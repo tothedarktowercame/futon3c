@@ -1,480 +1,480 @@
 row_type	record_id	turn_id	session_id	created_at	before_still_open	before_constrain_open	after_still_open	after_constrain_open	after_closed_this_turn	after_inferred	recompute_status	refusal_detail	open_growth
-record	turn-RKTxLv	claude-16-turn-1	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:07:15Z	5	0							
-record	turn-lzfg2C	claude-16-turn-3	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:24:17Z	6	0							
-record	turn-o2VZsQ	claude-16-turn-5	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:38:15Z	7	0							
-record	turn-rcPsFk	claude-16-turn-8	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:52:02Z	9	0							
-record	turn-UtEHpk	claude-16-turn-9	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:54:26Z	9	0							
-record	turn-jyJU5y	codex-10-turn-177	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T00:22:02Z	169	30							
-record	turn-YDvroy	codex-10-turn-2	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T02:43:11Z	1	0							
-record	turn-32eHlH	codex-10-turn-3	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T03:15:26Z	4	1							
-record	turn-ANJJCk	codex-10-turn-5	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T04:44:18Z	7	4							
-record	turn-BoYXrQ	codex-10-turn-6	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:36:29Z	8	4							
-record	turn-wS7piB	codex-10-turn-7	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:37:54Z	10	5							
-record	turn-Ok9sr7	codex-10-turn-8	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:41:21Z	12	5							
-record	turn-jADdxR	codex-10-turn-9	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:46:09Z	12	5							
-record	turn-Gs8LFo	codex-10-turn-10	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T06:16:18Z	15	5							
-record	turn-VdMrD9	codex-10-turn-11	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T06:17:29Z	16	5							
-record	turn-l92VRh	codex-10-turn-12	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T21:10:22Z	19	6							
-record	turn-xSJMjf	codex-10-turn-13	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T21:20:28Z	20	6							
-record	turn-pYwIRA	codex-18-turn-2	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T01:57:50Z	329	179							
-record	turn-F7l8sk	codex-18-turn-36	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:30:12Z	8	2							
-record	turn-IkroS8	codex-18-turn-37	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:35:07Z	8	2							
-record	turn-m2GjUp	codex-18-turn-38	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:41:48Z	9	3							
-record	turn-ADnSgn	codex-18-turn-39	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:53:10Z	9	3							
-record	turn-Wv9A0Q	codex-18-turn-40	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T05:01:49Z	9	3							
-record	turn-Lu4oy1	codex-18-turn-41	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T05:12:41Z	10	3							
-record	turn-Ua8qVd	codex-19-turn-193	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T00:09:50Z	174	67							
-record	turn-4DmSW5	codex-19-turn-3	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T01:54:36Z	5	3							
-record	turn-XDzSjm	codex-19-turn-4	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T02:00:25Z	7	3							
-record	turn-nA7g22	codex-19-turn-5	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T02:03:16Z	10	3							
-record	turn-0nXxZb	codex-19-turn-29	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T05:18:23Z	15	3							
-record	turn-ZHPLjj	codex-21-turn-2	01a10492-1dbe-72d3-9707-0d21e7419572	2026-10-04T02:02:54Z	3	1							
-record	turn-CBKG8g	claude-7-turn-1	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:20Z	2	0							
-record	turn-EiouaN	claude-7-turn-2	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:44Z	0	0							
-record	turn-leLJJw	claude-7-turn-3	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:59Z	2	1							
-record	turn-RNZ03S	claude-2-turn-3	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T04:19:45Z	1	0							
-record	turn-5VfZ6V	claude-2-turn-4	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T13:41:16Z	8	0							
-record	turn-oUIVIz	claude-2-turn-5	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T13:50:10Z	8	0							
-record	turn-QUbt77	claude-2-turn-7	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T14:02:10Z	11	0							
-record	turn-i9gc6V	claude-2-turn-8	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T14:08:21Z	11	0							
-record	turn-LZNJ49	claude-2-turn-10	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T15:47:26Z	24	2							
-record	turn-8ANSBc	claude-2-turn-11	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T15:59:48Z	30	3							
-record	turn-Dmp0fi	claude-2-turn-12	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T18:14:16Z	33	3							
-record	turn-EDnTfo	claude-2-turn-17	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T18:36:54Z	35	3							
-record	turn-i3c2qN	claude-2-turn-24	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:15:25Z	39	4							
-record	turn-JesiNP	claude-2-turn-25	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:17:48Z	41	4							
-record	turn-Vk4oka	claude-2-turn-26	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:28:11Z	46	4							
-record	turn-zDVNxa	claude-2-turn-27	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:39:24Z	48	5							
-record	turn-bxBGnR	claude-2-turn-28	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T21:03:00Z	49	5							
-record	turn-0OmtsL	claude-2-turn-29	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T21:20:17Z	53	5							
-record	turn-lYECzg	claude-2-turn-31	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T21:53:55Z	54	5							
-record	turn-DmXnCa	claude-2-turn-40	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T02:49:09Z	57	6							
-record	turn-3jTIfJ	claude-2-turn-42	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T02:56:40Z	59	7							
-record	turn-HOhCfB	claude-2-turn-47	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:21:23Z	61	7							
-record	turn-JHpGXv	claude-2-turn-49	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:26:25Z	61	7							
-record	turn-tyLl52	claude-2-turn-51	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:29:37Z	66	9							
-record	turn-QUKnek	claude-2-turn-52	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:33:07Z	67	9							
-record	turn-eb1BGU	claude-2-turn-58	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:01:52Z	70	9							
-record	turn-BPuysJ	claude-2-turn-60	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:10:49Z	71	10							
-record	turn-wFOKmu	claude-2-turn-61	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:12:58Z	73	10							
-record	turn-To5NXY	claude-2-turn-62	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:17:01Z	75	10							
-record	turn-WqJ4mW	claude-2-turn-66	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:34:12Z	78	10							
-record	turn-qnYgVz	claude-2-turn-81	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:13:02Z	83	10							
-record	turn-t4uzrX	claude-2-turn-82	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:17:36Z	85	10							
-record	turn-WkDyhJ	claude-2-turn-83	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:21:17Z	88	10							
-record	turn-BOqSDr	claude-2-turn-84	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:25:14Z	91	11							
-record	turn-Bcf06J	claude-2-turn-91	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T10:55:03Z	93	11							
-record	turn-gjm3LH	claude-2-turn-92	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T10:59:42Z	98	11							
-record	turn-PZ5GLb	claude-2-turn-102	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T19:55:42Z	102	11							
-record	turn-LHYRy5	claude-2-turn-103	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T20:06:43Z	105	11							
-record	turn-NEBxBC	claude-2-turn-105	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T21:50:54Z	107	11							
-record	turn-SkU5lr	claude-2-turn-108	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:15:39Z	115	12							
-record	turn-sMH1Sm	claude-2-turn-109	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:38:20Z	119	12							
-record	turn-LtmXGv	claude-2-turn-111	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:47:44Z	123	12							
-record	turn-X3R1HJ	claude-2-turn-113	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:56:22Z	126	12							
-record	turn-wM9PAr	claude-2-turn-119	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T23:31:53Z	129	12							
-record	turn-0IgOYv	claude-2-turn-121	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T23:38:15Z	133	12							
-record	turn-Wcr0h9	claude-2-turn-123	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T23:45:29Z	136	12							
-record	turn-ErsAQP	claude-2-turn-127	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-06T04:31:41Z	137	12							
-record	turn-3ohcEz	claude-2-turn-128	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-06T04:40:22Z	138	12							
-record	turn-CJjgu4	claude-3-turn-1	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:38:59Z	2	0							
-record	turn-4QLrgB	claude-3-turn-3	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:43:28Z	3	0							
-record	turn-uWgdog	claude-3-turn-4	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:45:06Z	5	0							
-record	turn-5JBr6g	claude-3-turn-5	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:46:23Z									
-record	turn-G502BL	claude-3-turn-11	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:36:41Z	7	0							
-record	turn-MY2SMp	claude-3-turn-12	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:39:58Z	8	0							
-record	turn-oTmqqp	claude-3-turn-14	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:42:26Z	11	0							
-record	turn-9sg8SX	claude-17-turn-382	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T00:42:05Z	339	49							
-record	turn-PPqEmR	claude-17-turn-397	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T16:17:47Z	355	50							
-record	turn-fWxOuE	claude-17-turn-398	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T16:19:16Z	358	50							
-record	turn-TTtCKM	claude-17-turn-425	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T21:46:20Z	386	51							
-record	turn-ZKoe7v	claude-17-turn-437	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T22:16:07Z	397	52							
-record	turn-PcHOkg	claude-17-turn-457	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T23:58:28Z	418	53							
-record	turn-QX1ci1	claude-17-turn-461	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T00:06:04Z	423	53							
-record	turn-cFZJ07	claude-17-turn-464	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T00:20:52Z	425	53							
-record	turn-OgNy0V	claude-17-turn-470	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T00:49:45Z	428	53							
-record	turn-7Ye630	claude-17-turn-487	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T03:48:30Z	444	57							
-record	turn-4Y6qFF	claude-17-turn-489	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T03:54:40Z	445	57							
-record	turn-uy7gV9	claude-17-turn-500	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T04:34:26Z	453	57							
-record	turn-YrgOAz	claude-17-turn-512	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T14:50:58Z	465	58							
-record	turn-g6q1nC	claude-17-turn-535	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-03T23:26:10Z	484	59							
-record	turn-PhLBYe	claude-17-turn-547	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T00:17:47Z	499	60							
-record	turn-vX22Ib	claude-17-turn-2	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:12:48Z	3	1							
-record	turn-aihw20	claude-17-turn-3	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:14:21Z	4	1							
-record	turn-pUYItO	claude-17-turn-4	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:16:25Z	5	1							
-record	turn-XE3XHH	claude-17-turn-5	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:18:45Z	6	1							
-record	turn-oTGuOV	claude-17-turn-6	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:22:18Z	7	1							
-record	turn-OtsTKG	claude-17-turn-7	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:24:34Z	11	1							
-record	turn-V3oRdx	claude-17-turn-8	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:25:15Z	12	1							
-record	turn-cGS7Id	claude-17-turn-10	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:29:03Z	13	1							
-record	turn-8fGjDp	claude-17-turn-13	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:38:06Z	527	66							
-record	turn-nMBR9W	claude-17-turn-15	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:50:08Z	21	2							
-record	turn-3qRBUm	claude-17-turn-23	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:07:57Z	29	4							
-record	turn-LPN1KW	claude-17-turn-25	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:16:40Z	542	66							
-record	turn-O8dzJL	claude-17-turn-26	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:28:40Z	547	67							
-record	turn-ArDfbO	claude-17-turn-27	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:34:54Z	551	69							
-record	turn-xm9Otx	claude-17-turn-28	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:48:51Z	557	69							
-record	turn-qwRnza	claude-17-turn-29	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:52:39Z	559	69							
-record	turn-tSMlKZ	claude-17-turn-30	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:12:11Z	566	70							
-record	turn-aBpChD	claude-17-turn-31	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:18:03Z	567	70							
-record	turn-dqrhT8	claude-17-turn-32	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:19:55Z	568	70							
-record	turn-BAy58C	claude-17-turn-33	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:21:11Z	569	70							
-record	turn-1hAzsq	claude-17-turn-34	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:22:02Z	570	70							
-record	turn-gXCZfv	claude-17-turn-35	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:29:04Z	571	70							
-record	turn-L2e942	claude-17-turn-36	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T04:18:53Z	572	70							
-record	turn-IOt3kq	claude-17-turn-37	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T04:23:51Z	30	4							
-record	turn-04zPYc	claude-17-turn-38	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T04:43:27Z	576	70							
-record	turn-Uc56TD	claude-17-turn-40	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:10:39Z	31	4							
-record	turn-hTMlRg	claude-17-turn-41	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:42:41Z	32	4							
-record	turn-uJNPcf	claude-17-turn-42	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:51:51Z	33	4							
-record	turn-WdLaYK	claude-17-turn-43	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:56:33Z	35	5							
-record	turn-qR3UaA	claude-17-turn-44	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T21:28:52Z	591	71							
-record	turn-mlUamp	claude-17-turn-45	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T21:38:58Z	37	6							
-record	turn-m18HXL	claude-17-turn-46	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T21:50:52Z	39	6							
-record	turn-1sNkzc	claude-17-turn-47	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T22:13:29Z	41	6							
-record	turn-07igHH	claude-17-turn-48	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T22:18:14Z	601	71							
-record	turn-VEYi7j	claude-17-turn-49	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T22:22:11Z	43	6							
-record	turn-GiuyRt	claude-17-turn-50	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:17:24Z	606	71							
-record	turn-dMgY2U	claude-17-turn-51	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:36:35Z	607	71							
-record	turn-MW216j	claude-17-turn-52	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:41:38Z	44	6							
-record	turn-aFXxNu	claude-17-turn-53	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:44:52Z	46	6							
-record	turn-j711nF	claude-17-turn-55	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T07:14:34Z	50	6							
-record	turn-tBnloT	claude-12-turn-3	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T03:50:44Z	1	1							
-record	turn-FgowBB	claude-12-turn-4	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T03:52:20Z	2	1							
-record	turn-OZlHwb	claude-12-turn-5	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T03:54:52Z	2	1							
-record	turn-JTuY1v	claude-12-turn-6	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T04:05:18Z									
-record	turn-XHiuAx	claude-12-turn-7	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T04:06:47Z	3	1							
-record	turn-k0AnLN	claude-12-turn-8	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:13:09Z	3	1							
-record	turn-dSsyla	claude-12-turn-9	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:13:21Z	3	1							
-record	turn-SihsZR	claude-12-turn-10	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:16:33Z	4	1							
-record	turn-cx0Qb2	claude-12-turn-11	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:21:10Z	4	1							
-record	turn-GK97ER	claude-12-turn-12	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:22:26Z	4	1							
-record	turn-U6QSNF	claude-12-turn-13	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:23:40Z	5	1							
-record	turn-xfBrMT	claude-12-turn-15	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:41:54Z	8	3							
-record	turn-ToK2Yu	claude-12-turn-43	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T14:41:47Z	9	3							
-record	turn-haaEfv	claude-12-turn-44	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T14:48:50Z	11	4							
-record	turn-auk3EL	claude-12-turn-60	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T15:52:24Z	11	4							
-record	turn-M4cqxa	claude-12-turn-67	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T17:51:39Z	11	4							
-record	turn-axq05q	claude-12-turn-68	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T17:56:42Z	13	4							
-record	turn-xLg1HX	claude-12-turn-69	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T18:12:33Z	13	4							
-record	turn-Glz20I	claude-12-turn-86	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T18:37:30Z	14	4							
-record	turn-AoeVH4	claude-12-turn-88	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T18:42:15Z	18	6							
-record	turn-Prtgyo	claude-12-turn-97	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T19:46:45Z	23	8							
-record	turn-2pr8U0	claude-12-turn-98	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T19:49:20Z	26	8							
-record	turn-Cu0AN8	claude-12-turn-104	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T20:04:10Z	30	8							
-record	turn-UUBqtF	claude-12-turn-109	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T21:22:17Z	31	8							
-record	turn-nIQs0P	claude-12-turn-110	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T21:23:33Z	31	8							
-record	turn-VuKpTB	claude-12-turn-112	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T22:36:55Z	32	9							
-record	turn-2aojFu	claude-12-turn-118	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T23:49:26Z	33	9							
-record	turn-mozTbR	claude-12-turn-120	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T00:46:10Z	33	9							
-record	turn-bIeFbo	claude-12-turn-122	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T00:55:02Z	33	9							
-record	turn-oNCyPA	claude-12-turn-125	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T01:50:46Z	34	9							
-record	turn-XVmeTY	claude-12-turn-126	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T02:22:57Z	35	9							
-record	turn-K1IY3h	claude-12-turn-127	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T02:58:25Z	37	9							
-record	turn-9bbs6t	claude-12-turn-129	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:30:45Z	37	9							
-record	turn-968NVf	claude-12-turn-131	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:35:35Z									
-record	turn-aOWJp9	claude-12-turn-132	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:38:02Z	39	10							
-record	turn-pdFfDh	claude-12-turn-133	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:43:47Z	41	10							
-record	turn-1QmK3t	claude-12-turn-138	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T13:57:22Z	42	10							
-record	turn-y28j7o	claude-12-turn-140	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:23:12Z	43	11							
-record	turn-4VqGUm	claude-12-turn-141	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:25:12Z	43	11							
-record	turn-fmv7o2	claude-12-turn-142	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:34:05Z	43	11							
-record	turn-eSNh0d	claude-12-turn-143	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:57:16Z	43	11							
-record	turn-DryWNa	claude-12-turn-144	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:58:22Z	44	11							
-record	turn-qX81HV	claude-12-turn-145	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:59:19Z									
-record	turn-qjsNtd	claude-12-turn-146	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:00:49Z	46	12							
-record	turn-AMDIbu	claude-12-turn-147	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:03:53Z	47	13							
-record	turn-LToyMw	claude-12-turn-148	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:07:29Z	48	14							
-record	turn-AwjMCR	claude-12-turn-149	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:08:55Z	48	14							
-record	turn-qS2xlb	claude-12-turn-150	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:11:05Z	49	14							
-record	turn-z9tNmo	claude-12-turn-151	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:12:00Z	50	15							
-record	turn-QPcd7V	claude-12-turn-152	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:13:14Z	50	15							
-record	turn-W2qJs4	claude-12-turn-153	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:18:02Z	51	15							
-record	turn-JKEthX	claude-12-turn-154	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:26:56Z	53	15							
-record	turn-ghnIeZ	claude-12-turn-155	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:29:24Z	54	15							
-record	turn-Hvqkdf	claude-12-turn-156	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:30:53Z	55	15							
-record	turn-XEPMFG	claude-12-turn-157	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:32:49Z	56	16							
-record	turn-xjQUrG	claude-12-turn-158	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:36:29Z	56	16							
-record	turn-6hFDIW	claude-12-turn-159	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:49:27Z	57	16							
-record	turn-VCSjvG	claude-14-turn-2	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T03:40:53Z	2	1							
-record	turn-YCVI7M	claude-14-turn-3	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T03:46:54Z	2	1							
-record	turn-AM8Lbn	claude-14-turn-4	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:13:15Z	3	1							
-record	turn-pXX2By	claude-14-turn-5	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:16:25Z	3	1							
-record	turn-NqKscZ	claude-14-turn-6	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:20:41Z	6	2							
-record	turn-s0fPFb	claude-14-turn-7	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:30:17Z	8	2							
-record	turn-9jq1Aj	claude-14-turn-9	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T16:33:18Z	10	2							
-record	turn-E5Dkcd	claude-14-turn-10	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T16:38:31Z	10	2							
-record	turn-uOMwsQ	claude-14-turn-11	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T16:40:05Z	11	2							
-record	turn-zp4iMU	claude-14-turn-12	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T19:21:54Z	12	2							
-record	turn-i8yVjf	claude-14-turn-13	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T22:01:29Z	14	2							
-record	turn-BcboOg	claude-14-turn-14	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:02:17Z	18	2							
-record	turn-5HxdtH	claude-14-turn-15	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:08:26Z	22	2							
-record	turn-KEDpiQ	claude-14-turn-16	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:09:41Z	22	2							
-record	turn-OD2RDe	claude-14-turn-17	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:11:15Z	23	2							
-record	turn-vgFB3Q	claude-14-turn-18	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:41:27Z	26	2							
-record	turn-6paVBT	claude-14-turn-19	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:44:35Z	30	2							
-record	turn-zi0gEE	claude-14-turn-20	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:48:13Z	35	2							
-record	turn-T6cr97	claude-4-turn-276	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-01T22:27:23Z	98	19							
-record	turn-OVLgZb	claude-4-turn-325	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-02T13:39:18Z	119	20							
-record	turn-fvzNzp	claude-4-turn-329	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-02T21:47:51Z	122	20							
-record	turn-nkFptf	claude-4-turn-330	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-03T14:44:40Z	126	20							
-record	turn-HeiWEK	claude-4-turn-335	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-03T15:12:08Z	134	21							
-record	turn-BrdsXD	claude-4-turn-1	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T01:06:38Z	145	23							
-record	turn-kv3qZ7	claude-4-turn-13	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T03:31:12Z	148	23							
-record	turn-L3v2a8	claude-4-turn-17	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T04:39:07Z	8	1							
-record	turn-jedqCo	claude-4-turn-21	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T04:53:36Z	9	1							
-record	turn-PGeqxq	claude-4-turn-22	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T04:59:10Z	155	23							
-record	turn-JXBPpb	claude-4-turn-24	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:01:12Z	9	1							
-record	turn-jYQHSw	claude-4-turn-27	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:04:43Z	157	23							
-record	turn-mtauh1	claude-4-turn-28	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:09:09Z	160	23							
-record	turn-nVbzFX	claude-4-turn-29	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:19:01Z	12	2							
-record	turn-N4hhhA	claude-4-turn-30	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:23:51Z	164	23							
-record	turn-dZmpQh	claude-4-turn-35	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:00:23Z	164	23							
-record	turn-NRK1u9	claude-4-turn-36	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:07:31Z	165	23							
-record	turn-wi6Q6y	claude-4-turn-37	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:09:38Z	168	23							
-record	turn-hbdgh1	claude-4-turn-38	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:13:12Z	169	23							
-record	turn-j2tSMk	claude-4-turn-39	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:27:15Z	170	23							
-record	turn-hcq9mD	claude-4-turn-82	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T12:59:38Z	172	23							
-record	turn-eF6fA6	claude-4-turn-85	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:08:21Z	177	23							
-record	turn-ELTBL4	claude-4-turn-86	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:11:01Z	47	7							
-record	turn-NmxOoQ	claude-4-turn-87	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:13:58Z	49	7							
-record	turn-RFGqGD	claude-4-turn-88	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:17:12Z	180	23							
-record	turn-7dRWAW	claude-4-turn-90	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:22:05Z	56	7							
-record	turn-LvQ6Vg	claude-4-turn-91	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:25:00Z	59	8							
-record	turn-ioGJZn	claude-4-turn-94	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:47:52Z	62	8							
-record	turn-gVrTPx	claude-4-turn-96	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:53:14Z	182	23							
-record	turn-G4b9rd	claude-4-turn-98	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:56:07Z	184	23							
-record	turn-7Lt8uX	claude-4-turn-99	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:57:04Z	185	23							
-record	turn-5rUCtR	claude-4-turn-101	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:59:35Z	188	23							
-record	turn-4ZsWPM	claude-4-turn-104	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T14:03:29Z	189	23							
-record	turn-oPHLtM	claude-4-turn-110	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T14:19:33Z	66	8							
-record	turn-C42bzz	claude-4-turn-113	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T14:24:47Z	190	23							
-record	turn-wbmIR9	claude-4-turn-196	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T18:15:33Z	192	23							
-record	turn-Rd3DV5	claude-4-turn-197	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T18:21:16Z	194	23							
-record	turn-gnvjBV	claude-4-turn-199	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T18:29:58Z	198	23							
-record	turn-DGJKIz	claude-4-turn-209	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T19:30:34Z	200	23							
-record	turn-StJxHy	claude-4-turn-211	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T19:35:50Z	200	24							
-record	turn-pWxrM6	claude-4-turn-246	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T21:31:47Z	200	24							
-record	turn-NLfNvL	claude-4-turn-299	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T01:43:15Z	202	24							
-record	turn-fgX7g4	claude-4-turn-300	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T01:49:01Z	204	24							
-record	turn-typEDG	claude-4-turn-301	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T01:57:20Z	206	24							
-record	turn-UstRGe	claude-4-turn-302	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T02:00:20Z	208	24							
-record	turn-sE1Q8C	claude-4-turn-303	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T02:56:55Z	209	24							
-record	turn-tjxDid	claude-4-turn-306	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:04:01Z	215	24							
-record	turn-g3s5EO	claude-4-turn-307	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:06:18Z	220	24							
-record	turn-QxunUb	claude-4-turn-309	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:08:28Z	106	20							
-record	turn-Z49iFb	claude-4-turn-313	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:23:22Z	222	24							
-record	turn-mflxD1	claude-4-turn-341	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:14:50Z	136	21							
-record	turn-Ptei5r	claude-4-turn-342	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:20:01Z	137	22							
-record	turn-tpHYvQ	claude-4-turn-343	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:22:52Z	138	22							
-record	turn-2pTVKc	claude-4-turn-344	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:26:13Z	223	23							
-record	turn-zwTFEs	claude-4-turn-345	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:29:22Z	139	22							
-record	turn-mNWwFT	claude-4-turn-362	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T07:31:15Z	224	23							
-record	turn-6p9wvd	claude-4-turn-377	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:13:09Z	225	23							
-record	turn-upM8t8	claude-4-turn-378	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:15:04Z	225	23							
-record	turn-3RuGAU	claude-4-turn-379	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:18:15Z	227	23							
-record	turn-DblTYM	claude-4-turn-380	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:20:54Z	227	23							
-record	turn-yLOqOd	claude-4-turn-381	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:25:06Z	231	24							
-record	turn-Yy6b9c	claude-4-turn-398	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:02:21Z	234	24							
-record	turn-8AvW7X	claude-4-turn-399	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:05:49Z	235	24							
-record	turn-T1cx7k	claude-4-turn-400	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:09:24Z	235	24							
-record	turn-QfpVdW	claude-4-turn-401	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:13:04Z	235	24							
-record	turn-fOAoHW	claude-4-turn-402	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:14:06Z	236	24							
-record	turn-KJgAnk	claude-4-turn-407	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:29:36Z	238	24							
-record	turn-4lAQIw	claude-4-turn-415	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T16:20:26Z	240	25							
-record	turn-ll79bR	claude-4-turn-512	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T19:41:38Z	243	25							
-record	turn-W93WBG	claude-4-turn-513	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T19:42:52Z	244	25							
-record	turn-hAWOna	claude-4-turn-552	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T21:59:10Z	244	25							
-record	turn-W2Wo3Y	claude-4-turn-553	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:02:30Z	249	25							
-record	turn-EZ9YGX	claude-4-turn-556	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:06:26Z	250	25							
-record	turn-QwPSdh	claude-4-turn-563	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:21:42Z	252	25							
-record	turn-i0Od3q	claude-4-turn-564	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:23:35Z	255	25							
-record	turn-XogEMy	claude-4-turn-567	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:25:20Z	257	25							
-record	turn-71JPGN	claude-4-turn-594	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:32:21Z	258	25							
-record	turn-W34IgZ	claude-4-turn-601	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:45:23Z	259	25							
-record	turn-FejOlN	claude-4-turn-602	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:49:04Z	261	25							
-record	turn-Yxh05o	claude-4-turn-603	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:51:33Z	264	26							
-record	turn-eSdgnm	claude-4-turn-604	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:54:48Z	264	26							
-record	turn-1UTHJA	claude-4-turn-608	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T05:38:57Z	265	26							
-record	turn-yGoIlB	claude-11-turn-2	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:12:32Z	4	0							
-record	turn-Cq0RT7	claude-11-turn-3	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:18:24Z	5	0							
-record	turn-yQrOe6	claude-11-turn-4	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:22:37Z	6	0							
-record	turn-uaXTGA	claude-11-turn-5	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:33:29Z	8	0							
-record	turn-TTgUYF	claude-11-turn-6	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:38:31Z	8	0							
-record	turn-9y7ov6	claude-11-turn-7	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:41:21Z	9	0							
-record	turn-gYSDOf	claude-11-turn-8	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:31:29Z	10	0							
-record	turn-Q2aKgI	claude-11-turn-9	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:33:47Z	9	0							
-record	turn-ZnJFtU	claude-11-turn-10	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:37:05Z	9	0							
-record	turn-wx2cqD	claude-11-turn-11	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:38:40Z	12	0							
-record	turn-CTQ5oc	claude-11-turn-12	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:40:37Z	13	0							
-record	turn-2Vu8GA	claude-11-turn-13	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:43:14Z	15	0							
-record	turn-NTgZ2T	claude-11-turn-14	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:44:38Z	14	0							
-record	turn-JjDGL0	claude-11-turn-15	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:46:05Z	16	0							
-record	turn-7QZ8sL	claude-11-turn-16	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:47:13Z	19	0							
-record	turn-7jqJgO	claude-11-turn-17	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:10:52Z	20	0							
-record	turn-IpZeeW	claude-11-turn-18	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:13:03Z	21	0							
-record	turn-z0v10N	claude-11-turn-20	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:22:06Z	21	0							
-record	turn-lx5879	claude-11-turn-24	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:30:34Z	24	0							
-record	turn-8AU38e	claude-11-turn-25	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:32:23Z	24	0							
-record	turn-0l6bap	claude-11-turn-27	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:57:26Z	25	0							
-record	turn-26JtLh	claude-11-turn-28	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:59:09Z	25	0							
-record	turn-PGXJGO	claude-11-turn-32	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:03:48Z	26	1							
-record	turn-WtIZCU	claude-11-turn-33	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:10:49Z									
-record	turn-XTdWPT	claude-11-turn-34	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:12:22Z	26	1							
-record	turn-PGWKMX	claude-11-turn-35	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:16:56Z	30	2							
-record	turn-kbw2Eb	claude-11-turn-36	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:21:52Z	31	2							
-record	turn-IcKsVj	claude-11-turn-37	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:24:30Z	31	2							
-record	turn-8X7BbX	claude-11-turn-38	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:27:53Z	32	2							
-record	turn-pvP9Kx	claude-11-turn-39	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:30:35Z	33	2							
-record	turn-9DcnO8	claude-11-turn-40	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:08:47Z	34	2							
-record	turn-9VxB75	claude-11-turn-41	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:10:06Z	35	3							
-record	turn-qYqSBA	claude-11-turn-42	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:15:10Z	35	3							
-record	turn-IJhnCI	claude-11-turn-43	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:19:32Z	38	3							
-record	turn-teO5Ga	claude-11-turn-44	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:24:50Z	39	3							
-record	turn-jk2twD	claude-11-turn-45	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:28:33Z	41	3							
-record	turn-SNwzeF	claude-11-turn-46	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:35:00Z	45	4							
-record	turn-fdvQ1m	claude-11-turn-47	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T13:08:54Z	46	4							
-record	turn-lQMQAv	claude-11-turn-48	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T13:30:28Z	48	4							
-record	turn-mVytXT	claude-11-turn-49	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T13:53:45Z									
-record	turn-SLqTW9	claude-11-turn-50	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:51:09Z	49	4							
-record	turn-hNwjyJ	claude-11-turn-51	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:53:03Z	50	4							
-record	turn-mTzwqq	claude-11-turn-52	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:54:26Z	51	4							
-record	turn-VgUJ8K	claude-11-turn-53	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:56:23Z									
-record	turn-ABYrM4	claude-11-turn-54	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:58:41Z									
-record	turn-Bb7G6A	claude-11-turn-55	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:59:56Z	52	4							
-record	turn-js5mI2	claude-11-turn-56	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:02:34Z	53	4							
-record	turn-R42kZJ	claude-11-turn-57	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:03:39Z	55	5							
-record	turn-6vi8MM	claude-11-turn-58	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:09:26Z	56	5							
-record	turn-lZ6mnP	claude-11-turn-59	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:11:24Z	56	5							
-record	turn-76Ae9x	claude-11-turn-60	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:40:36Z	57	5							
-record	turn-NGjbX3	claude-11-turn-61	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:50:19Z	57	5							
-record	turn-UcslMu	claude-11-turn-62	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T16:25:23Z	58	5							
-record	turn-yEmmFN	claude-11-turn-63	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T16:26:44Z	59	5							
-record	turn-myJaqk	claude-11-turn-64	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T16:55:23Z	61	6							
-record	turn-nWF7iW	claude-11-turn-65	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T17:27:53Z	62	6							
-record	turn-Pm8kca	claude-11-turn-66	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T17:45:54Z	62	6							
-record	turn-VgN2cM	claude-11-turn-67	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T19:47:17Z	63	6							
-record	turn-VIFvfY	claude-11-turn-68	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T19:48:00Z	63	6							
-record	turn-zStjMo	claude-11-turn-69	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:08:35Z	64	6							
-record	turn-0I6y3G	claude-11-turn-70	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:14:23Z	64	6							
-record	turn-7mgeed	claude-11-turn-71	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:43:48Z	65	6							
-record	turn-iWROIs	claude-11-turn-72	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:53:24Z	67	6							
-record	turn-V3TfrF	claude-11-turn-73	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T01:09:57Z	69	6							
-record	turn-FeAW0m	claude-11-turn-74	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T01:21:54Z	70	6							
-record	turn-V0dTZn	claude-11-turn-75	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T02:04:38Z	71	6							
-record	turn-lYZVem	claude-11-turn-76	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T02:21:06Z	72	6							
-record	turn-W6wqGo	claude-11-turn-77	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T02:57:11Z	73	6							
-record	turn-jIGFHO	claude-11-turn-78	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T03:24:14Z	74	6							
-record	turn-71dhB7	claude-11-turn-79	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T03:44:33Z	75	6							
-record	turn-wvZPdj	claude-11-turn-80	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T14:05:21Z	81	6							
-record	turn-sLRA1R	claude-11-turn-81	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T14:35:34Z	84	6							
-record	turn-77E8E0	claude-11-turn-82	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T16:08:56Z	85	6							
-record	turn-8N1Ph6	claude-11-turn-83	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T16:12:37Z	85	6							
-record	turn-ZT897u	claude-11-turn-84	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T16:45:57Z	86	6							
-record	turn-6OlWEO	claude-11-turn-88	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T20:28:22Z	88	6							
-record	turn-OURJPP	claude-11-turn-89	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T20:34:13Z	89	6							
-record	turn-ocUi9P	claude-11-turn-91	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T01:52:53Z	98	6							
-record	turn-1relYm	claude-11-turn-92	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T01:55:55Z	98	6							
-record	turn-8mX1Ks	claude-11-turn-93	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T01:59:15Z	99	6							
-record	turn-yAIq6E	claude-11-turn-95	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T02:06:35Z	100	6							
-record	turn-QnDY4N	claude-11-turn-96	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T03:39:26Z	105	6							
-record	turn-37gfPf	claude-11-turn-97	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T03:40:40Z	105	6							
-record	turn-BWV759	claude-11-turn-98	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T03:53:36Z	107	6							
-record	turn-1mZPHN	claude-11-turn-99	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:02:56Z	108	6							
-record	turn-X0awal	claude-11-turn-100	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:11:25Z	111	6							
-record	turn-9PITYv	claude-11-turn-101	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:17:38Z	114	6							
-record	turn-wDJkVr	claude-11-turn-102	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:26:41Z	115	6							
-record	turn-klsV1g	claude-11-turn-103	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:40:07Z	114	6							
-record	turn-OIhzli	claude-13-turn-2	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:10:19Z	3	0							
-record	turn-KsSUqR	claude-13-turn-3	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:12:23Z	4	0							
-record	turn-fOrPLY	claude-13-turn-4	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:19:39Z	8	1							
-record	turn-6d3gdP	claude-13-turn-5	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:42:33Z	9	1							
-record	turn-iNViGU	claude-13-turn-6	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:49:16Z	11	1							
-record	turn-Wdb4Sq	claude-13-turn-7	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:53:53Z	15	1							
-record	turn-oxdell	claude-13-turn-8	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:59:19Z	20	3							
-record	turn-wbmn6J	claude-13-turn-9	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:09:17Z	26	4							
-record	turn-HD0aXw	claude-13-turn-10	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:13:10Z	27	4							
-record	turn-fIuIof	claude-13-turn-11	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:16:01Z	29	4							
-record	turn-EO0A4w	claude-13-turn-12	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:19:07Z	30	4							
-record	turn-dV8LaA	claude-13-turn-13	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:30:12Z	36	5							
-record	turn-xPSDKd	claude-13-turn-14	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:37:03Z	39	5							
-record	turn-N1PFCg	claude-13-turn-15	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:40:02Z	43	5							
-record	turn-MAyWr0	claude-13-turn-16	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:44:47Z	44	5							
-record	turn-8J5gU4	claude-13-turn-17	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:50:00Z	45	5							
-record	turn-Xsp1x0	claude-13-turn-18	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:56:45Z	48	5							
-record	turn-IUT7Fc	claude-13-turn-19	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:58:33Z	48	5							
-record	turn-E5KqDv	claude-13-turn-20	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:01:39Z	49	5							
-record	turn-5HLIOX	claude-13-turn-21	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:03:39Z	50	5							
-record	turn-TqXIvP	claude-13-turn-22	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:04:27Z	51	5							
-record	turn-n89vlt	claude-13-turn-23	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:05:56Z	51	5							
-record	turn-ND51hI	claude-13-turn-24	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:07:14Z	52	5							
-record	turn-IIhehS	claude-13-turn-25	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:14:02Z	53	5							
-record	turn-ngC1Zc	claude-13-turn-26	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:18:41Z	55	6							
-record	turn-hoSA1W	claude-13-turn-27	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:26:16Z	57	6							
-record	turn-PISOdL	claude-13-turn-28	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:54:54Z	57	6							
-record	turn-boSBnC	claude-13-turn-29	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T03:02:29Z	60	7							
-record	turn-wNt6UQ	claude-13-turn-30	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T03:07:13Z	62	7							
-record	turn-VW7Fev	claude-13-turn-31	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:23:25Z	64	7							
-record	turn-xxIDhT	claude-13-turn-32	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:34:24Z	66	8							
-record	turn-Z4xoYC	claude-13-turn-33	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:36:05Z	67	8							
-record	turn-OlGfA3	claude-13-turn-34	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:55:18Z	68	8							
-record	turn-VYc3Gb	claude-13-turn-35	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:55:54Z	70	8							
-record	turn-RHQbI4	claude-5-turn-1	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:48:41Z	3	1							
-record	turn-v2AHXA	claude-5-turn-2	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:49:26Z	1	1							
-record	turn-O8L7or	claude-5-turn-3	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:50:09Z	3	2							
-record	turn-0r52n8	claude-6-turn-1	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T21:57:51Z	3	0							
-record	turn-RQwzVb	claude-6-turn-2	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:00:40Z	4	0							
-record	turn-GE5uDJ	claude-6-turn-3	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:03:31Z	8	0							
-record	turn-q0fjvy	claude-6-turn-4	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:05:18Z	9	0							
-record	turn-a3V7wF	claude-6-turn-5	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:06:21Z	10	0							
-record	turn-kNLxcE	claude-6-turn-6	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:10:03Z	12	0							
-record	turn-fVd27A	claude-6-turn-7	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:11:37Z	11	0							
-record	turn-AFcJRx	claude-6-turn-9	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:14:37Z	12	1							
-record	turn-FbAbLT	claude-6-turn-10	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:16:28Z	14	1							
-record	turn-DE5zRR	claude-9-turn-1	d9e4516f-e601-405f-a623-0dc31d6b7a73	2026-10-05T21:55:16Z	3	0							
-record	turn-zjFdHQ	claude-15-turn-2	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T19:39:39Z	1	0							
-record	turn-UBmb3D	claude-15-turn-3	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T19:45:53Z	2	0							
-record	turn-g0WX7n	claude-15-turn-4	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T22:13:18Z	3	0							
-record	turn-UHz87W	claude-15-turn-5	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T22:22:58Z	4	0							
-record	turn-Pn04er	claude-15-turn-7	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T23:24:47Z	7	0							
-record	turn-b3dxwJ	claude-15-turn-9	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T23:45:12Z	10	0							
-record	turn-1ij7FV	claude-15-turn-10	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T23:52:43Z	11	0							
-record	turn-mIc3Eh	claude-15-turn-11	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T00:03:41Z	10	0							
-record	turn-n5EIxj	claude-15-turn-12	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:15:22Z	11	0							
-record	turn-zb5phn	claude-15-turn-13	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:16:42Z	12	0							
-record	turn-GnZeXU	claude-15-turn-14	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:17:46Z	15	0							
-record	turn-jlxoP5	claude-15-turn-15	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:41:19Z	17	0							
-record	turn-MDwJCW	claude-15-turn-16	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:45:49Z	20	0							
-record	turn-kuEWAB	claude-15-turn-17	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:10:36Z	21	0							
-record	turn-CczJhL	claude-15-turn-18	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:22:29Z	24	0							
-record	turn-tqZHsF	claude-15-turn-19	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:27:57Z	25	0							
-record	turn-4Vnjnj	claude-15-turn-20	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:33:22Z	28	0							
-record	turn-0aeNn8	claude-15-turn-21	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:36:31Z	31	1							
-record	turn-oQdwzD	claude-15-turn-22	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:42:02Z	37	2							
-record	turn-L7qzfD	claude-15-turn-23	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:44:35Z	38	2							
-record	turn-8qn3cQ	claude-15-turn-27	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:36:44Z	39	2							
-record	turn-bgSPxR	claude-15-turn-28	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:42:34Z	42	2							
-record	turn-8VoJLF	claude-15-turn-29	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:45:14Z	46	3							
-record	turn-5UjoUi	claude-15-turn-31	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:51:51Z	52	3							
-record	turn-MLCYwI	claude-15-turn-32	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:56:18Z	56	3							
-record	turn-poV4qM	claude-15-turn-34	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T04:05:18Z	59	3							
-session_tail	turn-UtEHpk	claude-16-turn-9	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:54:26Z	9	0							
-session_tail	turn-xSJMjf	codex-10-turn-13	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T21:20:28Z	20	6							
-session_tail	turn-Lu4oy1	codex-18-turn-41	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T05:12:41Z	10	3							
-session_tail	turn-0nXxZb	codex-19-turn-29	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T05:18:23Z	15	3							
-session_tail	turn-ZHPLjj	codex-21-turn-2	01a10492-1dbe-72d3-9707-0d21e7419572	2026-10-04T02:02:54Z	3	1							
-session_tail	turn-leLJJw	claude-7-turn-3	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:59Z	2	1							
-session_tail	turn-3ohcEz	claude-2-turn-128	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-06T04:40:22Z	138	12							
-session_tail	turn-oTmqqp	claude-3-turn-14	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:42:26Z	11	0							
-session_tail	turn-j711nF	claude-17-turn-55	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T07:14:34Z	50	6							
-session_tail	turn-6hFDIW	claude-12-turn-159	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:49:27Z	57	16							
-session_tail	turn-zi0gEE	claude-14-turn-20	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:48:13Z	35	2							
-session_tail	turn-1UTHJA	claude-4-turn-608	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T05:38:57Z	265	26							
-session_tail	turn-klsV1g	claude-11-turn-103	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:40:07Z	114	6							
-session_tail	turn-VYc3Gb	claude-13-turn-35	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:55:54Z	70	8							
-session_tail	turn-O8L7or	claude-5-turn-3	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:50:09Z	3	2							
-session_tail	turn-FbAbLT	claude-6-turn-10	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:16:28Z	14	1							
-session_tail	turn-DE5zRR	claude-9-turn-1	d9e4516f-e601-405f-a623-0dc31d6b7a73	2026-10-05T21:55:16Z	3	0							
-session_tail	turn-poV4qM	claude-15-turn-34	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T04:05:18Z	59	3							
-grand_records					44541	5537							
-grand_session_tails					878	96							
+record	turn-RKTxLv	claude-16-turn-1	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:07:15Z	5	0	5	0	1	11	ok		0
+record	turn-lzfg2C	claude-16-turn-3	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:24:17Z	6	0	6	0	1	11	ok		0
+record	turn-o2VZsQ	claude-16-turn-5	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:38:15Z	7	0	7	0	0	11	ok		0
+record	turn-rcPsFk	claude-16-turn-8	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:52:02Z	9	0	9	0	1	11	ok		0
+record	turn-UtEHpk	claude-16-turn-9	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:54:26Z	9	0	9	0	1	11	ok		0
+record	turn-jyJU5y	codex-10-turn-177	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T00:22:02Z	169	30	139	0	0	0	ok		-30
+record	turn-YDvroy	codex-10-turn-2	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T02:43:11Z	1	0	1	0	0	0	ok		0
+record	turn-32eHlH	codex-10-turn-3	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T03:15:26Z	4	1	3	0	0	0	ok		-1
+record	turn-ANJJCk	codex-10-turn-5	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T04:44:18Z	7	4	3	0	0	0	ok		-4
+record	turn-BoYXrQ	codex-10-turn-6	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:36:29Z	8	4	4	0	1	0	ok		-4
+record	turn-wS7piB	codex-10-turn-7	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:37:54Z	10	5	5	0	0	0	ok		-5
+record	turn-Ok9sr7	codex-10-turn-8	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:41:21Z	12	5	7	0	0	0	ok		-5
+record	turn-jADdxR	codex-10-turn-9	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T05:46:09Z	12	5	7	0	0	0	ok		-5
+record	turn-Gs8LFo	codex-10-turn-10	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T06:16:18Z	15	5	10	0	0	0	ok		-5
+record	turn-VdMrD9	codex-10-turn-11	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T06:17:29Z	16	5	11	0	0	0	ok		-5
+record	turn-l92VRh	codex-10-turn-12	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T21:10:22Z	19	6	13	0	0	0	ok		-6
+record	turn-xSJMjf	codex-10-turn-13	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T21:20:28Z	20	6	14	0	0	0	ok		-6
+record	turn-pYwIRA	codex-18-turn-2	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T01:57:50Z	329	179	150	0	0	6	ok		-179
+record	turn-F7l8sk	codex-18-turn-36	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:30:12Z	8	2	6	0	5	6	ok		-2
+record	turn-IkroS8	codex-18-turn-37	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:35:07Z	8	2	6	0	2	6	ok		-2
+record	turn-m2GjUp	codex-18-turn-38	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:41:48Z	9	3	6	0	3	6	ok		-3
+record	turn-ADnSgn	codex-18-turn-39	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T04:53:10Z	9	3	6	0	1	6	ok		-3
+record	turn-Wv9A0Q	codex-18-turn-40	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T05:01:49Z	9	3	6	0	1	6	ok		-3
+record	turn-Lu4oy1	codex-18-turn-41	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T05:12:41Z	10	3	7	0	0	6	ok		-3
+record	turn-Ua8qVd	codex-19-turn-193	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T00:09:50Z	174	67	109	2	0	0	ok		-65
+record	turn-4DmSW5	codex-19-turn-3	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T01:54:36Z	5	3	4	2	6	0	ok		-1
+record	turn-XDzSjm	codex-19-turn-4	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T02:00:25Z	7	3	6	2	2	0	ok		-1
+record	turn-nA7g22	codex-19-turn-5	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T02:03:16Z	10	3	9	2	1	0	ok		-1
+record	turn-0nXxZb	codex-19-turn-29	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T05:18:23Z	15	3	14	2	1	0	ok		-1
+record	turn-ZHPLjj	codex-21-turn-2	01a10492-1dbe-72d3-9707-0d21e7419572	2026-10-04T02:02:54Z	3	1	1	0	1	2	ok		-2
+record	turn-CBKG8g	claude-7-turn-1	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:20Z	2	0	2	0	1	1	ok		0
+record	turn-EiouaN	claude-7-turn-2	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:44Z	0	0	0	0	3	1	ok		0
+record	turn-leLJJw	claude-7-turn-3	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:59Z	2	1	1	0	1	1	ok		-1
+record	turn-RNZ03S	claude-2-turn-3	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T04:19:45Z	1	0	1	0	1	50	ok		0
+record	turn-5VfZ6V	claude-2-turn-4	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T13:41:16Z	8	0	8	0	0	50	ok		0
+record	turn-oUIVIz	claude-2-turn-5	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T13:50:10Z	8	0	8	0	1	50	ok		0
+record	turn-QUbt77	claude-2-turn-7	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T14:02:10Z	11	0	11	0	0	50	ok		0
+record	turn-i9gc6V	claude-2-turn-8	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T14:08:21Z	11	0	11	0	2	50	ok		0
+record	turn-LZNJ49	claude-2-turn-10	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T15:47:26Z	24	2	22	0	0	50	ok		-2
+record	turn-8ANSBc	claude-2-turn-11	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T15:59:48Z	30	3	27	0	1	50	ok		-3
+record	turn-Dmp0fi	claude-2-turn-12	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T18:14:16Z	33	3	30	0	1	50	ok		-3
+record	turn-EDnTfo	claude-2-turn-17	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T18:36:54Z	35	3	32	0	0	50	ok		-3
+record	turn-i3c2qN	claude-2-turn-24	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:15:25Z	39	4	35	0	1	50	ok		-4
+record	turn-JesiNP	claude-2-turn-25	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:17:48Z	41	4	37	0	1	50	ok		-4
+record	turn-Vk4oka	claude-2-turn-26	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:28:11Z	46	4	42	0	0	50	ok		-4
+record	turn-zDVNxa	claude-2-turn-27	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T19:39:24Z	48	5	43	0	3	50	ok		-5
+record	turn-bxBGnR	claude-2-turn-28	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T21:03:00Z	49	5	44	0	2	50	ok		-5
+record	turn-0OmtsL	claude-2-turn-29	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T21:20:17Z	53	5	48	0	2	50	ok		-5
+record	turn-lYECzg	claude-2-turn-31	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-04T21:53:55Z	54	5	49	0	0	50	ok		-5
+record	turn-DmXnCa	claude-2-turn-40	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T02:49:09Z	57	6	51	0	0	50	ok		-6
+record	turn-3jTIfJ	claude-2-turn-42	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T02:56:40Z	59	7	52	0	0	50	ok		-7
+record	turn-HOhCfB	claude-2-turn-47	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:21:23Z	61	7	54	0	0	50	ok		-7
+record	turn-JHpGXv	claude-2-turn-49	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:26:25Z	61	7	54	0	0	50	ok		-7
+record	turn-tyLl52	claude-2-turn-51	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:29:37Z	66	9	56	0	1	50	ok		-10
+record	turn-QUKnek	claude-2-turn-52	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T03:33:07Z	67	9	57	0	0	50	ok		-10
+record	turn-eb1BGU	claude-2-turn-58	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:01:52Z	70	9	60	0	0	50	ok		-10
+record	turn-BPuysJ	claude-2-turn-60	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:10:49Z	71	10	60	0	0	50	ok		-11
+record	turn-wFOKmu	claude-2-turn-61	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:12:58Z	73	10	62	0	0	50	ok		-11
+record	turn-To5NXY	claude-2-turn-62	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:17:01Z	75	10	64	0	0	50	ok		-11
+record	turn-WqJ4mW	claude-2-turn-66	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T04:34:12Z	78	10	67	0	1	50	ok		-11
+record	turn-qnYgVz	claude-2-turn-81	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:13:02Z	83	10	72	0	1	50	ok		-11
+record	turn-t4uzrX	claude-2-turn-82	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:17:36Z	85	10	74	0	0	50	ok		-11
+record	turn-WkDyhJ	claude-2-turn-83	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:21:17Z	88	10	77	0	1	50	ok		-11
+record	turn-BOqSDr	claude-2-turn-84	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T07:25:14Z	91	11	79	0	1	50	ok		-12
+record	turn-Bcf06J	claude-2-turn-91	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T10:55:03Z	93	11	81	0	0	50	ok		-12
+record	turn-gjm3LH	claude-2-turn-92	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T10:59:42Z	98	11	86	0	1	50	ok		-12
+record	turn-PZ5GLb	claude-2-turn-102	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T19:55:42Z	102	11	90	0	0	50	ok		-12
+record	turn-LHYRy5	claude-2-turn-103	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T20:06:43Z	105	11	93	0	1	50	ok		-12
+record	turn-NEBxBC	claude-2-turn-105	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T21:50:54Z	107	11	95	0	0	50	ok		-12
+record	turn-SkU5lr	claude-2-turn-108	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:15:39Z	115	12	102	0	1	50	ok		-13
+record	turn-sMH1Sm	claude-2-turn-109	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:38:20Z	119	12	106	0	2	50	ok		-13
+record	turn-LtmXGv	claude-2-turn-111	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:47:44Z	123	12	110	0	1	50	ok		-13
+record	turn-X3R1HJ	claude-2-turn-113	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T22:56:22Z	126	12	113	0	1	50	ok		-13
+record	turn-wM9PAr	claude-2-turn-119	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T23:31:53Z	129	12	116	0	0	50	ok		-13
+record	turn-0IgOYv	claude-2-turn-121	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T23:38:15Z	133	12	120	0	0	50	ok		-13
+record	turn-Wcr0h9	claude-2-turn-123	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-05T23:45:29Z	136	12	123	0	0	50	ok		-13
+record	turn-ErsAQP	claude-2-turn-127	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-06T04:31:41Z	137	12	124	0	1	50	ok		-13
+record	turn-3ohcEz	claude-2-turn-128	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-06T04:40:22Z	138	12	125	0	1	50	ok		-13
+record	turn-CJjgu4	claude-3-turn-1	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:38:59Z	2	0	2	0	0	0	ok		0
+record	turn-4QLrgB	claude-3-turn-3	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:43:28Z	3	0	3	0	0	0	ok		0
+record	turn-uWgdog	claude-3-turn-4	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:45:06Z	5	0	5	0	0	0	ok		0
+record	turn-5JBr6g	claude-3-turn-5	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T14:46:23Z							refused	turn-5JBr6g: ports not computed (No acts for turn claude-3-turn-5)	
+record	turn-G502BL	claude-3-turn-11	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:36:41Z	7	0	7	0	0	0	ok		0
+record	turn-MY2SMp	claude-3-turn-12	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:39:58Z	8	0	8	0	0	0	ok		0
+record	turn-oTmqqp	claude-3-turn-14	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:42:26Z	11	0	11	0	0	0	ok		0
+record	turn-9sg8SX	claude-17-turn-382	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T00:42:05Z	339	49	290	1	0	51	ok		-49
+record	turn-PPqEmR	claude-17-turn-397	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T16:17:47Z	355	50	305	1	0	51	ok		-50
+record	turn-fWxOuE	claude-17-turn-398	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T16:19:16Z	358	50	308	1	0	51	ok		-50
+record	turn-TTtCKM	claude-17-turn-425	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T21:46:20Z	386	51	335	1	1	51	ok		-51
+record	turn-ZKoe7v	claude-17-turn-437	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T22:16:07Z	397	52	345	1	0	51	ok		-52
+record	turn-PcHOkg	claude-17-turn-457	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-01T23:58:28Z	418	53	365	1	0	51	ok		-53
+record	turn-QX1ci1	claude-17-turn-461	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T00:06:04Z	423	53	370	1	1	51	ok		-53
+record	turn-cFZJ07	claude-17-turn-464	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T00:20:52Z	425	53	372	1	0	51	ok		-53
+record	turn-OgNy0V	claude-17-turn-470	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T00:49:45Z	428	53	375	1	1	51	ok		-53
+record	turn-7Ye630	claude-17-turn-487	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T03:48:30Z	444	57	387	1	0	51	ok		-57
+record	turn-4Y6qFF	claude-17-turn-489	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T03:54:40Z	445	57	388	1	1	51	ok		-57
+record	turn-uy7gV9	claude-17-turn-500	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T04:34:26Z	453	57	396	1	0	51	ok		-57
+record	turn-YrgOAz	claude-17-turn-512	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-02T14:50:58Z	465	58	407	1	1	51	ok		-58
+record	turn-g6q1nC	claude-17-turn-535	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-03T23:26:10Z	484	59	425	1	0	51	ok		-59
+record	turn-PhLBYe	claude-17-turn-547	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T00:17:47Z	499	60	439	1	0	51	ok		-60
+record	turn-vX22Ib	claude-17-turn-2	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:12:48Z	3	1	2	0	0	51	ok		-1
+record	turn-aihw20	claude-17-turn-3	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:14:21Z	4	1	3	0	3	51	ok		-1
+record	turn-pUYItO	claude-17-turn-4	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:16:25Z	5	1	4	0	0	51	ok		-1
+record	turn-XE3XHH	claude-17-turn-5	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:18:45Z	6	1	5	0	4	51	ok		-1
+record	turn-oTGuOV	claude-17-turn-6	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:22:18Z	7	1	6	0	2	51	ok		-1
+record	turn-OtsTKG	claude-17-turn-7	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:24:34Z	11	1	10	0	2	51	ok		-1
+record	turn-V3oRdx	claude-17-turn-8	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:25:15Z	12	1	11	0	2	51	ok		-1
+record	turn-cGS7Id	claude-17-turn-10	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:29:03Z	13	1	12	0	2	51	ok		-1
+record	turn-8fGjDp	claude-17-turn-13	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:38:06Z	527	66	461	1	0	51	ok		-66
+record	turn-nMBR9W	claude-17-turn-15	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T01:50:08Z	21	2	19	0	4	51	ok		-2
+record	turn-3qRBUm	claude-17-turn-23	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:07:57Z	29	4	25	0	7	51	ok		-4
+record	turn-LPN1KW	claude-17-turn-25	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:16:40Z	542	66	476	1	1	51	ok		-66
+record	turn-O8dzJL	claude-17-turn-26	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:28:40Z	547	67	480	1	0	51	ok		-67
+record	turn-ArDfbO	claude-17-turn-27	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:34:54Z	551	69	481	1	1	51	ok		-70
+record	turn-xm9Otx	claude-17-turn-28	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:48:51Z	557	69	487	1	0	51	ok		-70
+record	turn-qwRnza	claude-17-turn-29	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T02:52:39Z	559	69	489	1	0	51	ok		-70
+record	turn-tSMlKZ	claude-17-turn-30	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:12:11Z	566	70	495	1	0	51	ok		-71
+record	turn-aBpChD	claude-17-turn-31	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:18:03Z	567	70	496	1	0	51	ok		-71
+record	turn-dqrhT8	claude-17-turn-32	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:19:55Z	568	70	497	1	0	51	ok		-71
+record	turn-BAy58C	claude-17-turn-33	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:21:11Z	569	70	498	1	0	51	ok		-71
+record	turn-1hAzsq	claude-17-turn-34	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:22:02Z	570	70	499	1	0	51	ok		-71
+record	turn-gXCZfv	claude-17-turn-35	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T03:29:04Z	571	70	500	1	0	51	ok		-71
+record	turn-L2e942	claude-17-turn-36	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T04:18:53Z	572	70	501	1	0	51	ok		-71
+record	turn-IOt3kq	claude-17-turn-37	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T04:23:51Z	30	4	26	0	3	51	ok		-4
+record	turn-04zPYc	claude-17-turn-38	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T04:43:27Z	576	70	505	1	0	51	ok		-71
+record	turn-Uc56TD	claude-17-turn-40	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:10:39Z	31	4	27	0	3	51	ok		-4
+record	turn-hTMlRg	claude-17-turn-41	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:42:41Z	32	4	28	0	2	51	ok		-4
+record	turn-uJNPcf	claude-17-turn-42	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:51:51Z	33	4	29	0	5	51	ok		-4
+record	turn-WdLaYK	claude-17-turn-43	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T05:56:33Z	35	5	31	1	1	51	ok		-4
+record	turn-qR3UaA	claude-17-turn-44	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T21:28:52Z	591	71	518	1	1	51	ok		-73
+record	turn-mlUamp	claude-17-turn-45	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T21:38:58Z	37	6	32	1	4	51	ok		-5
+record	turn-m18HXL	claude-17-turn-46	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T21:50:52Z	39	6	34	1	2	51	ok		-5
+record	turn-1sNkzc	claude-17-turn-47	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T22:13:29Z	41	6	35	1	3	51	ok		-6
+record	turn-07igHH	claude-17-turn-48	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T22:18:14Z	601	71	529	1	1	51	ok		-72
+record	turn-VEYi7j	claude-17-turn-49	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-04T22:22:11Z	43	6	37	1	3	51	ok		-6
+record	turn-GiuyRt	claude-17-turn-50	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:17:24Z	606	71	534	1	1	51	ok		-72
+record	turn-dMgY2U	claude-17-turn-51	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:36:35Z	607	71	535	1	1	51	ok		-72
+record	turn-MW216j	claude-17-turn-52	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:41:38Z	44	6	38	1	2	51	ok		-6
+record	turn-aFXxNu	claude-17-turn-53	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T06:44:52Z	46	6	40	1	2	51	ok		-6
+record	turn-j711nF	claude-17-turn-55	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T07:14:34Z	50	6	44	1	0	51	ok		-6
+record	turn-tBnloT	claude-12-turn-3	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T03:50:44Z	1	1	0	0	0	11	ok		-1
+record	turn-FgowBB	claude-12-turn-4	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T03:52:20Z	2	1	1	0	0	11	ok		-1
+record	turn-OZlHwb	claude-12-turn-5	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T03:54:52Z	2	1	1	0	0	11	ok		-1
+record	turn-JTuY1v	claude-12-turn-6	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T04:05:18Z							refused	turn-JTuY1v: ports not computed (No acts for turn claude-12-turn-6)	
+record	turn-XHiuAx	claude-12-turn-7	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T04:06:47Z	3	1	2	0	0	11	ok		-1
+record	turn-k0AnLN	claude-12-turn-8	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:13:09Z	3	1	2	0	0	11	ok		-1
+record	turn-dSsyla	claude-12-turn-9	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:13:21Z	3	1	2	0	0	11	ok		-1
+record	turn-SihsZR	claude-12-turn-10	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:16:33Z	4	1	3	0	0	11	ok		-1
+record	turn-cx0Qb2	claude-12-turn-11	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:21:10Z	4	1	3	0	0	11	ok		-1
+record	turn-GK97ER	claude-12-turn-12	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:22:26Z	4	1	3	0	0	11	ok		-1
+record	turn-U6QSNF	claude-12-turn-13	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:23:40Z	5	1	4	0	0	11	ok		-1
+record	turn-xfBrMT	claude-12-turn-15	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T13:41:54Z	8	3	5	0	0	11	ok		-3
+record	turn-ToK2Yu	claude-12-turn-43	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T14:41:47Z	9	3	6	0	0	11	ok		-3
+record	turn-haaEfv	claude-12-turn-44	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T14:48:50Z	11	4	7	0	0	11	ok		-4
+record	turn-auk3EL	claude-12-turn-60	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T15:52:24Z	11	4	7	0	0	11	ok		-4
+record	turn-M4cqxa	claude-12-turn-67	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T17:51:39Z	11	4	7	0	0	11	ok		-4
+record	turn-axq05q	claude-12-turn-68	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T17:56:42Z	13	4	9	0	0	11	ok		-4
+record	turn-xLg1HX	claude-12-turn-69	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T18:12:33Z	13	4	9	0	0	11	ok		-4
+record	turn-Glz20I	claude-12-turn-86	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T18:37:30Z	14	4	10	0	0	11	ok		-4
+record	turn-AoeVH4	claude-12-turn-88	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T18:42:15Z	18	6	12	0	0	11	ok		-6
+record	turn-Prtgyo	claude-12-turn-97	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T19:46:45Z	23	8	14	0	1	11	ok		-9
+record	turn-2pr8U0	claude-12-turn-98	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T19:49:20Z	26	8	17	0	0	11	ok		-9
+record	turn-Cu0AN8	claude-12-turn-104	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T20:04:10Z	30	8	21	0	0	11	ok		-9
+record	turn-UUBqtF	claude-12-turn-109	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T21:22:17Z	31	8	22	0	0	11	ok		-9
+record	turn-nIQs0P	claude-12-turn-110	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T21:23:33Z	31	8	22	0	0	11	ok		-9
+record	turn-VuKpTB	claude-12-turn-112	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T22:36:55Z	32	9	22	0	0	11	ok		-10
+record	turn-2aojFu	claude-12-turn-118	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-09T23:49:26Z	33	9	23	0	0	11	ok		-10
+record	turn-mozTbR	claude-12-turn-120	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T00:46:10Z	33	9	23	0	0	11	ok		-10
+record	turn-bIeFbo	claude-12-turn-122	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T00:55:02Z	33	9	23	0	0	11	ok		-10
+record	turn-oNCyPA	claude-12-turn-125	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T01:50:46Z	34	9	24	0	0	11	ok		-10
+record	turn-XVmeTY	claude-12-turn-126	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T02:22:57Z	35	9	25	0	0	11	ok		-10
+record	turn-K1IY3h	claude-12-turn-127	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T02:58:25Z	37	9	27	0	0	11	ok		-10
+record	turn-9bbs6t	claude-12-turn-129	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:30:45Z	37	9	27	0	0	11	ok		-10
+record	turn-968NVf	claude-12-turn-131	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:35:35Z							refused	turn-968NVf: ports not computed (No acts for turn claude-12-turn-131)	
+record	turn-aOWJp9	claude-12-turn-132	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:38:02Z	39	10	28	0	0	11	ok		-11
+record	turn-pdFfDh	claude-12-turn-133	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T03:43:47Z	41	10	30	0	0	11	ok		-11
+record	turn-1QmK3t	claude-12-turn-138	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T13:57:22Z	42	10	31	0	0	11	ok		-11
+record	turn-y28j7o	claude-12-turn-140	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:23:12Z	43	11	31	0	0	11	ok		-12
+record	turn-4VqGUm	claude-12-turn-141	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:25:12Z	43	11	31	0	0	11	ok		-12
+record	turn-fmv7o2	claude-12-turn-142	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:34:05Z	43	11	31	0	0	11	ok		-12
+record	turn-eSNh0d	claude-12-turn-143	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:57:16Z	43	11	31	0	0	11	ok		-12
+record	turn-DryWNa	claude-12-turn-144	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:58:22Z	44	11	32	0	0	11	ok		-12
+record	turn-qX81HV	claude-12-turn-145	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T14:59:19Z							refused	turn-qX81HV: ports not computed (No acts for turn claude-12-turn-145)	
+record	turn-qjsNtd	claude-12-turn-146	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:00:49Z	46	12	33	0	0	11	ok		-13
+record	turn-AMDIbu	claude-12-turn-147	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:03:53Z	47	13	33	0	0	11	ok		-14
+record	turn-LToyMw	claude-12-turn-148	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:07:29Z	48	14	33	0	0	11	ok		-15
+record	turn-AwjMCR	claude-12-turn-149	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:08:55Z	48	14	33	0	0	11	ok		-15
+record	turn-qS2xlb	claude-12-turn-150	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:11:05Z	49	14	34	0	0	11	ok		-15
+record	turn-z9tNmo	claude-12-turn-151	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:12:00Z	50	15	34	0	0	11	ok		-16
+record	turn-QPcd7V	claude-12-turn-152	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:13:14Z	50	15	34	0	0	11	ok		-16
+record	turn-W2qJs4	claude-12-turn-153	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:18:02Z	51	15	35	0	0	11	ok		-16
+record	turn-JKEthX	claude-12-turn-154	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:26:56Z	53	15	37	0	0	11	ok		-16
+record	turn-ghnIeZ	claude-12-turn-155	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:29:24Z	54	15	38	0	0	11	ok		-16
+record	turn-Hvqkdf	claude-12-turn-156	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:30:53Z	55	15	39	0	0	11	ok		-16
+record	turn-XEPMFG	claude-12-turn-157	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:32:49Z	56	16	39	0	0	11	ok		-17
+record	turn-xjQUrG	claude-12-turn-158	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:36:29Z	56	16	39	0	0	11	ok		-17
+record	turn-6hFDIW	claude-12-turn-159	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:49:27Z	57	16	40	0	0	11	ok		-17
+record	turn-VCSjvG	claude-14-turn-2	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T03:40:53Z	2	1	1	0	0	15	ok		-1
+record	turn-YCVI7M	claude-14-turn-3	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T03:46:54Z	2	1	1	0	0	15	ok		-1
+record	turn-AM8Lbn	claude-14-turn-4	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:13:15Z	3	1	2	0	0	15	ok		-1
+record	turn-pXX2By	claude-14-turn-5	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:16:25Z	3	1	2	0	0	15	ok		-1
+record	turn-NqKscZ	claude-14-turn-6	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:20:41Z	6	2	4	0	0	15	ok		-2
+record	turn-s0fPFb	claude-14-turn-7	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T14:30:17Z	8	2	6	0	0	15	ok		-2
+record	turn-9jq1Aj	claude-14-turn-9	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T16:33:18Z	10	2	8	0	0	15	ok		-2
+record	turn-E5Dkcd	claude-14-turn-10	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T16:38:31Z	10	2	8	0	0	15	ok		-2
+record	turn-uOMwsQ	claude-14-turn-11	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T16:40:05Z	11	2	9	0	0	15	ok		-2
+record	turn-zp4iMU	claude-14-turn-12	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T19:21:54Z	12	2	10	0	0	15	ok		-2
+record	turn-i8yVjf	claude-14-turn-13	75b00893-43cc-4172-917a-06a591193b20	2026-10-10T22:01:29Z	14	2	12	0	1	15	ok		-2
+record	turn-BcboOg	claude-14-turn-14	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:02:17Z	18	2	16	0	0	15	ok		-2
+record	turn-5HxdtH	claude-14-turn-15	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:08:26Z	22	2	20	0	0	15	ok		-2
+record	turn-KEDpiQ	claude-14-turn-16	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:09:41Z	22	2	20	0	1	15	ok		-2
+record	turn-OD2RDe	claude-14-turn-17	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T01:11:15Z	23	2	21	0	1	15	ok		-2
+record	turn-vgFB3Q	claude-14-turn-18	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:41:27Z	26	2	24	0	1	15	ok		-2
+record	turn-6paVBT	claude-14-turn-19	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:44:35Z	30	2	28	0	0	15	ok		-2
+record	turn-zi0gEE	claude-14-turn-20	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:48:13Z	35	2	33	0	0	15	ok		-2
+record	turn-T6cr97	claude-4-turn-276	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-01T22:27:23Z	98	19	79	0	0	74	ok		-19
+record	turn-OVLgZb	claude-4-turn-325	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-02T13:39:18Z	119	20	99	0	1	74	ok		-20
+record	turn-fvzNzp	claude-4-turn-329	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-02T21:47:51Z	122	20	102	0	0	74	ok		-20
+record	turn-nkFptf	claude-4-turn-330	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-03T14:44:40Z	126	20	106	0	0	74	ok		-20
+record	turn-HeiWEK	claude-4-turn-335	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-03T15:12:08Z	134	21	113	0	0	74	ok		-21
+record	turn-BrdsXD	claude-4-turn-1	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T01:06:38Z	145	23	122	0	0	74	ok		-23
+record	turn-kv3qZ7	claude-4-turn-13	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T03:31:12Z	148	23	125	0	0	74	ok		-23
+record	turn-L3v2a8	claude-4-turn-17	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T04:39:07Z	8	1	7	0	2	74	ok		-1
+record	turn-jedqCo	claude-4-turn-21	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T04:53:36Z	9	1	8	0	0	74	ok		-1
+record	turn-PGeqxq	claude-4-turn-22	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T04:59:10Z	155	23	132	0	0	74	ok		-23
+record	turn-JXBPpb	claude-4-turn-24	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:01:12Z	9	1	8	0	0	74	ok		-1
+record	turn-jYQHSw	claude-4-turn-27	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:04:43Z	157	23	134	0	0	74	ok		-23
+record	turn-mtauh1	claude-4-turn-28	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:09:09Z	160	23	137	0	0	74	ok		-23
+record	turn-nVbzFX	claude-4-turn-29	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:19:01Z	12	2	10	0	1	74	ok		-2
+record	turn-N4hhhA	claude-4-turn-30	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T05:23:51Z	164	23	141	0	0	74	ok		-23
+record	turn-dZmpQh	claude-4-turn-35	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:00:23Z	164	23	141	0	0	74	ok		-23
+record	turn-NRK1u9	claude-4-turn-36	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:07:31Z	165	23	142	0	0	74	ok		-23
+record	turn-wi6Q6y	claude-4-turn-37	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:09:38Z	168	23	145	0	0	74	ok		-23
+record	turn-hbdgh1	claude-4-turn-38	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:13:12Z	169	23	146	0	1	74	ok		-23
+record	turn-j2tSMk	claude-4-turn-39	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T06:27:15Z	170	23	147	0	0	74	ok		-23
+record	turn-hcq9mD	claude-4-turn-82	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T12:59:38Z	172	23	149	0	1	74	ok		-23
+record	turn-eF6fA6	claude-4-turn-85	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:08:21Z	177	23	154	0	0	74	ok		-23
+record	turn-ELTBL4	claude-4-turn-86	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:11:01Z	47	7	40	0	0	74	ok		-7
+record	turn-NmxOoQ	claude-4-turn-87	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:13:58Z	49	7	42	0	1	74	ok		-7
+record	turn-RFGqGD	claude-4-turn-88	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:17:12Z	180	23	157	0	0	74	ok		-23
+record	turn-7dRWAW	claude-4-turn-90	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:22:05Z	56	7	49	0	0	74	ok		-7
+record	turn-LvQ6Vg	claude-4-turn-91	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:25:00Z	59	8	51	0	1	74	ok		-8
+record	turn-ioGJZn	claude-4-turn-94	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:47:52Z	62	8	54	0	0	74	ok		-8
+record	turn-gVrTPx	claude-4-turn-96	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:53:14Z	182	23	159	0	1	74	ok		-23
+record	turn-G4b9rd	claude-4-turn-98	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:56:07Z	184	23	161	0	0	74	ok		-23
+record	turn-7Lt8uX	claude-4-turn-99	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:57:04Z	185	23	162	0	0	74	ok		-23
+record	turn-5rUCtR	claude-4-turn-101	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T13:59:35Z	188	23	165	0	0	74	ok		-23
+record	turn-4ZsWPM	claude-4-turn-104	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T14:03:29Z	189	23	166	0	0	74	ok		-23
+record	turn-oPHLtM	claude-4-turn-110	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T14:19:33Z	66	8	58	0	0	74	ok		-8
+record	turn-C42bzz	claude-4-turn-113	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T14:24:47Z	190	23	167	0	0	74	ok		-23
+record	turn-wbmIR9	claude-4-turn-196	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T18:15:33Z	192	23	169	0	0	74	ok		-23
+record	turn-Rd3DV5	claude-4-turn-197	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T18:21:16Z	194	23	171	0	0	74	ok		-23
+record	turn-gnvjBV	claude-4-turn-199	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T18:29:58Z	198	23	175	0	0	74	ok		-23
+record	turn-DGJKIz	claude-4-turn-209	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T19:30:34Z	200	23	177	0	1	74	ok		-23
+record	turn-StJxHy	claude-4-turn-211	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T19:35:50Z	200	24	176	0	1	74	ok		-24
+record	turn-pWxrM6	claude-4-turn-246	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-04T21:31:47Z	200	24	176	0	1	74	ok		-24
+record	turn-NLfNvL	claude-4-turn-299	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T01:43:15Z	202	24	178	0	1	74	ok		-24
+record	turn-fgX7g4	claude-4-turn-300	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T01:49:01Z	204	24	180	0	0	74	ok		-24
+record	turn-typEDG	claude-4-turn-301	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T01:57:20Z	206	24	182	0	1	74	ok		-24
+record	turn-UstRGe	claude-4-turn-302	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T02:00:20Z	208	24	184	0	0	74	ok		-24
+record	turn-sE1Q8C	claude-4-turn-303	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T02:56:55Z	209	24	185	0	1	74	ok		-24
+record	turn-tjxDid	claude-4-turn-306	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:04:01Z	215	24	191	0	0	74	ok		-24
+record	turn-g3s5EO	claude-4-turn-307	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:06:18Z	220	24	196	0	1	74	ok		-24
+record	turn-QxunUb	claude-4-turn-309	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:08:28Z	106	20	86	0	1	74	ok		-20
+record	turn-Z49iFb	claude-4-turn-313	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T03:23:22Z	222	24	198	0	0	74	ok		-24
+record	turn-mflxD1	claude-4-turn-341	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:14:50Z	136	21	115	0	1	74	ok		-21
+record	turn-Ptei5r	claude-4-turn-342	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:20:01Z	137	22	115	0	0	74	ok		-22
+record	turn-tpHYvQ	claude-4-turn-343	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:22:52Z	138	22	116	0	0	74	ok		-22
+record	turn-2pTVKc	claude-4-turn-344	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:26:13Z	223	23	200	0	0	74	ok		-23
+record	turn-zwTFEs	claude-4-turn-345	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T06:29:22Z	139	22	117	0	0	74	ok		-22
+record	turn-mNWwFT	claude-4-turn-362	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T07:31:15Z	224	23	201	0	0	74	ok		-23
+record	turn-6p9wvd	claude-4-turn-377	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:13:09Z	225	23	202	0	1	74	ok		-23
+record	turn-upM8t8	claude-4-turn-378	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:15:04Z	225	23	202	0	0	74	ok		-23
+record	turn-3RuGAU	claude-4-turn-379	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:18:15Z	227	23	204	0	1	74	ok		-23
+record	turn-DblTYM	claude-4-turn-380	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:20:54Z	227	23	204	0	1	74	ok		-23
+record	turn-yLOqOd	claude-4-turn-381	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T09:25:06Z	231	24	207	0	1	74	ok		-24
+record	turn-Yy6b9c	claude-4-turn-398	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:02:21Z	234	24	210	0	1	74	ok		-24
+record	turn-8AvW7X	claude-4-turn-399	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:05:49Z	235	24	211	0	0	74	ok		-24
+record	turn-T1cx7k	claude-4-turn-400	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:09:24Z	235	24	211	0	0	74	ok		-24
+record	turn-QfpVdW	claude-4-turn-401	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:13:04Z	235	24	211	0	1	74	ok		-24
+record	turn-fOAoHW	claude-4-turn-402	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:14:06Z	236	24	212	0	0	74	ok		-24
+record	turn-KJgAnk	claude-4-turn-407	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T11:29:36Z	238	24	214	0	0	74	ok		-24
+record	turn-4lAQIw	claude-4-turn-415	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T16:20:26Z	240	25	215	0	1	74	ok		-25
+record	turn-ll79bR	claude-4-turn-512	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T19:41:38Z	243	25	218	0	1	74	ok		-25
+record	turn-W93WBG	claude-4-turn-513	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T19:42:52Z	244	25	219	0	0	74	ok		-25
+record	turn-hAWOna	claude-4-turn-552	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T21:59:10Z	244	25	219	0	0	74	ok		-25
+record	turn-W2Wo3Y	claude-4-turn-553	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:02:30Z	249	25	224	0	0	74	ok		-25
+record	turn-EZ9YGX	claude-4-turn-556	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:06:26Z	250	25	225	0	1	74	ok		-25
+record	turn-QwPSdh	claude-4-turn-563	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:21:42Z	252	25	227	0	0	74	ok		-25
+record	turn-i0Od3q	claude-4-turn-564	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:23:35Z	255	25	230	0	0	74	ok		-25
+record	turn-XogEMy	claude-4-turn-567	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-05T22:25:20Z	257	25	232	0	0	74	ok		-25
+record	turn-71JPGN	claude-4-turn-594	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:32:21Z	258	25	233	0	0	74	ok		-25
+record	turn-W34IgZ	claude-4-turn-601	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:45:23Z	259	25	234	0	1	74	ok		-25
+record	turn-FejOlN	claude-4-turn-602	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:49:04Z	261	25	236	0	1	74	ok		-25
+record	turn-Yxh05o	claude-4-turn-603	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:51:33Z	264	26	238	0	1	74	ok		-26
+record	turn-eSdgnm	claude-4-turn-604	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T04:54:48Z	264	26	238	0	0	74	ok		-26
+record	turn-1UTHJA	claude-4-turn-608	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T05:38:57Z	265	26	239	0	1	74	ok		-26
+record	turn-yGoIlB	claude-11-turn-2	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:12:32Z	4	0	4	0	0	30	ok		0
+record	turn-Cq0RT7	claude-11-turn-3	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:18:24Z	5	0	5	0	0	30	ok		0
+record	turn-yQrOe6	claude-11-turn-4	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:22:37Z	6	0	6	0	0	30	ok		0
+record	turn-uaXTGA	claude-11-turn-5	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:33:29Z	8	0	8	0	0	30	ok		0
+record	turn-TTgUYF	claude-11-turn-6	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:38:31Z	8	0	8	0	1	30	ok		0
+record	turn-9y7ov6	claude-11-turn-7	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T01:41:21Z	9	0	9	0	0	30	ok		0
+record	turn-gYSDOf	claude-11-turn-8	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:31:29Z	10	0	10	0	1	30	ok		0
+record	turn-Q2aKgI	claude-11-turn-9	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:33:47Z	9	0	9	0	2	30	ok		0
+record	turn-ZnJFtU	claude-11-turn-10	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:37:05Z	9	0	9	0	1	30	ok		0
+record	turn-wx2cqD	claude-11-turn-11	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:38:40Z	12	0	12	0	0	30	ok		0
+record	turn-CTQ5oc	claude-11-turn-12	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:40:37Z	13	0	13	0	1	30	ok		0
+record	turn-2Vu8GA	claude-11-turn-13	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:43:14Z	15	0	15	0	0	30	ok		0
+record	turn-NTgZ2T	claude-11-turn-14	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:44:38Z	14	0	14	0	1	30	ok		0
+record	turn-JjDGL0	claude-11-turn-15	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:46:05Z	16	0	16	0	0	30	ok		0
+record	turn-7QZ8sL	claude-11-turn-16	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T02:47:13Z	19	0	19	0	0	30	ok		0
+record	turn-7jqJgO	claude-11-turn-17	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:10:52Z	20	0	20	0	0	30	ok		0
+record	turn-IpZeeW	claude-11-turn-18	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:13:03Z	21	0	21	0	1	30	ok		0
+record	turn-z0v10N	claude-11-turn-20	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:22:06Z	21	0	21	0	1	30	ok		0
+record	turn-lx5879	claude-11-turn-24	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:30:34Z	24	0	24	0	1	30	ok		0
+record	turn-8AU38e	claude-11-turn-25	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:32:23Z	24	0	24	0	0	30	ok		0
+record	turn-0l6bap	claude-11-turn-27	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:57:26Z	25	0	25	0	0	30	ok		0
+record	turn-26JtLh	claude-11-turn-28	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T03:59:09Z	25	0	25	0	1	30	ok		0
+record	turn-PGXJGO	claude-11-turn-32	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:03:48Z	26	1	25	0	0	30	ok		-1
+record	turn-WtIZCU	claude-11-turn-33	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:10:49Z							refused	turn-WtIZCU: ports not computed (No acts for turn claude-11-turn-33)	
+record	turn-XTdWPT	claude-11-turn-34	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:12:22Z	26	1	25	0	0	30	ok		-1
+record	turn-PGWKMX	claude-11-turn-35	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:16:56Z	30	2	28	0	0	30	ok		-2
+record	turn-kbw2Eb	claude-11-turn-36	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:21:52Z	31	2	29	0	0	30	ok		-2
+record	turn-IcKsVj	claude-11-turn-37	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:24:30Z	31	2	29	0	0	30	ok		-2
+record	turn-8X7BbX	claude-11-turn-38	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:27:53Z	32	2	30	0	0	30	ok		-2
+record	turn-pvP9Kx	claude-11-turn-39	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T04:30:35Z	33	2	31	0	0	30	ok		-2
+record	turn-9DcnO8	claude-11-turn-40	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:08:47Z	34	2	32	0	0	30	ok		-2
+record	turn-9VxB75	claude-11-turn-41	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:10:06Z	35	3	32	0	0	30	ok		-3
+record	turn-qYqSBA	claude-11-turn-42	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:15:10Z	35	3	32	0	0	30	ok		-3
+record	turn-IJhnCI	claude-11-turn-43	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:19:32Z	38	3	35	0	0	30	ok		-3
+record	turn-teO5Ga	claude-11-turn-44	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:24:50Z	39	3	36	0	0	30	ok		-3
+record	turn-jk2twD	claude-11-turn-45	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:28:33Z	41	3	38	0	0	30	ok		-3
+record	turn-SNwzeF	claude-11-turn-46	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T05:35:00Z	45	4	41	0	0	30	ok		-4
+record	turn-fdvQ1m	claude-11-turn-47	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T13:08:54Z	46	4	42	0	0	30	ok		-4
+record	turn-lQMQAv	claude-11-turn-48	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T13:30:28Z	48	4	44	0	0	30	ok		-4
+record	turn-mVytXT	claude-11-turn-49	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T13:53:45Z							refused	turn-mVytXT: ports not computed (No acts for turn claude-11-turn-49)	
+record	turn-SLqTW9	claude-11-turn-50	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:51:09Z	49	4	45	0	0	30	ok		-4
+record	turn-hNwjyJ	claude-11-turn-51	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:53:03Z	50	4	46	0	0	30	ok		-4
+record	turn-mTzwqq	claude-11-turn-52	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:54:26Z	51	4	47	0	0	30	ok		-4
+record	turn-VgUJ8K	claude-11-turn-53	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:56:23Z							refused	turn-VgUJ8K: ports not computed (No acts for turn claude-11-turn-53)	
+record	turn-ABYrM4	claude-11-turn-54	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:58:41Z							refused	turn-ABYrM4: ports not computed (No acts for turn claude-11-turn-54)	
+record	turn-Bb7G6A	claude-11-turn-55	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T14:59:56Z	52	4	48	0	0	30	ok		-4
+record	turn-js5mI2	claude-11-turn-56	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:02:34Z	53	4	49	0	0	30	ok		-4
+record	turn-R42kZJ	claude-11-turn-57	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:03:39Z	55	5	50	0	0	30	ok		-5
+record	turn-6vi8MM	claude-11-turn-58	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:09:26Z	56	5	51	0	0	30	ok		-5
+record	turn-lZ6mnP	claude-11-turn-59	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:11:24Z	56	5	51	0	0	30	ok		-5
+record	turn-76Ae9x	claude-11-turn-60	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:40:36Z	57	5	52	0	0	30	ok		-5
+record	turn-NGjbX3	claude-11-turn-61	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T15:50:19Z	57	5	52	0	0	30	ok		-5
+record	turn-UcslMu	claude-11-turn-62	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T16:25:23Z	58	5	53	0	0	30	ok		-5
+record	turn-yEmmFN	claude-11-turn-63	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T16:26:44Z	59	5	54	0	0	30	ok		-5
+record	turn-myJaqk	claude-11-turn-64	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T16:55:23Z	61	6	55	0	0	30	ok		-6
+record	turn-nWF7iW	claude-11-turn-65	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T17:27:53Z	62	6	56	0	0	30	ok		-6
+record	turn-Pm8kca	claude-11-turn-66	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T17:45:54Z	62	6	56	0	0	30	ok		-6
+record	turn-VgN2cM	claude-11-turn-67	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T19:47:17Z	63	6	57	0	0	30	ok		-6
+record	turn-VIFvfY	claude-11-turn-68	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T19:48:00Z	63	6	57	0	0	30	ok		-6
+record	turn-zStjMo	claude-11-turn-69	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:08:35Z	64	6	58	0	0	30	ok		-6
+record	turn-0I6y3G	claude-11-turn-70	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:14:23Z	64	6	58	0	0	30	ok		-6
+record	turn-7mgeed	claude-11-turn-71	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:43:48Z	65	6	59	0	0	30	ok		-6
+record	turn-iWROIs	claude-11-turn-72	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-09T23:53:24Z	67	6	61	0	0	30	ok		-6
+record	turn-V3TfrF	claude-11-turn-73	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T01:09:57Z	69	6	63	0	0	30	ok		-6
+record	turn-FeAW0m	claude-11-turn-74	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T01:21:54Z	70	6	64	0	0	30	ok		-6
+record	turn-V0dTZn	claude-11-turn-75	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T02:04:38Z	71	6	65	0	0	30	ok		-6
+record	turn-lYZVem	claude-11-turn-76	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T02:21:06Z	72	6	66	0	0	30	ok		-6
+record	turn-W6wqGo	claude-11-turn-77	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T02:57:11Z	73	6	67	0	0	30	ok		-6
+record	turn-jIGFHO	claude-11-turn-78	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T03:24:14Z	74	6	68	0	0	30	ok		-6
+record	turn-71dhB7	claude-11-turn-79	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T03:44:33Z	75	6	69	0	0	30	ok		-6
+record	turn-wvZPdj	claude-11-turn-80	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T14:05:21Z	81	6	75	0	0	30	ok		-6
+record	turn-sLRA1R	claude-11-turn-81	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T14:35:34Z	84	6	78	0	0	30	ok		-6
+record	turn-77E8E0	claude-11-turn-82	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T16:08:56Z	85	6	79	0	0	30	ok		-6
+record	turn-8N1Ph6	claude-11-turn-83	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T16:12:37Z	85	6	79	0	0	30	ok		-6
+record	turn-ZT897u	claude-11-turn-84	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T16:45:57Z	86	6	80	0	0	30	ok		-6
+record	turn-6OlWEO	claude-11-turn-88	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T20:28:22Z	88	6	82	0	0	30	ok		-6
+record	turn-OURJPP	claude-11-turn-89	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-10T20:34:13Z	89	6	83	0	0	30	ok		-6
+record	turn-ocUi9P	claude-11-turn-91	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T01:52:53Z	98	6	92	0	0	30	ok		-6
+record	turn-1relYm	claude-11-turn-92	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T01:55:55Z	98	6	92	0	0	30	ok		-6
+record	turn-8mX1Ks	claude-11-turn-93	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T01:59:15Z	99	6	93	0	0	30	ok		-6
+record	turn-yAIq6E	claude-11-turn-95	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T02:06:35Z	100	6	94	0	0	30	ok		-6
+record	turn-QnDY4N	claude-11-turn-96	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T03:39:26Z	105	6	99	0	0	30	ok		-6
+record	turn-37gfPf	claude-11-turn-97	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T03:40:40Z	105	6	99	0	0	30	ok		-6
+record	turn-BWV759	claude-11-turn-98	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T03:53:36Z	107	6	101	0	0	30	ok		-6
+record	turn-1mZPHN	claude-11-turn-99	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:02:56Z	108	6	102	0	0	30	ok		-6
+record	turn-X0awal	claude-11-turn-100	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:11:25Z	111	6	105	0	0	30	ok		-6
+record	turn-9PITYv	claude-11-turn-101	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:17:38Z	114	6	108	0	1	30	ok		-6
+record	turn-wDJkVr	claude-11-turn-102	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:26:41Z	115	6	109	0	1	30	ok		-6
+record	turn-klsV1g	claude-11-turn-103	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:40:07Z	114	6	108	0	1	30	ok		-6
+record	turn-OIhzli	claude-13-turn-2	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:10:19Z	3	0	3	0	0	35	ok		0
+record	turn-KsSUqR	claude-13-turn-3	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:12:23Z	4	0	4	0	1	35	ok		0
+record	turn-fOrPLY	claude-13-turn-4	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:19:39Z	8	1	7	0	2	35	ok		-1
+record	turn-6d3gdP	claude-13-turn-5	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:42:33Z	9	1	8	0	0	35	ok		-1
+record	turn-iNViGU	claude-13-turn-6	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:49:16Z	11	1	10	0	0	35	ok		-1
+record	turn-Wdb4Sq	claude-13-turn-7	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:53:53Z	15	1	14	0	0	35	ok		-1
+record	turn-oxdell	claude-13-turn-8	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T00:59:19Z	20	3	17	0	0	35	ok		-3
+record	turn-wbmn6J	claude-13-turn-9	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:09:17Z	26	4	22	0	1	35	ok		-4
+record	turn-HD0aXw	claude-13-turn-10	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:13:10Z	27	4	23	0	1	35	ok		-4
+record	turn-fIuIof	claude-13-turn-11	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:16:01Z	29	4	25	0	0	35	ok		-4
+record	turn-EO0A4w	claude-13-turn-12	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:19:07Z	30	4	26	0	1	35	ok		-4
+record	turn-dV8LaA	claude-13-turn-13	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:30:12Z	36	5	31	0	0	35	ok		-5
+record	turn-xPSDKd	claude-13-turn-14	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:37:03Z	39	5	34	0	1	35	ok		-5
+record	turn-N1PFCg	claude-13-turn-15	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:40:02Z	43	5	38	0	1	35	ok		-5
+record	turn-MAyWr0	claude-13-turn-16	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:44:47Z	44	5	39	0	0	35	ok		-5
+record	turn-8J5gU4	claude-13-turn-17	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:50:00Z	45	5	40	0	0	35	ok		-5
+record	turn-Xsp1x0	claude-13-turn-18	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:56:45Z	48	5	43	0	0	35	ok		-5
+record	turn-IUT7Fc	claude-13-turn-19	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T01:58:33Z	48	5	43	0	1	35	ok		-5
+record	turn-E5KqDv	claude-13-turn-20	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:01:39Z	49	5	44	0	0	35	ok		-5
+record	turn-5HLIOX	claude-13-turn-21	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:03:39Z	50	5	45	0	0	35	ok		-5
+record	turn-TqXIvP	claude-13-turn-22	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:04:27Z	51	5	46	0	0	35	ok		-5
+record	turn-n89vlt	claude-13-turn-23	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:05:56Z	51	5	46	0	1	35	ok		-5
+record	turn-ND51hI	claude-13-turn-24	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:07:14Z	52	5	47	0	1	35	ok		-5
+record	turn-IIhehS	claude-13-turn-25	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:14:02Z	53	5	48	0	1	35	ok		-5
+record	turn-ngC1Zc	claude-13-turn-26	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:18:41Z	55	6	49	0	0	35	ok		-6
+record	turn-hoSA1W	claude-13-turn-27	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:26:16Z	57	6	51	0	1	35	ok		-6
+record	turn-PISOdL	claude-13-turn-28	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T02:54:54Z	57	6	51	0	2	35	ok		-6
+record	turn-boSBnC	claude-13-turn-29	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T03:02:29Z	60	7	53	0	1	35	ok		-7
+record	turn-wNt6UQ	claude-13-turn-30	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-10T03:07:13Z	62	7	55	0	0	35	ok		-7
+record	turn-VW7Fev	claude-13-turn-31	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:23:25Z	64	7	57	0	0	35	ok		-7
+record	turn-xxIDhT	claude-13-turn-32	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:34:24Z	66	8	58	0	0	35	ok		-8
+record	turn-Z4xoYC	claude-13-turn-33	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:36:05Z	67	8	59	0	0	35	ok		-8
+record	turn-OlGfA3	claude-13-turn-34	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:55:18Z	68	8	60	0	0	35	ok		-8
+record	turn-VYc3Gb	claude-13-turn-35	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:55:54Z	70	8	62	0	1	35	ok		-8
+record	turn-RHQbI4	claude-5-turn-1	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:48:41Z	3	1	2	0	1	1	ok		-1
+record	turn-v2AHXA	claude-5-turn-2	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:49:26Z	1	1	0	0	3	1	ok		-1
+record	turn-O8L7or	claude-5-turn-3	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:50:09Z	3	2	1	0	0	1	ok		-2
+record	turn-0r52n8	claude-6-turn-1	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T21:57:51Z	3	0	3	0	0	14	ok		0
+record	turn-RQwzVb	claude-6-turn-2	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:00:40Z	4	0	4	0	1	14	ok		0
+record	turn-GE5uDJ	claude-6-turn-3	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:03:31Z	8	0	8	0	0	14	ok		0
+record	turn-q0fjvy	claude-6-turn-4	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:05:18Z	9	0	9	0	1	14	ok		0
+record	turn-a3V7wF	claude-6-turn-5	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:06:21Z	10	0	10	0	1	14	ok		0
+record	turn-kNLxcE	claude-6-turn-6	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:10:03Z	12	0	12	0	1	14	ok		0
+record	turn-fVd27A	claude-6-turn-7	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:11:37Z	11	0	11	0	1	14	ok		0
+record	turn-AFcJRx	claude-6-turn-9	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:14:37Z	12	1	11	0	0	14	ok		-1
+record	turn-FbAbLT	claude-6-turn-10	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:16:28Z	14	1	13	0	0	14	ok		-1
+record	turn-DE5zRR	claude-9-turn-1	d9e4516f-e601-405f-a623-0dc31d6b7a73	2026-10-05T21:55:16Z	3	0	3	0	0	0	ok		0
+record	turn-zjFdHQ	claude-15-turn-2	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T19:39:39Z	1	0	1	0	0	24	ok		0
+record	turn-UBmb3D	claude-15-turn-3	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T19:45:53Z	2	0	2	0	0	24	ok		0
+record	turn-g0WX7n	claude-15-turn-4	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T22:13:18Z	3	0	3	0	0	24	ok		0
+record	turn-UHz87W	claude-15-turn-5	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T22:22:58Z	4	0	4	0	0	24	ok		0
+record	turn-Pn04er	claude-15-turn-7	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T23:24:47Z	7	0	7	0	0	24	ok		0
+record	turn-b3dxwJ	claude-15-turn-9	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T23:45:12Z	10	0	10	0	0	24	ok		0
+record	turn-1ij7FV	claude-15-turn-10	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-10T23:52:43Z	11	0	11	0	0	24	ok		0
+record	turn-mIc3Eh	claude-15-turn-11	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T00:03:41Z	10	0	10	0	1	24	ok		0
+record	turn-n5EIxj	claude-15-turn-12	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:15:22Z	11	0	11	0	0	24	ok		0
+record	turn-zb5phn	claude-15-turn-13	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:16:42Z	12	0	12	0	0	24	ok		0
+record	turn-GnZeXU	claude-15-turn-14	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:17:46Z	15	0	15	0	0	24	ok		0
+record	turn-jlxoP5	claude-15-turn-15	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:41:19Z	17	0	17	0	0	24	ok		0
+record	turn-MDwJCW	claude-15-turn-16	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T01:45:49Z	20	0	20	0	1	24	ok		0
+record	turn-kuEWAB	claude-15-turn-17	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:10:36Z	21	0	21	0	0	24	ok		0
+record	turn-CczJhL	claude-15-turn-18	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:22:29Z	24	0	24	0	0	24	ok		0
+record	turn-tqZHsF	claude-15-turn-19	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:27:57Z	25	0	25	0	1	24	ok		0
+record	turn-4Vnjnj	claude-15-turn-20	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:33:22Z	28	0	28	0	0	24	ok		0
+record	turn-0aeNn8	claude-15-turn-21	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:36:31Z	31	1	30	0	0	24	ok		-1
+record	turn-oQdwzD	claude-15-turn-22	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:42:02Z	37	2	35	0	0	24	ok		-2
+record	turn-L7qzfD	claude-15-turn-23	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T02:44:35Z	38	2	36	0	1	24	ok		-2
+record	turn-8qn3cQ	claude-15-turn-27	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:36:44Z	39	2	37	0	1	24	ok		-2
+record	turn-bgSPxR	claude-15-turn-28	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:42:34Z	42	2	40	0	0	24	ok		-2
+record	turn-8VoJLF	claude-15-turn-29	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:45:14Z	46	3	43	0	0	24	ok		-3
+record	turn-5UjoUi	claude-15-turn-31	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:51:51Z	52	3	49	0	2	24	ok		-3
+record	turn-MLCYwI	claude-15-turn-32	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T03:56:18Z	56	3	53	0	2	24	ok		-3
+record	turn-poV4qM	claude-15-turn-34	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T04:05:18Z	59	3	56	0	1	24	ok		-3
+session_tail	turn-UtEHpk	claude-16-turn-9	00e653e3-28f7-4add-8304-47ca0475b5c2	2026-10-11T04:54:26Z	9	0	9	0	1	11	tail		0
+session_tail	turn-xSJMjf	codex-10-turn-13	01a0f4ae-af56-7191-b610-291a1bcfaeed	2026-10-04T21:20:28Z	20	6	14	0	0	0	tail		-6
+session_tail	turn-Lu4oy1	codex-18-turn-41	01a0fe50-5eb3-75b2-b686-b434dc17c357	2026-10-04T05:12:41Z	10	3	7	0	0	6	tail		-3
+session_tail	turn-0nXxZb	codex-19-turn-29	01a0ffa6-1850-7dc2-a283-9b6eb06d5913	2026-10-04T05:18:23Z	15	3	14	2	1	0	tail		-1
+session_tail	turn-ZHPLjj	codex-21-turn-2	01a10492-1dbe-72d3-9707-0d21e7419572	2026-10-04T02:02:54Z	3	1	1	0	1	2	tail		-2
+session_tail	turn-leLJJw	claude-7-turn-3	1b5d271d-f4b6-4c74-891a-55d34db56ffe	2026-10-04T22:19:59Z	2	1	1	0	1	1	tail		-1
+session_tail	turn-3ohcEz	claude-2-turn-128	40369bd2-11a6-47b9-a440-f319b68bbbf8	2026-10-06T04:40:22Z	138	12	125	0	1	50	tail		-13
+session_tail	turn-oTmqqp	claude-3-turn-14	49d366f7-dd42-4437-8b80-72ce9baf2e39	2026-10-04T21:42:26Z	11	0	11	0	0	0	tail		0
+session_tail	turn-j711nF	claude-17-turn-55	564c8e50-c240-46fc-81ad-55afafbc63ee	2026-10-05T07:14:34Z	50	6	44	1	0	51	tail		-6
+session_tail	turn-6hFDIW	claude-12-turn-159	5a109aed-1c56-4c99-9876-b5c2d6aac003	2026-10-10T15:49:27Z	57	16	40	0	0	11	tail		-17
+session_tail	turn-zi0gEE	claude-14-turn-20	75b00893-43cc-4172-917a-06a591193b20	2026-10-11T04:48:13Z	35	2	33	0	0	15	tail		-2
+session_tail	turn-1UTHJA	claude-4-turn-608	9ef8e479-e1b7-4755-894d-1264cacb6c3b	2026-10-06T05:38:57Z	265	26	239	0	1	74	tail		-26
+session_tail	turn-klsV1g	claude-11-turn-103	a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3	2026-10-11T04:40:07Z	114	6	108	0	1	30	tail		-6
+session_tail	turn-VYc3Gb	claude-13-turn-35	ae883f3a-6164-4404-834e-e89a0381ce6a	2026-10-11T04:55:54Z	70	8	62	0	1	35	tail		-8
+session_tail	turn-O8L7or	claude-5-turn-3	b52510f9-275c-44e1-a74f-243df3750115	2026-10-04T21:50:09Z	3	2	1	0	0	1	tail		-2
+session_tail	turn-FbAbLT	claude-6-turn-10	d710876a-82cc-4301-b628-3896ab13516b	2026-10-04T22:16:28Z	14	1	13	0	0	14	tail		-1
+session_tail	turn-DE5zRR	claude-9-turn-1	d9e4516f-e601-405f-a623-0dc31d6b7a73	2026-10-05T21:55:16Z	3	0	3	0	0	0	tail		0
+session_tail	turn-poV4qM	claude-15-turn-34	ec3a9b31-6656-4530-90db-53a22762c17f	2026-10-11T04:05:18Z	59	3	56	0	1	24	tail		-3
+grand_records					44541	5537	38940	51	215	16582	summary		-5601
+grand_session_tails					878	96	781	3	9	325	summary		-97
