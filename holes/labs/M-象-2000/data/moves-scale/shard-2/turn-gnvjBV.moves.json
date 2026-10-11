@@ -1,0 +1,117 @@
+{
+ "record": "turn-gnvjBV",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-199-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "checking in & merging into main the compiled-correct rows",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-199-f-s2-0",
+   "kind": "verify",
+   "move": "clarify/check-understanding",
+   "quote": "It would be interesting to see if the mfuton team has that work done already or not",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-199-r-0",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "Rob's `main` hasn't moved since 1 October",
+   "answers": [
+    {
+     "act": "claude-4-turn-199-f-s1-0",
+     "quote": "A trial merge of Rob's `main` into cand-1 conflicts in 13 files",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-4-turn-199-f-s2-0",
+     "quote": "codex-4 is checking whether Rob's `main` already gets our 20 CORRECT rows right",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "merge to Rob main",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-199-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-199-f-s1-0",
+     "quote": "(what I checked)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "merge to Rob main"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-199-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "`robmain1` for codex-4",
+   "answers": [
+    {
+     "act": "claude-4-turn-199-f-s2-0",
+     "quote": "`robmain1` for codex-4",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "merge to Rob main"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-199-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(then the merge)",
+   "answers": [
+    {
+     "act": "claude-4-turn-199-f-s1-0",
+     "quote": "(then the merge)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "merge to Rob main"
+   },
+   "confidence": "high",
+   "note": "Merge as a separate job with acceptance rerun; pushing to Rob main is the one confirmed step."
+  }
+ ],
+ "unlabelled": []
+}

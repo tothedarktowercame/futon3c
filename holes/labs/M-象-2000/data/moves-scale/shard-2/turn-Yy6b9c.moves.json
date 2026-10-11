@@ -1,0 +1,150 @@
+{
+ "record": "turn-Yy6b9c",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-398-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "unfortunate if we had to recheck all compiled matching rows cold each time we fixed something",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-398-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "hopefully the audit is fast",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-398-f-s2-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "based on function calls rather than behaviour?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-398-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "The audit already compares terms, not behaviour",
+   "answers": [
+    {
+     "act": "claude-4-turn-398-f-s2-0",
+     "quote": "The audit already compares terms, not behaviour",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-398-f-s2-1",
+     "quote": "record which parts of the port's compiler each row goes through",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-398-f-s1-0",
+     "quote": "record which parts of the port's compiler each row goes through",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Cost is the cold compile, not the comparison; endorses the function-call idea as the cut."
+  },
+  {
+   "act": "claude-4-turn-398-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "Each audit lane runs the comparator",
+   "answers": [
+    {
+     "act": "claude-4-turn-398-f-s2-1",
+     "quote": "Each audit lane runs the comparator",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-398-r-2",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(cheaper rechecks)",
+   "answers": [
+    {
+     "act": "claude-4-turn-398-f-s1-0",
+     "quote": "(cheaper rechecks)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "function-trace recheck plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Affected-rows-only rechecks with a completeness check, then one shared cold compile for all rows."
+  },
+  {
+   "act": "claude-4-turn-398-r-3",
+   "kind": "reply-mark",
+   "move": "defer/until",
+   "quote": "a warm cache we can trust",
+   "answers": [
+    {
+     "act": "claude-4-turn-398-f-s1-0",
+     "quote": "a warm cache we can trust",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Defers the warm cache until the warm-vs-cold difference is explained."
+  },
+  {
+   "act": "claude-4-turn-398-r-4",
+   "kind": "reply-mark",
+   "move": "delegate/to-agent",
+   "quote": "I'll give it change 1 as a small packet",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "function-trace recheck plan"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

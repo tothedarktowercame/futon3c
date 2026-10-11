@@ -1,0 +1,155 @@
+{
+ "record": "turn-W2Wo3Y",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-553-f-s1-0",
+   "kind": "propose",
+   "move": "ask-action/one-decision",
+   "quote": "Can we perhaps ask for more rigour beyond unit tests?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I'm not currently sure what that would look like",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-f-s2-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "we should know more about how to work with this material",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-f-s3-0",
+   "kind": "collect",
+   "move": "clarify/ask-decision",
+   "quote": "Do you have any ideas?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-f-s4-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Taking ten minutes on what is still a well-informed guess isn't great.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "The failures this evening have a single shape",
+   "answers": [
+    {
+     "act": "claude-4-turn-553-f-s2-1",
+     "quote": "The failures this evening have a single shape",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-553-f-s3-0",
+     "quote": "The failures this evening have a single shape",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-r-1",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(two concrete changes)",
+   "answers": [
+    {
+     "act": "claude-4-turn-553-f-s1-0",
+     "quote": "(two concrete changes)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-553-f-s4-0",
+     "quote": "(two concrete changes)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "capture-based test rigour",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-553-r-2",
+   "kind": "reply-mark",
+   "move": "propose/alternative",
+   "quote": "(a third change, cost unknown)",
+   "answers": [
+    {
+     "act": "claude-4-turn-553-f-s4-0",
+     "quote": "(a third change, cost unknown)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Read-only cold builds; wants a measurement first because warm and cold disagreed once."
+  },
+  {
+   "act": "claude-4-turn-553-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I send the first change",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "capture-based test rigour"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

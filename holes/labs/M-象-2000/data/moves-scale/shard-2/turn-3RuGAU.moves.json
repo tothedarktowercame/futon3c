@@ -1,0 +1,100 @@
+{
+ "record": "turn-3RuGAU",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-379-f-s1-0",
+   "kind": "verify",
+   "move": "clarify/ask-decision",
+   "quote": "I'd just like to understand it a little bit better",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-379-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "I'm just confused why you've waited to bring this to me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-379-r-0",
+   "kind": "reply-mark",
+   "move": "explain/decision-reversal",
+   "quote": "I held it back because I was applying the 09:15 rule",
+   "answers": [
+    {
+     "act": "claude-4-turn-379-f-s1-0",
+     "quote": "I've now sent it to codex-31",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-378-r-3",
+     "quote": "I've now sent it to codex-31",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "dispatch rule: discovery tasks go out, fix tasks approved",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Reverses the held-back dispatch and states the standing rule that governs later dispatches."
+  },
+  {
+   "act": "claude-4-turn-379-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "writing `(← e)` inside a `do` block",
+   "answers": [
+    {
+     "act": "claude-4-turn-379-f-s1-0",
+     "quote": "In Lean, writing `(← e)` inside a `do` block",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Explains the (← e) elaboration path; the paste-of-source diagnosis sits beyond the truncated authority span."
+  },
+  {
+   "act": "claude-4-turn-379-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "find the port code that builds `Bind.bind`",
+   "answers": [
+    {
+     "act": "claude-4-turn-379-f-s1-0",
+     "quote": "quote where `e` gets put in",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-379-r-0"
+   },
+   "confidence": "high",
+   "note": "Discovery-only packet scope, read under the dispatch rule just stated; the no-implementation line is past the truncated span."
+  }
+ ],
+ "unlabelled": []
+}

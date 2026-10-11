@@ -1,0 +1,197 @@
+{
+ "record": "turn-vl2dbJ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-357-f-s1-0",
+   "kind": "report",
+   "move": "report/ack",
+   "quote": "OK, they have woken up again.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-f-s2-0",
+   "kind": "propose",
+   "move": "propose/redirect-scope",
+   "quote": "they *validate* the transpiled (Python-to-) Lisp code",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-f-s2-1",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "rather than continue to develop an independent Lisp port",
+   "answers": [],
+   "scope": {
+    "opens": "transpiled-Lisp validation",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-f-s3-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "they will send them to codex-19 (if it is a transpilation bug) or to you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(validation instead of a separate port) Agreed",
+   "answers": [
+    {
+     "act": "claude-4-turn-357-f-s2-0",
+     "quote": "(validation instead of a separate port) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-357-f-s2-1",
+     "quote": "(validation instead of a separate port) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "transpiled-Lisp validation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how codex-18 can tell where a defect belongs)",
+   "answers": [
+    {
+     "act": "claude-4-turn-357-f-s3-0",
+     "quote": "(how codex-18 can tell where a defect belongs)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "transpiled-Lisp validation"
+   },
+   "confidence": "high",
+   "note": "The three-way run that routes each defect to codex-19 or to the operator."
+  },
+  {
+   "act": "claude-4-turn-357-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "(what I'll do with port bugs)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "transpiled-Lisp validation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one thing to tell codex-18)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "transpiled-Lisp validation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-4",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked on psw-none2)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-5",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(16 failing tests)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Attributes the 16 failures to stale expectations predating the merge, with the runs that show it."
+  },
+  {
+   "act": "claude-4-turn-357-r-6",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(my parseHeader probe was invalid)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-7",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(codex-15: the `ParserFn.run` construction bug, psw-ctx1)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-357-r-8",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(sweep and other work)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

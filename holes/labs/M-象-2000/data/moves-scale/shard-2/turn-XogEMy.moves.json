@@ -1,0 +1,99 @@
+{
+ "record": "turn-XogEMy",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-567-f-s1-0",
+   "kind": "ask-action",
+   "move": "constrain/hold-dispatch",
+   "quote": "please take some time to get the \"what I'd change\" in place before further dispatches",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-567-f-s1-1",
+   "kind": "delegate",
+   "move": "constrain/teach-helpers",
+   "quote": "you'll have to teach your helpers how to be efficient too",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-567-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The changes are in place, and I've held back new work packets until now",
+   "answers": [
+    {
+     "act": "claude-4-turn-567-f-s1-0",
+     "quote": "The changes are in place, and I've held back new work packets until now",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The one-line summary; the detail is r-1."
+  },
+  {
+   "act": "claude-4-turn-567-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what's in place)",
+   "answers": [
+    {
+     "act": "claude-4-turn-567-f-s1-0",
+     "quote": "(what's in place)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-567-f-s1-1",
+     "quote": "(what's in place)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "efficiency rules in packet preamble",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-567-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(one gap)",
+   "answers": [
+    {
+     "act": "claude-4-turn-567-f-s1-1",
+     "quote": "(one gap)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "efficiency rules in packet preamble"
+   },
+   "confidence": "high",
+   "note": "The source-location probe is uncommitted and mixed with argscope changes; merge gated on its timing run."
+  }
+ ],
+ "unlabelled": []
+}

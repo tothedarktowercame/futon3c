@@ -1,0 +1,98 @@
+{
+ "record": "turn-wbmIR9",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-196-f-s1-0",
+   "kind": "report-problem",
+   "move": "ask-action/status-check",
+   "quote": "What's going on with the 2 to 2.5 hour probe??",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-196-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "I tohught things were going to be fast now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-196-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(why the probe takes 2.5 hours)",
+   "answers": [
+    {
+     "act": "claude-4-turn-196-f-s1-0",
+     "quote": "(why the probe takes 2.5 hours)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-196-f-s2-0",
+     "quote": "my mistake made it worse",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Two reasons, one of them its own cache-policy mistake, already switched to warm."
+  },
+  {
+   "act": "claude-4-turn-196-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what is and isn't fast now)",
+   "answers": [
+    {
+     "act": "claude-4-turn-196-f-s2-0",
+     "quote": "(what is and isn't fast now)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-196-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/risk-assessment",
+   "quote": "(one risk with warm caches)",
+   "answers": [
+    {
+     "act": "claude-4-turn-196-f-s1-0",
+     "quote": "(one risk with warm caches)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

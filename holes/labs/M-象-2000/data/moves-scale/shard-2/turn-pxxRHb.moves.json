@@ -1,0 +1,129 @@
+{
+ "record": "turn-pxxRHb",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-332-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "let's get copies into /home/joe and into relevant remotes on Github too",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-332-f-s1-1",
+   "kind": "explain",
+   "move": "report-problem/suspected",
+   "quote": "it wouldn't be good if the work disappeared by accident",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-332-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "I'll pause the transpiler effort for a while",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-332-f-s2-1",
+   "kind": "verify",
+   "move": "ask-action/one-decision",
+   "quote": "see if it can compile your work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-332-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what went where)",
+   "answers": [
+    {
+     "act": "claude-4-turn-332-f-s1-0",
+     "quote": "(what went where)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-332-f-s1-1",
+     "quote": "(what went where)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Branches pushed, notes copied and committed, uncommitted edits saved as patches."
+  },
+  {
+   "act": "claude-4-turn-332-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what isn't covered)",
+   "answers": [
+    {
+     "act": "claude-4-turn-332-f-s1-1",
+     "quote": "(what isn't covered)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-332-r-2",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(pausing the transpiler)",
+   "answers": [
+    {
+     "act": "claude-4-turn-332-f-s2-0",
+     "quote": "(pausing the transpiler)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-332-f-s2-1",
+     "quote": "(pausing the transpiler)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

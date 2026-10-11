@@ -1,0 +1,123 @@
+{
+ "record": "turn-fgX7g4",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-300-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/one-decision",
+   "quote": "what is the best path forward?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-300-f-s2-0",
+   "kind": "continue",
+   "move": "clarify/ask-decision",
+   "quote": "just keep going?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-300-f-s3-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "i would likd to know how far we are from closing any row!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-300-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Two rows, `InputContext.atEnd` and `Parser.epsilonInfo`",
+   "answers": [
+    {
+     "act": "claude-4-turn-300-f-s3-0",
+     "quote": "Two rows, `InputContext.atEnd` and `Parser.epsilonInfo`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-300-r-1",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(\"just keep going?\") Not unchanged",
+   "answers": [
+    {
+     "act": "claude-4-turn-300-f-s1-0",
+     "quote": "(\"just keep going?\") Not unchanged",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-300-f-s2-0",
+     "quote": "(\"just keep going?\") Not unchanged",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "two-row close push",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-300-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(the two rows)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "two-row close push"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-300-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(how far, in time)",
+   "answers": [
+    {
+     "act": "claude-4-turn-300-f-s3-0",
+     "quote": "(how far, in time)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "two-row close push"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

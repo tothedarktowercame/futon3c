@@ -1,0 +1,94 @@
+{
+ "record": "turn-h7zTox",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-134-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "with the trace info in hand, what next?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-134-f-s3-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "run Lean in GDB so we could just step through",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-134-r-0",
+   "kind": "reply-mark",
+   "move": "explain/decline",
+   "quote": "I'd rather use GDB for logging than for stepping",
+   "answers": [
+    {
+     "act": "claude-4-turn-134-f-s3-0",
+     "quote": "I'd rather use GDB for logging than for stepping",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-4-turn-134-f-s2-0",
+     "quote": "That list becomes the fix curriculum, known in advance",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "registry-dump diff curriculum",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Declines stepping, proposes dump-both-sides-and-diff with GDB only for locating a difference."
+  },
+  {
+   "act": "claude-4-turn-134-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(where GDB fits)",
+   "answers": [
+    {
+     "act": "claude-4-turn-134-f-s3-0",
+     "quote": "(where GDB fits)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "registry-dump diff curriculum"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-134-r-2",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(order of work)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "registry-dump diff curriculum"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": [
+  "claude-4-turn-134-f-s1-0"
+ ]
+}

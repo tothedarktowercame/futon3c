@@ -1,0 +1,93 @@
+{
+ "record": "turn-TP9fme",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-308-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can I ask for a favour?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-308-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "I'd like you to train codex-17 to take over for YOUR session",
+   "answers": [],
+   "scope": {
+    "opens": "codex-17 seat handover",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Motivated by the operator's remaining ~2% Claude usage."
+  },
+  {
+   "act": "claude-4-turn-308-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "codex-17 is taking over the seat",
+   "answers": [
+    {
+     "act": "claude-4-turn-308-f-s2-0",
+     "quote": "codex-17 is taking over the seat",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-308-f-s1-0",
+     "quote": "codex-17 is taking over the seat",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-17 seat handover"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-308-r-1",
+   "kind": "reply-mark",
+   "move": "report/job-spec",
+   "quote": "`/tmp/pyreg/overnight/HANDOFF-codex-17.md`",
+   "answers": [
+    {
+     "act": "claude-4-turn-308-f-s2-0",
+     "quote": "`/tmp/pyreg/overnight/HANDOFF-codex-17.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-17 seat handover"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-308-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "The five current jobs will still send their completion bells to me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-17 seat handover"
+   },
+   "confidence": "high",
+   "note": "Bell routing and park-cancellation limits during the handover, with the usage-saving reply rule."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,100 @@
+{
+ "record": "turn-7dRWAW",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-90-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "OK so let's put it in one logical order.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-90-f-s2-0",
+   "kind": "propose",
+   "move": "propose/ordered-plan",
+   "quote": "CORRECT at the top, COMPILES INCORRECT, COMPILES UNTESTED, READY, WAITING",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-90-f-s3-0",
+   "kind": "extend",
+   "move": "propose/ordered-plan",
+   "quote": "actual WIP on the rows and then BACKLOG of rows that no one is working on",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-90-f-s4-0",
+   "kind": "prioritize",
+   "move": "delegate/to-agent",
+   "quote": "highest priority work to add now, you can send it to codex-6",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-90-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "They write Lean expectations for the 11 rows",
+   "answers": [
+    {
+     "act": "claude-4-turn-90-f-s4-0",
+     "quote": "`lean-prereg6` for codex-6",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-90-r-1",
+   "kind": "reply-mark",
+   "move": "report/planned",
+   "quote": "I've recorded the repair order in the queue file",
+   "answers": [
+    {
+     "act": "claude-4-turn-90-f-s1-0",
+     "quote": "I've recorded the repair order in the queue file",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The repair half of the requested logical order, recorded for when repair seats free up."
+  }
+ ],
+ "unlabelled": []
+}

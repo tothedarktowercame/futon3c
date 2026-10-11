@@ -1,0 +1,120 @@
+{
+ "record": "turn-mtauh1",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-28-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "these numbers may be misleading",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-28-f-s1-1",
+   "kind": "propose",
+   "move": "constrain/measurement-scope",
+   "quote": "he plans to remove a lot of Python from mfuton-share",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The measurable restatement — 6k against blank-file-relevant Python only — sits past the truncated span."
+  },
+  {
+   "act": "claude-4-turn-28-r-0",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "You're right, and my earlier figure was also wrong",
+   "answers": [
+    {
+     "act": "claude-4-turn-28-f-s1-0",
+     "quote": "You're right, and my earlier figure was also wrong",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-28-f-s1-1",
+     "quote": "Measured against only the Python reachable from the probe entry point",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Re-measures at the relevant scope and withdraws the earlier 6k/164k figure."
+  },
+  {
+   "act": "claude-4-turn-28-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(how I measured)",
+   "answers": [
+    {
+     "act": "claude-4-turn-28-f-s1-1",
+     "quote": "(how I measured)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-28-r-2",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "(Rob's removals)",
+   "answers": [
+    {
+     "act": "claude-4-turn-28-f-s1-1",
+     "quote": "(Rob's removals)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The cut has not landed yet; the 448-module set is the checklist for when it does."
+  },
+  {
+   "act": "claude-4-turn-28-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/impact",
+   "quote": "(does this change the plan?)",
+   "answers": [
+    {
+     "act": "claude-4-turn-28-f-s1-1",
+     "quote": "(does this change the plan?)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Plan unchanged except the inventory job narrows to the relevant modules."
+  }
+ ],
+ "unlabelled": []
+}

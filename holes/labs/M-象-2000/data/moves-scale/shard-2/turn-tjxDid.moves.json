@@ -1,0 +1,114 @@
+{
+ "record": "turn-tjxDid",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-306-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "error is possibly caused by the fix itself",
+   "answers": [],
+   "scope": {
+    "opens": "failure scorecard",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Commission bundled with the harm/usage grievance about Codex agents and the flat loss curve; the scorecard ask sits past the truncated span."
+  },
+  {
+   "act": "claude-4-turn-306-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "Your reporting is giving me extremely mixed signals",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-306-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "Why are they even trying to ship?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-306-f-s4-0",
+   "kind": "propose",
+   "move": "clarify/ask-decision",
+   "quote": "let me discuss that with you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-306-r-0",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "The red run for shape C failed for the wrong reason",
+   "answers": [
+    {
+     "act": "claude-4-turn-306-f-s2-0",
+     "quote": "The red run for shape C failed for the wrong reason",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-306-r-1",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(two agents on `bind()`)",
+   "answers": [
+    {
+     "act": "claude-4-turn-306-f-s3-0",
+     "quote": "(two agents on `bind()`)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Names the leading suspect, the witness-first rule, and the no-implementation-before-a-witness constraint."
+  },
+  {
+   "act": "claude-4-turn-306-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Watcher `bg-…695`, park `park-bacb0cd9`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

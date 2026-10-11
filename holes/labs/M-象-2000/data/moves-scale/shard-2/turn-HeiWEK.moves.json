@@ -1,0 +1,146 @@
+{
+ "record": "turn-HeiWEK",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-335-f-s1-0",
+   "kind": "report",
+   "move": "report/ack",
+   "quote": "OK, I have redirected codex-18 using your reply above.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-335-f-s2-0",
+   "kind": "redirect",
+   "move": "redirect/topic",
+   "quote": "The next question is with codex-17.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-335-f-s3-0",
+   "kind": "report",
+   "move": "report-problem/observed",
+   "quote": "they were never orchestrating work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-335-f-s4-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "I'd like to pass coordination on the Python build back to you",
+   "answers": [],
+   "scope": {
+    "opens": "python-build coordination",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-335-f-s5-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "we could still learn something from codex-17's buffer",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-335-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "I measured from Agency's job log rather than the buffer",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Body ends at the header: the measurements themselves are not in the record."
+  },
+  {
+   "act": "claude-4-turn-335-r-1",
+   "kind": "reply-mark",
+   "move": "report/post-mortem",
+   "quote": "Neither regression was found by codex-17's process",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Owns the one-at-a-time pattern as partly its own choice."
+  },
+  {
+   "act": "claude-4-turn-335-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "Closing out its own line, which is proposal 5",
+   "answers": [
+    {
+     "act": "claude-4-turn-335-f-s2-0",
+     "quote": "Closing out its own line, which is proposal 5",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-335-r-3",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "**Parallel sweep (I'm starting it now).**",
+   "answers": [
+    {
+     "act": "claude-4-turn-335-f-s4-0",
+     "quote": "**Parallel sweep (I'm starting it now).**",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-335-f-s5-0",
+     "quote": "**Parallel sweep (I'm starting it now).**",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "python-build coordination plan",
+    "closes": null,
+    "within": "python-build coordination"
+   },
+   "confidence": "high",
+   "note": "Takes the coordination: parallel sweep baseline, grouped discovery jobs, Lisp image off critical path, codex-17 as a discovery agent."
+  }
+ ],
+ "unlabelled": []
+}

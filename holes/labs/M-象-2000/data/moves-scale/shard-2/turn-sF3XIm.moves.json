@@ -1,0 +1,91 @@
+{
+ "record": "turn-sF3XIm",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-282-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "turn the \"blocked\" into a gantt chart or some other decomposition",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-282-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "just seeing a wall of \"blocked\" makes it look like everything is  blocked",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-282-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the chart)",
+   "answers": [
+    {
+     "act": "claude-4-turn-282-f-s1-0",
+     "quote": "(the chart)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-282-f-s1-1",
+     "quote": "(the chart)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "blocked-decomposition chart",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-282-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how a row is placed)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "blocked-decomposition chart"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-282-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what \"fixed, awaiting re-probe\" means)",
+   "answers": [
+    {
+     "act": "claude-4-turn-282-f-s1-1",
+     "quote": "(what \"fixed, awaiting re-probe\" means)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "blocked-decomposition chart"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

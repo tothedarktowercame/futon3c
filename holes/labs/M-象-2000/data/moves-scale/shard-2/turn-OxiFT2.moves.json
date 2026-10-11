@@ -1,0 +1,108 @@
+{
+ "record": "turn-OxiFT2",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-237-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "something is not really working with regard to bells",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-237-f-s2-1",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "codex-4 is not working again",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Same text as s2-0; the kernel carried it under two kinds, both labelled."
+  },
+  {
+   "act": "claude-4-turn-237-r-0",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "all three parks I made this afternoon",
+   "answers": [
+    {
+     "act": "claude-4-turn-237-f-s2-0",
+     "quote": "all three parks I made this afternoon",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-237-f-s2-1",
+     "quote": "all three parks I made this afternoon",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Finds the undelivered parks, the missing session field in its own park template, and saves the fix as a memory."
+  },
+  {
+   "act": "claude-4-turn-237-r-1",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I have the server refuse a park",
+   "answers": [
+    {
+     "act": "claude-4-turn-237-f-s2-1",
+     "quote": "Shall I have the server refuse a park",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Two server-guard options that turn the silent loss into a visible error, plus clearing the stale queue."
+  },
+  {
+   "act": "claude-4-turn-237-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Commits `891d7d1` (test) and `1a24607` (fix)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-237-r-3",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "is a `while True:`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Flags the unbounded retry from its own diff read and the loud-guard plan before landing."
+  }
+ ],
+ "unlabelled": []
+}

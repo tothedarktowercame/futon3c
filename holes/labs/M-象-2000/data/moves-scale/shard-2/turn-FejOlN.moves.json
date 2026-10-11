@@ -1,0 +1,108 @@
+{
+ "record": "turn-FejOlN",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-602-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/explain-failure",
+   "quote": "I want a very clear explanation of why.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-602-f-s2-0",
+   "kind": "propose",
+   "move": "constrain/method-first",
+   "quote": "We need to make the method good and then we will get good results.",
+   "answers": [],
+   "scope": {
+    "opens": "method-first policy",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-602-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "please don't redispatch work if this comes back contrary to your prediction",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method-first policy"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-602-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed. If mkListNode's cold run",
+   "answers": [
+    {
+     "act": "claude-4-turn-602-f-s3-0",
+     "quote": "Agreed. If mkListNode's cold run",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method-first policy"
+   },
+   "confidence": "high",
+   "note": "Accepts the no-redispatch rule with the two live runs named."
+  },
+  {
+   "act": "claude-4-turn-602-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I told codex-23 and codex-32",
+   "answers": [
+    {
+     "act": "claude-4-turn-602-f-s3-0",
+     "quote": "I told codex-23 and codex-32",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Instruction passed to both codex seats and added to the notes carried across wakes."
+  },
+  {
+   "act": "claude-4-turn-602-r-2",
+   "kind": "reply-mark",
+   "move": "propose/explanation-outline",
+   "quote": "The explanation will cover",
+   "answers": [
+    {
+     "act": "claude-4-turn-602-f-s1-0",
+     "quote": "The explanation will cover",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method-first policy"
+   },
+   "confidence": "high",
+   "note": "Outlines the owed explanation; the explanation itself is still to come."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,144 @@
+{
+ "record": "turn-yLOqOd",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-381-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "the only thing that can be trusted, it seems, is this comparator",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-381-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "only the code that is actually fully compliant with Thean can be accepted",
+   "answers": [],
+   "scope": {
+    "opens": "comparator-only trust rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Dictation typo \"Thean\" for Lean kept verbatim in the quote."
+  },
+  {
+   "act": "claude-4-turn-381-f-s2-0",
+   "kind": "ask-action",
+   "move": "clarify/check-understanding",
+   "quote": "Use the comparator?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-381-f-s3-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "fix the code until it matches Lean it's very simple",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-381-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed: no more questions for you",
+   "answers": [
+    {
+     "act": "claude-4-turn-381-f-s2-0",
+     "quote": "Agreed: no more questions for you",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-381-f-s3-0",
+     "quote": "Agreed: no more questions for you",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-381-f-s1-1",
+     "quote": "Agreed: no more questions for you",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "comparator-only trust rule"
+   },
+   "confidence": "high",
+   "note": "The loop, written into the park reminder and saved memory."
+  },
+  {
+   "act": "claude-4-turn-381-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "You're right to question it",
+   "answers": [
+    {
+     "act": "claude-4-turn-381-f-s1-0",
+     "quote": "You're right to question it",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "comparator-only trust rule"
+   },
+   "confidence": "high",
+   "note": "Explains what the earlier \"compliant\" claim actually rested on."
+  },
+  {
+   "act": "claude-4-turn-381-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(comparator work)",
+   "answers": [
+    {
+     "act": "claude-4-turn-381-f-s1-1",
+     "quote": "(comparator work)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "comparator-only trust rule"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-381-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(in progress)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

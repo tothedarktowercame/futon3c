@@ -1,0 +1,127 @@
+{
+ "record": "turn-Yxh05o",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-603-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "I want you to ask claude-2 to audit the method",
+   "answers": [],
+   "scope": {
+    "opens": "method baseline audit",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-603-f-s2-0",
+   "kind": "clarify",
+   "move": "qualify/caveat",
+   "quote": "The point is not that we're stuck.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-603-f-s3-0",
+   "kind": "report",
+   "move": "approve/plain",
+   "quote": "You've made a lot of improvements",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-603-f-s4-0",
+   "kind": "explain",
+   "move": "report/resource-state",
+   "quote": "a baseline audit NOW will mean that if we don't get good results we have a baseline to compare",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-603-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "claude-2 is on the audit",
+   "answers": [
+    {
+     "act": "claude-4-turn-603-f-s1-0",
+     "quote": "claude-2 is on the audit",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method baseline audit"
+   },
+   "confidence": "high",
+   "note": "Parked with a 90-minute deadline; the request quotes the operator's stated reason."
+  },
+  {
+   "act": "claude-4-turn-603-r-1",
+   "kind": "reply-mark",
+   "move": "report/job-spec",
+   "quote": "I asked claude-2 for four things",
+   "answers": [
+    {
+     "act": "claude-4-turn-603-f-s1-0",
+     "quote": "I asked claude-2 for four things",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method baseline audit"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-603-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "The audit is read-only",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method baseline audit"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-603-r-3",
+   "kind": "reply-mark",
+   "move": "defer/until",
+   "quote": "I'll check that its figures are counted rather than estimated",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "method baseline audit"
+   },
+   "confidence": "high",
+   "note": "Verification and hand-off plan; acting on recommendations waits for the operator's word (past the truncated span)."
+  }
+ ],
+ "unlabelled": []
+}

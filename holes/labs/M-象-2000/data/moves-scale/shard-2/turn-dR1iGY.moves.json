@@ -1,0 +1,106 @@
+{
+ "record": "turn-dR1iGY",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-287-f-s1-0",
+   "kind": "propose",
+   "move": "clarify/ask-decision",
+   "quote": "Can we bring Codex back in in a useful way?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-287-f-s2-0",
+   "kind": "delegate",
+   "move": "clarify/ask-decision",
+   "quote": "do you think that the Zai agents are enough?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-287-r-0",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "Yes, I think Codex is worth bringing back for work in the queue",
+   "answers": [
+    {
+     "act": "claude-4-turn-287-f-s1-0",
+     "quote": "Yes, I think Codex is worth bringing back for work in the queue",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-287-f-s2-0",
+     "quote": "Yes, I think Codex is worth bringing back for work in the queue",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "codex off-critical-path re-entry",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-287-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "The Zai agents are doing well",
+   "answers": [
+    {
+     "act": "claude-4-turn-287-f-s2-0",
+     "quote": "The Zai agents are doing well",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Seat-count arithmetic behind the capacity answer."
+  },
+  {
+   "act": "claude-4-turn-287-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/risk-assessment",
+   "quote": "Tonight's three Codex failures were \"model at capacity\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex off-critical-path re-entry"
+   },
+   "confidence": "high",
+   "note": "Failure cost and the second-failure move rule, plus the shared-usage trade-off."
+  },
+  {
+   "act": "claude-4-turn-287-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I send `tuple`/`nomatch` to codex-6",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex off-critical-path re-entry"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

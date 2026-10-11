@@ -1,0 +1,117 @@
+{
+ "record": "turn-ELTBL4",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-86-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Well I find it very hard to follow as is.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-86-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "You are reporting a breakdown across \"rows\" that aren't even shown on the map.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-86-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Here is a new view, `/tmp/pyreg/overnight/rowmap.py`",
+   "answers": [
+    {
+     "act": "claude-4-turn-86-f-s1-0",
+     "quote": "My rows didn't appear on your map. Here is a new view",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-86-f-s2-0",
+     "quote": "My rows didn't appear on your map. Here is a new view",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-85-r-4",
+     "quote": "It's measured at the current integration head, cand-1 cbb0428c",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "rowmap view at cand-1",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Delivers the followable map the operator asked for, at the current head, replacing the stale view."
+  },
+  {
+   "act": "claude-4-turn-86-r-1",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(what's in progress: the ▒ rows)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "low",
+   "note": "Empty body upstream: only the paragraph header survives, so the in-flight list itself is not in the record."
+  },
+  {
+   "act": "claude-4-turn-86-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "A ░ row's error is its latest probe on the cand-1 line",
+   "answers": [
+    {
+     "act": "claude-4-turn-86-f-s2-0",
+     "quote": "The errors cluster",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-86-r-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-86-r-3",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "In the old graph, the column counted only █",
+   "answers": [
+    {
+     "act": "claude-4-turn-85-r-0",
+     "quote": "In the old graph, the column counted only █",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-86-r-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

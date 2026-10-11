@@ -1,0 +1,93 @@
+{
+ "record": "turn-5rUCtR",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-101-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "you can create new seats directly using agency yourself",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-101-f-s2-0",
+   "kind": "propose",
+   "move": "propose/redirect-scope",
+   "quote": "should have a direct Agency pathway (maybe just not documented well)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-101-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "Agency has both pathways",
+   "answers": [
+    {
+     "act": "claude-4-turn-101-f-s1-0",
+     "quote": "Agency has both pathways",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-101-f-s2-0",
+     "quote": "Agency has both pathways",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-101-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "`handle-agents-auto-register` (about `:4508`)",
+   "answers": [
+    {
+     "act": "claude-4-turn-101-f-s2-0",
+     "quote": "`handle-agents-auto-register` (about `:4508`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "File-and-line evidence that the pathway exists and where it is handled."
+  },
+  {
+   "act": "claude-4-turn-101-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "Before dispatching an independent packet, I reset the seat's session.",
+   "answers": [],
+   "scope": {
+    "opens": "session-reset rule for independent packets",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "States the reset rule and where it is recorded; no operator act asks for it."
+  }
+ ],
+ "unlabelled": []
+}

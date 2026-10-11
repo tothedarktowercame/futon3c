@@ -1,0 +1,106 @@
+{
+ "record": "turn-llSmbF",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-270-f-s1-0",
+   "kind": "propose",
+   "move": "ask-action/commission",
+   "quote": "it should be possible to show a progress bar or similar indication",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-270-f-s1-1",
+   "kind": "propose",
+   "move": "ask-action/commission",
+   "quote": "show a progress bar or similar indication of how much (possibly sorted by section of the table)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Restatement of s1-0 recorded as its own fragment; same commission."
+  },
+  {
+   "act": "claude-4-turn-270-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "There's now a progress view",
+   "answers": [
+    {
+     "act": "claude-4-turn-270-f-s1-0",
+     "quote": "There's now a progress view",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-270-f-s1-1",
+     "quote": "There's now a progress view",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "progress view",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-270-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(the output now)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "progress view"
+   },
+   "confidence": "low",
+   "note": "Header-only paragraph: the sample output itself is not in the record."
+  },
+  {
+   "act": "claude-4-turn-270-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how to read it)",
+   "answers": [
+    {
+     "act": "claude-4-turn-270-f-s1-1",
+     "quote": "(how to read it)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "progress view"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-270-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(what moves the bar next)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "progress view"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,323 @@
+{
+ "record": "turn-MwN5mA",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-317-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "codex-17 has not made much progress since it took over",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s2-0",
+   "kind": "collect",
+   "move": "report/buffer-excerpt",
+   "quote": "8 matches for \"(progress)\" in buffer: *codex-repl:codex-17*",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Operator pastes the progress lines from codex-17's buffer as evidence for s1."
+  },
+  {
+   "act": "claude-4-turn-317-f-s3-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "reprobe-2 is at 41 of 62",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s4-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "20 compiled, 53 awaiting re-probe, 14 in progress, 23 not started",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "Quoted counts are shared by four pasted progress lines; the excerpt itself is the evidence."
+  },
+  {
+   "act": "claude-4-turn-317-f-s5-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "Reprobe-2 is active; the highest completed row is 47 of 62",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s6-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "227:㊢ (progress) 20 compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s7-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "Reprobe-2 has completed through row 47 of 62",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s8-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "271:㊢ (progress) 20 compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s9-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "Reprobe-2 is active through row 60 of 62",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s10-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "294:㊢ (progress) 20 compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s11-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "Reprobe-2 remains active through row 60 of 62",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s12-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "323:㊢ (progress) 20 compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s13-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "359:㊢ (progress) 20 compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s14-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "389:㊢ (progress) 20 compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s15-0",
+   "kind": "report",
+   "move": "report/buffer-excerpt",
+   "quote": "Reprobe-3 is active on its first row",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s16-0",
+   "kind": "report",
+   "move": "report/redirect-issued",
+   "quote": "I have asked it to change its approach (from line 556).",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-f-s17-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can you comment",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "Act text is truncated in the authority span; the request is a comment on the pasted progress."
+  },
+  {
+   "act": "claude-4-turn-317-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "You're reading it correctly",
+   "answers": [
+    {
+     "act": "claude-4-turn-317-f-s1-0",
+     "quote": "You're reading it correctly",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Confirms the flat progress and owns the band-counting design flaw behind it."
+  },
+  {
+   "act": "claude-4-turn-317-r-1",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "I agree with three of its changes",
+   "answers": [
+    {
+     "act": "claude-4-turn-317-f-s17-0",
+     "quote": "I agree with three of its changes",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-317-f-s16-0",
+     "quote": "I agree with three of its changes",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-r-2",
+   "kind": "reply-mark",
+   "move": "report-problem/suspected",
+   "quote": "Both come from the probe table, which I read this turn",
+   "answers": [
+    {
+     "act": "claude-4-turn-317-f-s17-0",
+     "quote": "Both come from the probe table, which I read this turn",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Two flags: builtin7 name leak suspicion and the two errors covering every sampled row."
+  },
+  {
+   "act": "claude-4-turn-317-r-3",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "linki4 spent a whole job on a defect that `cc05e83` had already fixed",
+   "answers": [],
+   "scope": {
+    "opens": "re-probe-before-brief rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-317-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I bell codex-17 these two flags",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

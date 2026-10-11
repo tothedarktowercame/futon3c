@@ -1,0 +1,125 @@
+{
+ "record": "turn-wi6Q6y",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-37-f-s1-0",
+   "kind": "propose",
+   "move": "constrain/standing-rule",
+   "quote": "we should be checking against Lean as a \"preregistration\"",
+   "answers": [],
+   "scope": {
+    "opens": "Lean preregistration checks",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-37-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "we should be able to run *it* in a debugger and step it into whatever state we need",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-37-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(checking against Lean, registered in advance) Yes",
+   "answers": [
+    {
+     "act": "claude-4-turn-37-f-s1-0",
+     "quote": "(checking against Lean, registered in advance) Yes",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-37-f-s2-0",
+     "quote": "(checking against Lean, registered in advance) Yes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "Lean preregistration checks"
+   },
+   "confidence": "high",
+   "note": "Accepts the preregistration reframing; prefers Lean inspection tools over debugger inching (past the truncated span)."
+  },
+  {
+   "act": "claude-4-turn-37-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how this goes step by step with Lean)",
+   "answers": [
+    {
+     "act": "claude-4-turn-37-f-s2-0",
+     "quote": "(how this goes step by step with Lean)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "Lean preregistration checks"
+   },
+   "confidence": "high",
+   "note": "Three check levels coarse-to-fine, with gdb as the last resort."
+  },
+  {
+   "act": "claude-4-turn-37-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(pilot dispatched to codex-6, `lean-prereg1`)",
+   "answers": [
+    {
+     "act": "claude-4-turn-37-f-s1-0",
+     "quote": "(pilot dispatched to codex-6, `lean-prereg1`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "Lean preregistration checks"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-37-r-3",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "(how this changes the workflow once the pilot works)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "Lean preregistration checks"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-37-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(running)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
