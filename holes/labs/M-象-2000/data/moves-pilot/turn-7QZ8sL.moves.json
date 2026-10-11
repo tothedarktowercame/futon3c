@@ -1,0 +1,139 @@
+{
+ "record": "turn-7QZ8sL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-16-f-s1-0",
+   "kind": "retract",
+   "move": "retract/correction",
+   "quote": "no, i forgot about 7.",
+   "answers": [
+    {
+     "act": "claude-11-turn-15-r-3",
+     "quote": "no, i forgot about 7.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "retracts the premise of the previous question"
+  },
+  {
+   "act": "claude-11-turn-16-f-s2-0",
+   "kind": "propose",
+   "move": "propose/best-of-review",
+   "quote": "we should review both 6 and 7 to find a best-of",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Both preambles are recovered, and I've drafted a best-of for you to review",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "The draft is `holes/method/preamble-best-of-DRAFT.md`, and every section is tagged [6], [7] or [6+7].",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-11-turn-15-r-3",
+     "quote": "`holes/method/recovered-2026-10-06/preamble6.md` is exact.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "preamble best-of draft",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "recovery done from packet copies plus transcript appends"
+  },
+  {
+   "act": "claude-11-turn-16-r-1",
+   "kind": "reply-mark",
+   "move": "explain/comparison",
+   "quote": "Preamble 7 is a rewrite of 6 based on what went wrong on 10-06, and it's stronger on method.",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "Preamble 7 is a rewrite of 6 based on what went wrong on 10-06, and it's stronger on method.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "preamble best-of draft"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-r-2",
+   "kind": "reply-mark",
+   "move": "propose/defaults",
+   "quote": "two places I chose, which you may want to overrule",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "I took 7's resolution: the cold comparator is the test, and unit tests are only for tools.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "preamble best-of draft"
+   },
+   "confidence": "medium",
+   "note": "resolution choices flagged for operator overrule"
+  },
+  {
+   "act": "claude-11-turn-16-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "Several things the preambles refer to were in `/tmp`, so the draft marks them as needing new homes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "preamble best-of draft"
+   },
+   "confidence": "high",
+   "note": "resume prerequisites lost with /tmp"
+  },
+  {
+   "act": "claude-11-turn-16-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Read the draft when you're ready. When you've settled it, I'll make it the new preamble",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "When you've settled it, I'll make it the new preamble and deal with the RESUME items.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "preamble best-of draft"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

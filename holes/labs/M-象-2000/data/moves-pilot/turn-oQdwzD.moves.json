@@ -1,0 +1,240 @@
+{
+ "record": "turn-oQdwzD",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-22-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/weight-budget",
+   "quote": "I don't really want all of the agents' turns to be read by a second agent, that's just too heavy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "we should get the benefit of the 大象 tooling.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s3-0",
+   "kind": "propose",
+   "move": "propose/hook-up",
+   "quote": "I reckon we're pretty much in a position to \"hook it all up\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s4-0",
+   "kind": "report",
+   "move": "report/gap-inventory",
+   "quote": "we'd still be missing the embedding and vector-based search, but we've added some categorical reasoning",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s5-0",
+   "kind": "explain",
+   "move": "explain/clarify-motive",
+   "quote": "what would make it all rather clarifying would be to have an end-to-end system hooked up that we could start to look at \"live\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s6-0",
+   "kind": "propose",
+   "move": "propose/scratch-first",
+   "quote": "I think you still have an extra futon1b we could work with that one and then switch it over when we're happy?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s7-0",
+   "kind": "qualify",
+   "move": "qualify/main-store-only",
+   "quote": "I'm guessing that there are some cool things we could only do in the main futon1b, like dealing with the relationship between \"intents\" and",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s8-0",
+   "kind": "propose",
+   "move": "propose/case-study",
+   "quote": "we'd also have a live case of \"your agent chat is a crime scene\" so we could think about how a viable memory sy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-0",
+   "kind": "reply-mark",
+   "move": "approve/with-plan",
+   "quote": "I think we can, without anyone's turns getting an extra model read.",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s3-0",
+     "quote": "Here's the end-to-end plan; nothing in it restarts or reconfigures a live service.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-22-f-s1-0",
+     "quote": "The 大象 side is already computed classically by the turn service, so the -40° side only needs to follow it, read-only",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-21-r-5",
+     "quote": "The 大象 side is already computed classically by the turn service",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "minus40 hook-up plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "The turn service in the Agency JVM writes one record per turn to `~/.emacs-graph/session-turn-analysis/turn-*.json`.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "minus40 hook-up plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-2",
+   "kind": "reply-mark",
+   "move": "propose/pipeline",
+   "quote": "**Follow the turn records.** A `minus40 follow` bg.py job, change-detecting like the hook, mirrors each settled turn into the store",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s5-0",
+     "quote": "a page the follower regenerates so we can watch it live",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-15-turn-22-f-s8-0",
+     "quote": "**First case: the claude-14 session.** Its turn records are already in that directory.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-22-f-s1-0",
+     "quote": "Model reads (entity read, conflict judge against candidate pairs): only for memory writes, which are a handful a day, never for turns.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "minus40 hook-up plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-3",
+   "kind": "reply-mark",
+   "move": "report/deferred",
+   "quote": "**Embeddings and vector search:** still missing from the spec.",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s4-0",
+     "quote": "They'd be a rebuildable sidecar later; the pipeline doesn't need them to be useful.",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-15-turn-22-f-s7-0",
+     "quote": "**Intents ↔ Tornhill signals:** needs the main futon1b, where those signals live.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "minus40 hook-up plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-4",
+   "kind": "reply-mark",
+   "move": "clarify/switch-over",
+   "quote": "Everything above is keyed to one base URL plus the store's own ids.",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s6-0",
+     "quote": "Switching to the main futon1b would mean re-running the loads against :7073 and repointing the hook and the follower, and that's your call when we get there.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "minus40 hook-up plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I build 1–4 in that order, committing and checking each, and then run the claude-14 replay?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "minus40 hook-up plan"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

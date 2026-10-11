@@ -1,0 +1,116 @@
+{
+ "record": "turn-FejOlN",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-602-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/explain-failure",
+   "quote": "OK but we can't a clean row I want a very clear explanation of why",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-602-f-s2-0",
+   "kind": "propose",
+   "move": "propose/method-first",
+   "quote": "We need to make the method good and then we will get good results.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-602-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "So, please don't redispatch work if this comes back contrary to your prediction.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-602-r-0",
+   "kind": "reply-mark",
+   "move": "constrain/accept",
+   "quote": "Agreed. If mkListNode's cold run (`bg-1103`) or codex-23's epsilonInfo trace (`bg-1098`) doesn't match its prediction, nothing more goes out.",
+   "answers": [
+    {
+     "act": "claude-4-turn-602-f-s3-0",
+     "quote": "If mkListNode's cold run (`bg-1103`) or codex-23's epsilonInfo trace (`bg-1098`) doesn't match its prediction, nothing more goes out.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-602-f-s1-0",
+     "quote": "Instead you'll get a written explanation of why no row is clean, before any further work is dispatched.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "accepts the constraint and ties it to the explanation owed"
+  },
+  {
+   "act": "claude-4-turn-602-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I told codex-23 and codex-32 that when their current run finishes they should report and then stop.",
+   "answers": [
+    {
+     "act": "claude-4-turn-602-f-s3-0",
+     "quote": "I've also added your instruction to the notes I carry between wakes, so it holds after a context reset.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-4-turn-602-r-2",
+   "kind": "reply-mark",
+   "move": "promise/explanation-outline",
+   "quote": "The explanation will cover:",
+   "answers": [
+    {
+     "act": "claude-4-turn-602-f-s1-0",
+     "quote": "**Each row:** what Lean produces and what the port produces, at the node where they differ.",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-4-turn-602-f-s2-0",
+     "quote": "**The method:** where it let us act on a wrong belief.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "method post-mortem",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

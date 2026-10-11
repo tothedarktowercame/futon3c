@@ -1,0 +1,110 @@
+{
+ "record": "turn-a3V7wF",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-6-turn-5-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "I am feeling angry because when I got claude-2 to tell claude-4 about this I thought it was going to be used",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-5-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "I checked the messages, and it went differently: claude-4 never received the route.",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "So the agents carried out what reached them; the fast route was dropped before anything was sent.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-6-turn-4-r-4",
+     "quote": "claude-2 mentioned it to you once (\"so I only name it\") and left it out of the bell.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "elaborator route disambiguation",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "acknowledges the grievance while correcting the record"
+  },
+  {
+   "act": "claude-6-turn-5-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence-chain",
+   "quote": "claude-2 told you that letting native Lean elaborate and translating its output would change the picture",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "That is what was sent, and what was built.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "elaborator route disambiguation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-5-r-2",
+   "kind": "reply-mark",
+   "move": "clarify/disambiguation",
+   "quote": "\"Use the Lean elaborator\" can mean two things.",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "You meant, or came to mean, the second. The agents heard the first",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "elaborator route disambiguation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-5-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I dispatch the test now: Lean's compiled output for two or three failing rows, translated to Python by a throwaway translator",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "If it works, the same message to claude-4 would state the route as an action, quote your reading of gate 1, and include the result.",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-6-turn-4-r-5",
+     "quote": "checked against the preregistered expected output, outside mfuton-share, with a bell back to me?",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "elaborator route disambiguation"
+   },
+   "confidence": "high",
+   "note": "concretizes the earlier two-or-three-row test offer"
+  }
+ ],
+ "unlabelled": []
+}

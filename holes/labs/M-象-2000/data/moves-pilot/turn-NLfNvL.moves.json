@@ -1,0 +1,144 @@
+{
+ "record": "turn-NLfNvL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-299-f-s1-0",
+   "kind": "verify",
+   "move": "verify/status-request",
+   "quote": "can you comment on progress?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-0",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "No new row has become fully correct yet. What has changed is that rows reach later stops.",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "Since about 23:00, six compiler fixes have been merged into cand-1, now at `e251cb68`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "direct status answer: fixes merged, no clean row yet"
+  },
+  {
+   "act": "claude-4-turn-299-r-1",
+   "kind": "reply-mark",
+   "move": "report/detailed-movement",
+   "quote": "**Null receiver** (codex-4): `nodeFn` and `atomicFn` now get past the `null.stackSize`/`null.pos` stop.",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "On the chart, that group fell from 11 to 3",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-2",
+   "kind": "reply-mark",
+   "move": "explain/chart-lag",
+   "quote": "The chart will lag until C lands and those rows are re-probed.",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "That's because the null-receiver rows moved onto the term[_] stop, and most term[_] rows haven't been re-probed since A+B merged.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-4-turn-299-r-3",
+   "kind": "reply-mark",
+   "move": "report/problem-post-mortem",
+   "quote": "codex-18 failed five times in a row the same way, so I paused it.",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "claude-3 then found the real cause: the port has no type for `Ne`",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-4-turn-246-r-4",
+     "quote": "codex-18's first fix passed its own test while the defect was still there.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "also closes the earlier why-nothing-merged question with concrete causes"
+  },
+  {
+   "act": "claude-4-turn-299-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "**Cold acceptance running:** host parsers (codex-17), numerals (codex-19), nomatch (codex-25).",
+   "answers": [
+    {
+     "act": "claude-4-turn-246-r-5",
+     "quote": "codex-4 merges cand-1 into the Rob merge branch next, then runs the 20-row cold acceptance.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-4-turn-299-r-5",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "The machine has been running at a load average around 24.",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "so acceptance is now the slowest part of the cycle",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "low",
+   "note": "reply is truncated mid-sentence in the record"
+  }
+ ],
+ "unlabelled": []
+}

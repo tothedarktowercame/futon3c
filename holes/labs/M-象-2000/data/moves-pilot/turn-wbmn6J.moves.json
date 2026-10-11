@@ -1,0 +1,285 @@
+{
+ "record": "turn-wbmn6J",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-9-f-s1-0",
+   "kind": "approve",
+   "move": "approve/provisional",
+   "quote": "this is probably good enough for a start, we're not trying to be fully scientific about it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s2-0",
+   "kind": "explore",
+   "move": "explore/customer-problems",
+   "quote": "what actual customer or client problems any of this might solve for anyone.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s3-0",
+   "kind": "explain",
+   "move": "explain/motive-link",
+   "quote": "Asking that could explain why some of the verbs are more interesting than others.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s4-0",
+   "kind": "report",
+   "move": "report/personal-case",
+   "quote": "in order to start to get the War Machine to work in a reasonable way, I needed to create a Lean specificatio",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s5-0",
+   "kind": "qualify",
+   "move": "qualify/unvalidated",
+   "quote": "We're still in the process of validating it, and even when it works, I don't know if it will be great for anything as a computational tool.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s6-0",
+   "kind": "clarify",
+   "move": "clarify/schematic-value",
+   "quote": "as a model of the way people and organisations work, it seems like a great schematic.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s7-0",
+   "kind": "propose",
+   "move": "propose/fit-pbase",
+   "quote": "whatever list of verbs we find or come up with can be fitted to the PBASE and R-number outlines that describe War Machine.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s8-0",
+   "kind": "explore",
+   "move": "explore/demand-side",
+   "quote": "a given company out there in middle America or wherever is going to be turning to AI/tech/agents/etc.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s9-0",
+   "kind": "clarify",
+   "move": "clarify/problem-statement",
+   "quote": "to solve some actual problem for themselves or their clients.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s10-0",
+   "kind": "propose",
+   "move": "propose/value-proposition",
+   "quote": "having a model of how the space works should allow us to help them solve it faster or better.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s11-0",
+   "kind": "constrain",
+   "move": "constrain/scope-examples",
+   "quote": "some problems are totally \"human\" problems, e.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s12-0",
+   "kind": "clarify",
+   "move": "clarify/limits-example",
+   "quote": "managers that don't listen to their employees won't be \"solved\" with Elephant-2000 methods for example.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've added this to the mission as §3.1 (commit `7a15814`).",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s1-0",
+     "quote": "It covers your turn, a test for telling human problems from ones tooling can help with",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-9-f-s7-0",
+     "quote": "a first mapping of the triples onto the War Machine's R-nodes.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "SVO triples section 3.1",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-1",
+   "kind": "reply-mark",
+   "move": "explain/criterion",
+   "quote": "A tool can only change the *via* column, which is how faithfully an intent gets carried out.",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s11-0",
+     "quote": "A tool can only change the *via* column",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-9-f-s12-0",
+     "quote": "he has no intent to *collect* what his employees tell him, so there's nothing for Elephant-2000 machinery to carry.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "SVO triples section 3.1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-2",
+   "kind": "reply-mark",
+   "move": "report/mapping",
+   "quote": "The verbs already map onto PBASE through `xiaoxiang-mark-keys`.",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s7-0",
+     "quote": "The verbs already map onto PBASE through `xiaoxiang-mark-keys`.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-9-f-s6-0",
+     "quote": "Against the R-nodes, my first reading (not yet checked against the Lean spec)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "SVO triples section 3.1"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-13-turn-9-r-3",
+   "kind": "reply-mark",
+   "move": "report/prior-work-gap",
+   "quote": "Some of this work already exists. `M-joe-told-me-about-futon` §2c collected public pain signals in six clusters",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s2-0",
+     "quote": "A company in middle America turning to AI is a different population, and nobody has looked at it yet.",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-9-f-s8-0",
+     "quote": "A company in middle America turning to AI is a different population",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "SVO triples section 3.1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-4",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "I could do that pass. I'd collect a dozen concrete problems that non-tech organisations say they're bringing AI to",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s2-0",
+     "quote": "Then I'd sort each problem into human, tooling, or mixed.",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-9-f-s3-0",
+     "quote": "That would show which verbs come up in real demand",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "SVO triples section 3.1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

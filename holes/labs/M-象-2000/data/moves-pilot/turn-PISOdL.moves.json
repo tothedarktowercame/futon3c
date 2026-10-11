@@ -1,0 +1,124 @@
+{
+ "record": "turn-PISOdL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-28-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/read-record",
+   "quote": "have a look at the recent claude-11 record.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-28-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I like the idea of a warn!",
+   "answers": [
+    {
+     "act": "claude-13-turn-27-r-4",
+     "quote": "I like the idea of a warn!",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "approves the hook offer from the previous turn"
+  },
+  {
+   "act": "claude-13-turn-28-r-0",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "claude-11 shows exactly the failure this hook is for.",
+   "answers": [
+    {
+     "act": "claude-13-turn-28-f-s1-0",
+     "quote": "Its Lean session servers (the warm `Init` server and the first Mathlib import) were started with `run_in_background`.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "the requested read, matched to the hook's purpose"
+  },
+  {
+   "act": "claude-13-turn-28-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The warn hook is in and working:",
+   "answers": [
+    {
+     "act": "claude-13-turn-28-f-s2-0",
+     "quote": "**Script:** `futon3c/scripts/claude-hooks/bg_warn.py` (futon3c `66da03c9`).",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-27-r-4",
+     "quote": "**Wiring:** `~/.claude/settings.json`, PreToolUse on `Bash|Monitor`.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-28-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "The pipe test covered 8 cases.",
+   "answers": [
+    {
+     "act": "claude-13-turn-28-f-s2-0",
+     "quote": "I also proved it live in this session: my own `sleep 0.1 &` produced the warning in my context, and the command still ran.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-28-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/scope",
+   "quote": "Other pouches pick it up the next time they load settings.",
+   "answers": [
+    {
+     "act": "claude-13-turn-28-f-s2-0",
+     "quote": "If the warning turns out to be too soft, the next step would be to deny `run_in_background` alone and keep warning on the rest.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,132 @@
+{
+ "record": "turn-Wcr0h9",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-123-f-s2-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "I do like reading things based on HEAD but keeping in mind HEAD is like from jazz or free jazz...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-123-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "it won't tell us whether the mission has spun off into abstractions like M-wyrd-modernism",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-123-f-s4-0",
+   "kind": "propose",
+   "move": "propose/cheat-sheet",
+   "quote": "we might want something a little bit like a chord \"cheat sheet\", like a very quick distillation of the scopes and keyw",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-123-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Added as B1d (futon2 `ff22a2876`), queued for codex-33 right after B1c",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "a one-line cheat sheet per item, computed from the whole document and its history rather than HEAD.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-123-f-s3-0",
+     "quote": "concrete vs abstract, and whether the mission is heading out or coming back — because that is the feasibility signal B2 could not get from commit history",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "B1d chord sheet",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "the register/direction remark becomes the sheet's key field"
+  },
+  {
+   "act": "claude-2-turn-123-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "Five fields, all classical counts so the sheet is the same on every run:",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "*register* — per section, the share of lines carrying a path, sha, number, checkbox or date against prose lines",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "B1d chord sheet"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-123-r-2",
+   "kind": "reply-mark",
+   "move": "explain/integration",
+   "quote": "The `observe` square today emits an item as id, kind, source pin and one locator.",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "The sheet is what it should emit instead — the item as a chord chart, not a bar",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "B1d chord sheet"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-123-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "B1c (revealed attention and co-work) running on codex-33, job `invoke-1791243893154-33311-1ff8ab13`",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "B1d follows; B3 then has B1–B2 and the sheet to draw on.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "B1d chord sheet"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": [
+  "claude-2-turn-123-f-s1-0"
+ ]
+}
