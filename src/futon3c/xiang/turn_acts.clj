@@ -513,7 +513,8 @@
   "Which ports closed in TURN-ID and which are still open after it, over
    ACTS (a session-acts vector): {:closed-this-turn [act-id ..]
    :still-open [{:act :kind :since}] :obligations [{:debtor :creditor
-   :source}] :inferred [{:answer :opener :rule :effect}]}. Per turn, an
+   :source}] :in-force [act-id ..] :promulgated [act-id ..]
+   :inferred [{:answer :opener :rule :effect}]}. Per turn, an
    untargeted reply paragraph is inferred to answer the sole operator opening
    fragment, if there is exactly one. The adjacency table alone determines
    that inferred pair's effect. The kernel's openo/closedo/obligationo answer,
@@ -566,4 +567,6 @@
                                        :since (:at (by-id id))})
                                     after)))
      :obligations (vec (lx/obligations db at))
+     :in-force (vec (sort (lx/in-force db at)))
+     :promulgated (vec (sort (lx/promulgated db at)))
      :inferred inferred})))

@@ -395,6 +395,7 @@
           acts (turn-acts/session-acts settled)
           by-id (into {} (map (juxt :id identity) acts))
           ports (turn-acts/turn-ports acts (:turn_id record) id)
+          in-force (set (:in-force ports))
           record-acts (->> acts
                            (filter #(or (= id (:record %))
                                         (and (nil? (:record %))
@@ -408,6 +409,11 @@
       (ts/update-record! store id
                          #(assoc %
                                  :acts record-acts
+                                 :standings
+                                 {:in_force (:in-force ports)
+                                  :adopted_not_applied
+                                  (vec (sort (remove in-force (:promulgated ports))))}
+                                 :obligations (:obligations ports)
                                  :ports
                                  {:closed_this_turn (mapv entry (:closed-this-turn ports))
                                   :still_open (mapv (fn [{:keys [act since]}]

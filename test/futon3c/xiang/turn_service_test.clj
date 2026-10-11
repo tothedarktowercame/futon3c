@@ -705,6 +705,8 @@
     (is (str/includes? (or (:detail (svc/health (:svc h))) "") "No acts for turn"))
     (is (nil? (:ports (ts/read-record store oldest))))
     (is (nil? (:acts (ts/read-record store oldest))))
+    (is (nil? (:standings (ts/read-record store oldest))))
+    (is (nil? (:obligations (ts/read-record store oldest))))
     (svc/compute-ports! (:svc h) oldest {:session-cap 10})
     (is (some? (:ports (ts/read-record store oldest))))))
 
@@ -746,7 +748,11 @@
               "the HUD needs no lookup: the act carries its text")
           (is (= "2026-10-01T13:49:05Z" (get-in open ["claude-17-turn-391-r-3" :since])))
           (is (some #(str/includes? (:text %) "do 1 now and look into 2") (:still_open ports))
-              "394's own ask-action is open at its turn"))))
+              "394's own ask-action is open at its turn")))
+      (is (= #{:in_force :adopted_not_applied} (set (keys (:standings rec)))))
+      (is (vector? (get-in rec [:standings :in_force])))
+      (is (vector? (get-in rec [:standings :adopted_not_applied])))
+      (is (vector? (:obligations rec))))
     ;; The accepting turn: its ports close the offer.
     (svc/compute-ports! (:svc h) "turn-I7n9AZ")
     (let [record (ts/read-record store "turn-I7n9AZ")

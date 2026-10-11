@@ -170,6 +170,52 @@
     (is (= [true false] ((juxt :port? :standing?) (by-kind :ask-action))))
     (is (= [true true] ((juxt :port? :standing?) (by-kind :propose))))))
 
+(deftest turn-ports-reports-standing-lifecycle
+  (let [acts (ta/session-acts
+              [(synthetic-turn [{:intent "constrain" :text "Keep this rule."}
+                                {:intent "propose" :text "Adopt this change."}]
+                               "")])
+        by-kind (into {} (map (juxt :kind identity) acts))
+        constrain (:id (by-kind :constrain))
+        propose (:id (by-kind :propose))
+        ports (ta/turn-ports acts "agent-turn-1")]
+    (testing "a constraint is in force without opening a port"
+      (is (some #{constrain} (:in-force ports)))
+      (is (not (some #{constrain} (map :act (:still-open ports))))))
+    (testing "an unapplied proposal is promulgated but not in force"
+      (is (some #{propose} (:promulgated ports)))
+      (is (not (some #{propose} (:in-force ports)))))))
+
+(deftest a-carried-out-proposal-becomes-in-force
+  (let [proposal (assoc (synthetic-turn [{:intent "propose" :text "Adopt this change."}] "")
+                        :record-id "turn-proposal")
+        approval (-> (synthetic-turn [{:intent "approve" :text "Approved."}] "")
+                     (assoc :record-id "turn-approval")
+                     (assoc-in [:record :turn_id] "agent-turn-2")
+                     (assoc-in [:record :created_at] "2026-10-11T04:01:00Z")
+                     (assoc :commits [{:repo "r" :sha "abc1234" :subject "apply"}]))
+        base (ta/session-acts [proposal approval])
+        proposal-id "agent-turn-1-f-s1-0"
+        acts (mapv #(if (= :commit (:kind %)) (assoc % :carries-out proposal-id) %) base)
+        ports (ta/turn-ports acts "agent-turn-2" "turn-approval")]
+    (is (some #(= :approve (:kind %)) acts))
+    (is (= proposal-id (:carries-out (some #(when (= :commit (:kind %)) %) acts))))
+    (is (some #{proposal-id} (:in-force ports)))))
+
+(deftest accepting-an-option-creates-an-obligation
+  (let [offer (-> (synthetic-turn [] "🈸 Choose one:\n1. First\n2. Second")
+                  (assoc :record-id "turn-offer")
+                  (assoc-in [:record :turn_id] "agent-turn-offer"))
+        accept (-> (synthetic-turn [{:intent "approve" :text "yes 1"}] "")
+                   (assoc :record-id "turn-accept")
+                   (assoc-in [:record :turn_id] "agent-turn-accept")
+                   (assoc-in [:record :created_at] "2026-10-11T04:01:00Z"))
+        acts (ta/session-acts [offer accept])
+        accept-id (:id (some #(when (= :accept (:kind %)) %) acts))
+        ports (ta/turn-ports acts "agent-turn-accept" "turn-accept")]
+    (is (= [{:debtor "agent" :creditor "operator" :source accept-id}]
+           (:obligations ports)))))
+
 (deftest reused-turn-ids-get-record-qualified-act-ids
   (let [first-turn (assoc (synthetic-turn [{:intent "clarify" :text "First?"}] "")
                           :record-id "turn-first")
