@@ -77,7 +77,7 @@ the standing/scope relation the kernel lacks (an opener's reach).
 
 ## Next
 
-1. **Single-opener batch** (207 records, 5 shards, ~20 budget points): the
+1. **Single-opener batch** (200 records after removing the 7 already labelled in the labelled session; 5 shards [68, 59, 25, 24, 24]; ~19 budget points): the
    precision test for the sole-port rule, by comparing each Zai incidence with
    the rule's inferred link on the same record.
 2. **Consolidation** of labels, classical, into `moves/vocabulary.json`.
