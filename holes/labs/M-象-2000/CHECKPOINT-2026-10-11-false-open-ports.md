@@ -46,17 +46,26 @@ So in this session, "open" mostly meant "no answer was linked", not "still owed"
 | 10-11 03:36 | delegate | (claude-15's reply) backfill → codex-70 | open when computed; codex-70 has since completed it | done (later) |
 | 10-11 03:36 | ask-action | please restore the setting & backfill | done | done |
 
-**Observations, not diagnoses.**
-- The replies quote the operator's words in each paragraph's bracket (the
-  2026-10-04 proforma trial), and still almost nothing closed. Either
-  `link-quoted-brackets` did not match these quotes, or the kernel's adjacency
-  table does not close these kinds (propose, clarify, report-problem) with the
-  reply's kinds (report, verify, explain, propose). Which one has not been
-  checked.
-- Constraints (`constrain`) count as open ports. In an inbox they are standing
-  rules, not obligations.
-- An act that is done later, outside the session's turns (the codex-70
-  backfill), stays open until a later turn links its completion.
+**Observations, corrected the same day.** The first version of this note said
+the replies quoted the operator's words in their brackets and still nothing
+closed. claude-16's first finding, re-checked by claude-15, shows that was
+wrong on both counts:
+- The turn records in the outage window carry no `reply_text`: 0 of 93
+  analysed records on 10-09 and 0 of 117 on 10-10, against 135 of 162 on 10-04.
+  So these ports were computed from operator fragments alone. There was nothing
+  to link, and neither `link-quoted-brackets` nor the adjacency table was
+  reached.
+- Where replies exist, the brackets are mostly labels ("where we are"), not
+  quotes: 15 of claude-15's 17 in this session.
+
+The replies are on :7073 as agent-chat/turn evidence and can be backfilled;
+claude-16 owns that plan (M-象-2000, from 2026-10-11).
+
+Two observations stand:
+- Constraints (`constrain`) count as open ports, though in an inbox they are
+  standing rules, not obligations.
+- An act done later, outside the session's turns (the codex-70 backfill), stays
+  open until a later turn links its completion.
 
 **Scale.** Across all sessions mirrored since 10-01 (2,423 records, 97 sessions),
 1,857 ports were open on 10-11:
