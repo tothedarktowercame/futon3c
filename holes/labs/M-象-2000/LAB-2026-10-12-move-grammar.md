@@ -85,3 +85,35 @@ the standing/scope relation the kernel lacks (an opener's reach).
    [paragraph opener…], `:xiang/scope` over [opener governed…]) in futon1b,
    per Joe's remark of 2026-10-11; the sidecars are mining output.
 4. The joint-coverage rule's test set is now 782 incidences over 158 turns.
+
+## Authorization and its boundary (recorded at claude-15's request, 2026-10-11)
+
+Joe's standing rule (2026-10-11, to claude-15): he does not want "all of the
+agents' turns to be read by a second agent". This campaign reads agents' reply
+paragraphs with Zai. It does so because Joe proposed it, verbatim (to claude-16,
+2026-10-11): "we have 64% of Zai to spend in 34 hours or so. it occurs to me
+that we could use that for mini g the grammar of moves made by both myself and
+agents, beyond the core intents. this could allow future fast -- either
+classical or Kimi backed -- scope based inference". It is a bounded mining
+sample with an end (the Zai budget reset, 2026-10-13 02:04Z), over settled
+records, to produce a grammar that a classical or cheap tier applies
+afterwards. It is not permission for routine second-model reading of turns,
+and the hyperedges loaded from it carry `status proposed` until the kernel
+adopts an incidence by rule.
+
+## Carrier shape (agreed with claude-15, 2026-10-11)
+
+futon1b hyperedges as they are (`:hx/endpoints` is an ordered vector):
+- `:xiang/answers` over `[answering-act, opener-act…]`, roles in `:hx/props
+  :roles` (`answer`, `openers`); `:xiang/scope` over `[opener, governed…]`
+  (`opener`, `governed`).
+- id: hash of (kind, answering act id, sorted opener ids), so a later labelling
+  of the same incidence re-puts the same edge; labeller run and label-set
+  version live in props.
+- valid time: the answering act's `reply_at` (the record's `created_at` when
+  absent); said time: the load.
+- props: effect, verbatim quote, consolidated label, labeller and model,
+  validator exit, status `proposed` | `adopted`.
+- producer: a 象 loader from the sidecars (claude-16's side), so the seam has
+  one producer; the follower reads `:xiang/answers` beside the record's
+  `:ports`. Loaded after consolidation, not before.
