@@ -23,6 +23,7 @@ or other shards.
 For every `shard-<N>/input/<record>.input.json`, write
 `shard-<N>/<record>.moves.json` per the schema: one entry per fragment in
 `fragments` and per act in `reply_acts`; `move` as `<kind>/<move>` (seeds
+  **A move names how the paragraph acts in the dialogue, never its subject**: `propose/tentative` ("I wonder if", "we could"), `propose/directive` ("let's", "we should"), `propose/alternative`, `propose/next-step` are moves; `propose/aif-integration` or `propose/cheat-sheet` are topics and are wrong. Batch 1 showed topic leaking into 39% of proposals; do not repeat it.
 when they fit; reuse the pilot's invented labels where they fit before
 inventing new ones); for reply acts, `answers` listing every fragment of the
 record (or act in `previous_reply_acts`) the paragraph bears on, each with a
