@@ -57,8 +57,8 @@
 (defonce ^{:doc "Listeners for durable session-ended transitions."}
   !session-end-listeners (atom []))
 
-(def ^:dynamic *session-end-store*
-  "Turn store override for tests; production resolves the canonical store."
+(def ^:dynamic *session-end-outbox*
+  "Explicit session-end JSONL path override, primarily for test isolation."
   nil)
 
 (def ^:private session-end-outbox-lock (Object.))
@@ -82,14 +82,18 @@
      :reason (name reason)
      :at at*}))
 
-(defn- session-end-outbox-file []
-  (io/file (:dir (or *session-end-store* (turn-store/store)))
-           "session-ends.jsonl"))
+(defn session-end-outbox-path
+  "The shared session-end JSONL path: dynamic override, environment override,
+   then the canonical turn-store directory."
+  []
+  (or *session-end-outbox*
+      (some-> (System/getenv "FUTON3C_SESSION_END_OUTBOX") str/trim not-empty)
+      (str (io/file (:dir (turn-store/store)) "session-ends.jsonl"))))
 
 (defn- append-session-end!
   [transition]
   (locking session-end-outbox-lock
-    (let [file (session-end-outbox-file)
+    (let [file (io/file (session-end-outbox-path))
           parent (.getParentFile file)]
       (when parent (.mkdirs parent))
       (with-open [out (FileOutputStream. file true)]

@@ -9,6 +9,7 @@
             [cheshire.core :as json]
             [clojure.java.io :as io]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.session-end-test-fixture :as session-end-fixture]
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.clock-decision :as decision]
             [futon3c.blackboard]
@@ -21,14 +22,16 @@
 (use-fixtures
   :each
   (fn [f]
-    (reg/reset-registry!)
-    (clock/reset-store!)
-    ;; Suppress live-file pollution during tests: hop! / hop-back!
-    ;; would otherwise append entries to pilot-inhabitations.edn.
-    (binding [reg/*enable-hop-event-emission?* false
-              decision/*test-store* (atom {:entries {} :order []})
-              decision/*repo-roots* {}]
-      (f))))
+    (session-end-fixture/with-isolated-session-end-outbox
+     (fn []
+       (reg/reset-registry!)
+       (clock/reset-store!)
+       ;; Suppress live-file pollution during tests: hop! / hop-back!
+       ;; would otherwise append entries to pilot-inhabitations.edn.
+       (binding [reg/*enable-hop-event-emission?* false
+                 decision/*test-store* (atom {:entries {} :order []})
+                 decision/*repo-roots* {}]
+         (f))))))
 
 (deftest status-publication-can-suppress-uplink-echo
   (testing "an imported roster can update HUDs without announcing back upstream"
@@ -67,13 +70,14 @@
   []
   (count @(var-get (ns-resolve 'futon3c.agency.registry '!registry))))
 
-(defn- session-end-temp-store []
-  {:dir (str (Files/createTempDirectory
-              "registry-session-ends-"
-              (make-array java.nio.file.attribute.FileAttribute 0)))})
+(defn- session-end-temp-path []
+  (str (.resolve (Files/createTempDirectory
+                  "registry-session-ends-"
+                  (make-array java.nio.file.attribute.FileAttribute 0))
+                 "session-ends.jsonl")))
 
-(defn- session-end-lines [store]
-  (let [file (io/file (:dir store) "session-ends.jsonl")]
+(defn- session-end-lines [path]
+  (let [file (io/file path)]
     (if (.exists file)
       (with-open [reader (io/reader file)]
         (mapv #(json/parse-string % true) (line-seq reader)))
@@ -90,14 +94,14 @@
      ttl-ms (assoc :ttl-ms ttl-ms))))
 
 (deftest session-ended-reset-is-durable-and-notifies
-  (let [store (session-end-temp-store)
+  (let [path (session-end-temp-path)
         heard (atom [])
         remove-listener! (reg/add-session-end-listener! #(swap! heard conj %))]
     (try
-      (binding [reg/*session-end-store* store]
+      (binding [reg/*session-end-outbox* path]
         (register-session-agent! "session-reset" "old-reset" (fn [_ _] {:result "ok"}))
         (is (:ok (reg/reset-session! "session-reset")))
-        (let [[event :as events] (session-end-lines store)]
+        (let [[event :as events] (session-end-lines path)]
           (is (= 1 (count events)))
           (is (= event (first @heard)))
           (is (= {:agent "session-reset"
@@ -110,8 +114,8 @@
       (finally (remove-listener!)))))
 
 (deftest session-ended-deregister-and-reap-are-durable
-  (let [store (session-end-temp-store)]
-    (binding [reg/*session-end-store* store]
+  (let [path (session-end-temp-path)]
+    (binding [reg/*session-end-outbox* path]
       (register-session-agent! "session-drop" "drop-sid" (fn [_ _] {:result "ok"}))
       (is (:ok (reg/deregister-agent! "session-drop")))
       (register-session-agent! "session-reap" "reap-sid" (fn [_ _] {:result "ok"})
@@ -121,15 +125,15 @@
       (is (= [["deregister" "drop-sid" nil]
               ["reap" "reap-sid" nil]]
              (mapv (juxt :reason :old_session :new_session)
-                   (session-end-lines store)))))))
+                   (session-end-lines path)))))))
 
 (deftest session-ended-replacement-detects-status-and-invoke-results
-  (let [store (session-end-temp-store)]
-    (binding [reg/*session-end-store* store]
+  (let [path (session-end-temp-path)]
+    (binding [reg/*session-end-outbox* path]
       (register-session-agent! "session-status" "status-a" (fn [_ _] {:result "ok"}))
       (reg/report-external-invoke! "session-status" "test"
                                    {:status :invoking :session-id "status-a"})
-      (is (empty? (session-end-lines store)))
+      (is (empty? (session-end-lines path)))
       (reg/report-external-invoke! "session-status" "test"
                                    {:status :invoking :session-id "status-b"})
       (register-session-agent! "session-invoke" "invoke-a"
@@ -141,16 +145,16 @@
       (is (= [["session-status" "status-a" "status-b" "replaced"]
               ["session-invoke" "invoke-a" "invoke-b" "replaced"]]
              (mapv (juxt :agent :old_session :new_session :reason)
-                   (session-end-lines store)))))))
+                   (session-end-lines path)))))))
 
 (deftest session-ended-ids-are-distinct-per-reset-and-stable-on-replay
-  (let [store (session-end-temp-store)]
-    (binding [reg/*session-end-store* store]
+  (let [path (session-end-temp-path)]
+    (binding [reg/*session-end-outbox* path]
       (register-session-agent! "session-twice" "first" (fn [_ _] {:result "ok"}))
       (reg/reset-session! "session-twice")
       (reg/update-agent! "session-twice" :agent/session-id "second")
       (reg/reset-session! "session-twice")
-      (let [[first-event second-event] (session-end-lines store)
+      (let [[first-event second-event] (session-end-lines path)
             replay (reg/session-end-transition (:agent first-event)
                                                (:old_session first-event)
                                                (:new_session first-event)
@@ -162,12 +166,25 @@
 (deftest session-ended-outbox-failure-does-not-roll-back-mutation
   (let [not-a-directory (java.io.File/createTempFile "session-ends-parent-" ".tmp")]
     (try
-      (binding [reg/*session-end-store* {:dir (.getPath not-a-directory)}]
+      (binding [reg/*session-end-outbox* (str (io/file not-a-directory "session-ends.jsonl"))]
         (register-session-agent! "session-write-failure" "still-resets"
                                  (fn [_ _] {:result "ok"}))
         (is (:ok (reg/reset-session! "session-write-failure")))
         (is (nil? (:agent/session-id (reg/get-agent "session-write-failure")))))
       (finally (.delete not-a-directory)))))
+
+(deftest registry-fixture-does-not-write-the-default-session-end-outbox
+  (let [default-path (binding [reg/*session-end-outbox* nil]
+                       (reg/session-end-outbox-path))
+        default-file (io/file default-path)
+        parent (.getParentFile default-file)]
+    (when (and parent (.isDirectory parent))
+      (let [size-before (if (.exists default-file) (.length default-file) 0)]
+        (register-session-agent! "fixture-isolation" "fixture-session"
+                                 (fn [_ _] {:result "ok"}))
+        (reg/reset-session! "fixture-isolation")
+        (is (= size-before
+               (if (.exists default-file) (.length default-file) 0)))))))
 
 (deftest persona-aliases-resolve-without-adding-registry-identities
   (register-test-agent! "codex-persona-target")

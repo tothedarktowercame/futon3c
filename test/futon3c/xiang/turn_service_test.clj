@@ -5,11 +5,14 @@
   (:require [clojure.java.io :as io]
             [clojure.data.json :as json]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.session-end-test-fixture :as session-end-fixture]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts]
             [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-service :as svc]))
+
+(use-fixtures :each session-end-fixture/with-isolated-session-end-outbox)
 
 (defn- temp-store []
   (ts/store (str (java.nio.file.Files/createTempDirectory

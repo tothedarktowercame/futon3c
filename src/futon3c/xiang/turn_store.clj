@@ -14,7 +14,8 @@
 
    Writes are atomic (temp file + move) and the analysis is published with
    exclusive creation, as session_turn_analysis.py complete does: an earlier
-   interpretation is never replaced by accident."
+   interpretation is never replaced by accident. Session-end transitions use
+   FUTON3C_SESSION_END_OUTBOX when set, otherwise session-ends.jsonl here."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str])

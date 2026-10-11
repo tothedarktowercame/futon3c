@@ -22,6 +22,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.session-end-test-fixture :as session-end-fixture]
             [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.federation :as federation]
@@ -86,7 +87,8 @@
       (is (= "job-config" (:dispatch-id @seen))))))
 
 (use-fixtures
-  :each mesh-fixtures/with-store
+  :each session-end-fixture/with-isolated-session-end-outbox
+  mesh-fixtures/with-store
   (fn [f]
     (with-redefs [artifact-activation/submit-work! (fn [& _] :submitted)]
       (reg/reset-registry!)
