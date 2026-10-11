@@ -8,6 +8,7 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts]
+            [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-service :as svc]))
 
 (defn- temp-store []
@@ -693,7 +694,7 @@
                          #(-> %
                               (assoc :analysis_status "analyzed"
                                      :reply_text (slurp (io/file ports-fixture-dir (str fid ".reply.txt"))))
-                              (dissoc :ports))))
+                              (dissoc :ports :acts))))
     store)))
 
 (deftest compute-ports-session-cap-is-call-scoped
@@ -703,6 +704,7 @@
     (svc/compute-ports! (:svc h) oldest {:session-cap 1})
     (is (str/includes? (or (:detail (svc/health (:svc h))) "") "No acts for turn"))
     (is (nil? (:ports (ts/read-record store oldest))))
+    (is (nil? (:acts (ts/read-record store oldest))))
     (svc/compute-ports! (:svc h) oldest {:session-cap 10})
     (is (some? (:ports (ts/read-record store oldest))))))
 
@@ -714,6 +716,24 @@
     (svc/attach-happened! (:svc h) "turn-HUylGP" {:reply reply :commits []})
     (let [rec (ts/read-record store "turn-HUylGP")]
       (is (= reply (:reply_text rec)) "the reply text is stored for 大象")
+      (let [acts (:acts rec)
+            allowed #{:id :kind :author :at :to :turn :record :port? :standing?
+                      :target :carries-out :about :option :sha :repo :subject
+                      :start :end :text}
+            expected (->> (turn-acts/session-acts
+                           (mapv (fn [fid]
+                                   {:record-id fid
+                                    :record (ts/read-record store fid)
+                                    :reading (ts/read-analysis store fid)
+                                    :reply (:reply_text (ts/read-record store fid))
+                                    :commits (turn-acts/happened-commits
+                                              (:happened_summary (ts/read-record store fid)))})
+                                 ports-fixture-ids))
+                          (filter #(= "turn-HUylGP" (:record %))))]
+        (is (= (set (map :id expected)) (set (map :id acts))))
+        (is (every? #(and (contains? % :port?) (contains? % :standing?)) acts))
+        (is (every? #(every? allowed (keys %)) acts))
+        (is (every? #(or (nil? (:text %)) (<= (count (:text %)) 120)) acts)))
       (let [ports (:ports rec)]
         (is (some? ports) "the settle computed ports")
         (is (contains? ports :inferred) "the stored ports carry inference witnesses")
@@ -729,10 +749,30 @@
               "394's own ask-action is open at its turn"))))
     ;; The accepting turn: its ports close the offer.
     (svc/compute-ports! (:svc h) "turn-I7n9AZ")
-    (let [ports (:ports (ts/read-record store "turn-I7n9AZ"))]
+    (let [record (ts/read-record store "turn-I7n9AZ")
+          ports (:ports record)
+          commit (some #(when (= "d9d30ead" (:sha %)) %) (:acts record))]
       (is (= 1 (count (:closed_this_turn ports))))
       (is (= "offer" (:kind (first (:closed_this_turn ports)))))
-      (is (str/includes? (:text (first (:closed_this_turn ports))) "yes 1")))))
+      (is (str/includes? (:text (first (:closed_this_turn ports))) "yes 1"))
+      (is (= {:sha "d9d30ead" :repo "futon3c"
+              :subject "P11 acceptance: accept '🈸:yes' as a spelling of yes in both parsers (+23 -6 over 3 files)"
+              :carries-out "claude-17-turn-392-r-4"}
+             (select-keys commit [:sha :repo :subject :carries-out]))))))
+
+(deftest persisted-acts-use-record-identity-when-turn-ids-repeat
+  (let [store (seed-ports-store (take 2 ports-fixture-ids))
+        h (harness {:store store})
+        first-id (first ports-fixture-ids)
+        second-id (second ports-fixture-ids)
+        reused-turn (:turn_id (ts/read-record store first-id))]
+    (ts/update-record! store second-id #(assoc % :turn_id reused-turn))
+    (svc/compute-ports! (:svc h) second-id {:session-cap 10})
+    (let [acts (:acts (ts/read-record store second-id))]
+      (is (seq acts))
+      (is (every? #(= second-id (:record %)) acts))
+      (is (every? #(str/includes? (:id %) (str "@" second-id)) acts))
+      (is (not-any? #(= first-id (:record %)) acts)))))
 
 (deftest ports-land-in-either-arrival-order
   (testing "reading first, happened second"

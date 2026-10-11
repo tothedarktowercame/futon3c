@@ -345,14 +345,25 @@
   (let [s (str/trim (str (or s "")))]
     (if (> (count s) 120) (str (subs s 0 119) "…") s)))
 
+(def ^:private stored-act-keys
+  [:id :kind :author :at :to :turn :record :port? :standing? :target
+   :carries-out :about :option :sha :repo :subject :start :end :text])
+
+(defn- stored-act
+  "The durable, bounded projection of one adapter act."
+  [act]
+  (cond-> (select-keys act stored-act-keys)
+    (contains? act :text) (update :text trim-act-text)))
+
 (defn compute-ports!
   "The settled turn's HAPPENED / DIDN'T HAPPEN: run the turn-acts adapter
    over the session's settled turns (the last `ports-session-cap`, ordered
    by created_at) and store the kernel's answer on ID's record as :ports
    {:closed_this_turn [{:act :kind :text}] :still_open [{:act :kind :text
    :since}]}, each act carrying its paragraph/fragment text trimmed to 120
-   characters so the HUD needs no lookup. Drafted turns contribute their
-   reply and commit acts but no operator fragments: 小象's parse is
+   characters so the HUD needs no lookup. Also store this record's bounded
+   act projection as :acts, from the same successful computation. Drafted
+   turns contribute their reply and commit acts but no operator fragments: 小象's parse is
    provisional. Run off the caller's path (the caller schedules this);
    never fails the turn — a failure sets health detail only."
   ([svc id]
@@ -384,13 +395,20 @@
           acts (turn-acts/session-acts settled)
           by-id (into {} (map (juxt :id identity) acts))
           ports (turn-acts/turn-ports acts (:turn_id record) id)
+          record-acts (->> acts
+                           (filter #(or (= id (:record %))
+                                        (and (nil? (:record %))
+                                             (= (:turn_id record) (:turn %)))))
+                           (mapv stored-act))
           entry (fn [act-id]
                   (let [a (by-id act-id)]
                     {:act act-id
                      :kind (some-> (:kind a) name)
                      :text (trim-act-text (:text a))}))]
       (ts/update-record! store id
-                         #(assoc % :ports
+                         #(assoc %
+                                 :acts record-acts
+                                 :ports
                                  {:closed_this_turn (mapv entry (:closed-this-turn ports))
                                   :still_open (mapv (fn [{:keys [act since]}]
                                                       (assoc (entry act) :since since))
