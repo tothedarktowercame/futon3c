@@ -22,6 +22,17 @@ MARKS = {'㊥':'gist','㊭':'propose','㊣':'approve','🈚':'disagree','㊟':'q
          '🈰':'continue','🈝':'defer','🈘':'redirect','㊫':'explore','🈡':'withdraw'}
 OPENING = {'propose','ask-action','offer','delegate','promise','report-problem','clarify','constrain','verify'}
 SAYS = {'report','explain','verify','qualify','report-problem'}
+# adjacency (logic/xiang.clj, 2026-10-11): opener -> {answer: effect}
+ADJ = {'propose':{'approve':'closes','disagree':'closes','defer':'closes','redirect':'closes','extend':'closes','commit':'closes','withdraw':'closes','retract':'closes'},
+       'ask-action':{'accept':'closes','disagree':'closes','qualify':'keeps','offer':'keeps','report':'closes','explain':'closes'},
+       'offer':{'accept':'closes','disagree':'closes','defer':'closes','retract':'closes','withdraw':'closes'},
+       'delegate':{'promise':'closes','report-problem':'keeps','retract':'closes','disagree':'closes','report':'closes'},
+       'promise':{'fulfil':'closes','release':'closes','lapse':'closes','report-problem':'keeps','qualify':'keeps'},
+       'report-problem':{'verify':'closes','explain':'closes','redirect':'closes','commit':'closes','collect':'keeps'},
+       'clarify':{'explain':'closes','report':'closes'},
+       'constrain':{'withdraw':'closes','rule-withdraw':'closes','qualify':'keeps','commit':'keeps'},
+       'verify':{'report':'closes','approve':'closes','explain':'closes','report-problem':'closes'}}
+# B*: sole-port, but any reply paragraph kind, and the link counts as a close only when ADJ types the pair :closes
 NOKIND = {'gist','unresolved'}
 STOP = set('''the a an and or of to in on for with that this these those is are was were be been being it its
 we you i they he she our your their my me us them not no yes do does did done have has had will would can could
@@ -77,6 +88,9 @@ def link(fr, ps, rules):
         if 'B' in rules and p['kind'] in SAYS:
             op=[f for f in fr if f['kind'] in OPENING]
             if len(op)==1: t[i]=op[0]['id']
+        if 'B*' in rules:
+            op=[f for f in fr if f['kind'] in OPENING]
+            if len(op)==1 and ADJ.get(op[0]['kind'],{}).get(p['kind'])=='closes': t[i]=op[0]['id']
     return t
 def main():
     recs=load()
@@ -95,13 +109,13 @@ def main():
             tot['opening fragments']+=len(op); tot['marked paragraphs']+=len(ps)
             tot['turns']+=1; tot['turns with exactly one opening fragment']+= (len(op)==1)
             closed={}
-            for name,rules in (('quote',set()),('quote+A',{'A'}),('quote+B',{'B'}),('quote+A+B',{'A','B'})):
+            for name,rules in (('quote',set()),('quote+A',{'A'}),('quote+B',{'B'}),('quote+A+B',{'A','B'}),('quote+B*',{'B*'})):
                 t=link(fr,ps,rules); hit={fid for fid in t.values() if fid in {f['id'] for f in op}}
                 closed[name]=hit; tot[f'{name}: opening fragments answered']+=len(hit)
             if sess==LAB or d.get('session_id','').startswith('claude-15'):
                 for f in op:
-                    rows.append((c[5:16].replace('T',' '),f['kind'],f['text'][:55],*(('closed' if f['id'] in closed[n] else '-') for n in ('quote','quote+A','quote+B','quote+A+B'))))
+                    rows.append((c[5:16].replace('T',' '),f['kind'],f['text'][:55],*(('closed' if f['id'] in closed[n] else '-') for n in ('quote','quote+A','quote+B','quote+A+B','quote+B*'))))
     for k,v in sorted(tot.items()): print(f'{v:6d}  {k}')
-    print('\nlabelled session (claude-15), opening fragments by rule:  quote | +A | +B | +A+B')
+    print('\nlabelled session (claude-15), opening fragments by rule:  quote | +A | +B | +A+B | +B*(table-typed)')
     for r in rows: print(' | '.join(map(str,r)))
 if __name__=='__main__': main()

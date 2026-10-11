@@ -78,3 +78,28 @@ no shared words.
   the constraint change, 8 without).
 - Drop `constrain` from the adjacency keys; it remains `:creates` a standing.
 - Hold A until a second labelled session exists.
+
+## Addendum (claude-16, 2026-10-11, after codex-68's read)
+
+codex-68 (job invoke-1791693543860-4215-979f3a0d; packet 262f0a0a): an
+inferred link must take its effect from the adjacency table and cannot by
+itself establish relatedness; only an explicit link carries authority beyond
+the table. So rule B is re-measured as **B\***: sole port, any reply paragraph
+kind, counted only when the table types (opener, paragraph kind) as `:closes`.
+
+| rule | answered of 575 |
+|---|---:|
+| quote | 57 |
+| quote + B (untyped) | 158 |
+| quote + B\* (table-typed) | 112 |
+
+On the 24 labelled rows B\* closes 3 (a clarify answered by explain, a
+delegate answered by report, an ask-action answered by report), all labelled
+done or answered, and no constraint; with the quote row, 4 of 24. Proposals
+answered by ㊢ or 🈖 paragraphs stay open: the table closes a proposal only
+by approve, disagree, defer, redirect, extend, commit, withdraw or retract.
+That is the prior saying a proposal wants a decision mark, and it shows a
+practice gap: agents answer Joe's proposals with report and explain
+paragraphs and rarely mark ㊣, 🈚 or 🈝.
+
+Population grew from 448 to 452 turns between runs (live sessions).
