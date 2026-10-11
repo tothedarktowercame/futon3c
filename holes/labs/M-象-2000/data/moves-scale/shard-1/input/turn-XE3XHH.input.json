@@ -1,0 +1,142 @@
+{
+  "record": "turn-XE3XHH",
+  "turn_id": "claude-17-turn-5",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-04T01:18:45Z",
+  "agent_id": "claude-17",
+  "source_text": "So, 象 is still much slower than you on your turns.  I have an idea: what if we develop a fully-classical path and run 象 in the background so that it *updates* the parse which may be after the frame has closed.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-5-f-s1-0",
+      "intent": "report-problem",
+      "text": "So, 象 is still much slower than you on your turns."
+    },
+    {
+      "id": "claude-17-turn-5-f-s2-0",
+      "intent": "propose",
+      "text": "I have an idea: what if we develop a fully-classical path and run 象 in the background so that it *updates* the parse which may be after the frame has closed."
+    }
+  ],
+  "reply_text": "㊥ (classical path first) Yes, and most of it already exists. The classical 小象 draft takes about 0.1 s and is written within a second of your send. So the stepper could show the draft parse straight away, marked provisional, and replace it when 象's reading lands, even if that's after the frame has closed. Shall I send that to kimi-1?\n\n㊬ (where the fast path stands) Your last three turns since you switched back to `jvm`:\n- **Draft:** landed within 1 s of the send each time.\n- **象's reading:** landed 25–120 s after the send. Before the fast path it was 3–4 minutes.\n- **Compared with my turns:** 象 now usually lands around the time I finish replying, not minutes after. It still isn't ahead of me, which fits what you're seeing.\n\nThe 11-second draft from earlier was a one-off. Run directly, `xiaoxiang_preview.py preview` takes 0.08–0.14 s.\n\n㊭ (what the change involves)\n1. **Stepper shows drafts.** At the moment it hides any turn 象 hasn't read. Instead, `turn_frames.py` would build the PARSE from `turn-*.json.draft.json` for those turns, marked \"小象, provisional\". The draft gives each fragment's guesses and precision, so a weak guess can be shown as one.\n2. **象 updates in place.** When the reading lands, the stepper replaces the draft parse in that frame, even if it's an older frame by then. It refreshes on the landed hook as it does now, but it shouldn't jump you to the newest frame if you're reading an older one.\n3. **Two evidence entries.** Your one-packet rule would have to bend. The classical packet (record + draft + \"happened\") would be written when the turn is finalised, and 象's reading added later as an update citing it. That's like the THEN arriving on the other side of the bar after the turn has closed. The alternative is to keep one packet and wait for 象, but then evidence stays behind the stepper.\n\n🈯 (one choice before I send it) Is the two-entry evidence shape, a classical entry and then 象's update, all right with you? I'd write the classical entry at finalisation and 象's reading as a second entry that cites it.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-5-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(classical path first) Yes, and most of it already exists. The classical 小象 draft takes about 0.1 s and is written within a second of your send. So the stepper could show the draft parse straight away, marked provisional, and replace it when 象's reading lands, even if that's after the frame has closed. Shall I send that to kimi-1?"
+    },
+    {
+      "id": "claude-17-turn-5-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(where the fast path stands) Your last three turns since you switched back to `jvm`:\n- **Draft:** landed within 1 s of the send each time.\n- **象's reading:** landed 25–120 s after the send. Before the fast path it was 3–4 minutes.\n- **Compared with my turns:** 象 now usually lands around the time I finish replying, not minutes after. It still isn't ahead of me, which fits what you're seeing."
+    },
+    {
+      "id": "claude-17-turn-5-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what the change involves)\n1. **Stepper shows drafts.** At the moment it hides any turn 象 hasn't read. Instead, `turn_frames.py` would build the PARSE from `turn-*.json.draft.json` for those turns, marked \"小象, provisional\". The draft gives each fragment's guesses and precision, so a weak guess can be shown as one.\n2. **象 updates in place.** When the reading lands, the stepper replaces the draft parse in that frame, even if it's an older frame by then. It refreshes on the landed hook as it does now, but it shouldn't jump you to the newest frame if you're reading an older one.\n3. **Two evidence entries.** Your one-packet rule would have to bend. The classical packet (record + draft + \"happened\") would be written when the turn is finalised, and 象's reading added later as an update citing it. That's like the THEN arriving on the other side of the bar after the turn has closed. The alternative is to keep one packet and wait for 象, but then evidence stays behind the stepper."
+    },
+    {
+      "id": "claude-17-turn-5-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈯",
+      "text": "(one choice before I send it) Is the two-entry evidence shape, a classical entry and then 象's update, all right with you? I'd write the classical entry at finalisation and 象's reading as a second entry that cites it."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-4-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(the stringp error) That error came from me, not from your config. It was a check I ran in your Emacs through emacsclient, and its error showed in your minibuffer. Nothing broke: the requires and the hot-reload refresh had already run before the error."
+    },
+    {
+      "id": "claude-17-turn-4-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(cause) The check counted hot-reload targets by matching each element of `my-chatgpt-shell--hot-reload-resolve-files`'s result against a filename pattern. That function returns a property list, so one of the elements was the keyword `:targets`, and `string-match-p` refused it with `Wrong type argument: stringp, :targets`. My next check read the `:targets` list properly and found `turn-stepper.el`, `xiang-trace.el` and `xiaoxiang-preview.el` all in it."
+    },
+    {
+      "id": "claude-17-turn-4-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(going forward) Errors from checks I run in your Emacs land in your minibuffer as if your config had failed. From here on I'll wrap such checks in `ignore-errors`, so a mistake in a check stays out of your way."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-5",
+      "id": "claude-17-turn-5@turn-XE3XHH-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-04T01:18:45Z",
+      "record": "turn-XE3XHH",
+      "end": 50,
+      "standing?": false,
+      "about": "象's latency relative to the seat's turns, against the bar set in turn-CNNiaK",
+      "text": "So, 象 is still much slower than you on your turns.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 52,
+      "author": "operator",
+      "turn": "claude-17-turn-5",
+      "id": "claude-17-turn-5@turn-XE3XHH-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-04T01:18:45Z",
+      "record": "turn-XE3XHH",
+      "end": 209,
+      "standing?": true,
+      "about": "a two-speed architecture: fully-classical fast path, 象 as background updater of the parse",
+      "text": "I have an idea: what if we develop a fully-classical path and run 象 in the background so that it *updates* the parse wh…",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-5",
+      "id": "claude-17-turn-5@turn-XE3XHH-r-1",
+      "kind": "verify",
+      "at": "2026-10-04T01:18:45Z",
+      "record": "turn-XE3XHH",
+      "standing?": false,
+      "text": "(where the fast path stands) Your last three turns since you switched back to `jvm`:\n- **Draft:** landed within 1 s of …",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-5",
+      "id": "claude-17-turn-5@turn-XE3XHH-r-2",
+      "kind": "propose",
+      "at": "2026-10-04T01:18:45Z",
+      "record": "turn-XE3XHH",
+      "standing?": true,
+      "text": "(what the change involves)\n1. **Stepper shows drafts.** At the moment it hides any turn 象 hasn't read. Instead, `turn_f…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-5",
+      "id": "claude-17-turn-5@turn-XE3XHH-r-3",
+      "kind": "clarify",
+      "at": "2026-10-04T01:18:45Z",
+      "record": "turn-XE3XHH",
+      "standing?": false,
+      "text": "(one choice before I send it) Is the two-entry evidence shape, a classical entry and then 象's update, all right with yo…",
+      "to": "operator"
+    }
+  ]
+}

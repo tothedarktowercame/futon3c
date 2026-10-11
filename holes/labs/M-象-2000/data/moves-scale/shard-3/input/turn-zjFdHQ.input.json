@@ -1,0 +1,55 @@
+{
+  "record": "turn-zjFdHQ",
+  "turn_id": "claude-15-turn-2",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-10T19:39:39Z",
+  "agent_id": "claude-15",
+  "source_text": "ok i think it is connected now, can you grab a 40ºbelowdb spec from downloads",
+  "fragments": [
+    {
+      "id": "claude-15-turn-2-f-s1-0",
+      "intent": "report",
+      "text": "ok i think it is connected now"
+    },
+    {
+      "id": "claude-15-turn-2-f-s1-1",
+      "intent": "ask-action",
+      "text": "can you grab a 40ºbelowdb spec from downloads"
+    }
+  ],
+  "reply_text": "The tunnel works, but `Download` holds only three folders. Searching the rest of the phone's storage:I found it in Termux's `~/downloads`. Copying it over and pulling out the text:I copied **\"40ºBelowDB — rough spec\"** (Oct 9, 7 kB of text) from phone1 to `~/Downloads/40belowdb/`. That folder has the original `.docx` and a plain-text version, `spec.txt` (223 lines). It wasn't in the phone's shared Download folder; it was in Termux's own `~/downloads`.\n\nWhat the spec says, in short:\n- **What it is:** a memory store for agents that runs on your own hardware, built as a FUTON component. It takes in a claude.ai memory export and has to answer questions the hosted version can't.\n- **Data model:** people and topics, plus facts that can link several of them at once. Each fact records where it came from, two dates (when it was true, and when the store learned it), and a status: live, superseded, retracted or \"sorry\". A sorry is an unconfirmed or contradicted fact held open until someone confirms or retracts it.\n- **Operations:** add a fact, replace one, flag a contradiction, settle a sorry, retract, merge names for the same person, query, and export back to Claude's markdown. Every write is checked against current facts first.\n- **Import:** a 7-step parser for the export, which ends in a conflict check. Re-importing a newer export doesn't duplicate anything.\n- **Suggested stack:** Clojure, XTDB for the facts (it stores both dates natively), pgvector or Qdrant for search, and a BGE embedding model run locally.\n- **7 milestones:** round-trip → time → sorries → aliases → search → MCP server → extraction.\n- **6 open questions:** for example, does it live inside FUTON's store or beside it, XTDB or Datomic, which local model does extraction, and is it just for you or a demo for consulting clients.\n\nThe doc's architecture diagram didn't come through in the text version; only its caption did. It may be an embedded image inside the `.docx`.\n\nWhat do you want to do with it?",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-2",
+      "id": "claude-15-turn-2-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-10T19:39:39Z",
+      "record": "turn-zjFdHQ",
+      "end": 30,
+      "standing?": false,
+      "about": "the tunnel from phone1 (turn-Rbl3PJ): Joe thinks it is connected now",
+      "text": "ok i think it is connected now",
+      "to": "claude-15"
+    },
+    {
+      "port?": true,
+      "start": 32,
+      "author": "operator",
+      "turn": "claude-15-turn-2",
+      "id": "claude-15-turn-2-f-s1-1",
+      "kind": "ask-action",
+      "at": "2026-10-10T19:39:39Z",
+      "record": "turn-zjFdHQ",
+      "end": 77,
+      "standing?": false,
+      "about": "the 40ºBelowDB spec on the phone: the agent is to grab it from downloads",
+      "text": "can you grab a 40ºbelowdb spec from downloads",
+      "to": "claude-15"
+    }
+  ]
+}

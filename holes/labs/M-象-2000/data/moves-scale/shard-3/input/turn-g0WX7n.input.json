@@ -1,0 +1,35 @@
+{
+  "record": "turn-g0WX7n",
+  "turn_id": "claude-15-turn-4",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-10T22:13:18Z",
+  "agent_id": "claude-15",
+  "source_text": "did you get any results back?",
+  "fragments": [
+    {
+      "id": "claude-15-turn-4-f-s1-0",
+      "intent": "ask-action",
+      "text": "did you get any results back?"
+    }
+  ],
+  "reply_text": "Yes, both came back. Here they are again in case my last message didn't reach you. The full notes are in `~/Downloads/40belowdb/exploration-2026-10-10.md`.\n\n**Recommendation: stay on XTDB 2.** It's the least change and also the best fit.\n- XTDB 2 is the only option that natively stores both dates the spec needs: when a fact was true, and when the store learned it. Its `ERASE` also gives the spec's \"no trace kept\" retraction.\n- **Datomic** and **Datahike** only record when the store learned a fact; you'd build \"when it was true\" yourself.\n- **Postgres** handles \"when it was true\" but not \"when the store learned it\". **SQLite** needs both built by hand.\n- **Datalevin** keeps no history at all, so it's out.\n- **Git markdown** is fine as an export format but not as the store.\n- **Runner-up:** Datahike, which is embedded and has built-in vector search.\n- **XTDB's gap:** no vector search. Add a separate index that can be rebuilt from the store.\n- **Encryption at rest:** no option does it natively, so put the store on an encrypted disk (LUKS).\n\n**Already built:** about half the spec, mostly in futon1b.\n- futon1b keeps memories in XTDB 2.1 with both dates.\n- Facts can be current, challenged, superseded or retracted; \"challenged\" is close to a sorry.\n- Alias lookup, full-text search, a two-tool MCP server, and local embeddings for patterns and missions only.\n\n**Missing, the part that makes it new:**\n- Claude memory import/export.\n- Checking new facts against current ones and opening sorries.\n- Merging two names into one entity.\n- Embeddings and a vector index for facts.\n- Retraction that leaves no trace.\n- More MCP tools.\n\nSo 40ºBelowDB would fit inside futon1b as new fact types and routes. The cheapest first step is milestone 1: parse a Claude export and write it back out unchanged.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-4",
+      "id": "claude-15-turn-4-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-10-10T22:13:18Z",
+      "record": "turn-g0WX7n",
+      "end": 29,
+      "standing?": false,
+      "about": "the two background checks claude-15 started (turn-UBmb3D: what is already built, and alternatives to XTDB): the agent is to say whether results have come back",
+      "text": "did you get any results back?",
+      "to": "claude-15"
+    }
+  ]
+}

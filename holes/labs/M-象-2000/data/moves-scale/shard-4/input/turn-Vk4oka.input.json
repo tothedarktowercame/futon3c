@@ -1,0 +1,227 @@
+{
+  "record": "turn-Vk4oka",
+  "turn_id": "claude-2-turn-26",
+  "session_id": "40369bd2-11a6-47b9-a440-f319b68bbbf8",
+  "created_at": "2026-10-04T19:28:11Z",
+  "agent_id": "claude-2",
+  "source_text": "The mouse-over pop doesn't work for me in a full-screen chrome running on a Pixel plugged into a monitor.  Maybe it's just my setup.  Anyway BTW \"SCAN\" should probably go under ACT both to save space and because \"no stage\" doesn't mean anything",
+  "fragments": [
+    {
+      "id": "claude-2-turn-26-f-s1-0",
+      "intent": "report-problem",
+      "text": "The mouse-over pop doesn't work for me in a full-screen chrome running on a Pixel plugged into a monitor."
+    },
+    {
+      "id": "claude-2-turn-26-f-s2-0",
+      "intent": "qualify",
+      "text": "Maybe it's just my setup."
+    },
+    {
+      "id": "claude-2-turn-26-f-s3-0",
+      "intent": "propose",
+      "text": "Anyway BTW \"SCAN\" should probably go under ACT both to save space and because \"no stage\" doesn't mean anything"
+    }
+  ],
+  "reply_text": "Fixing the Pixel hover (it was my touch-device guard) and finding where the SCAN column comes from; first a scratch run of the figure generator to see whether its inputs have moved.㊥ (\"doesn't work for me in a full-screen chrome running on a Pixel\") It was not your setup; it was a guard I wrote, and it is fixed. SCAN is now under ACT. Both are committed on futon7a `master` as `889ad06` and not pushed.\n\n🈖 (\"Maybe it's just my setup\") I had the box open only on devices that report hover support, to keep it off phones. A phone reports \"no hover\" even with a mouse attached, so on your Pixel it never opened. It now opens for any mouse or pen pointer, on any device, and not for a finger.\n\n㊬ (the Pixel case) I ran a browser set up as a phone, with touch on and hover reported as absent. A finger tap does not open the box, a mouse on the same device does, and the margin closes it. This is an emulation; I could not test your Pixel itself.\n\n㊢ (\"SCAN\" should probably go under ACT) Done in the figure's generator in p4ng, so it survives regeneration.\n- **Layout:** SCAN is drawn at the foot of the ACT column, below R16, and the \"(no stage)\" column is gone.\n- **Size:** the drawing is 1730 wide instead of 2060, so the figure in the page is drawn about 19% larger and the labels are easier to read.\n- **Tooltip:** hovering SCAN says \"not on the control map; drawn under ACT\". I did not record SCAN as an ACT-stage node in the stage data. That data is read off the hand-drawn control map, and SCAN is not on it.\n\n㊬ (what I checked for the figure)\n- Before my change, a scratch run of the generator reproduced the tracked page byte for byte, so the regenerated diff is the layout only.\n- The generator's own checks pass (`test_gen_lean_dag.sh`: all cases ok).\n- The earlier hover checks all pass at the new proportions, at 1600 by 900.\n- I looked at a screenshot of the new figure in the page: five columns, SCAN under R16, the lower band and the R20 boundary intact.\n\n㊢ (commits)\n\n| Repo | Commit | What |\n|---|---|---|\n| futon7a | `889ad06` | pointer fix, new figure, proportions held in one place; not pushed |\n| p4ng | `b76b07e` | generator change and the regenerated figures; not pushed |\n| futon7 | `c7a987b` | `scripts/harness-figure.py`, which builds the About page figure from p4ng's page |\n\nThe script is new. The About page copy was derived by hand before, and a hand copy would have lost the fit-and-slide code at the next regeneration.\n\n🈸 (to see it) `git push origin master` in futon7a, then reload the About page. The frame's address has a new version, so the figure itself will not come from cache.",
+  "reply_acts": [
+    {
+      "id": "claude-2-turn-26-r-0",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "🈖",
+      "text": "(\"Maybe it's just my setup\") I had the box open only on devices that report hover support, to keep it off phones. A phone reports \"no hover\" even with a mouse attached, so on your Pixel it never opened. It now opens for any mouse or pen pointer, on any device, and not for a finger."
+    },
+    {
+      "id": "claude-2-turn-26-r-1",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊬",
+      "text": "(the Pixel case) I ran a browser set up as a phone, with touch on and hover reported as absent. A finger tap does not open the box, a mouse on the same device does, and the margin closes it. This is an emulation; I could not test your Pixel itself."
+    },
+    {
+      "id": "claude-2-turn-26-r-2",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊢",
+      "text": "(\"SCAN\" should probably go under ACT) Done in the figure's generator in p4ng, so it survives regeneration.\n- **Layout:** SCAN is drawn at the foot of the ACT column, below R16, and the \"(no stage)\" column is gone.\n- **Size:** the drawing is 1730 wide instead of 2060, so the figure in the page is drawn about 19% larger and the labels are easier to read.\n- **Tooltip:** hovering SCAN says \"not on the control map; drawn under ACT\". I did not record SCAN as an ACT-stage node in the stage data. That data is read off the hand-drawn control map, and SCAN is not on it."
+    },
+    {
+      "id": "claude-2-turn-26-r-3",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊬",
+      "text": "(what I checked for the figure)\n- Before my change, a scratch run of the generator reproduced the tracked page byte for byte, so the regenerated diff is the layout only.\n- The generator's own checks pass (`test_gen_lean_dag.sh`: all cases ok).\n- The earlier hover checks all pass at the new proportions, at 1600 by 900.\n- I looked at a screenshot of the new figure in the page: five columns, SCAN under R16, the lower band and the R20 boundary intact."
+    },
+    {
+      "id": "claude-2-turn-26-r-4",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊢",
+      "text": "(commits)"
+    },
+    {
+      "id": "claude-2-turn-26-r-5",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "🈸",
+      "text": "(to see it) `git push origin master` in futon7a, then reload the About page. The frame's address has a new version, so the figure itself will not come from cache."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-2-turn-25-r-0",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "🈖",
+      "text": "(why it slides) The drawing is 2.84 times as wide as it is tall, and the figure in the page already takes about 79% of the window's width. A box at 80% that showed the whole drawing would be about 2% larger, which is no gain. So in the box the drawing takes the box's height instead. At 1600 by 900 that makes it 2046 px wide against 1260 in the page, about 1.6 times larger and close to its natural size. Since it is then wider than the box, it slides left and right as the pointer moves across. Nothing scrolls and the wheel is not involved."
+    },
+    {
+      "id": "claude-2-turn-25-r-1",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊢",
+      "text": "(\"leaving a 20% margin, so mouse-away to the margin can exit\") I took this as 10% on each side, so the box is at most 80% of the window's width and height.\n- **To open:** rest the pointer on the figure for 200 ms. A quick pass across it while moving down the page does not open it.\n- **To close:** move the pointer out to the margin, click in the margin, or press Escape.\n- **No reopen loop:** if the pointer is over the figure's place in the page when the box closes, it stays closed until the pointer has left the figure.\n- **Touch and narrow windows:** phones, and windows under 761 px wide, keep the plain figure.\n- **Caption:** I added one sentence telling a reader how to enlarge it and put it back. Reword it as you like."
+    },
+    {
+      "id": "claude-2-turn-25-r-2",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊬",
+      "text": "(what I checked) I served the site locally and drove a real Chromium with Playwright at 1600 by 900. Every check passed and the page raised no errors:\n- the box opens to 1280 by 720, centred;\n- the drawing slides with the pointer;\n- the margin, Escape and a click each close it;\n- closing over the figure does not reopen it, and a later hover does;\n- opening when the pointer starts in the margin band works;\n- a quick pass does not open it;\n- a 700 px window stays inline;\n- a box can be clicked in the enlarged view."
+    },
+    {
+      "id": "claude-2-turn-25-r-3",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "㊟",
+      "text": "(two things you may notice)\n- **Aiming:** because the drawing slides as you move, a box shifts a little as you approach it. In my automated click test the click landed on the neighbouring box, SCAN, when I aimed at R16 from stale coordinates. By eye this should be easy to follow, but if it feels slippery, the alternative is to slide only while the pointer is near the left or right edge.\n- **Other screen sizes:** I tested one size. The box height is capped at 870 px, so on a very large screen the drawing stops growing at 1.2 times its natural size."
+    },
+    {
+      "id": "claude-2-turn-25-r-4",
+      "kind": "reply-mark",
+      "author": "claude-2",
+      "mark": "🈸",
+      "text": "(to try it) Push, then hard-reload the About page once (Ctrl+Shift+R). The frame's address has a new version, so the hard reload should only be needed for the About page itself."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "end": 105,
+      "standing?": false,
+      "about": "mouse-over pop failing in full-screen Chrome on Pixel + external monitor",
+      "text": "The mouse-over pop doesn't work for me in a full-screen chrome running on a Pixel plugged into a monitor.",
+      "to": "claude-2"
+    },
+    {
+      "port?": false,
+      "start": 107,
+      "author": "operator",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-f-s2-0",
+      "kind": "qualify",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "end": 132,
+      "standing?": false,
+      "about": "scope of the mouse-over defect report",
+      "text": "Maybe it's just my setup.",
+      "to": "claude-2"
+    },
+    {
+      "port?": true,
+      "start": 134,
+      "author": "operator",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-f-s3-0",
+      "kind": "propose",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "end": 244,
+      "standing?": true,
+      "about": "reclassify SCAN under ACT in the UI",
+      "text": "Anyway BTW \"SCAN\" should probably go under ACT both to save space and because \"no stage\" doesn't mean anything",
+      "to": "claude-2"
+    },
+    {
+      "port?": false,
+      "author": "claude-2",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-r-0",
+      "kind": "explain",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "target": "claude-2-turn-26-f-s2-0",
+      "standing?": false,
+      "text": "(\"Maybe it's just my setup\") I had the box open only on devices that report hover support, to keep it off phones. A pho…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-2",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-r-1",
+      "kind": "verify",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "standing?": false,
+      "text": "(the Pixel case) I ran a browser set up as a phone, with touch on and hover reported as absent. A finger tap does not o…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-2",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-r-2",
+      "kind": "report",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "standing?": false,
+      "text": "(\"SCAN\" should probably go under ACT) Done in the figure's generator in p4ng, so it survives regeneration.\n- **Layout:*…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-2",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-r-3",
+      "kind": "verify",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "standing?": false,
+      "text": "(what I checked for the figure)\n- Before my change, a scratch run of the generator reproduced the tracked page byte for…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-2",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-r-4",
+      "kind": "report",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "standing?": false,
+      "text": "(commits)",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-2",
+      "turn": "claude-2-turn-26",
+      "id": "claude-2-turn-26-r-5",
+      "kind": "ask-action",
+      "at": "2026-10-04T19:28:11Z",
+      "record": "turn-Vk4oka",
+      "standing?": false,
+      "text": "(to see it) `git push origin master` in futon7a, then reload the About page. The frame's address has a new version, so …",
+      "to": "operator"
+    }
+  ]
+}

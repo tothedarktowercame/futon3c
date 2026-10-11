@@ -1,0 +1,23 @@
+{
+  "record": "turn-BNEg24",
+  "turn_id": "claude-1-turn-167",
+  "session_id": "b24467ae-519b-4310-b7c2-201cd5d78938",
+  "created_at": "2026-09-30T07:49:47Z",
+  "agent_id": "claude-1",
+  "source_text": "\"Cascades are formed on the fly, but from a pool, and the pool is not the pattern library.\" Then you are violating my core design from the first step",
+  "fragments": [
+    {
+      "id": "claude-1-turn-167-f-s1-0",
+      "intent": "clarify",
+      "text": "\"Cascades are formed on the fly, but from a pool, and the pool is not the pattern library.\""
+    },
+    {
+      "id": "claude-1-turn-167-f-s2-0",
+      "intent": "report-problem",
+      "text": "Then you are violating my core design from the first step"
+    }
+  ],
+  "reply_text": "Yes. I've recorded that as the incident's primary finding, with the design quoted and the commits where the implementation departed from it (commit `782499d47`).\n\n**The design, in the library's own words** (`futon3/library/cascades/on-the-fly-cascade.flexiarg`): \"Derive cascade edges per query, against the current problem state — the cascade a seat needs is the cascade FOR THIS PROBLEM, and most such relations cannot be pre-declared.\" And: \"Compute the cascade slice at query time … hand the seat the slice with provenance, and receipt whatever the seat actually uses.\"\n\n**What was built instead, and since when:**\n\n- **17 September** (`e2e1b477a`, `8e3fde409`): a target's patterns come from a hand-written file for that target. The commit message itself says \"hand-admitted interpretation/construction\".\n- **24 September** (`e08d08329`, `604959898`): an agent may add to that per-target list by answering an interpretation request, one pattern per want, validated before it counts.\n- **Ever since:** the constructor has read only that per-target list. It has never derived a slice from the library for the problem at hand.\n\n**Why it went that way.** To compute a score for a cascade, the code wants each pattern as a rewrite over the target's tokens: a guard and a produced want. Library patterns are prose. The \"interpretation\" is the translation of one pattern for one target, and only translated patterns may be used. So a step introduced to make the score computable ended up replacing the library with a short list fed in by hand. It has the same root as the formal-wants gate you identified earlier.\n\n**A piece that already exists and is misused.** `interpretation_request.clj` runs two retrievers over the whole library against a want and ranks the candidate patterns. That is a query-time slice with provenance, close to what the design describes. But it is used only to fill the prompt of an interpretation request. The slice never reaches the constructor or the seat.\n\nThe other six findings in the incident are downstream of this one: the single policy, the scoring that compared nothing, and the author being handed one pre-chosen cascade that it could only accept or refuse.\n\nI inherited this machinery on 28 September and have spent the time since repairing its gates without checking them against the design. The incident now says so.",
+  "reply_acts": [],
+  "previous_reply_acts": []
+}

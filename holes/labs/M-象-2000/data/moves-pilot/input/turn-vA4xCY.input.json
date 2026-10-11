@@ -1,0 +1,55 @@
+{
+  "record": "turn-vA4xCY",
+  "turn_id": "claude-17-turn-303",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-09-30T02:35:19Z",
+  "agent_id": "claude-17",
+  "source_text": "OK, let's set up another practice turn.  @claude-17 please make a signed commit in futon7a which I will subsequently rewind.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-303-f-s1-0",
+      "intent": "propose",
+      "text": "OK, let's set up another practice turn."
+    },
+    {
+      "id": "claude-17-turn-303-f-s2-0",
+      "intent": "ask-action",
+      "text": "@claude-17 please make a signed commit in futon7a which I will subsequently rewind."
+    }
+  ],
+  "reply_text": "[Error: Turn not started: futon1b was busy while recording this turn's clock decision (futon1b busy (HTTP 504): the write was not served and nothing was written). Nothing was recorded, so sending the message again is safe.]",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-303",
+      "id": "claude-17-turn-303-f-s1-0",
+      "kind": "propose",
+      "at": "2026-09-30T02:35:19Z",
+      "record": "turn-vA4xCY",
+      "end": 39,
+      "standing?": true,
+      "about": "a second rewind-practice fixture turn",
+      "text": "OK, let's set up another practice turn.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 41,
+      "author": "operator",
+      "turn": "claude-17-turn-303",
+      "id": "claude-17-turn-303-f-s2-0",
+      "kind": "ask-action",
+      "at": "2026-09-30T02:35:19Z",
+      "record": "turn-vA4xCY",
+      "end": 124,
+      "standing?": false,
+      "about": "a sacrificial signed commit in futon7a, designated for rewinding",
+      "text": "@claude-17 please make a signed commit in futon7a which I will subsequently rewind.",
+      "to": "claude-17"
+    }
+  ]
+}

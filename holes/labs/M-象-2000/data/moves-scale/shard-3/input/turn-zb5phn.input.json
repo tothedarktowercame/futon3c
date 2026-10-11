@@ -1,0 +1,35 @@
+{
+  "record": "turn-zb5phn",
+  "turn_id": "claude-15-turn-13",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-11T01:16:42Z",
+  "agent_id": "claude-15",
+  "source_text": "what is milestone 4?",
+  "fragments": [
+    {
+      "id": "claude-15-turn-13-f-s1-0",
+      "intent": "clarify",
+      "text": "what is milestone 4?"
+    }
+  ],
+  "reply_text": "Milestone 4 is **aliases**: merging entities. The spec defines it as \"Entity merge, with every link and fact following the merged id.\"\n\nIn the claude.ai design, an entity is a person or topic, so merging means treating \"Joe\", \"my partner\" and a GitHub handle as one node. Applied to Claude Code memories, I see two parts:\n\n1. **Duplicate memories.** The judge found 18 `restates` pairs, i.e. the same lesson filed twice, often in two project folders. Examples are `park-needs-session-id` and `emacs-park-needs-session`, or `joe-assesses-results-not-rulings` and `operator-assessment-not-ruling`. Merging a pair means choosing one id to keep. The other becomes an alias of it, and every `[[link]]`, version edge and sorry that pointed at the old id follows to the kept one. History is kept: the old id's versions stay queryable, and the merge is itself a dated fact.\n\n2. **Things the memories talk about.** As I noted early on, a memory file is a fact, not an entity. The actual entities (futon1b, phone1, :7070, codex-18, you) only appear in the text. This part would pull those names out into entity nodes with alias sets. For example, `zone`, `zone.hyperreal.enterprises` and \"the server\" would be one node, and so would `phone1`, `dexphone` and \"the Galaxy S21\". Each memory would then get an edge to every entity it mentions. That's what makes the spec's cross-file queries possible, like \"everything about phone1, newest first\", rather than relying on shared words or `[[links]]`. futon1b's alias lookup and futon3a's entity/alias/mention tables are the existing pieces to reuse.\n\nPart 1 is small and the candidates already exist. Part 2 is the bigger and more useful half, and it needs an extraction pass. That could be rule-based for ports, repo names and device names, with Haiku for the rest.\n\nI'd start with part 1 and propose the merges rather than apply them, same as the supersessions, since you may not want some duplicates collapsed.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-13",
+      "id": "claude-15-turn-13-f-s1-0",
+      "kind": "clarify",
+      "at": "2026-10-11T01:16:42Z",
+      "record": "turn-zb5phn",
+      "end": 20,
+      "standing?": false,
+      "about": "milestone 4 of claude-15's memory-import plan (turn-1ij7FV; turn-n5EIxj ended with an offer to keep the store up for it): the agent is to say what it is",
+      "text": "what is milestone 4?",
+      "to": "claude-15"
+    }
+  ]
+}

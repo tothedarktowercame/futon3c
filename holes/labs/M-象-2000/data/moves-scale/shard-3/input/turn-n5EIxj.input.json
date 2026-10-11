@@ -1,0 +1,57 @@
+{
+  "record": "turn-n5EIxj",
+  "turn_id": "claude-15-turn-12",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-11T01:15:22Z",
+  "agent_id": "claude-15",
+  "source_text": "are they still going?",
+  "fragments": [
+    {
+      "id": "claude-15-turn-12-f-s1-0",
+      "intent": "ask-action",
+      "text": "are they still going?"
+    }
+  ],
+  "reply_text": "No, the judging has finished. All 4 Haiku shards exited after judging all 631 pairs, and I loaded the results last turn: 18 open sorries, 18 `restates` edges and 32 proposed supersessions, committed as `0354bea`.\n\nOnly the scratch futon1b on :7093 is still running, and it holds the loaded store. It's capped at 3 GB. I can leave it up for milestone 4 or stop it, whichever you prefer.",
+  "reply_acts": [],
+  "previous_reply_acts": [
+    {
+      "id": "claude-15-turn-11-r-0",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊢",
+      "text": "(early results) In the first 26 judgements every quote checked out. 11 pairs were unrelated, 6 restate each other, 6 are replacements and 3 are conflicts. The conflicts look like real ones:\n- **noVNC:** one memory says the noVNC browser surface is running, and a later memory says it is \"Not set up yet\".\n- **codex-18/19:** one memory says the two seats were retired and deregistered, another says they paused cleanly, both on 10-04.\n- **a1 cascade:** two memories give incompatible explanations for the same empty a1 cascade results."
+    },
+    {
+      "id": "claude-15-turn-11-r-1",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊢",
+      "text": "(loader is ready) `minus40.sorries` turns the verdicts into futon1b records. Only verdicts with verbatim quotes are used.\n- **conflict:** a sorry, written as a futon3c-shaped challenge plus a `:memory/sorry` edge.\n- **restates:** a `:memory/restates` edge.\n- **replaces:** a `:memory/supersede-proposed` edge from the older memory to the newer one. It isn't applied, since a model made the call.\n- **Commands:** `list` shows open sorries with both quotes. `discharge <id> a|b|both|neither <note>` closes one and keeps the open period in history.\n- **Challenged state:** a memory counts as `:challenged` (futon2's term) while an open sorry touches it, so no version edges get rewritten."
+    },
+    {
+      "id": "claude-15-turn-11-r-2",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "🈰",
+      "text": "(next) When the shards finish, I'll load everything into the scratch store, check the counts and some samples against the source, commit, and send you the list of open sorries."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-12",
+      "id": "claude-15-turn-12-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-10-11T01:15:22Z",
+      "record": "turn-n5EIxj",
+      "end": 21,
+      "standing?": false,
+      "about": "the four Haiku judge shards claude-15 started (turn-mIc3Eh): the agent is to say whether they are still running",
+      "text": "are they still going?",
+      "to": "claude-15"
+    }
+  ]
+}

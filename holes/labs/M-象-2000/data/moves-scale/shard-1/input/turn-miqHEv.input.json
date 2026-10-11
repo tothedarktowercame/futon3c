@@ -1,0 +1,237 @@
+{
+  "record": "turn-miqHEv",
+  "turn_id": "claude-17-turn-388",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-01T01:31:11Z",
+  "agent_id": "claude-17",
+  "source_text": "Well, in terms of the questions-for-me I wonder if we could mine potentially-interested use cases from https://www.tech-week.com/calendar since I will be in SF and can ask people what they think in person. The \"upsell\" from the free demo that I'd see would have to do not just with 象 but with a custom memory system (e.g. for me that involves building an alignment between turns & patterns and intents that you know about, but also Missions, and Active Inference over this collection of material is current work in progress... I'm not sure I'll be able to give anyone a convincing demo of AIF loops automatically improving my software stack, nor am I sure if what we have here is \"better\" than standard offerings like Tessl... but there's definitely something *different* about my approach from most things I've seen, so it's highly custom; that doesn't mean it has a high value for others though).",
+  "fragments": [
+    {
+      "id": "claude-17-turn-388-f-s1-0",
+      "intent": "propose",
+      "text": "Well, in terms of the questions-for-me I wonder if we could mine potentially-interested use cases from https://www.tech-week.com/calendar since I will be in SF and can ask people what they think in person."
+    },
+    {
+      "id": "claude-17-turn-388-f-s2-0",
+      "intent": "propose",
+      "text": "The \"upsell\" from the free demo that I'd see would have to do not just with 象 but with a custom memory system (e.g."
+    },
+    {
+      "id": "claude-17-turn-388-f-s3-0",
+      "intent": "explain",
+      "text": "for me that involves building an alignment between turns & patterns and intents that you know about, but also Missions, and Active Inference over this collection of material is current work in progress..."
+    },
+    {
+      "id": "claude-17-turn-388-f-s4-0",
+      "intent": "qualify",
+      "text": "I'm not sure I'll be able to give anyone a convincing demo of AIF loops automatically improving my software stack, nor am I sure if what we have here is \"better\" than standard offerings like Tessl..."
+    },
+    {
+      "id": "claude-17-turn-388-f-s5-0",
+      "intent": "qualify",
+      "text": "but there's definitely something *different* about my approach from most things I've seen, so it's highly custom; that doesn't mean it has a high value for others though)."
+    }
+  ],
+  "reply_text": "The Tech Week calendar sits behind a bot checkpoint that blocks plain fetches, so I'm trying to load it in a real Chromium on the server's virtual display.㊥ Gist: I couldn't read the Tech Week calendar directly because it blocks automated visitors, but searching turned up five relevant events. The one most worth attending is the coding-agents panel on Thursday 8 October at 18:00. One of the companies featured there, XTrace, turns a team's agent sessions into rules and skills, which is the nearest thing I've found to the memory side of your approach. The shortlist and five questions to ask are now in the pilot draft.\n\n㊢ (the list, in `futon7/holes/E-xiaoxiang-pilot-offer.md`, commit 853490d) Plain fetches and headless Chromium were all refused, so these come from search results and the event pages themselves.\n\n| When | Event | What it offers you |\n|---|---|---|\n| Tue 6 Oct, 17:30 | Camp AI: Production-Ready Agents | Anthropic, Cloudflare, Auth0 and Browserbase on running agents in companies |\n| Wed 7 Oct, 17:30 | Agents in Production: The Data Layer | Agent data and memory |\n| Thu 8 Oct, 18:00 | Unlock the Full Power of Coding Agents (PTET) | A panel on teams using coding agents, covering memory, skills and harnesses, with XTrace |\n| Thu 8 Oct, 18:00 | Code. Fix. Drink. Repeat. (WeAreDevelopers, Snyk) | Working developers, the people whose requests get dropped |\n| Fri 9 Oct, 12:00–18:00 | Agent Day | The most agent founders in one place |\n\nI checked the date of the Thursday panel on its own page. The Wednesday events and Agent Day come from one guide and I haven't checked them against their event pages. Two other events the search returned weren't this year's Tech Week, so I left them out.\n\n🈖 (your point on the upsell) I agree the paid work would be the memory system, not 象 alone. I'd also leave active inference out of the pitch. A live demo of AIF loops improving your stack is the hard thing to show, and you don't need it to make the case. What is distinctive and easy to show is smaller:\n- **Patterns carry outcomes:** your patterns record how they turned out when they were used. This is page 6 of the site plan, memory that has been evaluated.\n- **Turns are linked:** a turn connects to the patterns and missions it touched, so \"I was talking about such-and-such\" finds the right material.\n- **Contrast with XTrace:** XTrace's offer, sessions turned into rules, is the generic version of this. Hearing what its users find missing is the most direct test of whether your difference is worth paying for.\n\n㊟ (different isn't necessarily valuable) I can't settle that from here. Conversations at Tech Week can, so I wrote the questions to find out where the pain is rather than to pitch:\n1. How do you know an agent did what you asked?\n2. Who reads agent transcripts on your team?\n3. Would you let a tool run over your rollouts on your own machine?\n4. What does your agents' memory hold now, and who curates it?\n5. What was missing from XTrace, Tessl or similar tools you've tried?\n\nIf several people answer the fourth with \"rules files nobody curates\", that is the opening for the memory system.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-388-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(the list, in `futon7/holes/E-xiaoxiang-pilot-offer.md`, commit 853490d) Plain fetches and headless Chromium were all refused, so these come from search results and the event pages themselves."
+    },
+    {
+      "id": "claude-17-turn-388-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(your point on the upsell) I agree the paid work would be the memory system, not 象 alone. I'd also leave active inference out of the pitch. A live demo of AIF loops improving your stack is the hard thing to show, and you don't need it to make the case. What is distinctive and easy to show is smaller:\n- **Patterns carry outcomes:** your patterns record how they turned out when they were used. This is page 6 of the site plan, memory that has been evaluated.\n- **Turns are linked:** a turn connects to the patterns and missions it touched, so \"I was talking about such-and-such\" finds the right material.\n- **Contrast with XTrace:** XTrace's offer, sessions turned into rules, is the generic version of this. Hearing what its users find missing is the most direct test of whether your difference is worth paying for."
+    },
+    {
+      "id": "claude-17-turn-388-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(different isn't necessarily valuable) I can't settle that from here. Conversations at Tech Week can, so I wrote the questions to find out where the pain is rather than to pitch:\n1. How do you know an agent did what you asked?\n2. Who reads agent transcripts on your team?\n3. Would you let a tool run over your rollouts on your own machine?\n4. What does your agents' memory hold now, and who curates it?\n5. What was missing from XTrace, Tessl or similar tools you've tried?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-387-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(fast mode, futon3c commit 38ec87aa) To try it, load `futon3c/emacs/xiaoxiang-preview.el`. It is not loaded automatically.\n- **C-c x p:** marks each fragment of the input area with the mark from the reply key. It takes about 0.1 s.\n- **C-c x c:** corrects the fragment at point. Corrections go to `storage/operator-turns/xiaoxiang-corrections.jsonl` and are used when the model is next rebuilt, at most once a day. They are not used in the edition scores, so those stay comparable.\n- **C-c x k:** clears the marks. A mark also disappears when you edit its fragment.\n- **Which repls:** the keys are bound in the Claude REPL only, not the Codex, Kimi or Zai ones."
+    },
+    {
+      "id": "claude-17-turn-387-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(confidence) 小象's probabilities are badly overconfident: when it reports 90% or more, it is right only 44% of the time. So a mark is shown only for intents that cross-validation shows are right at least half the time they are predicted. Those are approve 0.84, continue 0.86, defer 0.78, disagree 0.68, ask-action 0.52 and clarify 0.50. Everything else shows \"?\", with the two likeliest intents in the tooltip, and those two include the right one 52% of the time."
+    },
+    {
+      "id": "claude-17-turn-387-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(what I checked)\n- A batch Emacs run on a sample draft marked \"OK, that looks right.\" as ㊣ and \"Can you rerun the check on block 3?\" as 🈸. \"Don't touch the July blocks though.\" got \"?\", with constrain as the first guess.\n- The parens check passes and the file byte-compiles without warnings.\n- A correction was recorded, and an intent not on the list was refused.\n- I haven't run it in your live Emacs."
+    },
+    {
+      "id": "claude-17-turn-387-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(pilot offer, `futon7/holes/E-xiaoxiang-pilot-offer.md`, futon7 commit b7357fa) Your rollout audit already covers the token cost. This adds the babysitting cost you raised: of the requests a team typed to its agents last month, how many were done, answered without being done, dropped, or asked twice.\n- **The pilot:** two weeks on their machine, ending in a report and a 小象 retrained on their turns, with fast mode, which they keep.\n- **Success test:** agreed in advance. The team accepts at least ten of the dropped or repeated requests we report as real.\n- **What it leads to:** repeat audits, fixes for what it finds, and a case write-up for the site."
+    },
+    {
+      "id": "claude-17-turn-387-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(gaps the draft states)\n- **Following a request to its outcome isn't built.** It has to be shown on a week of your turns first, as the sample report.\n- **Labelling in the pilot would rest on 象, not 小象,** whose accuracy on someone else's turns is unknown.\n- **The 小象 site page** (`site-draft/xiaoxiang.html`) already has a try-a-sentence box and a download. It needs one line pointing at the pilot and a contact address."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "end": 205,
+      "standing?": true,
+      "about": "mining the Tech Week calendar for potentially-interested use cases, with in-person asking at the event",
+      "text": "Well, in terms of the questions-for-me I wonder if we could mine potentially-interested use cases from https://www.tech…",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 206,
+      "author": "operator",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "end": 321,
+      "standing?": true,
+      "about": "the offer: the paid step up from the free demo is a custom memory system, not 象 alone",
+      "text": "The \"upsell\" from the free demo that I'd see would have to do not just with 象 but with a custom memory system (e.g.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 322,
+      "author": "operator",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-f-s3-0",
+      "kind": "explain",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "end": 526,
+      "standing?": false,
+      "about": "what the custom memory system concretely involves in his own case",
+      "text": "for me that involves building an alignment between turns & patterns and intents that you know about, but also Missions,…",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 527,
+      "author": "operator",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-f-s4-0",
+      "kind": "qualify",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "end": 726,
+      "standing?": false,
+      "about": "the offer's demonstrability and superiority claims",
+      "text": "I'm not sure I'll be able to give anyone a convincing demo of AIF loops automatically improving my software stack, nor …",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 727,
+      "author": "operator",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-f-s5-0",
+      "kind": "qualify",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "end": 898,
+      "standing?": false,
+      "about": "the differentiator itself: confirmed as real, discounted as not-implying-value",
+      "text": "but there's definitely something *different* about my approach from most things I've seen, so it's highly custom; that …",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-r-0",
+      "kind": "report",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "standing?": false,
+      "text": "(the list, in `futon7/holes/E-xiaoxiang-pilot-offer.md`, commit 853490d) Plain fetches and headless Chromium were all r…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-r-1",
+      "kind": "explain",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "standing?": false,
+      "text": "(your point on the upsell) I agree the paid work would be the memory system, not 象 alone. I'd also leave active inferen…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-388",
+      "id": "claude-17-turn-388-r-2",
+      "kind": "qualify",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "standing?": false,
+      "text": "(different isn't necessarily valuable) I can't settle that from here. Conversations at Tech Week can, so I wrote the qu…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-388",
+      "carries-out": "claude-17-turn-386-r-7",
+      "id": "claude-17-turn-388-c-019fa09c",
+      "kind": "commit",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "repo": "futon7",
+      "subject": "M-descriptive-essay: stack-annotations substrate + region overlay + I1-I6 audit + print essay projection",
+      "sha": "019fa09c",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-388",
+      "carries-out": "claude-17-turn-386-r-7",
+      "id": "claude-17-turn-388-c-853490d6",
+      "kind": "commit",
+      "at": "2026-10-01T01:31:11Z",
+      "record": "turn-miqHEv",
+      "repo": "futon7",
+      "subject": "E-xiaoxiang-pilot-offer: SF Tech Week shortlist and questions to ask",
+      "sha": "853490d6",
+      "standing?": false
+    }
+  ]
+}

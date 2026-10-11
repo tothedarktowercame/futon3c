@@ -100,6 +100,16 @@ class MovesHarnessTest(unittest.TestCase):
             self.assertEqual(2, report["incidence"])
             self.assertEqual(0.5, report["precision_answered_vs_open"])
 
+class ReplyMarksFollowKernelNumbering(unittest.TestCase):
+    def test_marked_only_zero_based_body_text(self):
+        record = {"turn_id": "a-turn-1", "agent_id": "a",
+                  "reply_text": "plain intro paragraph\n\n㊢ (what) did it\n\nunmarked middle\n\n🈸: yes or no?"}
+        acts = sample.reply_marks(record)
+        self.assertEqual([a["id"] for a in acts], ["a-turn-1-r-0", "a-turn-1-r-1"])
+        self.assertEqual(acts[0]["text"], "(what) did it")
+        self.assertEqual(acts[1]["text"], "yes or no?")
+        self.assertEqual(acts[1]["mark"], "🈸")
+
 
 if __name__ == "__main__":
     unittest.main()

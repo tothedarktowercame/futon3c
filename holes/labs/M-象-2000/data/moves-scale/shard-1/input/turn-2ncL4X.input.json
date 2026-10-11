@@ -1,0 +1,109 @@
+{
+  "record": "turn-2ncL4X",
+  "turn_id": "claude-17-turn-526",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-03T05:58:07Z",
+  "agent_id": "claude-17",
+  "source_text": "Can we bring down the 象 seats on a temporary basis? There should be a 象-off function for this",
+  "fragments": [
+    {
+      "id": "claude-17-turn-526-f-s1-0",
+      "intent": "ask-action",
+      "text": "Can we bring down the 象 seats on a temporary basis?"
+    },
+    {
+      "id": "claude-17-turn-526-f-s2-0",
+      "intent": "report-problem",
+      "text": "There should be a 象-off function for this"
+    }
+  ],
+  "reply_text": "I haven't found an `象-off` function yet. I'm now checking the code that dispatches to the 象 seats.㊥ (bringing down the 象 seats) There's no `象-off` function anywhere: not in the code, the git history, or your running Emacs. To get the same effect for now, I set `session-mode-turn-analysis-policy` to `never` in your Emacs. Your turns are still recorded, but no new readings are sent to 象, 象-sonnet or 象-1 to 象-4. To turn them back on, evaluate `(setq session-mode-turn-analysis-policy 'all)`.\n\n㊢ (current state) The seats are still registered with Agency; I only stopped new work from reaching them. 象-1 is in the middle of a reading and will finish it. The other seats are idle. Emacs lists 8 readings as sent but not yet returned. Some of those may be stale entries. The setting only lasts for this Emacs session, so a restart sets it back to `all`.\n\n🈸 (a real 象-off) Shall I add `象-off` and `象-on` commands to `futon3c/emacs/session-turn-analysis.el` that flip this setting? I could also have `象-off` deregister the seats, if you want them off the roster too.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-526-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(current state) The seats are still registered with Agency; I only stopped new work from reaching them. 象-1 is in the middle of a reading and will finish it. The other seats are idle. Emacs lists 8 readings as sent but not yet returned. Some of those may be stale entries. The setting only lasts for this Emacs session, so a restart sets it back to `all`."
+    },
+    {
+      "id": "claude-17-turn-526-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(a real 象-off) Shall I add `象-off` and `象-on` commands to `futon3c/emacs/session-turn-analysis.el` that flip this setting? I could also have `象-off` deregister the seats, if you want them off the roster too."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-525-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(pushing both repos) I've pushed both repos. Each had one commit that wasn't on GitHub yet:\n- **futon3c `master`:** pushed `813b829f` (\"Dispatch compiler connection and native installation capabilities\").\n- **element-web-futon `futon/main`:** pushed `57bd9a8b4f` (\"Load Fumarimo outputs with Matrix authentication\") to your fork, `tothedarktowercame/element-web`."
+    },
+    {
+      "id": "claude-17-turn-525-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(what wasn't pushed) futon3c has an untracked file, `holes/excursions/E-mfuton-scope-extension-20261003.md`. It isn't committed, so it wasn't pushed, and I didn't commit it."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-526",
+      "id": "claude-17-turn-526-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-10-03T05:58:07Z",
+      "record": "turn-2ncL4X",
+      "end": 51,
+      "standing?": false,
+      "about": "the 象 turn-analysis seats (象, 象-sonnet, 象-1..4)",
+      "text": "Can we bring down the 象 seats on a temporary basis?",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 52,
+      "author": "operator",
+      "turn": "claude-17-turn-526",
+      "id": "claude-17-turn-526-f-s2-0",
+      "kind": "report-problem",
+      "at": "2026-10-03T05:58:07Z",
+      "record": "turn-2ncL4X",
+      "end": 93,
+      "standing?": false,
+      "about": "missing 象-off affordance in session-turn-analysis.el",
+      "text": "There should be a 象-off function for this",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-526",
+      "id": "claude-17-turn-526-r-0",
+      "kind": "report",
+      "at": "2026-10-03T05:58:07Z",
+      "record": "turn-2ncL4X",
+      "standing?": false,
+      "text": "(current state) The seats are still registered with Agency; I only stopped new work from reaching them. 象-1 is in the m…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-526",
+      "id": "claude-17-turn-526-r-1",
+      "kind": "ask-action",
+      "at": "2026-10-03T05:58:07Z",
+      "record": "turn-2ncL4X",
+      "standing?": false,
+      "text": "(a real 象-off) Shall I add `象-off` and `象-on` commands to `futon3c/emacs/session-turn-analysis.el` that flip this setti…",
+      "to": "operator"
+    }
+  ]
+}

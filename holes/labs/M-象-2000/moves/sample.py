@@ -36,21 +36,30 @@ def fragments(record, record_path):
     return out
 
 
+MARKS = set("㊥㊭㊣🈚㊟🈖🈯㊢㊩㊬🈹🈳🈲🈸㊯㊝㊮🈕🈰🈝🈘㊫🈡")
+
+
 def reply_marks(record):
+    """Reply-paragraph acts as the kernel numbers them (turn_acts/reply-acts):
+    paragraphs are runs between blank lines; a paragraph is marked when its
+    first character is a proforma mark; ids are <turn_id>-r-<i> with i over
+    the MARKED paragraphs only, 0-based; text is the body after the mark and
+    an optional colon."""
     reply = record.get("reply_text") or ""
     result = []
-    for index, paragraph in enumerate(re.split(r"\n\s*\n", reply)):
+    index = 0
+    for paragraph in re.split(r"\n\s*\n", reply):
         paragraph = paragraph.strip()
-        if not paragraph:
+        if not paragraph or paragraph[0] not in MARKS:
             continue
-        match = MARK.match(paragraph)
-        result.append({"id": f"{record.get('turn_id')}-r-{index + 1}",
+        mark = paragraph[0]
+        body = re.sub(r"^:\s*", "", paragraph[1:].lstrip())
+        result.append({"id": f"{record.get('turn_id')}-r-{index}",
                        "kind": "reply-mark",
                        "author": record.get("agent_id") or "agent",
-                       "mark": match.group(1) if match else None,
-                       "label": ((match.group(2) or match.group(3))
-                                 if match else None),
-                       "text": paragraph})
+                       "mark": mark,
+                       "text": body})
+        index += 1
     return result
 
 
@@ -131,6 +140,7 @@ def write_inputs(chosen, out):
                    "agent_id": record.get("agent_id"),
                    "source_text": record.get("source_text", ""),
                    "fragments": fs, "reply_text": record.get("reply_text"),
+                   "reply_acts": reply_marks(record),
                    "previous_reply_acts": previous}
         if record.get("acts") is not None:
             payload["acts"] = record["acts"]
@@ -143,12 +153,21 @@ def write_inputs(chosen, out):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n", type=int, required=True)
+    parser.add_argument("--n", type=int, default=0)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--include-labelled", action="store_true")
+    parser.add_argument("--records", type=Path,
+                        help="file of record ids, one per line: select exactly these (ignores --n/--seed)")
     args = parser.parse_args()
-    selected = choose(records(), args.n, args.seed, args.include_labelled)
+    if args.records:
+        wanted = {line.strip() for line in args.records.read_text(encoding="utf-8").splitlines() if line.strip()}
+        selected = sorted((row for row in records() if row[0].stem in wanted), key=lambda row: row[0].stem)
+        missing = wanted - {row[0].stem for row in selected}
+        if missing:
+            raise SystemExit(f"not eligible or not found: {sorted(missing)}")
+    else:
+        selected = choose(records(), args.n, args.seed, args.include_labelled)
     for record_id in write_inputs(selected, args.out):
         print(record_id)
 

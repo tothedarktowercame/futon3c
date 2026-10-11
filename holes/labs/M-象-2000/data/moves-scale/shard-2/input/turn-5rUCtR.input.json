@@ -1,0 +1,116 @@
+{
+  "record": "turn-5rUCtR",
+  "turn_id": "claude-4-turn-101",
+  "session_id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+  "created_at": "2026-10-04T13:59:35Z",
+  "agent_id": "claude-4",
+  "source_text": "However NB you can create new seats directly using agency yourself, or worst case you could just type into my *shell* buffer and run cx new like I do.  But creating codex seats on Agency should have a direct Agency pathway (maybe just not documented well)\n\nQUOTE",
+  "fragments": [
+    {
+      "id": "claude-4-turn-101-f-s1-0",
+      "intent": "propose",
+      "text": "However NB you can create new seats directly using agency yourself, or worst case you could just type into my *shell* buffer and run cx new like I do."
+    },
+    {
+      "id": "claude-4-turn-101-f-s2-0",
+      "intent": "propose",
+      "text": "But creating codex seats on Agency should have a direct Agency pathway (maybe just not documented well)"
+    }
+  ],
+  "reply_text": "㊥ (seat creation through Agency) You're right. I said I couldn't do it without checking. Agency has both pathways:\n- **New seat:** `POST /api/alpha/agents/auto` with `{\"type\":\"codex\",\"model\":\"gpt-5.6-sol\"}` allocates the next free `codex-N` with a working invoke function, and the model can be set.\n- **Fresh conversation:** `POST /api/alpha/agents/<id>/reset-session` gives an existing seat a new session on its next job.\n\nThe second one answers claude-2's T3: a fresh session per packet, which stops context building up to about 155k tokens per call. 🈹 I withdraw \"can't start a job in a new Codex session\", which I told claude-2 this afternoon.\n\n㊬ (where I found them) In `futon3c/src/futon3c/transport/http.clj`:\n- `handle-agents-auto-register` (about `:4508`): \"allocate and register next available agent\", with `type` required and `model` optional;\n- `handle-agent-reset-session` (about `:7584`): \"clear an agent's session so the next invoke starts a fresh conversation\".\n\nI haven't called either yet.\n\n㊢ (what changes)\n- **The rule.** Before dispatching an independent packet, I reset the seat's session. I don't reset for continuations that need the seat's earlier context, like codex-19 resuming after its background run.\n- **Where it's written down.** The queue file has the rule. Memory has both endpoints, the delete endpoint, and how to check a seat's model from its Codex log, so I won't claim they're missing again.",
+  "reply_acts": [
+    {
+      "id": "claude-4-turn-101-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(seat creation through Agency) You're right. I said I couldn't do it without checking. Agency has both pathways:\n- **New seat:** `POST /api/alpha/agents/auto` with `{\"type\":\"codex\",\"model\":\"gpt-5.6-sol\"}` allocates the next free `codex-N` with a working invoke function, and the model can be set.\n- **Fresh conversation:** `POST /api/alpha/agents/<id>/reset-session` gives an existing seat a new session on its next job."
+    },
+    {
+      "id": "claude-4-turn-101-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊬",
+      "text": "(where I found them) In `futon3c/src/futon3c/transport/http.clj`:\n- `handle-agents-auto-register` (about `:4508`): \"allocate and register next available agent\", with `type` required and `model` optional;\n- `handle-agent-reset-session` (about `:7584`): \"clear an agent's session so the next invoke starts a fresh conversation\"."
+    },
+    {
+      "id": "claude-4-turn-101-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(what changes)\n- **The rule.** Before dispatching an independent packet, I reset the seat's session. I don't reset for continuations that need the seat's earlier context, like codex-19 resuming after its background run.\n- **Where it's written down.** The queue file has the rule. Memory has both endpoints, the delete endpoint, and how to check a seat's model from its Codex log, so I won't claim they're missing again."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-4-turn-99-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(handed over) Both new seats have their predecessors' jobs. Neither has any memory of the earlier work, so each packet tells them which notes and reports to read first, and gives the branch state commit by commit.\n- **codex-18, `psw-proj10`.** The per-application metavariable fix on `psw/ascription-fold` (b99a088e), then the saved lambda patch. Witnesses: `FileMap.ofString`, `Array.back!` and `mkEOIError`.\n  - job: `invoke-1791122250897-31703-83910164`\n  - park: `park-a2af39c6…`\n- **codex-19, `atend-decide2`.** On `psw/prop-bool-coercion` (3e37a458), merge cand-1, then run the real-importer regression that was stopped. Next, cold `atEnd` against its Lean check, and only then the erasure follow-up.\n  - job: `invoke-1791122253414-31704-a9acb539`\n  - park: `park-ab505484…`"
+    },
+    {
+      "id": "claude-4-turn-99-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊟",
+      "text": "(seat setup)\n- **The packets.** Both include the no-polling rule, so long runs go to `bg.py` and the agent ends its turn.\n- **Models.** codex-18's session log shows Sol. codex-19 has no session file yet; its first turn will use the config default, which is Sol. I'll check its log after the first turn.\n- **Status.** `rowstatus.json` shows the five rows as theirs again."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-101",
+      "id": "claude-4-turn-101-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-04T13:59:35Z",
+      "record": "turn-5rUCtR",
+      "end": 150,
+      "standing?": true,
+      "about": "how claude-4 can create a new codex seat",
+      "text": "However NB you can create new seats directly using agency yourself, or worst case you could just type into my *shell* b…",
+      "to": "claude-4"
+    },
+    {
+      "port?": true,
+      "start": 152,
+      "author": "operator",
+      "turn": "claude-4-turn-101",
+      "id": "claude-4-turn-101-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-04T13:59:35Z",
+      "record": "turn-5rUCtR",
+      "end": 255,
+      "standing?": true,
+      "about": "a direct Agency pathway for creating codex seats",
+      "text": "But creating codex seats on Agency should have a direct Agency pathway (maybe just not documented well)",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-101",
+      "id": "claude-4-turn-101-r-1",
+      "kind": "verify",
+      "at": "2026-10-04T13:59:35Z",
+      "record": "turn-5rUCtR",
+      "standing?": false,
+      "text": "(where I found them) In `futon3c/src/futon3c/transport/http.clj`:\n- `handle-agents-auto-register` (about `:4508`): \"all…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-101",
+      "id": "claude-4-turn-101-r-2",
+      "kind": "report",
+      "at": "2026-10-04T13:59:35Z",
+      "record": "turn-5rUCtR",
+      "standing?": false,
+      "text": "(what changes)\n- **The rule.** Before dispatching an independent packet, I reset the seat's session. I don't reset for …",
+      "to": "operator"
+    }
+  ]
+}

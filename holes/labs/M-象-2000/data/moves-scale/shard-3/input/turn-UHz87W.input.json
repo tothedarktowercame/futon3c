@@ -1,0 +1,55 @@
+{
+  "record": "turn-UHz87W",
+  "turn_id": "claude-15-turn-5",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-10T22:22:58Z",
+  "agent_id": "claude-15",
+  "source_text": "let's focus on the technical aspects.  We could reade claude code memories rather than claude.ai memories for a data source.",
+  "fragments": [
+    {
+      "id": "claude-15-turn-5-f-s1-0",
+      "intent": "redirect",
+      "text": "let's focus on the technical aspects."
+    },
+    {
+      "id": "claude-15-turn-5-f-s2-0",
+      "intent": "propose",
+      "text": "We could reade claude code memories rather than claude.ai memories for a data source."
+    }
+  ],
+  "reply_text": "Now checking the pre-rebuild copy on the old disk, and whether the session transcripts record each memory edit:Claude Code memories are a better source than the claude.ai export: richer data, and nothing to export, since they're all on disk. I profiled them; the main catch is that a memory file holds a fact, not a person or topic.\n\n**What's there**\n- **Size:** 293 memory files in 7 project folders under `~/.claude/projects/*/memory/`, about 91k words. voxterm has 108, `code` 94, home 64 and futon3c 23. No file name appears in two folders, so the file name works as an id.\n- **Header fields:** every file has `name`, `description` and `type`. The types are feedback 145, project 127, reference 20, user 1. About half also record `originSessionId` (the session that wrote it) and `modified`.\n- **Links:** 500 `[[links]]` pointing at 217 distinct memories; only 3 point at memories that don't exist.\n- **Structure:** 241 files have **Why:** / **How to apply:** lines, and the bodies contain 1,005 dates.\n- **Missing from the spec's format:** none of the `[stated]` / `[observed]` / `[inferred]` tags, and no alias lists.\n\n**How it maps onto the spec's data model**\n1. **A file is a fact.** In the claude.ai format a file is a person or topic. Here a file is a lesson or fact, and the people and things it's about (futon1b, phone1, :7070, Joe) are only named in the text. So each file becomes one fact or a few, `[[links]]` become links between facts, and an extraction pass has to pull out the entities. futon3a's entity, alias and mention tables, plus its proposal workflow, are the closest existing code for that step.\n2. **\"When the store learned it\" comes free.** The memories aren't in git, but the session transcripts record every Write and Edit on a memory file, with a timestamp and the old and new text. That's 68 edits in current transcripts and 84 in the old disk's, which reach further back. Replaying them gives each file's edit history, which is exactly what XTDB stores as system time. One gap: edits made through shell commands, like my `cat >>` to a memory file earlier today, need their own parser. The `/mnt/olddisk` copy is also a snapshot from before the rebuild: 282 files are identical, 2 changed, and 9 are new since.\n3. **\"When it was true\" comes from the dates in the text.** Many memories say things like \"as of 09-08\" or \"on 2026-10-10\". The fallback is the time of the first write.\n4. **Superseded content is already there, unmarked.** Files are edited in place, so one file often holds both the old state and its replacement. For example, `server-remote-access-setup.md` describes the grouped tmux views and then says they're GONE. Those are real test cases for the conflict check and for sorries, with known right answers.\n5. **The `type` field is useful.** Feedback memories are rules about how I should work, while project and reference memories are facts about the world. They probably need different conflict rules: a rule replacing an older rule is normal, but two contradictory facts about the world should open a sorry.\n\n**Suggested first milestone, reworked**\nParse all 293 files into futon1b as memory hyperedges, with one link per `[[link]]` and the provenance fields. Then write them back out and check the result matches the originals exactly. After that, replaying the transcript edits fills in system time, which is milestone 2 essentially done from real history.\n\nI've added this profile to `~/Downloads/40belowdb/exploration-2026-10-10.md`. Should I start on the parser?",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-5",
+      "id": "claude-15-turn-5-f-s1-0",
+      "kind": "redirect",
+      "at": "2026-10-10T22:22:58Z",
+      "record": "turn-UHz87W",
+      "end": 37,
+      "standing?": false,
+      "about": "the discussion with claude-15: move to the technical aspects",
+      "text": "let's focus on the technical aspects.",
+      "to": "claude-15"
+    },
+    {
+      "port?": true,
+      "start": 39,
+      "author": "operator",
+      "turn": "claude-15-turn-5",
+      "id": "claude-15-turn-5-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-10T22:22:58Z",
+      "record": "turn-UHz87W",
+      "end": 124,
+      "standing?": true,
+      "about": "the data source for the memory-import work: read the Claude Code memories instead of the claude.ai memories",
+      "text": "We could reade claude code memories rather than claude.ai memories for a data source.",
+      "to": "claude-15"
+    }
+  ]
+}

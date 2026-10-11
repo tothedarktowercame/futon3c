@@ -1,0 +1,132 @@
+{
+  "record": "turn-Pn04er",
+  "turn_id": "claude-15-turn-7",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-10T23:24:47Z",
+  "agent_id": "claude-15",
+  "source_text": "hm... I am not sure what the standard practice is for XTDB, but I think insertion time vs record time can differ without any issue",
+  "fragments": [
+    {
+      "id": "claude-15-turn-7-f-s1-0",
+      "intent": "qualify",
+      "text": "hm..."
+    },
+    {
+      "id": "claude-15-turn-7-f-s2-0",
+      "intent": "propose",
+      "text": "I am not sure what the standard practice is for XTDB, but I think insertion time vs record time can differ without any issue"
+    }
+  ],
+  "reply_text": "You're right, and it means futon1b doesn't need changing. I'm testing the route it already has on the scratch server:㊥ (\"can differ without any issue\") Agreed, so futon1b doesn't need changing. XTDB keeps two separate clocks. System time records when minus40 imported a row, and there's no reason to fake it. Valid time records when a memory version actually held, and we can set that to any date.\n\n㊬ (checked just now) futon1b's existing hyperedge route already takes `:hx/valid-time`. On the scratch store I wrote two versions of one hyperedge, valid from 09-01 and 09-20. Querying at 08-15 returned nothing, at 09-10 returned v1, and at 10-01 returned v2.\n\n㊭ (milestone 2 plan)\n- Each memory gets one stable `:memory/version` hyperedge.\n- That hyperedge is written once per version found in the transcripts' edit history. Its valid time is the edit time, and it points at that version's evidence entry.\n- \"What did this memory say on date X\" then becomes a single valid-time query.\n\n㊟ (one constraint) Versions have to be replayed oldest first. A write with no end date stays valid indefinitely, so writing an older version after a newer one would overwrite the newer one.\n\n㊢ (recorded) I've updated the plan in the README (`a80af71`) and in my memory note. Shall I start on the transcript replay?",
+  "reply_acts": [
+    {
+      "id": "claude-15-turn-7-r-0",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊬",
+      "text": "(checked just now) futon1b's existing hyperedge route already takes `:hx/valid-time`. On the scratch store I wrote two versions of one hyperedge, valid from 09-01 and 09-20. Querying at 08-15 returned nothing, at 09-10 returned v1, and at 10-01 returned v2."
+    },
+    {
+      "id": "claude-15-turn-7-r-1",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊭",
+      "text": "(milestone 2 plan)\n- Each memory gets one stable `:memory/version` hyperedge.\n- That hyperedge is written once per version found in the transcripts' edit history. Its valid time is the edit time, and it points at that version's evidence entry.\n- \"What did this memory say on date X\" then becomes a single valid-time query."
+    },
+    {
+      "id": "claude-15-turn-7-r-2",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊟",
+      "text": "(one constraint) Versions have to be replayed oldest first. A write with no end date stays valid indefinitely, so writing an older version after a newer one would overwrite the newer one."
+    },
+    {
+      "id": "claude-15-turn-7-r-3",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊢",
+      "text": "(recorded) I've updated the plan in the README (`a80af71`) and in my memory note. Shall I start on the transcript replay?"
+    }
+  ],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-7",
+      "id": "claude-15-turn-7-f-s1-0",
+      "kind": "qualify",
+      "at": "2026-10-10T23:24:47Z",
+      "record": "turn-Pn04er",
+      "end": 5,
+      "standing?": false,
+      "about": "claude-15's last proposal about the bitemporal data (not shown in this record): Joe hesitates before answering",
+      "text": "hm...",
+      "to": "claude-15"
+    },
+    {
+      "port?": true,
+      "start": 6,
+      "author": "operator",
+      "turn": "claude-15-turn-7",
+      "id": "claude-15-turn-7-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-10T23:24:47Z",
+      "record": "turn-Pn04er",
+      "end": 130,
+      "standing?": true,
+      "about": "how the two timestamps are treated: insertion time and record time can differ, with no problem",
+      "text": "I am not sure what the standard practice is for XTDB, but I think insertion time vs record time can differ without any …",
+      "to": "claude-15"
+    },
+    {
+      "port?": false,
+      "author": "claude-15",
+      "turn": "claude-15-turn-7",
+      "id": "claude-15-turn-7-r-0",
+      "kind": "verify",
+      "at": "2026-10-10T23:24:47Z",
+      "record": "turn-Pn04er",
+      "standing?": false,
+      "text": "(checked just now) futon1b's existing hyperedge route already takes `:hx/valid-time`. On the scratch store I wrote two …",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-15",
+      "turn": "claude-15-turn-7",
+      "id": "claude-15-turn-7-r-1",
+      "kind": "propose",
+      "at": "2026-10-10T23:24:47Z",
+      "record": "turn-Pn04er",
+      "standing?": true,
+      "text": "(milestone 2 plan)\n- Each memory gets one stable `:memory/version` hyperedge.\n- That hyperedge is written once per vers…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-15",
+      "turn": "claude-15-turn-7",
+      "id": "claude-15-turn-7-r-2",
+      "kind": "qualify",
+      "at": "2026-10-10T23:24:47Z",
+      "record": "turn-Pn04er",
+      "standing?": false,
+      "text": "(one constraint) Versions have to be replayed oldest first. A write with no end date stays valid indefinitely, so writi…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-15",
+      "turn": "claude-15-turn-7",
+      "id": "claude-15-turn-7-r-3",
+      "kind": "report",
+      "at": "2026-10-10T23:24:47Z",
+      "record": "turn-Pn04er",
+      "standing?": false,
+      "text": "(recorded) I've updated the plan in the README (`a80af71`) and in my memory note. Shall I start on the transcript repla…",
+      "to": "operator"
+    }
+  ]
+}

@@ -1,0 +1,209 @@
+{
+  "record": "turn-oTGuOV",
+  "turn_id": "claude-17-turn-6",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-04T01:22:18Z",
+  "agent_id": "claude-17",
+  "source_text": "\"Shall I send that to kimi-1?\" yes; we could still orchestrate things so that 象 is as fast as possible.  E.g. 小象 could work in the .json and then 象 would be the one to persist the finalised annotation.  Yes there are 2 packets here but it still makes sense.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-6-f-s1-0",
+      "intent": "report",
+      "text": "\"Shall I send that to kimi-1?\""
+    },
+    {
+      "id": "claude-17-turn-6-f-s2-0",
+      "intent": "approve",
+      "text": "yes; "
+    },
+    {
+      "id": "claude-17-turn-6-f-s2-1",
+      "intent": "propose",
+      "text": "we could still orchestrate things so that 象 is as fast as possible."
+    },
+    {
+      "id": "claude-17-turn-6-f-s4-0",
+      "intent": "propose",
+      "text": "小象 could work in the .json and then 象 would be the one to persist the finalised annotation."
+    },
+    {
+      "id": "claude-17-turn-6-f-s5-0",
+      "intent": "explain",
+      "text": "Yes there are 2 packets here but it still makes sense."
+    }
+  ],
+  "reply_text": "㊥ (sent to kimi-1) It's with kimi-1, set up the way you describe. 小象's parse lives only in the turn's `.json` files and appears in the stepper straight away, marked provisional. 象's finalised reading replaces it in place when it lands, and only 象 writes the turn to futon1b. Job `invoke-1791076962579-31400-cd14d59e`, park `park-07f37fec-…`.\n\n㊢ (what the packet asks for)\n1. **`turn_frames.py`:** a turn with a draft but no reading gets a parse built from the draft, marked \"小象, provisional\". Weak guesses are visibly weak. Turns 象 has already read come out exactly as now, and a test pins that.\n2. **The stepper:** it stops hiding your newest turns when they have a provisional parse, and draws that parse in a different style. A turn with neither a draft nor a reading is still hidden.\n3. **Updating in place:** when 象's reading lands, the frame's parse is replaced. The stepper stays on the frame you're reading, even if the reading is for an older one. There's a test for the older-frame case.\n\nEvidence doesn't change: futon1b still gets one entry per settled turn, from 象.\n\n🈖 (象 is already working from the draft) The 象 brief already gives 象 小象's draft \"to confirm or correct\" (`turn_record.clj`, the draft brief section). So 象 is correcting a parse, not starting from scratch. Making that brief smaller is the next lever for speed, if the 25–120 s doesn't come down by itself.\n\n㊭ (when it lands) I'll review it, load the stepper code into your Emacs (with errors kept out of your minibuffer), and refresh your stepper. Your newest turn should then show up within about a second of sending.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-6-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(sent to kimi-1) It's with kimi-1, set up the way you describe. 小象's parse lives only in the turn's `.json` files and appears in the stepper straight away, marked provisional. 象's finalised reading replaces it in place when it lands, and only 象 writes the turn to futon1b. Job `invoke-1791076962579-31400-cd14d59e`, park `park-07f37fec-…`."
+    },
+    {
+      "id": "claude-17-turn-6-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what the packet asks for)\n1. **`turn_frames.py`:** a turn with a draft but no reading gets a parse built from the draft, marked \"小象, provisional\". Weak guesses are visibly weak. Turns 象 has already read come out exactly as now, and a test pins that.\n2. **The stepper:** it stops hiding your newest turns when they have a provisional parse, and draws that parse in a different style. A turn with neither a draft nor a reading is still hidden.\n3. **Updating in place:** when 象's reading lands, the frame's parse is replaced. The stepper stays on the frame you're reading, even if the reading is for an older one. There's a test for the older-frame case."
+    },
+    {
+      "id": "claude-17-turn-6-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(象 is already working from the draft) The 象 brief already gives 象 小象's draft \"to confirm or correct\" (`turn_record.clj`, the draft brief section). So 象 is correcting a parse, not starting from scratch. Making that brief smaller is the next lever for speed, if the 25–120 s doesn't come down by itself."
+    },
+    {
+      "id": "claude-17-turn-6-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(when it lands) I'll review it, load the stepper code into your Emacs (with errors kept out of your minibuffer), and refresh your stepper. Your newest turn should then show up within about a second of sending."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-5-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(classical path first) Yes, and most of it already exists. The classical 小象 draft takes about 0.1 s and is written within a second of your send. So the stepper could show the draft parse straight away, marked provisional, and replace it when 象's reading lands, even if that's after the frame has closed. Shall I send that to kimi-1?"
+    },
+    {
+      "id": "claude-17-turn-5-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(where the fast path stands) Your last three turns since you switched back to `jvm`:\n- **Draft:** landed within 1 s of the send each time.\n- **象's reading:** landed 25–120 s after the send. Before the fast path it was 3–4 minutes.\n- **Compared with my turns:** 象 now usually lands around the time I finish replying, not minutes after. It still isn't ahead of me, which fits what you're seeing."
+    },
+    {
+      "id": "claude-17-turn-5-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what the change involves)\n1. **Stepper shows drafts.** At the moment it hides any turn 象 hasn't read. Instead, `turn_frames.py` would build the PARSE from `turn-*.json.draft.json` for those turns, marked \"小象, provisional\". The draft gives each fragment's guesses and precision, so a weak guess can be shown as one.\n2. **象 updates in place.** When the reading lands, the stepper replaces the draft parse in that frame, even if it's an older frame by then. It refreshes on the landed hook as it does now, but it shouldn't jump you to the newest frame if you're reading an older one.\n3. **Two evidence entries.** Your one-packet rule would have to bend. The classical packet (record + draft + \"happened\") would be written when the turn is finalised, and 象's reading added later as an update citing it. That's like the THEN arriving on the other side of the bar after the turn has closed. The alternative is to keep one packet and wait for 象, but then evidence stays behind the stepper."
+    },
+    {
+      "id": "claude-17-turn-5-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈯",
+      "text": "(one choice before I send it) Is the two-entry evidence shape, a classical entry and then 象's update, all right with you? I'd write the classical entry at finalisation and 象's reading as a second entry that cites it."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "end": 30,
+      "standing?": false,
+      "about": "the seat's offer to send the result to kimi-1, quoted back",
+      "text": "\"Shall I send that to kimi-1?\"",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 31,
+      "author": "operator",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-f-s2-0",
+      "kind": "approve",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "end": 36,
+      "standing?": false,
+      "about": "the seat's quoted offer to send to kimi-1",
+      "text": "yes;",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 36,
+      "author": "operator",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-f-s2-1",
+      "kind": "propose",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "end": 103,
+      "standing?": true,
+      "about": "orchestration for speed: 象 as fast as achievable within the two-speed design",
+      "text": "we could still orchestrate things so that 象 is as fast as possible.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 110,
+      "author": "operator",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-f-s4-0",
+      "kind": "propose",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "end": 201,
+      "standing?": true,
+      "about": "tier assignment: 小象 drafts in the .json, 象 persists the finalised annotation",
+      "text": "小象 could work in the .json and then 象 would be the one to persist the finalised annotation.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 203,
+      "author": "operator",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-f-s5-0",
+      "kind": "explain",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "end": 257,
+      "standing?": false,
+      "about": "the anticipated objection (two packets per turn) answered in advance",
+      "text": "Yes there are 2 packets here but it still makes sense.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-r-1",
+      "kind": "report",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "standing?": false,
+      "text": "(what the packet asks for)\n1. **`turn_frames.py`:** a turn with a draft but no reading gets a parse built from the draf…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-r-2",
+      "kind": "explain",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "standing?": false,
+      "text": "(象 is already working from the draft) The 象 brief already gives 象 小象's draft \"to confirm or correct\" (`turn_record.clj`…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-6",
+      "id": "claude-17-turn-6@turn-oTGuOV-r-3",
+      "kind": "propose",
+      "at": "2026-10-04T01:22:18Z",
+      "record": "turn-oTGuOV",
+      "standing?": true,
+      "text": "(when it lands) I'll review it, load the stepper code into your Emacs (with errors kept out of your minibuffer), and re…",
+      "to": "operator"
+    }
+  ]
+}

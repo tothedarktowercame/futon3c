@@ -1,0 +1,168 @@
+{
+  "record": "turn-x2RU5I",
+  "turn_id": "claude-17-turn-406",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-01T18:25:33Z",
+  "agent_id": "claude-17",
+  "source_text": "RETRACT still hasn't got an IBOL label in the legend.  There's an x with an up-to-the-right arrow that would work for RETRACT.  In the actual Chipwits game it is the 4th icon on the 2nd row in the Operators panel.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-406-f-s1-0",
+      "intent": "report-problem",
+      "text": "RETRACT still hasn't got an IBOL label in the legend."
+    },
+    {
+      "id": "claude-17-turn-406-f-s2-0",
+      "intent": "propose",
+      "text": "There's an x with an up-to-the-right arrow that would work for RETRACT."
+    },
+    {
+      "id": "claude-17-turn-406-f-s3-0",
+      "intent": "clarify",
+      "text": "In the actual Chipwits game it is the 4th icon on the 2nd row in the Operators panel."
+    }
+  ],
+  "reply_text": "Found it: the X with an up-right arrow is in the bottom row of the game's own chip-icon file. I'm cutting it out and adding it to the retract row.㊥ Gist: Retract now has the X with the up-right arrow in the legend. It's published on the turns page (futon3 `1646355`), so all four new rows now have a chip. Retract notes in the feed get the same icon.\n\n㊢ (where the icon came from) It's not on the 1984 sheets the other chips were cut from. On the Workshop panel in `CW_Coding_Screen.png`, the 4th icon on row 2 is the minus sign. I found it in the game's own icon file, `chipwits-native/data/IBOL` (160×160, 1-bit), in the bottom row. I cut it to the same 15-pixel black-on-transparent format as `chips/op-x-arrow.png`.\n\n㊬ (what I checked) I rendered `feed.html` in headless Chromium: the chip loads (HTTP 200) and the row reads \"X AND ARROW\". clj-kondo is clean, and the release build has 0 warnings.\n\n㊟ (labels still unchecked) As with the other three, \"X AND ARROW\" describes the picture, not the IBOL operator's name or meaning. I haven't checked that against the game or the manual.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-406-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(where the icon came from) It's not on the 1984 sheets the other chips were cut from. On the Workshop panel in `CW_Coding_Screen.png`, the 4th icon on row 2 is the minus sign. I found it in the game's own icon file, `chipwits-native/data/IBOL` (160×160, 1-bit), in the bottom row. I cut it to the same 15-pixel black-on-transparent format as `chips/op-x-arrow.png`."
+    },
+    {
+      "id": "claude-17-turn-406-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(what I checked) I rendered `feed.html` in headless Chromium: the chip loads (HTTP 200) and the row reads \"X AND ARROW\". clj-kondo is clean, and the release build has 0 warnings."
+    },
+    {
+      "id": "claude-17-turn-406-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(labels still unchecked) As with the other three, \"X AND ARROW\" describes the picture, not the IBOL operator's name or meaning. I haven't checked that against the game or the manual."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-405-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(where the chips came from) The page's 20 chips didn't include any of these, so I cut them from `chipwits-forth/mac/graphics/IBOL_Graphics.png`. That's the same sheet the existing chips match: op-plus is found there pixel for pixel. They're in the same format as the others, black on transparent and 15 pixels wide. They're named `op-move`, `op-door` and `op-loop`, and they sit in the published `chips/` directory next to the others. Like the other chips, they're not in any repo."
+    },
+    {
+      "id": "claude-17-turn-405-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(what I checked)\n- **Rendering:** I rendered `feed.html` in headless Chromium. All three images load (HTTP 200), and op-move appears 18 times, once in the legend and on explore notes in the feed.\n- **Gates:** clj-kondo and the parens check are clean, and the release build has 0 warnings."
+    },
+    {
+      "id": "claude-17-turn-405-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(labels not checked) I've labelled the rows ROLLER SKATE, DOOR and LOOP ARROW, after how they look, and left the \"IBOL says\" line empty. I haven't checked what these chips do in ChipWits against the manual, so their real operator names may differ. The manual PDFs are in `chipwits-forth/docs` if you want the rows to give the IBOL meaning."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "end": 53,
+      "standing?": false,
+      "about": "the turnfeed legend's missing IBOL label for the RETRACT row",
+      "text": "RETRACT still hasn't got an IBOL label in the legend.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 55,
+      "author": "operator",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "end": 126,
+      "standing?": true,
+      "about": "candidate icon (x with up-right arrow) for the RETRACT legend chip",
+      "text": "There's an x with an up-to-the-right arrow that would work for RETRACT.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 128,
+      "author": "operator",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-f-s3-0",
+      "kind": "clarify",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "end": 213,
+      "standing?": false,
+      "about": "exact location of the proposed icon in the original Chipwits game UI",
+      "text": "In the actual Chipwits game it is the 4th icon on the 2nd row in the Operators panel.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-r-0",
+      "kind": "report",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "standing?": false,
+      "text": "(where the icon came from) It's not on the 1984 sheets the other chips were cut from. On the Workshop panel in `CW_Codi…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-r-1",
+      "kind": "verify",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "standing?": false,
+      "text": "(what I checked) I rendered `feed.html` in headless Chromium: the chip loads (HTTP 200) and the row reads \"X AND ARROW\"…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-r-2",
+      "kind": "qualify",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "standing?": false,
+      "text": "(labels still unchecked) As with the other three, \"X AND ARROW\" describes the picture, not the IBOL operator's name or …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-406",
+      "id": "claude-17-turn-406-c-1646355d",
+      "kind": "commit",
+      "at": "2026-10-01T18:25:33Z",
+      "record": "turn-x2RU5I",
+      "repo": "futon3",
+      "subject": "turnfeed legend: retract gets the X-and-arrow chip",
+      "sha": "1646355d",
+      "standing?": false
+    }
+  ]
+}

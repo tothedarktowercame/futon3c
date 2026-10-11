@@ -1,0 +1,221 @@
+{
+  "record": "turn-g6q1nC",
+  "turn_id": "claude-17-turn-535",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-03T23:26:10Z",
+  "agent_id": "claude-17",
+  "source_text": "OK, let's do work according to your \"order of work\".  I'm starting to also believe that we *need* outstanding work-order tracking to become first-class in Agency across all services.  Recent example: claude-4 asked codex-19 for work, and codex-19 did the first half and then just stopped.  It should get a reminder that there is a work order outstanding.  As it stands, I had to intervene there myself.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-535-f-s1-0",
+      "intent": "approve",
+      "text": "OK, let's do work according to your \"order of work\"."
+    },
+    {
+      "id": "claude-17-turn-535-f-s2-0",
+      "intent": "propose",
+      "text": "I'm starting to also believe that we *need* outstanding work-order tracking to become first-class in Agency across all services."
+    },
+    {
+      "id": "claude-17-turn-535-f-s3-0",
+      "intent": "report",
+      "text": "Recent example: claude-4 asked codex-19 for work, and codex-19 did the first half and then just stopped."
+    },
+    {
+      "id": "claude-17-turn-535-f-s4-0",
+      "intent": "propose",
+      "text": "It should get a reminder that there is a work order outstanding."
+    },
+    {
+      "id": "claude-17-turn-535-f-s5-0",
+      "intent": "report-problem",
+      "text": "As it stands, I had to intervene there myself."
+    }
+  ],
+  "reply_text": "The JVM route doesn't yet accept Emacs's \"analysis requested\" flag. Without it, moving Emacs onto the route would bypass `象-off`, so that goes into the packet. I'm writing the step-1 handoff now.㊥ (order of work) Step 1 is underway. kimi-1 is moving your Emacs turn recording onto the JVM routes, behind a new option that defaults to the current file-based path, so nothing changes for you until I've reviewed it. I'm parked on the job and will review it when kimi-1 bells back. On work orders, I agree they need to be first-class. Much of what's needed already exists, but none of it holds the agent that receives the work to the order.\n\n㊯ (step 1 dispatch) kimi-1 is running it now; the packet is in `/tmp/claude-17-p24/step1.md`.\n- **Job:** `invoke-1791070032310-31301-c2a8b13a`\n- **Park:** `park-f255470a-…`, with a one-hour deadline, tied to this session.\n\nThe packet has one prerequisite I found while scoping it. The JVM's record route had no way to receive Emacs's \"analysis requested\" decision, so routing Emacs turns through it would have bypassed `象-off`. kimi-1 adds that flag first, with a test that, with the policy at `never`, a turn comes back not-requested and nothing is sent to 象.\n\n🈖 (work orders: what exists) Pieces of this are already in futon3c:\n- **Parking:** the agent that asks waits on the job and is woken when it ends.\n- **Promise records and outcomes:** `promise_outcome.clj` checks criteria on a 30-second sweep.\n- **The obligations projection:** `obligations.clj`.\n- **P24's `obligationo`:** \"this agent owes that one, under this act\".\n\nAll of these are on the asking side. A bell job is marked done when the receiving agent's turn ends, whatever it actually delivered. That is how codex-19 could do half the work and stop with nothing flagging it.\n\n㊭ (work orders: what's missing) A first-class work order would:\n- start when the bell is sent, with its acceptance bar;\n- stay open until the receiving agent reports it done against that bar, or the agent that asked releases it;\n- when the receiving agent's job ends with the order still open, bell that agent a reminder that names the order and what's left, and tell the agent that asked.\n\nThe second kernel problem from P24 is the same gap in its logic: delivered work isn't recorded as discharging the order. So the kernel could be what decides whether an order is still open.\n\n🈸 (one decision) Shall I write this up as its own mission once step 1 is reviewed, starting from the codex-19 case? Or do you want it to go ahead of steps 2 and 3?",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-535-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊯",
+      "text": "(step 1 dispatch) kimi-1 is running it now; the packet is in `/tmp/claude-17-p24/step1.md`.\n- **Job:** `invoke-1791070032310-31301-c2a8b13a`\n- **Park:** `park-f255470a-…`, with a one-hour deadline, tied to this session."
+    },
+    {
+      "id": "claude-17-turn-535-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(work orders: what exists) Pieces of this are already in futon3c:\n- **Parking:** the agent that asks waits on the job and is woken when it ends.\n- **Promise records and outcomes:** `promise_outcome.clj` checks criteria on a 30-second sweep.\n- **The obligations projection:** `obligations.clj`.\n- **P24's `obligationo`:** \"this agent owes that one, under this act\"."
+    },
+    {
+      "id": "claude-17-turn-535-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(work orders: what's missing) A first-class work order would:\n- start when the bell is sent, with its acceptance bar;\n- stay open until the receiving agent reports it done against that bar, or the agent that asked releases it;\n- when the receiving agent's job ends with the order still open, bell that agent a reminder that names the order and what's left, and tell the agent that asked."
+    },
+    {
+      "id": "claude-17-turn-535-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I write this up as its own mission once step 1 is reviewed, starting from the codex-19 case? Or do you want it to go ahead of steps 2 and 3?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-534-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(has the move to the JVM happened?) Half of it has. PR #68 moved turn recording, sending to 象 and collecting readings into the JVM, keyed by session and turn id. But it still stores everything as files in the same directory, and your Emacs doesn't use it yet. So the record and its reading are not evidence yet. Shall I start on that?"
+    },
+    {
+      "id": "claude-17-turn-534-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what's there) The JVM routes `/api/alpha/xiang/turns…` are built and running, and the Matrix bridge path already uses them. Two things are not done:\n1. **Emacs still records the old way.** Nothing in `futon3c/emacs/` calls those routes. Emacs writes `turn-*.json` itself, sends readings through `agency_send.py` and collects them through `turn_dispatch_reap.py`. The two paths share a directory but are two separate implementations.\n2. **The store is still files.** `turn_store.clj` deliberately kept the files under `~/.emacs-graph/session-turn-analysis/` the same, so `turn_frames.py`, the stepper, `xlate.py census` and feed.html would keep working unchanged. The only link to futon1b is the operator turn's `evidence_id`, which the record carries."
+    },
+    {
+      "id": "claude-17-turn-534-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(order of work)\n1. Point Emacs at the JVM routes: record when you send, report what happened when the reply ends, and let the JVM send to 象 and collect the reading. `小象` stays local, as you say. `象-off` then has to reach the JVM too, since otherwise turning it off in Emacs would no longer stop anything.\n2. Have `turn_store` write the record and its reading as futon1b evidence entries citing the operator turn's `evidence_id`, and keep writing the files until the readers move.\n3. Move the readers (`turn_frames.py` first, since the stepper depends on it) onto evidence, then retire the files."
+    },
+    {
+      "id": "claude-17-turn-534-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈯",
+      "text": "(\"You can fix\") I took this as \"push\", which seemed to fit best after my last turn. The three commits are now on GitHub, and futon3c master matches origin. If you meant the two kernel problems from the P24 experiment, say so and I'll do those too: agreements refused without seat info, and delivered work still showing as owed."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "end": 52,
+      "standing?": false,
+      "about": "claude-17's \"order of work\" plan",
+      "text": "OK, let's do work according to your \"order of work\".",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 54,
+      "author": "operator",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "end": 182,
+      "standing?": true,
+      "about": "first-class work-order tracking in Agency",
+      "text": "I'm starting to also believe that we *need* outstanding work-order tracking to become first-class in Agency across all …",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 184,
+      "author": "operator",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-f-s3-0",
+      "kind": "report",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "end": 288,
+      "standing?": false,
+      "about": "codex-19's half-done work for claude-4",
+      "text": "Recent example: claude-4 asked codex-19 for work, and codex-19 did the first half and then just stopped.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 290,
+      "author": "operator",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-f-s4-0",
+      "kind": "propose",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "end": 354,
+      "standing?": true,
+      "about": "reminder mechanism for outstanding work orders",
+      "text": "It should get a reminder that there is a work order outstanding.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 356,
+      "author": "operator",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-f-s5-0",
+      "kind": "report-problem",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "end": 402,
+      "standing?": false,
+      "about": "operator intervention in the codex-19 incident",
+      "text": "As it stands, I had to intervene there myself.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-r-0",
+      "kind": "delegate",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "standing?": true,
+      "text": "(step 1 dispatch) kimi-1 is running it now; the packet is in `/tmp/claude-17-p24/step1.md`.\n- **Job:** `invoke-17910700…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-r-1",
+      "kind": "explain",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "standing?": false,
+      "text": "(work orders: what exists) Pieces of this are already in futon3c:\n- **Parking:** the agent that asks waits on the job a…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-r-2",
+      "kind": "propose",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "standing?": true,
+      "text": "(work orders: what's missing) A first-class work order would:\n- start when the bell is sent, with its acceptance bar;\n-…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-535",
+      "id": "claude-17-turn-535-r-3",
+      "kind": "ask-action",
+      "at": "2026-10-03T23:26:10Z",
+      "record": "turn-g6q1nC",
+      "standing?": false,
+      "text": "(one decision) Shall I write this up as its own mission once step 1 is reviewed, starting from the codex-19 case? Or do…",
+      "to": "operator"
+    }
+  ]
+}

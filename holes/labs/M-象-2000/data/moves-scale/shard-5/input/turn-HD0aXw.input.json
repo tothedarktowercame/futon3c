@@ -1,0 +1,223 @@
+{
+  "record": "turn-HD0aXw",
+  "turn_id": "claude-13-turn-10",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T01:13:10Z",
+  "agent_id": "claude-13",
+  "source_text": "Sure, maybe we could use the example companies I found as a \"kernel\".  It seemed to me that it in many cases they are solving tech problems for tech people (e.g. Mastra seems like a great example of this)... and of course I personally find this interesting, but just being good at managing context for developer sessions or software factories does not immediately in my mind translate into solving non-technical problems.  Whereas a possible distinction with the War Machine is that, yes, technically it is a kind of \"software factory\" but it is a software factory that can be grounded in the way an actual organisation works.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-10-f-s1-0",
+      "intent": "propose",
+      "text": "Sure, maybe we could use the example companies I found as a \"kernel\"."
+    },
+    {
+      "id": "claude-13-turn-10-f-s2-0",
+      "intent": "report",
+      "text": "It seemed to me that it in many cases they are solving tech problems for tech people (e.g."
+    },
+    {
+      "id": "claude-13-turn-10-f-s3-0",
+      "intent": "report",
+      "text": "Mastra seems like a great example of this)..."
+    },
+    {
+      "id": "claude-13-turn-10-f-s4-0",
+      "intent": "qualify",
+      "text": "and of course I personally find this interesting, but just being good at managing context for developer sessions or software factories does not immediately in my mind translate into solving non-technical problems."
+    },
+    {
+      "id": "claude-13-turn-10-f-s5-0",
+      "intent": "propose",
+      "text": "Whereas a possible distinction with the War Machine is that, yes, technically it is a kind of \"software factory\" but it is a software factory that can be grounded in the way an actual organisation works."
+    }
+  ],
+  "reply_text": "I'll use your companies as the kernel. First I'm sorting all 54 entries by who the customer is. In parallel, an agent is collecting the customer stories published by the few companies that sell to people outside tech.㊥ (gist) You're right about the kernel. About 36 of the 54 entries are tech for tech people. I've sorted all of them by whose problem they actually address, and that's committed as §3.2 (`9f98fa6`). A research agent is still collecting real customer stories from the minority that sell outside tech.\n\n㊢ (the sort) Five groups:\n- **A. Tech for tech people (~36):** Mastra, Smithers, Cotal, Reticle, the memory DBs, and others. The buyer is a developer with a developer's problem.\n- **B. One non-technical worker's task (~5):** Solid, Hyperbound, Voiskey, MiniMax Agent, o-machine. The client's problem is visible here, but there's no model of the organisation.\n- **C. Capturing an expert's know-how (2):** ZooWork, Cognisee.\n- **D. Making an organisation's working visible (~5):**\n  - Scribe Optimize: what employees actually do, mined from their clicks.\n  - Agentic Fabriq: whose authority an agent acts under.\n  - AIUC-1: what a buyer or insurer can rely on.\n  - Proof-of-Control: what outsiders can check.\n  - p2r: each participant's own contribution.\n- **E. Not products:** Plank, Tatras, Immersive Commons, atproto/Germ.\n\n🈖 (\"grounded in the way an actual organisation works\") Your distinction puts the War Machine closest to D, with one difference. D sells the record of how the organisation works, and A sells the factory. None of the D vendors builds a factory, and none of the A vendors models the organisation. A factory grounded in an organisation needs both, and that combination is where the War Machine sits. In SVO terms, A has one developer as its subject, B and C have one worker or expert, and D has several people holding intents that may conflict. D is also where the \"human\" problems live, like your manager who doesn't listen. So that filter will matter most for D-type clients.\n\n🈰 (next) Once the customer stories come back, I'll write the concrete client problems as triples and sort each one into human, tooling or mixed. That should answer your earlier question about why some verbs are more interesting than others.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-10-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(the sort) Five groups:\n- **A. Tech for tech people (~36):** Mastra, Smithers, Cotal, Reticle, the memory DBs, and others. The buyer is a developer with a developer's problem.\n- **B. One non-technical worker's task (~5):** Solid, Hyperbound, Voiskey, MiniMax Agent, o-machine. The client's problem is visible here, but there's no model of the organisation.\n- **C. Capturing an expert's know-how (2):** ZooWork, Cognisee.\n- **D. Making an organisation's working visible (~5):**\n  - Scribe Optimize: what employees actually do, mined from their clicks.\n  - Agentic Fabriq: whose authority an agent acts under.\n  - AIUC-1: what a buyer or insurer can rely on.\n  - Proof-of-Control: what outsiders can check.\n  - p2r: each participant's own contribution.\n- **E. Not products:** Plank, Tatras, Immersive Commons, atproto/Germ."
+    },
+    {
+      "id": "claude-13-turn-10-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"grounded in the way an actual organisation works\") Your distinction puts the War Machine closest to D, with one difference. D sells the record of how the organisation works, and A sells the factory. None of the D vendors builds a factory, and none of the A vendors models the organisation. A factory grounded in an organisation needs both, and that combination is where the War Machine sits. In SVO terms, A has one developer as its subject, B and C have one worker or expert, and D has several people holding intents that may conflict. D is also where the \"human\" problems live, like your manager who doesn't listen. So that filter will matter most for D-type clients."
+    },
+    {
+      "id": "claude-13-turn-10-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈰",
+      "text": "(next) Once the customer stories come back, I'll write the concrete client problems as triples and sort each one into human, tooling or mixed. That should answer your earlier question about why some verbs are more interesting than others."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-9-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) I've added this to the mission as §3.1 (commit `7a15814`). It covers your turn, a test for telling human problems from ones tooling can help with, and a first mapping of the triples onto the War Machine's R-nodes."
+    },
+    {
+      "id": "claude-13-turn-9-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"totally \"human\" problems\") The SVO form gives a fairly clean way to separate the two. A tool can only change the *via* column, which is how faithfully an intent gets carried out. If the problem sits in the subject or the verb, meaning nobody holds the intent, then better fidelity won't help. Your manager is like that: he has no intent to *collect* what his employees tell him, so there's nothing for Elephant-2000 machinery to carry. If the intent is there but carried badly or slowly, tooling can help. Most real cases will be mixed. The test is still useful because it tells you which part of a client's problem you can actually take on."
+    },
+    {
+      "id": "claude-13-turn-9-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"fitted to the PBASE and R-number outlines\") The verbs already map onto PBASE through `xiaoxiang-mark-keys`. Against the R-nodes, my first reading (not yet checked against the Lean spec) is:"
+    },
+    {
+      "id": "claude-13-turn-9-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(\"actual customer or client problems\") Some of this work already exists. `M-joe-told-me-about-futon` §2c collected public pain signals in six clusters, but they're nearly all *developer* pain: context loss, drift, review load, cost. A company in middle America turning to AI is a different population, and nobody has looked at it yet."
+    },
+    {
+      "id": "claude-13-turn-9-r-4",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊭",
+      "text": "(next, if you want it) I could do that pass. I'd collect a dozen concrete problems that non-tech organisations say they're bringing AI to, such as intake, scheduling, compliance paperwork and customer follow-up, and write each one as triples. Then I'd sort each problem into human, tooling, or mixed. That would show which verbs come up in real demand, which was your question about why some verbs are more interesting than others."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "end": 69,
+      "standing?": true,
+      "about": "using Joe's gathered example companies as the kernel of the landscape analysis",
+      "text": "Sure, maybe we could use the example companies I found as a \"kernel\".",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 71,
+      "author": "operator",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-f-s2-0",
+      "kind": "report",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "end": 161,
+      "standing?": false,
+      "about": "classification observation: most offerings solve tech problems for tech people",
+      "text": "It seemed to me that it in many cases they are solving tech problems for tech people (e.g.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 162,
+      "author": "operator",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-f-s3-0",
+      "kind": "report",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "end": 207,
+      "standing?": false,
+      "about": "Mastra as the exemplar of the tech-for-tech class",
+      "text": "Mastra seems like a great example of this)...",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 208,
+      "author": "operator",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-f-s4-0",
+      "kind": "qualify",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "end": 421,
+      "standing?": false,
+      "about": "whether tech-for-tech capability transfers to non-technical problems",
+      "text": "and of course I personally find this interesting, but just being good at managing context for developer sessions or sof…",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 423,
+      "author": "operator",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-f-s5-0",
+      "kind": "propose",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "end": 626,
+      "standing?": true,
+      "about": "the War Machine differentiator: a software factory grounded in an actual organisation",
+      "text": "Whereas a possible distinction with the War Machine is that, yes, technically it is a kind of \"software factory\" but it…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-r-0",
+      "kind": "report",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "standing?": false,
+      "text": "(the sort) Five groups:\n- **A. Tech for tech people (~36):** Mastra, Smithers, Cotal, Reticle, the memory DBs, and othe…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-r-1",
+      "kind": "explain",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "target": "claude-13-turn-10-f-s5-0",
+      "standing?": false,
+      "text": "(\"grounded in the way an actual organisation works\") Your distinction puts the War Machine closest to D, with one diffe…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-r-2",
+      "kind": "continue",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "standing?": false,
+      "text": "(next) Once the customer stories come back, I'll write the concrete client problems as triples and sort each one into h…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-10",
+      "id": "claude-13-turn-10-c-9f98fa62",
+      "kind": "commit",
+      "at": "2026-10-10T01:13:10Z",
+      "record": "turn-HD0aXw",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning: §3.2 kernel sorted by whose problem it is",
+      "sha": "9f98fa62",
+      "standing?": false
+    }
+  ]
+}

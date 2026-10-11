@@ -1,0 +1,123 @@
+{
+  "record": "turn-XogEMy",
+  "turn_id": "claude-4-turn-567",
+  "session_id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+  "created_at": "2026-10-05T22:25:20Z",
+  "agent_id": "claude-4",
+  "source_text": "OK, please take some time to get the \"what I'd change\" in place before further dispatches (remember that you'll have to teach your helpers how to be efficient too, e.g., using the probesource tool appropriately)",
+  "fragments": [
+    {
+      "id": "claude-4-turn-567-f-s1-0",
+      "intent": "ask-action",
+      "text": "OK, please take some time to get the \"what I'd change\" in place before further dispatches"
+    },
+    {
+      "id": "claude-4-turn-567-f-s1-1",
+      "intent": "delegate",
+      "text": "(remember that you'll have to teach your helpers how to be efficient too, e.g., using the probesource tool appropriately)"
+    }
+  ],
+  "reply_text": "㊥ The changes are in place, and I've held back new work packets until now.\n\n㊢ (what's in place)\n1. **Agents' rules.** The preamble every packet starts with now ends with an EFFICIENCY RULES section:\n   - read the raise site and the Lean source before any run, and state a hypothesis with file and line;\n   - write down the predicted counts or next stop before every run;\n   - when a stop is in a dependency, reproduce it by compiling that one declaration with `tools/probe_declaration.py`, using the source-location form for names only the port invents, once I announce it's on cand-1;\n   - instrument once, so one run answers every question;\n   - report the prediction next to the result.\n\n   It sits beside the real-path rule from earlier.\n2. **My own practice.** It's in `/tmp/pyreg/overnight/REVIEW-CHECKLIST.md`:\n   - at every new stop, grep and read the raise site and the Lean step before sending anything;\n   - in review, check the real path and the prediction, and look for fixes aimed at symptoms;\n   - batch independent fixes into one acceptance run per row.\n3. **The agents.** All six active agents (codex-19, 23, 24, 30, 31 and 32) got a short notice to read the new section now and apply it from their next step. Each replies in one line with their next step and its prediction, so I can see they've taken it in. Runs already in flight finish as they are.\n4. **Memory.** Saved as `punch-card-discipline`, linked to `tests-must-prove-the-real-path`.\n\n㊟ (one gap) The source-location probe exists only in codex-30's worktree, and it isn't committed yet. That worktree also has uncommitted `argscope` changes mixed in. I'll merge it into cand-1 once its timing run (`bg-1058`) shows it works, and then announce it. Until then, the agents can use the probe by name for any declaration Lean can name.",
+  "reply_acts": [
+    {
+      "id": "claude-4-turn-567-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "The changes are in place, and I've held back new work packets until now."
+    },
+    {
+      "id": "claude-4-turn-567-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(what's in place)\n1. **Agents' rules.** The preamble every packet starts with now ends with an EFFICIENCY RULES section:\n   - read the raise site and the Lean source before any run, and state a hypothesis with file and line;\n   - write down the predicted counts or next stop before every run;\n   - when a stop is in a dependency, reproduce it by compiling that one declaration with `tools/probe_declaration.py`, using the source-location form for names only the port invents, once I announce it's on cand-1;\n   - instrument once, so one run answers every question;\n   - report the prediction next to the result."
+    },
+    {
+      "id": "claude-4-turn-567-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊟",
+      "text": "(one gap) The source-location probe exists only in codex-30's worktree, and it isn't committed yet. That worktree also has uncommitted `argscope` changes mixed in. I'll merge it into cand-1 once its timing run (`bg-1058`) shows it works, and then announce it. Until then, the agents can use the probe by name for any declaration Lean can name."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-4-turn-564-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "Yes, I agree. With punch cards, every run is expensive, so you'd read the source and work out what the run should print before submitting it. We've been doing the reverse: using 13-minute cold runs to find out things that reading the source would have told us. The clearest case tonight was `ks`. Three traced runs went in before I read `elaborate_own_declaration_header` and the import-linking code. Two minutes of reading gave the hypothesis that turned out right."
+    },
+    {
+      "id": "claude-4-turn-564-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊭",
+      "text": "(what I'd change)\n1. **Predict before running.** Every packet that ends in a cold run has to state the expected result first: the counts, the next stop, and which function handles the node. It works that out from the Lean source and the port source. If the run disagrees, that's a wrong hypothesis to understand from the source, not a reason to run again with another guess.\n2. **I read first, at every stop.** When a run returns a new stop, I read the raise site and the code around it before sending anything. I send a hypothesis with file and line, not \"trace it\". When I did that tonight (`ks`, the `≥` term loss, the `fun _ => y` source), it went fast. When I sent \"trace it\" instead, it cost a run each time.\n3. **Spend runs on confirmation, and batch them.** When fixes in different lanes are independent, one cold run on a combined branch checks all of them, instead of one run per fix per lane.\n4. **Make the run itself cheap where possible.** That's the probe by source location (codex-30) and the cold-path measurement (codex-31). They help, but they're secondary. The main saving is in 1 and 2."
+    },
+    {
+      "id": "claude-4-turn-564-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "🈸",
+      "text": "(do you want this as a rule?) I'd add 1 and 2 to the packet preamble and to my own review practice now, and apply 3 when merging. Shall I?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-567",
+      "id": "claude-4-turn-567-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-10-05T22:25:20Z",
+      "record": "turn-XogEMy",
+      "end": 89,
+      "standing?": false,
+      "about": "landing the agreed \"what I'd change\" list before any further dispatches",
+      "text": "OK, please take some time to get the \"what I'd change\" in place before further dispatches",
+      "to": "claude-4"
+    },
+    {
+      "port?": true,
+      "start": 90,
+      "author": "operator",
+      "turn": "claude-4-turn-567",
+      "id": "claude-4-turn-567-f-s1-1",
+      "kind": "delegate",
+      "at": "2026-10-05T22:25:20Z",
+      "record": "turn-XogEMy",
+      "end": 211,
+      "standing?": true,
+      "about": "propagating efficiency practice (e.g. probesource usage) to the agent's helpers",
+      "text": "(remember that you'll have to teach your helpers how to be efficient too, e.g., using the probesource tool appropriatel…",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-567",
+      "id": "claude-4-turn-567-r-1",
+      "kind": "report",
+      "at": "2026-10-05T22:25:20Z",
+      "record": "turn-XogEMy",
+      "standing?": false,
+      "text": "(what's in place)\n1. **Agents' rules.** The preamble every packet starts with now ends with an EFFICIENCY RULES section…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-567",
+      "id": "claude-4-turn-567-r-2",
+      "kind": "qualify",
+      "at": "2026-10-05T22:25:20Z",
+      "record": "turn-XogEMy",
+      "standing?": false,
+      "text": "(one gap) The source-location probe exists only in codex-30's worktree, and it isn't committed yet. That worktree also …",
+      "to": "operator"
+    }
+  ]
+}

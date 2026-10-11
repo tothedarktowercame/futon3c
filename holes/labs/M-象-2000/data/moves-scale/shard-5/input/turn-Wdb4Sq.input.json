@@ -1,0 +1,202 @@
+{
+  "record": "turn-Wdb4Sq",
+  "turn_id": "claude-13-turn-7",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T00:53:53Z",
+  "agent_id": "claude-13",
+  "source_text": "It's also worth saying: people use very anthropogenic terms like \"memory\" (I do this too) when in fact the reality is a bit different (graph database plus injected context into an agent session or something).  Possibly the list I was thinking of was a list of \"intents\" that the agents could carry out on behalf of their operator, but, really, it is the operator's intent that is being carried out (for better or worse and with more or less fidelity) through the tool.  This seems to be a common theme that the various different service providers are circling here, so it may be that there's no one \"best\" list.  But I think we should be careful to distinguish between intents (per speech act) and, let's say, actions (like \"query database\").",
+  "fragments": [
+    {
+      "id": "claude-13-turn-7-f-s1-0",
+      "intent": "clarify",
+      "text": "It's also worth saying: people use very anthropogenic terms like \"memory\" (I do this too) when in fact the reality is a bit different (graph database plus injected context into an agent session or something)."
+    },
+    {
+      "id": "claude-13-turn-7-f-s2-0",
+      "intent": "clarify",
+      "text": "Possibly the list I was thinking of was a list of \"intents\" that the agents could carry out on behalf of their operator, but, really, it is the operator's intent that is being carried out (for better or worse and with more or less fidelity) through the tool."
+    },
+    {
+      "id": "claude-13-turn-7-f-s3-0",
+      "intent": "qualify",
+      "text": "This seems to be a common theme that the various different service providers are circling here, so it may be that there's no one \"best\" list."
+    },
+    {
+      "id": "claude-13-turn-7-f-s4-0",
+      "intent": "propose",
+      "text": "But I think we should be careful to distinguish between intents (per speech act) and, let's say, actions (like \"query database\")."
+    }
+  ],
+  "reply_text": "㊥ (gist) Agreed. I've recorded this in the mission as tension T8, in your words, splitting the vocabulary into three layers: the operator's **intent**, the tool's **action**, and the **vendor word** for that action. It's committed and pushed as `77946a2`. I also added a caveat to GLOSS, because its verbs (\"remember\", \"learn\", \"decide\") are mostly vendor words. It works for translating the names, but it isn't the ontology.\n\n🈖 (\"intents (per speech act) and, let's say, actions\") Take \"memory\" as an example:\n- **Intent:** the operator's. Roughly *constrain* or *collect*: \"don't make me repeat myself\", \"keep what we settled\".\n- **Action:** write facts to a graph or vector store, retrieve by similarity, inject the matches into the session.\n- **Vendor word:** \"memory\".\n\nThe interesting question then becomes **fidelity**: did the injected text actually carry the intent? Nobody's marketing answers that, and that includes the way we've described futon1b. It's also why there's no single best list. Each vendor names the intent layer differently, but underneath they all have much the same small set of actions.\n\n🈕 (what this does to the ontology idea) The rows of the \"what people do when they do tech\" list would be **operator intents**, which the 象 marks already cover as speech acts. Each row would say which actions carry that intent in which tools, including FUTON. The vendor words would be a lookup column, and the last column would ask how anyone could tell whether the intent was carried. Under that layout, tools that sound different (\"memory\", \"context engine\", \"second brain\") would land on the same actions. Tools with similar names could also turn out to carry different intents. Your earlier point about T7 now fits as a special case: speech acts belong to layer 1, and tool verbs like *lease* or *admit* belong to layer 2.\n\n🈸 (one decision) Shall I draft `landscape/ACTIVITIES.md` in that shape: intent → actions → vendor words → fidelity check? I'd fill a few rows from GLOSS to see whether the layout holds up before doing all of them.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-7-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) Agreed. I've recorded this in the mission as tension T8, in your words, splitting the vocabulary into three layers: the operator's **intent**, the tool's **action**, and the **vendor word** for that action. It's committed and pushed as `77946a2`. I also added a caveat to GLOSS, because its verbs (\"remember\", \"learn\", \"decide\") are mostly vendor words. It works for translating the names, but it isn't the ontology."
+    },
+    {
+      "id": "claude-13-turn-7-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"intents (per speech act) and, let's say, actions\") Take \"memory\" as an example:\n- **Intent:** the operator's. Roughly *constrain* or *collect*: \"don't make me repeat myself\", \"keep what we settled\".\n- **Action:** write facts to a graph or vector store, retrieve by similarity, inject the matches into the session.\n- **Vendor word:** \"memory\"."
+    },
+    {
+      "id": "claude-13-turn-7-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈕",
+      "text": "(what this does to the ontology idea) The rows of the \"what people do when they do tech\" list would be **operator intents**, which the 象 marks already cover as speech acts. Each row would say which actions carry that intent in which tools, including FUTON. The vendor words would be a lookup column, and the last column would ask how anyone could tell whether the intent was carried. Under that layout, tools that sound different (\"memory\", \"context engine\", \"second brain\") would land on the same actions. Tools with similar names could also turn out to carry different intents. Your earlier point about T7 now fits as a special case: speech acts belong to layer 1, and tool verbs like *lease* or *admit* belong to layer 2."
+    },
+    {
+      "id": "claude-13-turn-7-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(one decision) Shall I draft `landscape/ACTIVITIES.md` in that shape: intent → actions → vendor words → fidelity check? I'd fill a few rows from GLOSS to see whether the layout holds up before doing all of them."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-6-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) Yes. The 13 verb groups in GLOSS are already most of a first draft, if we describe them by what *people* do and treat the tools as automating parts of those activities. FUTON has two neighbouring vocabularies the new list would need to sit beside."
+    },
+    {
+      "id": "claude-13-turn-6-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(where it would sit) FUTON already has two vocabularies that border on this:\n- **The 象 marks** say what a turn *says*: report, propose, delegate, verify.\n- **`capability/capability-vocabulary-v0`** (futon3 library) has eight dimensions describing how an *operator develops*: scope-discipline, apparatus-design, and so on."
+    },
+    {
+      "id": "claude-13-turn-6-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊭",
+      "text": "(making it Cognisee-like rather than another list) Cognisee's idea is that know-how gets captured *from the people who have it*, with attribution. Applied here, the activities shouldn't come from vendor marketing, which is where the GLOSS verbs came from. They should come from what you actually do, as recorded in the evidence store and your turns. A concrete version:\n1. Draft about 12 activities from GLOSS.\n2. Check them against a sample of your own turns: does each activity show up, and are there common activities the tools never mention?\n3. Keep a \"not tech / no activity\" default. The capability-vocabulary work found that without one, every turn gets *some* tag and the counts end up measuring how often things were recorded."
+    },
+    {
+      "id": "claude-13-turn-6-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(one decision) Shall I draft it as `landscape/ACTIVITIES.md`? Each activity would list the human activity, the tool verbs, the FUTON counterpart and the 象 marks that point at it. I'd then do step 2 on a sample of about 50 of your turns."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-f-s1-0",
+      "kind": "clarify",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "end": 208,
+      "standing?": false,
+      "about": "anthropomorphic vendor terms such as \"memory\"",
+      "text": "It's also worth saying: people use very anthropogenic terms like \"memory\" (I do this too) when in fact the reality is a…",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 210,
+      "author": "operator",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-f-s2-0",
+      "kind": "clarify",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "end": 468,
+      "standing?": false,
+      "about": "whose intent an agent action expresses",
+      "text": "Possibly the list I was thinking of was a list of \"intents\" that the agents could carry out on behalf of their operator…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 470,
+      "author": "operator",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-f-s3-0",
+      "kind": "qualify",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "end": 611,
+      "standing?": false,
+      "about": "whether a single best intent vocabulary exists",
+      "text": "This seems to be a common theme that the various different service providers are circling here, so it may be that there…",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 613,
+      "author": "operator",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-f-s4-0",
+      "kind": "propose",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "end": 742,
+      "standing?": true,
+      "about": "the vocabulary distinction between intents and actions",
+      "text": "But I think we should be careful to distinguish between intents (per speech act) and, let's say, actions (like \"query d…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-r-1",
+      "kind": "explain",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "standing?": false,
+      "text": "(\"intents (per speech act) and, let's say, actions\") Take \"memory\" as an example:\n- **Intent:** the operator's. Roughly…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-r-2",
+      "kind": "extend",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "standing?": false,
+      "text": "(what this does to the ontology idea) The rows of the \"what people do when they do tech\" list would be **operator inten…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-13",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-r-3",
+      "kind": "ask-action",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "standing?": false,
+      "text": "(one decision) Shall I draft `landscape/ACTIVITIES.md` in that shape: intent → actions → vendor words → fidelity check?…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-7",
+      "id": "claude-13-turn-7-c-77946a24",
+      "kind": "commit",
+      "at": "2026-10-10T00:53:53Z",
+      "record": "turn-Wdb4Sq",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning: T8 intent / action / vendor word",
+      "sha": "77946a24",
+      "standing?": false
+    }
+  ]
+}

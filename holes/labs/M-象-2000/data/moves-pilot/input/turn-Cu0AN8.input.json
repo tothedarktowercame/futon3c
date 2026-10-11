@@ -18,62 +18,158 @@
     }
   ],
   "reply_text": "㊥ That fits the report card well: each fix states, before it lands, what it should change on the next card, and the next card checks it. First, what preregistration machinery already exists. `full_loop_cohort.clj` has a `PinnedPreregistration` record.㊥ (\"preregister any needed improvements against the latest report card\") Yes. Each fix would state, before the next run, what it predicts that run's card will show, and the next card then checks the prediction.\n\n㊢ (what exists) futon2 already uses preregistration, but at cohort level: `full_loop_cohort.clj` pins a preregistered cohort file (its bytes and its stopping target) before a run series. Nothing yet lets an individual fix declare a prediction against a card.\n\n㊭ (design)\n- **Where predictions live:** one file per preregistration under `futon2/holes/labs/wm-contract/preregistrations/`, committed. The commit time is what proves the prediction came before the run.\n- **What each one contains:**\n  - **Against:** the run id, plus the SHA-256 of the report card it responds to.\n  - **Defect:** the card row and facts it addresses.\n  - **Change:** the commits that implement it.\n  - **Prediction:** fields of the next card, and the value or condition each is expected to show. For example: outcome is not `required-checkpoints-missing`; `targetsWithG ≥ 342`; Q9 `earlierProgressPairs > 0`.\n  - **Applies when:** the condition under which the prediction is checked, for example \"only if the run reaches review\".\n  - **Refuted by:** what result would refute it.\n- **How it's evaluated:** each new card gets a Preregistrations section. A prediction counts only if the run's recorded source revision contains its commits, and it gets one of:\n  - **confirmed**;\n  - **refuted**;\n  - **not exercised**, when the run didn't reach the condition;\n  - **not yet applicable**, when the run's code doesn't include the change.\n\n  The first decisive result closes it.\n- **On the WIP site:** each run's card shows its verdicts, and the index lists the open preregistrations.\n\n㊯ (dispatching) The format and evaluator go to codex-28, who owns the report card. Once they exist, I'll write the first batch against click 49's card, before the next click, covering today's merged fixes:\n- lane size and streamed persist;\n- relations and Q8;\n- F admission;\n- the Q9/Q10 cascades;\n- the infinity and ticket-parent fixes;\n- the debugger and falsifier fixes.㊯ (codex-28, job `invoke-1791576288687-841-09e1a7d7`) Building the preregistration format, a validator, and the evaluator in the report card. The validator rejects an unknown predicate, or a preregistration whose card hash doesn't match a real card. Tests cover each outcome (confirmed, refuted, not exercised, not yet applicable), a malformed file, and close-once.\n\n㊭ (order before the next click)\n1. Merge the evaluator.\n2. I write and commit the first preregistrations against click 49's card, so their commit times come before the run.\n3. codex-35's close-time trigger publishes the next run's card, with its Preregistrations section, on the WIP site.\n\nThe next click then tests those predictions as well as the fixes themselves.",
+  "reply_acts": [
+    {
+      "id": "claude-12-turn-104-r-0",
+      "kind": "reply-mark",
+      "author": "claude-12",
+      "mark": "㊥",
+      "text": "That fits the report card well: each fix states, before it lands, what it should change on the next card, and the next card checks it. First, what preregistration machinery already exists. `full_loop_cohort.clj` has a `PinnedPreregistration` record.㊥ (\"preregister any needed improvements against the latest report card\") Yes. Each fix would state, before the next run, what it predicts that run's card will show, and the next card then checks the prediction."
+    },
+    {
+      "id": "claude-12-turn-104-r-1",
+      "kind": "reply-mark",
+      "author": "claude-12",
+      "mark": "㊢",
+      "text": "(what exists) futon2 already uses preregistration, but at cohort level: `full_loop_cohort.clj` pins a preregistered cohort file (its bytes and its stopping target) before a run series. Nothing yet lets an individual fix declare a prediction against a card."
+    },
+    {
+      "id": "claude-12-turn-104-r-2",
+      "kind": "reply-mark",
+      "author": "claude-12",
+      "mark": "㊭",
+      "text": "(design)\n- **Where predictions live:** one file per preregistration under `futon2/holes/labs/wm-contract/preregistrations/`, committed. The commit time is what proves the prediction came before the run.\n- **What each one contains:**\n  - **Against:** the run id, plus the SHA-256 of the report card it responds to.\n  - **Defect:** the card row and facts it addresses.\n  - **Change:** the commits that implement it.\n  - **Prediction:** fields of the next card, and the value or condition each is expected to show. For example: outcome is not `required-checkpoints-missing`; `targetsWithG ≥ 342`; Q9 `earlierProgressPairs > 0`.\n  - **Applies when:** the condition under which the prediction is checked, for example \"only if the run reaches review\".\n  - **Refuted by:** what result would refute it.\n- **How it's evaluated:** each new card gets a Preregistrations section. A prediction counts only if the run's recorded source revision contains its commits, and it gets one of:\n  - **confirmed**;\n  - **refuted**;\n  - **not exercised**, when the run didn't reach the condition;\n  - **not yet applicable**, when the run's code doesn't include the change."
+    },
+    {
+      "id": "claude-12-turn-104-r-3",
+      "kind": "reply-mark",
+      "author": "claude-12",
+      "mark": "㊯",
+      "text": "(dispatching) The format and evaluator go to codex-28, who owns the report card. Once they exist, I'll write the first batch against click 49's card, before the next click, covering today's merged fixes:\n- lane size and streamed persist;\n- relations and Q8;\n- F admission;\n- the Q9/Q10 cascades;\n- the infinity and ticket-parent fixes;\n- the debugger and falsifier fixes.㊯ (codex-28, job `invoke-1791576288687-841-09e1a7d7`) Building the preregistration format, a validator, and the evaluator in the report card. The validator rejects an unknown predicate, or a preregistration whose card hash doesn't match a real card. Tests cover each outcome (confirmed, refuted, not exercised, not yet applicable), a malformed file, and close-once."
+    },
+    {
+      "id": "claude-12-turn-104-r-4",
+      "kind": "reply-mark",
+      "author": "claude-12",
+      "mark": "㊭",
+      "text": "(order before the next click)\n1. Merge the evaluator.\n2. I write and commit the first preregistrations against click 49's card, so their commit times come before the run.\n3. codex-35's close-time trigger publishes the next run's card, with its Preregistrations section, on the WIP site."
+    }
+  ],
   "previous_reply_acts": [
+    {
+      "id": "claude-12-turn-98-r-0",
+      "kind": "reply-mark",
+      "author": "claude-12",
+      "mark": "㊥",
+      "text": "(publishing) I'll take that as a go for the report card, published on the WIP site. First, finding the WIP site in the Caddy config, and how its pages are served and protected.㊥ (\"show run reports under Caddy\") Yes: each run's report card can be published as its own section of the WIP site at `zone.hyperreal.enterprises/wip/`. I've commissioned the card generator first; publishing is a second package."
+    },
     {
       "id": "claude-12-turn-98-r-1",
       "kind": "reply-mark",
       "author": "claude-12",
-      "mark": "㊥",
-      "label": "publishing",
-      "text": "㊥ (publishing) I'll take that as a go for the report card, published on the WIP site. First, finding the WIP site in the Caddy config, and how its pages are served and protected.㊥ (\"show run reports under Caddy\") Yes: each run's report card can be published as its own section of the WIP site at `zone.hyperreal.enterprises/wip/`. I've commissioned the card generator first; publishing is a second package."
+      "mark": "㊢",
+      "text": "(what I found) The WIP site is p4ng's collection in `/var/www/zone.hyperreal.enterprises/wip`, and it's public.\n- Its landing page is built by `p4ng/publish-wip-index.py` from a `SECTIONS` list. Any page not in the list gets reported rather than hidden.\n- Publishers run through `p4ng/publish-job.py`, which records each outcome on a status page."
     },
     {
       "id": "claude-12-turn-98-r-2",
       "kind": "reply-mark",
       "author": "claude-12",
-      "mark": "㊢",
-      "label": "what I found",
-      "text": "㊢ (what I found) The WIP site is p4ng's collection in `/var/www/zone.hyperreal.enterprises/wip`, and it's public.\n- Its landing page is built by `p4ng/publish-wip-index.py` from a `SECTIONS` list. Any page not in the list gets reported rather than hidden.\n- Publishers run through `p4ng/publish-job.py`, which records each outcome on a status page."
+      "mark": "㊯",
+      "text": "(dispatched: codex-28, job `invoke-1791575411545-826-727ba38c`) The generator reads one run record and writes `report-card.edn`, `.md` and `.html` next to that run's data. Sections:\n1. Q1–Q10 verdicts, with the deciding facts.\n2. The phase timeline: debugger stops, seats, tokens, terminal receipt.\n3. The cascade:\n   - the target, and why it won (its G terms against the next three policies);\n   - the patterns in order, with their interpretations;\n   - what the author was asked to build.\n4. The outcome: commits, review and falsifier verdicts, grounding, the feature card and its demo steps, and the Field Desk and morning-brief references.\n5. A short paper-ready paragraph, built only from fields in the record."
     },
     {
       "id": "claude-12-turn-98-r-3",
       "kind": "reply-mark",
       "author": "claude-12",
-      "mark": null,
-      "label": null,
-      "text": "So \"War Machine runs\" can be a new section with one page per run, built the same way."
+      "mark": "㊟",
+      "text": "(public site) The cards will show seat names, ticket text and commit IDs. Host paths will be shortened to repo-relative, and tests check that no `/home/joe` path appears in the HTML."
     },
     {
       "id": "claude-12-turn-98-r-4",
       "kind": "reply-mark",
       "author": "claude-12",
-      "mark": "㊯",
-      "label": "dispatched: codex-28, job `invoke-1791575411545-826-727ba38c`",
-      "text": "㊯ (dispatched: codex-28, job `invoke-1791575411545-826-727ba38c`) The generator reads one run record and writes `report-card.edn`, `.md` and `.html` next to that run's data. Sections:\n1. Q1–Q10 verdicts, with the deciding facts.\n2. The phase timeline: debugger stops, seats, tokens, terminal receipt.\n3. The cascade:\n   - the target, and why it won (its G terms against the next three policies);\n   - the patterns in order, with their interpretations;\n   - what the author was asked to build.\n4. The outcome: commits, review and falsifier verdicts, grounding, the feature card and its demo steps, and the Field Desk and morning-brief references.\n5. A short paper-ready paragraph, built only from fields in the record."
-    },
-    {
-      "id": "claude-12-turn-98-r-5",
-      "kind": "reply-mark",
-      "author": "claude-12",
-      "mark": null,
-      "label": null,
-      "text": "Every missing field shows as a typed absence, so failed runs get a card too. It will backfill cards for clicks 48 and 49 as the first examples."
-    },
-    {
-      "id": "claude-12-turn-98-r-6",
-      "kind": "reply-mark",
-      "author": "claude-12",
-      "mark": "㊟",
-      "label": "public site",
-      "text": "㊟ (public site) The cards will show seat names, ticket text and commit IDs. Host paths will be shortened to repo-relative, and tests check that no `/home/joe` path appears in the HTML."
-    },
-    {
-      "id": "claude-12-turn-98-r-7",
-      "kind": "reply-mark",
-      "author": "claude-12",
       "mark": "㊭",
-      "label": "next",
-      "text": "㊭ (next) Once I've reviewed the two backfilled cards for anything invented, the second package will:\n- add the section to `publish-wip-index.py`;\n- add a publisher run through `publish-job.py`;\n- trigger publishing at run close, since the WIP timers are parked."
+      "text": "(next) Once I've reviewed the two backfilled cards for anything invented, the second package will:\n- add the section to `publish-wip-index.py`;\n- add a publisher run through `publish-job.py`;\n- trigger publishing at run close, since the WIP timers are parked."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 37,
+      "author": "operator",
+      "turn": "claude-12-turn-104",
+      "id": "claude-12-turn-104-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-09T20:04:10Z",
+      "record": "turn-Cu0AN8",
+      "end": 114,
+      "standing?": true,
+      "about": "per-fix preregistration against the report card",
+      "text": "be able to preregister any needed improvements against tge latest report card",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-104",
+      "id": "claude-12-turn-104-f-s1-1",
+      "kind": "defer",
+      "at": "2026-10-09T20:04:10Z",
+      "record": "turn-Cu0AN8",
+      "end": 36,
+      "standing?": false,
+      "about": "preregistration capability",
+      "text": "After we have records we should also",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-104",
+      "id": "claude-12-turn-104-r-1",
+      "kind": "report",
+      "at": "2026-10-09T20:04:10Z",
+      "record": "turn-Cu0AN8",
+      "standing?": false,
+      "text": "(what exists) futon2 already uses preregistration, but at cohort level: `full_loop_cohort.clj` pins a preregistered coh…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-12",
+      "turn": "claude-12-turn-104",
+      "id": "claude-12-turn-104-r-2",
+      "kind": "propose",
+      "at": "2026-10-09T20:04:10Z",
+      "record": "turn-Cu0AN8",
+      "standing?": true,
+      "text": "(design)\n- **Where predictions live:** one file per preregistration under `futon2/holes/labs/wm-contract/preregistratio…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-12",
+      "turn": "claude-12-turn-104",
+      "id": "claude-12-turn-104-r-3",
+      "kind": "delegate",
+      "at": "2026-10-09T20:04:10Z",
+      "record": "turn-Cu0AN8",
+      "standing?": true,
+      "text": "(dispatching) The format and evaluator go to codex-28, who owns the report card. Once they exist, I'll write the first …",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-12",
+      "turn": "claude-12-turn-104",
+      "id": "claude-12-turn-104-r-4",
+      "kind": "propose",
+      "at": "2026-10-09T20:04:10Z",
+      "record": "turn-Cu0AN8",
+      "standing?": true,
+      "text": "(order before the next click)\n1. Merge the evaluator.\n2. I write and commit the first preregistrations against click 49…",
+      "to": "operator"
     }
   ]
 }

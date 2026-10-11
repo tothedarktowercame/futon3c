@@ -1,0 +1,217 @@
+{
+  "record": "turn-hoSA1W",
+  "turn_id": "claude-13-turn-27",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T02:26:16Z",
+  "agent_id": "claude-13",
+  "source_text": "Here's what I'm thinking about the M-landscape-positioning... what if I use this as a kind of \"alternative backlog\".  So if I run into technical problems myself I would be able to query the \"alternative backlog\" and find out what methods would help me do things better or faster.  That may just be for me as a technologist, rather than me as a business-innovator or whatever.  So, for example, if I keep having to remind claude agents to use bg.py surely there must be a \"tool\" or \"skill\" or MCP or somesuch that I could get them to use, all of that seems quite standard among the various technologies that I looked at and probably the fact that I've rolled my own REPL is the only thing to \"blame\" here.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-27-f-s1-0",
+      "intent": "explain",
+      "text": "Here's what I'm thinking about the M-landscape-positioning..."
+    },
+    {
+      "id": "claude-13-turn-27-f-s2-0",
+      "intent": "propose",
+      "text": "what if I use this as a kind of \"alternative backlog\"."
+    },
+    {
+      "id": "claude-13-turn-27-f-s3-0",
+      "intent": "extend",
+      "text": "So if I run into technical problems myself I would be able to query the \"alternative backlog\" and find out what methods would help me do things better or faster."
+    },
+    {
+      "id": "claude-13-turn-27-f-s4-0",
+      "intent": "qualify",
+      "text": "That may just be for me as a technologist, rather than me as a business-innovator or whatever."
+    },
+    {
+      "id": "claude-13-turn-27-f-s5-0",
+      "intent": "report-problem",
+      "text": "So, for example, if I keep having to remind claude agents to use bg.py surely there must be a \"tool\" or \"skill\" or MCP or somesuch that I could get them to use, all of that seems quite standard among the various technologies that I looked at and probably the fact that I've rolled my own REPL is the only thing to \"blame\" here."
+    }
+  ],
+  "reply_text": "㊥ (gist) Yes, and the survey is already indexed the right way for that. It's keyed by problem, written as verb · object, so you can query it with \"I keep having to ⟨do X⟩ by hand\". I've added it to the mission as §5, \"alternative backlog\", with an entry format and bg.py as the first entry (`f6a9588`).\n\n🈖 (\"surely there must be a \"tool\" or \"skill\" or MCP\") There is, and for this case the strongest of them is a **hook**, not a skill or an MCP tool. The four options, strongest first:\n1. **Hook.** A Claude Code `PreToolUse` hook on Bash sees every command before it runs. It can deny anything that sets `run_in_background` or uses `nohup`, `setsid` or a trailing `&`, and reply \"use `scripts/bg.py launch \"<cmd>\" --agent <id>`\". It runs every time, so it doesn't depend on the model remembering anything.\n2. **Skill.** It loads when its description matches the task, but the model still has to pick it.\n3. **MCP or native `bg_launch` tool.** It makes the right action easy, but nothing stops a bare `&`.\n4. **Prose in CLAUDE.md.** That's where the rule lives now, and it's why you keep reminding agents.\n\n㊟ (\"I've rolled my own REPL is the only thing to \"blame\"\") Mostly not. Any rule kept in prose fails this way, with or without a custom REPL. And your REPL doesn't block the standard fix. Agency's pouches run `claude --print` with no `--setting-sources` restriction (I checked `agent_pouch.clj`), so a hook in your user settings should apply to every claude-N. Hooks can deny a command even under `bypassPermissions`. Before relying on it, I'd confirm on one pouch that it actually fires.\n\n🈸 (one decision) Shall I write that hook? It's one small script plus an entry in `~/.claude/settings.json`. It would affect every Claude agent on zone, so I'd test it on this session first. To avoid catching ordinary short `&` use, the first version could only *warn*, not deny.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-27-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) Yes, and the survey is already indexed the right way for that. It's keyed by problem, written as verb · object, so you can query it with \"I keep having to ⟨do X⟩ by hand\". I've added it to the mission as §5, \"alternative backlog\", with an entry format and bg.py as the first entry (`f6a9588`)."
+    },
+    {
+      "id": "claude-13-turn-27-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"surely there must be a \"tool\" or \"skill\" or MCP\") There is, and for this case the strongest of them is a **hook**, not a skill or an MCP tool. The four options, strongest first:\n1. **Hook.** A Claude Code `PreToolUse` hook on Bash sees every command before it runs. It can deny anything that sets `run_in_background` or uses `nohup`, `setsid` or a trailing `&`, and reply \"use `scripts/bg.py launch \"<cmd>\" --agent <id>`\". It runs every time, so it doesn't depend on the model remembering anything.\n2. **Skill.** It loads when its description matches the task, but the model still has to pick it.\n3. **MCP or native `bg_launch` tool.** It makes the right action easy, but nothing stops a bare `&`.\n4. **Prose in CLAUDE.md.** That's where the rule lives now, and it's why you keep reminding agents."
+    },
+    {
+      "id": "claude-13-turn-27-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(\"I've rolled my own REPL is the only thing to \"blame\"\") Mostly not. Any rule kept in prose fails this way, with or without a custom REPL. And your REPL doesn't block the standard fix. Agency's pouches run `claude --print` with no `--setting-sources` restriction (I checked `agent_pouch.clj`), so a hook in your user settings should apply to every claude-N. Hooks can deny a command even under `bypassPermissions`. Before relying on it, I'd confirm on one pouch that it actually fires."
+    },
+    {
+      "id": "claude-13-turn-27-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(one decision) Shall I write that hook? It's one small script plus an entry in `~/.claude/settings.json`. It would affect every Claude agent on zone, so I'd test it on this session first. To avoid catching ordinary short `&` use, the first version could only *warn*, not deny."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-26-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(done) I've created `futon0/README-nebula.md` (pushed as `ff0776d`). It holds goals that have real effort behind them but no star yet, each with the evidence of effort and pointers to nearby stars or notes. The rule at the top: an entry leaves the nebula when a mission opens for it, which is how a star forms. There are nine entries:\n1. you learning maths\n2. the travelling workstation\n3. infrastructure that survives failure\n4. money and the end-of-year decision\n5. teaching and Peeragogy\n6. writing and publishing\n7. ChipWits\n8. friends' projects\n9. fun and play"
+    },
+    {
+      "id": "claude-13-turn-26-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"ChipWits wasn't just fun\") I've corrected that in both places. ChipWits now has its own entry: a source of the icons used in Xiang-2000, and a model for thinking about controlling an agent system through icon-based instructions. \"Fun and play\" stays as a separate entry, with a note that not everything in the file needs a use."
+    },
+    {
+      "id": "claude-13-turn-26-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(why a separate file) It gets around the selection effect we found. The star map only shows what missions have already minted. The nebula is where effort shows up first, so a future goal has somewhere to be written down before anyone has built anything for it."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-f-s1-0",
+      "kind": "explain",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "end": 61,
+      "standing?": false,
+      "about": "M-landscape-positioning",
+      "text": "Here's what I'm thinking about the M-landscape-positioning...",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 62,
+      "author": "operator",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "end": 116,
+      "standing?": true,
+      "about": "M-landscape-positioning, repurposed as an 'alternative backlog'",
+      "text": "what if I use this as a kind of \"alternative backlog\".",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 118,
+      "author": "operator",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-f-s3-0",
+      "kind": "extend",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "end": 279,
+      "standing?": false,
+      "about": "the alternative backlog: its query mode and success criterion",
+      "text": "So if I run into technical problems myself I would be able to query the \"alternative backlog\" and find out what methods…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 281,
+      "author": "operator",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-f-s4-0",
+      "kind": "qualify",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "end": 375,
+      "standing?": false,
+      "about": "the scope of the alternative backlog: Joe-as-technologist, not Joe-as-business-innovator",
+      "text": "That may just be for me as a technologist, rather than me as a business-innovator or whatever.",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 377,
+      "author": "operator",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-f-s5-0",
+      "kind": "report-problem",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "end": 704,
+      "standing?": false,
+      "about": "the recurring need to remind claude agents to use bg.py — and the missing standard mechanism behind it",
+      "text": "So, for example, if I keep having to remind claude agents to use bg.py surely there must be a \"tool\" or \"skill\" or MCP …",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-r-1",
+      "kind": "explain",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "target": "claude-13-turn-27-f-s5-0",
+      "standing?": false,
+      "text": "(\"surely there must be a \"tool\" or \"skill\" or MCP\") There is, and for this case the strongest of them is a **hook**, no…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-r-2",
+      "kind": "qualify",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "target": "claude-13-turn-27-f-s5-0",
+      "standing?": false,
+      "text": "(\"I've rolled my own REPL is the only thing to \"blame\"\") Mostly not. Any rule kept in prose fails this way, with or wit…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-13",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-r-3",
+      "kind": "ask-action",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "standing?": false,
+      "text": "(one decision) Shall I write that hook? It's one small script plus an entry in `~/.claude/settings.json`. It would affe…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-27",
+      "id": "claude-13-turn-27-c-f6a9588a",
+      "kind": "commit",
+      "at": "2026-10-10T02:26:16Z",
+      "record": "turn-hoSA1W",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning: §5 alternative backlog; first entry (bg.py reminders)",
+      "sha": "f6a9588a",
+      "standing?": false
+    }
+  ]
+}

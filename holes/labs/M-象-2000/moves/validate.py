@@ -39,9 +39,11 @@ def validate(path):
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         return 0, 0, [str(exc)]
     current = {}
-    for act in source.get("acts", []) + source.get("fragments", []):
+    # Authority: the record's stored acts, the reading's fragments, and the
+    # reply-paragraph acts as the kernel numbers them (sample.py:reply_marks).
+    for act in source.get("acts", []) + source.get("fragments", []) + source.get("reply_acts", []):
         if act.get("id"):
-            current[act["id"]] = act
+            current.setdefault(act["id"], act)
     previous = {act["id"]: act for act in source.get("previous_reply_acts", [])}
     operator = {aid for aid, act in current.items()
                 if act.get("author", "operator") == "operator"}

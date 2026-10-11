@@ -13,46 +13,118 @@
     }
   ],
   "reply_text": "㊥ (\"blueprints could follow the audits\") Set up that way in `3e72c0903`. The order is now: route audit, then a reviewed blueprint of the foundation the audit names, then formalisation one blueprint node at a time. Both foundation programs already have audits, so their next jobs write blueprints. The loops are running again.\n\n㊢ (what's in place)\n- **`BLUEPRINTS.md`** in the lab sets out the order and the format: `ConstructionTargets/<Foundation>.blueprint.md`, one node per future Lean declaration, each with `uses:` edges, the intended Lean type, and the Lean representation wherever there's a choice. A node needing more than about a page gets split, and every hypothesis of the final theorem has to be used by some node. Blueprints are only for FOUNDATION-sized theorems; READY and NEAR problems go straight from audit to closure, as t00J08 did.\n- **Work prompt:** a program whose blueprint doesn't exist yet writes it as its whole job, commits it, and stops. After that, its milestones are the blueprint's nodes, and a STOP has to name the node it's stuck on. A strategy checkpoint may elect a multi-day foundation row only with a reviewed blueprint behind it; otherwise it elects the blueprint.\n- **Review prompt:** blueprints are reviewed for their mathematics. Are the statements true as written, does each proof use only its `uses:` nodes and stated hypotheses, and is each Lean type a faithful form of its statement? A failure has to come with the counterexample or the missing hypothesis.\n- **Programs:** van Kampen writes `PointWedgeVanKampen.blueprint.md`, working from the t99J01, t01A03, t01A04, t92J06, t97A01 and t97A03 audits. Deck-group writes `DeckGroupQuotientFundamentalGroup.blueprint.md`, from the t93J03, t00A02, t00J07 and t99J01 audits.\n- **Checks:** both ledgers validate and the lab tests pass.\n\n㊭ (after the audits) When all 10 batches are in, I'll group the FOUNDATION verdicts by the foundation they need and rank them by how many problems each serves. So far the candidates are surface classification, Sard with corners, Klein bottle homology, curve collars and Brouwer degree. I'll elect a blueprint for each of the top few, and those then become programs as the two current ones finish. The audits are about a fifth done; batch 3 is running now.",
+  "reply_acts": [
+    {
+      "id": "claude-14-turn-30-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊥",
+      "text": "(\"blueprints could follow the audits\") Set up that way in `3e72c0903`. The order is now: route audit, then a reviewed blueprint of the foundation the audit names, then formalisation one blueprint node at a time. Both foundation programs already have audits, so their next jobs write blueprints. The loops are running again."
+    },
+    {
+      "id": "claude-14-turn-30-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊢",
+      "text": "(what's in place)\n- **`BLUEPRINTS.md`** in the lab sets out the order and the format: `ConstructionTargets/<Foundation>.blueprint.md`, one node per future Lean declaration, each with `uses:` edges, the intended Lean type, and the Lean representation wherever there's a choice. A node needing more than about a page gets split, and every hypothesis of the final theorem has to be used by some node. Blueprints are only for FOUNDATION-sized theorems; READY and NEAR problems go straight from audit to closure, as t00J08 did.\n- **Work prompt:** a program whose blueprint doesn't exist yet writes it as its whole job, commits it, and stops. After that, its milestones are the blueprint's nodes, and a STOP has to name the node it's stuck on. A strategy checkpoint may elect a multi-day foundation row only with a reviewed blueprint behind it; otherwise it elects the blueprint.\n- **Review prompt:** blueprints are reviewed for their mathematics. Are the statements true as written, does each proof use only its `uses:` nodes and stated hypotheses, and is each Lean type a faithful form of its statement? A failure has to come with the counterexample or the missing hypothesis.\n- **Programs:** van Kampen writes `PointWedgeVanKampen.blueprint.md`, working from the t99J01, t01A03, t01A04, t92J06, t97A01 and t97A03 audits. Deck-group writes `DeckGroupQuotientFundamentalGroup.blueprint.md`, from the t93J03, t00A02, t00J07 and t99J01 audits.\n- **Checks:** both ledgers validate and the lab tests pass."
+    },
+    {
+      "id": "claude-14-turn-30-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊭",
+      "text": "(after the audits) When all 10 batches are in, I'll group the FOUNDATION verdicts by the foundation they need and rank them by how many problems each serves. So far the candidates are surface classification, Sard with corners, Klein bottle homology, curve collars and Brouwer degree. I'll elect a blueprint for each of the top few, and those then become programs as the two current ones finish. The audits are about a fifth done; batch 3 is running now."
+    }
+  ],
   "previous_reply_acts": [
+    {
+      "id": "claude-14-turn-28-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊥",
+      "text": "(\"write out the maths behind their foundations\") Yes, I think it would help, for the foundations specifically. Most of what went wrong today would have shown up in a written proof before any Lean was attempted. Mathlib-scale projects do this already, as a \"blueprint\": an informal document where each definition and lemma is a numbered node that records which earlier nodes it uses and which Lean declaration it becomes. Its dependency graph is exactly the lemma DAG we've been trying to keep in sync by hand."
+    },
     {
       "id": "claude-14-turn-28-r-1",
       "kind": "reply-mark",
       "author": "claude-14",
-      "mark": "㊥",
-      "label": "\"write out the maths behind their foundations\"",
-      "text": "㊥ (\"write out the maths behind their foundations\") Yes, I think it would help, for the foundations specifically. Most of what went wrong today would have shown up in a written proof before any Lean was attempted. Mathlib-scale projects do this already, as a \"blueprint\": an informal document where each definition and lemma is a numbered node that records which earlier nodes it uses and which Lean declaration it becomes. Its dependency graph is exactly the lemma DAG we've been trying to keep in sync by hand."
+      "mark": "🈖",
+      "text": "(what a written path would have caught)\n- **Klein carrier:** the four boundary formulas were inconsistent at a corner. Writing the map out on paper shows that straight away; the loops instead spent two stopped rows and a review cycle on it.\n- **Wrong hypotheses in frozen fixtures:** the Schreier fixture was false at r = 0 and n = 0, and my deck-group program type left out T2 and local compactness. A proof written in full has to use those hypotheses, so leaving one out gets noticed.\n- **Oversized rows:** a blueprint splits a theorem into paragraph-sized lemmas. The loops currently elect chapter-sized rows that stop twice and get parked.\n- **DAG drift:** if DAG nodes come from blueprint nodes, with Lean names attached, the DAG reflects the actual proof rather than the prose of STOP receipts."
     },
     {
       "id": "claude-14-turn-28-r-2",
       "kind": "reply-mark",
       "author": "claude-14",
-      "mark": "🈖",
-      "label": "what a written path would have caught",
-      "text": "🈖 (what a written path would have caught)\n- **Klein carrier:** the four boundary formulas were inconsistent at a corner. Writing the map out on paper shows that straight away; the loops instead spent two stopped rows and a review cycle on it.\n- **Wrong hypotheses in frozen fixtures:** the Schreier fixture was false at r = 0 and n = 0, and my deck-group program type left out T2 and local compactness. A proof written in full has to use those hypotheses, so leaving one out gets noticed.\n- **Oversized rows:** a blueprint splits a theorem into paragraph-sized lemmas. The loops currently elect chapter-sized rows that stop twice and get parked.\n- **DAG drift:** if DAG nodes come from blueprint nodes, with Lean names attached, the DAG reflects the actual proof rather than the prose of STOP receipts."
+      "mark": "㊟",
+      "text": "(limits)\n- **Lean representation:** an informal proof can be correct but awkward to formalise. The friction today was usually about representation: which quotient model, `Monoid.Coprod` against free products, the `asEquivalence` counit. So the blueprint has to name the Lean objects it works with, not just the mathematics.\n- **Cost:** it's worth it for foundations and for problems the audits mark FOUNDATION. For READY or NEAR problems like t00J08, the audit chain is enough.\n- **Checking:** the blueprint needs a review that checks the mathematics, by a seat other than its author. Otherwise a wrong blueprint just pins a wrong path."
     },
     {
       "id": "claude-14-turn-28-r-3",
       "kind": "reply-mark",
       "author": "claude-14",
-      "mark": "㊟",
-      "label": "limits",
-      "text": "㊟ (limits)\n- **Lean representation:** an informal proof can be correct but awkward to formalise. The friction today was usually about representation: which quotient model, `Monoid.Coprod` against free products, the `asEquivalence` counit. So the blueprint has to name the Lean objects it works with, not just the mathematics.\n- **Cost:** it's worth it for foundations and for problems the audits mark FOUNDATION. For READY or NEAR problems like t00J08, the audit chain is enough.\n- **Checking:** the blueprint needs a review that checks the mathematics, by a seat other than its author. Otherwise a wrong blueprint just pins a wrong path."
+      "mark": "㊭",
+      "text": "(how I'd add it)\n1. **Programs:** each foundation program's next job writes `ConstructionTargets/<Program>.blueprint.md`. Each node has a statement, a proof sketch at about one paragraph per future Lean lemma, `uses:` edges, and the intended Lean name and type. A different seat reviews the mathematics, and then `add-lemmas` builds the program's DAG from it. Formalisation jobs then cite blueprint nodes, and a STOP has to name the node it got stuck on.\n2. **Audits:** for problems codex-71 marks FOUNDATION, the audit's chain becomes the outline of a blueprint for that foundation. The problems' existing `informal-solution.md` and `proof-outline.md` files are a starting point.\n3. **Strategy rule:** a strategy checkpoint may only elect a FOUNDATION-sized row if a reviewed blueprint node backs it."
     },
     {
       "id": "claude-14-turn-28-r-4",
       "kind": "reply-mark",
       "author": "claude-14",
-      "mark": "㊭",
-      "label": "how I'd add it",
-      "text": "㊭ (how I'd add it)\n1. **Programs:** each foundation program's next job writes `ConstructionTargets/<Program>.blueprint.md`. Each node has a statement, a proof sketch at about one paragraph per future Lean lemma, `uses:` edges, and the intended Lean name and type. A different seat reviews the mathematics, and then `add-lemmas` builds the program's DAG from it. Formalisation jobs then cite blueprint nodes, and a STOP has to name the node it got stuck on.\n2. **Audits:** for problems codex-71 marks FOUNDATION, the audit's chain becomes the outline of a blueprint for that foundation. The problems' existing `informal-solution.md` and `proof-outline.md` files are a starting point.\n3. **Strategy rule:** a strategy checkpoint may only elect a FOUNDATION-sized row if a reviewed blueprint node backs it."
+      "mark": "🈸",
+      "text": "(go?) Shall I add this, starting with the two running programs?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-14-turn-30",
+      "id": "claude-14-turn-30-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-11T10:07:32Z",
+      "record": "turn-4THvxs",
+      "end": 99,
+      "standing?": true,
+      "about": "the order of work for claude-14's loops (blueprints and audits, not defined in this record; it follows turn-ip2Cs8): blueprints come after the audits, once those exist",
+      "text": "so, I think blueprints could follow the audits, when those exist, as this builds increasing clarity",
+      "to": "claude-14"
     },
     {
-      "id": "claude-14-turn-28-r-5",
-      "kind": "reply-mark",
+      "port?": false,
       "author": "claude-14",
-      "mark": "🈸",
-      "label": "go?",
-      "text": "🈸 (go?) Shall I add this, starting with the two running programs?"
+      "turn": "claude-14-turn-30",
+      "id": "claude-14-turn-30-r-1",
+      "kind": "report",
+      "at": "2026-10-11T10:07:32Z",
+      "record": "turn-4THvxs",
+      "standing?": false,
+      "text": "(what's in place)\n- **`BLUEPRINTS.md`** in the lab sets out the order and the format: `ConstructionTargets/<Foundation>…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-14",
+      "turn": "claude-14-turn-30",
+      "id": "claude-14-turn-30-r-2",
+      "kind": "propose",
+      "at": "2026-10-11T10:07:32Z",
+      "record": "turn-4THvxs",
+      "standing?": true,
+      "text": "(after the audits) When all 10 batches are in, I'll group the FOUNDATION verdicts by the foundation they need and rank …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-14",
+      "turn": "claude-14-turn-30",
+      "id": "claude-14-turn-30-c-b1762da2",
+      "kind": "commit",
+      "at": "2026-10-11T10:07:32Z",
+      "record": "turn-4THvxs",
+      "repo": "futon3c",
+      "subject": "M-象-2000: checkpoint, Joe's ruling (interface going forward, history stays in the store); pending items narrowed (+6 -0 over 1 files)",
+      "sha": "b1762da2",
+      "standing?": false
     }
   ]
 }

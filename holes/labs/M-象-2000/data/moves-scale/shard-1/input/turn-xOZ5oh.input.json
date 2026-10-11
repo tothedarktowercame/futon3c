@@ -1,0 +1,129 @@
+{
+  "record": "turn-xOZ5oh",
+  "turn_id": "claude-17-turn-432",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-01T22:09:14Z",
+  "agent_id": "claude-17",
+  "source_text": "No faces shown on e.g. ㊬  in *claude-repl:claude-17* at the moment",
+  "fragments": [
+    {
+      "id": "claude-17-turn-432-f-s1-0",
+      "intent": "verify",
+      "text": "No faces shown on e.g."
+    },
+    {
+      "id": "claude-17-turn-432-f-s2-0",
+      "intent": "report-problem",
+      "text": "㊬  in *claude-repl:claude-17* at the moment"
+    }
+  ],
+  "reply_text": "Session-mode itself is off in that buffer; the mode that's on is session-mode-turn-tags-mode, so my scan never runs there. I'll look at what turn-tags mode repaints and when.Same two older failures, and the new test passes. Loading it, then registering the painter directly in the buffers that already have turn-tags mode on, so their tags don't get repainted:㊥ (no faces on ㊬) I've fixed it: the colours now appear in REPL buffers, so ㊬ should show pink (act) on a pale pink background. My first change only coloured marks when full session-mode is on, but your REPL buffers run turn-tags mode instead, so they never got the colours. If ㊬ in `*claude-repl:claude-17*` still looks plain, tell me and I'll look again.\n\n㊢ (what changed) Under turn-tags mode, marks are now coloured as they come into view or are edited, which covers new turns as well. Turning turn-tags mode off removes the colours. I loaded the change into your Emacs and switched it on in the 19 buffers that already had turn-tags mode on, without restarting the mode, so their phrase underlines are untouched. In claude-17's buffer, all 592 marks now have their colour. Hovering over a mark shows its intent and stage.\n\n㊬ (test) A new test colours a sample line twice and checks that each mark gets exactly one colour, with ㊬ as act. It passes. The same two older send-path tests still fail as before. Committed as futon3c `1cd21174`.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-432-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what changed) Under turn-tags mode, marks are now coloured as they come into view or are edited, which covers new turns as well. Turning turn-tags mode off removes the colours. I loaded the change into your Emacs and switched it on in the 19 buffers that already had turn-tags mode on, without restarting the mode, so their phrase underlines are untouched. In claude-17's buffer, all 592 marks now have their colour. Hovering over a mark shows its intent and stage."
+    },
+    {
+      "id": "claude-17-turn-432-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(test) A new test colours a sample line twice and checks that each mark gets exactly one colour, with ㊬ as act. It passes. The same two older send-path tests still fail as before. Committed as futon3c `1cd21174`."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-430-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(why \"a few of them are already in colour\") The marks that already looked coloured (🈸, 🈚, 🈯 and the rest of the 🈀 block) are drawn from the colour-emoji font. Emacs ignores the text colour on those, so each face also has a pale background in the stage colour. That way both kinds of mark show their stage. Hovering over a mark shows its intent and stage, e.g. \"🈸 ask-action — ACT\"."
+    },
+    {
+      "id": "claude-17-turn-430-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(the test) A new test checks four marks against their faces. It also checks that the session-mode table and the C-c ; menu table list the same 23 marks and intents. The two tables are kept by hand, so the test fails if one gets edited without the other. The new test passes. Two older session-mode tests fail (53 of 55 pass): both expect an analysis-request preamble in the text a REPL sends, and my change doesn't touch the send path. Committed as futon3c `97791a77`."
+    },
+    {
+      "id": "claude-17-turn-430-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(families figure) Still running with zai-2; I'll bring you the link when it reports back."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-432",
+      "id": "claude-17-turn-432-f-s1-0",
+      "kind": "verify",
+      "at": "2026-10-01T22:09:14Z",
+      "record": "turn-xOZ5oh",
+      "end": 22,
+      "standing?": false,
+      "about": "the just-delivered stage-colour faces, checked in the live Emacs",
+      "text": "No faces shown on e.g.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 23,
+      "author": "operator",
+      "turn": "claude-17-turn-432",
+      "id": "claude-17-turn-432-f-s2-0",
+      "kind": "report-problem",
+      "at": "2026-10-01T22:09:14Z",
+      "record": "turn-xOZ5oh",
+      "end": 66,
+      "standing?": false,
+      "about": "the exact locus of the missing faces (mark ㊬, buffer *claude-repl:claude-17*, now)",
+      "text": "㊬  in *claude-repl:claude-17* at the moment",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-432",
+      "id": "claude-17-turn-432-r-0",
+      "kind": "report",
+      "at": "2026-10-01T22:09:14Z",
+      "record": "turn-xOZ5oh",
+      "standing?": false,
+      "text": "(what changed) Under turn-tags mode, marks are now coloured as they come into view or are edited, which covers new turn…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-432",
+      "id": "claude-17-turn-432-r-1",
+      "kind": "verify",
+      "at": "2026-10-01T22:09:14Z",
+      "record": "turn-xOZ5oh",
+      "standing?": false,
+      "text": "(test) A new test colours a sample line twice and checks that each mark gets exactly one colour, with ㊬ as act. It pass…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-432",
+      "id": "claude-17-turn-432-c-1cd21174",
+      "kind": "commit",
+      "at": "2026-10-01T22:09:14Z",
+      "record": "turn-xOZ5oh",
+      "repo": "futon3c",
+      "subject": "session-mode: paint proforma marks under turn-tags mode too",
+      "sha": "1cd21174",
+      "standing?": false
+    }
+  ]
+}
