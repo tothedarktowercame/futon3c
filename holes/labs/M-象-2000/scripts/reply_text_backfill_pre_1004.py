@@ -89,8 +89,15 @@ def tail(sid):
     xs=bf.all_session_records(sid); return xs[-1] if xs else ("","",{})
 
 
-def prepare(coverage_path, ledger):
-    data=json.loads(coverage_path.read_text()); selected=[x for x in data["rows"] if x["session_id"] in TARGETS and x["outcome"] in ("join-1","join-2") and not x["existing_reply"]]
+def prepare(coverage_path, ledger, rest=False):
+    data=json.loads(coverage_path.read_text())
+    selected=[]
+    for x in data["rows"]:
+        if x["outcome"] not in ("join-1","join-2") or (x["session_id"] in TARGETS) == rest:
+            continue
+        # Re-read live state: the frozen coverage predates earlier backfills.
+        if not str(bf.load_record(x["record_id"]).get("reply_text") or "").strip():
+            selected.append(x)
     bf.evidence_pages=all_evidence
     by_id,groups=bf.evidence_index(); tails={sid:tail(sid) for sid in {x["session_id"] for x in selected}}
     out=[]
@@ -139,6 +146,11 @@ def recompute(result):
         time.sleep(1)
     print(json.dumps({"recomputed":len(done),"ports":sum(x["ports"] for x in done),"refused":[x["record_id"] for x in done if not x["ports"]]}))
 
+def recompute_ledger(ledger, result):
+    global TARGETS
+    TARGETS={x["session_id"] for x in csv.DictReader(ledger.open(),delimiter="\t")}
+    recompute(result)
+
 def finalize(ledger):
     rows=list(csv.DictReader(ledger.open(),delimiter="\t")); tails={}
     for x in rows:
@@ -149,16 +161,19 @@ def finalize(ledger):
         x["session_tail_open_after"]=tails[sid][1]
     with ledger.open("w",newline="") as f:w=csv.DictWriter(f,FIELDS,delimiter="\t",lineterminator="\n");w.writeheader();w.writerows(rows)
     before={}; after={}
-    for x in rows: before[x["session_id"]]=int(x["session_tail_open_before"]);after[x["session_id"]]=int(x["session_tail_open_after"])
+    for x in rows:
+        before[x["session_id"]]=int(x["session_tail_open_before"] or 0)
+        after[x["session_id"]]=int(x["session_tail_open_after"] or 0)
     print(json.dumps({"records":len(rows),"readback_ok":sum(x["readback"]=="ok" for x in rows),"tail_before":before,"tail_after":after,"total_before":sum(before.values()),"total_after":sum(after.values())},indent=2))
 
 
 def main():
     p=argparse.ArgumentParser(); s=p.add_subparsers(dest="cmd",required=True)
-    for name,nargs in (("coverage",1),("prepare",2),("apply",2),("recompute",1),("finalize",1)):
+    for name,nargs in (("coverage",1),("prepare",2),("prepare-rest",2),("apply",2),("recompute",1),("recompute-ledger",2),("finalize",1)):
         q=s.add_parser(name)
         for i in range(nargs): q.add_argument("paths"+str(i),type=pathlib.Path)
     a=p.parse_args(); ps=[getattr(a,"paths"+str(i)) for i in range(2) if hasattr(a,"paths"+str(i))]
-    {"coverage":coverage,"prepare":prepare,"apply":apply,"recompute":recompute,"finalize":finalize}[a.cmd](*ps)
+    if a.cmd=="prepare-rest": prepare(*ps,rest=True)
+    else: {"coverage":coverage,"prepare":prepare,"apply":apply,"recompute":recompute,"recompute-ledger":recompute_ledger,"finalize":finalize}[a.cmd](*ps)
 
 if __name__=="__main__": main()
