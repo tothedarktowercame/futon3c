@@ -14,8 +14,8 @@
       "reason": "kept"
     },
     "approve/with-plan": {
-      "label": "approve/plain",
-      "reason": "folded:agree,already,mining,turns"
+      "label": "approve/with-amendment",
+      "reason": "label:with"
     },
     "ask-action/commission": {
       "label": "ask-action/commission",
@@ -46,8 +46,8 @@
       "reason": "kept"
     },
     "ask-action/operator-step": {
-      "label": "ask-action/commission",
-      "reason": "folded:futon7a,page"
+      "label": "ask-action/other",
+      "reason": "other"
     },
     "ask-action/read-record": {
       "label": "ask-action/read-record",
@@ -78,16 +78,16 @@
       "reason": "kept"
     },
     "clarify/ask-fact": {
-      "label": "clarify/other",
-      "reason": "other"
+      "label": "clarify/ask-decision",
+      "reason": "label:ask"
     },
     "clarify/ask-recap": {
-      "label": "clarify/other",
-      "reason": "other"
+      "label": "clarify/ask-decision",
+      "reason": "label:ask"
     },
     "clarify/ask-role": {
-      "label": "clarify/other",
-      "reason": "other"
+      "label": "clarify/ask-decision",
+      "reason": "label:ask"
     },
     "clarify/assertion": {
       "label": "clarify/assertion",
@@ -155,7 +155,7 @@
     },
     "constrain/accept": {
       "label": "constrain/stand-rule",
-      "reason": "folded:bugs,claude-4,lean-to-python"
+      "reason": "folded:bugs,lean-to-python"
     },
     "constrain/for-now": {
       "label": "constrain/for-now",
@@ -198,8 +198,8 @@
       "reason": "kept"
     },
     "delegate/dispatch": {
-      "label": "delegate/to-agent",
-      "reason": "folded:bell,codex-10"
+      "label": "delegate/other",
+      "reason": "other"
     },
     "delegate/draft-request": {
       "label": "delegate/to-agent",
@@ -215,7 +215,7 @@
     },
     "delegate/send-followup": {
       "label": "delegate/to-agent",
-      "reason": "folded:codex-10,let's,send"
+      "reason": "folded:let's,send"
     },
     "delegate/swarm-per-node": {
       "label": "delegate/to-agent",
@@ -226,8 +226,8 @@
       "reason": "kept"
     },
     "delegate/to-agent-with-tool": {
-      "label": "delegate/other",
-      "reason": "other"
+      "label": "delegate/to-agent",
+      "reason": "label:agent"
     },
     "disagree/already-built": {
       "label": "disagree/other",
@@ -250,8 +250,8 @@
       "reason": "other"
     },
     "explain/accumulator-example": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/example",
+      "reason": "label:example"
     },
     "explain/accumulator-mechanics": {
       "label": "explain/other",
@@ -342,16 +342,16 @@
       "reason": "folded:both,linked"
     },
     "explain/edge-semantics": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/g-semantic",
+      "reason": "label:semantic"
     },
     "explain/emergent-structure": {
       "label": "explain/other",
       "reason": "other"
     },
     "explain/enabler-example": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/example",
+      "reason": "label:example"
     },
     "explain/endorse-idea": {
       "label": "explain/mechanism",
@@ -474,8 +474,8 @@
       "reason": "other"
     },
     "explain/parallel-work-example": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/example",
+      "reason": "label:example"
     },
     "explain/parse-vs-formation": {
       "label": "explain/other",
@@ -547,7 +547,7 @@
     },
     "explain/semantics": {
       "label": "explain/g-semantic",
-      "reason": "folded:doesn't,mean"
+      "reason": "label:semantic"
     },
     "explain/signal-scope": {
       "label": "explain/other",
@@ -602,8 +602,8 @@
       "reason": "other"
     },
     "explore/goal-question": {
-      "label": "explore/other",
-      "reason": "other"
+      "label": "explore/open-question",
+      "reason": "label:question"
     },
     "explore/historical-count": {
       "label": "explore/other",
@@ -682,8 +682,8 @@
       "reason": "other"
     },
     "propose/acceptance-plan": {
-      "label": "propose/alternative",
-      "reason": "folded:check,cost,write"
+      "label": "propose/order-plan",
+      "reason": "label:plan"
     },
     "propose/aif-integration": {
       "label": "propose/other",
@@ -774,8 +774,8 @@
       "reason": "kept"
     },
     "propose/design-forward": {
-      "label": "propose/alternative",
-      "reason": "folded:maybe,rather"
+      "label": "propose/design",
+      "reason": "label:design"
     },
     "propose/discovery": {
       "label": "propose/other",
@@ -826,20 +826,20 @@
       "reason": "other"
     },
     "propose/explore-alternatives": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/alternative",
+      "reason": "label:alternative"
     },
     "propose/extend": {
       "label": "propose/extend",
       "reason": "kept"
     },
     "propose/extend-analysis": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/extend",
+      "reason": "label:extend"
     },
     "propose/extend-scope": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/redirect-scope",
+      "reason": "label:scope"
     },
     "propose/fast-mode": {
       "label": "propose/other",
@@ -870,8 +870,8 @@
       "reason": "other"
     },
     "propose/handoff-plan": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/order-plan",
+      "reason": "label:plan"
     },
     "propose/health-scan": {
       "label": "propose/other",
@@ -938,8 +938,8 @@
       "reason": "other"
     },
     "propose/milestone-plan": {
-      "label": "propose/next-step",
-      "reason": "folded:each,memory"
+      "label": "propose/order-plan",
+      "reason": "label:plan"
     },
     "propose/mixed-readers": {
       "label": "propose/other",
@@ -982,8 +982,8 @@
       "reason": "folded:build,turn"
     },
     "propose/plan": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/order-plan",
+      "reason": "label:plan"
     },
     "propose/positioning": {
       "label": "propose/alternative",
@@ -994,8 +994,8 @@
       "reason": "folded:notebook,system"
     },
     "propose/priority-order": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/order-plan",
+      "reason": "label:order"
     },
     "propose/process": {
       "label": "propose/other",
@@ -1154,8 +1154,8 @@
       "reason": "other"
     },
     "propose/two-ways-forward": {
-      "label": "propose/alternative",
-      "reason": "folded:kernel,side"
+      "label": "propose/other",
+      "reason": "other"
     },
     "propose/upsell-idea": {
       "label": "propose/other",
@@ -1190,8 +1190,8 @@
       "reason": "other"
     },
     "qualify/agree-with-caveat": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "label:caveat"
     },
     "qualify/agree-with-placement": {
       "label": "qualify/other",
@@ -1202,8 +1202,8 @@
       "reason": "other"
     },
     "qualify/assessment": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/risk-assessment",
+      "reason": "label:assessment"
     },
     "qualify/caveat": {
       "label": "qualify/caveat",
@@ -1270,8 +1270,8 @@
       "reason": "other"
     },
     "qualify/out-of-scope": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/scope",
+      "reason": "label:scope"
     },
     "qualify/perf": {
       "label": "qualify/other",
@@ -1298,8 +1298,8 @@
       "reason": "kept"
     },
     "qualify/scope-effort": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/scope",
+      "reason": "label:scope"
     },
     "qualify/sideline": {
       "label": "qualify/other",
@@ -1346,8 +1346,8 @@
       "reason": "normalised"
     },
     "report-problem/observed-then-fixed": {
-      "label": "report-problem/other",
-      "reason": "other"
+      "label": "report-problem/observ",
+      "reason": "label:observ"
     },
     "report-problem/self-correction": {
       "label": "report-problem/self-correction",
@@ -1418,8 +1418,8 @@
       "reason": "kept"
     },
     "report/coverage-status": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/status",
+      "reason": "label:status"
     },
     "report/delegated-numbers": {
       "label": "report/done",
@@ -1482,8 +1482,8 @@
       "reason": "kept"
     },
     "report/gap-status": {
-      "label": "report/evidence",
-      "reason": "folded:against,already,links"
+      "label": "report/status",
+      "reason": "label:status"
     },
     "report/genuinely-open": {
       "label": "report/done",
@@ -1522,8 +1522,8 @@
       "reason": "kept"
     },
     "report/next-plan": {
-      "label": "report/done",
-      "reason": "folded:changes,packets"
+      "label": "report/next",
+      "reason": "label:next"
     },
     "report/numbers": {
       "label": "report/evidence",
@@ -1567,7 +1567,7 @@
     },
     "report/proposals-list": {
       "label": "report/done",
-      "reason": "folded:code,data,list,under"
+      "reason": "folded:list,under"
     },
     "report/quoted-ask": {
       "label": "report/other",
@@ -1582,12 +1582,12 @@
       "reason": "folded:both,i've"
     },
     "report/resource-state": {
-      "label": "report/diagnosis",
-      "reason": "folded:audit,usage"
+      "label": "report/other",
+      "reason": "other"
     },
     "report/running-jobs": {
-      "label": "report/status",
-      "reason": "folded:scratch,store"
+      "label": "report/job-spec",
+      "reason": "label:job"
     },
     "report/status": {
       "label": "report/status",
@@ -1638,8 +1638,8 @@
       "reason": "normalised"
     },
     "verify/feasibility-question": {
-      "label": "verify/other",
-      "reason": "other"
+      "label": "verify/prior-art-question",
+      "reason": "label:question"
     },
     "verify/get-story-straight": {
       "label": "verify/other",

@@ -178,3 +178,100 @@ by source label. The words in parentheses are the overlap witness.
 These are recorded rather than corrected by hand. `moves/label-map.json`
 keeps every original-to-consolidated decision and its reason, so a later
 closed-vocabulary or ambiguity pass can revise them reproducibly.
+
+## Consolidation, second pass
+
+The second pass removes identifiers, paths, seat names, Futon repository
+names, 象 pattern names, and generic move-discourse words from quote witnesses.
+It also tries label-component stems before quote overlap. This preserves the
+413 → 94 label reduction, but moves 17 acts out of `other` (272 → 255) on
+explicit label evidence. The cleaned quote evidence also moves some first-pass
+folds *into* `other`; the net is therefore the useful comparison.
+
+| kind | acts | first-pass `other` | second-pass `other` | second-pass share |
+|---|---:|---:|---:|---:|
+| approve | 63 | 0 | 0 | 0.0% |
+| ask-action | 116 | 5 | 7 | 6.0% |
+| challenge | 3 | 3 | 3 | 100.0% |
+| clarify | 72 | 12 | 9 | 12.5% |
+| collect | 4 | 1 | 1 | 25.0% |
+| constrain | 45 | 4 | 4 | 8.9% |
+| continue | 2 | 2 | 2 | 100.0% |
+| defer | 14 | 0 | 0 | 0.0% |
+| delegate | 35 | 2 | 2 | 5.7% |
+| disagree | 7 | 3 | 3 | 42.9% |
+| explain | 190 | 62 | 58 | 30.5% |
+| explore | 18 | 13 | 12 | 66.7% |
+| extend | 1 | 1 | 1 | 100.0% |
+| prioritize | 7 | 7 | 7 | 100.0% |
+| propose | 240 | 99 | 93 | 38.8% |
+| qualify | 125 | 24 | 20 | 16.0% |
+| redirect | 3 | 3 | 3 | 100.0% |
+| report | 360 | 20 | 21 | 5.8% |
+| report-problem | 81 | 2 | 1 | 1.2% |
+| retract | 10 | 3 | 3 | 30.0% |
+| verify | 44 | 6 | 5 | 11.4% |
+| **total** | **1,440** | **272** | **255** | **17.7%** |
+
+The two largest residuals remain `propose/other` (93/240, 38.8%) and
+`explain/other` (58/190, 30.5%). Their fifteen most frequent source labels
+follow; ties are lexical and each quote is the first corpus occurrence.
+
+### `propose/other`
+
+| count | original label | example quote |
+|---:|---|---|
+| 2 | `propose/comparison` | “we can potentially analyse the turns both ways” |
+| 2 | `propose/infer-from-behaviour` | “But we can infer,” |
+| 2 | `propose/row-loop` | “i wonder if we could get agents to work tgrough a whole row at a time” |
+| 2 | `propose/speedup-item` | “**Change the key**” |
+| 1 | `propose/aif-integration` | “since there is a phase-by-phase alignment I wonder if we can start” |
+| 1 | `propose/aligned-ledgers` | “using our ‘aligned ledgers’ between PBASE and R-numbers and intents” |
+| 1 | `propose/applied-idea` | “one applied idea where the small-causal diagram idea could be *practical*.” |
+| 1 | `propose/bidding` | “Then it will bid for patterns from the 150.” |
+| 1 | `propose/build-cascade` | “we now have all the formal pieces that we would need to develop a convincing cascade” |
+| 1 | `propose/cheat-sheet` | “we might want something a little bit like a chord ‘cheat sheet’” |
+| 1 | `propose/checklist` | “(before the notebook goes public)” |
+| 1 | `propose/checkpoint` | “make a Checkpoint in the M-象-2000 mission document” |
+| 1 | `propose/collate` | “Then we collate the bids.” |
+| 1 | `propose/combine` | “we need to do is carefully bring these ingredients together” |
+| 1 | `propose/complexify` | “If these requirements are not in the outer loop cascade yet, we could complexify it.” |
+
+Candidate additions (not applied):
+
+- `propose/analysis-method`: comparison and inference-from-behaviour.
+- `propose/integration`: AIF integration, aligned ledgers, combination, and
+  cascade assembly.
+- `propose/workflow`: row loops and speed-up/process changes.
+- `propose/artifact`: cheat sheets, checklists, and checkpoints.
+- `propose/coordination-mechanism`: bidding and collating distributed bids.
+
+### `explain/other`
+
+| count | original label | example quote |
+|---:|---|---|
+| 2 | `explain/parse-vs-formation` | “the tree presents a *parse* of the proof,” |
+| 2 | `explain/reference` | “the ‘I/me’ paragraphs give a ‘point of view’ character” |
+| 1 | `explain/accept-retraction` | “Noted. I'll stay off the War Machine until you say otherwise” |
+| 1 | `explain/accumulator` | “So, a memory system in this setting would be searched with an accumulator that accumulates a heuristic for” |
+| 1 | `explain/accumulator-mechanics` | “A query isn't a lookup.” |
+| 1 | `explain/adopt-division` | “(‘work on our tasks and ping claude-16 when we need something’) Agreed. I'll ping claude-16 only when -40°” |
+| 1 | `explain/analogy` | “The hook structure is similar to way 象 works.” |
+| 1 | `explain/composition` | “when these are combined you get a cascade” |
+| 1 | `explain/concept` | “we would have an M-typed-parks (I guess) that basically are ‘pipes with intent’.” |
+| 1 | `explain/concretisation` | “Hot memory is the puddle.” |
+| 1 | `explain/consequence` | “One pattern is already a diamond” |
+| 1 | `explain/convergence-vision` | “-40° would be a kind of convergence of the intent based system” |
+| 1 | `explain/counterfactual` | “if we had a better Cook Ting / Joints processing system, I might not need to use the autorunner at all” |
+| 1 | `explain/cross-check-use` | “(useful for minus40) Live records since 10-09 carry the service's own ports again, so the follower's computed” |
+| 1 | `explain/decision-reversal` | “I held it back because I was applying the 09:15 rule” |
+
+Candidate additions (not applied):
+
+- `explain/mechanics`: accumulator operation, composition, and other process
+  mechanics.
+- `explain/analogy`: analogies, concretisations, and compact conceptual
+  models.
+- `explain/decision-rationale`: retractions, division of work, and reversals.
+- `explain/consequence`: consequences and counterfactual consequences.
+- `explain/system-integration`: convergence visions and cross-system uses.

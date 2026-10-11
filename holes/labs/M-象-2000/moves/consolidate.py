@@ -14,16 +14,22 @@ we you i they he she our your their my me us them not no yes do does did done ha
 should may might just also then than so as at by from into over about what which who how when where why let lets
 please ok okay well right sure thing things something anything some any all more most much very really there here
 one two first next now still again back out up down off like want need think know see use used using make made
-going go get got take went come came say said work works working way ways""".split())
+going go get got take went come came say said work works working way ways check plan step""".split())
 
 
 def content_words(text):
-    text = re.sub(r"\s+", " ", (text or "").lower()).strip()
-    return {
-        word
-        for word in re.findall(r"[a-z0-9][a-z0-9'\-]{2,}", text)
-        if word not in STOP and len(word) >= 4
-    }
+    words = set()
+    for raw in re.findall(r"\S+", (text or "").lower()):
+        if any(mark in raw for mark in ("/", "_", "`", "象")) or any(char.isdigit() for char in raw):
+            continue
+        word = re.sub(r"^[^a-z]+|[^a-z]+$", "", raw)
+        if not re.fullmatch(r"[a-z][a-z'\-]{2,}", word):
+            continue
+        if re.fullmatch(r"(?:claude|codex|zai)-\w+", word) or re.fullmatch(r"futon\w*", word):
+            continue
+        if word not in STOP and len(word) >= 4:
+            words.add(word)
+    return words
 
 
 def _stem(part):
@@ -57,6 +63,11 @@ def normalize_label(label):
     return f"{kind}/{name}"
 
 
+def label_stems(label):
+    """Morphological components in the label name, independent of quote STOP."""
+    return {_stem(part) for part in label.split("/", 1)[1].split("-") if len(part) >= 3}
+
+
 def consolidate(acts):
     """Return (vocabulary, label_map, summary, folds) for ACTS."""
     original = collections.defaultdict(list)
@@ -73,7 +84,7 @@ def consolidate(acts):
         for label, quotes in normalized.items()
     }
     destination = {}
-    fold_words = {}
+    fold_reasons = {}
     by_kind = collections.defaultdict(list)
     for label in normalized:
         by_kind[label.split("/", 1)[0]].append(label)
@@ -86,13 +97,23 @@ def consolidate(acts):
                 continue
             candidates = []
             for candidate in frequent:
+                shared = sorted(label_stems(label) & label_stems(candidate))
+                if shared:
+                    candidates.append((-counts[candidate], candidate, shared[0]))
+            if candidates:
+                _, target, shared = min(candidates)
+                destination[label] = target
+                fold_reasons[label] = f"label:{shared}"
+                continue
+            candidates = []
+            for candidate in frequent:
                 overlap = sorted(words[label] & words[candidate])
                 if len(overlap) >= 2:
                     candidates.append((-counts[candidate], candidate, overlap))
             if candidates:
                 _, target, overlap = min(candidates)
                 destination[label] = target
-                fold_words[label] = overlap
+                fold_reasons[label] = "folded:" + ",".join(overlap)
             else:
                 destination[label] = f"{kind}/other"
 
@@ -108,8 +129,7 @@ def consolidate(acts):
         if target.endswith("/other"):
             reason = "other"
         elif target != norm:
-            overlap = fold_words[norm]
-            reason = "folded:" + ",".join(overlap)
+            reason = fold_reasons[norm]
         elif label != norm:
             reason = "normalised"
         else:

@@ -8,6 +8,7 @@ SPEC = importlib.util.spec_from_file_location("consolidate", Path(__file__).with
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 consolidate = MODULE.consolidate
+content_words = MODULE.content_words
 normalize_label = MODULE.normalize_label
 
 
@@ -46,6 +47,33 @@ class ConsolidateTest(unittest.TestCase):
         _, label_map, _, _ = consolidate(acts)
         self.assertEqual("explain/other", label_map["labels"]["explain/rare"]["label"])
         self.assertEqual("other", label_map["labels"]["explain/rare"]["reason"])
+
+    def test_identifier_and_generic_tokens_cannot_witness_fold(self):
+        acts = [
+            act("report/stable", "futon7a claude-4 check plan"),
+            act("report/stable", "futon7a claude-4 check plan"),
+            act("report/stable", "futon7a claude-4 check plan"),
+            act("report/rare", "futon7a claude-4 check plan"),
+        ]
+        self.assertEqual(
+            set(),
+            content_words("`path/file_2` futon futon7a claude-4 象-pattern check plan step"),
+        )
+        _, label_map, _, _ = consolidate(acts)
+        self.assertEqual("report/other", label_map["labels"]["report/rare"]["label"])
+
+    def test_label_stem_precedes_quote_overlap(self):
+        acts = [
+            act("propose/design-proposal", "alpha beta"),
+            act("propose/design-proposal", "gamma delta"),
+            act("propose/design-proposal", "epsilon zeta"),
+            act("propose/design", "unrelated words"),
+        ]
+        _, label_map, _, _ = consolidate(acts)
+        self.assertEqual(
+            {"label": "propose/design-proposal", "reason": "label:design"},
+            label_map["labels"]["propose/design"],
+        )
 
     def test_label_with_three_uses_is_kept(self):
         acts = [act("approve/plain", quote) for quote in ("alpha", "beta", "gamma")]

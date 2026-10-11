@@ -7,7 +7,7 @@
       "labels": [
         {
           "label": "approve/plain",
-          "count": 57,
+          "count": 55,
           "examples": [
             "that's a good start",
             "The one-line gray message is better, thanks.",
@@ -16,11 +16,11 @@
         },
         {
           "label": "approve/with-amendment",
-          "count": 6,
+          "count": 8,
           "examples": [
-            "\"Pipes with intent\" fits what the token machine needs.",
-            "I agree that turning R-nodes into another kind of conversational act would be the wrong move.",
-            "I agree, and the model shows what follows for the site."
+            "I agree that mining your old turns won't fill these gaps.",
+            "Yes, and most of it already exists.",
+            "\"Pipes with intent\" fits what the token machine needs."
           ]
         }
       ]
@@ -39,7 +39,7 @@
         },
         {
           "label": "ask-action/commission",
-          "count": 25,
+          "count": 23,
           "examples": [
             "OK so let's put it in one logical order.",
             "produce some loss function plots and put them on a page in WIP",
@@ -57,7 +57,7 @@
         },
         {
           "label": "ask-action/other",
-          "count": 5,
+          "count": 7,
           "examples": [
             "I'll let this one sit there so you can inspect.",
             "I actually want the forensic report to continue up to today",
@@ -102,21 +102,21 @@
       "act_count": 72,
       "labels": [
         {
+          "label": "clarify/ask-decision",
+          "count": 17,
+          "examples": [
+            "What is needed?",
+            "(what \"overlay\" means here) If that's it, these are the details",
+            "I'd just like to understand it a little bit better"
+          ]
+        },
+        {
           "label": "clarify/check-understand",
           "count": 17,
           "examples": [
             "What I thought was that the xiaoxiang-insert-mark tokens would be used to support FAST inference",
             "I still don't know what texts *should* turn red (R-number node but not an intent).",
             "I don't understand the semnatics of \"labelling patterns\"."
-          ]
-        },
-        {
-          "label": "clarify/ask-decision",
-          "count": 14,
-          "examples": [
-            "What is needed?",
-            "(what \"overlay\" means here) If that's it, these are the details",
-            "I'd just like to understand it a little bit better"
           ]
         },
         {
@@ -130,7 +130,7 @@
         },
         {
           "label": "clarify/other",
-          "count": 12,
+          "count": 9,
           "examples": [
             "obligations that have closed over the last turn, or others still outstanding from previous turns.",
             "(no evidence id)",
@@ -271,7 +271,7 @@
           "label": "delegate/other",
           "count": 2,
           "examples": [
-            "Do you think Kimi could sort that out using Playwright to validate?",
+            "Please bell it to codex-10",
             "You can do that as \"priming data\" and then we can ask a few other agents to elaborate"
           ]
         }
@@ -314,7 +314,7 @@
         },
         {
           "label": "explain/other",
-          "count": 62,
+          "count": 58,
           "examples": [
             "I considered Peirce's categories, separating brute encounter from habit or law",
             "in *this* session, I seem to be doing knowledge work",
@@ -323,7 +323,7 @@
         },
         {
           "label": "explain/example",
-          "count": 12,
+          "count": 15,
           "examples": [
             "I hav three verbs classed as PERCEIVE ㊩ 🈖 ㊢ and the War Machine has three nodes in that layer",
             "I can simulate that pipe by using the <token>: prefix form",
@@ -349,21 +349,21 @@
           ]
         },
         {
+          "label": "explain/g-semantic",
+          "count": 6,
+          "examples": [
+            "to me <mark>: means that I'm replying to your point above",
+            "it doesn't mean that my reply actually shares *your* intent",
+            "@how is more similar to Alexander'"
+          ]
+        },
+        {
           "label": "explain/answer-question",
           "count": 5,
           "examples": [
             "Mostly no. Part of the explicit-signal inbox doesn't depend on answers being linked",
             "Probably yes, partly, with that one memory alone.",
             "Both routes are open."
-          ]
-        },
-        {
-          "label": "explain/g-semantic",
-          "count": 5,
-          "examples": [
-            "to me <mark>: means that I'm replying to your point above",
-            "it doesn't mean that my reply actually shares *your* intent",
-            "minimizing G *doesn't* mean changing the cascade structurally"
           ]
         },
         {
@@ -409,7 +409,7 @@
       "labels": [
         {
           "label": "explore/other",
-          "count": 13,
+          "count": 12,
           "examples": [
             "I'm curious what others might find it specifically useful for,",
             "curious to think about business cases where someone would encounter it",
@@ -418,11 +418,11 @@
         },
         {
           "label": "explore/open-question",
-          "count": 5,
+          "count": 6,
           "examples": [
+            "this would achieve somethin, but would it do what we ultimately want?",
             "Or in some other way?",
-            "there are several different ways to slice the inference up as a natural deduction rule",
-            "I'm not sure how many people would click on the open source offering"
+            "there are several different ways to slice the inference up as a natural deduction rule"
           ]
         }
       ]
@@ -458,7 +458,7 @@
       "labels": [
         {
           "label": "propose/other",
-          "count": 99,
+          "count": 93,
           "examples": [
             "relative to the new Agency work orders, Tickle could have a renewed lease on life.",
             "curious about my own potential use of it in a \"fast\" mode *before* sending any turn to the 象 annotator.",
@@ -467,7 +467,7 @@
         },
         {
           "label": "propose/alternative",
-          "count": 51,
+          "count": 48,
           "examples": [
             "I'd separate them by what the words are about: the world itself, or your own account of it",
             "A root order could carry the stopping condition as a check the machine computes",
@@ -476,7 +476,7 @@
         },
         {
           "label": "propose/next-step",
-          "count": 29,
+          "count": 28,
           "examples": [
             "if I use start-codex-autorunner I think we should *turn off* transcription of my turns as a result,",
             "A page where a visitor pastes a message and sees it marked up in the browser",
@@ -485,7 +485,7 @@
         },
         {
           "label": "propose/design",
-          "count": 19,
+          "count": 20,
           "examples": [
             "Two searches per fragment: one for the move and one for the subject",
             "Shall I add `象-off` and `象-on` commands to `futon3c/emacs/session-turn-analysis.el`",
@@ -493,8 +493,17 @@
           ]
         },
         {
+          "label": "propose/order-plan",
+          "count": 19,
+          "examples": [
+            "Kimi has to write a Playwright check that loads the page in headless Chromium",
+            "A ninth row, cost.",
+            "CORRECT at the top, COMPILES INCORRECT, COMPILES UNTESTED, READY, WAITING"
+          ]
+        },
+        {
           "label": "propose/redirect-scope",
-          "count": 17,
+          "count": 18,
           "examples": [
             "what we were talking about was aligning operator turns",
             "I wonder if we should switch focus to 小象 for a while.",
@@ -502,17 +511,8 @@
           ]
         },
         {
-          "label": "propose/order-plan",
-          "count": 12,
-          "examples": [
-            "CORRECT at the top, COMPILES INCORRECT, COMPILES UNTESTED, READY, WAITING",
-            "actual WIP on the rows and then BACKLOG of rows that no one is working on",
-            "**Parallel sweep (I'm starting it now).**"
-          ]
-        },
-        {
           "label": "propose/extend",
-          "count": 6,
+          "count": 7,
           "examples": [
             "the forward model could map pain points",
             "There's a further refinement beyond that which is the Lean code, with concepts like MachineQ",
@@ -544,7 +544,7 @@
       "labels": [
         {
           "label": "qualify/caveat",
-          "count": 85,
+          "count": 86,
           "examples": [
             "but there's still a bit left over,",
             "That's the intention, not a guarantee.",
@@ -553,7 +553,7 @@
         },
         {
           "label": "qualify/other",
-          "count": 24,
+          "count": 20,
           "examples": [
             "Your plan about pattern-to-Rnumber is plausible but I think we could do a bit better.",
             "(the 7 leftovers) Those turns have readings with no recognised acts, and the live `compute-ports!` refuses",
@@ -562,11 +562,20 @@
         },
         {
           "label": "qualify/scope",
-          "count": 5,
+          "count": 7,
           "examples": [
             "Only the acceptance lines changed.",
             "This assumes the compiler itself could have been in Lisp, with only its output in Python.",
             "That may just be for me as a technologist"
+          ]
+        },
+        {
+          "label": "qualify/risk-assessment",
+          "count": 5,
+          "examples": [
+            "Tonight's three Codex failures were \"model at capacity\"",
+            "(one risk with warm caches)",
+            "This is the bet that failed on 10-06"
           ]
         },
         {
@@ -576,15 +585,6 @@
             "it might *work* and (b) it might also be *useful*",
             "**(a) Could it work?** Yes, if the scope is small",
             "future work could go via the warm image path"
-          ]
-        },
-        {
-          "label": "qualify/risk-assessment",
-          "count": 4,
-          "examples": [
-            "Tonight's three Codex failures were \"model at capacity\"",
-            "(one risk with warm caches)",
-            "This is the bet that failed on 10-06"
           ]
         },
         {
@@ -617,7 +617,7 @@
       "labels": [
         {
           "label": "report/done",
-          "count": 92,
+          "count": 91,
           "examples": [
             "Work orders do give Tickle a new role.",
             "Done: while the Codex autorunner is armed, its repeated prompt is recorded but never sent to 象 for reading",
@@ -626,7 +626,7 @@
         },
         {
           "label": "report/evidence",
-          "count": 36,
+          "count": 35,
           "examples": [
             "I counted turns that name a pattern family outright",
             "The stages split as follows in `p4ng/empirics-futon/control-stages.edn`:",
@@ -643,15 +643,6 @@
           ]
         },
         {
-          "label": "report/diagnosis",
-          "count": 25,
-          "examples": [
-            "`detect-stalls` in `src/futon3c/agents/tickle.clj`",
-            "The readers search for the move and drop the subject.",
-            "My first packet offered \"in place, or in a linked panel"
-          ]
-        },
-        {
           "label": "report/dispatch",
           "count": 25,
           "examples": [
@@ -662,11 +653,20 @@
         },
         {
           "label": "report/status",
-          "count": 23,
+          "count": 24,
           "examples": [
             "The seats are still registered with Agency; I only stopped new work from reaching them.",
             "The field is `:node` in `futon0/analysis/audits/pattern-stages-2026-10-01.edn`",
             "It splits a turn into fragments and gives each fragment one intent from 象's list"
+          ]
+        },
+        {
+          "label": "report/diagnosis",
+          "count": 23,
+          "examples": [
+            "`detect-stalls` in `src/futon3c/agents/tickle.clj`",
+            "The readers search for the move and drop the subject.",
+            "My first packet offered \"in place, or in a linked panel"
           ]
         },
         {
@@ -680,7 +680,7 @@
         },
         {
           "label": "report/other",
-          "count": 20,
+          "count": 21,
           "examples": [
             "Examples of potential characters to use in your proforma presentation:",
             "\"Shall I send that to kimi-1?\"",
@@ -751,6 +751,24 @@
           ]
         },
         {
+          "label": "report/job-spec",
+          "count": 4,
+          "examples": [
+            "`BLANK-CURRICULUM.tsv` and `.md`",
+            "`/tmp/pyreg/overnight/HANDOFF-codex-17.md`",
+            "I asked claude-2 for four things"
+          ]
+        },
+        {
+          "label": "report/next",
+          "count": 4,
+          "examples": [
+            "claude-16 will make the two kernel changes as small packets with tests",
+            "Crystallisation at write time, as queued.",
+            "When the shards finish I'll merge, load, and run `about` on a few entities"
+          ]
+        },
+        {
           "label": "report/analysis",
           "count": 3,
           "examples": [
@@ -796,24 +814,6 @@
           ]
         },
         {
-          "label": "report/job-spec",
-          "count": 3,
-          "examples": [
-            "`BLANK-CURRICULUM.tsv` and `.md`",
-            "`/tmp/pyreg/overnight/HANDOFF-codex-17.md`",
-            "I asked claude-2 for four things"
-          ]
-        },
-        {
-          "label": "report/next",
-          "count": 3,
-          "examples": [
-            "Crystallisation at write time, as queued.",
-            "When the shards finish I'll merge, load, and run `about` on a few entities",
-            "When the shards finish, I'll load everything into the scratch store"
-          ]
-        },
-        {
           "label": "report/partial",
           "count": 3,
           "examples": [
@@ -829,7 +829,7 @@
       "labels": [
         {
           "label": "report-problem/observ",
-          "count": 57,
+          "count": 58,
           "examples": [
             "I think undertagging of old turns is laziness.",
             "the problem is that it is noticeably VERY slow",
@@ -874,10 +874,9 @@
         },
         {
           "label": "report-problem/other",
-          "count": 2,
+          "count": 1,
           "examples": [
-            "There should be a 象-off function for this",
-            "The first real edit logged `No module named 'crystallise'`."
+            "There should be a 象-off function for this"
           ]
         }
       ]
@@ -919,11 +918,20 @@
         },
         {
           "label": "verify/other",
-          "count": 6,
+          "count": 5,
           "examples": [
             "find ./ -type f -name \"*.flexiarg\" | xargs grep \" [bB]aldwin \"",
             "4 minutes per record?",
             "ok, but how did you register @fucodex?"
+          ]
+        },
+        {
+          "label": "verify/prior-art-question",
+          "count": 4,
+          "examples": [
+            "Possibly this is something that we have tried already.",
+            "I thought RETRACT had previously been classed with the x-up-arrow icon.",
+            "I'm not sure if we have a lookup table between the 象-recognised intents"
           ]
         },
         {
@@ -933,15 +941,6 @@
             "I click on a band, and I see it highlighted",
             "OK, I see it on the clickthrough.",
             "All the characters show up nicely on my screen."
-          ]
-        },
-        {
-          "label": "verify/prior-art-question",
-          "count": 3,
-          "examples": [
-            "Possibly this is something that we have tried already.",
-            "I thought RETRACT had previously been classed with the x-up-arrow icon.",
-            "I'm not sure if we have a lookup table between the 象-recognised intents"
           ]
         }
       ]
