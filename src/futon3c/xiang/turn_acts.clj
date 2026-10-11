@@ -45,10 +45,17 @@
    no kind: the acts are skipped and counted."
   (into {} (keep (fn [[k _]] [(name k) k]) lx/kinds)))
 
+(def intent-aliases
+  "Reading intents whose names differ from the kernel kind they express."
+  {"agree" :approve
+   "challenge" :disagree})
+
 (defn- intent-kind
   "The kernel kind for a reading intent string, or nil."
   [intent]
-  (get intent-kinds (some-> intent str/trim)))
+  (let [intent (some-> intent str/trim)]
+    (or (get intent-aliases intent)
+        (get intent-kinds intent))))
 
 (defn- stamp-act
   "Carry the kind tables' two independent relations on ACT."

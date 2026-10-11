@@ -92,6 +92,64 @@
     (is (= :report (:kind (first acts))))
     (is (= 2 (:skipped (meta acts))) "the two no-kind intents are counted, not invented")))
 
+(deftest reading-intent-aliases-name-kernel-kinds
+  (let [record (:record (fixture-turn "turn-455grB"))
+        reading {:sentences [{:id "s1"
+                              :fragments [{:intent "agree" :text "Yes."}
+                                          {:intent "challenge" :text "No."}]}]}
+        acts (ta/turn->acts record reading "" [])]
+    (is (= [:approve :disagree] (mapv :kind acts)))
+    (is (zero? (:skipped (meta acts))))))
+
+(deftest aliased-agree-accepts-the-preceding-offer
+  (let [offer-turn {:record {:turn_id "agent-turn-offer"
+                             :created_at "2026-10-11T03:59:00Z"
+                             :agent_id "agent" :session_id "session"
+                             :source_text "Choose."}
+                    :reading {:sentences []}
+                    :reply "🈸 Pick one:\n1. First\n2. Second"
+                    :commits []}
+        agree-turn {:record {:turn_id "agent-turn-agree"
+                             :created_at "2026-10-11T04:00:00Z"
+                             :agent_id "agent" :session_id "session"
+                             :source_text "First."}
+                    :reading {:sentences [{:id "s1"
+                                           :fragments [{:intent "agree" :text "First."}]}]}
+                    :reply "" :commits []}
+        acts (ta/session-acts [offer-turn agree-turn])
+        offer (first (filter #(= :offer (:kind %)) acts))
+        accept (first (filter #(= :accept (:kind %)) acts))]
+    (is (= "agent-turn-offer-r-0" (:id offer)))
+    (is (= (:id offer) (:target accept)))
+    (is (= :accept (:kind accept)))))
+
+(deftest unknown-reading-intent-remains-skipped
+  (let [record (:record (fixture-turn "turn-455grB"))
+        acts (ta/turn->acts record
+                            {:sentences [{:id "s1"
+                                          :fragments [{:intent "muse" :text "Perhaps."}]}]}
+                            "" [])]
+    (is (empty? acts))
+    (is (= 1 (:skipped (meta acts))))))
+
+(deftest formerly-refusing-agree-reading-has-ports
+  ;; Copied from turn-5JBr6g.json.analysis.json; no live-file dependency.
+  (let [turn {:record {:turn_id "claude-3-turn-5"
+                       :created_at "2026-10-04T14:46:23Z"
+                       :agent_id "claude-3"
+                       :session_id "49d366f7-dd42-4437-8b80-72ce9baf2e39"
+                       :source_text "25 on 32 is how we roll"}
+              :record-id "turn-5JBr6g"
+              :reading {:sentences [{:id "s1"
+                                     :fragments [{:start 0 :end 23
+                                                  :text "25 on 32 is how we roll"
+                                                  :intent "agree"
+                                                  :target "the '25 on 32' configuration or practice stated in the seat"}]}]}
+              :reply "" :commits []}
+        acts (ta/session-acts [turn])]
+    (is (= [:approve] (mapv :kind acts)))
+    (is (map? (ta/turn-ports acts "claude-3-turn-5" "turn-5JBr6g")))))
+
 (defn- synthetic-turn
   [fragments reply]
   {:record {:turn_id "agent-turn-1" :created_at "2026-10-11T04:00:00Z"
