@@ -7,6 +7,7 @@
    typed-identifiers (R6)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
+            [clojure.java.io :as io]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.clock-decision :as decision]
@@ -14,7 +15,8 @@
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.ws.invoke :as ws-invoke])
-  (:import [java.util.concurrent CountDownLatch TimeUnit]))
+  (:import [java.nio.file Files]
+           [java.util.concurrent CountDownLatch TimeUnit]))
 
 (use-fixtures
   :each
@@ -64,6 +66,108 @@
 (defn- registry-key-count
   []
   (count @(var-get (ns-resolve 'futon3c.agency.registry '!registry))))
+
+(defn- session-end-temp-store []
+  {:dir (str (Files/createTempDirectory
+              "registry-session-ends-"
+              (make-array java.nio.file.attribute.FileAttribute 0)))})
+
+(defn- session-end-lines [store]
+  (let [file (io/file (:dir store) "session-ends.jsonl")]
+    (if (.exists file)
+      (with-open [reader (io/reader file)]
+        (mapv #(json/parse-string % true) (line-seq reader)))
+      [])))
+
+(defn- register-session-agent!
+  [agent-id session-id invoke-fn & {:keys [ttl-ms]}]
+  (reg/register-agent!
+   (cond-> {:agent-id (fix/make-agent-id agent-id)
+            :type :codex
+            :invoke-fn invoke-fn
+            :session-id session-id
+            :capabilities [:edit]}
+     ttl-ms (assoc :ttl-ms ttl-ms))))
+
+(deftest session-ended-reset-is-durable-and-notifies
+  (let [store (session-end-temp-store)
+        heard (atom [])
+        remove-listener! (reg/add-session-end-listener! #(swap! heard conj %))]
+    (try
+      (binding [reg/*session-end-store* store]
+        (register-session-agent! "session-reset" "old-reset" (fn [_ _] {:result "ok"}))
+        (is (:ok (reg/reset-session! "session-reset")))
+        (let [[event :as events] (session-end-lines store)]
+          (is (= 1 (count events)))
+          (is (= event (first @heard)))
+          (is (= {:agent "session-reset"
+                  :old_session "old-reset"
+                  :new_session nil
+                  :reason "reset"}
+                 (select-keys event [:agent :old_session :new_session :reason])))
+          (is (= (str "session-end:session-reset:old-reset:" (:at event))
+                 (:id event)))))
+      (finally (remove-listener!)))))
+
+(deftest session-ended-deregister-and-reap-are-durable
+  (let [store (session-end-temp-store)]
+    (binding [reg/*session-end-store* store]
+      (register-session-agent! "session-drop" "drop-sid" (fn [_ _] {:result "ok"}))
+      (is (:ok (reg/deregister-agent! "session-drop")))
+      (register-session-agent! "session-reap" "reap-sid" (fn [_ _] {:result "ok"})
+                               :ttl-ms 1)
+      (Thread/sleep 5)
+      (is (= 1 (count (reg/reap-expired!))))
+      (is (= [["deregister" "drop-sid" nil]
+              ["reap" "reap-sid" nil]]
+             (mapv (juxt :reason :old_session :new_session)
+                   (session-end-lines store)))))))
+
+(deftest session-ended-replacement-detects-status-and-invoke-results
+  (let [store (session-end-temp-store)]
+    (binding [reg/*session-end-store* store]
+      (register-session-agent! "session-status" "status-a" (fn [_ _] {:result "ok"}))
+      (reg/report-external-invoke! "session-status" "test"
+                                   {:status :invoking :session-id "status-a"})
+      (is (empty? (session-end-lines store)))
+      (reg/report-external-invoke! "session-status" "test"
+                                   {:status :invoking :session-id "status-b"})
+      (register-session-agent! "session-invoke" "invoke-a"
+                               (fn [_ _] {:result "ok" :session-id "invoke-b"}))
+      (is (:ok (reg/invoke-agent! "session-invoke" "hello" 1000)))
+      (register-session-agent! "session-invoke-same" "invoke-same"
+                               (fn [_ _] {:result "ok" :session-id "invoke-same"}))
+      (is (:ok (reg/invoke-agent! "session-invoke-same" "hello" 1000)))
+      (is (= [["session-status" "status-a" "status-b" "replaced"]
+              ["session-invoke" "invoke-a" "invoke-b" "replaced"]]
+             (mapv (juxt :agent :old_session :new_session :reason)
+                   (session-end-lines store)))))))
+
+(deftest session-ended-ids-are-distinct-per-reset-and-stable-on-replay
+  (let [store (session-end-temp-store)]
+    (binding [reg/*session-end-store* store]
+      (register-session-agent! "session-twice" "first" (fn [_ _] {:result "ok"}))
+      (reg/reset-session! "session-twice")
+      (reg/update-agent! "session-twice" :agent/session-id "second")
+      (reg/reset-session! "session-twice")
+      (let [[first-event second-event] (session-end-lines store)
+            replay (reg/session-end-transition (:agent first-event)
+                                               (:old_session first-event)
+                                               (:new_session first-event)
+                                               (keyword (:reason first-event))
+                                               (:at first-event))]
+        (is (not= (:id first-event) (:id second-event)))
+        (is (= (:id first-event) (:id replay)))))))
+
+(deftest session-ended-outbox-failure-does-not-roll-back-mutation
+  (let [not-a-directory (java.io.File/createTempFile "session-ends-parent-" ".tmp")]
+    (try
+      (binding [reg/*session-end-store* {:dir (.getPath not-a-directory)}]
+        (register-session-agent! "session-write-failure" "still-resets"
+                                 (fn [_ _] {:result "ok"}))
+        (is (:ok (reg/reset-session! "session-write-failure")))
+        (is (nil? (:agent/session-id (reg/get-agent "session-write-failure")))))
+      (finally (.delete not-a-directory)))))
 
 (deftest persona-aliases-resolve-without-adding-registry-identities
   (register-test-agent! "codex-persona-target")

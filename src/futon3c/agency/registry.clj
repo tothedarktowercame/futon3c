@@ -18,13 +18,16 @@
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
   (:require [clojure.edn :as edn]
+            [cheshire.core :as json]
             [futon3c.evidence.origin :as origin]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.blackboard :as bb]
             [futon3c.agency.clock-store :as clock-store]
-            [futon3c.transport.ws.invoke :as ws-invoke])
-  (:import [java.time Instant]))
+            [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.xiang.turn-store :as turn-store])
+  (:import [java.io FileOutputStream]
+           [java.time Instant]))
 
 (declare registry-status)
 
@@ -50,6 +53,67 @@
    Signature: (fn [agent-id outcome] ...) where outcome is
    {:ok bool :error str-or-nil :session-id str-or-nil}."}
   !on-idle (atom nil))
+
+(defonce ^{:doc "Listeners for durable session-ended transitions."}
+  !session-end-listeners (atom []))
+
+(def ^:dynamic *session-end-store*
+  "Turn store override for tests; production resolves the canonical store."
+  nil)
+
+(def ^:private session-end-outbox-lock (Object.))
+
+(defn add-session-end-listener!
+  "Call F after each session-ended transition is durably appended.
+   Returns a zero-argument function that removes this registration."
+  [f]
+  (swap! !session-end-listeners conj f)
+  (fn [] (swap! !session-end-listeners
+                (fn [listeners] (vec (remove #(identical? f %) listeners))))))
+
+(defn session-end-transition
+  "Build the stable wire record for one ended session."
+  [agent old-session new-session reason at]
+  (let [at* (str at)]
+    {:id (str "session-end:" agent ":" old-session ":" at*)
+     :agent (str agent)
+     :old_session (str old-session)
+     :new_session (some-> new-session str)
+     :reason (name reason)
+     :at at*}))
+
+(defn- session-end-outbox-file []
+  (io/file (:dir (or *session-end-store* (turn-store/store)))
+           "session-ends.jsonl"))
+
+(defn- append-session-end!
+  [transition]
+  (locking session-end-outbox-lock
+    (let [file (session-end-outbox-file)
+          parent (.getParentFile file)]
+      (when parent (.mkdirs parent))
+      (with-open [out (FileOutputStream. file true)]
+        (.write out (.getBytes (str (json/generate-string transition) "\n") "UTF-8"))
+        (.flush out)
+        (.sync (.getFD out)))))
+  transition)
+
+(defn- publish-session-end!
+  [transition]
+  (try
+    (append-session-end! transition)
+    (doseq [listener @!session-end-listeners]
+      (try
+        (listener transition)
+        (catch Throwable t
+          (println "[registry] session-end listener error:" (.getMessage t)))))
+    true
+    (catch Throwable t
+      ;; Registry lifecycle is authoritative; observability failure must not
+      ;; roll it back or make the caller believe the mutation failed.
+      (println "[registry] session-end outbox append failed:" (.getMessage t))
+      (flush)
+      false)))
 
 (def ^:private ws-invoke-timeout-ms 120000)
 (def ^:private external-invoke-fresh-ms 15000)
@@ -649,7 +713,13 @@
     (swap! !registry
            (fn [m]
              (if-let [agent (get m aid-val)]
-               (do (reset! result {:ok true :agent/id (:agent/id agent)})
+               (let [at (now)]
+                 (reset! result (cond-> {:ok true :agent/id (:agent/id agent)}
+                                  (:agent/session-id agent)
+                                  (assoc ::session-end
+                                         (session-end-transition aid-val
+                                                                 (:agent/session-id agent)
+                                                                 nil :deregister at))))
                    (dissoc m aid-val))
                (do (reset! result
                            {:ok false
@@ -658,7 +728,9 @@
                                     (str "Agent not registered: " aid-val)
                                     :agent-id aid-val)})
                    m))))
-    @result))
+    (when-let [transition (::session-end @result)]
+      (publish-session-end! transition))
+    (dissoc @result ::session-end)))
 
 (defn deregister-agent!
   "Compatibility wrapper around `unregister-agent!`.
@@ -968,14 +1040,19 @@
             (swap! !registry
                    (fn [m]
                      (if-let [agent* (get m aid-val)]
-                       (do
+                       (let [at (now)
+                             actual-old-sid (:agent/session-id agent*)]
                          (reset! result {:ok true
                                          :agent-id aid-val
-                                         :old-session-id old-sid})
+                                         :old-session-id old-sid
+                                         ::session-end
+                                         (when actual-old-sid
+                                           (session-end-transition aid-val actual-old-sid
+                                                                   nil :reset at))})
                          (assoc m aid-val
                                 (-> agent*
                                     (assoc :agent/session-id nil
-                                           :agent/last-active (now))
+                                           :agent/last-active at)
                                     (dissoc :agent/external-invokes
                                             :agent/external-heartbeat-at))))
                        (do
@@ -986,7 +1063,9 @@
                                           (str "Agent not registered: " aid-val)
                                           :agent-id aid-val)})
                          m))))
-            @result)))
+            (when-let [transition (::session-end @result)]
+              (publish-session-end! transition))
+            (dissoc @result ::session-end))))
       {:ok false
        :error (make-social-error
                :agent-not-found
@@ -1087,20 +1166,32 @@
                               (project-agents!))
              mark-idle! (fn [session-id]
                           ;; Update only if still registered (R5: no resurrect).
-                          (swap! !registry
-                                 (fn [m]
-                                   (if-let [agent* (get m aid-val)]
-                                     (assoc m aid-val
-                                            (merge agent*
-                                                   {:agent/session-id (or session-id current-session)
-                                                    :agent/last-active (now)
-                                                    :agent/status :idle
-                                                    :agent/invoke-started-at nil
-                                                    :agent/invoke-prompt-preview nil
-                                                    :agent/invoke-activity nil
-                                                    :agent/invoke-activity-at nil
-                                                    :agent/invoke-event-sink nil}))
-                                     m)))
+                          (let [transition (atom nil)]
+                            (swap! !registry
+                                   (fn [m]
+                                     (reset! transition nil)
+                                     (if-let [agent* (get m aid-val)]
+                                       (let [old-session (:agent/session-id agent*)
+                                             new-session (or session-id current-session)
+                                             at (now)]
+                                         (when (and old-session new-session
+                                                    (not= old-session new-session))
+                                           (reset! transition
+                                                   (session-end-transition
+                                                    aid-val old-session new-session :replaced at)))
+                                         (assoc m aid-val
+                                                (merge agent*
+                                                       {:agent/session-id new-session
+                                                        :agent/last-active at
+                                                        :agent/status :idle
+                                                        :agent/invoke-started-at nil
+                                                        :agent/invoke-prompt-preview nil
+                                                        :agent/invoke-activity nil
+                                                        :agent/invoke-activity-at nil
+                                                        :agent/invoke-event-sink nil})))
+                                       m)))
+                            (when-let [event @transition]
+                              (publish-session-end! event)))
                           (project-agents!)
                           ;; Agency bell: write turn-completed to file.
                           ;; Emacs watches this file → joe/visible-bell.
@@ -1280,9 +1371,12 @@
    Returns vector of reaped agent IDs."
   []
   (let [now-ms (System/currentTimeMillis)
-        reaped (atom [])]
+        reaped (atom [])
+        transitions (atom [])]
     (swap! !registry
            (fn [m]
+             (reset! reaped [])
+             (reset! transitions [])
              (reduce-kv
               (fn [acc aid-val agent]
                 (if-let [ttl (:agent/ttl-ms agent)]
@@ -1290,11 +1384,17 @@
                         expired? (> now-ms (+ registered-ms ttl))]
                     (if expired?
                       (do (swap! reaped conj (:agent/id agent))
+                          (when-let [session (:agent/session-id agent)]
+                            (swap! transitions conj
+                                   (session-end-transition aid-val session nil :reap
+                                                           (Instant/ofEpochMilli now-ms))))
                           (dissoc acc aid-val))
                       acc))
                   acc))
               m
               m)))
+    (doseq [transition @transitions]
+      (publish-session-end! transition))
     @reaped))
 
 ;; =============================================================================
@@ -1485,10 +1585,12 @@
                    :else nil))
         clear? (or (nil? source-key)
                    (nil? status)
-                   (= :idle status))]
+                   (= :idle status))
+        transition (atom nil)]
     (when source-key
       (swap! !registry
              (fn [m]
+               (reset! transition nil)
                (if-let [agent (get m aid-val)]
                  (let [existing (get-in agent [:agent/external-invokes source-key])
                        next-external
@@ -1519,6 +1621,15 @@
                        ;; :agent/last-active forever, so the roster renders
                        ;; "idle (Nh ago)" minutes after a completed run
                        ;; (war-machine, 2026-07-25).
+                       next-session (when (and (not clear?)
+                                               (some-> (:session-id state) str str/trim not-empty))
+                                      (some-> (:session-id state) str str/trim))
+                       _ (when (and (:agent/session-id agent) next-session
+                                    (not= (:agent/session-id agent) next-session))
+                           (reset! transition
+                                   (session-end-transition aid-val
+                                                           (:agent/session-id agent)
+                                                           next-session :replaced now*)))
                        agent* (cond-> (assoc agent
                                              :agent/external-heartbeat-at now*
                                              :agent/last-active now*)
@@ -1526,11 +1637,12 @@
                                 (assoc :agent/external-invokes next-external)
                                 (nil? next-external)
                                 (dissoc :agent/external-invokes)
-                                (and (not clear?)
-                                     (some-> (:session-id state) str str/trim not-empty))
-                                (assoc :agent/session-id (some-> (:session-id state) str str/trim)))]
+                                next-session
+                                (assoc :agent/session-id next-session))]
                    (assoc m aid-val agent*))
                  m)))
+      (when-let [event @transition]
+        (publish-session-end! event))
       (publish-agents-status!))
     {:ok true
      :agent-id aid-val
