@@ -213,6 +213,51 @@
           "claude-17-turn-394-r-4"]
          (mapv :id (ta/session-acts (fixture-turns))))))
 
+(deftest verify-opens-a-port-only-when-the-operator-authored-it
+  (testing "an agent's marked verification is a report, not a new request"
+    (let [acts (ta/session-acts [(synthetic-turn [] "㊬ checked the result.")])
+          verify (first acts)
+          ports (ta/turn-ports acts "agent-turn-1")]
+      (is (= :verify (:kind verify)))
+      (is (false? (:port? verify)))
+      (is (not (some #{(:id verify)} (map :act (:still-open ports)))))))
+  (testing "an operator verify fragment still asks for a check"
+    (let [acts (ta/session-acts
+                [(synthetic-turn [{:intent "verify" :text "Check the result."}] "")])
+          verify (first acts)
+          ports (ta/turn-ports acts "agent-turn-1")]
+      (is (true? (:port? verify)))
+      (is (some #{(:id verify)} (map :act (:still-open ports)))))))
+
+(deftest agent-verify-still-answers-an-operator-port
+  (let [acts (ta/session-acts
+              [(synthetic-turn
+                [{:intent "report-problem" :text "The result differs."}]
+                "㊬ (result comparison) The outputs now match.")])
+        ports (ta/turn-ports acts "agent-turn-1")
+        verify (first (filter #(= :verify (:kind %)) acts))]
+    (is (false? (:port? verify)))
+    (is (= [{:answer "agent-turn-1-r-0"
+             :opener "agent-turn-1-f-s1-0"
+             :rule :sole-port
+             :effect :closes}]
+           (:inferred ports)))
+    (is (= ["agent-turn-1-f-s1-0"] (:closed-this-turn ports)))
+    (is (empty? (:still-open ports)))))
+
+(deftest agent-verify-still-closes-a-bell-port
+  (let [record {:turn_id "agent-turn-bell" :origin "agent" :caller "caller"
+                :agent_id "agent" :session_id "session"
+                :created_at "2026-10-11T04:00:00Z"
+                :source_text "Please verify the result."}
+        acts (ta/turn->acts record {} "㊬ result verified." [])
+        ports (ta/turn-ports acts "agent-turn-bell")
+        verify (first (filter #(= :verify (:kind %)) acts))]
+    (is (false? (:port? verify)))
+    (is (= "agent-turn-bell-b-0" (:target verify)))
+    (is (= ["agent-turn-bell-b-0"] (:closed-this-turn ports)))
+    (is (empty? (:still-open ports)))))
+
 (deftest sole-operator-port-infers-table-typed-reply-links
   (let [clarify {:intent "clarify" :text "Is that clarifying?"}
         explain "㊢ (where we are) Yes, that explains it."

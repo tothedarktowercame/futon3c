@@ -59,9 +59,10 @@
 
 (defn- stamp-act
   "Carry the kind tables' two independent relations on ACT."
-  [{:keys [kind] :as act}]
+  [{:keys [kind author] :as act}]
   (assoc act
-         :port? (contains? lx/port-kinds kind)
+         :port? (and (contains? lx/port-kinds kind)
+                     (not (and (= :verify kind) (not= "operator" author))))
          :standing? (= :creates (lx/kinds kind))))
 
 ;; ---------------------------------------------------------------------------
