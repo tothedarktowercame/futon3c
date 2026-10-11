@@ -75,16 +75,27 @@
         (is (str/starts-with? (:prompt bell) (str "Requisition: M-futon-seams — interpret operator turn " id)))
         (is (str/includes? (:prompt bell) (ts/record-path (get-in (:svc h) [:config :store]) id)))
         (is (= "job-1" (get-in stored [:analysis_dispatch :job_id])))
+        (is (= "1970-01-01T00:16:40Z" (:reply_at stored)))
         (is (str/includes? (:happened_summary stored) "line5"))
         (is (not (str/includes? (:happened_summary stored) "line6")))
         (is (str/includes? (:happened_summary stored) "- futon3c abc123de fix (+3 -1 over 2 files)")))
       (is (= [180] (delays h)) "the first reap waits reap-after"))))
+
+(deftest happened-preserves-an-explicit-reply-time
+  (let [h (harness)
+        {:keys [id]} (turn! h)
+        reply-at "2026-10-11T06:30:45Z"]
+    (svc/attach-happened! (:svc h) id {:reply "done" :reply-at reply-at :commits []})
+    (let [record (ts/read-record (get-in (:svc h) [:config :store]) id)]
+      (is (= reply-at (:reply_at record)))
+      (is (instance? java.time.Instant (java.time.Instant/parse (:reply_at record)))))))
 
 (deftest a-turn-addressed-to-the-seat-is-recorded-but-never-dispatched
   (let [h (harness)
         {:keys [id dispatch]} (turn! h {:agent-id "象"})]
     (is (= :skipped dispatch))
     (is (= {:dispatched false :reason :addressed-to-seat} (svc/attach-happened! (:svc h) id "summary")))
+    (is (nil? (:reply_at (ts/read-record (get-in (:svc h) [:config :store]) id))))
     (is (empty? @(:bells h)))))
 
 (deftest a-declared-turn-is-recorded-settled-and-never-dispatched

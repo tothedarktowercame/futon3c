@@ -591,10 +591,14 @@
                            (map? happened) (happened-summary (:reply happened) (:commits happened))
                            :else nil)
                      (catch Exception _ nil))
-        reply (when (map? happened) (:reply happened))]
+        reply (when (map? happened) (:reply happened))
+        reply? (and (map? happened) (contains? happened :reply))
+        reply-at (when reply?
+                   (or (:reply-at happened) (iso (now-ms svc))))]
     (when summary
       (try (ts/update-record! store id #(cond-> (assoc % :happened_summary summary)
-                                          reply (assoc :reply_text reply)))
+                                          reply? (assoc :reply_text reply
+                                                        :reply_at reply-at)))
            (catch Exception _ nil)))
     (let [record (ts/read-record store id)
           status (:analysis_status record)]

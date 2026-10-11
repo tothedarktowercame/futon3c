@@ -42,7 +42,7 @@
 (def rules-version
   "Version of the persisted act/port interpretation rules. Bump by hand on
    every change to linking, the kind tables, or the adjacency table."
-  "2026-10-11.1")
+  "2026-10-11.2")
 
 (def intent-kinds
   "The reading/mark intents that name a kernel act kind, as keywords.
@@ -142,7 +142,7 @@
    unresolved) are skipped and counted."
   [record reply-text base]
   (let [turn-id (:turn_id record)
-        at (:created_at record)]
+        at (or (:reply_at record) (:created_at record))]
     (reduce (fn [acc [idx {:keys [intent text]}]]
               (if-let [kind (mark-kind intent text)]
                 (update acc :acts conj
@@ -162,12 +162,13 @@
 (defn- commit-acts
   "One :commit act per happened-note commit."
   [record commits base]
-  (let [turn-id (:turn_id record)]
+  (let [turn-id (:turn_id record)
+        at (or (:reply_at record) (:created_at record))]
     (mapv (fn [{:keys [sha repo subject]}]
             {:id (str base "-c-" sha)
              :kind :commit
              :author (:agent_id record)
-             :at (:created_at record)
+             :at at
              :agent (:agent_id record) :session (:session_id record)
              :turn turn-id
              :sha sha :repo repo :subject subject})
@@ -522,8 +523,9 @@
    :inferred [{:answer :opener :rule :effect}]}. Per turn, an
    untargeted reply paragraph is inferred to answer the sole operator opening
    fragment, if there is exactly one. The adjacency table alone determines
-   that inferred pair's effect. The kernel's openo/closedo/obligationo answer,
-   as of the turn's own timestamp. RECORD-ID selects one occurrence when a
+   that inferred pair's effect. The before-anchor is the operator turn's own
+   timestamp; the after-state runs through the latest act attributed to that
+   turn, so its later reply/commit can close what it opened. RECORD-ID selects one occurrence when a
    process restart reused TURN-ID; the two-argument form remains compatible
    with histories whose turn ids are unique."
   ([acts turn-id] (turn-ports acts turn-id nil))
@@ -535,6 +537,15 @@
         _ (when-not at
             (throw (ex-info (str "No acts for turn " turn-id)
                             {:reason :unknown-turn :turn turn-id})))
+        through (reduce (fn [latest candidate]
+                          (if (.isAfter (java.time.Instant/parse candidate)
+                                        (java.time.Instant/parse latest))
+                            candidate
+                            latest))
+                        at
+                        (keep (fn [{act-at :at :as act}]
+                                (when (chosen? act) act-at))
+                              acts))
         inferred (->> (group-by (juxt :turn :record) acts)
                       vals
                       (mapcat (fn [turn-acts]
@@ -562,7 +573,7 @@
                      (keep (fn [{:keys [id] :as act}]
                              (when (and (chosen? act) (lx/port-act? act)) id)))
                      acts)
-        after (lx/open-ports db at)
+        after (lx/open-ports db through)
         by-id (into {} (map (juxt :id identity) acts))]
     {:closed-this-turn (vec (sort (set/difference before after)))
      :still-open (vec (sort-by :act
@@ -571,7 +582,7 @@
                                        :kind (:kind (by-id id))
                                        :since (:at (by-id id))})
                                     after)))
-     :obligations (vec (lx/obligations db at))
-     :in-force (vec (sort (lx/in-force db at)))
-     :promulgated (vec (sort (lx/promulgated db at)))
+     :obligations (vec (lx/obligations db through))
+     :in-force (vec (sort (lx/in-force db through)))
+     :promulgated (vec (sort (lx/promulgated db through)))
      :inferred inferred})))

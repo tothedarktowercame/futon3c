@@ -11699,9 +11699,10 @@
         "happened"
         (let [happened (cond (string? (:summary payload)) (:summary payload)
                              (or (:reply payload) (:commits payload))
-                             {:reply (:reply payload)
-                              :commits (mapv #(select-keys % [:repo :repo-path :sha :subject :numstat])
-                                             (or (:commits payload) []))}
+                             (cond-> {:reply (:reply payload)
+                                      :commits (mapv #(select-keys % [:repo :repo-path :sha :subject :numstat])
+                                                     (or (:commits payload) []))}
+                               (contains? payload :reply-at) (assoc :reply-at (:reply-at payload)))
                              :else nil)
               result (xiang-turns/attach-happened!
                       svc id happened

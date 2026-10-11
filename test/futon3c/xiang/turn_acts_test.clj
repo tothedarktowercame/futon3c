@@ -73,6 +73,23 @@
     (testing "every kind is from the kernel's table"
       (is (every? #(contains? lx/kinds (:kind %)) acts)))))
 
+(deftest reply-and-commit-acts-use-the-reply-time
+  (let [{:keys [record reading reply commits]} (first (fixture-turns))
+        reply-at "2026-10-01T13:50:05Z"
+        acts (ta/turn->acts (assoc record :reply_at reply-at) reading reply commits)]
+    (is (every? #(= (:created_at record) (:at %))
+                (filter (comp #{"operator"} :author) acts)))
+    (is (every? #(= reply-at (:at %))
+                (remove (comp #{"operator"} :author) acts)))))
+
+(deftest absent-reply-time-preserves-established-acts
+  (let [{:keys [record reading reply commits]} (first (fixture-turns))
+        before (ta/turn->acts record reading reply commits)
+        same-time (ta/turn->acts (assoc record :reply_at (:created_at record))
+                                 reading reply commits)]
+    (is (= (mapv (juxt :id :at) before)
+           (mapv (juxt :id :at) same-time)))))
+
 (deftest offer-options-are-detected
   (let [{:keys [record reading reply commits]} (second (fixture-turns))
         acts (ta/turn->acts record reading reply commits)
@@ -326,6 +343,16 @@
             reply-act (first (filter #(= "agent-turn-1-r-0" (:id %)) acts))]
         (is (= "agent-turn-1-f-s1-0" (:target reply-act)))
         (is (empty? (:inferred (ta/turn-ports acts "agent-turn-1"))))))))
+
+(deftest a-later-reply-time-still-closes-a-port-in-its-turn
+  (let [turn (assoc-in (synthetic-turn [{:intent "clarify" :text "Is that clear?"}]
+                                        "㊢ (clarification) Yes.")
+                       [:record :reply_at] "2026-10-11T04:01:00Z")
+        acts (ta/session-acts [turn])
+        ports (ta/turn-ports acts "agent-turn-1")]
+    (is (= "2026-10-11T04:00:00Z" (:at (first acts))))
+    (is (= "2026-10-11T04:01:00Z" (:at (second acts))))
+    (is (= ["agent-turn-1-f-s1-0"] (:closed-this-turn ports)))))
 
 (deftest session-acts-acceptance-and-carry-out
   (let [acts (ta/session-acts (fixture-turns))
