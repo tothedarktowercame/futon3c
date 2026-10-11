@@ -749,6 +749,170 @@
         (finally
           (Files/deleteIfExists tmp))))))
 
+(defonce ^:private !invoke-ledger-journal-state
+  ;; Store-path -> the value and journal coordinates made durable by this JVM.
+  ;; Keying by path keeps tests which rebind invoke-jobs-store-path isolated.
+  (atom {}))
+
+(defn- invoke-jobs-journal-path []
+  (str (invoke-jobs-store-path) ".journal"))
+
+(defn- force-parent-directory!
+  [^Path parent]
+  (with-open [directory (FileChannel/open
+                         parent
+                         (into-array StandardOpenOption
+                                     [StandardOpenOption/READ]))]
+    (.force directory true)))
+
+(defn- write-journal-line!
+  "Append one EDN record using heap streams, then force it durable."
+  [record]
+  (let [journal (-> (Path/of (invoke-jobs-journal-path) (make-array String 0))
+                    .toAbsolutePath)
+        parent (.getParent journal)]
+    (Files/createDirectories parent
+                             (make-array java.nio.file.attribute.FileAttribute 0))
+    (with-open [stream (FileOutputStream. (.toFile journal) true)
+                writer (BufferedWriter.
+                        (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+      (binding [*out* writer]
+        (pr record)
+        (newline))
+      (.flush writer)
+      (.sync (.getFD stream)))
+    record))
+
+(defn- replace-journal!
+  "Install a forced one-line journal for SNAPSHOT-ID by atomic rename."
+  [snapshot-id]
+  (let [target (-> (Path/of (invoke-jobs-journal-path) (make-array String 0))
+                   .toAbsolutePath)
+        parent (.getParent target)
+        tmp (Files/createTempFile parent ".invoke-jobs-journal-" ".tmp"
+                                  (make-array java.nio.file.attribute.FileAttribute 0))
+        header {:j/seq 0 :j/at (str (Instant/now)) :j/base snapshot-id}]
+    (try
+      (with-open [stream (FileOutputStream. (.toFile tmp))
+                  writer (BufferedWriter.
+                          (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+        (binding [*out* writer]
+          (pr header)
+          (newline))
+        (.flush writer)
+        (.sync (.getFD stream)))
+      (when *invoke-jobs-persist-stage-hook*
+        (*invoke-jobs-persist-stage-hook* :journal-temp-forced
+                                          {:target target :temp tmp}))
+      (Files/move tmp target
+                  (into-array StandardCopyOption
+                              [StandardCopyOption/ATOMIC_MOVE
+                               StandardCopyOption/REPLACE_EXISTING]))
+      (when *invoke-jobs-persist-stage-hook*
+        (*invoke-jobs-persist-stage-hook* :journal-renamed
+                                          {:target target :temp tmp}))
+      (force-parent-directory! parent)
+      (finally
+        (Files/deleteIfExists tmp)))))
+
+(defn- persist-invoke-jobs-snapshot!
+  "Persist LEDGER with a fresh journal identity, then rotate its journal.
+
+  The snapshot rename happens first. A crash before the journal rename leaves
+  the old journal beside a snapshot with a different base, so replay ignores
+  it; after the journal rename, the new header and snapshot agree."
+  [ledger]
+  (let [snapshot-id (str (UUID/randomUUID))
+        snapshot (assoc ledger :journal/snapshot-id snapshot-id)]
+    (persist-invoke-jobs-ledger! snapshot)
+    (let [state {:ledger ledger
+                 :snapshot-id snapshot-id
+                 :snapshot-size (.length (io/file (invoke-jobs-store-path)))
+                 :journal-seq 0}]
+      (try
+        (replace-journal! snapshot-id)
+        state
+        (catch Throwable t
+          ;; The snapshot is already authoritative. Retain its coordinates so
+          ;; a retry in this JVM appends against the new base rather than the
+          ;; now-obsolete pre-rotation base.
+          (throw (ex-info "invoke-jobs snapshot committed; journal rotation failed"
+                          {:committed? true :snapshot-state state}
+                          t)))))))
+
+(defn- changed-job-upserts
+  [before after]
+  (into {}
+        (keep (fn [[job-id job]]
+                (let [old (get before job-id ::absent)]
+                  (when (or (= ::absent old)
+                            (and (not (identical? old job))
+                                 (not= old job)))
+                    [job-id job]))))
+        after))
+
+(defn- invoke-ledger-delta
+  [durable ledger snapshot-id journal-seq]
+  (let [before-jobs (:jobs durable)
+        after-jobs (:jobs ledger)
+        before-order (:job-order durable)
+        after-order (:job-order ledger)
+        before-trace (:trace->job durable)
+        after-trace (:trace->job ledger)
+        dropped (into [] (remove #(contains? after-jobs %)) (keys before-jobs))
+        order-drop (into [] (remove (set after-order)) before-order)
+        retained-order (into [] (remove (set order-drop)) before-order)
+        order-append (if (and (<= (count retained-order) (count after-order))
+                              (= retained-order
+                                 (subvec after-order 0 (count retained-order))))
+                       (subvec after-order (count retained-order))
+                       (throw (ex-info "invoke-jobs job-order changed non-append-only"
+                                       {:before before-order :after after-order})))
+        trace-drop (into [] (remove #(contains? after-trace %)) (keys before-trace))
+        trace-put (into {}
+                        (keep (fn [[trace-id job-id]]
+                                (when (not= job-id (get before-trace trace-id ::absent))
+                                  [trace-id job-id])))
+                        after-trace)
+        upserts (changed-job-upserts before-jobs after-jobs)]
+    (cond-> {:j/seq (inc (long journal-seq))
+             :j/at (str (Instant/now))
+             :j/base snapshot-id}
+      (seq upserts) (assoc :upsert upserts)
+      (seq dropped) (assoc :drop dropped)
+      (not= (:next-seq durable) (:next-seq ledger))
+      (assoc :next-seq (:next-seq ledger))
+      (seq order-append) (assoc :job-order-append order-append)
+      (seq order-drop) (assoc :job-order-drop order-drop)
+      (seq trace-put) (assoc :trace->job-put trace-put)
+      (seq trace-drop) (assoc :trace->job-drop trace-drop))))
+
+(defn- invoke-ledger-write!
+  "Make LEDGER durable by snapshotting once, then appending only its delta."
+  [ledger]
+  (locking invoke-jobs-writer-lock
+    (let [store (str (.toAbsolutePath
+                      (Path/of (invoke-jobs-store-path) (make-array String 0))))
+          state (get @!invoke-ledger-journal-state store)
+          journal-file (io/file (invoke-jobs-journal-path))]
+      (if (or (nil? state)
+              (> (.length journal-file) (long (:snapshot-size state))))
+        (try
+          (let [new-state (persist-invoke-jobs-snapshot! ledger)]
+            (swap! !invoke-ledger-journal-state assoc store new-state)
+            ledger)
+          (catch clojure.lang.ExceptionInfo e
+            (when-let [new-state (:snapshot-state (ex-data e))]
+              (swap! !invoke-ledger-journal-state assoc store new-state))
+            (throw e)))
+        (let [record (invoke-ledger-delta (:ledger state) ledger
+                                          (:snapshot-id state)
+                                          (:journal-seq state))]
+          (write-journal-line! record)
+          (swap! !invoke-ledger-journal-state assoc store
+                 (assoc state :ledger ledger :journal-seq (:j/seq record)))
+          ledger)))))
+
 ;; ---------- coalesced ledger persistence (2026-09-30 invoke-jobs write storm) ----------
 ;; kimi-5 measured every invoke-job event rewriting and fsyncing the WHOLE
 ;; ledger (~49 MB at the time) under invoke-jobs-writer-lock — ~6 events per
@@ -774,7 +938,7 @@
   "Seam for tests: the durable write the flusher performs. Defaults to the
    atomic persist; with-redefs sets the ROOT binding, which the flusher
    thread sees."
-  persist-invoke-jobs-ledger!)
+  invoke-ledger-write!)
 
 (defonce ^:private !invoke-ledger-flush-state
   ;; {:gen int — bumped by every flush request; :dirty? bool — a persist is
@@ -929,6 +1093,62 @@
                                          (empty? (:jobs ledger)))})))
     ledger))
 
+(defn- apply-invoke-ledger-journal-record
+  [ledger record]
+  (let [drop-ids (set (:drop record))
+        order-drop (set (:job-order-drop record))]
+    (cond-> ledger
+      (seq (:upsert record)) (update :jobs merge (:upsert record))
+      (seq drop-ids) (update :jobs #(apply dissoc % drop-ids))
+      (contains? record :next-seq) (assoc :next-seq (:next-seq record))
+      (seq order-drop) (update :job-order
+                               #(into [] (remove order-drop) %))
+      (seq (:job-order-append record))
+      (update :job-order into (:job-order-append record))
+      (seq (:trace->job-put record))
+      (update :trace->job merge (:trace->job-put record))
+      (seq (:trace->job-drop record))
+      (update :trace->job #(apply dissoc % (:trace->job-drop record))))))
+
+(defn- read-invoke-ledger-journal
+  [ledger snapshot-id]
+  (let [journal (io/file (invoke-jobs-journal-path))]
+    (if-not (and snapshot-id (.exists journal))
+      ledger
+      (let [lines (with-open [reader (io/reader journal)]
+                    (vec (line-seq reader)))
+            last-index (dec (count lines))
+            records
+            (keep-indexed
+             (fn [index line]
+               (try
+                 (let [record (edn/read-string line)]
+                   (when-not (map? record)
+                     (throw (ex-info "invoke-jobs journal record is not a map"
+                                     {:line (inc index)})))
+                   (when (= snapshot-id (:j/base record))
+                     (when-not (and (integer? (:j/seq record))
+                                    (not (neg? (:j/seq record))))
+                       (throw (ex-info "invoke-jobs journal sequence is invalid"
+                                       {:line (inc index) :record record})))
+                     record))
+                 (catch Throwable t
+                   (if (= index last-index)
+                     (do
+                       (binding [*out* *err*]
+                         (println (str "[invoke-ledger] ignoring torn journal tail at "
+                                       (.getAbsolutePath journal) ": "
+                                       (or (.getMessage t) (str t)))))
+                       nil)
+                     (throw (ex-info "invoke-jobs journal contains a corrupt record"
+                                     {:path (.getAbsolutePath journal)
+                                      :line (inc index)}
+                                     t))))))
+             lines)]
+        (reduce apply-invoke-ledger-journal-record
+                ledger
+                (sort-by :j/seq records))))))
+
 (defn- load-invoke-jobs-ledger
   []
   (let [f (io/file (invoke-jobs-store-path))]
@@ -945,7 +1165,11 @@
             (when-not (map? parsed)
               (throw (ex-info "invoke-jobs ledger root is not a map"
                               {:root-type (some-> parsed class .getName)})))
-            (validate-invoke-jobs-ledger! parsed)))
+            (let [snapshot-id (:journal/snapshot-id parsed)
+                  replayed (read-invoke-ledger-journal
+                            (dissoc parsed :journal/snapshot-id)
+                            snapshot-id)]
+              (validate-invoke-jobs-ledger! replayed))))
         (catch Throwable t
           (throw (ex-info "invoke-jobs ledger is unreadable; refusing empty fallback"
                           {:path (.getAbsolutePath f)}
