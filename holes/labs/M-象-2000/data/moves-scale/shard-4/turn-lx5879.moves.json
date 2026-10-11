@@ -1,0 +1,151 @@
+{
+ "record": "turn-lx5879",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-24-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "so, this was fast and cheap.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-f-s2-0",
+   "kind": "propose",
+   "move": "propose/row-loop",
+   "quote": "i wonder if we could get agents to work tgrough a whole row at a time",
+   "answers": [],
+   "scope": {
+    "opens": "row-loop",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/ask-recap",
+   "quote": "i have forgotten the ins and outs of verification",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-24-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-r-0",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "A cold compile only gets as far as the first error that stops it",
+   "answers": [
+    {
+     "act": "claude-11-turn-24-f-s2-0",
+     "quote": "A cold compile only gets as far as the first error that stops it",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-24-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-r-1",
+   "kind": "explain",
+   "move": "explain/recap",
+   "quote": "There were four layers, from cheapest to most expensive",
+   "answers": [
+    {
+     "act": "claude-11-turn-24-f-s3-0",
+     "quote": "There were four layers, from cheapest to most expensive",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-24-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-r-2",
+   "kind": "propose",
+   "move": "propose/row-loop",
+   "quote": "Choose a row whose dependencies already compile.",
+   "answers": [
+    {
+     "act": "claude-11-turn-24-f-s2-0",
+     "quote": "Choose a row whose dependencies already compile.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-24-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-r-3",
+   "kind": "qualify",
+   "move": "qualify/risk-assessment",
+   "quote": "This is the bet that failed on 10-06",
+   "answers": [
+    {
+     "act": "claude-11-turn-24-f-s2-0",
+     "quote": "This is the bet that failed on 10-06",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-24-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-24-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Pilot it on one row with several differences?",
+   "answers": [
+    {
+     "act": "claude-11-turn-24-f-s2-0",
+     "quote": "Pilot it on one row with several differences?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-24-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

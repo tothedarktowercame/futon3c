@@ -1,0 +1,184 @@
+{
+ "record": "turn-zDVNxa",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-27-f-s1-0",
+   "kind": "accept",
+   "move": "approve/plain",
+   "quote": "Yes, the pop effect works now,",
+   "answers": [],
+   "scope": {
+    "opens": "hover-box-polish",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "it should be static and full-size relative to its raised element when the mouse moves",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-f-s2-0",
+   "kind": "propose",
+   "move": "propose/resize",
+   "quote": "increase its size / decrease its boundary a bit to make \"full size\" legible",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-f-s3-0",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "SCAN confirmed to be placed as desired",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Done. The enlarged box now shows the whole drawing and nothing moves when the pointer moves",
+   "answers": [
+    {
+     "act": "claude-2-turn-27-f-s1-1",
+     "quote": "nothing moves when the pointer moves",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The box now takes up to 92% of the window's width and height",
+   "answers": [
+    {
+     "act": "claude-2-turn-27-f-s2-0",
+     "quote": "The box now takes up to 92% of the window's width and height",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-27-f-s1-1",
+     "quote": "The box now takes up to 92% of the window's width and height",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "I served the site locally and drove Chromium with Playwright",
+   "answers": [
+    {
+     "act": "claude-2-turn-27-f-s2-0",
+     "quote": "I served the site locally and drove Chromium with Playwright",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The gain is limited because the figure in the page is already about 79%",
+   "answers": [
+    {
+     "act": "claude-2-turn-27-f-s2-0",
+     "quote": "The gain is limited because the figure in the page is already about 79%",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-r-4",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Noted; nothing further on that",
+   "answers": [
+    {
+     "act": "claude-2-turn-27-f-s3-0",
+     "quote": "Noted; nothing further on that",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-27-r-5",
+   "kind": "ask-action",
+   "move": "ask-action/operator-step",
+   "quote": "`git push origin master` in futon7a, then reload the About page",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-27-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,169 @@
+{
+ "record": "turn-Vk4oka",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-26-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The mouse-over pop doesn't work for me in a full-screen chrome",
+   "answers": [],
+   "scope": {
+    "opens": "hover-box-pixel-bug",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-26-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Maybe it's just my setup.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-26-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-26-f-s3-0",
+   "kind": "propose",
+   "move": "propose/reorganization",
+   "quote": "\"SCAN\" should probably go under ACT",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-26-r-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "I had the box open only on devices that report hover support",
+   "answers": [
+    {
+     "act": "claude-2-turn-26-f-s1-0",
+     "quote": "I had the box open only on devices that report hover support",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-26-f-s2-0",
+     "quote": "I had the box open only on devices that report hover support",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-26-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the fix (opens for any mouse or pen pointer) sits past the acts truncation"
+  },
+  {
+   "act": "claude-2-turn-26-r-1",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "I ran a browser set up as a phone",
+   "answers": [
+    {
+     "act": "claude-2-turn-26-f-s1-0",
+     "quote": "I ran a browser set up as a phone",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-26-f-s2-0",
+     "quote": "I ran a browser set up as a phone",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-26-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "emulation only; the actual Pixel untested"
+  },
+  {
+   "act": "claude-2-turn-26-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Done in the figure's generator in p4ng",
+   "answers": [
+    {
+     "act": "claude-2-turn-26-f-s3-0",
+     "quote": "Done in the figure's generator in p4ng",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "scan-under-act",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-26-r-3",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "a scratch run of the generator reproduced the tracked page byte for",
+   "answers": [
+    {
+     "act": "claude-2-turn-26-f-s3-0",
+     "quote": "a scratch run of the generator reproduced the tracked page byte for",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-26-r-2"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-2-turn-26-r-4",
+   "kind": "report",
+   "move": "report/commits",
+   "quote": "(commits)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-26-r-2"
+   },
+   "confidence": "low",
+   "note": "reply_act text is only the section header; shas live in unmarked paragraphs"
+  },
+  {
+   "act": "claude-2-turn-26-r-5",
+   "kind": "ask-action",
+   "move": "ask-action/operator-step",
+   "quote": "`git push origin master` in futon7a, then reload the About page",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-26-r-2"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

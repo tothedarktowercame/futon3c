@@ -1,0 +1,325 @@
+{
+ "record": "turn-0IgOYv",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-121-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "unblocks *might* be witten down somewhere in some of the missions or excursions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I haven't put a great deal of effort into clarifying those semantics",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s1-2",
+   "kind": "explain",
+   "move": "explain/hypothesis",
+   "quote": "we have trouble recovering them may be just because they aren't actually there",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s2-0",
+   "kind": "propose",
+   "move": "propose/infer-from-behaviour",
+   "quote": "But we can infer,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s2-1",
+   "kind": "propose",
+   "move": "propose/infer-from-behaviour",
+   "quote": "from the fact that I'm working on E-aif-cascade right now that I must think it has high priority",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s3-0",
+   "kind": "explain",
+   "move": "explain/enabler-example",
+   "quote": "M-diagramprover is connected to a bunch of other things",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s3-1",
+   "kind": "clarify",
+   "move": "clarify/distinction",
+   "quote": "not a \"blocker\" but an enabler of those things",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s4-0",
+   "kind": "explain",
+   "move": "explain/no-finish-needed",
+   "quote": "it doesn't need to be 'finished' to be useful",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s4-1",
+   "kind": "explain",
+   "move": "explain/parallel-work-example",
+   "quote": "upgrading diagramprover to accomodate Lean work as well as cascade work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s5-0",
+   "kind": "qualify",
+   "move": "qualify/scope-effort",
+   "quote": "a really rigorous study of which missions depend on which and in which ways",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s6-0",
+   "kind": "propose",
+   "move": "propose/first-cut",
+   "quote": "But to make a first cut shouldn't be too hard",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s6-1",
+   "kind": "explain",
+   "move": "explain/improvable-loop",
+   "quote": "the outer-loop-cascade can be improved over time",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s6-2",
+   "kind": "explain",
+   "move": "explain/subject-to-constraints",
+   "quote": "so minimising G is also \"subject to constraints\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-f-s7-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "a deep-dive to fully plan all of the work across all time is actually not a good use of time and energy",
+   "answers": [],
+   "scope": {
+    "opens": "no-full-dependency-study",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Taken as guidance rather than as a defect in the data",
+   "answers": [
+    {
+     "act": "claude-2-turn-121-f-s1-0",
+     "quote": "Taken as guidance rather than as a defect in the data",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-121-f-s6-0",
+     "quote": "I added B1c to the excursion",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-121-f-s5-0",
+     "quote": "recorded your enabler/blocker distinction and the \"subject to constraints\" point as the frame for B3",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-121-f-s7-0",
+     "quote": "recorded your enabler/blocker distinction and the \"subject to constraints\" point as the frame for B3",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "b1c-first-cut",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-121-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "The records for that inference are already",
+   "answers": [
+    {
+     "act": "claude-2-turn-121-f-s2-0",
+     "quote": "The records for that inference are already",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-121-f-s2-1",
+     "quote": "The records for that inference are already",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-121-r-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncated; quotes restricted to the stored span"
+  },
+  {
+   "act": "claude-2-turn-121-r-2",
+   "kind": "explain",
+   "move": "explain/distinction",
+   "quote": "That is a different relation again, and B1c names it so",
+   "answers": [
+    {
+     "act": "claude-2-turn-121-f-s3-0",
+     "quote": "*co-work* — items targeted",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-121-f-s3-1",
+     "quote": "That is a different relation again, and B1c names it so",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-121-f-s4-1",
+     "quote": "*co-work* — items targeted",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-121-r-0"
+   },
+   "confidence": "medium",
+   "note": "truncated span cuts off the diagramprover example the answer rests on"
+  },
+  {
+   "act": "claude-2-turn-121-r-3",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Agreed, and it is alre",
+   "answers": [
+    {
+     "act": "claude-2-turn-121-f-s7-0",
+     "quote": "Agreed, and it is alre",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-121-f-s6-1",
+     "quote": "Agreed, and it is alre",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-121-f-s5-0",
+     "quote": "Agreed, and it is alre",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-121-f-s7-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncated mid-word; quote kept inside the stored span"
+  }
+ ],
+ "unlabelled": []
+}

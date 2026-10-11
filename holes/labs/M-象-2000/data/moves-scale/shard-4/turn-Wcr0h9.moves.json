@@ -1,0 +1,138 @@
+{
+ "record": "turn-Wcr0h9",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-123-f-s2-0",
+   "kind": "explain",
+   "move": "explain/metaphor",
+   "quote": "keeping in mind HEAD is like from jazz or free jazz",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-123-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "it won't tell us whether the mission has spun off into abstractions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-123-f-s4-0",
+   "kind": "propose",
+   "move": "propose/cheat-sheet",
+   "quote": "we might want something a little bit like a chord \"cheat sheet\"",
+   "answers": [],
+   "scope": {
+    "opens": "chord-sheet",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-123-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Added as B1d (futon2 `ff22a2876`)",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "Added as B1d (futon2 `ff22a2876`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "b1d-sheet",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-123-r-1",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "Five fields, all classical counts",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "Five fields, all classical counts",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-123-f-s3-0",
+     "quote": "Five fields, all classical counts",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-123-r-0"
+   },
+   "confidence": "high",
+   "note": "the register field that answers the abstractions worry sits past the acts truncation"
+  },
+  {
+   "act": "claude-2-turn-123-r-2",
+   "kind": "explain",
+   "move": "explain/integration",
+   "quote": "The `observe` square today emits an item as id, kind, source pin and one locator",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "The `observe` square today emits an item as id, kind, source pin and one locator",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-123-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-123-r-3",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "B1c (revealed attention and co-work) running on codex-33",
+   "answers": [
+    {
+     "act": "claude-2-turn-123-f-s4-0",
+     "quote": "B1c (revealed attention and co-work) running on codex-33",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-123-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": [
+  "claude-2-turn-123-f-s1-0"
+ ]
+}

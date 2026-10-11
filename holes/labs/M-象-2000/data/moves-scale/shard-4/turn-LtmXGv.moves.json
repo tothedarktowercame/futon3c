@@ -1,0 +1,175 @@
+{
+ "record": "turn-LtmXGv",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-111-f-s1-0",
+   "kind": "propose",
+   "move": "propose/project-idea",
+   "quote": "the R-nodes themselves could be presented as a cascade",
+   "answers": [],
+   "scope": {
+    "opens": "r-cascade-project",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "But in fact it's an elaborated prototype,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-f-s2-1",
+   "kind": "clarify",
+   "move": "clarify/distinction",
+   "quote": "a \"wiring diagram\" rather than merely a cascade.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-f-s3-0",
+   "kind": "propose",
+   "move": "propose/simplification",
+   "quote": "the cascade version would be a simplification of the elaborated wiring diagram.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "the data already says what the simplification is",
+   "answers": [
+    {
+     "act": "claude-2-turn-111-f-s1-0",
+     "quote": "the data already says what the simplification is",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-111-f-s3-0",
+     "quote": "the data already says what the simplification is",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "cut-report",
+    "closes": null,
+    "within": "claude-2-turn-111-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-r-1",
+   "kind": "report",
+   "move": "report/analysis",
+   "quote": "I tried the obvious cut inline",
+   "answers": [
+    {
+     "act": "claude-2-turn-111-f-s3-0",
+     "quote": "I tried the obvious cut inline",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-111-f-s2-0",
+     "quote": "I tried the obvious cut inline",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-r-2",
+   "kind": "explain",
+   "move": "explain/mapping",
+   "quote": "What goes, and where it goes",
+   "answers": [
+    {
+     "act": "claude-2-turn-111-f-s3-0",
+     "quote": "What goes, and where it goes",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-r-3",
+   "kind": "propose",
+   "move": "propose/ordered-plan",
+   "quote": "A script beside `harness-figure.bb`",
+   "answers": [
+    {
+     "act": "claude-2-turn-111-f-s1-0",
+     "quote": "A script beside `harness-figure.bb`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-111-r-4",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "The cut is the only non-mechanical step",
+   "answers": [
+    {
+     "act": "claude-2-turn-111-f-s3-0",
+     "quote": "The cut is the only non-mechanical step",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-111-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,140 @@
+{
+ "record": "turn-wM9PAr",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-119-f-s1-0",
+   "kind": "propose",
+   "move": "propose/driver",
+   "quote": "a simplified cascade based on Cascade Live should make a good outer loop \"driver\"",
+   "answers": [],
+   "scope": {
+    "opens": "outer-driver",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-119-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "In terms of \"shares patterns\" vs \"unblocks\", no, those have different semantics",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-119-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/distinction",
+   "quote": "\"shares patterns\" would be a generalisation of @how and \"unblocks\" would be a generalisation of @why",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-119-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-119-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Recorded (futon2 `d8c85edf8`)",
+   "answers": [
+    {
+     "act": "claude-2-turn-119-f-s1-0",
+     "quote": "the Cascade Live–based simplified cascade is the outer driver",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-119-f-s2-0",
+     "quote": "shares-patterns and unblocks are two tokens with different semantics",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-119-f-s3-0",
+     "quote": "shares-patterns and unblocks are two tokens with different semantics",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "token-semantics-record",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-119-r-1",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes, and the two directions already carry the distinction",
+   "answers": [
+    {
+     "act": "claude-2-turn-119-f-s2-0",
+     "quote": "Yes, and the two directions already carry the distinction",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-119-f-s3-0",
+     "quote": "Yes, and the two directions already carry the distinction",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-119-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-119-r-2",
+   "kind": "propose",
+   "move": "propose/discovery",
+   "quote": "Three candidate sources for an inter-item `@why`, kept apart",
+   "answers": [
+    {
+     "act": "claude-2-turn-119-f-s2-0",
+     "quote": "Three candidate sources for an inter-item `@why`, kept apart",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-119-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-119-r-3",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "codex-33 is on the B2 amendment",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-119-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

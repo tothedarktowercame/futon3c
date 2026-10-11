@@ -1,0 +1,143 @@
+{
+ "record": "turn-yGoIlB",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-2-f-s1-0",
+   "kind": "propose",
+   "move": "propose/health-scan",
+   "quote": "we should work on a health scan that goes beyond just the XTDB endpoint",
+   "answers": [],
+   "scope": {
+    "opens": "zone-health-scan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-2-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "unpushed repos are a liability",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-2-f-s3-0",
+   "kind": "prioritize",
+   "move": "propose/priority-order",
+   "quote": "all the items need to be dealt with eventually, hopefully sooner rather than later",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-2-f-s4-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "we could leave them as failing tests for the health check for now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-2-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "**federation:** lucy's Agency isn't running",
+   "answers": [
+    {
+     "act": "claude-11-turn-2-f-s1-0",
+     "quote": "**federation:** lucy's Agency isn't running",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-11-turn-2-f-s2-0",
+     "quote": "**federation:** lucy's Agency isn't running",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the 16-of-53 unpushed-repos count sits past the acts truncation"
+  },
+  {
+   "act": "claude-11-turn-2-r-1",
+   "kind": "verify",
+   "move": "report/correction",
+   "quote": "The first run reported 3 failures that were wrong",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-2-r-2",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "I wrote it myself rather than handing it to Codex",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-11-turn-2-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Should I add a daily timer that sends only *changes* in the scan result",
+   "answers": [
+    {
+     "act": "claude-11-turn-2-f-s3-0",
+     "quote": "Should I add a daily timer that sends only *changes* in the scan result",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-11-turn-2-f-s4-0",
+     "quote": "Should I add a daily timer that sends only *changes* in the scan result",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the repeat-8-known-failures reasoning sits past the acts truncation"
+  }
+ ],
+ "unlabelled": []
+}

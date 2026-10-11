@@ -1,0 +1,179 @@
+{
+ "record": "turn-EDnTfo",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-17-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "put the \"staging\" stuff on the main branch of futon7a",
+   "answers": [],
+   "scope": {
+    "opens": "futon7a-main-merge",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-f-s2-0",
+   "kind": "explain",
+   "move": "explain/intent",
+   "quote": "I'll edit it there.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-17-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-f-s3-0",
+   "kind": "propose",
+   "move": "propose/pipeline",
+   "quote": "We should build a pipeline for editing+staging+publishing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-f-s3-1",
+   "kind": "approve",
+   "move": "approve/provisional",
+   "quote": "but for now the content is good enough to fix \"in prod\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The staging material is now on `master`",
+   "answers": [
+    {
+     "act": "claude-2-turn-17-f-s1-0",
+     "quote": "The staging material is now on `master`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "futon7a-merge-report",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "**Committed** the redrafted `index.html` sections on `staging` as `94c9db7`",
+   "answers": [
+    {
+     "act": "claude-2-turn-17-f-s1-0",
+     "quote": "**Committed** the redrafted `index.html` sections on `staging` as `94c9db7`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-17-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-r-2",
+   "kind": "qualify",
+   "move": "qualify/deferred-to-operator",
+   "quote": "why I stopped before the push",
+   "answers": [
+    {
+     "act": "claude-2-turn-17-f-s2-0",
+     "quote": "publishing is \"merging it into master and pushing\"",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-17-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The index now links to the 大象 notebook",
+   "answers": [
+    {
+     "act": "claude-2-turn-17-f-s3-1",
+     "quote": "The index now links to the 大象 notebook",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "notebook-prepublication",
+    "closes": null,
+    "within": "claude-2-turn-17-r-0"
+   },
+   "confidence": "high",
+   "note": "the pre-publication-pass point sits past the acts truncation in the full text"
+  },
+  {
+   "act": "claude-2-turn-17-r-4",
+   "kind": "report",
+   "move": "report/mapping",
+   "quote": "Most of it exists already",
+   "answers": [
+    {
+     "act": "claude-2-turn-17-f-s3-0",
+     "quote": "Most of it exists already",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-17-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-17-r-5",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "The 1d job (`invoke-1791138867112-31952-3e1018ea`) is parked",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-17-r-3"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

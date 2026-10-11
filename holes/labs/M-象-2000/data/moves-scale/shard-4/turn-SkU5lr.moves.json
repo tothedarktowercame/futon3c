@@ -1,0 +1,471 @@
+{
+ "record": "turn-SkU5lr",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-108-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "I don't want to disrupt that just",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s2-0",
+   "kind": "propose",
+   "move": "propose/build-cascade",
+   "quote": "we now have all the formal pieces that we would need to develop a convincing cascade",
+   "answers": [],
+   "scope": {
+    "opens": "convincing-cascade",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s3-0",
+   "kind": "explain",
+   "move": "explain/evidence",
+   "quote": "proved that a cascade is more efficient than a flat list",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/gap",
+   "quote": "we haven't proved that it is similarly more efficient than a chain",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s5-0",
+   "kind": "propose",
+   "move": "propose/idea",
+   "quote": "Let me trot out a conceptual idea that has been on my mind for a while.",
+   "answers": [],
+   "scope": {
+    "opens": "proof-not-a-tree",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s6-0",
+   "kind": "explain",
+   "move": "explain/reference",
+   "quote": "Alexander said \"a city is not a tree\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s7-0",
+   "kind": "propose",
+   "move": "propose/riff",
+   "quote": "I had the riff that \"a proof is not a tree\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s8-0",
+   "kind": "explain",
+   "move": "explain/parse-vs-formation",
+   "quote": "the tree presents a *parse* of the proof,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s8-1",
+   "kind": "explain",
+   "move": "explain/parse-vs-formation",
+   "quote": "but not the proof's formation.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s9-0",
+   "kind": "qualify",
+   "move": "qualify/analogy",
+   "quote": "we could no doubt turn a cascade into a linear do-this-then-do-this...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s11-0",
+   "kind": "explain",
+   "move": "explain/formation-first",
+   "quote": "the recipe is strictly additional work beyond the formation of the cascade",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s12-0",
+   "kind": "collect",
+   "move": "collect/ingredients",
+   "quote": "we have the 3/2 category story, we have the \"wants\" token story",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s13-0",
+   "kind": "propose",
+   "move": "propose/combine",
+   "quote": "we need to do is carefully bring these ingredients together",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s14-0",
+   "kind": "propose",
+   "move": "propose/one-cascade",
+   "quote": "ONE cascade from the outer loop that is a policy for selecting META items",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s15-0",
+   "kind": "explain",
+   "move": "explain/g-semantics",
+   "quote": "minimizing G *doesn't* mean changing the cascade structurally",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s14-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s16-0",
+   "kind": "explain",
+   "move": "explain/g-semantics",
+   "quote": "Minimizing G in the outer loop is parametric in the selection of META item.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s14-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s17-0",
+   "kind": "propose",
+   "move": "propose/shape-claim",
+   "quote": "the outer loop cascade should \"look like\" a cascade",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s14-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s18-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "rather than concocting a made up example, I think we should explore that one in a bit more detail",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s14-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s19-0",
+   "kind": "qualify",
+   "move": "qualify/open-question",
+   "quote": "we really do need to change it structurally depending on circumstances",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s17-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-f-s20-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "But this is something to explore.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-f-s17-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I took the outer-loop cascade as the real example and read it three ways",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s18-0",
+     "quote": "I took the outer-loop cascade as the real example and read it three ways",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-108-f-s13-0",
+     "quote": "I took the outer-loop cascade as the real example and read it three ways",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "outer-cascade-note",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "There are two outer loops",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s14-0",
+     "quote": "There are two outer loops",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-r-2",
+   "kind": "explain",
+   "move": "explain/g-semantics",
+   "quote": "In 3/2 terms: the tactical loop constructs the *diagr",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s15-0",
+     "quote": "In 3/2 terms: the tactical loop constructs the *diagr",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-108-f-s16-0",
+     "quote": "In 3/2 terms: the tactical loop constructs the *diagr",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncates mid-word"
+  },
+  {
+   "act": "claude-2-turn-108-r-3",
+   "kind": "explain",
+   "move": "explain/structure-change",
+   "quote": "Structure must change exactly when the fixed",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s19-0",
+     "quote": "Structure must change exactly when the fixed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncates mid-phrase"
+  },
+  {
+   "act": "claude-2-turn-108-r-4",
+   "kind": "report",
+   "move": "report/mapping",
+   "quote": "(bringing the three stories together)",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s13-0",
+     "quote": "(bringing the three stories together)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-108-f-s12-0",
+     "quote": "(bringing the three stories together)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": "the per-story mapping sits in unmarked continuation paragraphs"
+  },
+  {
+   "act": "claude-2-turn-108-r-5",
+   "kind": "qualify",
+   "move": "report/evidence",
+   "quote": "In the code the list and the chain are",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s4-0",
+     "quote": "In the code the list and the chain are",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncates mid-sentence"
+  },
+  {
+   "act": "claude-2-turn-108-r-6",
+   "kind": "propose",
+   "move": "propose/ordered-plan",
+   "quote": "next checks, each dispatchable alone, in order",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s13-0",
+     "quote": "next checks, each dispatchable alone, in order",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-108-f-s20-0",
+     "quote": "next checks, each dispatchable alone, in order",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-108-r-7",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I dispatch 1 and 2 now",
+   "answers": [
+    {
+     "act": "claude-2-turn-108-f-s13-0",
+     "quote": "Shall I dispatch 1 and 2 now",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-108-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": [
+  "claude-2-turn-108-f-s10-0"
+ ]
+}

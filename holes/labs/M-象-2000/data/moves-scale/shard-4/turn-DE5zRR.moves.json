@@ -1,0 +1,116 @@
+{
+ "record": "turn-DE5zRR",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-9-turn-1-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Can we ensure that boxes such as lucy can ssh back in to Zone?",
+   "answers": [],
+   "scope": {
+    "opens": "ssh-failsafe",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-9-turn-1-f-s2-0",
+   "kind": "explain",
+   "move": "explain/purpose",
+   "quote": "This is to provide a failsafe in case I lose access to phone1 and phone2.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-9-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-9-turn-1-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "I should be able to get back into Linode, then back into this box with Lish.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-9-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-9-turn-1-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I added each box's `id_ed25519.pub` to `~/.ssh/authorized_keys`",
+   "answers": [
+    {
+     "act": "claude-9-turn-1-f-s1-0",
+     "quote": "I added each box's `id_ed25519.pub` to `~/.ssh/authorized_keys`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-9-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-9-turn-1-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "A Lish console login needs a local password, not a key",
+   "answers": [
+    {
+     "act": "claude-9-turn-1-f-s3-0",
+     "quote": "A Lish console login needs a local password, not a key",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-9-turn-1-f-s2-0",
+     "quote": "sudo on all t",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-9-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Linode-2FA point sits past the acts truncation; the console-password evidence span is what the authority holds"
+  },
+  {
+   "act": "claude-9-turn-1-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The keys are tied to each box's current IP",
+   "answers": [
+    {
+     "act": "claude-9-turn-1-f-s1-0",
+     "quote": "The keys are tied to each box's current IP",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-9-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

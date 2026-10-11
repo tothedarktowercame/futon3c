@@ -1,0 +1,227 @@
+{
+ "record": "turn-Dmp0fi",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-12-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Regarding search, it's not part",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-f-s1-1",
+   "kind": "propose",
+   "move": "propose/evidence",
+   "quote": "Evidence Landscape Search has a live example in Emacs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-f-s1-2",
+   "kind": "propose",
+   "move": "propose/figure-idea",
+   "quote": "probably best illustrated by a figure that shows \"the marble run\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "the illustration isn't ready yet b/c the work isn't really ready yet,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-f-s2-1",
+   "kind": "explain",
+   "move": "explain/deferred-payoff",
+   "quote": "when it is ready I imagine it will make a nice illustration!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-f-s3-0",
+   "kind": "accept",
+   "move": "approve/plain",
+   "quote": "In terms of the drafts: yes please put the changes in staging",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-f-s3-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "pass next steps to claude-17.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I edited `/home/joe/code/futon7a-staging/index.html`",
+   "answers": [
+    {
+     "act": "claude-2-turn-12-f-s3-0",
+     "quote": "I edited `/home/joe/code/futon7a-staging/index.html`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "staging-index",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-r-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "shows *some of* what came of",
+   "answers": [
+    {
+     "act": "claude-2-turn-12-f-s1-0",
+     "quote": "shows *some of* what came of",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-12-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-r-2",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Agreed on both",
+   "answers": [
+    {
+     "act": "claude-2-turn-12-f-s1-1",
+     "quote": "A screenshot of the `*Evidence Landscape Search*` buffer",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-12-f-s1-2",
+     "quote": "Agreed on both",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-12-f-s2-0",
+     "quote": "Agreed on both",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-12-f-s2-1",
+     "quote": "Agreed on both",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-12-r-0"
+   },
+   "confidence": "high",
+   "note": "the marble-run-as-figure detail sits past the acts truncation"
+  },
+  {
+   "act": "claude-2-turn-12-r-3",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I committed the edits as `297635bd`",
+   "answers": [
+    {
+     "act": "claude-2-turn-11-r-7",
+     "quote": "I committed the edits as `297635bd`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-12-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-12-r-4",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "The bell is job `invoke-1791137729120-31926-24244786`",
+   "answers": [
+    {
+     "act": "claude-2-turn-12-f-s3-1",
+     "quote": "The bell is job `invoke-1791137729120-31926-24244786`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-11-r-7",
+     "quote": "The bell is job `invoke-1791137729120-31926-24244786`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-12-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

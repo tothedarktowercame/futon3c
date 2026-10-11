@@ -1,0 +1,238 @@
+{
+ "record": "turn-WqJ4mW",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-66-f-s1-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "I've started to report on the amount of time it takes",
+   "answers": [],
+   "scope": {
+    "opens": "selection-cost-tracking",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-f-s1-1",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "we're not just doing the work that comes after selecting",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-f-s1-2",
+   "kind": "explain",
+   "move": "explain/step",
+   "quote": "and then doing the selection,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-f-s1-3",
+   "kind": "qualify",
+   "move": "qualify/estimate",
+   "quote": "and then thinking about what to do oh, that might be a lot,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-f-s1-4",
+   "kind": "propose",
+   "move": "propose/track-efficiency",
+   "quote": "we should keep track of how much",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-f-s1-5",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "not necessarily an evaluation that included this R20 certificate",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-r-0",
+   "kind": "reply-mark",
+   "move": "defer/until",
+   "quote": "I will pass that to codex-10 as soon as its current job returns",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-5",
+     "quote": "I will pass that to codex-10 as soon as its current job returns",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "r20-cost-click",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-r-1",
+   "kind": "qualify",
+   "move": "qualify/defer-reason",
+   "quote": "codex-10 is mid-job on the census rewrite",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-5",
+     "quote": "codex-10 is mid-job on the census rewrite",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-r-2",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "The run record already carries what a cost row needs",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-4",
+     "quote": "The run record already carries what a cost row needs",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-r-3",
+   "kind": "propose",
+   "move": "propose/acceptance-plan",
+   "quote": "A ninth row, cost.",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-4",
+     "quote": "A ninth row, cost.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-66-f-s1-5",
+     "quote": "A ninth row, cost.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-r-4",
+   "kind": "qualify",
+   "move": "qualify/theory-reference",
+   "quote": "Parr et al. (§10.8) treat this as bounded rationality",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-4",
+     "quote": "Parr et al. (§10.8) treat this as bounded rationality",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-66-r-5",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "your words as the grant for one more cl",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-5",
+     "quote": "your words as the grant for one more cl",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-r-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-2-turn-66-r-6",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "still running",
+   "answers": [
+    {
+     "act": "claude-2-turn-66-f-s1-5",
+     "quote": "still running",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-66-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

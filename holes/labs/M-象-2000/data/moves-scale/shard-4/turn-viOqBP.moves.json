@@ -1,0 +1,165 @@
+{
+ "record": "turn-viOqBP",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-32-f-s1-0",
+   "kind": "propose",
+   "move": "propose/infrastructure-need",
+   "quote": "we would need hypergraphs for that \"jumping back in\" to work well",
+   "answers": [],
+   "scope": {
+    "opens": "hypergraph-for-resume",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-f-s2-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "the scopes in futon6 work are very rich",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-32-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/precedent",
+   "quote": "we had done a previous llm backed mining round on operator turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/distinction",
+   "quote": "the scopes themselves are closer to intents than memories",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "the store we already have is one: futon1b's memory edges are hyperedges",
+   "answers": [
+    {
+     "act": "claude-16-turn-32-f-s1-0",
+     "quote": "the store we already have is one: futon1b's memory edges are hyperedges",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "hypergraph-plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-r-1",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "the two things the Zai mining produces are hyperedges by nature",
+   "answers": [
+    {
+     "act": "claude-16-turn-32-f-s1-0",
+     "quote": "the two things the Zai mining produces are hyperedges by nature",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-32-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "Two things there, and they are both the right analogy",
+   "answers": [
+    {
+     "act": "claude-16-turn-32-f-s2-0",
+     "quote": "Two things there, and they are both the right analogy",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-32-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-r-3",
+   "kind": "qualify",
+   "move": "qualify/agree-with-placement",
+   "quote": "Agreed, and that settles where scopes live",
+   "answers": [
+    {
+     "act": "claude-16-turn-32-f-s4-0",
+     "quote": "Agreed, and that settles where scopes live",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-32-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-16-turn-32-r-4",
+   "kind": "explain",
+   "move": "explain/difference",
+   "quote": "The earlier round mined operator turns into the 26 象 patterns and stopped",
+   "answers": [
+    {
+     "act": "claude-16-turn-32-f-s3-0",
+     "quote": "The earlier round mined operator turns into the 26 象 patterns and stopped",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-32-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

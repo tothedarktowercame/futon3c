@@ -1,0 +1,169 @@
+{
+ "record": "turn-X3R1HJ",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-113-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "write it the project steps for codex-33 as an E-aif-cascade.md note",
+   "answers": [],
+   "scope": {
+    "opens": "e-aif-cascade-note",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-f-s2-0",
+   "kind": "propose",
+   "move": "propose/elaborate-cascade",
+   "quote": "maybe we should continue to elaborate the outer loop cas",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "for example, I've mentioned \"centrality\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-f-s4-0",
+   "kind": "propose",
+   "move": "propose/complexify",
+   "quote": "If these requirements are not in the outer loop cascade yet, we could complexify it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-f-s5-0",
+   "kind": "report",
+   "move": "report/assessment",
+   "quote": "it's not even possible to conceive of it as other than a cascade!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Written: `futon2/holes/E-aif-cascade.md`",
+   "answers": [
+    {
+     "act": "claude-2-turn-113-f-s1-0",
+     "quote": "Written: `futon2/holes/E-aif-cascade.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "excursion-running",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "Centrality is already in the loop twice",
+   "answers": [
+    {
+     "act": "claude-2-turn-113-f-s4-0",
+     "quote": "Centrality is already in the loop twice",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-113-f-s3-0",
+     "quote": "Centrality is already in the loop twice",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-113-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-113-r-2",
+   "kind": "qualify",
+   "move": "qualify/reassessment",
+   "quote": "Less so than it looks: the bag is not an arrangement the tokens ad",
+   "answers": [
+    {
+     "act": "claude-2-turn-113-f-s2-0",
+     "quote": "Less so than it looks: the bag is not an arrangement the tokens ad",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-113-f-s5-0",
+     "quote": "Less so than it looks: the bag is not an arrangement the tokens ad",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-113-r-0"
+   },
+   "confidence": "high",
+   "note": "the one-more-square point answering the cascade-only view sits past the acts truncation"
+  },
+  {
+   "act": "claude-2-turn-113-r-3",
+   "kind": "propose",
+   "move": "propose/process",
+   "quote": "codex-33 takes the next unchecked item in its section",
+   "answers": [
+    {
+     "act": "claude-2-turn-113-f-s1-0",
+     "quote": "codex-33 takes the next unchecked item in its section",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-113-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,205 @@
+{
+ "record": "turn-0OmtsL",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:40:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-29-f-s1-0",
+   "kind": "accept",
+   "move": "approve/plain",
+   "quote": "The diagram looks great now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-f-s1-1",
+   "kind": "clarify",
+   "move": "clarify/ask-role",
+   "quote": "I do somewhat wonder about the role that the gray boxes play now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-f-s2-0",
+   "kind": "explain",
+   "move": "explain/lean-grounding",
+   "quote": "If they aren't measureable in Lean",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-f-s2-1",
+   "kind": "explain",
+   "move": "explain/lean-is-model",
+   "quote": "given that Lean is the model they *should* be modelled there otherwise they are basically just vibes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-f-s3-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you message codex-10 with findings?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-f-s5-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "do these features exist or not?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-r-0",
+   "kind": "report",
+   "move": "report/answer",
+   "quote": "Here is what I found and sent",
+   "answers": [
+    {
+     "act": "claude-2-turn-29-f-s1-1",
+     "quote": "Grey in the figure means no registry equation binds",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-29-f-s5-0",
+     "quote": "Grey in the figure means no registry equation binds",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "grey-boxes-verdict",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-r-1",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "Every Lean declaration in the table is still in `Holes.lean` at the line cited",
+   "answers": [
+    {
+     "act": "claude-2-turn-29-f-s2-0",
+     "quote": "Every Lean declaration in the table is still in `Holes.lean` at the line cited",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-29-f-s2-1",
+     "quote": "Every Lean declaration in the table is still in `Holes.lean` at the line cited",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The Lean column rests on the three-week-old map plus my line check",
+   "answers": [
+    {
+     "act": "claude-2-turn-29-f-s5-0",
+     "quote": "The Lean column rests on the three-week-old map plus my line check",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-r-3",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "what codex-10 was asked",
+   "answers": [
+    {
+     "act": "claude-2-turn-29-f-s3-0",
+     "quote": "For each of the seven nodes, one of three verdicts",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "codex-10-verdict",
+    "closes": null,
+    "within": "claude-2-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-2-turn-29-r-4",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "The job is queued behind your own current turn with codex-10",
+   "answers": [
+    {
+     "act": "claude-2-turn-29-f-s3-0",
+     "quote": "The job is queued behind your own current turn with codex-10",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-29-r-3"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": [
+  "claude-2-turn-29-f-s4-0"
+ ]
+}
