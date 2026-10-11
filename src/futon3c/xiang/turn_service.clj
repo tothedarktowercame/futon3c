@@ -355,12 +355,14 @@
    reply and commit acts but no operator fragments: 小象's parse is
    provisional. Run off the caller's path (the caller schedules this);
    never fails the turn — a failure sets health detail only."
-  [svc id]
-  (try
+  ([svc id]
+   (compute-ports! svc id {}))
+  ([svc id {:keys [session-cap] :or {session-cap ports-session-cap}}]
+   (try
     (let [store (cfg svc :store)
           record (ts/read-record store id)
           settled (->> (ts/list-records store :session-id (:session_id record)
-                                        :limit ports-session-cap)
+                                        :limit session-cap)
                        (keep (fn [{rid :id r :record}]
                                (let [status (:analysis_status r)]
                                  ;; Bell turns (origin "agent") settle
@@ -393,8 +395,8 @@
                                                       (assoc (entry act) :since since))
                                                     (:still-open ports))
                                   :inferred (:inferred ports)})))
-    (catch Exception e
-      (set-health! svc nil (str id ": ports not computed (" (.getMessage e) ")")))))
+     (catch Exception e
+       (set-health! svc nil (str id ": ports not computed (" (.getMessage e) ")"))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Record (session-mode--record-turn via the store)

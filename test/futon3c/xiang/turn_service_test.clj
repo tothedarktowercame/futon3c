@@ -680,18 +680,31 @@
 (defn- seed-ports-store
   "A temp store holding the four real settled turns 391-394 (copied
    unmodified), each carrying its reply text."
-  []
+  ([] (seed-ports-store ports-fixture-ids))
+  ([fixture-ids]
   (let [store (temp-store)]
     (.mkdirs (io/file (:dir store)))
-    (doseq [fid ports-fixture-ids]
+    (doseq [fid fixture-ids]
       (io/copy (io/file ports-fixture-dir (str fid ".json"))
                (io/file (:dir store) (str fid ".json")))
       (io/copy (io/file ports-fixture-dir (str fid ".json.analysis.json"))
                (io/file (:dir store) (str fid ".json.analysis.json")))
       (ts/update-record! store fid
-                         #(assoc % :analysis_status "analyzed"
-                                 :reply_text (slurp (io/file ports-fixture-dir (str fid ".reply.txt"))))))
-    store))
+                         #(-> %
+                              (assoc :analysis_status "analyzed"
+                                     :reply_text (slurp (io/file ports-fixture-dir (str fid ".reply.txt"))))
+                              (dissoc :ports))))
+    store)))
+
+(deftest compute-ports-session-cap-is-call-scoped
+  (let [store (seed-ports-store (take 3 ports-fixture-ids))
+        h (harness {:store store})
+        oldest (first ports-fixture-ids)]
+    (svc/compute-ports! (:svc h) oldest {:session-cap 1})
+    (is (str/includes? (or (:detail (svc/health (:svc h))) "") "No acts for turn"))
+    (is (nil? (:ports (ts/read-record store oldest))))
+    (svc/compute-ports! (:svc h) oldest {:session-cap 10})
+    (is (some? (:ports (ts/read-record store oldest))))))
 
 (deftest settle-computes-ports
   (let [store (seed-ports-store)
