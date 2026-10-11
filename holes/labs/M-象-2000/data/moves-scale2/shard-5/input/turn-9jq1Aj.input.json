@@ -1,0 +1,103 @@
+{
+  "record": "turn-9jq1Aj",
+  "turn_id": "claude-14-turn-9",
+  "session_id": "75b00893-43cc-4172-917a-06a591193b20",
+  "created_at": "2026-10-10T16:33:18Z",
+  "agent_id": "claude-14",
+  "source_text": "are they making progress again?",
+  "fragments": [
+    {
+      "id": "claude-14-turn-9-f-s1-0",
+      "intent": "ask-action",
+      "text": "are they making progress again?"
+    }
+  ],
+  "reply_text": "㊥ (are they making progress) Yes, on lemmas, which is where the work now goes. No problem has closed yet. Both loops have run steadily since the 14:40 relaunch with no stops or faults, and rows pass review every few minutes.\n\n㊬ (since 14:40)\n- **Lemma DAG in use:** topo1 has 22 lemmas banked and 12 in backlog; topo2 has 6 banked and 11 in backlog. The strategy seats are adding lemmas to the DAG and splitting large ones, as intended.\n- **topo1:** working toward t93J03 through the Klein fundamental domain. It has built the Klein plane action, the classification of square orbits, a normal form for the Klein surface relation, and unit-interval integer classification. Each passed review. It's now on the boundary-orbit EqvGen step.\n- **topo2:** working toward t02A03's left-tube punctured model, through planar polar decomposition, its reconstruction, and an interpolated planar norm. Each passed review.\n- **Problem count:** still 63 closed, 153 placeholders.\n- **Quota:** Codex weekly use went from 37% to 44% in about 2 hours.\n\n㊟ (two things I'm watching)\n- **topo2's punctured-model row:** it has asked for a prerequisite (REVISE) three times, and each time a small piece got built and passed. That's progress, but if it keeps going the row needs a proper split in the DAG.\n- **How lemmas get elected:** only 3 of topo1's rows carry `:implements-lemma`, and none of topo2's. The seats are building lemmas through ordinary rows and reporting them as proved, which also banks them. So the ranking works, but elections aren't driven from it yet. I'll check after the next couple of checkpoints whether they start using `priorities`.",
+  "reply_acts": [
+    {
+      "id": "claude-14-turn-9-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊥",
+      "text": "(are they making progress) Yes, on lemmas, which is where the work now goes. No problem has closed yet. Both loops have run steadily since the 14:40 relaunch with no stops or faults, and rows pass review every few minutes."
+    },
+    {
+      "id": "claude-14-turn-9-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊬",
+      "text": "(since 14:40)\n- **Lemma DAG in use:** topo1 has 22 lemmas banked and 12 in backlog; topo2 has 6 banked and 11 in backlog. The strategy seats are adding lemmas to the DAG and splitting large ones, as intended.\n- **topo1:** working toward t93J03 through the Klein fundamental domain. It has built the Klein plane action, the classification of square orbits, a normal form for the Klein surface relation, and unit-interval integer classification. Each passed review. It's now on the boundary-orbit EqvGen step.\n- **topo2:** working toward t02A03's left-tube punctured model, through planar polar decomposition, its reconstruction, and an interpolated planar norm. Each passed review.\n- **Problem count:** still 63 closed, 153 placeholders.\n- **Quota:** Codex weekly use went from 37% to 44% in about 2 hours."
+    },
+    {
+      "id": "claude-14-turn-9-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊟",
+      "text": "(two things I'm watching)\n- **topo2's punctured-model row:** it has asked for a prerequisite (REVISE) three times, and each time a small piece got built and passed. That's progress, but if it keeps going the row needs a proper split in the DAG.\n- **How lemmas get elected:** only 3 of topo1's rows carry `:implements-lemma`, and none of topo2's. The seats are building lemmas through ordinary rows and reporting them as proved, which also banks them. So the ranking works, but elections aren't driven from it yet. I'll check after the next couple of checkpoints whether they start using `priorities`."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-14-turn-7-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊥",
+      "text": "(\"previous loops maintained a DAG\") You're right, and that's what's missing now. Until 09-28 the loops kept `TOPOLOGY-DEPENDENCY-DAG.md`. It's a tree of shared lemmas, each with a state (BANKED, UPTAKE, LOCAL-GO, API-GAP, FOUNDATION, SPEC-DEFECT), with edges down to the problems that need them, and elections worked from it. When `TOPOLOGY-ROUTES.md` replaced it for elections on 09-28, nobody kept the DAG up to date; its last edit was 09-10. Since then, a strategy checkpoint only sees per-problem routes and the previous checkpoint's receipt. Nothing persistent records which lemmas depend on which, or how many open problems each one would unblock. That fits what we saw today: chapter-sized rows, and a flat list of missing theorems that I added this afternoon."
+    },
+    {
+      "id": "claude-14-turn-7-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊭",
+      "text": "(how I'd restore it) Make the missing lemmas nodes in the ledger itself, rather than a separate file:\n1. **Backlog state:** a missing theorem becomes a ledger row in a new `:backlog` state. It carries its Lean type, `:depends-on` edges to other lemma rows, and `:consumer`/`:other-consumers` naming the problems it serves. The ledger already validates dependency edges, commits atomically with each transition, and merges concurrent writes, so the DAG gets all of that for free and can't drift from the ledger. A separate file would need its own commit path, and we've just seen what an extra uncommitted file does to the loops.\n2. **Filling it:** when build_step applies a receipt with `:missing-theorems`, it adds or updates backlog rows, matched by theorem name. `missing-theorems.edn` then goes away.\n3. **Priority:** a new command, `build_step.bb priorities`, ranks backlog lemmas by how many open problems they unblock, counted through the DAG, and by how close each problem then is to closing. Each strategy checkpoint runs it and promotes the top lemmas from `:backlog` to `:open`. Rule 0 (close what's nearly closed first) still applies.\n4. **Seeding:** start from today's nine named gaps, plus the API-GAP/FOUNDATION nodes still open in the old DAG that bear on current problems."
+    },
+    {
+      "id": "claude-14-turn-7-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "🈯",
+      "text": "(go?) This changes the loops' data model, which is why I'm asking before building it. It's about half a day's work: build_step, the validator, the strategy prompt and tests. Both loops keep running in the meantime. Shall I go ahead?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-14-turn-9",
+      "id": "claude-14-turn-9-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-10-10T16:33:18Z",
+      "record": "turn-9jq1Aj",
+      "end": 31,
+      "standing?": false,
+      "about": "the running work (two loops, per the agent's reply): the agent is to say whether they are making progress again",
+      "text": "are they making progress again?",
+      "to": "claude-14"
+    },
+    {
+      "port?": false,
+      "author": "claude-14",
+      "turn": "claude-14-turn-9",
+      "id": "claude-14-turn-9-r-1",
+      "kind": "verify",
+      "at": "2026-10-10T16:33:18Z",
+      "record": "turn-9jq1Aj",
+      "standing?": false,
+      "text": "(since 14:40)\n- **Lemma DAG in use:** topo1 has 22 lemmas banked and 12 in backlog; topo2 has 6 banked and 11 in backlo…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-14",
+      "turn": "claude-14-turn-9",
+      "id": "claude-14-turn-9-r-2",
+      "kind": "qualify",
+      "at": "2026-10-10T16:33:18Z",
+      "record": "turn-9jq1Aj",
+      "standing?": false,
+      "text": "(two things I'm watching)\n- **topo2's punctured-model row:** it has asked for a prerequisite (REVISE) three times, and …",
+      "to": "operator"
+    }
+  ]
+}

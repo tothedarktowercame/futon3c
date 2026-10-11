@@ -1,0 +1,155 @@
+{
+  "record": "turn-KsSUqR",
+  "turn_id": "claude-13-turn-3",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T00:12:23Z",
+  "agent_id": "claude-13",
+  "source_text": "The Lean version has to do with someone whose github handle is endomorphosis",
+  "fragments": [
+    {
+      "id": "claude-13-turn-3-f-s1-0",
+      "intent": "clarify",
+      "text": "The Lean version has to do with someone whose github handle is endomorphosis"
+    }
+  ],
+  "reply_text": "㊥ (gist) The Lean one is Benjamin Barber's stack, the speaker from 10-09. It turns out the \"TypeSafe AI / Jev\" link in your room log belongs to him too, so those two entries are one lead. I read his GitHub READMEs and added him to the mission. Nothing was run.\n\n㊢ (\"Lean-backed dispatches\") The Agency-like part is the \"agent supervisor\" inside `endomorphosis/ipfs_accelerate_py` (AGPL-3.0). It takes an objective and runs this chain: code and proof-gap analysis → todos → leases and isolated worktrees → LLM proposals → deterministic validation → merge receipts. His own wording is that LLM output is \"proposal material\". Nothing is admitted until a checker or prover signs off.\n\n**Problem it solves:** letting many coding agents work on one codebase without trusting any of them. FUTON's answer to the same problem is Agency dispatch, worktrees and gates. The difference is that our gates are mostly clj-kondo and tests, while his are prover receipts.\n\n㊢ (the Jev link) His `JevOps` repo describes itself as the \"TypeSafe / Jev kernel, split from Lean Refactor Arena\". In it, an autoencoder proposes Lean candidates, and only Lean/Lake can admit them. That's the \"autoencoders to produce Lean\" from his talk. The current application is source-locked US federal law, which is the \"Lean and law\" part. His `Mcp-Plus-Plus` is a spec for making multi-agent tool calls auditable: content-addressed contracts, an event DAG for replay, and deontic policy. That sits close to the evidence store and the audit offer.\n\n🈖 (why he stands out from the rest) Most of the log is harnesses, competing with Agency on orchestration. Barber's stack lines up with the thesis from the July probe: agents propose, a formal checker decides, and a receipt records it. The domain is law where ours is maths, and the plumbing is IPFS/P2P where ours is a hub plus XTDB. In the mission I've filed him as a probable \"talk to\", not as something to copy.\n\n🈸 (next) The mission is still uncommitted. Shall I commit it and start writing the one-line problem statements for the remaining ~40 entries?",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-3-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) The Lean one is Benjamin Barber's stack, the speaker from 10-09. It turns out the \"TypeSafe AI / Jev\" link in your room log belongs to him too, so those two entries are one lead. I read his GitHub READMEs and added him to the mission. Nothing was run."
+    },
+    {
+      "id": "claude-13-turn-3-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"Lean-backed dispatches\") The Agency-like part is the \"agent supervisor\" inside `endomorphosis/ipfs_accelerate_py` (AGPL-3.0). It takes an objective and runs this chain: code and proof-gap analysis → todos → leases and isolated worktrees → LLM proposals → deterministic validation → merge receipts. His own wording is that LLM output is \"proposal material\". Nothing is admitted until a checker or prover signs off."
+    },
+    {
+      "id": "claude-13-turn-3-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(the Jev link) His `JevOps` repo describes itself as the \"TypeSafe / Jev kernel, split from Lean Refactor Arena\". In it, an autoencoder proposes Lean candidates, and only Lean/Lake can admit them. That's the \"autoencoders to produce Lean\" from his talk. The current application is source-locked US federal law, which is the \"Lean and law\" part. His `Mcp-Plus-Plus` is a spec for making multi-agent tool calls auditable: content-addressed contracts, an event DAG for replay, and deontic policy. That sits close to the evidence store and the audit offer."
+    },
+    {
+      "id": "claude-13-turn-3-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(why he stands out from the rest) Most of the log is harnesses, competing with Agency on orchestration. Barber's stack lines up with the thesis from the July probe: agents propose, a formal checker decides, and a receipt records it. The domain is law where ours is maths, and the plumbing is IPFS/P2P where ours is a hub plus XTDB. In the mission I've filed him as a probable \"talk to\", not as something to copy."
+    },
+    {
+      "id": "claude-13-turn-3-r-4",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(next) The mission is still uncommitted. Shall I commit it and start writing the one-line problem statements for the remaining ~40 entries?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-2-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) I've rewritten the mission's purpose around your correction. The goal is now to learn what problem each company is solving, not to replicate anything. Each company is treated as a starting point for a keyword search, not as a sample of what's good."
+    },
+    {
+      "id": "claude-13-turn-2-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"we certainly don't need to \"replicate\"\") In `M-landscape-positioning.md`, your words are now the first entry in the operator-voice anchor. A new section, \"What the mission is for\", sets the output for each entry as one plain sentence: the problem it solves, written without its name. If FUTON solves the same problem differently, nothing needs doing. The earlier ignore/reuse/replicate rule is kept only as a secondary tag. I also added tension T6: the starting points all come from one week in SF. So the problems we find will be the ones being pitched there that week, unless the searches actually travel further out."
+    },
+    {
+      "id": "claude-13-turn-2-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"cotal.ai\") Here's the cotal.ai entry, phrased the new way. **Problem:** making agents from different vendors (Claude Code, OpenCode, Hermes) work as one team with a shared, durable record. **How:** agents find each other by name, channel or role and hand off work over peer-to-peer pub/sub (NATS + JetStream), with no central orchestrator. It's self-hosted and Apache-2.0. So it's very close to Agency's roster plus bells, but peer-to-peer where Agency runs through a hub on :7070. It's a different answer to a problem you already solve, and that's fine."
+    },
+    {
+      "id": "claude-13-turn-2-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈯",
+      "text": "(\"Lean-backed dispatches\") One quick search didn't turn up the Lean-backed one. Do you remember a name, or is it in the screenshot or the room? Also, can you drop the Cotal screenshot somewhere I can read it, or post it to the room?"
+    },
+    {
+      "id": "claude-13-turn-2-r-4",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊭",
+      "text": "(next) I suggest running MAP in this order:\n1. Write the one-sentence problem statement for every entry, about 45 of them.\n2. Group the statements by problem. My guess is the groups will be roughly: coordinating agents, supervising them, checking their output, agent memory, typed decisions, and formal verification.\n3. For each group, do one wider keyword search that isn't tied to SF, to find who else works on that problem."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-3",
+      "id": "claude-13-turn-3-f-s1-0",
+      "kind": "clarify",
+      "at": "2026-10-10T00:12:23Z",
+      "record": "turn-KsSUqR",
+      "end": 76,
+      "standing?": false,
+      "about": "identity of the Lean-related entry in the landscape notes",
+      "text": "The Lean version has to do with someone whose github handle is endomorphosis",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-3",
+      "id": "claude-13-turn-3-r-1",
+      "kind": "report",
+      "at": "2026-10-10T00:12:23Z",
+      "record": "turn-KsSUqR",
+      "standing?": false,
+      "text": "(\"Lean-backed dispatches\") The Agency-like part is the \"agent supervisor\" inside `endomorphosis/ipfs_accelerate_py` (AG…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-3",
+      "id": "claude-13-turn-3-r-2",
+      "kind": "report",
+      "at": "2026-10-10T00:12:23Z",
+      "record": "turn-KsSUqR",
+      "standing?": false,
+      "text": "(the Jev link) His `JevOps` repo describes itself as the \"TypeSafe / Jev kernel, split from Lean Refactor Arena\". In it…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-3",
+      "id": "claude-13-turn-3-r-3",
+      "kind": "explain",
+      "at": "2026-10-10T00:12:23Z",
+      "record": "turn-KsSUqR",
+      "standing?": false,
+      "text": "(why he stands out from the rest) Most of the log is harnesses, competing with Agency on orchestration. Barber's stack …",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-13",
+      "turn": "claude-13-turn-3",
+      "id": "claude-13-turn-3-r-4",
+      "kind": "ask-action",
+      "at": "2026-10-10T00:12:23Z",
+      "record": "turn-KsSUqR",
+      "standing?": false,
+      "text": "(next) The mission is still uncommitted. Shall I commit it and start writing the one-line problem statements for the re…",
+      "to": "operator"
+    }
+  ]
+}

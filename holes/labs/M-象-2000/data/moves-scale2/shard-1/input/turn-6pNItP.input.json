@@ -1,0 +1,130 @@
+{
+  "record": "turn-6pNItP",
+  "turn_id": "claude-17-turn-384",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-01T00:50:10Z",
+  "agent_id": "claude-17",
+  "source_text": "OK, maybe we should use that example as a \"negative example\" for priming future seats",
+  "fragments": [
+    {
+      "id": "claude-17-turn-384-f-s1-0",
+      "intent": "propose",
+      "text": "OK, maybe we should use that example as a \"negative example\" for priming future seats"
+    }
+  ],
+  "reply_text": "㊥ Gist: Done. Every new pack now carries two negative examples: the maturity-audit thread, with that pattern cited on every sentence, and the \"follow mode\" citation. Each says what was wrong with it. This is in commit 8d581679, and the pack tests pass.\n\n㊢ (what the pack now says)\n- **Topic, not move:** the thread was about a maturity audit, so a reader cited `maturity-evidence-audit` on every sentence, including \"Isn't actually defined.\" Those sentences report and ask; they do not make the audit move. A pattern belongs on the sentence that makes its move. Citing the same pattern twice in one turn needs a rationale naming a different IF clause.\n- **Shared word, not move:** \"keep displaying in follow mode, can you fix that\" was cited as `read-only-first-then-extend` because both use \"follow\" and \"display\". That pattern is about a new peripheral first only observing. You were asking for a bug fix.\n\n㊟ (what this doesn't cover) It only affects packs built from now on. The 418 repeated citations already published are unchanged. I'd leave them out of the pattern graph until we decide whether to move them to a turn-level context field or simply drop them. `citation_audit.py` will show whether the examples change behaviour: a seat's repeat rate should stay near the current Codex level of 2–4%.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-384-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "Gist: Done. Every new pack now carries two negative examples: the maturity-audit thread, with that pattern cited on every sentence, and the \"follow mode\" citation. Each says what was wrong with it. This is in commit 8d581679, and the pack tests pass."
+    },
+    {
+      "id": "claude-17-turn-384-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what the pack now says)\n- **Topic, not move:** the thread was about a maturity audit, so a reader cited `maturity-evidence-audit` on every sentence, including \"Isn't actually defined.\" Those sentences report and ask; they do not make the audit move. A pattern belongs on the sentence that makes its move. Citing the same pattern twice in one turn needs a rationale naming a different IF clause.\n- **Shared word, not move:** \"keep displaying in follow mode, can you fix that\" was cited as `read-only-first-then-extend` because both use \"follow\" and \"display\". That pattern is about a new peripheral first only observing. You were asking for a bug fix."
+    },
+    {
+      "id": "claude-17-turn-384-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(what this doesn't cover) It only affects packs built from now on. The 418 repeated citations already published are unchanged. I'd leave them out of the pattern graph until we decide whether to move them to a turn-level context field or simply drop them. `citation_audit.py` will show whether the examples change behaviour: a seat's repeat rate should stay near the current Codex level of 2–4%."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-383-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "Gist: I don't think batching is the cause. Today's loop also gave each reader ten consecutive turns from the same threads, and only 2–4% of its citations repeat. My suggestion is to keep context and record the repetition as what it is: the thread's context, not the move each sentence makes."
+    },
+    {
+      "id": "claude-17-turn-383-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(why not batching) The loop picks turns oldest first within a block, so a pack is usually a run of turns from one or two threads. That is exactly the setting where topic-level citing would show up. Even in hour 1, when Codex cited on most fragments, it did not repeat one pattern across a thread. The heavy repeats come from particular older Kimi readers. So the cause looks like the instructions and how those readers worked, not batching itself. Random assignment would also cost the session context that readers need for dictated fragments and replies like \"OK, do that\"."
+    },
+    {
+      "id": "claude-17-turn-383-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(what the repeats mean) When kimi-16 cites `maturity-evidence-audit` on every sentence of one conversation, it is not entirely wrong: the conversation is about a maturity audit. Its mistake is attaching that to each sentence as if each one made the pattern's move. \"Isn't actually defined.\" is a report made within that context, not an audit move. So the repeats hold real information, just at the wrong level."
+    },
+    {
+      "id": "claude-17-turn-383-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what I'd do)\n1. **A context field:** add an optional `context_patterns` field at the turn level. It records that the turn sits in the setting a pattern describes. Sentence citations stay for moves.\n2. **Moving the old repeats:** where a pattern repeats four or more times across a thread, move it from the sentences to the turn's `context_patterns`. Keep a sentence citation only where the rationale names something that sentence does. This is mechanical, and nothing is deleted.\n3. **A rule for new packs:** at most one citation of a given pattern per turn. A second citation needs a rationale that names a different IF clause. The validator can enforce this, and the loop's current repeat rate of 2–4% suggests it would rarely trigger.\n4. **For 小象:** context and move become two separate predictions. \"Which pattern's setting is this thread in\" is a classification over a whole conversation, and repetition helps it there. \"Which move is this sentence\" stays per sentence."
+    },
+    {
+      "id": "claude-17-turn-383-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I add `context_patterns` and move the 418 repeated citations into it?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-384",
+      "id": "claude-17-turn-384-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-01T00:50:10Z",
+      "record": "turn-6pNItP",
+      "end": 85,
+      "standing?": true,
+      "about": "the mis-citation example just discussed, repurposed as a labeled negative for future seats' priming",
+      "text": "OK, maybe we should use that example as a \"negative example\" for priming future seats",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-384",
+      "id": "claude-17-turn-384-r-1",
+      "kind": "report",
+      "at": "2026-10-01T00:50:10Z",
+      "record": "turn-6pNItP",
+      "standing?": false,
+      "text": "(what the pack now says)\n- **Topic, not move:** the thread was about a maturity audit, so a reader cited `maturity-evid…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-384",
+      "id": "claude-17-turn-384-r-2",
+      "kind": "qualify",
+      "at": "2026-10-01T00:50:10Z",
+      "record": "turn-6pNItP",
+      "standing?": false,
+      "text": "(what this doesn't cover) It only affects packs built from now on. The 418 repeated citations already published are unc…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-384",
+      "id": "claude-17-turn-384-c-8d581679",
+      "kind": "commit",
+      "at": "2026-10-01T00:50:10Z",
+      "record": "turn-6pNItP",
+      "repo": "futon3c",
+      "subject": "backfill_pack: two refused citations as negative examples in the pack",
+      "sha": "8d581679",
+      "standing?": false
+    }
+  ]
+}

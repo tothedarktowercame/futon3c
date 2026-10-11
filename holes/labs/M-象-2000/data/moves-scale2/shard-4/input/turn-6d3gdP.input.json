@@ -1,0 +1,176 @@
+{
+  "record": "turn-6d3gdP",
+  "turn_id": "claude-13-turn-5",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T00:42:33Z",
+  "agent_id": "claude-13",
+  "source_text": "Regarding the verbs, no, I'm afraid I can't find them, there were many slides shown during the week and I seem not to gave gotten a photo of the one I have in mind, I don't even know what talk it was from at this point!  But it isn't hugely important.  We could try to characterise the various things we've found with a few verbs each, since otherwise it is tremendously confusing with all the made-up non-English words.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-5-f-s1-0",
+      "intent": "report",
+      "text": "Regarding the verbs, no, I'm afraid I can't find them, there were many slides shown during the week and I seem not to gave gotten a photo of the one I have in mind, I don't even know what talk it was from at this point!"
+    },
+    {
+      "id": "claude-13-turn-5-f-s2-0",
+      "intent": "qualify",
+      "text": "But it isn't hugely important."
+    },
+    {
+      "id": "claude-13-turn-5-f-s3-0",
+      "intent": "propose",
+      "text": "We could try to characterise the various things we've found with a few verbs each, since otherwise it is tremendously confusing with all the made-up non-English words."
+    }
+  ],
+  "reply_text": "㊥ (gist) I've written the glossary you asked for: `futon0/holes/missions/landscape/GLOSS.md`, committed and pushed as `3523d3a`. Every name gets a few plain verbs for what it does, plus a flag for whether it's open and self-hostable. The entries are grouped by their main verb, so you can look a name up without opening the longer batch files.\n\n㊢ (the groups) There are 13 groups:\n- **coordinate:** Cotal, BAND, Kylon, Alinery, ipfs_accelerate\n- **orchestrate:** Smithers, RocketRide, Mastra, merlin, Hermes, …\n- **write code:** AdaL, Command Code, Agent Deck\n- **check:** Reticle, Zeroshot, Prelint, JevOps, …\n- **evaluate:** Judgment, Braintrust, aimock, …\n- **govern:** Agentic Fabriq, AIUC-1, Proof-of-Control, p2r, …\n- **decide:** TypeSafe, o-machine\n- **remember:** HydraDB, ZeroDB, ApertureData, Cognisee\n- **connect:** Composio, TinyFish, Apify, Querit, Glasser\n- **host:** Tenki, InstaCloud, SGLang\n- **economise:** Paritok\n- **show:** AG-UI, CopilotKit, Voiskey\n- **federate:** atproto, Germ\n\nThere's also a \"not tools\" list for Scribe, Hyperbound, Plank, Finch, tracn and Tatras.\n\n🈖 (why grouping by verb helps) Seen this way, the SF crowd is dense under *coordinate*, *orchestrate* and *check*, which is where Agency already works. It's thin under *decide* and *govern*. Those thin groups are where FUTON could pick up open ideas rather than meet competitors: typed decision models via SGLang + Clef, Proof-of-Control's checkpoint × verdict grid, and Reticle's four-way verdict. The group names are also a first answer to your network of intents. They're operations on work, as T7 predicted, and few of them overlap with the 象 speech-act marks.\n\n㊟ (the lost slide) Since the slide is gone, this list stands in for it. If a verb on it rings a bell later, it could help you work out which talk it was.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-5-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) I've written the glossary you asked for: `futon0/holes/missions/landscape/GLOSS.md`, committed and pushed as `3523d3a`. Every name gets a few plain verbs for what it does, plus a flag for whether it's open and self-hostable. The entries are grouped by their main verb, so you can look a name up without opening the longer batch files."
+    },
+    {
+      "id": "claude-13-turn-5-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(the groups) There are 13 groups:\n- **coordinate:** Cotal, BAND, Kylon, Alinery, ipfs_accelerate\n- **orchestrate:** Smithers, RocketRide, Mastra, merlin, Hermes, …\n- **write code:** AdaL, Command Code, Agent Deck\n- **check:** Reticle, Zeroshot, Prelint, JevOps, …\n- **evaluate:** Judgment, Braintrust, aimock, …\n- **govern:** Agentic Fabriq, AIUC-1, Proof-of-Control, p2r, …\n- **decide:** TypeSafe, o-machine\n- **remember:** HydraDB, ZeroDB, ApertureData, Cognisee\n- **connect:** Composio, TinyFish, Apify, Querit, Glasser\n- **host:** Tenki, InstaCloud, SGLang\n- **economise:** Paritok\n- **show:** AG-UI, CopilotKit, Voiskey\n- **federate:** atproto, Germ"
+    },
+    {
+      "id": "claude-13-turn-5-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(why grouping by verb helps) Seen this way, the SF crowd is dense under *coordinate*, *orchestrate* and *check*, which is where Agency already works. It's thin under *decide* and *govern*. Those thin groups are where FUTON could pick up open ideas rather than meet competitors: typed decision models via SGLang + Clef, Proof-of-Control's checkpoint × verdict grid, and Reticle's four-way verdict. The group names are also a first answer to your network of intents. They're operations on work, as T7 predicted, and few of them overlap with the 象 speech-act marks."
+    },
+    {
+      "id": "claude-13-turn-5-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(the lost slide) Since the slide is gone, this list stands in for it. If a verb on it rings a bell later, it could help you work out which talk it was."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-4-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"complete the rest of the investigation\") Three research agents are running in the background on about 54 entries, split into three batches:\n- harnesses and coordination\n- evals, verification and protocols\n- memory, models and kindred projects"
+    },
+    {
+      "id": "claude-13-turn-4-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(\"extend the xiaoxiang-insert-mark list of verbs\") I looked at `xiaoxiang-mark-keys`. There are 23 marks, and each is a *speech act* placed on a PBASE stage: report, propose, delegate, verify. The tools' verbs will mostly be *operations on work*: spawn, hand off, lease, admit, merge, replay. Only a few words appear on both lists, delegate and verify among them. Those shared verbs are where speech and work connect, so they'd be the links in the network of intents. I've written this up as T7. My suggestion is a separate operation vocabulary, linked to the marks only through the verbs the two lists share, so the `C-c ;` menu stays as it is. We can decide that once the verbs are collected."
+    },
+    {
+      "id": "claude-13-turn-4-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈯",
+      "text": "(\"an interesting list of verbs\") Do you remember which tool had that verb list? If not, the agents are copying out any explicit verb list they find, and I'll flag the richest ones when they report back."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-5",
+      "id": "claude-13-turn-5-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "end": 219,
+      "standing?": false,
+      "about": "the remembered verb-list slide from the talks",
+      "text": "Regarding the verbs, no, I'm afraid I can't find them, there were many slides shown during the week and I seem not to g…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 221,
+      "author": "operator",
+      "turn": "claude-13-turn-5",
+      "id": "claude-13-turn-5-f-s2-0",
+      "kind": "qualify",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "end": 251,
+      "standing?": false,
+      "about": "the weight of the lost source",
+      "text": "But it isn't hugely important.",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 253,
+      "author": "operator",
+      "turn": "claude-13-turn-5",
+      "id": "claude-13-turn-5-f-s3-0",
+      "kind": "propose",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "end": 420,
+      "standing?": true,
+      "about": "a few authored verbs per landscape entry as a glossary",
+      "text": "We could try to characterise the various things we've found with a few verbs each, since otherwise it is tremendously c…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-5",
+      "id": "claude-13-turn-5-r-1",
+      "kind": "report",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "standing?": false,
+      "text": "(the groups) There are 13 groups:\n- **coordinate:** Cotal, BAND, Kylon, Alinery, ipfs_accelerate\n- **orchestrate:** Smi…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-5",
+      "id": "claude-13-turn-5-r-2",
+      "kind": "explain",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "standing?": false,
+      "text": "(why grouping by verb helps) Seen this way, the SF crowd is dense under *coordinate*, *orchestrate* and *check*, which …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-5",
+      "id": "claude-13-turn-5-r-3",
+      "kind": "qualify",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "standing?": false,
+      "text": "(the lost slide) Since the slide is gone, this list stands in for it. If a verb on it rings a bell later, it could help…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-5",
+      "carries-out": "claude-13-turn-3-r-4",
+      "id": "claude-13-turn-5-c-3523d3ab",
+      "kind": "commit",
+      "at": "2026-10-10T00:42:33Z",
+      "record": "turn-6d3gdP",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning: GLOSS — every made-up name as a few plain verbs",
+      "sha": "3523d3ab",
+      "standing?": false
+    }
+  ]
+}

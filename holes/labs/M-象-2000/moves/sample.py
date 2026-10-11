@@ -19,6 +19,21 @@ def load_json(path):
         return json.load(handle)
 
 
+def act_base(record):
+    """The act-id base the kernel used for this record: <turn_id>, or
+    <turn_id>@<record-id> when the turn id was reused in the session (read
+    from the record's stored :acts when present)."""
+    turn_id = record.get("turn_id") or ""
+    for act in record.get("acts") or []:
+        aid = act.get("id") or ""
+        for sep in ("-f-", "-r-", "-c-", "-b-"):
+            if sep in aid:
+                base = aid.split(sep, 1)[0]
+                if base.startswith(turn_id):
+                    return base
+    return turn_id
+
+
 def fragments(record, record_path):
     analysis_path = Path(record.get("analysis_file") or
                          (str(record_path) + ".analysis.json"))
@@ -26,10 +41,11 @@ def fragments(record, record_path):
         return []
     analysis = load_json(analysis_path)
     out = []
+    base = act_base(record)
     for sentence in analysis.get("sentences", []):
         sid = sentence.get("id", "s0")
         for index, fragment in enumerate(sentence.get("fragments", [])):
-            item = {"id": f"{record.get('turn_id')}-f-{sid}-{index}",
+            item = {"id": f"{base}-f-{sid}-{index}",
                     "intent": fragment.get("intent"),
                     "text": fragment.get("text", "")}
             out.append(item)
@@ -54,7 +70,7 @@ def reply_marks(record):
             continue
         mark = paragraph[0]
         body = re.sub(r"^:\s*", "", paragraph[1:].lstrip())
-        result.append({"id": f"{record.get('turn_id')}-r-{index}",
+        result.append({"id": f"{act_base(record)}-r-{index}",
                        "kind": "reply-mark",
                        "author": record.get("agent_id") or "agent",
                        "mark": mark,

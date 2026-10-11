@@ -1,0 +1,237 @@
+{
+  "record": "turn-DwSflT",
+  "turn_id": "claude-17-turn-387",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-01T01:23:32Z",
+  "agent_id": "claude-17",
+  "source_text": "Yes please, both to the fast-mode + the pilot offer",
+  "fragments": [
+    {
+      "id": "claude-17-turn-387-f-s1-0",
+      "intent": "approve",
+      "text": "Yes please"
+    },
+    {
+      "id": "claude-17-turn-387-f-s1-1",
+      "intent": "clarify",
+      "text": "both to the fast-mode + the pilot offer"
+    }
+  ],
+  "reply_text": "Calibrating confidence first, so the preview only labels where it has earned it.I've added a fast-mode preview command to the scripts, and I'm now writing the small Emacs file that shows its marks in your REPL input. The pilot offer comes after that.Fast mode is done and committed. I'm now drafting the pilot offer so it fits the diagnostic and 小象 page already planned for the website, not as a separate pitch.㊥ Gist: Both are done. In the Claude REPL, C-c x p now marks your draft turn by fragment before you send it, and C-c x c corrects a mark and saves the correction for training. The pilot offer is drafted as an extra section of your existing rollout-audit offer, not as a separate pitch.\n\n㊢ (fast mode, futon3c commit 38ec87aa) To try it, load `futon3c/emacs/xiaoxiang-preview.el`. It is not loaded automatically.\n- **C-c x p:** marks each fragment of the input area with the mark from the reply key. It takes about 0.1 s.\n- **C-c x c:** corrects the fragment at point. Corrections go to `storage/operator-turns/xiaoxiang-corrections.jsonl` and are used when the model is next rebuilt, at most once a day. They are not used in the edition scores, so those stay comparable.\n- **C-c x k:** clears the marks. A mark also disappears when you edit its fragment.\n- **Which repls:** the keys are bound in the Claude REPL only, not the Codex, Kimi or Zai ones.\n\n㊩ (confidence) 小象's probabilities are badly overconfident: when it reports 90% or more, it is right only 44% of the time. So a mark is shown only for intents that cross-validation shows are right at least half the time they are predicted. Those are approve 0.84, continue 0.86, defer 0.78, disagree 0.68, ask-action 0.52 and clarify 0.50. Everything else shows \"?\", with the two likeliest intents in the tooltip, and those two include the right one 52% of the time.\n\n㊬ (what I checked)\n- A batch Emacs run on a sample draft marked \"OK, that looks right.\" as ㊣ and \"Can you rerun the check on block 3?\" as 🈸. \"Don't touch the July blocks though.\" got \"?\", with constrain as the first guess.\n- The parens check passes and the file byte-compiles without warnings.\n- A correction was recorded, and an intent not on the list was refused.\n- I haven't run it in your live Emacs.\n\n㊢ (pilot offer, `futon7/holes/E-xiaoxiang-pilot-offer.md`, futon7 commit b7357fa) Your rollout audit already covers the token cost. This adds the babysitting cost you raised: of the requests a team typed to its agents last month, how many were done, answered without being done, dropped, or asked twice.\n- **The pilot:** two weeks on their machine, ending in a report and a 小象 retrained on their turns, with fast mode, which they keep.\n- **Success test:** agreed in advance. The team accepts at least ten of the dropped or repeated requests we report as real.\n- **What it leads to:** repeat audits, fixes for what it finds, and a case write-up for the site.\n\n㊩ (gaps the draft states)\n- **Following a request to its outcome isn't built.** It has to be shown on a week of your turns first, as the sample report.\n- **Labelling in the pilot would rest on 象, not 小象,** whose accuracy on someone else's turns is unknown.\n- **The 小象 site page** (`site-draft/xiaoxiang.html`) already has a try-a-sentence box and a download. It needs one line pointing at the pilot and a contact address.\n\nThe draft also asks three questions for you: whether teams already feel this pain, whether the pilot is unpaid or a small fee with a refund condition, and whose turns get audited.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-387-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(fast mode, futon3c commit 38ec87aa) To try it, load `futon3c/emacs/xiaoxiang-preview.el`. It is not loaded automatically.\n- **C-c x p:** marks each fragment of the input area with the mark from the reply key. It takes about 0.1 s.\n- **C-c x c:** corrects the fragment at point. Corrections go to `storage/operator-turns/xiaoxiang-corrections.jsonl` and are used when the model is next rebuilt, at most once a day. They are not used in the edition scores, so those stay comparable.\n- **C-c x k:** clears the marks. A mark also disappears when you edit its fragment.\n- **Which repls:** the keys are bound in the Claude REPL only, not the Codex, Kimi or Zai ones."
+    },
+    {
+      "id": "claude-17-turn-387-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(confidence) 小象's probabilities are badly overconfident: when it reports 90% or more, it is right only 44% of the time. So a mark is shown only for intents that cross-validation shows are right at least half the time they are predicted. Those are approve 0.84, continue 0.86, defer 0.78, disagree 0.68, ask-action 0.52 and clarify 0.50. Everything else shows \"?\", with the two likeliest intents in the tooltip, and those two include the right one 52% of the time."
+    },
+    {
+      "id": "claude-17-turn-387-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(what I checked)\n- A batch Emacs run on a sample draft marked \"OK, that looks right.\" as ㊣ and \"Can you rerun the check on block 3?\" as 🈸. \"Don't touch the July blocks though.\" got \"?\", with constrain as the first guess.\n- The parens check passes and the file byte-compiles without warnings.\n- A correction was recorded, and an intent not on the list was refused.\n- I haven't run it in your live Emacs."
+    },
+    {
+      "id": "claude-17-turn-387-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(pilot offer, `futon7/holes/E-xiaoxiang-pilot-offer.md`, futon7 commit b7357fa) Your rollout audit already covers the token cost. This adds the babysitting cost you raised: of the requests a team typed to its agents last month, how many were done, answered without being done, dropped, or asked twice.\n- **The pilot:** two weeks on their machine, ending in a report and a 小象 retrained on their turns, with fast mode, which they keep.\n- **Success test:** agreed in advance. The team accepts at least ten of the dropped or repeated requests we report as real.\n- **What it leads to:** repeat audits, fixes for what it finds, and a case write-up for the site."
+    },
+    {
+      "id": "claude-17-turn-387-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(gaps the draft states)\n- **Following a request to its outcome isn't built.** It has to be shown on a week of your turns first, as the sample report.\n- **Labelling in the pilot would rest on 象, not 小象,** whose accuracy on someone else's turns is unknown.\n- **The 小象 site page** (`site-draft/xiaoxiang.html`) already has a try-a-sentence box and a download. It needs one line pointing at the pilot and a contact address."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-386-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "Gist: I agree that mining your old turns won't fill these gaps. They need people other than you using it. My suggestion: build the fast mode for you first, since your corrections are the best training data we could get. Then offer a pilot that audits one team's agent conversations, checking whether each request they made got an answer. Rob's work on the mfuton project might be the first outside data. Shall I start with the fast mode?"
+    },
+    {
+      "id": "claude-17-turn-386-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(what 小象 can do today) It splits a turn into fragments and gives each fragment one intent from 象's list, running locally and cheaply. It is weak on the labels. Edition 9 picks the right intent about 36% of the time, and macro F1 is 0.22. The fragment splitting looks much better: I read the last column of the edition table, 0.78, as agreement with 象's fragment boundaries, though I haven't confirmed that. So a fast mode is honest only if it shows the splits, and labels only the fragments it is confident about."
+    },
+    {
+      "id": "claude-17-turn-386-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(fast mode for you) Before a turn goes to 象, 小象 marks it in the REPL. For example, it might show that the turn holds two requests, one constraint and a question. You could spot that a question has no request attached, or that the instruction you care about is buried. When you correct a label, the correction is saved as training data. A hundred of your corrections would probably teach 小象 more than a thousand backfilled readings, because they are your judgement on your own words. It also gives you a working demo to show people."
+    },
+    {
+      "id": "claude-17-turn-386-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what it could be used for) Labelling intents on its own isn't worth much, because any large model can do it on request. What is less common:\n- It runs locally, so transcripts never leave the machine.\n- It works per fragment, not per message.\n- With the reply marks agents already use, it can pair each request with what the agent did about it."
+    },
+    {
+      "id": "claude-17-turn-386-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what we would sell) Not the model, but an audit with a tool left behind. The pilot, unpaid, would take two to four weeks:\n1. **Data:** a month of one team's agent transcripts, processed on their own machine.\n2. **Findings:** every request, and what became of it (done, answered, or dropped), with examples and their rates.\n3. **Tool:** a 小象 trained on their vocabulary, which they keep.\n4. **Success test, agreed in advance:** for example, \"finds at least ten dropped requests that you agree mattered.\""
+    },
+    {
+      "id": "claude-17-turn-386-r-5",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(website to first contact) A page where a visitor pastes a message and sees it marked up in the browser, with nothing uploaded. Under it is one line: \"Want this run over a month of your team's agent conversations? Here's the pilot.\" Then a contact form. The browser demo is a lot of work. Until it exists, a recorded example on your own turns would do."
+    },
+    {
+      "id": "claude-17-turn-386-r-6",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(what we don't know)\n- Does 象's intent list fit other people's speech, or only yours?\n- Does anyone already feel the pain of dropped requests, or do we have to show it to them?\n- Is the request-to-response pairing reliable outside our own marked replies?"
+    },
+    {
+      "id": "claude-17-turn-386-r-7",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I build the fast-mode preview in the REPL first, with corrections saved, and draft the one-page pilot offer alongside it?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-f-s1-0",
+      "kind": "accept",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "target": "claude-17-turn-386-r-7",
+      "end": 10,
+      "standing?": true,
+      "about": "the agent's two pending offers: the 小象 fast-mode preview and the pilot offer",
+      "text": "Yes please",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 12,
+      "author": "operator",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-f-s1-1",
+      "kind": "clarify",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "end": 51,
+      "standing?": false,
+      "about": "the scope of the approval: both offered items, not a choice between them",
+      "text": "both to the fast-mode + the pilot offer",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-r-0",
+      "kind": "report",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "standing?": false,
+      "text": "(fast mode, futon3c commit 38ec87aa) To try it, load `futon3c/emacs/xiaoxiang-preview.el`. It is not loaded automatical…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-r-1",
+      "kind": "report-problem",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "standing?": false,
+      "text": "(confidence) 小象's probabilities are badly overconfident: when it reports 90% or more, it is right only 44% of the time.…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-r-2",
+      "kind": "verify",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "standing?": false,
+      "text": "(what I checked)\n- A batch Emacs run on a sample draft marked \"OK, that looks right.\" as ㊣ and \"Can you rerun the check…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-r-3",
+      "kind": "report",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "standing?": false,
+      "text": "(pilot offer, `futon7/holes/E-xiaoxiang-pilot-offer.md`, futon7 commit b7357fa) Your rollout audit already covers the t…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "id": "claude-17-turn-387-r-4",
+      "kind": "report-problem",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "standing?": false,
+      "text": "(gaps the draft states)\n- **Following a request to its outcome isn't built.** It has to be shown on a week of your turn…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "carries-out": "claude-17-turn-386-r-7",
+      "id": "claude-17-turn-387-c-38ec87aa",
+      "kind": "commit",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "repo": "futon3c",
+      "subject": "小象 fast mode: mark a draft turn in the REPL before sending; record corrections",
+      "sha": "38ec87aa",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-387",
+      "carries-out": "claude-17-turn-386-r-7",
+      "id": "claude-17-turn-387-c-b7357fab",
+      "kind": "commit",
+      "at": "2026-10-01T01:23:32Z",
+      "record": "turn-DwSflT",
+      "repo": "futon7",
+      "subject": "E-xiaoxiang-pilot-offer: draft pilot (requests done / dropped / repeated) as a section of the rollout-audit offer",
+      "sha": "b7357fab",
+      "standing?": false
+    }
+  ]
+}

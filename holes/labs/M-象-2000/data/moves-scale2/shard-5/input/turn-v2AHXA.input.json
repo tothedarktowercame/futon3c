@@ -1,0 +1,134 @@
+{
+  "record": "turn-v2AHXA",
+  "turn_id": "claude-5-turn-2",
+  "session_id": "b52510f9-275c-44e1-a74f-243df3750115",
+  "created_at": "2026-10-04T21:49:26Z",
+  "agent_id": "claude-5",
+  "source_text": "🈯: yes, call it elephant.txt.  🈸: yes 1, and do it in a new git repo at /tmp/xiang-demo, with a commit.",
+  "fragments": [
+    {
+      "id": "claude-5-turn-2-f-s1-0",
+      "intent": "approve",
+      "text": "🈯: yes, call it elephant.txt."
+    },
+    {
+      "id": "claude-5-turn-2-f-s2-0",
+      "intent": "approve",
+      "text": "🈸: yes 1"
+    },
+    {
+      "id": "claude-5-turn-2-f-s2-1",
+      "intent": "ask-action",
+      "text": "do it in a new git repo at /tmp/xiang-demo, with a commit."
+    }
+  ],
+  "reply_text": "㊢ (\"do it in a new git repo at /tmp/xiang-demo, with a commit\") Done. I created a new repo at /tmp/xiang-demo with a single file, elephant.txt, containing the line `An elephant never forgets.`, and committed it as b400ad1.\n\n㊟ (commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos under ~/code, and this repo is in /tmp, so 象's rewind would not recognise b400ad1 as this turn's commit. If the demo needs that, I can link the hook into the repo and amend the commit.",
+  "reply_acts": [
+    {
+      "id": "claude-5-turn-2-r-0",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "㊢",
+      "text": "(\"do it in a new git repo at /tmp/xiang-demo, with a commit\") Done. I created a new repo at /tmp/xiang-demo with a single file, elephant.txt, containing the line `An elephant never forgets.`, and committed it as b400ad1."
+    },
+    {
+      "id": "claude-5-turn-2-r-1",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "㊟",
+      "text": "(commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos under ~/code, and this repo is in /tmp, so 象's rewind would not recognise b400ad1 as this turn's commit. If the demo needs that, I can link the hook into the repo and amend the commit."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-5-turn-1-r-0",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "🈯",
+      "text": "(\"called elephant.txt\") Should the demo file be called elephant.txt?"
+    },
+    {
+      "id": "claude-5-turn-1-r-1",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "🈸",
+      "text": "(\"the one line to write in it\") Which line should I write in it?\n1. `An elephant never forgets.`\n2. `象 reads this line.`"
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-5-turn-2",
+      "id": "claude-5-turn-2-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-04T21:49:26Z",
+      "record": "turn-v2AHXA",
+      "target": "claude-5-turn-1-r-0",
+      "end": 29,
+      "standing?": false,
+      "about": "claude-5's 🈯 question: whether the demo file should be called elephant.txt",
+      "text": "🈯: yes, call it elephant.txt.",
+      "to": "claude-5"
+    },
+    {
+      "port?": false,
+      "start": 31,
+      "author": "operator",
+      "option": 1,
+      "turn": "claude-5-turn-2",
+      "id": "claude-5-turn-2-f-s2-0",
+      "kind": "accept",
+      "at": "2026-10-04T21:49:26Z",
+      "record": "turn-v2AHXA",
+      "target": "claude-5-turn-1-r-1",
+      "end": 39,
+      "standing?": true,
+      "about": "claude-5's 🈸 question: which line to write — option 1 'An elephant never forgets.'",
+      "text": "🈸: yes 1",
+      "to": "claude-5"
+    },
+    {
+      "port?": true,
+      "start": 45,
+      "author": "operator",
+      "turn": "claude-5-turn-2",
+      "id": "claude-5-turn-2-f-s2-1",
+      "kind": "ask-action",
+      "at": "2026-10-04T21:49:26Z",
+      "record": "turn-v2AHXA",
+      "target": "claude-5-turn-1-r-1",
+      "end": 103,
+      "standing?": false,
+      "about": "execution of the approved demo: fresh git repo at /tmp/xiang-demo, evidence = a commit",
+      "text": "do it in a new git repo at /tmp/xiang-demo, with a commit.",
+      "to": "claude-5"
+    },
+    {
+      "port?": false,
+      "author": "claude-5",
+      "turn": "claude-5-turn-2",
+      "id": "claude-5-turn-2-r-0",
+      "kind": "report",
+      "at": "2026-10-04T21:49:26Z",
+      "record": "turn-v2AHXA",
+      "target": "claude-5-turn-2-f-s2-1",
+      "standing?": false,
+      "text": "(\"do it in a new git repo at /tmp/xiang-demo, with a commit\") Done. I created a new repo at /tmp/xiang-demo with a sing…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-5",
+      "turn": "claude-5-turn-2",
+      "id": "claude-5-turn-2-r-1",
+      "kind": "qualify",
+      "at": "2026-10-04T21:49:26Z",
+      "record": "turn-v2AHXA",
+      "standing?": false,
+      "text": "(commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos unde…",
+      "to": "operator"
+    }
+  ]
+}

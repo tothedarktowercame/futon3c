@@ -1,0 +1,142 @@
+{
+  "record": "turn-MW216j",
+  "turn_id": "claude-17-turn-52",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-05T06:41:38Z",
+  "agent_id": "claude-17",
+  "source_text": "I think that overly constrains \"unresolved\". it is better for us to try to parse it classically based on standard punctuation marks.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-52@turn-MW216j-f-s1-0",
+      "intent": "disagree",
+      "text": "I think that overly constrains \"unresolved\"."
+    },
+    {
+      "id": "claude-17-turn-52@turn-MW216j-f-s2-0",
+      "intent": "propose",
+      "text": "it is better for us to try to parse it classically based on standard punctuation marks."
+    }
+  ],
+  "reply_text": "I'll make the recorder find questions by their question marks, in any paragraph, whatever its mark. First, how it collects offers now:The \"yes\" was attached to the right reply: the one ending in the 🈳 paragraph. So reading questions by their punctuation fixes this case. Writing it now.The test didn't catch the code-span plant: the URL-like case doesn't exercise it. I'm adding a case that does, plus the HTTP agreement tests.Every exclusion is now pinned by a planted bug. Committing and reloading.㊥ (`\"parse it classically based on standard punctuation marks\"`) Done, in futon3c `6cb659f8`, and loaded into the running JVM. A paragraph in an agent's reply now counts as an ask whenever it contains a sentence ending in \"?\", whatever its mark. So claude-4's 🈳 paragraph would have been an offer, and your \"yes\" would have been recorded. I've left 🈳 meaning \"unresolved\" and haven't touched the proforma.\n\n㊢ (what counts as a question) A \"?\" counts if a space or the end of the paragraph follows it. These don't count:\n- a \"?\" in a URL;\n- a \"?\" inside the bracketed target;\n- a \"?\" in inline code or a fenced code block;\n- a question in quotation marks, such as one of yours being quoted.\n\nThe stop C question, which claude-4 first asked inside a ㊥ gist paragraph, counts now as well. Each asking paragraph is one option, as before. So claude-4's paragraph with two questions is one option, and a bare \"yes\" accepts all of it. That is how you meant it, and how claude-4 acted.\n\n㊬ (what I checked)\n- **Tests:** a test built from claude-4's actual paragraph, and one built from the stop C gist. The agreement, agreement-HTTP and turn-record tests together give 42 tests, 0 failures.\n- **Planted bugs:** I broke each part in turn: the rule itself, the code-span exclusion and the bracket exclusion. Each was caught. The first two plants weren't caught at first, so I added test cases until they were.\n- **After the reload:** the routes probe answered 200.\n\n㊟ (a cost) A rhetorical question in an explanation now makes an offer too. Two asking paragraphs mean that a bare \"yes\" comes back as ambiguous, and the agent asks which you meant. That seems the right way to fail. It doesn't record anything wrongly.\n\n🈳 (still open) The two earlier questions are still waiting: backfilling ports for yesterday's records, and starting the discovery pass for recording bells as turns.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-52@turn-MW216j-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what counts as a question) A \"?\" counts if a space or the end of the paragraph follows it. These don't count:\n- a \"?\" in a URL;\n- a \"?\" inside the bracketed target;\n- a \"?\" in inline code or a fenced code block;\n- a question in quotation marks, such as one of yours being quoted."
+    },
+    {
+      "id": "claude-17-turn-52@turn-MW216j-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(what I checked)\n- **Tests:** a test built from claude-4's actual paragraph, and one built from the stop C gist. The agreement, agreement-HTTP and turn-record tests together give 42 tests, 0 failures.\n- **Planted bugs:** I broke each part in turn: the rule itself, the code-span exclusion and the bracket exclusion. Each was caught. The first two plants weren't caught at first, so I added test cases until they were.\n- **After the reload:** the routes probe answered 200."
+    },
+    {
+      "id": "claude-17-turn-52@turn-MW216j-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(a cost) A rhetorical question in an explanation now makes an offer too. Two asking paragraphs mean that a bare \"yes\" comes back as ambiguous, and the agent asks which you meant. That seems the right way to fail. It doesn't record anything wrongly."
+    },
+    {
+      "id": "claude-17-turn-52@turn-MW216j-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈳",
+      "text": "(still open) The two earlier questions are still waiting: backfilling ports for yesterday's records, and starting the discovery pass for recording bells as turns."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-51-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊣",
+      "text": "(`\"still waiting is a reminder about an earlier ask\"`) I agree that's what 🈳 means here. A reminder should link to the ask it repeats, and the agreement belongs to that original ask. Here, though, there was no marked ask for the reminders to point back to. So the recorder had nothing to agree to, and 象 had nothing to keep open across those eleven repeats."
+    },
+    {
+      "id": "claude-17-turn-51-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(what that shows) Most of the failure is at the point where the ask is made. claude-4 kept the promise (\"I'll ask you before pushing\") in substance: it did ask before pushing. But the moment a promise turns into a question is the one moment that needs a 🈸, and it came out as 🈳. Stop C went the same way: the question sat inside a gist, then went straight to 🈳."
+    },
+    {
+      "id": "claude-17-turn-51-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I make both changes?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-52",
+      "id": "claude-17-turn-52@turn-MW216j-f-s1-0",
+      "kind": "disagree",
+      "at": "2026-10-05T06:41:38Z",
+      "record": "turn-MW216j",
+      "end": 44,
+      "standing?": false,
+      "about": "the current criterion for marking a sentence \"unresolved\"",
+      "text": "I think that overly constrains \"unresolved\".",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 45,
+      "author": "operator",
+      "turn": "claude-17-turn-52",
+      "id": "claude-17-turn-52@turn-MW216j-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-05T06:41:38Z",
+      "record": "turn-MW216j",
+      "end": 132,
+      "standing?": true,
+      "about": "sentence parsing rule",
+      "text": "it is better for us to try to parse it classically based on standard punctuation marks.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-52",
+      "id": "claude-17-turn-52@turn-MW216j-r-0",
+      "kind": "report",
+      "at": "2026-10-05T06:41:38Z",
+      "record": "turn-MW216j",
+      "standing?": false,
+      "text": "(what counts as a question) A \"?\" counts if a space or the end of the paragraph follows it. These don't count:\n- a \"?\" …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-52",
+      "id": "claude-17-turn-52@turn-MW216j-r-1",
+      "kind": "verify",
+      "at": "2026-10-05T06:41:38Z",
+      "record": "turn-MW216j",
+      "standing?": false,
+      "text": "(what I checked)\n- **Tests:** a test built from claude-4's actual paragraph, and one built from the stop C gist. The ag…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-52",
+      "id": "claude-17-turn-52@turn-MW216j-r-2",
+      "kind": "qualify",
+      "at": "2026-10-05T06:41:38Z",
+      "record": "turn-MW216j",
+      "standing?": false,
+      "text": "(a cost) A rhetorical question in an explanation now makes an offer too. Two asking paragraphs mean that a bare \"yes\" c…",
+      "to": "operator"
+    }
+  ]
+}

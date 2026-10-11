@@ -1,0 +1,182 @@
+{
+  "record": "turn-ArDfbO",
+  "turn_id": "claude-17-turn-27",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-04T02:34:54Z",
+  "agent_id": "claude-17",
+  "source_text": "🈲 I also want to send a turn with a long quote in it (in the codex-10 REPL).  I will ensure that I use the triple-greater-than form for that quote but I want to be very sure that no agent (other than codex-10) will annotate that.  On feed.html it should be given visible blockquote styling and the quote text should not appear in the 象 annotation execpt as QUOTE (because 象 should not be passed that text).  I won't send the turn until you assure me this is OK.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-27-f-s1-0",
+      "intent": "report",
+      "text": "🈲 I also want to send a turn with a long quote in it (in the codex-10 REPL)."
+    },
+    {
+      "id": "claude-17-turn-27-f-s2-0",
+      "intent": "constrain",
+      "text": "I will ensure that I use the triple-greater-than form for that quote but I want to be very sure that no agent (other than codex-10) will annotate that."
+    },
+    {
+      "id": "claude-17-turn-27-f-s3-0",
+      "intent": "constrain",
+      "text": "On feed.html it should be given visible blockquote styling and the quote text should not appear in the 象 annotation execpt as QUOTE (because 象 should not be passed that text)."
+    },
+    {
+      "id": "claude-17-turn-27-f-s4-0",
+      "intent": "ask-action",
+      "text": "I won't send the turn until you assure me this is OK."
+    }
+  ],
+  "reply_text": "Now moving the quote text out of everything 象 can read.㊥ (your quoted turn) It's OK to send now, but it wasn't until a few minutes ago. 象 *was* being passed quoted material. Its brief points it at the turn record file, and the record kept every `>>>` block twice: in a `quotes` field and inside `original_text`. Three past records with quotes show this. I've fixed it (`25d321c5`, live in the JVM and your Emacs). The record 象 reads now carries only `QUOTE` and a count.\n\n㊬ (what I checked)\n- **The loaded code, end to end.** I recorded a quoted turn through it, using a temporary store rather than yours. The record file doesn't contain the quote text; the quote is only in a new sidecar, `RECORD.quotes.json`, which no brief names.\n- **Tests.** A new test checks that neither the record file nor the 象 brief contains the quote or the sidecar's name. The same check covers the Emacs recorder (codex-10 uses the JVM recorder, but the Emacs one had the same leak). The Emacs test fails against the previous version and passes now.\n\n㊢ (each reader of your turn)\n- **codex-10:** gets your turn exactly as typed.\n- **小象's draft:** runs over the text with `QUOTE` in place of the block.\n- **象:** reads the record, which has `QUOTE`. Fixed as above.\n- **大象 and the HUD:** they read 象's reading and agent replies, not your quote.\n- **feed.html:** shows the block in its quoted style (shaded background, left rule, fixed-width font). The feed builder now takes the text from the sidecar.\n\n㊟ (one thing outside this) Agent-chat's ordinary evidence row for your turn, the transcript entry written when you send, still stores what you typed, quote included, in futon1b. Nothing annotates that row, but it's there. If you'd rather the quote stayed out of futon1b too, that's a change in `agent-chat.el` I can make. You don't need to wait for it.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-27-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(what I checked)\n- **The loaded code, end to end.** I recorded a quoted turn through it, using a temporary store rather than yours. The record file doesn't contain the quote text; the quote is only in a new sidecar, `RECORD.quotes.json`, which no brief names.\n- **Tests.** A new test checks that neither the record file nor the 象 brief contains the quote or the sidecar's name. The same check covers the Emacs recorder (codex-10 uses the JVM recorder, but the Emacs one had the same leak). The Emacs test fails against the previous version and passes now."
+    },
+    {
+      "id": "claude-17-turn-27-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(each reader of your turn)\n- **codex-10:** gets your turn exactly as typed.\n- **小象's draft:** runs over the text with `QUOTE` in place of the block.\n- **象:** reads the record, which has `QUOTE`. Fixed as above.\n- **大象 and the HUD:** they read 象's reading and agent replies, not your quote.\n- **feed.html:** shows the block in its quoted style (shaded background, left rule, fixed-width font). The feed builder now takes the text from the sidecar."
+    },
+    {
+      "id": "claude-17-turn-27-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(one thing outside this) Agent-chat's ordinary evidence row for your turn, the transcript entry written when you send, still stores what you typed, quote included, in futon1b. Nothing annotates that row, but it's there. If you'd rather the quote stayed out of futon1b too, that's a change in `agent-chat.el` I can make. You don't need to wait for it."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-26-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(autorunner lighter, reply targets) Both are done.\n- **Autorunner:** codex-18 and codex-19 were already skipping 象 for the autorunner prompt; their recent \"OK please continue\" turns are all recorded \"not-requested\". The lighter stayed red only because it showed the global policy. It's now grey while that buffer's autorunner is on (`a265057f`).\n- **Reply targets:** done your way (`77ed39ff`). `<mark>:` points at the agent paragraph you're answering. A mark without the colon is your own intent and is kept only as a hint; 象 still decides your intent."
+    },
+    {
+      "id": "claude-17-turn-26-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(autorunner, checked live) The codex-19 lighter now reads plain grey \"象\". Its tooltip says the autorunner's prompt is captured but not sent, that anything else you type is still read, and that `stop-codex-autorunner` resumes reading."
+    },
+    {
+      "id": "claude-17-turn-26-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(reply targets, how it works)\n- **Candidates.** The JVM now keeps each agent's last few ended turns, REPL turns and bellback jobs alike, each tagged with what it answered.\n- **Resolving.** When your turn is recorded, each `<mark>:` paragraph is matched against the agent's turns since your previous one, newest first. It takes the newest turn that has a paragraph opening with that mark. The record gets `reply_to`, saying which turn and paragraph matched and which rule was used: mark match, newest as a fallback, or none. Your colon-free marks go in as declared intents.\n- **Tests.** Your last turn is the test case: your `🈖:` and `🈸:` resolve to my nudge-answering turn, not the reply to you before it, and your `㊩` is recorded as your own intent. Further tests cover a mark found only in an older turn, the newest-turn fallback, an unmarked turn, and a failing source never failing the record. All pass."
+    },
+    {
+      "id": "claude-17-turn-26-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(what's live, what isn't)\n- **Live:** loaded into the JVM. The turn service was rebuilt with no readings outstanding, and the route rebuild took a moment.\n- **Starts from now:** the candidate list was empty at reload, so this reply is the first turn it captures. Your next turn is the first that gets a `reply_to`.\n- **Not yet shown:** the stepper doesn't display `reply_to` yet.\n- **Not started:** frame numbers in the bar."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "end": 76,
+      "standing?": false,
+      "about": "the turn Joe plans to send: it will carry a long quote, in the codex-10 REPL",
+      "text": "🈲 I also want to send a turn with a long quote in it (in the codex-10 REPL).",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 78,
+      "author": "operator",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-f-s2-0",
+      "kind": "constrain",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "end": 229,
+      "standing?": true,
+      "about": "who may annotate the quote: no agent other than codex-10, and the quote will be in the triple->>> form",
+      "text": "I will ensure that I use the triple-greater-than form for that quote but I want to be very sure that no agent (other th…",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 231,
+      "author": "operator",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-f-s3-0",
+      "kind": "constrain",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "end": 406,
+      "standing?": true,
+      "about": "how the quote shows: blockquote styling on feed.html, and in the 象 annotation only as QUOTE, because 象 should not be passed the text",
+      "text": "On feed.html it should be given visible blockquote styling and the quote text should not appear in the 象 annotation exe…",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 408,
+      "author": "operator",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-f-s4-0",
+      "kind": "ask-action",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "end": 461,
+      "standing?": false,
+      "about": "the agent: it is to assure Joe that the quote handling is OK before he sends",
+      "text": "I won't send the turn until you assure me this is OK.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-r-0",
+      "kind": "verify",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "standing?": false,
+      "text": "(what I checked)\n- **The loaded code, end to end.** I recorded a quoted turn through it, using a temporary store rather…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-r-1",
+      "kind": "report",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "standing?": false,
+      "text": "(each reader of your turn)\n- **codex-10:** gets your turn exactly as typed.\n- **小象's draft:** runs over the text with `…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-27",
+      "id": "claude-17-turn-27-r-2",
+      "kind": "qualify",
+      "at": "2026-10-04T02:34:54Z",
+      "record": "turn-ArDfbO",
+      "standing?": false,
+      "text": "(one thing outside this) Agent-chat's ordinary evidence row for your turn, the transcript entry written when you send, …",
+      "to": "operator"
+    }
+  ]
+}

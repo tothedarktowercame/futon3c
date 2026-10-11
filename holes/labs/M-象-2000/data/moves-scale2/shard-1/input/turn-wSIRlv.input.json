@@ -1,0 +1,148 @@
+{
+  "record": "turn-wSIRlv",
+  "turn_id": "claude-17-turn-542",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-03T23:57:56Z",
+  "agent_id": "claude-17",
+  "source_text": "㊬ session-mode-turn-recorder configured, testing again",
+  "fragments": [
+    {
+      "id": "claude-17-turn-542-f-s1-0",
+      "intent": "verify",
+      "text": "㊬ session-mode-turn-recorder configured, testing again"
+    }
+  ],
+  "reply_text": "㊥ (your second test) Your turn reached the JVM and became evidence (`e-xiang-turn-turn-wSIRlv`). But Emacs reported it as not recorded, because the JVM took 11 seconds to answer and Emacs gives up after 10. I've fixed that. I've also pointed your buffer at this turn's record, so when this reply ends the reading should come back through the JVM and the stepper should update.\n\n㊩ (what went wrong) Two separate problems:\n- **The timeout.** The JVM wrote the record at 23:57:56, then ran the 小象 draft inside the same request until 23:58:07. Emacs warned \"Turn structure was NOT recorded … no answer\" and never stored the record's path.\n- **The wrong turn.** Your buffer was still pointing at the previous turn's record (`turn-SuuilW`, already read). Without correcting that, the end of this reply would have reported \"happened\" for the wrong turn.\n\n㊢ (fix, `b6cd9da4`) A turn that isn't sent to 象 straight away is now drafted in the background. Dispatch drafts any record that still has no draft, so the routine-turn check still sees one. The test suite is 27 tests, 0 failures, including a new test that the record request returns before the draft runs. I reloaded the JVM and pushed. For this turn, I set your buffer to `turn-wSIRlv.json` by hand.\n\n㊬ (your first test) The file-path turn worked end to end: `turn-SuuilW` was analysed and its reading landed.\n\n㊟ (what to watch now) When this reply ends:\n1. Emacs posts \"happened\" for `turn-wSIRlv`, and the JVM sends it to a 象 seat.\n2. When the reading lands, a second evidence entry `e-xiang-reading-turn-wSIRlv` should appear, and the stepper should refresh.\n\nYour next turn is the first real test of the fixed send, and it should not show the \"NOT recorded\" warning.\n\n🈳 (still open) Neither path records the operator turn's evidence id: the record's `evidence_id` is empty on both. The operator evidence row is only acknowledged after the turn is sent (\"queued for durable retry\"), so at recording time there is nothing to cite yet. The record could be updated when the acknowledgement arrives. I'll leave that until after this test.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-542-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(your second test) Your turn reached the JVM and became evidence (`e-xiang-turn-turn-wSIRlv`). But Emacs reported it as not recorded, because the JVM took 11 seconds to answer and Emacs gives up after 10. I've fixed that. I've also pointed your buffer at this turn's record, so when this reply ends the reading should come back through the JVM and the stepper should update."
+    },
+    {
+      "id": "claude-17-turn-542-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(what went wrong) Two separate problems:\n- **The timeout.** The JVM wrote the record at 23:57:56, then ran the 小象 draft inside the same request until 23:58:07. Emacs warned \"Turn structure was NOT recorded … no answer\" and never stored the record's path.\n- **The wrong turn.** Your buffer was still pointing at the previous turn's record (`turn-SuuilW`, already read). Without correcting that, the end of this reply would have reported \"happened\" for the wrong turn."
+    },
+    {
+      "id": "claude-17-turn-542-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(fix, `b6cd9da4`) A turn that isn't sent to 象 straight away is now drafted in the background. Dispatch drafts any record that still has no draft, so the routine-turn check still sees one. The test suite is 27 tests, 0 failures, including a new test that the record request returns before the draft runs. I reloaded the JVM and pushed. For this turn, I set your buffer to `turn-wSIRlv.json` by hand."
+    },
+    {
+      "id": "claude-17-turn-542-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(your first test) The file-path turn worked end to end: `turn-SuuilW` was analysed and its reading landed."
+    },
+    {
+      "id": "claude-17-turn-542-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(what to watch now) When this reply ends:\n1. Emacs posts \"happened\" for `turn-wSIRlv`, and the JVM sends it to a 象 seat.\n2. When the reading lands, a second evidence entry `e-xiang-reading-turn-wSIRlv` should appear, and the stepper should refresh."
+    },
+    {
+      "id": "claude-17-turn-542-r-5",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈳",
+      "text": "(still open) Neither path records the operator turn's evidence id: the record's `evidence_id` is empty on both. The operator evidence row is only acknowledged after the turn is sent (\"queued for durable retry\"), so at recording time there is nothing to cite yet. The record could be updated when the acknowledgement arrives. I'll leave that until after this test."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-541-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(your test turn) This turn is testing the old file-based path, not the new JVM one. Your Emacs hadn't loaded the step-1 code yet, so the turn was recorded the old way, as `turn-SuuilW.json`, marked \"requested\". It will be sent to 象 when this reply ends, and the stepper should then go to 292 once the reading lands. That's still a useful check of the ordinary path. To test the JVM path, evaluate `(setq session-mode-turn-recorder 'jvm)` and send one more turn."
+    },
+    {
+      "id": "claude-17-turn-541-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what I did) I loaded the current `session-turn-analysis.el` into your Emacs. The recorder is still `files`, so nothing changes until you switch it. 象 is on, with policy `all`."
+    },
+    {
+      "id": "claude-17-turn-541-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(watching the JVM test) For the turn after you switch, there are three things to check:\n1. It shows up in evidence under the `xiang-turn` tag: `curl -s 'localhost:7070/api/alpha/evidence?tag=xiang-turn&limit=5'`. There are none so far, which is expected, since nothing has gone through the JVM yet.\n2. When my reply ends, `/api/alpha/xiang/health` shows it outstanding.\n3. When the reading lands, the stepper refreshes on its own and a second evidence entry appears, the reading, linked to the turn record."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-542",
+      "id": "claude-17-turn-542-f-s1-0",
+      "kind": "verify",
+      "at": "2026-10-03T23:57:56Z",
+      "record": "turn-wSIRlv",
+      "end": 54,
+      "standing?": false,
+      "about": "the reconfigured session-mode-turn-recorder path, probed by this turn",
+      "text": "㊬ session-mode-turn-recorder configured, testing again",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-542",
+      "id": "claude-17-turn-542-r-1",
+      "kind": "report-problem",
+      "at": "2026-10-03T23:57:56Z",
+      "record": "turn-wSIRlv",
+      "standing?": false,
+      "text": "(what went wrong) Two separate problems:\n- **The timeout.** The JVM wrote the record at 23:57:56, then ran the 小象 draft…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-542",
+      "id": "claude-17-turn-542-r-2",
+      "kind": "report",
+      "at": "2026-10-03T23:57:56Z",
+      "record": "turn-wSIRlv",
+      "standing?": false,
+      "text": "(fix, `b6cd9da4`) A turn that isn't sent to 象 straight away is now drafted in the background. Dispatch drafts any recor…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-542",
+      "id": "claude-17-turn-542-r-3",
+      "kind": "verify",
+      "at": "2026-10-03T23:57:56Z",
+      "record": "turn-wSIRlv",
+      "standing?": false,
+      "text": "(your first test) The file-path turn worked end to end: `turn-SuuilW` was analysed and its reading landed.",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-542",
+      "id": "claude-17-turn-542-r-4",
+      "kind": "qualify",
+      "at": "2026-10-03T23:57:56Z",
+      "record": "turn-wSIRlv",
+      "standing?": false,
+      "text": "(what to watch now) When this reply ends:\n1. Emacs posts \"happened\" for `turn-wSIRlv`, and the JVM sends it to a 象 seat…",
+      "to": "operator"
+    }
+  ]
+}

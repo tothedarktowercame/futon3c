@@ -41,7 +41,9 @@ def validate(path):
     current = {}
     # Authority: the record's stored acts, the reading's fragments, and the
     # reply-paragraph acts as the kernel numbers them (sample.py:reply_marks).
-    for act in source.get("acts", []) + source.get("fragments", []) + source.get("reply_acts", []):
+    # reply_acts carry the full paragraph text; the record's stored :acts carry
+    # a 120-character prefix, so reply_acts take precedence for -r- ids.
+    for act in source.get("reply_acts", []) + source.get("acts", []) + source.get("fragments", []):
         if act.get("id"):
             current.setdefault(act["id"], act)
     previous = {act["id"]: act for act in source.get("previous_reply_acts", [])}

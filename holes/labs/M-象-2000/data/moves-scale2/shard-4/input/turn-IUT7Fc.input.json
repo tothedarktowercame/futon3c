@@ -1,0 +1,136 @@
+{
+  "record": "turn-IUT7Fc",
+  "turn_id": "claude-13-turn-19",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T01:58:33Z",
+  "agent_id": "claude-13",
+  "source_text": "Well, Arxiv mining is kind of Cognisee just with papers rather than interviews as inputs.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-19-f-s1-0",
+      "intent": "propose",
+      "text": "Well, Arxiv mining is kind of Cognisee just with papers rather than interviews as inputs."
+    }
+  ],
+  "reply_text": "㊣ (\"kind of Cognisee just with papers\") Agreed. I've added futon6's arXiv mining as FUTON's counterpart in the Cognisee row (row 20: *collect · know-how, with attribution*), committed as `3af0ee6`.\n\n🈖 (where they differ) The difference is the input. Interviews capture what was never written down. Papers are written down, and citations already handle attribution. A paper still leaves some of its argument unstated, though: why a given step, which known trick is being used. That unstated part is tacit in Cognisee's sense, and it's the layer futon6's argument mining goes after. So the arXiv work already fits this survey. It's the same intent as Cognisee's, applied to an input that's much easier to get in bulk.\n\n㊟ (the people) This also makes Cognisee more than a passing link. They're the one company in the kernel aiming at the same intent from the interview side. Earlier I'd marked them \"talk to\". With this overlap, a conversation with Olaf Witkowski has a concrete topic: papers versus interviews as two routes to the same attributed know-how.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-19-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊣",
+      "text": "(\"kind of Cognisee just with papers\") Agreed. I've added futon6's arXiv mining as FUTON's counterpart in the Cognisee row (row 20: *collect · know-how, with attribution*), committed as `3af0ee6`."
+    },
+    {
+      "id": "claude-13-turn-19-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(where they differ) The difference is the input. Interviews capture what was never written down. Papers are written down, and citations already handle attribution. A paper still leaves some of its argument unstated, though: why a given step, which known trick is being used. That unstated part is tacit in Cognisee's sense, and it's the layer futon6's argument mining goes after. So the arXiv work already fits this survey. It's the same intent as Cognisee's, applied to an input that's much easier to get in bulk."
+    },
+    {
+      "id": "claude-13-turn-19-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(the people) This also makes Cognisee more than a passing link. They're the one company in the kernel aiming at the same intent from the interview side. Earlier I'd marked them \"talk to\". With this overlap, a conversation with Olaf Witkowski has a concrete topic: papers versus interviews as two routes to the same attributed know-how."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-18-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) That's an honest limit. You and Rob are proof points for people who are already technical and mathematical, so you can't settle whether FUTON helps someone whose dream is a grocery store. I've written it up as a candidate question for the next stage of the mission (§3.11, `5b184f5`), with a sketch of how it could be tested."
+    },
+    {
+      "id": "claude-13-turn-18-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"I don't know for sure that FUTON can help them\") It's the same trap the July probe fell into. That probe chose competitors from its own field and missed the control company. Two proof points from the same starting place make the same mistake with users. My guess at the split, to be tested rather than assumed:\n- **Probably carries over:** the \"understand\" half of the hyperreal bet. That's the mission discipline (keep the person's own words, map before designing), keeping a record, verifying as a habit, and patterns as reusable answers.\n- **Probably tech-for-tech:** Agency's dispatch and the War Machine's plumbing. In scattering terms these are internal bounces, and they only count through what they deliver."
+    },
+    {
+      "id": "claude-13-turn-18-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊭",
+      "text": "(a test) Take one person with a non-technical dream. Your Oakland contact with a Saba-style project would be ideal. Have them work the same real question twice, once with raw Claude and once with the FUTON discipline. Judge each attempt on the out-channel: did they understand their problem better, decide faster, actually act? Don't judge on the documents produced. The judges would be the person themselves plus someone who doesn't know which attempt was which."
+    },
+    {
+      "id": "claude-13-turn-18-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(arXiv) It's good news that the arXiv mining is proven in principle. \"What remains is hooking it up\" is the same assembly-around-a-lasting-component pattern as before. I'd leave it out of this mission, though, unless you want it in."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-19",
+      "id": "claude-13-turn-19-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-10T01:58:33Z",
+      "record": "turn-IUT7Fc",
+      "end": 89,
+      "standing?": true,
+      "about": "analogy mapping futon6 arXiv mining onto Cognisee with the input slot swapped",
+      "text": "Well, Arxiv mining is kind of Cognisee just with papers rather than interviews as inputs.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-19",
+      "id": "claude-13-turn-19-r-0",
+      "kind": "approve",
+      "at": "2026-10-10T01:58:33Z",
+      "record": "turn-IUT7Fc",
+      "target": "claude-13-turn-19-f-s1-0",
+      "standing?": false,
+      "text": "(\"kind of Cognisee just with papers\") Agreed. I've added futon6's arXiv mining as FUTON's counterpart in the Cognisee r…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-19",
+      "id": "claude-13-turn-19-r-1",
+      "kind": "explain",
+      "at": "2026-10-10T01:58:33Z",
+      "record": "turn-IUT7Fc",
+      "standing?": false,
+      "text": "(where they differ) The difference is the input. Interviews capture what was never written down. Papers are written dow…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-19",
+      "id": "claude-13-turn-19-r-2",
+      "kind": "qualify",
+      "at": "2026-10-10T01:58:33Z",
+      "record": "turn-IUT7Fc",
+      "standing?": false,
+      "text": "(the people) This also makes Cognisee more than a passing link. They're the one company in the kernel aiming at the sam…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-19",
+      "id": "claude-13-turn-19-c-3af0ee67",
+      "kind": "commit",
+      "at": "2026-10-10T01:58:33Z",
+      "record": "turn-IUT7Fc",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning: futon6 arXiv mining as the Cognisee row",
+      "sha": "3af0ee67",
+      "standing?": false
+    }
+  ]
+}

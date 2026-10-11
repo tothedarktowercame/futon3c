@@ -1,0 +1,97 @@
+{
+  "record": "turn-6p9wvd",
+  "turn_id": "claude-4-turn-377",
+  "session_id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+  "created_at": "2026-10-05T09:13:09Z",
+  "agent_id": "claude-4",
+  "source_text": "https://zone.hyperreal.enterprises/wip/mfuton-progress.html seems out of date regarding the in flight",
+  "fragments": [
+    {
+      "id": "claude-4-turn-377-f-s1-0",
+      "intent": "report-problem",
+      "text": "https://zone.hyperreal.enterprises/wip/mfuton-progress.html seems out of date regarding the in flight"
+    }
+  ],
+  "reply_text": "㊢ (\"seems out of date regarding the in flight\") I've rewritten the in-flight table and re-rendered the page. It now shows only what's live:\n- **epsilonInfo** (codex-30): cold acceptance running.\n- **stop C** (codex-31): paused, waiting on your decision about the do-notation discovery.\n- **atEnd** (codex-19): fix held until stop C is settled.\n- **comparator** (codex-23): done, with the warm-cache caveat.\n- **cache investigation** (claude-8): done; all decision runs are now cold.\n- **Rob's main** (codex-4): pushed.\n\nThe branches stopped overnight (hostparsers, numlit, deftype, macroscope, binrel, typeproj and the rest) are off the table now; their outcomes are on the scorecard. The old table is backed up as `pipeline.tsv.bak-0900`.\n\n㊩ (why it went stale) The table is the `pipeline.tsv` file, which I'm meant to update on every agent report. I stopped doing that once the comparator work began, so it had been frozen since about 06:00 UTC. I'll update it with each report from here on.",
+  "reply_acts": [
+    {
+      "id": "claude-4-turn-377-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(\"seems out of date regarding the in flight\") I've rewritten the in-flight table and re-rendered the page. It now shows only what's live:\n- **epsilonInfo** (codex-30): cold acceptance running.\n- **stop C** (codex-31): paused, waiting on your decision about the do-notation discovery.\n- **atEnd** (codex-19): fix held until stop C is settled.\n- **comparator** (codex-23): done, with the warm-cache caveat.\n- **cache investigation** (claude-8): done; all decision runs are now cold.\n- **Rob's main** (codex-4): pushed."
+    },
+    {
+      "id": "claude-4-turn-377-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊩",
+      "text": "(why it went stale) The table is the `pipeline.tsv` file, which I'm meant to update on every agent report. I stopped doing that once the comparator work began, so it had been frozen since about 06:00 UTC. I'll update it with each report from here on."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-4-turn-362-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(\"isn't that suggesting direction for the port to take?\") Yes. The commit keeps the port's own special-case coercion first and uses Lean's general coercion only when that declines, so Lean's behaviour is the fallback. It should be the other way round: Lean's `ensureHasType` and `mkCoe` should be the only path. The port's special case should survive only if it corresponds to something Lean does, and then as part of that path, not ahead of it. Where the two would give different answers, the port's version currently wins, and that is exactly where it could diverge from Lean."
+    },
+    {
+      "id": "claude-4-turn-362-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "🈖",
+      "text": "(why it was written this way) The special syntax-action coercion was added earlier, during the quotation work, and the rows that are correct today depend on it. Keeping it first was the low-risk choice for those rows. But it means we haven't checked whether that special case is itself what Lean does."
+    },
+    {
+      "id": "claude-4-turn-362-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊯",
+      "text": "(what I'll ask codex-19) I'll send codex-19 two steps:\n1. Find the Lean code, if any, that the syntax-action special case corresponds to. If none exists, remove it and use Lean's general coercion as the single path. If it does exist, fold it into that path in Lean's order.\n2. Measure the change cold on all 20 correct rows plus atEnd, so we see whether removing it breaks anything rather than assuming it does."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-377",
+      "id": "claude-4-turn-377-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-05T09:13:09Z",
+      "record": "turn-6p9wvd",
+      "end": 101,
+      "standing?": false,
+      "about": "mfuton progress dashboard staleness vs in-flight work",
+      "text": "https://zone.hyperreal.enterprises/wip/mfuton-progress.html seems out of date regarding the in flight",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-377",
+      "id": "claude-4-turn-377-r-0",
+      "kind": "report",
+      "at": "2026-10-05T09:13:09Z",
+      "record": "turn-6p9wvd",
+      "target": "claude-4-turn-377-f-s1-0",
+      "standing?": false,
+      "text": "(\"seems out of date regarding the in flight\") I've rewritten the in-flight table and re-rendered the page. It now shows…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-4",
+      "turn": "claude-4-turn-377",
+      "id": "claude-4-turn-377-r-1",
+      "kind": "report-problem",
+      "at": "2026-10-05T09:13:09Z",
+      "record": "turn-6p9wvd",
+      "standing?": false,
+      "text": "(why it went stale) The table is the `pipeline.tsv` file, which I'm meant to update on every agent report. I stopped do…",
+      "to": "operator"
+    }
+  ]
+}

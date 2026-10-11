@@ -110,6 +110,16 @@ class ReplyMarksFollowKernelNumbering(unittest.TestCase):
         self.assertEqual(acts[1]["text"], "yes or no?")
         self.assertEqual(acts[1]["mark"], "🈸")
 
+class ActBaseFollowsStoredActs(unittest.TestCase):
+    def test_reused_turn_id_base(self):
+        rec = {"turn_id": "c-turn-3", "acts": [{"id": "c-turn-3@turn-abc123-f-s1-0"}],
+               "reply_text": "㊢ (x) done"}
+        self.assertEqual(sample.act_base(rec), "c-turn-3@turn-abc123")
+        self.assertEqual(sample.reply_marks(rec)[0]["id"], "c-turn-3@turn-abc123-r-0")
+
+    def test_plain_turn_id_base(self):
+        self.assertEqual(sample.act_base({"turn_id": "c-turn-4"}), "c-turn-4")
+
 
 if __name__ == "__main__":
     unittest.main()

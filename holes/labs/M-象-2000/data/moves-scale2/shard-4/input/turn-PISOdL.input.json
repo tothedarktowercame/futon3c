@@ -1,0 +1,171 @@
+{
+  "record": "turn-PISOdL",
+  "turn_id": "claude-13-turn-28",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T02:54:54Z",
+  "agent_id": "claude-13",
+  "source_text": "have a look at the recent claude-11 record.  I like the idea of a warn!",
+  "fragments": [
+    {
+      "id": "claude-13-turn-28-f-s1-0",
+      "intent": "ask-action",
+      "text": "have a look at the recent claude-11 record."
+    },
+    {
+      "id": "claude-13-turn-28-f-s2-0",
+      "intent": "approve",
+      "text": "I like the idea of a warn!"
+    }
+  ],
+  "reply_text": "I'm writing the warn hook now. It's a small script in futon3c, plus one entry in your user settings, and I'll pipe-test it before wiring it in.Now I'll prove it fires in this session. I'm a pouch, so this is a live test:It fired, and the command still ran. Now I'm committing the script and updating the backlog entry:㊢ (\"have a look at the recent claude-11 record\") claude-11 shows exactly the failure this hook is for. Its Lean session servers (the warm `Init` server and the first Mathlib import) were started with `run_in_background`. Both died when its pouch was torn down between turns. It first told you they hit \"a 30-minute timeout\". After your correction it switched to bg.py and wrote a memory note, which adds one thing I hadn't covered: **Monitor** watches die with the pouch too.\n\n㊢ (done) The warn hook is in and working:\n- **Script:** `futon3c/scripts/claude-hooks/bg_warn.py` (futon3c `66da03c9`).\n- **Wiring:** `~/.claude/settings.json`, PreToolUse on `Bash|Monitor`. The old file is kept as `settings.json.bak-2026-10-10`.\n- **Who it warns:** only pouch agents, meaning `FUTON_AGENT_ID` is set, so terminal sessions are left alone.\n- **What it catches:** `run_in_background`, `nohup`/`setsid`/`disown`, a trailing `&`, and any Monitor call.\n- **How it warns:** the agent gets a note telling it to use `bg.py launch \"<cmd>\" --agent <id>`, with \"if it finishes within this turn, ignore this\" for short jobs. It never blocks a command.\n\n㊬ (checked) The pipe test covered 8 cases. `2>&1`, `&&`, commands that already use bg.py, and sessions without an agent id all stay silent. I also proved it live in this session: my own `sleep 0.1 &` produced the warning in my context, and the command still ran. The backlog entry in §5 is now marked **adopted** (futon0 `e661585`).\n\n㊟ (scope) Other pouches pick it up the next time they load settings. Any pouch that's warm right now may need a fresh turn or a restart first. If the warning turns out to be too soft, the next step would be to deny `run_in_background` alone and keep warning on the rest.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-28-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(done) The warn hook is in and working:\n- **Script:** `futon3c/scripts/claude-hooks/bg_warn.py` (futon3c `66da03c9`).\n- **Wiring:** `~/.claude/settings.json`, PreToolUse on `Bash|Monitor`. The old file is kept as `settings.json.bak-2026-10-10`.\n- **Who it warns:** only pouch agents, meaning `FUTON_AGENT_ID` is set, so terminal sessions are left alone.\n- **What it catches:** `run_in_background`, `nohup`/`setsid`/`disown`, a trailing `&`, and any Monitor call.\n- **How it warns:** the agent gets a note telling it to use `bg.py launch \"<cmd>\" --agent <id>`, with \"if it finishes within this turn, ignore this\" for short jobs. It never blocks a command."
+    },
+    {
+      "id": "claude-13-turn-28-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊬",
+      "text": "(checked) The pipe test covered 8 cases. `2>&1`, `&&`, commands that already use bg.py, and sessions without an agent id all stay silent. I also proved it live in this session: my own `sleep 0.1 &` produced the warning in my context, and the command still ran. The backlog entry in §5 is now marked **adopted** (futon0 `e661585`)."
+    },
+    {
+      "id": "claude-13-turn-28-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(scope) Other pouches pick it up the next time they load settings. Any pouch that's warm right now may need a fresh turn or a restart first. If the warning turns out to be too soft, the next step would be to deny `run_in_background` alone and keep warning on the rest."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-27-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) Yes, and the survey is already indexed the right way for that. It's keyed by problem, written as verb · object, so you can query it with \"I keep having to ⟨do X⟩ by hand\". I've added it to the mission as §5, \"alternative backlog\", with an entry format and bg.py as the first entry (`f6a9588`)."
+    },
+    {
+      "id": "claude-13-turn-27-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"surely there must be a \"tool\" or \"skill\" or MCP\") There is, and for this case the strongest of them is a **hook**, not a skill or an MCP tool. The four options, strongest first:\n1. **Hook.** A Claude Code `PreToolUse` hook on Bash sees every command before it runs. It can deny anything that sets `run_in_background` or uses `nohup`, `setsid` or a trailing `&`, and reply \"use `scripts/bg.py launch \"<cmd>\" --agent <id>`\". It runs every time, so it doesn't depend on the model remembering anything.\n2. **Skill.** It loads when its description matches the task, but the model still has to pick it.\n3. **MCP or native `bg_launch` tool.** It makes the right action easy, but nothing stops a bare `&`.\n4. **Prose in CLAUDE.md.** That's where the rule lives now, and it's why you keep reminding agents."
+    },
+    {
+      "id": "claude-13-turn-27-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(\"I've rolled my own REPL is the only thing to \"blame\"\") Mostly not. Any rule kept in prose fails this way, with or without a custom REPL. And your REPL doesn't block the standard fix. Agency's pouches run `claude --print` with no `--setting-sources` restriction (I checked `agent_pouch.clj`), so a hook in your user settings should apply to every claude-N. Hooks can deny a command even under `bypassPermissions`. Before relying on it, I'd confirm on one pouch that it actually fires."
+    },
+    {
+      "id": "claude-13-turn-27-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(one decision) Shall I write that hook? It's one small script plus an entry in `~/.claude/settings.json`. It would affect every Claude agent on zone, so I'd test it on this session first. To avoid catching ordinary short `&` use, the first version could only *warn*, not deny."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-28",
+      "id": "claude-13-turn-28-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "end": 43,
+      "standing?": false,
+      "about": "the recent claude-11 session record (the Lean/bg.py pouch-teardown episode)",
+      "text": "have a look at the recent claude-11 record.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 45,
+      "author": "operator",
+      "turn": "claude-13-turn-28",
+      "id": "claude-13-turn-28-f-s2-0",
+      "kind": "accept",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "target": "claude-13-turn-27-r-3",
+      "end": 71,
+      "standing?": true,
+      "about": "the warn-hook option from the agent's ranked four-option reply (hook / skill / MCP / somesuch)",
+      "text": "I like the idea of a warn!",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-28",
+      "id": "claude-13-turn-28-r-0",
+      "kind": "report",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "standing?": false,
+      "text": "(done) The warn hook is in and working:\n- **Script:** `futon3c/scripts/claude-hooks/bg_warn.py` (futon3c `66da03c9`).\n-…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-28",
+      "id": "claude-13-turn-28-r-1",
+      "kind": "verify",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "standing?": false,
+      "text": "(checked) The pipe test covered 8 cases. `2>&1`, `&&`, commands that already use bg.py, and sessions without an agent i…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-28",
+      "id": "claude-13-turn-28-r-2",
+      "kind": "qualify",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "standing?": false,
+      "text": "(scope) Other pouches pick it up the next time they load settings. Any pouch that's warm right now may need a fresh tur…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-28",
+      "carries-out": "claude-13-turn-27-r-3",
+      "id": "claude-13-turn-28-c-e6615853",
+      "kind": "commit",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning §5: bg.py entry adopted as a warn hook",
+      "sha": "e6615853",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-28",
+      "carries-out": "claude-13-turn-27-r-3",
+      "id": "claude-13-turn-28-c-66da03c9",
+      "kind": "commit",
+      "at": "2026-10-10T02:54:54Z",
+      "record": "turn-PISOdL",
+      "repo": "futon3c",
+      "subject": "claude-hooks: bg_warn — PreToolUse warning for pouch-bound background work",
+      "sha": "66da03c9",
+      "standing?": false
+    }
+  ]
+}

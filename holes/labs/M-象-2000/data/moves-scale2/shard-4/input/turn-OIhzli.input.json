@@ -1,0 +1,222 @@
+{
+  "record": "turn-OIhzli",
+  "turn_id": "claude-13-turn-2",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T00:10:19Z",
+  "agent_id": "claude-13",
+  "source_text": "A nice example that we could use as a Brownian partical is cotal.ai — that wasn't in the notes I don't think but I got a screenshot of their app.  It strikes me as a bit like Agency.  I learned about another one today that was somehow like Agency but with Lean-backed dispatches.  My main point here is that we certainly don't need to \"replicate\" what others are doing, if they are solving a similar problem to ones we are solving in different ways, that's fine, it's OK for there to be different solutions.  But it would be good for me to at least be acquainted with the problems that different folks are solving, particularly because almost all the companies have names that are nonsense words.  The companies and products I have bumped into as you said are the ones that happened to be here in SF at a given point in time, it doesn't make them good or interesting, maybe it's mostly just a way to start to go a keyword search.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-2-f-s1-0",
+      "intent": "collect",
+      "text": "A nice example that we could use as a Brownian partical is cotal.ai — that wasn't in the notes I don't think but I got a screenshot of their app."
+    },
+    {
+      "id": "claude-13-turn-2-f-s2-0",
+      "intent": "report",
+      "text": "It strikes me as a bit like Agency."
+    },
+    {
+      "id": "claude-13-turn-2-f-s3-0",
+      "intent": "report",
+      "text": "I learned about another one today that was somehow like Agency but with Lean-backed dispatches."
+    },
+    {
+      "id": "claude-13-turn-2-f-s4-0",
+      "intent": "redirect",
+      "text": "My main point here is that we certainly don't need to \"replicate\" what others are doing, if they are solving a similar problem to ones we are solving in different ways, that's fine, it's OK for there to be different solutions."
+    },
+    {
+      "id": "claude-13-turn-2-f-s5-0",
+      "intent": "propose",
+      "text": "But it would be good for me to at least be acquainted with the problems that different folks are solving, particularly because almost all the companies have names that are nonsense words."
+    },
+    {
+      "id": "claude-13-turn-2-f-s6-0",
+      "intent": "qualify",
+      "text": "The companies and products I have bumped into as you said are the ones that happened to be here in SF at a given point in time, it doesn't make them good or interesting, maybe it's mostly just a way to start to go a keyword search."
+    }
+  ],
+  "reply_text": "㊥ (gist) I've rewritten the mission's purpose around your correction. The goal is now to learn what problem each company is solving, not to replicate anything. Each company is treated as a starting point for a keyword search, not as a sample of what's good.\n\n㊢ (\"we certainly don't need to \"replicate\"\") In `M-landscape-positioning.md`, your words are now the first entry in the operator-voice anchor. A new section, \"What the mission is for\", sets the output for each entry as one plain sentence: the problem it solves, written without its name. If FUTON solves the same problem differently, nothing needs doing. The earlier ignore/reuse/replicate rule is kept only as a secondary tag. I also added tension T6: the starting points all come from one week in SF. So the problems we find will be the ones being pitched there that week, unless the searches actually travel further out.\n\n㊢ (\"cotal.ai\") Here's the cotal.ai entry, phrased the new way. **Problem:** making agents from different vendors (Claude Code, OpenCode, Hermes) work as one team with a shared, durable record. **How:** agents find each other by name, channel or role and hand off work over peer-to-peer pub/sub (NATS + JetStream), with no central orchestrator. It's self-hosted and Apache-2.0. So it's very close to Agency's roster plus bells, but peer-to-peer where Agency runs through a hub on :7070. It's a different answer to a problem you already solve, and that's fine.\n\n🈯 (\"Lean-backed dispatches\") One quick search didn't turn up the Lean-backed one. Do you remember a name, or is it in the screenshot or the room? Also, can you drop the Cotal screenshot somewhere I can read it, or post it to the room?\n\n㊭ (next) I suggest running MAP in this order:\n1. Write the one-sentence problem statement for every entry, about 45 of them.\n2. Group the statements by problem. My guess is the groups will be roughly: coordinating agents, supervising them, checking their output, agent memory, typed decisions, and formal verification.\n3. For each group, do one wider keyword search that isn't tied to SF, to find who else works on that problem.\n\nThe second step is what replaces the nonsense names with something you can read. The HEAD is still uncommitted, so tell me if you want it committed first.\n\nSources:\n- [cotal.ai](https://cotal.ai/)",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-2-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) I've rewritten the mission's purpose around your correction. The goal is now to learn what problem each company is solving, not to replicate anything. Each company is treated as a starting point for a keyword search, not as a sample of what's good."
+    },
+    {
+      "id": "claude-13-turn-2-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"we certainly don't need to \"replicate\"\") In `M-landscape-positioning.md`, your words are now the first entry in the operator-voice anchor. A new section, \"What the mission is for\", sets the output for each entry as one plain sentence: the problem it solves, written without its name. If FUTON solves the same problem differently, nothing needs doing. The earlier ignore/reuse/replicate rule is kept only as a secondary tag. I also added tension T6: the starting points all come from one week in SF. So the problems we find will be the ones being pitched there that week, unless the searches actually travel further out."
+    },
+    {
+      "id": "claude-13-turn-2-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"cotal.ai\") Here's the cotal.ai entry, phrased the new way. **Problem:** making agents from different vendors (Claude Code, OpenCode, Hermes) work as one team with a shared, durable record. **How:** agents find each other by name, channel or role and hand off work over peer-to-peer pub/sub (NATS + JetStream), with no central orchestrator. It's self-hosted and Apache-2.0. So it's very close to Agency's roster plus bells, but peer-to-peer where Agency runs through a hub on :7070. It's a different answer to a problem you already solve, and that's fine."
+    },
+    {
+      "id": "claude-13-turn-2-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈯",
+      "text": "(\"Lean-backed dispatches\") One quick search didn't turn up the Lean-backed one. Do you remember a name, or is it in the screenshot or the room? Also, can you drop the Cotal screenshot somewhere I can read it, or post it to the room?"
+    },
+    {
+      "id": "claude-13-turn-2-r-4",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊭",
+      "text": "(next) I suggest running MAP in this order:\n1. Write the one-sentence problem statement for every entry, about 45 of them.\n2. Group the statements by problem. My guess is the groups will be roughly: coordinating agents, supervising them, checking their output, agent memory, typed decisions, and formal verification.\n3. For each group, do one wider keyword search that isn't tied to SF, to find who else works on that problem."
+    }
+  ],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-f-s1-0",
+      "kind": "collect",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "end": 145,
+      "standing?": false,
+      "about": "cotal.ai as a new landscape example",
+      "text": "A nice example that we could use as a Brownian partical is cotal.ai — that wasn't in the notes I don't think but I got …",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 147,
+      "author": "operator",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-f-s2-0",
+      "kind": "report",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "end": 182,
+      "standing?": false,
+      "about": "resemblance of cotal.ai to Agency",
+      "text": "It strikes me as a bit like Agency.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 184,
+      "author": "operator",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-f-s3-0",
+      "kind": "report",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "end": 279,
+      "standing?": false,
+      "about": "a second Agency-like product with Lean-backed dispatches",
+      "text": "I learned about another one today that was somehow like Agency but with Lean-backed dispatches.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 281,
+      "author": "operator",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-f-s4-0",
+      "kind": "redirect",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "end": 507,
+      "standing?": false,
+      "about": "the mission's replicate-framing of other products",
+      "text": "My main point here is that we certainly don't need to \"replicate\" what others are doing, if they are solving a similar …",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 509,
+      "author": "operator",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-f-s5-0",
+      "kind": "propose",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "end": 696,
+      "standing?": true,
+      "about": "acquaintance with the problems others are solving as the mission's output",
+      "text": "But it would be good for me to at least be acquainted with the problems that different folks are solving, particularly …",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 698,
+      "author": "operator",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-f-s6-0",
+      "kind": "qualify",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "end": 929,
+      "standing?": false,
+      "about": "epistemic standing of the bumped-into companies",
+      "text": "The companies and products I have bumped into as you said are the ones that happened to be here in SF at a given point …",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-r-1",
+      "kind": "report",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "target": "claude-13-turn-2-f-s4-0",
+      "standing?": false,
+      "text": "(\"we certainly don't need to \"replicate\"\") In `M-landscape-positioning.md`, your words are now the first entry in the o…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-r-2",
+      "kind": "report",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "target": "claude-13-turn-2-f-s1-0",
+      "standing?": false,
+      "text": "(\"cotal.ai\") Here's the cotal.ai entry, phrased the new way. **Problem:** making agents from different vendors (Claude …",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-13",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-r-3",
+      "kind": "clarify",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "target": "claude-13-turn-2-f-s3-0",
+      "standing?": false,
+      "text": "(\"Lean-backed dispatches\") One quick search didn't turn up the Lean-backed one. Do you remember a name, or is it in the…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-13",
+      "turn": "claude-13-turn-2",
+      "id": "claude-13-turn-2-r-4",
+      "kind": "propose",
+      "at": "2026-10-10T00:10:19Z",
+      "record": "turn-OIhzli",
+      "standing?": true,
+      "text": "(next) I suggest running MAP in this order:\n1. Write the one-sentence problem statement for every entry, about 45 of th…",
+      "to": "operator"
+    }
+  ]
+}

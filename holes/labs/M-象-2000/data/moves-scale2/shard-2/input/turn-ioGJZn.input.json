@@ -1,0 +1,150 @@
+{
+  "record": "turn-ioGJZn",
+  "turn_id": "claude-4-turn-94",
+  "session_id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+  "created_at": "2026-10-04T13:47:52Z",
+  "agent_id": "claude-4",
+  "source_text": "So, the work in progress section of your breakdown is confusing.  It includes a mix of READY and WAITING.  Neither of those statuses make immediate sense as me as a status for work in progress, since they sound  like \"stuck\" or \"terminal\" states.",
+  "fragments": [
+    {
+      "id": "claude-4-turn-94@turn-ioGJZn-f-s1-0",
+      "intent": "report-problem",
+      "text": "So, the work in progress section of your breakdown is confusing."
+    },
+    {
+      "id": "claude-4-turn-94@turn-ioGJZn-f-s2-0",
+      "intent": "explain",
+      "text": "It includes a mix of READY and WAITING."
+    },
+    {
+      "id": "claude-4-turn-94@turn-ioGJZn-f-s3-0",
+      "intent": "explain",
+      "text": "Neither of those statuses make immediate sense as me as a status for work in progress, since they sound  like \"stuck\" or \"terminal\" states."
+    }
+  ],
+  "reply_text": "㊥ (work in progress) Agreed: READY and WAITING describe rows nobody is working on, so they don't belong there. WORK IN PROGRESS now shows, for each row being worked on, who is on it and what they're doing. If the row also depends on a failing row that nobody has taken, it adds a \"will also need\" line. The READY, NEEDS A CHECK and BLOCKED sections now list only unassigned rows, so the two groups no longer overlap.\n\n```\n6. WORK IN PROGRESS (18)\n  [codex-17] ▒ Array.append\n        doing: fixing operand types lost in the generated-support `≤` expansion\n  [codex-18] ▒ mkEOIError, FileMap.ofString (+loop), Array.back!\n        doing: investigating a numeral given type TSyntax inside the list macro\n        will also need (unassigned): ParserState.mkUnexpectedError   ← mkEOIError only\n  [codex-19] ▓ InputContext.atEnd\n        doing: fixing wrong results (Prop→Bool decide; Bind.bind binders)\n  [codex-4]  ▒ Lean.Compiler.LCNF.mkDeclExt\n        doing: fixing the next blocker (β: filterMap result type)\n        will also need (unassigned): PersistentHashMap.foldl, PersistentHashMap.insertAux, instMonadEIO, instMonadEIO._aux_13\n  [codex-6]  ▓ the 11 untested rows\n        doing: writing and running their Lean checks\n```\n\nThe full output, from `python3 /tmp/pyreg/overnight/rowtree.py`, lists each row on its own line.\n\n㊟ (what \"will also need\" shows) Even when codex-4 clears `β`, `mkDeclExt` won't compile until four other failing rows do, and nobody is on those yet. Two of them are the instance-naming rows at the top of the ready list. So repairing instance naming would also unblock `mkDeclExt`.\n\n㊢ (where the status comes from) The \"doing\" text lives in `rowstatus.json`. I update it each time I dispatch or close a job, so it's only as current as my last dispatch.",
+  "reply_acts": [
+    {
+      "id": "claude-4-turn-94@turn-ioGJZn-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(work in progress) Agreed: READY and WAITING describe rows nobody is working on, so they don't belong there. WORK IN PROGRESS now shows, for each row being worked on, who is on it and what they're doing. If the row also depends on a failing row that nobody has taken, it adds a \"will also need\" line. The READY, NEEDS A CHECK and BLOCKED sections now list only unassigned rows, so the two groups no longer overlap."
+    },
+    {
+      "id": "claude-4-turn-94@turn-ioGJZn-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊟",
+      "text": "(what \"will also need\" shows) Even when codex-4 clears `β`, `mkDeclExt` won't compile until four other failing rows do, and nobody is on those yet. Two of them are the instance-naming rows at the top of the ready list. So repairing instance naming would also unblock `mkDeclExt`."
+    },
+    {
+      "id": "claude-4-turn-94@turn-ioGJZn-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(where the status comes from) The \"doing\" text lives in `rowstatus.json`. I update it each time I dispatch or close a job, so it's only as current as my last dispatch."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(readiness now requires correct dependencies) You're right, and I've changed it. A row is READY only if everything it depends on is CORRECT, meaning it matches Lean, not merely compiles. Rows whose dependencies compile but haven't been checked now get their own section, 4b WAITING ON A CHECK:\n- `Raw₀.insert` waits on `AssocList.foldlM`;\n- `Lean.Parser.skip` waits on `epsilonInfo`."
+    },
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊬",
+      "text": "(what I checked) The closure file I'd used (`stdlean-closure.tsv`) covers the grammar and environment-initialiser closure, not the parser module. So `testParseModule`, `parseHeader`, `parseCommand` and 13 others were missing, and showed up as READY with 0 dependencies."
+    },
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(what changed in the order) With correct dependencies, the most valuable READY rows are the anonymous-instance-naming problem, one error across three rows:"
+    },
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-3",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊟",
+      "text": "(to see it) `python3 /tmp/pyreg/overnight/rowtree.py` prints sections 1–7 in your order, with 4b added."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-94",
+      "id": "claude-4-turn-94@turn-ioGJZn-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-04T13:47:52Z",
+      "record": "turn-ioGJZn",
+      "end": 64,
+      "standing?": false,
+      "about": "the work-in-progress section of the agent's breakdown readout",
+      "text": "So, the work in progress section of your breakdown is confusing.",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "start": 66,
+      "author": "operator",
+      "turn": "claude-4-turn-94",
+      "id": "claude-4-turn-94@turn-ioGJZn-f-s2-0",
+      "kind": "explain",
+      "at": "2026-10-04T13:47:52Z",
+      "record": "turn-ioGJZn",
+      "end": 105,
+      "standing?": false,
+      "about": "the contents of the work-in-progress section",
+      "text": "It includes a mix of READY and WAITING.",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "start": 107,
+      "author": "operator",
+      "turn": "claude-4-turn-94",
+      "id": "claude-4-turn-94@turn-ioGJZn-f-s3-0",
+      "kind": "explain",
+      "at": "2026-10-04T13:47:52Z",
+      "record": "turn-ioGJZn",
+      "end": 246,
+      "standing?": false,
+      "about": "why READY and WAITING misread as work-in-progress statuses",
+      "text": "Neither of those statuses make immediate sense as me as a status for work in progress, since they sound  like \"stuck\" o…",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-94",
+      "id": "claude-4-turn-94@turn-ioGJZn-r-1",
+      "kind": "qualify",
+      "at": "2026-10-04T13:47:52Z",
+      "record": "turn-ioGJZn",
+      "standing?": false,
+      "text": "(what \"will also need\" shows) Even when codex-4 clears `β`, `mkDeclExt` won't compile until four other failing rows do,…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-94",
+      "id": "claude-4-turn-94@turn-ioGJZn-r-2",
+      "kind": "report",
+      "at": "2026-10-04T13:47:52Z",
+      "record": "turn-ioGJZn",
+      "standing?": false,
+      "text": "(where the status comes from) The \"doing\" text lives in `rowstatus.json`. I update it each time I dispatch or close a j…",
+      "to": "operator"
+    }
+  ]
+}

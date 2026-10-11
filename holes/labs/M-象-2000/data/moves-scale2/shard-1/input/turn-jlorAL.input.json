@@ -1,0 +1,155 @@
+{
+  "record": "turn-jlorAL",
+  "turn_id": "claude-17-turn-536",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-03T23:31:22Z",
+  "agent_id": "claude-17",
+  "source_text": "This is more of an Excursion than a missions, since the requirements are clear, and live cases are easy to find.  Let's make it E-agency-work-orders.md as an excursion attached to M-象-2000 since it uses the basic McCarthy semantics",
+  "fragments": [
+    {
+      "id": "claude-17-turn-536-f-s1-0",
+      "intent": "qualify",
+      "text": "This is more of an Excursion than a missions, since the requirements are clear, and live cases are easy to find."
+    },
+    {
+      "id": "claude-17-turn-536-f-s2-0",
+      "intent": "ask-action",
+      "text": "Let's make it E-agency-work-orders.md as an excursion attached to M-象-2000 since it uses the basic McCarthy semantics"
+    }
+  ],
+  "reply_text": "I'm writing `E-agency-work-orders.md` now. I'll then link it from M-象-2000 next to the other related excursions.㊥ (E-agency-work-orders) I've written `futon3c/holes/excursions/E-agency-work-orders.md` and linked it from M-象-2000 as an attached excursion. Committed as `02a80b37`, not pushed yet. The excursion says a work order stays open until the agent that received it reports it done against its acceptance bar, or the agent that asked releases it. An agent whose job ends with an order still open gets a reminder. P24's `futon3c.logic.xiang` decides whether an order is open.\n\n㊢ (contents) The excursion has:\n- **Requirements:** an order is a recorded act; a job ending doesn't close it; one reminder at turn end, then a problem report to the agent that asked; the kernel is the only judge; a listing route plus a count in the lighter.\n- **What already exists:** parking, promises and the obligations projection, all of which serve only the agent that asked.\n- **The P24 gap:** delivered work isn't recorded as closing the obligation.\n\nThe order of work starts by turning the codex-19 case into a P24 fixture whose expected result is \"still open after codex-19's job ends\".\n\n㊩ (the codex-19 case) I couldn't find it yet. codex-19's last 200 jobs include 27 bells from codex-19 to claude-4 and none from claude-4 to codex-19. claude-4's request may have travelled inside a reply. The excursion records this, and finding the case is its first task.\n\n㊢ (step 1) kimi-1 is still working on step 1 (job `invoke-1791070032310-31301-c2a8b13a`). I'll review it when it bells back, before steps 2 and 3.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-536-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(contents) The excursion has:\n- **Requirements:** an order is a recorded act; a job ending doesn't close it; one reminder at turn end, then a problem report to the agent that asked; the kernel is the only judge; a listing route plus a count in the lighter.\n- **What already exists:** parking, promises and the obligations projection, all of which serve only the agent that asked.\n- **The P24 gap:** delivered work isn't recorded as closing the obligation."
+    },
+    {
+      "id": "claude-17-turn-536-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(the codex-19 case) I couldn't find it yet. codex-19's last 200 jobs include 27 bells from codex-19 to claude-4 and none from claude-4 to codex-19. claude-4's request may have travelled inside a reply. The excursion records this, and finding the case is its first task."
+    },
+    {
+      "id": "claude-17-turn-536-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(step 1) kimi-1 is still working on step 1 (job `invoke-1791070032310-31301-c2a8b13a`). I'll review it when it bells back, before steps 2 and 3."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-535-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊯",
+      "text": "(step 1 dispatch) kimi-1 is running it now; the packet is in `/tmp/claude-17-p24/step1.md`.\n- **Job:** `invoke-1791070032310-31301-c2a8b13a`\n- **Park:** `park-f255470a-…`, with a one-hour deadline, tied to this session."
+    },
+    {
+      "id": "claude-17-turn-535-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(work orders: what exists) Pieces of this are already in futon3c:\n- **Parking:** the agent that asks waits on the job and is woken when it ends.\n- **Promise records and outcomes:** `promise_outcome.clj` checks criteria on a 30-second sweep.\n- **The obligations projection:** `obligations.clj`.\n- **P24's `obligationo`:** \"this agent owes that one, under this act\"."
+    },
+    {
+      "id": "claude-17-turn-535-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(work orders: what's missing) A first-class work order would:\n- start when the bell is sent, with its acceptance bar;\n- stay open until the receiving agent reports it done against that bar, or the agent that asked releases it;\n- when the receiving agent's job ends with the order still open, bell that agent a reminder that names the order and what's left, and tell the agent that asked."
+    },
+    {
+      "id": "claude-17-turn-535-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I write this up as its own mission once step 1 is reviewed, starting from the codex-19 case? Or do you want it to go ahead of steps 2 and 3?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-536",
+      "id": "claude-17-turn-536-f-s1-0",
+      "kind": "qualify",
+      "at": "2026-10-03T23:31:22Z",
+      "record": "turn-jlorAL",
+      "end": 112,
+      "standing?": false,
+      "about": "the governance container for the agency-work-orders work: excursion, not mission",
+      "text": "This is more of an Excursion than a missions, since the requirements are clear, and live cases are easy to find.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 114,
+      "author": "operator",
+      "turn": "claude-17-turn-536",
+      "id": "claude-17-turn-536-f-s2-0",
+      "kind": "ask-action",
+      "at": "2026-10-03T23:31:22Z",
+      "record": "turn-jlorAL",
+      "end": 231,
+      "standing?": false,
+      "about": "creation of E-agency-work-orders.md as an excursion attached to M-象-2000",
+      "text": "Let's make it E-agency-work-orders.md as an excursion attached to M-象-2000 since it uses the basic McCarthy semantics",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-536",
+      "id": "claude-17-turn-536-r-0",
+      "kind": "report",
+      "at": "2026-10-03T23:31:22Z",
+      "record": "turn-jlorAL",
+      "standing?": false,
+      "text": "(contents) The excursion has:\n- **Requirements:** an order is a recorded act; a job ending doesn't close it; one remind…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-536",
+      "id": "claude-17-turn-536-r-1",
+      "kind": "report-problem",
+      "at": "2026-10-03T23:31:22Z",
+      "record": "turn-jlorAL",
+      "standing?": false,
+      "text": "(the codex-19 case) I couldn't find it yet. codex-19's last 200 jobs include 27 bells from codex-19 to claude-4 and non…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-536",
+      "id": "claude-17-turn-536-r-2",
+      "kind": "report",
+      "at": "2026-10-03T23:31:22Z",
+      "record": "turn-jlorAL",
+      "standing?": false,
+      "text": "(step 1) kimi-1 is still working on step 1 (job `invoke-1791070032310-31301-c2a8b13a`). I'll review it when it bells ba…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-536",
+      "id": "claude-17-turn-536-c-02a80b37",
+      "kind": "commit",
+      "at": "2026-10-03T23:31:22Z",
+      "record": "turn-jlorAL",
+      "repo": "futon3c",
+      "subject": "Open E-agency-work-orders, attached to M-象-2000",
+      "sha": "02a80b37",
+      "standing?": false
+    }
+  ]
+}

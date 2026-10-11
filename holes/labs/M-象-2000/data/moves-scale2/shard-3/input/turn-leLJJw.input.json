@@ -1,0 +1,104 @@
+{
+  "record": "turn-leLJJw",
+  "turn_id": "claude-7-turn-3",
+  "session_id": "1b5d271d-f4b6-4c74-891a-55d34db56ffe",
+  "created_at": "2026-10-04T22:19:59Z",
+  "agent_id": "claude-7",
+  "source_text": "Thanks. Now ask me one 🈸 question about whether to delete the file, and then stop.",
+  "fragments": [
+    {
+      "id": "claude-7-turn-3-f-s1-0",
+      "intent": "approve",
+      "text": "Thanks."
+    },
+    {
+      "id": "claude-7-turn-3-f-s2-0",
+      "intent": "ask-action",
+      "text": "Now ask me one 🈸 question about whether to delete the file,"
+    },
+    {
+      "id": "claude-7-turn-3-f-s2-1",
+      "intent": "constrain",
+      "text": "and then stop."
+    }
+  ],
+  "reply_text": "🈸 (\"whether to delete the file\") Should I delete `elephant.txt` from /tmp/xiang-demo-2 and commit the deletion?",
+  "reply_acts": [
+    {
+      "id": "claude-7-turn-3-r-0",
+      "kind": "reply-mark",
+      "author": "claude-7",
+      "mark": "🈸",
+      "text": "(\"whether to delete the file\") Should I delete `elephant.txt` from /tmp/xiang-demo-2 and commit the deletion?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-7-turn-2-r-0",
+      "kind": "reply-mark",
+      "author": "claude-7",
+      "mark": "㊢",
+      "text": "(\"yes 1\") I created a new git repo at /tmp/xiang-demo-2 (the directory was empty) and wrote `elephant.txt` containing `象 means elephant.` It's committed as `738afbd` (\"Add elephant.txt\")."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-7-turn-3",
+      "id": "claude-7-turn-3-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-04T22:19:59Z",
+      "record": "turn-leLJJw",
+      "end": 7,
+      "standing?": false,
+      "about": "the agent's immediately preceding work",
+      "text": "Thanks.",
+      "to": "claude-7"
+    },
+    {
+      "port?": true,
+      "start": 8,
+      "author": "operator",
+      "turn": "claude-7-turn-3",
+      "id": "claude-7-turn-3-f-s2-0",
+      "kind": "ask-action",
+      "at": "2026-10-04T22:19:59Z",
+      "record": "turn-leLJJw",
+      "end": 67,
+      "standing?": false,
+      "about": "the deletion decision, routed through exactly one operator question",
+      "text": "Now ask me one 🈸 question about whether to delete the file,",
+      "to": "claude-7"
+    },
+    {
+      "port?": false,
+      "start": 68,
+      "author": "operator",
+      "turn": "claude-7-turn-3",
+      "id": "claude-7-turn-3-f-s2-1",
+      "kind": "constrain",
+      "at": "2026-10-04T22:19:59Z",
+      "record": "turn-leLJJw",
+      "end": 82,
+      "standing?": true,
+      "about": "the agent's turn after the question is asked",
+      "text": "and then stop.",
+      "to": "claude-7"
+    },
+    {
+      "port?": true,
+      "author": "claude-7",
+      "turn": "claude-7-turn-3",
+      "id": "claude-7-turn-3-r-0",
+      "kind": "ask-action",
+      "at": "2026-10-04T22:19:59Z",
+      "record": "turn-leLJJw",
+      "target": "claude-7-turn-3-f-s2-0",
+      "standing?": false,
+      "text": "(\"whether to delete the file\") Should I delete `elephant.txt` from /tmp/xiang-demo-2 and commit the deletion?",
+      "to": "operator"
+    }
+  ]
+}

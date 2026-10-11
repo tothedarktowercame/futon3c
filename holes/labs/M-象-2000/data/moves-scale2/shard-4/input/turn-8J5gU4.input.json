@@ -1,0 +1,273 @@
+{
+  "record": "turn-8J5gU4",
+  "turn_id": "claude-13-turn-17",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T01:50:00Z",
+  "agent_id": "claude-13",
+  "source_text": "So, coming from the UK where \"the Co-op\" is a known national brand (but from a food standpoint certainly no better than any other grocery chain) it seems clear that the co-op aspect is possible.  A Saba in every city would be the same kind of thing.  And if it makes money, great.  But I think the \"futonic\" ideas would indeed be a bit about helping people realise some of their own potential, whether that's for business or education or just eating healthier food or having more fun or whatever.  And it remains a good question about which aspects of that technology can really help with.  For me, for example, I continue to think that technology could help me learn mathematics \"faster\" or at least \"better\"... but learning mathematics seems like something of a niche interest.  Indeed, I remember hearing about some UK-based research that said that most people don't like learning at all (though I'm not sure if they counted young people learning football statistics).",
+  "fragments": [
+    {
+      "id": "claude-13-turn-17-f-s1-0",
+      "intent": "agree",
+      "text": "So, coming from the UK where \"the Co-op\" is a known national brand (but from a food standpoint certainly no better than any other grocery chain) it seems clear that the co-op aspect is possible."
+    },
+    {
+      "id": "claude-13-turn-17-f-s2-0",
+      "intent": "extend",
+      "text": "A Saba in every city would be the same kind of thing."
+    },
+    {
+      "id": "claude-13-turn-17-f-s3-0",
+      "intent": "qualify",
+      "text": "And if it makes money, great."
+    },
+    {
+      "id": "claude-13-turn-17-f-s4-0",
+      "intent": "propose",
+      "text": "But I think the \"futonic\" ideas would indeed be a bit about helping people realise some of their own potential, whether that's for business or education or just eating healthier food or having more fun or whatever."
+    },
+    {
+      "id": "claude-13-turn-17-f-s5-0",
+      "intent": "explore",
+      "text": "And it remains a good question about which aspects of that technology can really help with."
+    },
+    {
+      "id": "claude-13-turn-17-f-s6-0",
+      "intent": "report",
+      "text": "For me, for example, I continue to think that technology could help me learn mathematics \"faster\" or at least \"better\"..."
+    },
+    {
+      "id": "claude-13-turn-17-f-s7-0",
+      "intent": "qualify",
+      "text": "but learning mathematics seems like something of a niche interest."
+    },
+    {
+      "id": "claude-13-turn-17-f-s8-0",
+      "intent": "challenge",
+      "text": "Indeed, I remember hearing about some UK-based research that said that most people don't like learning at all (though I'm not sure if they counted young people learning football statistics)."
+    }
+  ],
+  "reply_text": "㊥ (gist) That gives a useful line between the two. A Saba in every city is the co-op layer: it can work, and if it makes money, good. The futonic layer is helping people realise their own potential. And the question of which parts of that tech can actually help is the same demand-side question as the corner store. I've recorded it as §3.10 (`48bcc6f`).\n\n㊢ (\"most people don't like learning at all\") That's probably the Learning and Work Institute's annual Adult Participation in Learning Survey. Its 2025 figures:\n- 42% of UK adults say they've learned something in the last three years, down from 52% in 2024.\n- 21% are learning now.\n- Half of those who left school at 16 or younger haven't taken part in learning since.\n\nThese numbers are self-reported, though, so they count what people *call* learning. Your football-statistics doubt is a fair one. Kids who learn league tables and player stats, or adults working out betting odds and game strategy, would mostly answer no to \"are you learning?\".\n\n🈖 (why that matters here) It's the same point as the corner store. Food deserts weren't caused by a missing shop, and low adult learning may not be caused by a missing course. A lot of the learning people actually want sits inside things they already do, under another name. That also explains your mathematics: it's a niche when it's offered as \"maths\", but much less so as odds, stats or how a game's mechanics work. So the futonic question is less \"how can tech make people learn\" and more \"how can tech carry what people already want to get better at\". People's own preferences set the direction, and the tooling helps with fidelity and speed. That's the same split the mission found for client problems.\n\n🈳 (open) This also ties into your Peeragogy work: people learning together inside things they care about. If the mission later needs an inner-loop case from education, that's probably where to look, rather than in formal courses.\n\nSource: [Learning and Work Institute, Adult Participation in Learning Survey 2025](https://learningandwork.org.uk/resources/research-and-reports/adult-participation-in-learning-survey-2025/)",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-17-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) That gives a useful line between the two. A Saba in every city is the co-op layer: it can work, and if it makes money, good. The futonic layer is helping people realise their own potential. And the question of which parts of that tech can actually help is the same demand-side question as the corner store. I've recorded it as §3.10 (`48bcc6f`)."
+    },
+    {
+      "id": "claude-13-turn-17-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"most people don't like learning at all\") That's probably the Learning and Work Institute's annual Adult Participation in Learning Survey. Its 2025 figures:\n- 42% of UK adults say they've learned something in the last three years, down from 52% in 2024.\n- 21% are learning now.\n- Half of those who left school at 16 or younger haven't taken part in learning since."
+    },
+    {
+      "id": "claude-13-turn-17-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(why that matters here) It's the same point as the corner store. Food deserts weren't caused by a missing shop, and low adult learning may not be caused by a missing course. A lot of the learning people actually want sits inside things they already do, under another name. That also explains your mathematics: it's a niche when it's offered as \"maths\", but much less so as odds, stats or how a game's mechanics work. So the futonic question is less \"how can tech make people learn\" and more \"how can tech carry what people already want to get better at\". People's own preferences set the direction, and the tooling helps with fidelity and speed. That's the same split the mission found for client problems."
+    },
+    {
+      "id": "claude-13-turn-17-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈳",
+      "text": "(open) This also ties into your Peeragogy work: people learning together inside things they care about. If the mission later needs an inner-loop case from education, that's probably where to look, rather than in formal courses."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-16-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) Agreed. A shop stocks what sells, so the owner's margin follows what residents actually want, and regulation only sets the outer limits. I've added your point to §3.8 (`12e7ba2`)."
+    },
+    {
+      "id": "claude-13-turn-16-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"what's key here is the \"demand side\"\") This is the earlier human-versus-tooling test at neighbourhood scale. Tooling changes how an intent gets carried out; it can't supply one. A co-op doesn't change that either. What it changes is *whose* preferences govern. In a residents' co-op it's the residents' wants that count, not an outsider's idea of what they ought to want. That's both why it's legitimate and why it might simply sell beer. So \"is it in demand?\" can only be answered in the inner loop, by asking residents and reading sales records, before anything is built."
+    },
+    {
+      "id": "claude-13-turn-16-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(Saba) The Oakland link makes sense. Saba also sits on the side that doesn't require changing anyone's wants. It lowers the cost of stocking fresh food for owners who'd like to, and it leaves the deciding to customers. If your contact is building on that, the useful outer-loop question is what it would take to run a Saba in another city without Saba's staff. The answer is roughly the shared ordering, refrigeration logistics and sales records from §3.8."
+    },
+    {
+      "id": "claude-13-turn-16-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(one decision) The co-op cases agent is still running. When it reports, shall I add a Saba-style outer-loop sketch to the mission, as something concrete you could show your contact? Or would you rather keep the mission at the survey level for now?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s1-0",
+      "kind": "accept",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "target": "claude-13-turn-16-r-3",
+      "end": 194,
+      "standing?": true,
+      "about": "that the co-op aspect is possible, via the UK witness",
+      "text": "So, coming from the UK where \"the Co-op\" is a known national brand (but from a food standpoint certainly no better than…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 196,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s2-0",
+      "kind": "extend",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 249,
+      "standing?": false,
+      "about": "the Saba example to national scale",
+      "text": "A Saba in every city would be the same kind of thing.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 251,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s3-0",
+      "kind": "qualify",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 280,
+      "standing?": false,
+      "about": "the success bar for the co-op layer",
+      "text": "And if it makes money, great.",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 282,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s4-0",
+      "kind": "propose",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 496,
+      "standing?": true,
+      "about": "the futonic layer: helping people realise their own potential",
+      "text": "But I think the \"futonic\" ideas would indeed be a bit about helping people realise some of their own potential, whether…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 498,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s5-0",
+      "kind": "explore",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 589,
+      "standing?": false,
+      "about": "which aspects of the technology can really help",
+      "text": "And it remains a good question about which aspects of that technology can really help with.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 591,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s6-0",
+      "kind": "report",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 712,
+      "standing?": false,
+      "about": "himself as the positive case for learning tech",
+      "text": "For me, for example, I continue to think that technology could help me learn mathematics \"faster\" or at least \"better\".…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 713,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s7-0",
+      "kind": "qualify",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 779,
+      "standing?": false,
+      "about": "the typicality of the self-example",
+      "text": "but learning mathematics seems like something of a niche interest.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 781,
+      "author": "operator",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-f-s8-0",
+      "kind": "disagree",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "end": 971,
+      "standing?": false,
+      "about": "the survey claim and its instrument",
+      "text": "Indeed, I remember hearing about some UK-based research that said that most people don't like learning at all (though I…",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-r-1",
+      "kind": "report",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "target": "claude-13-turn-17-f-s8-0",
+      "standing?": false,
+      "text": "(\"most people don't like learning at all\") That's probably the Learning and Work Institute's annual Adult Participation…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-17",
+      "id": "claude-13-turn-17-r-2",
+      "kind": "explain",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "standing?": false,
+      "text": "(why that matters here) It's the same point as the corner store. Food deserts weren't caused by a missing shop, and low…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-17",
+      "carries-out": "claude-13-turn-16-r-3",
+      "id": "claude-13-turn-17-c-48bcc6f8",
+      "kind": "commit",
+      "at": "2026-10-10T01:50:00Z",
+      "record": "turn-8J5gU4",
+      "repo": "futon0",
+      "subject": "M-landscape-positioning: §3.10 futonic = realising potential; UK learning survey",
+      "sha": "48bcc6f8",
+      "standing?": false
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "record": "turn-qCKjmS",
+  "turn_id": "claude-17-turn-475",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-02T01:06:35Z",
+  "agent_id": "claude-17",
+  "source_text": "Hm... I question whether AIF terms can semantically overlap intent queues. Also, the previous turn has been massively over-underlined, e.g. the term \"underlined\" is underlined but that was only on the turn above, not this one.  It is confusing.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-475-f-s2-0",
+      "intent": "disagree",
+      "text": "I question whether AIF terms can semantically overlap intent queues."
+    },
+    {
+      "id": "claude-17-turn-475-f-s3-0",
+      "intent": "report-problem",
+      "text": "Also, the previous turn has been massively over-underlined, e.g."
+    },
+    {
+      "id": "claude-17-turn-475-f-s5-0",
+      "intent": "report",
+      "text": "It is confusing."
+    }
+  ],
+  "reply_text": "Only 8 of the 353 R-node cues are also intent cues. I'll have the painter skip any phrase that is in the live intent vocabulary:Those tests use \"for now\", which the default intent vocabulary already contains. They'll run with an empty intent vocabulary:㊥ (do R-node terms overlap intent cues?) I agree they shouldn't, and I've made the painter enforce it. We decided R-nodes aren't conversational acts. So a phrase like \"for now\" or \"I still see\", which already marks your speech act, shouldn't also count as evidence of a requirement. It was already tagged as an intent (\"defer\", \"report-problem\"), and the R-node tag added nothing new. Now any phrase in the live intent vocabulary is never an R-node tag. Only 8 of the 353 R-node cues were affected: \"for now\", \"I still see\", \"I reckon\", \"let's go with\", \"please do\", \"update\" and two longer phrases. That brings this buffer's red tags from 112 to 93. Committed as futon3c `58b4e30f`, with a test that a phrase in the intent vocabulary gets no red tag.\n\n🖖 (where the extra underlining came from) The wavy purple underlines on \"underlined\", \"don't need underlining\" and \"if they are red\" aren't from the R-node layer or the phrase cues. They're 象's interpretation of your previous turn: 象-sonnet split it into fragments, report-problem and constrain, and those spans get the purple wave. That turn had three layers at once on \"I still see\": the 象 fragment, the intent phrase cue and the red R-node tag. With today's change it now has two.\n\nThe confusing part is timing. 象 interprets a turn after you send it, so its fragments always land on the turn above the one you're typing. They stay there until the next analysis replaces them. It's worse when your turn is about underlining, because the fragment boundaries then fall on the word \"underlined\".\n\n🈸 (the purple fragments) Want me to change how they're shown? Two options:\n1. **Hover only:** no wave, just the hover text with intent and target.\n2. **Show briefly:** keep the wave, but only until you start typing the next turn.\n\nEither way the analysis is still recorded. Only the display changes. It's in `session-turn-analysis.el` (`session-mode--display-analysis`), a small change.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-475-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(the purple fragments) Want me to change how they're shown? Two options:\n1. **Hover only:** no wave, just the hover text with intent and target.\n2. **Show briefly:** keep the wave, but only until you start typing the next turn."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-474-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(red, no underline) Red terms no longer have an underline. The underline wasn't part of the red tag: phrases like \"for now\" are also intent cues, and the intent tag underlines them. Now the red tag sits above the intent tag and turns its underline off, so those words show as plain red. Your existing turns have been repainted. Words that are intent cues but not R-node terms keep their usual underline."
+    },
+    {
+      "id": "claude-17-turn-474-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(checked) \"for now\" at the end of your last turn now shows the red face with no underline. The red-tag test now also checks that the tag outranks the intent tag and that the red face has no underline. All five R-node tests pass. Committed as futon3c `bd6f5172`."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 6,
+      "author": "operator",
+      "turn": "claude-17-turn-475",
+      "id": "claude-17-turn-475-f-s2-0",
+      "kind": "disagree",
+      "at": "2026-10-02T01:06:35Z",
+      "record": "turn-qCKjmS",
+      "end": 74,
+      "standing?": false,
+      "about": "the premise that R-node (AIF) terms can overlap semantically with intent cues ('queues' read as 'cues')",
+      "text": "I question whether AIF terms can semantically overlap intent queues.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 75,
+      "author": "operator",
+      "turn": "claude-17-turn-475",
+      "id": "claude-17-turn-475-f-s3-0",
+      "kind": "report-problem",
+      "at": "2026-10-02T01:06:35Z",
+      "record": "turn-qCKjmS",
+      "end": 139,
+      "standing?": false,
+      "about": "the previous turn's display: it is covered in underlines",
+      "text": "Also, the previous turn has been massively over-underlined, e.g.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 228,
+      "author": "operator",
+      "turn": "claude-17-turn-475",
+      "id": "claude-17-turn-475-f-s5-0",
+      "kind": "report",
+      "at": "2026-10-02T01:06:35Z",
+      "record": "turn-qCKjmS",
+      "end": 244,
+      "standing?": false,
+      "about": "the display after the changes: Joe's own state about it",
+      "text": "It is confusing.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "option": [
+        1,
+        2
+      ],
+      "turn": "claude-17-turn-475",
+      "id": "claude-17-turn-475-r-0",
+      "kind": "offer",
+      "at": "2026-10-02T01:06:35Z",
+      "record": "turn-qCKjmS",
+      "standing?": true,
+      "text": "(the purple fragments) Want me to change how they're shown? Two options:\n1. **Hover only:** no wave, just the hover tex…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-475",
+      "id": "claude-17-turn-475-c-52afc672",
+      "kind": "commit",
+      "at": "2026-10-02T01:06:35Z",
+      "record": "turn-qCKjmS",
+      "repo": "futon2",
+      "subject": "Publish repair ticket T-repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d (finding repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d)",
+      "sha": "52afc672",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-475",
+      "id": "claude-17-turn-475-c-58b4e30f",
+      "kind": "commit",
+      "at": "2026-10-02T01:06:35Z",
+      "record": "turn-qCKjmS",
+      "repo": "futon3c",
+      "subject": "session-mode: a phrase in the intent vocabulary is not also an R-node cue",
+      "sha": "58b4e30f",
+      "standing?": false
+    }
+  ]
+}

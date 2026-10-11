@@ -1,0 +1,196 @@
+{
+  "record": "turn-ngC1Zc",
+  "turn_id": "claude-13-turn-26",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T02:18:41Z",
+  "agent_id": "claude-13",
+  "source_text": "Well, we don't necessarily need to mint new stars right away, but the list is a good one.  E.g. ChipWits wasn't just fun, it was a source of icons that were used in Xiang-2000 and a way to think about controlling an agent system.  Most of the other items *should* have a mission and star associated, but maybe right now they are more like fodder for a futon0/README-nebula.md b/c they are a bit nebulous and stars might form there.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-26-f-s1-0",
+      "intent": "constrain",
+      "text": "Well, we don't necessarily need to mint new stars right away, but the list is a good one."
+    },
+    {
+      "id": "claude-13-turn-26-f-s3-0",
+      "intent": "explain",
+      "text": "ChipWits wasn't just fun, it was a source of icons that were used in Xiang-2000 and a way to think about controlling an agent system."
+    },
+    {
+      "id": "claude-13-turn-26-f-s4-0",
+      "intent": "propose",
+      "text": "Most of the other items *should* have a mission and star associated, but maybe right now they are more like fodder for a futon0/README-nebula.md b/c they are a bit nebulous and stars might form there."
+    }
+  ],
+  "reply_text": "㊢ (done) I've created `futon0/README-nebula.md` (pushed as `ff0776d`). It holds goals that have real effort behind them but no star yet, each with the evidence of effort and pointers to nearby stars or notes. The rule at the top: an entry leaves the nebula when a mission opens for it, which is how a star forms. There are nine entries:\n1. you learning maths\n2. the travelling workstation\n3. infrastructure that survives failure\n4. money and the end-of-year decision\n5. teaching and Peeragogy\n6. writing and publishing\n7. ChipWits\n8. friends' projects\n9. fun and play\n\n㊢ (\"ChipWits wasn't just fun\") I've corrected that in both places. ChipWits now has its own entry: a source of the icons used in Xiang-2000, and a model for thinking about controlling an agent system through icon-based instructions. \"Fun and play\" stays as a separate entry, with a note that not everything in the file needs a use.\n\n🈖 (why a separate file) It gets around the selection effect we found. The star map only shows what missions have already minted. The nebula is where effort shows up first, so a future goal has somewhere to be written down before anyone has built anything for it.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-26-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(done) I've created `futon0/README-nebula.md` (pushed as `ff0776d`). It holds goals that have real effort behind them but no star yet, each with the evidence of effort and pointers to nearby stars or notes. The rule at the top: an entry leaves the nebula when a mission opens for it, which is how a star forms. There are nine entries:\n1. you learning maths\n2. the travelling workstation\n3. infrastructure that survives failure\n4. money and the end-of-year decision\n5. teaching and Peeragogy\n6. writing and publishing\n7. ChipWits\n8. friends' projects\n9. fun and play"
+    },
+    {
+      "id": "claude-13-turn-26-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"ChipWits wasn't just fun\") I've corrected that in both places. ChipWits now has its own entry: a source of the icons used in Xiang-2000, and a model for thinking about controlling an agent system through icon-based instructions. \"Fun and play\" stays as a separate entry, with a note that not everything in the file needs a use."
+    },
+    {
+      "id": "claude-13-turn-26-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(why a separate file) It gets around the selection effect we found. The star map only shows what missions have already minted. The nebula is where effort shows up first, so a future goal has somewhere to be written down before anyone has built anything for it."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-25-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊥",
+      "text": "(gist) Turning the survey on your own problems gives a clear answer: the technology helps most with **`wm-overnight-unsupervised`**, and the best of it is open. The introspection also suggests the list is somewhat prejudiced, for a structural reason I can point to. Both are in the mission as §4 (`dc69bef`)."
+    },
+    {
+      "id": "claude-13-turn-25-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"whether any of the technology I learned about could help me\") I matched the 13 held stars and 1 active star in the star map against the survey. The useful matches:\n- **`wm-overnight-unsupervised`**: four things you could take directly, all open.\n  - Reticle's verdict spec: yes / no / unknown / no-fault, and it refuses any action that wasn't declared in advance.\n  - Zeroshot's separate review-and-repair loop.\n  - Smithers' durable runs with rewind.\n  - Cotal's leases with fencing tokens.\n- **`efe-trustworthy-over-starmap`**: calibrated typed decisions, through the open SGLang + Clef route (needs a GPU).\n- **`full-arxiv-mining`** and **`ai-passes-prelims`**:\n  - Crawlee for harvesting\n  - SGLang for serving open models locally\n  - Paritok for using fewer tokens\n  - JevOps's pattern of letting Lean decide what gets admitted\n- **`hypergraph-operator`**: Cognisee and Scribe Optimize, as things to learn from.\n- **`symbol-grounding`**: nothing in the survey."
+    },
+    {
+      "id": "claude-13-turn-25-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(the t2 chain) The revenue chain is stuck at its first link: `cold-eoi-sent` is at n=0, which the star map itself calls \"the crux\". No tool from SF would send that first email. By the test we used earlier, that's probably not a tooling gap. It's either a missing intent or something blocking it, and only you know which."
+    },
+    {
+      "id": "claude-13-turn-25-r-3",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈖",
+      "text": "(\"somewhat prejudiced\") Missions *mint* capabilities. So only something that already has a mission can become a star. That's the same selection effect that tripped up the July probe: the map draws your goals from the apparatus that already exists. All 36 stars fall into five regions: the War Machine, mathematics, the hypergraph, revenue, and the pudding-prover kit. Things you've put real effort into recently that have no star:\n- **you learning mathematics faster or better.** The map has \"AI passes prelims\" but nothing about Joe learning.\n- the phone/Kinesis/DeX/voxterm workstation\n- infrastructure that survives a drive failure\n- money: taxes, filings, the Ltd question, and the decision you face at the end of the year\n- teaching, workshops and Peeragogy\n- writing and publishing: futon7a, the MMCA paper\n- fun: ChipWits\n- friends' projects, like the Oakland co-op"
+    },
+    {
+      "id": "claude-13-turn-25-r-4",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "🈸",
+      "text": "(one decision) Which of these are real goals, and which are maintenance or pastimes that don't need a star? I'd only mint the ones you confirm. The rest stay in the mission as a record that the question was asked."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-f-s1-0",
+      "kind": "constrain",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "end": 89,
+      "standing?": true,
+      "about": "minting new stars (missions) from the goals list",
+      "text": "Well, we don't necessarily need to mint new stars right away, but the list is a good one.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 96,
+      "author": "operator",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-f-s3-0",
+      "kind": "explain",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "end": 229,
+      "standing?": false,
+      "about": "why nebulous items are worth keeping: the ChipWits precedent",
+      "text": "ChipWits wasn't just fun, it was a source of icons that were used in Xiang-2000 and a way to think about controlling an…",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 231,
+      "author": "operator",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-f-s4-0",
+      "kind": "propose",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "end": 431,
+      "standing?": true,
+      "about": "a README-nebula.md nursery for proto-goals, with stars condensing out of it",
+      "text": "Most of the other items *should* have a mission and star associated, but maybe right now they are more like fodder for …",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-r-0",
+      "kind": "report",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "standing?": false,
+      "text": "(done) I've created `futon0/README-nebula.md` (pushed as `ff0776d`). It holds goals that have real effort behind them b…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-r-1",
+      "kind": "report",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "target": "claude-13-turn-26-f-s3-0",
+      "standing?": false,
+      "text": "(\"ChipWits wasn't just fun\") I've corrected that in both places. ChipWits now has its own entry: a source of the icons …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-r-2",
+      "kind": "explain",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "standing?": false,
+      "text": "(why a separate file) It gets around the selection effect we found. The star map only shows what missions have already …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-c-6ba0f4b8",
+      "kind": "commit",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "repo": "futon0",
+      "subject": "README-nebula: goals with real effort and no star yet",
+      "sha": "6ba0f4b8",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-26",
+      "id": "claude-13-turn-26-c-ff0776db",
+      "kind": "commit",
+      "at": "2026-10-10T02:18:41Z",
+      "record": "turn-ngC1Zc",
+      "repo": "futon0",
+      "subject": "README-nebula: fix DEX-SETUP path",
+      "sha": "ff0776db",
+      "standing?": false
+    }
+  ]
+}

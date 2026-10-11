@@ -1,0 +1,142 @@
+{
+  "record": "turn-ND51hI",
+  "turn_id": "claude-13-turn-24",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-10T02:07:14Z",
+  "agent_id": "claude-13",
+  "source_text": "OK, let's create a futon0/README-hardening.md now that collects the ideas (as ideas) and we can come back to them later",
+  "fragments": [
+    {
+      "id": "claude-13-turn-24-f-s1-0",
+      "intent": "delegate",
+      "text": "let's create a futon0/README-hardening.md now that collects the ideas (as ideas)"
+    },
+    {
+      "id": "claude-13-turn-24-f-s1-1",
+      "intent": "defer",
+      "text": "we can come back to them later"
+    }
+  ],
+  "reply_text": "I'm correcting one line in the new README. The three pass keys belong to zone and the two phones, not to metameso and lucy.㊢ (done) I've created `futon0/README-hardening.md`, committed and pushed as `1ea6b3b` with a one-line correction in `b73d516`. It collects the ideas as ideas, each with its source and a status of done, not done, open, or idea. It's in seven sections:\n1. getting back in when zone won't answer: console, serial, watchdog, reverse tunnel\n2. firewall\n3. watching the hardware\n4. backups\n5. secrets and access\n6. recall across hosts, today's gap\n7. the parked timers\n\nThe landscape mission now points to it.\n\n㊢ (status, from running zone-health just now) 11 of 19 checks pass. The failures:\n- federation peers can't be reached from zone\n- inbox-zero isn't running\n- 288 side branches aren't on any remote\n- there are 454 checkouts in `/tmp`\n- the pass store has diverged from the metameso hub (3 Linode root-password commits)\n- all 12 timers are still parked\n\n㊩ (two things the checks hide)\n- **`evidence-backup` passes only because the one-off 10-08 extract is 27 hours old.** There's still no nightly off-box evidence backup, so this check will look healthy until it suddenly doesn't.\n- **The new drive already shows 3.54 TB written, about two days in.** That's mostly the restore, but disk-watch alerts above 1 TB in 24 hours, so it's worth watching whether the daily rate settles.\n\nBoth are written into the README's status snapshot. Nothing else was changed on the system.",
+  "reply_acts": [
+    {
+      "id": "claude-13-turn-24-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(status, from running zone-health just now) 11 of 19 checks pass. The failures:\n- federation peers can't be reached from zone\n- inbox-zero isn't running\n- 288 side branches aren't on any remote\n- there are 454 checkouts in `/tmp`\n- the pass store has diverged from the metameso hub (3 Linode root-password commits)\n- all 12 timers are still parked"
+    },
+    {
+      "id": "claude-13-turn-24-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊩",
+      "text": "(two things the checks hide)\n- **`evidence-backup` passes only because the one-off 10-08 extract is 27 hours old.** There's still no nightly off-box evidence backup, so this check will look healthy until it suddenly doesn't.\n- **The new drive already shows 3.54 TB written, about two days in.** That's mostly the restore, but disk-watch alerts above 1 TB in 24 hours, so it's worth watching whether the daily rate settles."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-13-turn-23-r-0",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(\"on metameso\") Yes, that's where it is. It's a section headed **\"Hardening, once it is back\"**, starting at line 75 of `metameso:~/notes/zone-outage-2026-10-06.md`, not a separate README. It lists:\n- dropbear-initramfs, so a LUKS box can be unlocked over SSH after a reboot\n- a serial console, plus persistent journald so the previous boot's log survives a crash\n- a firewall safety net when editing rules remotely (`iptables-apply`, or an `at` job that flushes the rules)\n- after the outage: RAID1 if possible, smartd alerts, and off-box backups (restic/borg)"
+    },
+    {
+      "id": "claude-13-turn-23-r-1",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊢",
+      "text": "(mission) I've updated the landscape mission's pointer so the deferred metameso-recall item points at that section (`dac476b`)."
+    },
+    {
+      "id": "claude-13-turn-23-r-2",
+      "kind": "reply-mark",
+      "author": "claude-13",
+      "mark": "㊟",
+      "text": "(the recall gap again) This is another small instance of §3.12 row 1. Your hardening list lives only in a notes file on another host, and neither of us could find it from here by name. It took a grep over ssh, like the 10-08 analysis this morning."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 4,
+      "author": "operator",
+      "turn": "claude-13-turn-24",
+      "id": "claude-13-turn-24-f-s1-0",
+      "kind": "delegate",
+      "at": "2026-10-10T02:07:14Z",
+      "record": "turn-ND51hI",
+      "end": 84,
+      "standing?": true,
+      "about": "futon0/README-hardening.md — a new document collecting hardening ideas from the outage notes, ZONE-1.1, firewall and secrets docs",
+      "text": "let's create a futon0/README-hardening.md now that collects the ideas (as ideas)",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "start": 89,
+      "author": "operator",
+      "turn": "claude-13-turn-24",
+      "id": "claude-13-turn-24-f-s1-1",
+      "kind": "defer",
+      "at": "2026-10-10T02:07:14Z",
+      "record": "turn-ND51hI",
+      "end": 119,
+      "standing?": false,
+      "about": "acting on the collected hardening ideas",
+      "text": "we can come back to them later",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-24",
+      "id": "claude-13-turn-24-r-0",
+      "kind": "report",
+      "at": "2026-10-10T02:07:14Z",
+      "record": "turn-ND51hI",
+      "standing?": false,
+      "text": "(status, from running zone-health just now) 11 of 19 checks pass. The failures:\n- federation peers can't be reached fro…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-13",
+      "turn": "claude-13-turn-24",
+      "id": "claude-13-turn-24-r-1",
+      "kind": "report-problem",
+      "at": "2026-10-10T02:07:14Z",
+      "record": "turn-ND51hI",
+      "standing?": false,
+      "text": "(two things the checks hide)\n- **`evidence-backup` passes only because the one-off 10-08 extract is 27 hours old.** The…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-24",
+      "id": "claude-13-turn-24-c-1ea6b3bc",
+      "kind": "commit",
+      "at": "2026-10-10T02:07:14Z",
+      "record": "turn-ND51hI",
+      "repo": "futon0",
+      "subject": "README-hardening: collect hardening ideas from the outage notes, ZONE-1.1, firewall and secrets docs",
+      "sha": "1ea6b3bc",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-24",
+      "id": "claude-13-turn-24-c-b73d5168",
+      "kind": "commit",
+      "at": "2026-10-10T02:07:14Z",
+      "record": "turn-ND51hI",
+      "repo": "futon0",
+      "subject": "README-hardening: correct which devices hold pass keys",
+      "sha": "b73d5168",
+      "standing?": false
+    }
+  ]
+}

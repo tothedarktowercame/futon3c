@@ -1,0 +1,115 @@
+{
+  "record": "turn-LvQ6Vg",
+  "turn_id": "claude-4-turn-91",
+  "session_id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+  "created_at": "2026-10-04T13:25:00Z",
+  "agent_id": "claude-4",
+  "source_text": "The real problem here I think is that you've listed \"READY — fails; every row it depends on compiles (38)\" which takes \"compiles\" as a sign of readiness *without* taking correctness as the sign of readiness when correctness is cheap to compute",
+  "fragments": [
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-f-s1-0",
+      "intent": "report-problem",
+      "text": "The real problem here I think is that you've listed \"READY — fails; every row it depends on compiles (38)\" which takes \"compiles\" as a sign of readiness *without* taking correctness as the sign of readiness when correctness is cheap to compute"
+    }
+  ],
+  "reply_text": "㊥ (readiness now requires correct dependencies) You're right, and I've changed it. A row is READY only if everything it depends on is CORRECT, meaning it matches Lean, not merely compiles. Rows whose dependencies compile but haven't been checked now get their own section, 4b WAITING ON A CHECK:\n- `Raw₀.insert` waits on `AssocList.foldlM`;\n- `Lean.Parser.skip` waits on `epsilonInfo`.\n\nBoth blockers are in codex-6's check job. While fixing this I found a second, worse problem in the dependency data. 16 of the 110 rows weren't in the dependency source I'd used, including `testParseModule` and `mkEmptyEnvironment`, so they wrongly showed no dependencies. I've replaced that source with dependencies computed by Lean itself.\n\n㊬ (what I checked) The closure file I'd used (`stdlean-closure.tsv`) covers the grammar and environment-initialiser closure, not the parser module. So `testParseModule`, `parseHeader`, `parseCommand` and 13 others were missing, and showed up as READY with 0 dependencies.\n\nI wrote `/tmp/pyreg/rowdeps/RowDeps.lean`. For each row it follows the constants used in definition values (`getUsedConstants`) transitively, in the pinned v4.29 toolchain. All 110 rows were found. `testParseModule` now depends on 82 rows and `parseHeader` on 70, as expected. The limit: what macros and elaboration need is still not included.\n\n㊢ (what changed in the order) With correct dependencies, the most valuable READY rows are the anonymous-instance-naming problem, one error across three rows:\n\n| Row | Rows waiting on it |\n|---|---|\n| `String.instDecidableLtRaw._aux_1` | 21 |\n| `instMonadEIO._aux_13` | 18 |\n| `String.instHashableRaw.hash` | 12 |\n\nThen `mkUnexpectedError` (10, and it blocks `mkEOIError`) and `PersistentHashMap.insertAux` (10). `List.foldlM` falls to 5. Its 28 came from the incomplete data. I've updated the queue's repair order.\n\n㊟ (to see it) `python3 /tmp/pyreg/overnight/rowtree.py` prints sections 1–7 in your order, with 4b added.",
+  "reply_acts": [
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(readiness now requires correct dependencies) You're right, and I've changed it. A row is READY only if everything it depends on is CORRECT, meaning it matches Lean, not merely compiles. Rows whose dependencies compile but haven't been checked now get their own section, 4b WAITING ON A CHECK:\n- `Raw₀.insert` waits on `AssocList.foldlM`;\n- `Lean.Parser.skip` waits on `epsilonInfo`."
+    },
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊬",
+      "text": "(what I checked) The closure file I'd used (`stdlean-closure.tsv`) covers the grammar and environment-initialiser closure, not the parser module. So `testParseModule`, `parseHeader`, `parseCommand` and 13 others were missing, and showed up as READY with 0 dependencies."
+    },
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(what changed in the order) With correct dependencies, the most valuable READY rows are the anonymous-instance-naming problem, one error across three rows:"
+    },
+    {
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-3",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊟",
+      "text": "(to see it) `python3 /tmp/pyreg/overnight/rowtree.py` prints sections 1–7 in your order, with 4b added."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-4-turn-90@turn-7dRWAW-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(dispatched) `lean-prereg6` for codex-6. They write Lean expectations for the 11 rows:\n- `List.foldl`, `AssocList.foldlM`;\n- `epsilonInfo`, `isTerminalCommand`, `withStackDrop`;\n- the five `Syntax.*` accessors;\n- `mkListNode`."
+    },
+    {
+      "id": "claude-4-turn-90@turn-7dRWAW-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊟",
+      "text": "(repair order) I've recorded the repair order in the queue file for when repair seats free up: `List.foldlM` (28 dependents) → anonymous-instance naming (22 + 15 + 8) → `mkUnexpectedError` (9; it blocks `mkEOIError`)."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-91",
+      "id": "claude-4-turn-91@turn-LvQ6Vg-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-04T13:25:00Z",
+      "record": "turn-LvQ6Vg",
+      "end": 243,
+      "standing?": false,
+      "about": "the READY criterion in claude-4's list: 'compiles' used as the readiness sign",
+      "text": "The real problem here I think is that you've listed \"READY — fails; every row it depends on compiles (38)\" which takes …",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-91",
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-1",
+      "kind": "verify",
+      "at": "2026-10-04T13:25:00Z",
+      "record": "turn-LvQ6Vg",
+      "standing?": false,
+      "text": "(what I checked) The closure file I'd used (`stdlean-closure.tsv`) covers the grammar and environment-initialiser closu…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-91",
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-2",
+      "kind": "report",
+      "at": "2026-10-04T13:25:00Z",
+      "record": "turn-LvQ6Vg",
+      "standing?": false,
+      "text": "(what changed in the order) With correct dependencies, the most valuable READY rows are the anonymous-instance-naming p…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-91",
+      "id": "claude-4-turn-91@turn-LvQ6Vg-r-3",
+      "kind": "qualify",
+      "at": "2026-10-04T13:25:00Z",
+      "record": "turn-LvQ6Vg",
+      "standing?": false,
+      "text": "(to see it) `python3 /tmp/pyreg/overnight/rowtree.py` prints sections 1–7 in your order, with 4b added.",
+      "to": "operator"
+    }
+  ]
+}

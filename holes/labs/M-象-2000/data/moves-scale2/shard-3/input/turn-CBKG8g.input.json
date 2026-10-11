@@ -1,0 +1,120 @@
+{
+  "record": "turn-CBKG8g",
+  "turn_id": "claude-7-turn-1",
+  "session_id": "1b5d271d-f4b6-4c74-891a-55d34db56ffe",
+  "created_at": "2026-10-04T22:19:20Z",
+  "agent_id": "claude-7",
+  "source_text": "This is a demo session for testing 象. Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it. Don't do anything yet.",
+  "fragments": [
+    {
+      "id": "claude-7-turn-1-f-s1-0",
+      "intent": "report",
+      "text": "This is a demo session for testing 象."
+    },
+    {
+      "id": "claude-7-turn-1-f-s2-0",
+      "intent": "ask-action",
+      "text": "Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file should be called elephant.txt, and a 🈸 paragraph offering two numbered options for the one line to write in it."
+    },
+    {
+      "id": "claude-7-turn-1-f-s3-0",
+      "intent": "defer",
+      "text": "Don't do anything yet."
+    }
+  ],
+  "reply_text": "🈯 (\"should be called elephant.txt\") Should the demo file be called elephant.txt?\n\n🈸 (\"the one line to write in it\") Which line should go in it?\n1. `象 means elephant.`\n2. `This file was written during a 象 demo session.`",
+  "reply_acts": [
+    {
+      "id": "claude-7-turn-1-r-0",
+      "kind": "reply-mark",
+      "author": "claude-7",
+      "mark": "🈯",
+      "text": "(\"should be called elephant.txt\") Should the demo file be called elephant.txt?"
+    },
+    {
+      "id": "claude-7-turn-1-r-1",
+      "kind": "reply-mark",
+      "author": "claude-7",
+      "mark": "🈸",
+      "text": "(\"the one line to write in it\") Which line should go in it?\n1. `象 means elephant.`\n2. `This file was written during a 象 demo session.`"
+    }
+  ],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-7-turn-1",
+      "id": "claude-7-turn-1-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-04T22:19:20Z",
+      "record": "turn-CBKG8g",
+      "end": 37,
+      "standing?": false,
+      "about": "the session's standing (demo/test of 象)",
+      "text": "This is a demo session for testing 象.",
+      "to": "claude-7"
+    },
+    {
+      "port?": true,
+      "start": 38,
+      "author": "operator",
+      "turn": "claude-7-turn-1",
+      "id": "claude-7-turn-1-f-s2-0",
+      "kind": "ask-action",
+      "at": "2026-10-04T22:19:20Z",
+      "record": "turn-CBKG8g",
+      "end": 265,
+      "standing?": false,
+      "about": "a scripted two-question proforma reply",
+      "text": "Please reply in the proforma with two questions for me and nothing else: a 🈯 paragraph asking whether the demo file sh…",
+      "to": "claude-7"
+    },
+    {
+      "port?": false,
+      "start": 266,
+      "author": "operator",
+      "turn": "claude-7-turn-1",
+      "id": "claude-7-turn-1-f-s3-0",
+      "kind": "defer",
+      "at": "2026-10-04T22:19:20Z",
+      "record": "turn-CBKG8g",
+      "end": 288,
+      "standing?": false,
+      "about": "all action beyond the scripted reply",
+      "text": "Don't do anything yet.",
+      "to": "claude-7"
+    },
+    {
+      "port?": true,
+      "author": "claude-7",
+      "turn": "claude-7-turn-1",
+      "id": "claude-7-turn-1-r-0",
+      "kind": "clarify",
+      "at": "2026-10-04T22:19:20Z",
+      "record": "turn-CBKG8g",
+      "target": "claude-7-turn-1-f-s2-0",
+      "standing?": false,
+      "text": "(\"should be called elephant.txt\") Should the demo file be called elephant.txt?",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-7",
+      "option": [
+        1,
+        2
+      ],
+      "turn": "claude-7-turn-1",
+      "id": "claude-7-turn-1-r-1",
+      "kind": "offer",
+      "at": "2026-10-04T22:19:20Z",
+      "record": "turn-CBKG8g",
+      "target": "claude-7-turn-1-f-s2-0",
+      "standing?": true,
+      "text": "(\"the one line to write in it\") Which line should go in it?\n1. `象 means elephant.`\n2. `This file was written during a 象…",
+      "to": "operator"
+    }
+  ]
+}

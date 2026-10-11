@@ -1,0 +1,103 @@
+{
+  "record": "turn-ZnJFtU",
+  "turn_id": "claude-11-turn-10",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-09T02:37:05Z",
+  "agent_id": "claude-11",
+  "source_text": "what is the heavy raw scan?",
+  "fragments": [
+    {
+      "id": "claude-11-turn-10-f-s1-0",
+      "intent": "clarify",
+      "text": "what is the heavy raw scan?"
+    }
+  ],
+  "reply_text": "㊥ (gist) When a file is deleted, ext4 only marks its blocks as free. The text stays on the disk until something overwrites it. The scan reads the whole old drive, all 2 TB from first byte to last, ignoring the filesystem, and searches for the word `rowtree`. If the deleted `rowtree.py`, or text that mentions it, is still in those freed blocks, the scan records where on the disk each hit is. I can then cut the surrounding bytes out and piece the file back together.\n\n🈖 (why it's heavy) It's long rather than costly. 2 TB over USB at about 100 MB/s takes 5–6 hours. So far it has read 60 GB and found nothing yet. The load is small:\n- It only reads the old drive, which is read-only anyway.\n- It writes almost nothing to the new drive; disk-watch shows no change in writes.\n- It runs at idle I/O priority and low CPU priority, so anything else on the box comes first.\n\n㊟ (whether it's worth it) The odds are modest. The old system ran for a day after the deletion and could have overwritten those blocks. Even a hit may be only a fragment. The fallback is rebuilding `rowtree.py` from the progress page and `PROGRESS-HISTORY.jsonl`, which is maybe an hour's work for an agent. If you'd rather not leave it running, `sudo systemctl stop olddisk-rowtree-scan` ends it and nothing else depends on it.",
+  "reply_acts": [
+    {
+      "id": "claude-11-turn-10-r-0",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "㊥",
+      "text": "(gist) When a file is deleted, ext4 only marks its blocks as free. The text stays on the disk until something overwrites it. The scan reads the whole old drive, all 2 TB from first byte to last, ignoring the filesystem, and searches for the word `rowtree`. If the deleted `rowtree.py`, or text that mentions it, is still in those freed blocks, the scan records where on the disk each hit is. I can then cut the surrounding bytes out and piece the file back together."
+    },
+    {
+      "id": "claude-11-turn-10-r-1",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "🈖",
+      "text": "(why it's heavy) It's long rather than costly. 2 TB over USB at about 100 MB/s takes 5–6 hours. So far it has read 60 GB and found nothing yet. The load is small:\n- It only reads the old drive, which is read-only anyway.\n- It writes almost nothing to the new drive; disk-watch shows no change in writes.\n- It runs at idle I/O priority and low CPU priority, so anything else on the box comes first."
+    },
+    {
+      "id": "claude-11-turn-10-r-2",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "㊟",
+      "text": "(whether it's worth it) The odds are modest. The old system ran for a day after the deletion and could have overwritten those blocks. Even a hit may be only a fragment. The fallback is rebuilding `rowtree.py` from the progress page and `PROGRESS-HISTORY.jsonl`, which is maybe an hour's work for an agent. If you'd rather not leave it running, `sudo systemctl stop olddisk-rowtree-scan` ends it and nothing else depends on it."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-11-turn-9-r-0",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "㊢",
+      "text": "(one last attempt) ext4's journal no longer had the deleted directory, so a normal undelete found nothing. A raw scan of the 2 TB old disk for `rowtree` text is now running as the `olddisk-rowtree-scan` system unit. It runs at idle I/O priority and should take 5–6 hours. If deleted file contents survive in free space, the hits will be in `~/recovered-olddisk-tmp/rowtree-hits.txt`. The old disk is mounted read-only at `/mnt/olddisk` until the scan finishes. If nothing turns up, rebuilding `rowtree.py` from the page and the history file is a modest job."
+    },
+    {
+      "id": "claude-11-turn-9-r-1",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "🈖",
+      "text": "(\"working in tmp is clearly a bit if a liability\") I agree, and it's worse than a backup gap: `/tmp` is erased on every boot. The habit came from claude-4's handoff packets, which said `git worktree add … /tmp/mfs-key`, and the Codex lanes copied it. I've done three things about it:\n1. **A rule in `~/code/CLAUDE.md` and `~/code/AGENTS.md`:** \"No work in /tmp\". Worktrees go under `~/worktrees/<repo>/`, notes under the repo or `~/notes/`, and packets must not tell agents to use `/tmp` either.\n2. **A new scan check, `work-in-tmp`** (futon0 `1c78a94`). It fails on any git checkout in `/tmp`. I created one in `/tmp` and the check caught it.\n3. **Pruned the 278 dead worktree records** in mfuton-share. This only removed git's records of directories that no longer exist; the branch count is 216 before and after."
+    },
+    {
+      "id": "claude-11-turn-9-r-2",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "㊟",
+      "text": "(a related gap) The nightly `zone-git-backup` snapshots uncommitted work only in each repo's main checkout, not in its linked worktrees. Moving worktrees out of `/tmp` makes them survive a reboot, but uncommitted work in them is still not off-box until it's committed and pushed. Also, `~/code/CLAUDE.md` and `AGENTS.md` aren't in any repo, so no backup covers them."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-11-turn-10",
+      "id": "claude-11-turn-10-f-s1-0",
+      "kind": "clarify",
+      "at": "2026-10-09T02:37:05Z",
+      "record": "turn-ZnJFtU",
+      "end": 27,
+      "standing?": false,
+      "about": "the 'heavy raw scan' — a recovery process the agent named in its prior report",
+      "text": "what is the heavy raw scan?",
+      "to": "claude-11"
+    },
+    {
+      "port?": false,
+      "author": "claude-11",
+      "turn": "claude-11-turn-10",
+      "id": "claude-11-turn-10-r-1",
+      "kind": "explain",
+      "at": "2026-10-09T02:37:05Z",
+      "record": "turn-ZnJFtU",
+      "standing?": false,
+      "text": "(why it's heavy) It's long rather than costly. 2 TB over USB at about 100 MB/s takes 5–6 hours. So far it has read 60 G…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-11",
+      "turn": "claude-11-turn-10",
+      "id": "claude-11-turn-10-r-2",
+      "kind": "qualify",
+      "at": "2026-10-09T02:37:05Z",
+      "record": "turn-ZnJFtU",
+      "standing?": false,
+      "text": "(whether it's worth it) The odds are modest. The old system ran for a day after the deletion and could have overwritten…",
+      "to": "operator"
+    }
+  ]
+}

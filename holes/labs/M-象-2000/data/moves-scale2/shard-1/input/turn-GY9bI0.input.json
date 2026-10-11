@@ -1,0 +1,149 @@
+{
+  "record": "turn-GY9bI0",
+  "turn_id": "claude-17-turn-465",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-02T00:24:53Z",
+  "agent_id": "claude-17",
+  "source_text": "OK, now I have an idea.  The War Machine's agents should have self-talk or exchanges between them.  If we can find those transcripts, we should be able to figure out what they are doing in their turns and how *they* talk about activities that are strictly correlated with R-numbers due to the construction of the programme",
+  "fragments": [
+    {
+      "id": "claude-17-turn-465-f-s2-0",
+      "intent": "explain",
+      "text": "The War Machine's agents should have self-talk or exchanges between them."
+    },
+    {
+      "id": "claude-17-turn-465-f-s3-0",
+      "intent": "propose",
+      "text": "If we can find those transcripts, we should be able to figure out what they are doing in their turns and how *they* talk about activities that are strictly correlated with R-numbers due to the construction of the programme"
+    }
+  ],
+  "reply_text": "㊥ (the War Machine's own agents) The transcripts exist, but only four R-nodes have speakers. In the War Machine's act vocabulary (`futon2/holes/labs/wm-contract/wm-click-acts.edn`, 17 acts, each tagged with its R-node), most acts run as plain code with no agent talking. Only these dispatch an agent:\n- **dispatch-author:** R16;\n- **dispatch-reviewer and verify-review:** R9;\n- **request-interpretation:** R7;\n- **repair dispatches from the click-repair loop:** R17.\n\nFor those four, every word the agent writes falls under that R-node by the way the programme is built, so we get labelled examples without any judging.\n\n㊢ (what's retained) There are two sources:\n- **Agency job store:** 6,134 jobs. The War Machine's own callers are `wm-flight` (85 jobs), `wm-full-loop` (39) and `wm-click` (15). Their prompts and replies are often not kept, though. About 30 full-loop jobs have the agent's working text, including 10 independent reviews and the author jobs. 11 interpretation jobs have both the request and the reply.\n- **Codex session logs:** these hold the agents' full working text. 22 logs name a wm-author or wm-reviewer seat, 33 contain a full-loop independent review, and 8 contain an interpretation request. The click-repair loop dispatches as `wm-click-loop` through `agency_send`, so its R17 repair jobs are in the job store too.\n\n🖖 (how I'd use it) The useful contrast is author against reviewer on the same target: same mission, same code, different R-node. That should remove most of the subject matter (clj-kondo, the repo, the mission). What's left should be how R16 talk differs from R9 talk. Interpretation (R7) and repair (R17) contrast against the pooled rest. The steps:\n1. Build the corpus: one file per R-node with the agents' own text, prompts excluded, from both sources.\n2. Extract the words each node uses distinctively, by log-odds against the other nodes, keeping only words that occur on several targets.\n3. Add those as cues for R16, R9, R7 and R17, and rerun the held-out detection on your turns against the turn bids, as before.\n\nIt could fill the gap the last test exposed: R9 fired on only 7 of your turns. We'd learn whether you talk the way the reviewers do when you're checking something.\n\n㊟ (limits) This covers 4 of the 23 nodes. The other 19 have no agent talking: their work is in-process code, so the War Machine gives us no examples of their language. The amounts are also modest, dozens of transcripts per node, not thousands. Enough to find distinctive words, not to train anything.\n\n🈸 (go-ahead) Shall I build the corpus and run the contrast?",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-465-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(the War Machine's own agents) The transcripts exist, but only four R-nodes have speakers. In the War Machine's act vocabulary (`futon2/holes/labs/wm-contract/wm-click-acts.edn`, 17 acts, each tagged with its R-node), most acts run as plain code with no agent talking. Only these dispatch an agent:\n- **dispatch-author:** R16;\n- **dispatch-reviewer and verify-review:** R9;\n- **request-interpretation:** R7;\n- **repair dispatches from the click-repair loop:** R17."
+    },
+    {
+      "id": "claude-17-turn-465-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what's retained) There are two sources:\n- **Agency job store:** 6,134 jobs. The War Machine's own callers are `wm-flight` (85 jobs), `wm-full-loop` (39) and `wm-click` (15). Their prompts and replies are often not kept, though. About 30 full-loop jobs have the agent's working text, including 10 independent reviews and the author jobs. 11 interpretation jobs have both the request and the reply.\n- **Codex session logs:** these hold the agents' full working text. 22 logs name a wm-author or wm-reviewer seat, 33 contain a full-loop independent review, and 8 contain an interpretation request. The click-repair loop dispatches as `wm-click-loop` through `agency_send`, so its R17 repair jobs are in the job store too."
+    },
+    {
+      "id": "claude-17-turn-465-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(limits) This covers 4 of the 23 nodes. The other 19 have no agent talking: their work is in-process code, so the War Machine gives us no examples of their language. The amounts are also modest, dozens of transcripts per node, not thousands. Enough to find distinctive words, not to train anything."
+    },
+    {
+      "id": "claude-17-turn-465-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(go-ahead) Shall I build the corpus and run the contrast?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-464-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(do the keywords detect anything?) Yes, and on the held-out turns they agree with an independent judge better than chance. This is the first time any route this week has. Of the 150 turns no elaborating agent saw, 96 trigger at least one R-node. On the 61 of those that also have a turn bid from the R-node agents, a detected node is among the bid nodes 39% of the time, against 22% by chance. That's with a plain word matcher: no model, just the 440 cues from the tree and the three elaborations."
+    },
+    {
+      "id": "claude-17-turn-464-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(on all your recent turns) Across all 1,226 operator turns in the live annotation store, 63% trigger at least one node:"
+    },
+    {
+      "id": "claude-17-turn-464-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(with the everyday words removed) I reran without 12 of them: \"would\", \"work\", \"will\", \"I think\", \"we could\", \"build\", \"design\", \"until\", \"if we\", \"rather … than\", \"level\", \"enough\". Detection drops to 55 of 150 held-out turns. Agreement with the turn bids holds at 33%, against 15% by chance. Removing those words gives up coverage, but what remains is more specific."
+    },
+    {
+      "id": "claude-17-turn-464-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what I'd look at next) Two things the counts suggest, before touching the tree:\n1. **Everyday words:** make them count only when they occur with something more specific. For example, \"would\" counts towards R4 only alongside \"if\" or a named consequence.\n2. **Assurance nodes:** look at turns where you are clearly checking or auditing, and see what words you actually use there. The agents' cues for R9 and R12 (\"independent\", \"calibrated\") seem to be words you rarely write."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 25,
+      "author": "operator",
+      "turn": "claude-17-turn-465",
+      "id": "claude-17-turn-465-f-s2-0",
+      "kind": "explain",
+      "at": "2026-10-02T00:24:53Z",
+      "record": "turn-GY9bI0",
+      "end": 98,
+      "standing?": false,
+      "about": "the War Machine's agents: Joe's expectation that they produce talk, to themselves or between them",
+      "text": "The War Machine's agents should have self-talk or exchanges between them.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 100,
+      "author": "operator",
+      "turn": "claude-17-turn-465",
+      "id": "claude-17-turn-465-f-s3-0",
+      "kind": "propose",
+      "at": "2026-10-02T00:24:53Z",
+      "record": "turn-GY9bI0",
+      "end": 322,
+      "standing?": true,
+      "about": "reading the War Machine agents' transcripts, if they can be found, to learn what the agents do in their turns and how they describe R-number activities",
+      "text": "If we can find those transcripts, we should be able to figure out what they are doing in their turns and how *they* tal…",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-465",
+      "id": "claude-17-turn-465-r-1",
+      "kind": "report",
+      "at": "2026-10-02T00:24:53Z",
+      "record": "turn-GY9bI0",
+      "standing?": false,
+      "text": "(what's retained) There are two sources:\n- **Agency job store:** 6,134 jobs. The War Machine's own callers are `wm-flig…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-465",
+      "id": "claude-17-turn-465-r-2",
+      "kind": "qualify",
+      "at": "2026-10-02T00:24:53Z",
+      "record": "turn-GY9bI0",
+      "standing?": false,
+      "text": "(limits) This covers 4 of the 23 nodes. The other 19 have no agent talking: their work is in-process code, so the War M…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-465",
+      "id": "claude-17-turn-465-r-3",
+      "kind": "ask-action",
+      "at": "2026-10-02T00:24:53Z",
+      "record": "turn-GY9bI0",
+      "standing?": false,
+      "text": "(go-ahead) Shall I build the corpus and run the contrast?",
+      "to": "operator"
+    }
+  ]
+}

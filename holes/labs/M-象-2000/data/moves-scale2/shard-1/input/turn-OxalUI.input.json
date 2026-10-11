@@ -1,0 +1,139 @@
+{
+  "record": "turn-OxalUI",
+  "turn_id": "claude-17-turn-528",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-03T22:32:55Z",
+  "agent_id": "claude-17",
+  "source_text": "An external agent did some work on the McCarthy elephant logic and a limited extension thereof; I believe it is in PR#68",
+  "fragments": [
+    {
+      "id": "claude-17-turn-528-f-s1-0",
+      "intent": "report",
+      "text": "An external agent did some work on the McCarthy elephant logic and a limited extension thereof"
+    },
+    {
+      "id": "claude-17-turn-528-f-s1-1",
+      "intent": "verify",
+      "text": "I believe it is in PR#68"
+    }
+  ],
+  "reply_text": "I found it: futon3c PR #68. I'm now checking how it fits with the 象-off switch from earlier.㊥ (PR #68) The work is futon3c PR #68, \"Port M-象-2000 frontend to JVM and TypeScript (P23)\". It was built in a cloud Claude session on branch `claude/modest-newton-p7guja` and merged on 2026-10-02 as `cb6090af`. It is already on local master. It moves the 象 turn pipeline (recording, sending turns to the 象 seats, collecting the readings) out of Emacs and Python into the JVM. It adds routes under `/api/alpha/xiang/turns`, plus a TypeScript client and widget in `packages/xiang-client/` for Element and Matrix. What should I do with it?\n\n㊢ (what else landed) Three commits since the merge build on it:\n- **`1b926e00`:** adds the 小象 draft tier, a classical pre-parse that is handed to 象. This may be the \"limited extension\" you mean.\n- **`b7f02576`:** records the bridge agents' replies without sending them to 象.\n- **`b2d41946`:** stops the JVM from sending turns that weren't asked for analysis.\n\nThe write-up, including what the cloud session could and couldn't test, is in `holes/labs/M-象-2000/P23-frontend-port.md`. It had no JVM, futon1b or Emacs to test against.\n\n㊩ (the 象-off from earlier) This affects what I told you last turn. `象-off` only stops the Emacs path. The JVM now sends turns to 象-1 to 象-4 by itself, and it has no off switch. Turns that come in through the Matrix bridge with immediate dispatch will still reach the seats while 象 is \"off\". The JVM's health route shows it in use: its last reading (`turn-0flV3D`) was at about 05:14 UTC, shortly before I switched 象 off.\n\n🈸 (two options) \n1. I could add an off/on switch to the JVM's turn service that also takes a written re-arm condition, and have `象-off` / `象-on` set it too, so one command stops both paths.\n2. I could review PR #68 and the follow-up commits.\n\nWhich do you want, or both?",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-528-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what else landed) Three commits since the merge build on it:\n- **`1b926e00`:** adds the 小象 draft tier, a classical pre-parse that is handed to 象. This may be the \"limited extension\" you mean.\n- **`b7f02576`:** records the bridge agents' replies without sending them to 象.\n- **`b2d41946`:** stops the JVM from sending turns that weren't asked for analysis."
+    },
+    {
+      "id": "claude-17-turn-528-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(the 象-off from earlier) This affects what I told you last turn. `象-off` only stops the Emacs path. The JVM now sends turns to 象-1 to 象-4 by itself, and it has no off switch. Turns that come in through the Matrix bridge with immediate dispatch will still reach the seats while 象 is \"off\". The JVM's health route shows it in use: its last reading (`turn-0flV3D`) was at about 05:14 UTC, shortly before I switched 象 off."
+    },
+    {
+      "id": "claude-17-turn-528-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(two options) \n1. I could add an off/on switch to the JVM's turn service that also takes a written re-arm condition, and have `象-off` / `象-on` set it too, so one command stops both paths.\n2. I could review PR #68 and the follow-up commits."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-527-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(how they work) `M-x 象-off` asks \"Re-arm 象 when:\" and won't accept an empty answer, following the war-room pattern card wr-26. It sets the analysis policy to `never` and keeps the previous policy. It also writes the condition, with a timestamp, to `~/.emacs-graph/session-turn-analysis/xiang-off.log`. `M-x 象-on` puts the previous policy back and logs that too. Running `象-off` twice only replaces the written condition, so `象-on` still goes back to the policy from before the first `象-off`."
+    },
+    {
+      "id": "claude-17-turn-527-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(testing) I tested them in a separate batch Emacs, so your live setting wasn't touched:\n- An empty condition is refused.\n- The policy goes off and back to the one it had before (`unmatched` in the test).\n- A second `象-on` just says 象 isn't off."
+    },
+    {
+      "id": "claude-17-turn-527-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(limits) The seats stay registered with Agency. As you didn't ask for deregistration, I left it out. The off state lasts only for this Emacs session, so a restart turns 象 back on."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-528",
+      "id": "claude-17-turn-528-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-03T22:32:55Z",
+      "record": "turn-OxalUI",
+      "end": 94,
+      "standing?": false,
+      "about": "out-of-band work by an external agent on the elephant logic",
+      "text": "An external agent did some work on the McCarthy elephant logic and a limited extension thereof",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 96,
+      "author": "operator",
+      "turn": "claude-17-turn-528",
+      "id": "claude-17-turn-528-f-s1-1",
+      "kind": "verify",
+      "at": "2026-10-03T22:32:55Z",
+      "record": "turn-OxalUI",
+      "end": 120,
+      "standing?": false,
+      "about": "the location of the external work, hedged: PR#68",
+      "text": "I believe it is in PR#68",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-528",
+      "id": "claude-17-turn-528-r-0",
+      "kind": "report",
+      "at": "2026-10-03T22:32:55Z",
+      "record": "turn-OxalUI",
+      "standing?": false,
+      "text": "(what else landed) Three commits since the merge build on it:\n- **`1b926e00`:** adds the 小象 draft tier, a classical pre…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-528",
+      "id": "claude-17-turn-528-r-1",
+      "kind": "report-problem",
+      "at": "2026-10-03T22:32:55Z",
+      "record": "turn-OxalUI",
+      "standing?": false,
+      "text": "(the 象-off from earlier) This affects what I told you last turn. `象-off` only stops the Emacs path. The JVM now sends t…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "option": [
+        1,
+        2
+      ],
+      "turn": "claude-17-turn-528",
+      "id": "claude-17-turn-528-r-2",
+      "kind": "offer",
+      "at": "2026-10-03T22:32:55Z",
+      "record": "turn-OxalUI",
+      "standing?": true,
+      "text": "(two options) \n1. I could add an off/on switch to the JVM's turn service that also takes a written re-arm condition, an…",
+      "to": "operator"
+    }
+  ]
+}

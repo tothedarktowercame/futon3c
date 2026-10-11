@@ -1,0 +1,202 @@
+{
+  "record": "turn-XwITxi",
+  "turn_id": "claude-17-turn-383",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-10-01T00:48:55Z",
+  "agent_id": "claude-17",
+  "source_text": "So, it's an interesting question about the repeated citations; I guess that's the risk of batching things.  We could give randomly assigned turns in the batches, but they would still likely over-use certain patterns.  I don'tk now what to do about this.",
+  "fragments": [
+    {
+      "id": "claude-17-turn-383-f-s1-0",
+      "intent": "explore",
+      "text": "So, it's an interesting question about the repeated citations; I guess that's the risk of batching things."
+    },
+    {
+      "id": "claude-17-turn-383-f-s2-0",
+      "intent": "propose",
+      "text": "We could give randomly assigned turns in the batches, but they would still likely over-use certain patterns."
+    },
+    {
+      "id": "claude-17-turn-383-f-s3-0",
+      "intent": "report",
+      "text": "I don'tk now what to do about this."
+    }
+  ],
+  "reply_text": "㊥ Gist: I don't think batching is the cause. Today's loop also gave each reader ten consecutive turns from the same threads, and only 2–4% of its citations repeat. My suggestion is to keep context and record the repetition as what it is: the thread's context, not the move each sentence makes.\n\n🈖 (why not batching) The loop picks turns oldest first within a block, so a pack is usually a run of turns from one or two threads. That is exactly the setting where topic-level citing would show up. Even in hour 1, when Codex cited on most fragments, it did not repeat one pattern across a thread. The heavy repeats come from particular older Kimi readers. So the cause looks like the instructions and how those readers worked, not batching itself. Random assignment would also cost the session context that readers need for dictated fragments and replies like \"OK, do that\".\n\n🈖 (what the repeats mean) When kimi-16 cites `maturity-evidence-audit` on every sentence of one conversation, it is not entirely wrong: the conversation is about a maturity audit. Its mistake is attaching that to each sentence as if each one made the pattern's move. \"Isn't actually defined.\" is a report made within that context, not an audit move. So the repeats hold real information, just at the wrong level.\n\n㊭ (what I'd do)\n1. **A context field:** add an optional `context_patterns` field at the turn level. It records that the turn sits in the setting a pattern describes. Sentence citations stay for moves.\n2. **Moving the old repeats:** where a pattern repeats four or more times across a thread, move it from the sentences to the turn's `context_patterns`. Keep a sentence citation only where the rationale names something that sentence does. This is mechanical, and nothing is deleted.\n3. **A rule for new packs:** at most one citation of a given pattern per turn. A second citation needs a rationale that names a different IF clause. The validator can enforce this, and the loop's current repeat rate of 2–4% suggests it would rarely trigger.\n4. **For 小象:** context and move become two separate predictions. \"Which pattern's setting is this thread in\" is a classification over a whole conversation, and repetition helps it there. \"Which move is this sentence\" stays per sentence.\n\n🈸 (one decision) Shall I add `context_patterns` and move the 418 repeated citations into it?",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-383-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "Gist: I don't think batching is the cause. Today's loop also gave each reader ten consecutive turns from the same threads, and only 2–4% of its citations repeat. My suggestion is to keep context and record the repetition as what it is: the thread's context, not the move each sentence makes."
+    },
+    {
+      "id": "claude-17-turn-383-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(why not batching) The loop picks turns oldest first within a block, so a pack is usually a run of turns from one or two threads. That is exactly the setting where topic-level citing would show up. Even in hour 1, when Codex cited on most fragments, it did not repeat one pattern across a thread. The heavy repeats come from particular older Kimi readers. So the cause looks like the instructions and how those readers worked, not batching itself. Random assignment would also cost the session context that readers need for dictated fragments and replies like \"OK, do that\"."
+    },
+    {
+      "id": "claude-17-turn-383-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(what the repeats mean) When kimi-16 cites `maturity-evidence-audit` on every sentence of one conversation, it is not entirely wrong: the conversation is about a maturity audit. Its mistake is attaching that to each sentence as if each one made the pattern's move. \"Isn't actually defined.\" is a report made within that context, not an audit move. So the repeats hold real information, just at the wrong level."
+    },
+    {
+      "id": "claude-17-turn-383-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(what I'd do)\n1. **A context field:** add an optional `context_patterns` field at the turn level. It records that the turn sits in the setting a pattern describes. Sentence citations stay for moves.\n2. **Moving the old repeats:** where a pattern repeats four or more times across a thread, move it from the sentences to the turn's `context_patterns`. Keep a sentence citation only where the rationale names something that sentence does. This is mechanical, and nothing is deleted.\n3. **A rule for new packs:** at most one citation of a given pattern per turn. A second citation needs a rationale that names a different IF clause. The validator can enforce this, and the loop's current repeat rate of 2–4% suggests it would rarely trigger.\n4. **For 小象:** context and move become two separate predictions. \"Which pattern's setting is this thread in\" is a classification over a whole conversation, and repetition helps it there. \"Which move is this sentence\" stays per sentence."
+    },
+    {
+      "id": "claude-17-turn-383-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I add `context_patterns` and move the 418 repeated citations into it?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-382-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(what I built, commit 6be52885) `scripts/citation_audit.py` scores all 2,208 published citations at once. It writes one line per citation to `storage/operator-turns/citation-audit.jsonl`. The measures are:\n- **Word overlap:** similarity to the pattern's text, which words the sentence shares with it, and whether those include the pattern's 15 most distinctive words.\n- **Frequency:** how many readers cite the pattern, how often it gets this intent, and how often the same reader cites it within one thread."
+    },
+    {
+      "id": "claude-17-turn-382-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊩",
+      "text": "(word overlap doesn't work) I tested it on the five citations I had already judged, and it got about half of them wrong in each direction:\n- **Rated as fitting, but wrong:** the bad `exotic/full-lift-registry` citation, because \"metadata\" and \"full\" are among that pattern's own distinctive words.\n- **Rated as a word-match, but right:** the good `process/fake-done-via-binary-closure` citation shares only \"work\" with its pattern, and the fit comes from what your sentence means.\n- **Why:** shared words show the turn is on the pattern's topic, not that it makes the pattern's move. Your example of a bad citation, \"follow mode\" against `read-only-first-then-extend`, was flagged correctly, but so were many good ones."
+    },
+    {
+      "id": "claude-17-turn-382-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(the frequency measures that do work)\n- **Repetition within a thread:** this matches the citations a reader attaches to every sentence because they fit the thread's topic. For example, kimi-16 cited `stack-coherence/maturity-evidence-audit` 36 times, all in one conversation, including \"Isn't actually defined.\" and \"Well, how is sea defined in lean?\" By reader, this applies to:"
+    },
+    {
+      "id": "claude-17-turn-382-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(next)\n1. Mark the 418 repeated citations as unverified and keep them out of the pattern graph. The readings stay as they are, and the step is mechanical, quick and reversible.\n2. Then check about 30 of the remaining citations by hand, to estimate how many errors are left."
+    },
+    {
+      "id": "claude-17-turn-382-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(toward 小象 heuristics) Two of these measures could serve as simple rules inside 小象:\n- **Intent profile:** each pattern's spread of intents, so a pattern mostly cited on `constrain` is unlikely to fit an `ask-action`.\n- **Once per thread:** a limit on suggesting the same pattern repeatedly in one thread."
+    },
+    {
+      "id": "claude-17-turn-382-r-5",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Shall I mark the 418 repeated citations as unverified now?"
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-f-s1-0",
+      "kind": "explore",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "end": 106,
+      "standing?": false,
+      "about": "the cause of repeated citations in the backfill packs",
+      "text": "So, it's an interesting question about the repeated citations; I guess that's the risk of batching things.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 108,
+      "author": "operator",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "end": 216,
+      "standing?": true,
+      "about": "randomising turn assignment within batches as a remedy",
+      "text": "We could give randomly assigned turns in the batches, but they would still likely over-use certain patterns.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 218,
+      "author": "operator",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-f-s3-0",
+      "kind": "report",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "end": 253,
+      "standing?": false,
+      "about": "the operator's own remedy-lessness on the repetition problem",
+      "text": "I don'tk now what to do about this.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-r-1",
+      "kind": "explain",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "standing?": false,
+      "text": "(why not batching) The loop picks turns oldest first within a block, so a pack is usually a run of turns from one or tw…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-r-2",
+      "kind": "explain",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "standing?": false,
+      "text": "(what the repeats mean) When kimi-16 cites `maturity-evidence-audit` on every sentence of one conversation, it is not e…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-r-3",
+      "kind": "propose",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "standing?": true,
+      "text": "(what I'd do)\n1. **A context field:** add an optional `context_patterns` field at the turn level. It records that the t…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-383",
+      "id": "claude-17-turn-383-r-4",
+      "kind": "ask-action",
+      "at": "2026-10-01T00:48:55Z",
+      "record": "turn-XwITxi",
+      "standing?": false,
+      "text": "(one decision) Shall I add `context_patterns` and move the 418 repeated citations into it?",
+      "to": "operator"
+    }
+  ]
+}
