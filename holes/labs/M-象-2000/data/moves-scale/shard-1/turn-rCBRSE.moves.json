@@ -1,0 +1,86 @@
+{
+ "record": "turn-rCBRSE",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-523-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/quoted-constraint",
+   "quote": "\"A homeserver administrator must provision the account and token",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-523-f-s2-0",
+   "kind": "verify",
+   "move": "verify/get-story-straight",
+   "quote": "ok, but how did you register @fucodex?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-523-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how @fucodex was registered) I registered @fucodex on 14 September from a shell on lucy",
+   "answers": [
+    {
+     "act": "claude-17-turn-523-f-s2-0",
+     "quote": "I registered @fucodex on 14 September from a shell on lucy",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-523-r-1",
+   "kind": "reply-mark",
+   "move": "clarify/definition",
+   "quote": "(the line you quoted) \"A homeserver administrator must provision the account\"",
+   "answers": [
+    {
+     "act": "claude-17-turn-523-f-s1-0",
+     "quote": "(the line you quoted) \"A homeserver administrator must provision the account\"",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-523-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I provision the publisher account now?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

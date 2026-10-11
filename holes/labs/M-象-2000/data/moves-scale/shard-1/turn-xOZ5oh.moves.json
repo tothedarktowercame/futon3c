@@ -1,0 +1,78 @@
+{
+ "record": "turn-xOZ5oh",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-432-f-s1-0",
+   "kind": "verify",
+   "move": "verify/observed-output",
+   "quote": "No faces shown on e.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-432-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "㊬  in *claude-repl:claude-17* at the moment",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-432-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what changed) Under turn-tags mode, marks are now coloured as they come into view",
+   "answers": [
+    {
+     "act": "claude-17-turn-432-f-s1-0",
+     "quote": "(what changed) Under turn-tags mode, marks are now coloured",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-432-f-s2-0",
+     "quote": "(what changed) Under turn-tags mode",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-432-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(test) A new test colours a sample line twice",
+   "answers": [
+    {
+     "act": "claude-17-turn-432-f-s1-0",
+     "quote": "(test) A new test colours a sample line twice",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,187 @@
+{
+ "record": "turn-uJNPcf",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-42-f-s1-0",
+   "kind": "ask-action",
+   "move": "delegate/send-followup",
+   "quote": "let's send a follow-up short-list of additional considerations about wm-click-abb61cd8 to codex-10",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "the working definiton of \"click\" for our context is good",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-f-s3-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "it could apply to a set of dispatches that claude-4 is organising",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/definition",
+   "quote": "That's not done inside the War Machine at all.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-f-s5-0",
+   "kind": "propose",
+   "move": "propose/requisition",
+   "quote": "presumably claude-4 could send their design *to* the War Machine as a requisition.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-f-s6-0",
+   "kind": "propose",
+   "move": "propose/comparison",
+   "quote": "We could then in principle compare",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've sent codex-10 a follow-up with seven more points",
+   "answers": [
+    {
+     "act": "claude-17-turn-42-f-s1-0",
+     "quote": "I've sent codex-10 a follow-up with seven more points",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-42-f-s6-0",
+     "quote": "I agree with comparing the same job run as a War Machine click",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-42-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(follow-up to codex-10)",
+   "answers": [
+    {
+     "act": "claude-17-turn-42-f-s1-0",
+     "quote": "(follow-up to codex-10)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-42-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(your \"send it to the War Machine as a requisition\")",
+   "answers": [
+    {
+     "act": "claude-17-turn-42-f-s5-0",
+     "quote": "(your \"send it to the War Machine as a requisition\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-42-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(how to run the comparison)",
+   "answers": [
+    {
+     "act": "claude-17-turn-42-f-s6-0",
+     "quote": "(how to run the comparison)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-42-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(go-ahead) If you agree, I'll add §9 to the excursion",
+   "answers": [
+    {
+     "act": "claude-17-turn-42-f-s6-0",
+     "quote": "(go-ahead) If you agree",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

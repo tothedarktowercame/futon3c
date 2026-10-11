@@ -1,0 +1,252 @@
+{
+ "record": "turn-LPN1KW",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-25-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "your proposal sounds about right.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s2-0",
+   "kind": "explain",
+   "move": "explain/concept",
+   "quote": "we would have an M-typed-parks (I guess) that basically are \"pipes with intent\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "I can simulate that pipe by using the <token>: prefix form",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s4-0",
+   "kind": "explain",
+   "move": "explain/generalisation",
+   "quote": "That generalises M-: from Emacs, if we assume that the M- token is an Emacs-native intent.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s5-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "This is good,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s5-1",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "because I've always felt I don't have enough modifier keys on my keyboard.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s6-0",
+   "kind": "explain",
+   "move": "explain/feasibility",
+   "quote": "For 大象, matching your tokens and my tokens is pretty easy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s7-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "you've just been responding to a bellback from Kimi so there are intervening lines",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s8-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "You only know because you infer it from your context window.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s9-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "We could add frame numbers to the margin (like I do with display-line-number-mode)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-f-s10-0",
+   "kind": "propose",
+   "move": "propose/smart-repl",
+   "quote": "the REPL itself should be \"smart enough\" to know which frame I am replying to",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Yes, the REPL can know that.",
+   "answers": [
+    {
+     "act": "claude-17-turn-25-f-s7-0",
+     "quote": "Agent turns that answer a bellback aren't frames",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-25-f-s10-0",
+     "quote": "Yes, the REPL can know that.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "frame addressing",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "Your `㊩:` this turn answers the ㊩ paragraph of my last turn",
+   "answers": [
+    {
+     "act": "claude-17-turn-25-f-s8-0",
+     "quote": "Your `㊩:` this turn answers the ㊩ paragraph of my last turn",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "frame addressing"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-25-r-2",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "Frame numbers are cheap: the bar above your prompt could read `── frame 314 ──`",
+   "answers": [
+    {
+     "act": "claude-17-turn-25-f-s9-0",
+     "quote": "Frame numbers are cheap",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "frame addressing"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-25-r-3",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "\"Pipes with intent\" fits what the token machine needs.",
+   "answers": [
+    {
+     "act": "claude-17-turn-25-f-s2-0",
+     "quote": "\"Pipes with intent\" fits what the token machine needs.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "frame addressing"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-25-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I start with the recording side, steps 1 and 2?",
+   "answers": [
+    {
+     "act": "claude-17-turn-25-f-s9-0",
+     "quote": "Shall I start with the recording side, steps 1 and 2?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "frame addressing"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,111 @@
+{
+ "record": "turn-fWxOuE",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-398-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the system messages are a bit in-your-face.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-398-f-s2-0",
+   "kind": "verify",
+   "move": "verify/observed-output",
+   "quote": "system: yes: agreement act:32ab1363-88f5-48a2-92dd-0bc1fbe62989",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-398-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The outcome of a yes is now one dim, indented line with short ids",
+   "answers": [
+    {
+     "act": "claude-17-turn-398-f-s1-0",
+     "quote": "The outcome of a yes is now one dim, indented line with short ids",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-398-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "A refusal or failure gets the same dim style:",
+   "answers": [
+    {
+     "act": "claude-17-turn-398-f-s1-0",
+     "quote": "A refusal or failure gets the same dim style:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-398-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "The agent-chat ERT tests pass, 57 of 57.",
+   "answers": [
+    {
+     "act": "claude-17-turn-398-f-s1-0",
+     "quote": "The agent-chat ERT tests pass, 57 of 57.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-398-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/scope",
+   "quote": "Only the acceptance lines changed.",
+   "answers": [
+    {
+     "act": "claude-17-turn-398-f-s1-0",
+     "quote": "Only the acceptance lines changed.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

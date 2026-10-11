@@ -1,0 +1,280 @@
+{
+ "record": "turn-4nfBU0",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-386-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "I wonder if we should switch focus to 小象 for a while.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s2-0",
+   "kind": "explore",
+   "move": "explore/other-users",
+   "quote": "I'm curious what others might find it specifically useful for,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s2-1",
+   "kind": "propose",
+   "move": "propose/fast-mode",
+   "quote": "curious about my own potential use of it in a \"fast\" mode *before* sending any turn to the 象 annotator.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s3-0",
+   "kind": "explore",
+   "move": "explore/business-case",
+   "quote": "curious to think about business cases where someone would encounter it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s4-0",
+   "kind": "report-problem",
+   "move": "report-problem/missing-pathway",
+   "quote": "I don't think that pathway from local-first demo to first-contact really exists for people.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s6-0",
+   "kind": "explore",
+   "move": "explore/value-proposition",
+   "quote": "what would we actually be selling?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s7-0",
+   "kind": "explore",
+   "move": "explore/pilot-design",
+   "quote": "Supposing I even found an organisation that was willing to do an unpaid pilot, what kind of pilot would we do there",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-f-s8-0",
+   "kind": "constrain",
+   "move": "constrain/scope-limit",
+   "quote": "I'm feeling like there are gaps in the narrative here that merely mining my own old turns won't help with.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-0",
+   "kind": "reply-mark",
+   "move": "approve/with-plan",
+   "quote": "I agree that mining your old turns won't fill these gaps.",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s8-0",
+     "quote": "I agree that mining your old turns won't fill these gaps.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-386-f-s2-1",
+     "quote": "build the fast mode for you first, since your corrections are the best training data",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "xiaoxiao fast-mode plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "It splits a turn into fragments and gives each fragment one intent from 象's list",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s2-1",
+     "quote": "It splits a turn into fragments and gives each fragment one intent",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "Before a turn goes to 象, 小象 marks it in the REPL.",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s2-1",
+     "quote": "Before a turn goes to 象, 小象 marks it in the REPL.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-3",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "Labelling intents on its own isn't worth much",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s2-0",
+     "quote": "Labelling intents on its own isn't worth much",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-4",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "Not the model, but an audit with a tool left behind.",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s6-0",
+     "quote": "Not the model, but an audit with a tool left behind.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-386-f-s7-0",
+     "quote": "Not the model, but an audit with a tool left behind.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-5",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "A page where a visitor pastes a message and sees it marked up in the browser",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s4-0",
+     "quote": "A page where a visitor pastes a message and sees it marked up in the browser",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-386-f-s3-0",
+     "quote": "A page where a visitor pastes a message and sees it marked up in the browser",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-386-r-6",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "Does 象's intent list fit other people's speech, or only yours?",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s8-0",
+     "quote": "Does 象's intent list fit other people's speech, or only yours?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-386-r-7",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I build the fast-mode preview in the REPL first",
+   "answers": [
+    {
+     "act": "claude-17-turn-386-f-s2-1",
+     "quote": "Shall I build the fast-mode preview in the REPL first",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "xiaoxiao fast-mode plan"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

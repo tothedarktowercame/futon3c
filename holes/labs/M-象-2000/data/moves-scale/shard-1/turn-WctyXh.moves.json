@@ -1,0 +1,148 @@
+{
+ "record": "turn-WctyXh",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-372-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "What the heck?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-f-s2-0",
+   "kind": "verify",
+   "move": "verify/get-story-straight",
+   "quote": "4 minutes per record?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-f-s3-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "Can't they be batched?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Yes, they can be batched.",
+   "answers": [
+    {
+     "act": "claude-17-turn-372-f-s3-0",
+     "quote": "Yes, they can be batched.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-372-f-s2-0",
+     "quote": "The time goes on tool calls, about 67 per turn",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "backfill batching",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "For each fragment the reader runs two pattern searches",
+   "answers": [
+    {
+     "act": "claude-17-turn-372-f-s2-0",
+     "quote": "For each fragment the reader runs two pattern searches",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "backfill batching"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "**`pack`** builds one file for ten turns.",
+   "answers": [
+    {
+     "act": "claude-17-turn-372-f-s3-0",
+     "quote": "**`pack`** builds one file for ten turns.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "backfill batching"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "A reader can only judge the patterns the search surfaced",
+   "answers": [
+    {
+     "act": "claude-17-turn-372-f-s3-0",
+     "quote": "A reader can only judge the patterns the search surfaced",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "backfill batching"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-372-r-4",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "When the builder lands I will check it and build the pack for chunk 4.",
+   "answers": [
+    {
+     "act": "claude-17-turn-372-f-s3-0",
+     "quote": "When the builder lands I will check it and build the pack for chunk 4.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "backfill batching"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,209 @@
+{
+ "record": "turn-n3zH0f",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-362-f-s1-0",
+   "kind": "propose",
+   "move": "propose/revision",
+   "quote": "Shall we revie the 象 annotator as well with further instructions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I see from the record above that you shared \"Report-problem (pattern work)\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-f-s2-1",
+   "kind": "propose",
+   "move": "propose/session-backlog",
+   "quote": "issues should be saved in a \"session backlog\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-f-s3-0",
+   "kind": "propose",
+   "move": "propose/system-commands",
+   "quote": "I could use commands like !unfinished in my REPL that are routed to \"the system\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Yes, let's revise the annotator.",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s1-0",
+     "quote": "Yes, let's revise the annotator.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-362-f-s2-1",
+     "quote": "A session backlog follows directly from the wiring",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "session backlog wiring",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(revising the 象 annotator) The revision is small",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s1-0",
+     "quote": "(revising the 象 annotator) The revision is small",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "session backlog wiring"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the session backlog) With that field, the backlog needs no further judgement",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s2-1",
+     "quote": "(the session backlog) With that field",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-362-f-s2-0",
+     "quote": "(the session backlog) With that field",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "session backlog wiring"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-r-3",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "(what `!unfinished` would show now, compiled by hand from this session)",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s3-0",
+     "quote": "(what `!unfinished` would show now, compiled by hand from this session)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-362-f-s2-1",
+     "quote": "(what `!unfinished` would show now, compiled by hand from this session)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "session backlog wiring"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-r-4",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(`!` commands routed to the system) Agreed.",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s3-0",
+     "quote": "(`!` commands routed to the system) Agreed.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "session backlog wiring"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-362-r-5",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(order of work)",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s1-0",
+     "quote": "(order of work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "session backlog wiring"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-362-r-6",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one confirmation) Step 3 changes what every live reading contains",
+   "answers": [
+    {
+     "act": "claude-17-turn-362-f-s1-0",
+     "quote": "(one confirmation) Step 3 changes what every live reading contains",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "session backlog wiring"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

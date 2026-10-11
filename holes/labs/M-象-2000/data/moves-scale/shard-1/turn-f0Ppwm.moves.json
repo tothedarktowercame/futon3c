@@ -1,0 +1,111 @@
+{
+ "record": "turn-f0Ppwm",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-419-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "I don't understand the semnatics of \"labelling patterns\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-419-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "What is needed?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-419-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "The Minard method doesn't label your turns directly.",
+   "answers": [
+    {
+     "act": "claude-17-turn-419-f-s1-0",
+     "quote": "The Minard method doesn't label your turns directly.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "pattern stage labelling",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-419-r-1",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "This is a real entry from `pattern-stages-2026-09-21.edn`:",
+   "answers": [
+    {
+     "act": "claude-17-turn-419-f-s1-0",
+     "quote": "This is a real entry from `pattern-stages-2026-09-21.edn`:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern stage labelling"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-419-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "The 97 unlabelled patterns are mostly recent library additions.",
+   "answers": [
+    {
+     "act": "claude-17-turn-419-f-s2-0",
+     "quote": "The 97 unlabelled patterns are mostly recent library additions.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern stage labelling"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-419-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "We could skip it and report those 153 hits (12%) as unlabelled.",
+   "answers": [
+    {
+     "act": "claude-17-turn-419-f-s2-0",
+     "quote": "We could skip it and report those 153 hits (12%) as unlabelled.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern stage labelling"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

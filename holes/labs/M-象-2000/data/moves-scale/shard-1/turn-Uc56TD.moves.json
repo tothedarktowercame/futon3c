@@ -1,0 +1,97 @@
+{
+ "record": "turn-Uc56TD",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-40-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "There's some error in the behaviour of starting and stopping codex autorunner",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-40-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I stopped it and it didn't stop, first of all, and the 象 didn't turn gray second of all.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-40-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Here's what I can see:",
+   "answers": [
+    {
+     "act": "claude-17-turn-40-f-s2-0",
+     "quote": "*Messages* has \"stopped in codex-19\" four times.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-40-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "The 象 indicator itself works.",
+   "answers": [
+    {
+     "act": "claude-17-turn-40-f-s2-0",
+     "quote": "The 象 indicator itself works.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-40-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The fix is futon3c `40f8a2e1`, and both functions are already loaded into your Emacs.",
+   "answers": [
+    {
+     "act": "claude-17-turn-40-f-s1-0",
+     "quote": "The fix is futon3c `40f8a2e1`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-40-f-s2-0",
+     "quote": "Start and stop now redraw the 象 indicator immediately.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

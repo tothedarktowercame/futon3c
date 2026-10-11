@@ -1,0 +1,110 @@
+{
+ "record": "turn-x2RU5I",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-406-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "RETRACT still hasn't got an IBOL label in the legend.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-406-f-s2-0",
+   "kind": "propose",
+   "move": "propose/icon-choice",
+   "quote": "There's an x with an up-to-the-right arrow that would work for RETRACT.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-406-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/locator",
+   "quote": "In the actual Chipwits game it is the 4th icon on the 2nd row in the Operators panel.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-406-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(where the icon came from) It's not on the 1984 sheets the other chips were cut from.",
+   "answers": [
+    {
+     "act": "claude-17-turn-406-f-s3-0",
+     "quote": "(where the icon came from) It's not on the 1984 sheets",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-406-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked) I rendered `feed.html` in headless Chromium",
+   "answers": [
+    {
+     "act": "claude-17-turn-406-f-s1-0",
+     "quote": "(what I checked) I rendered `feed.html` in headless Chromium",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-406-f-s2-0",
+     "quote": "the chip loads (HTTP 200)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-406-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(labels still unchecked) As with the other three, \"X AND ARROW\" describes the picture",
+   "answers": [
+    {
+     "act": "claude-17-turn-406-f-s1-0",
+     "quote": "(labels still unchecked) As with the other three, \"X AND ARROW\" describes the picture",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

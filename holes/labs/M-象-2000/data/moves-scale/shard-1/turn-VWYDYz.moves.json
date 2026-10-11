@@ -1,0 +1,135 @@
+{
+ "record": "turn-VWYDYz",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-510-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you help with this 象-2000 issue?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-510-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/named-gap",
+   "quote": "(no evidence id)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-510-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Your \"Yes\" is still queued in `~/.local/state/futon3c/evidence-outbox`",
+   "answers": [
+    {
+     "act": "claude-17-turn-510-f-s2-0",
+     "quote": "Your \"Yes\" is still queued in `~/.local/state/futon3c/evidence-outbox`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-510-f-s1-0",
+     "quote": "Your \"Yes\" is still queued",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-510-r-1",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "If one turn is turned down for good, every later turn in that session fails too.",
+   "answers": [
+    {
+     "act": "claude-17-turn-510-f-s2-0",
+     "quote": "every later turn in that session fails too",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "evidence outbox repair",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-510-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I replayed three records by hand:",
+   "answers": [
+    {
+     "act": "claude-17-turn-510-f-s2-0",
+     "quote": "I replayed three records by hand:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "evidence outbox repair"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-510-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "I'd do it in two steps:",
+   "answers": [
+    {
+     "act": "claude-17-turn-510-f-s1-0",
+     "quote": "I'd do it in two steps:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "evidence outbox repair"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-510-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I do step 1 now, before the retention window starts deleting records tonight?",
+   "answers": [
+    {
+     "act": "claude-17-turn-510-f-s1-0",
+     "quote": "Shall I do step 1 now",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "evidence outbox repair"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

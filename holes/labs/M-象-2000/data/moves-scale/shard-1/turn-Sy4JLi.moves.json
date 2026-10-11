@@ -1,0 +1,112 @@
+{
+ "record": "turn-Sy4JLi",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-447-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I see a portion that says \"no token data",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-447-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/fix-request",
+   "quote": "I actually want the forensic report to continue up to today",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-447-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The run finished sooner than expected. All 23 nodes reported;",
+   "answers": [
+    {
+     "act": "claude-17-turn-447-f-s1-0",
+     "quote": "The run finished sooner than expected.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "paragraph opens with the R-node bidding result before the gap-data items"
+  },
+  {
+   "act": "claude-17-turn-447-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "I opened three cited declarations and they are what the bids say:",
+   "answers": [
+    {
+     "act": "claude-17-turn-447-f-s1-0",
+     "quote": "I opened three cited declarations",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-447-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "The library's functional patterns mostly describe engineering",
+   "answers": [
+    {
+     "act": "claude-17-turn-447-f-s1-0",
+     "quote": "The library's functional patterns mostly describe engineering",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-447-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "kimi-1 has the in-place band decomposition and kimi-2 the gap data",
+   "answers": [
+    {
+     "act": "claude-17-turn-447-f-s1-1",
+     "quote": "kimi-2 the gap data",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

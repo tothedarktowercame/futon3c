@@ -1,0 +1,92 @@
+{
+ "record": "turn-pK5idM",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-460-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/generate",
+   "quote": "let's *generate* a set of keywords that we put into a fully-disambiguated tree.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-460-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/prime-then-elaborate",
+   "quote": "You can do that as \"priming data\" and then we can ask a few other agents to elaborate",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-460-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(structure) Under System 4, the Understanding",
+   "answers": [
+    {
+     "act": "claude-17-turn-460-f-s1-0",
+     "quote": "(structure) Under System 4",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "keyword tree",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-460-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(checker) `check_tree.py` verifies four things:",
+   "answers": [
+    {
+     "act": "claude-17-turn-460-f-s1-0",
+     "quote": "(checker) `check_tree.py` verifies four things:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "keyword tree"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-460-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(go-ahead) Shall I dispatch that round?",
+   "answers": [
+    {
+     "act": "claude-17-turn-460-f-s2-0",
+     "quote": "(go-ahead) Shall I dispatch that round?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "keyword tree"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

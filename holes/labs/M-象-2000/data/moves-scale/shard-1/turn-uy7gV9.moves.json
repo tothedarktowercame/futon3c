@@ -1,0 +1,179 @@
+{
+ "record": "turn-uy7gV9",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-500-f-s1-0",
+   "kind": "propose",
+   "move": "propose/applied-idea",
+   "quote": "one applied idea where the small-causal diagram idea could be *practical*.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I know we are still trying to check whether it even works at all.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/scenario",
+   "quote": "suppose we want a \"policy for selecting the next M-E-T-A- task to work on\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/status",
+   "quote": "that's what codex-10 is currently writing.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-f-s5-0",
+   "kind": "propose",
+   "move": "propose/validate-early",
+   "quote": "We could validate *that* with our Fong-inspired approach",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(checking codex-10's META policy) This works, and it has already found a gap.",
+   "answers": [
+    {
+     "act": "claude-17-turn-500-f-s5-0",
+     "quote": "(checking codex-10's META policy) This works",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-500-f-s2-0",
+     "quote": "This works",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-17-turn-500-f-s3-0",
+     "quote": "I read codex-10's draft",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "meta policy causal check",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how) The models follow the draft's own `:arms` guards:",
+   "answers": [
+    {
+     "act": "claude-17-turn-500-f-s5-0",
+     "quote": "(how) The models follow the draft's own `:arms` guards:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "meta policy causal check"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why this is practical) The method checks a policy's structure before it is ever run:",
+   "answers": [
+    {
+     "act": "claude-17-turn-500-f-s1-0",
+     "quote": "(why this is practical)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "meta policy causal check"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-500-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits) This checks only the structure of the selection",
+   "answers": [
+    {
+     "act": "claude-17-turn-500-f-s2-0",
+     "quote": "(limits) This checks only the structure",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "meta policy causal check"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-500-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I send codex-10 the missing-arm finding",
+   "answers": [
+    {
+     "act": "claude-17-turn-500-f-s5-0",
+     "quote": "(one decision) Shall I send codex-10 the missing-arm finding",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "meta policy causal check"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

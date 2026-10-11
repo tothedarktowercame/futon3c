@@ -1,0 +1,112 @@
+{
+ "record": "turn-8aFNoU",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-477-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I can see underlining, but not anything but the standard underlining \"for now\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-477-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "I also don't like visual noise.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-477-f-s3-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "The red text for R-nodes plus underlining for other things is good enough.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-477-f-s4-0",
+   "kind": "propose",
+   "move": "explore/historical-count",
+   "quote": "What will be interesting is to look historically and see how many red texts appear.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-477-f-s5-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "I still don't know what texts *should* turn red (R-number node but not an intent).",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-477-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "Across the 1,249 operator turns in the live store, from 22 September to now, 286 turns would show red",
+   "answers": [
+    {
+     "act": "claude-17-turn-477-f-s4-0",
+     "quote": "286 turns would show red: 23%",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-477-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "That's the intention, not a guarantee.",
+   "answers": [
+    {
+     "act": "claude-17-turn-477-f-s5-0",
+     "quote": "That's the intention, not a guarantee.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

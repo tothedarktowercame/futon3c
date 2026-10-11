@@ -1,0 +1,137 @@
+{
+ "record": "turn-mlUamp",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-45-f-s1-0",
+   "kind": "propose",
+   "move": "propose/demo-session",
+   "quote": "how about we would a \"demo\" session and we use it to verify the behaviour.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-45-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I don't even know what to type.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-45-f-s3-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I have created an empty Claude REPL terminal.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-45-f-s4-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "What should I do to get evidence that the system works?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-45-r-0",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "Type the three turns below into the new REPL, in order",
+   "answers": [
+    {
+     "act": "claude-17-turn-45-f-s2-0",
+     "quote": "Type the three turns below into the new REPL",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-45-f-s4-0",
+     "quote": "Type the three turns below into the new REPL",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "demo session",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-45-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what to type)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "demo session"
+   },
+   "confidence": "low",
+   "note": "heading-only paragraph; content follows in the next paragraph"
+  },
+  {
+   "act": "claude-17-turn-45-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what I will check, turn by turn)",
+   "answers": [
+    {
+     "act": "claude-17-turn-45-f-s1-0",
+     "quote": "(what I will check, turn by turn)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "demo session"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-45-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(things that may go wrong, which still count as findings)",
+   "answers": [
+    {
+     "act": "claude-17-turn-45-f-s1-0",
+     "quote": "(things that may go wrong, which still count as findings)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "demo session"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

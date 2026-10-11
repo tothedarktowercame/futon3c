@@ -1,0 +1,161 @@
+{
+ "record": "turn-mKNPUO",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-502-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes that would be a nice \"meta\" ask.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-502-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "You tell it to read its last turns and distill that into an A-self-heal.md algorithm",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-502-f-s3-0",
+   "kind": "delegate",
+   "move": "delegate/dispatch",
+   "quote": "Please bell it to codex-10",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-502-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "The bell is sent, and codex-10 is already working on it.",
+   "answers": [
+    {
+     "act": "claude-17-turn-502-f-s3-0",
+     "quote": "The bell is sent, and codex-10 is already working on it.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-502-f-s2-0",
+     "quote": "It asks codex-10 to:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-502-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "**Job:** `invoke-1790915880255-30166-6552bb4c`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-502-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "codex-10's work checks out.",
+   "answers": [
+    {
+     "act": "claude-17-turn-502-f-s2-0",
+     "quote": "codex-10's work checks out.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-502-r-3",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "**Cited commits:** all ten futon2 commits the file cites as receipts exist",
+   "answers": [
+    {
+     "act": "claude-17-turn-502-f-s2-0",
+     "quote": "all ten futon2 commits the file cites as receipts exist",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-502-r-4",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "codex-10's reasoning is sound as far as it goes",
+   "answers": [
+    {
+     "act": "claude-17-turn-502-f-s2-0",
+     "quote": "codex-10's reasoning is sound as far as it goes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-502-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I ask codex-10 to replace the abstention with that \"write the missing A item\" filler?",
+   "answers": [
+    {
+     "act": "claude-17-turn-502-f-s2-0",
+     "quote": "Shall I ask codex-10 to replace the abstention",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,247 @@
+{
+ "record": "turn-WBTnHm",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-389-f-s1-0",
+   "kind": "propose",
+   "move": "propose/forward-model",
+   "quote": "we could start to set up an improved version of the futon",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "We could in principle use other open source intelligence to feed into that model",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s3-0",
+   "kind": "explain",
+   "move": "explain/hypothesis",
+   "quote": "customer journeys and development trajectories are closely related",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s4-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "I'm not sure how many people would click on the open source offering",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s5-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "the forward model could map pain points",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s6-0",
+   "kind": "propose",
+   "move": "propose/positioning",
+   "quote": "one clever idea would be to keep going with the active inference work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s7-0",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "I'd be able to show good work-product while keeping AIF as a semi-secret-sauce.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s8-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "(Not a real secret b/c it is published by others",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s9-0",
+   "kind": "explain",
+   "move": "explain/hypothesis",
+   "quote": "I have some hypotheses about what would be \"missing\" at XTrace & Tessl",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s10-0",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "what we're doing is not just optimizing agent chats but optimizing overall behaviour in organisations.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-f-s11-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "the latter should not be hard to sell *if it is demonstrated*",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what's written, `futon7/holes/M-futon-forward-model.demand-v0.edn`",
+   "answers": [
+    {
+     "act": "claude-17-turn-389-f-s1-0",
+     "quote": "(what's written, `futon7/holes/M-futon-forward-model.demand-v0.edn`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "forward model demand v0",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-r-1",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "I agree, and the model shows what follows for the site.",
+   "answers": [
+    {
+     "act": "claude-17-turn-389-f-s4-0",
+     "quote": "I agree, and the model shows what follows for the site.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "forward model demand v0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "Since yesterday, agent replies carry a mark on each paragraph",
+   "answers": [
+    {
+     "act": "claude-17-turn-389-f-s6-0",
+     "quote": "Since yesterday, agent replies carry a mark on each paragraph",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "forward model demand v0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-r-3",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I recorded it as hypothesis `:h/aif-gap`.",
+   "answers": [
+    {
+     "act": "claude-17-turn-389-f-s9-0",
+     "quote": "I recorded it as hypothesis `:h/aif-gap`.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "forward model demand v0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-389-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I build proposal recording v0 over your turns since 30 September?",
+   "answers": [
+    {
+     "act": "claude-17-turn-389-f-s5-0",
+     "quote": "Shall I build proposal recording v0",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "forward model demand v0"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

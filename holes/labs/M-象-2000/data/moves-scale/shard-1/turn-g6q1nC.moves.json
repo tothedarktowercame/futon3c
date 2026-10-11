@@ -1,0 +1,160 @@
+{
+ "record": "turn-g6q1nC",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-535-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "let's do work according to your \"order of work\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-f-s2-0",
+   "kind": "propose",
+   "move": "propose/first-class-tracking",
+   "quote": "we *need* outstanding work-order tracking to become first-class in Agency",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-f-s3-0",
+   "kind": "report",
+   "move": "report/case-study",
+   "quote": "claude-4 asked codex-19 for work, and codex-19 did the first half and then just stopped.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-f-s4-0",
+   "kind": "propose",
+   "move": "propose/reminder-system",
+   "quote": "It should get a reminder that there is a work order outstanding.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "As it stands, I had to intervene there myself.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "kimi-1 is running it now; the packet is in `/tmp/claude-17-p24/step1.md`.",
+   "answers": [
+    {
+     "act": "claude-17-turn-535-f-s1-0",
+     "quote": "kimi-1 is running it now",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-535-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Pieces of this are already in futon3c:",
+   "answers": [
+    {
+     "act": "claude-17-turn-535-f-s2-0",
+     "quote": "Pieces of this are already in futon3c:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "first-class work orders",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "A first-class work order would:",
+   "answers": [
+    {
+     "act": "claude-17-turn-535-f-s2-0",
+     "quote": "A first-class work order would:",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-17-turn-535-f-s4-0",
+     "quote": "A first-class work order would:",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-535-f-s3-0",
+     "quote": "A first-class work order would:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "first-class work orders"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-535-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I write this up as its own mission once step 1 is reviewed, starting from the codex-19 case?",
+   "answers": [
+    {
+     "act": "claude-17-turn-535-f-s2-0",
+     "quote": "Shall I write this up as its own mission",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "first-class work orders"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

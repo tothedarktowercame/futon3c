@@ -1,0 +1,148 @@
+{
+ "record": "turn-OtsTKG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-7-f-s1-0",
+   "kind": "propose",
+   "move": "propose/state-tracking",
+   "quote": "it could maintain something like the marble-run-state,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-f-s1-1",
+   "kind": "clarify",
+   "move": "clarify/examples",
+   "quote": "obligations that have closed over the last turn, or others still outstanding from previous turns.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-f-s2-0",
+   "kind": "extend",
+   "move": "propose/hud",
+   "quote": "It would start to turn HAPPENED and maybe DIDN'T HAPPEN into a proper heads-up display.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Yes. Once 象 works after a turn has landed, it can keep a running state across turns.",
+   "answers": [
+    {
+     "act": "claude-17-turn-7-f-s1-0",
+     "quote": "it can keep a running state across turns",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-7-f-s1-1",
+     "quote": "which ports closed this turn (`closedo`) and which are still open",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "marble-run HUD",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Both sides of the conversation can already be read as acts:",
+   "answers": [
+    {
+     "act": "claude-17-turn-7-f-s1-0",
+     "quote": "Both sides of the conversation can already be read as acts",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "marble-run HUD"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-r-2",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "This session already has things a HUD would list as still open:",
+   "answers": [
+    {
+     "act": "claude-17-turn-7-f-s1-1",
+     "quote": "This session already has things a HUD would list as still open",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "marble-run HUD"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-r-3",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "**An adapter** that turns a settled turn (record + reading + happened) and my marked reply into P24 acts.",
+   "answers": [
+    {
+     "act": "claude-17-turn-7-f-s2-0",
+     "quote": "**An adapter** that turns a settled turn",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "marble-run HUD"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-7-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I add this to `E-agency-work-orders.md` as the HUD section",
+   "answers": [
+    {
+     "act": "claude-17-turn-7-f-s2-0",
+     "quote": "Shall I add this to `E-agency-work-orders.md` as the HUD section",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "marble-run HUD"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

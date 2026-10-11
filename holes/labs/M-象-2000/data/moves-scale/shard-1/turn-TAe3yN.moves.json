@@ -1,0 +1,146 @@
+{
+ "record": "turn-TAe3yN",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-405-f-s1-0",
+   "kind": "propose",
+   "move": "propose/icon-choice",
+   "quote": "on the Legend from feed, EXPLORE could use a roller skate icon?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "I'm a bit worried about the other icon.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-f-s3-0",
+   "kind": "propose",
+   "move": "propose/icon-choice",
+   "quote": "WITHDRAW could use the door icon.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-f-s4-0",
+   "kind": "verify",
+   "move": "verify/prior-art-question",
+   "quote": "I thought RETRACT had previously been classed with the x-up-arrow icon.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-f-s5-0",
+   "kind": "propose",
+   "move": "propose/icon-choice",
+   "quote": "GIST could be classed with the arrow-in-a-loop icon",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "The page's 20 chips didn't include any of these",
+   "answers": [
+    {
+     "act": "claude-17-turn-405-f-s1-0",
+     "quote": "The page's 20 chips didn't include any of these",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-405-f-s2-0",
+     "quote": "The page's 20 chips didn't include any of these",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "I rendered `feed.html` in headless Chromium. All three images load (HTTP 200)",
+   "answers": [
+    {
+     "act": "claude-17-turn-405-f-s1-0",
+     "quote": "All three images load (HTTP 200)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-405-f-s3-0",
+     "quote": "All three images load (HTTP 200)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-405-f-s5-0",
+     "quote": "All three images load (HTTP 200)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-405-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "I've labelled the rows ROLLER SKATE, DOOR and LOOP ARROW, after how they look",
+   "answers": [
+    {
+     "act": "claude-17-turn-405-f-s4-0",
+     "quote": "I've labelled the rows ROLLER SKATE, DOOR and LOOP ARROW",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

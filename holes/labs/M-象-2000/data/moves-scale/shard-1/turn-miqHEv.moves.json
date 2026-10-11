@@ -1,0 +1,136 @@
+{
+ "record": "turn-miqHEv",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-388-f-s1-0",
+   "kind": "propose",
+   "move": "propose/use-case-mining",
+   "quote": "in terms of the questions-for-me I wonder if we could mine",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-388-f-s2-0",
+   "kind": "propose",
+   "move": "propose/upsell-idea",
+   "quote": "The \"upsell\" from the free demo that I'd see would have to do not just with 象",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-388-f-s3-0",
+   "kind": "explain",
+   "move": "explain/requirements",
+   "quote": "that involves building an alignment between turns & patterns and intents",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-388-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I'm not sure I'll be able to give anyone a convincing demo of AIF loops",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-388-f-s5-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "there's definitely something *different* about my approach from most things I've seen",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-388-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the list, in `futon7/holes/E-xiaoxiang-pilot-offer.md`, commit 853490d)",
+   "answers": [
+    {
+     "act": "claude-17-turn-388-f-s1-0",
+     "quote": "(the list, in `futon7/holes/E-xiaoxiang-pilot-offer.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-388-r-1",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "I agree the paid work would be the memory system, not 象 alone.",
+   "answers": [
+    {
+     "act": "claude-17-turn-388-f-s2-0",
+     "quote": "I agree the paid work would be the memory system",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-388-f-s4-0",
+     "quote": "I agree the paid work would be the memory system",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-388-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "I can't settle that from here.",
+   "answers": [
+    {
+     "act": "claude-17-turn-388-f-s5-0",
+     "quote": "I can't settle that from here.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

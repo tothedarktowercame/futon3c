@@ -1,0 +1,148 @@
+{
+ "record": "turn-qwRnza",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-29-f-s1-0",
+   "kind": "propose",
+   "move": "propose/mark-correction",
+   "quote": "I think you should use the same \"㊯:\" form ideally",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-29-f-s2-0",
+   "kind": "propose",
+   "move": "propose/extend",
+   "quote": "just like 小象 reads my turns quickly, 大象 should read your turns quickly",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-29-f-s3-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "what I'd really like to send Brendan is something more like a \"literate notebook\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-29-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(notebook) The notebook is built and you can read it at https://zone.hyperreal.enterprises/wip/notebooks/fong_live.html.",
+   "answers": [
+    {
+     "act": "claude-17-turn-29-f-s3-0",
+     "quote": "The notebook is built and you can read it at https://zone.hyperreal.enterprises/wip/notebooks/fong_live.html.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "fong notebook",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-29-r-1",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(the ㊯ mark) Taken back. I delivered that paragraph, so it should have opened `㊯:`",
+   "answers": [
+    {
+     "act": "claude-17-turn-29-f-s1-0",
+     "quote": "(the ㊯ mark) Taken back.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-29-f-s2-0",
+     "quote": "(the ㊯ mark) Taken back.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "mark-colon answering convention",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-29-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what the notebook shows, in order)",
+   "answers": [
+    {
+     "act": "claude-17-turn-29-f-s3-0",
+     "quote": "(what the notebook shows, in order)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "fong notebook"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-29-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(before you send it)",
+   "answers": [
+    {
+     "act": "claude-17-turn-29-f-s3-0",
+     "quote": "(before you send it)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "fong notebook"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-29-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(still open) The email paragraph from last turn could now just introduce the link.",
+   "answers": [
+    {
+     "act": "claude-17-turn-29-f-s3-0",
+     "quote": "(still open) The email paragraph from last turn",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "fong notebook"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

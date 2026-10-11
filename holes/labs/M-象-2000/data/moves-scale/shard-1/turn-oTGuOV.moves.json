@@ -1,0 +1,150 @@
+{
+ "record": "turn-oTGuOV",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-6-f-s1-0",
+   "kind": "report",
+   "move": "report/quoted-ask",
+   "quote": "\"Shall I send that to kimi-1?\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-f-s2-1",
+   "kind": "propose",
+   "move": "propose/optimisation",
+   "quote": "we could still orchestrate things so that 象 is as fast as possible.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-f-s4-0",
+   "kind": "propose",
+   "move": "propose/division-of-labour",
+   "quote": "小象 could work in the .json and then 象 would be the one to persist the finalised annotation.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-f-s5-0",
+   "kind": "explain",
+   "move": "explain/justification",
+   "quote": "Yes there are 2 packets here but it still makes sense.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(sent to kimi-1) It's with kimi-1, set up the way you describe.",
+   "answers": [
+    {
+     "act": "claude-17-turn-6-f-s2-0",
+     "quote": "It's with kimi-1, set up the way you describe.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "provisional draft pipeline",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what the packet asks for)",
+   "answers": [
+    {
+     "act": "claude-17-turn-6-f-s4-0",
+     "quote": "(what the packet asks for)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "provisional draft pipeline"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-6-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(象 is already working from the draft) The 象 brief already gives 象 小象's draft",
+   "answers": [
+    {
+     "act": "claude-17-turn-6-f-s4-0",
+     "quote": "(象 is already working from the draft) The 象 brief already gives 象 小象's draft",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "provisional draft pipeline"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-6-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(when it lands) I'll review it, load the stepper code into your Emacs",
+   "answers": [
+    {
+     "act": "claude-17-turn-6-f-s2-1",
+     "quote": "Your newest turn should then show up within about a second of sending.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "provisional draft pipeline"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

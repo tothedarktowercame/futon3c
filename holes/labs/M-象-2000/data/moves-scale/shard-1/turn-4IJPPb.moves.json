@@ -1,0 +1,105 @@
+{
+ "record": "turn-4IJPPb",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-446-f-s1-0",
+   "kind": "verify",
+   "move": "verify/confirmed",
+   "quote": "I click on a band, and I see it highlighted",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-446-f-s1-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "I would like would be for the associated family to be rendered as a decomposition of the band itself",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-446-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Understood, and I've sent kimi-1 a corrected spec; it's working on it now.",
+   "answers": [
+    {
+     "act": "claude-17-turn-446-f-s1-1",
+     "quote": "I've sent kimi-1 a corrected spec",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-446-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "While a stage is open:",
+   "answers": [
+    {
+     "act": "claude-17-turn-446-f-s1-1",
+     "quote": "While a stage is open:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-446-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "My first packet offered \"in place, or in a linked panel",
+   "answers": [
+    {
+     "act": "claude-17-turn-446-f-s1-1",
+     "quote": "My first packet offered \"in place, or in a linked panel",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-446-r-3",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "Kimi job `invoke-1790895564187-29931-37801d98`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

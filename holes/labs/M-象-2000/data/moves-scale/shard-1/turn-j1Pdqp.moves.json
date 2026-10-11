@@ -1,0 +1,241 @@
+{
+ "record": "turn-j1Pdqp",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-358-f-s1-0",
+   "kind": "propose",
+   "move": "propose/encoding",
+   "quote": "we could use terms from the Enclosed CJK Letters and Months Unicode block",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-f-s2-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "Regarding the \"cheaper\" training system, let's not try to make it cheaper",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "I'd like it to feed both the pattern graph and the 小象 system.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-f-s4-0",
+   "kind": "propose",
+   "move": "propose/mixed-readers",
+   "quote": "We can use zai, kimi, and Sonnet for tagging, they are all \"cheap enough\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-f-s5-0",
+   "kind": "report",
+   "move": "report/examples",
+   "quote": "Examples of potential characters to use in your proforma presentation:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-r-0",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "I like the enclosed characters for the proforma and have drafted a mapping below.",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s1-0",
+     "quote": "I like the enclosed characters for the proforma",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-358-f-s2-0",
+     "quote": "On tagging, understood: the full contract on every turn",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-358-f-s4-0",
+     "quote": "with Zai, Kimi and Sonnet all reading.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "mark proforma",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-r-1",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Approve (enclosed characters as labels):",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s1-0",
+     "quote": "A single codepoint at the start of a paragraph is easier to parse",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-r-2",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "Propose (a mapping, drawn from the two blocks you named):",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s5-0",
+     "quote": "Propose (a mapping, drawn from the two blocks you named):",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "Qualify (rendering):",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s5-0",
+     "quote": "Qualify (rendering):",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-358-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "Qualify (speech):",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s5-0",
+     "quote": "Only the Gist paragraph is read aloud",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-358-r-5",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "Report (backfill chunk 1): zai-2 is still running",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s3-0",
+     "quote": "Report (backfill chunk 1): zai-2 is still running",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-358-r-6",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "Propose (running the backfill with mixed readers):",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s4-0",
+     "quote": "Propose (running the backfill with mixed readers):",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-358-r-7",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "Ask-action (two confirmations):",
+   "answers": [
+    {
+     "act": "claude-17-turn-358-f-s4-0",
+     "quote": "Shall I build that loop once chunk 1 passes its check?",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-17-turn-358-f-s1-0",
+     "quote": "Ask-action (two confirmations):",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark proforma"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

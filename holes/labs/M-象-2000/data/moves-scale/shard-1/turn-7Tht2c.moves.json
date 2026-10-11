@@ -1,0 +1,143 @@
+{
+ "record": "turn-7Tht2c",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-399-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "The one-line gray message is better, thanks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-f-s2-0",
+   "kind": "propose",
+   "move": "delegate/to-agent",
+   "quote": "we should put our heads together with codex-10",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-f-s3-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "we'd increasingly be in a position to work on the \"close AIF over the operator\" material",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-f-s4-0",
+   "kind": "propose",
+   "move": "propose/zip-two-sides",
+   "quote": "we could try to \"zip\" the two sides to form a mission",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-f-s5-0",
+   "kind": "extend",
+   "move": "propose/two-sided-work",
+   "quote": "we could even work on the mission from both sides",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've started a mission draft, `futon3c/holes/missions/M-aif-over-the-operator.md`",
+   "answers": [
+    {
+     "act": "claude-17-turn-399-f-s4-0",
+     "quote": "I've started a mission draft",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-399-f-s2-0",
+     "quote": "asked codex-10 to fill in the War Machine half",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "M-aif-over-the-operator zip",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "**Origin:** your words today, plus the problem as `sec-operator.tex` states it.",
+   "answers": [
+    {
+     "act": "claude-17-turn-399-f-s4-0",
+     "quote": "**Origin:** your words today",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "M-aif-over-the-operator zip"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-399-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "**Job:** `invoke-1790873058224-29744-663ef2c1`, in work mode.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "M-aif-over-the-operator zip"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-399-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "I don't know where 象's readings of your turns are stored durably.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "M-aif-over-the-operator zip"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,186 @@
+{
+ "record": "turn-2NRgxJ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-364-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I think undertagging of old turns is laziness.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-f-s2-0",
+   "kind": "verify",
+   "move": "verify/command-suggested",
+   "quote": "find ./ -type f -name \"*.flexiarg\" | xargs grep \" [bB]aldwin \"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-0",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "You are right, and I take back my acceptance of chunk 1.",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s1-0",
+     "quote": "Its readers never looked at a single Baldwin pattern",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-364-f-s2-0",
+     "quote": "You are right, and I take back my acceptance of chunk 1.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "baldwin undertagging post-mortem",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-1",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "That was wrong and I had not checked it.",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s2-0",
+     "quote": "That was wrong and I had not checked it.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "The readers search for the move and drop the subject.",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s1-0",
+     "quote": "The readers search for the move and drop the subject.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-3",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "I counted turns that name a pattern family outright",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s1-0",
+     "quote": "I counted turns that name a pattern family outright",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-4",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "Your turn says \"there is no `futon3/library/baldwin/`\".",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s1-0",
+     "quote": "Your turn says \"there is no `futon3/library/baldwin/`\".",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-5",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "Two searches per fragment: one for the move and one for the subject",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s1-0",
+     "quote": "Two searches per fragment: one for the move and one for the subject",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-6",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "Shall I apply changes 1 to 4 to the backfill packet and the live 象 instruction together?",
+   "answers": [
+    {
+     "act": "claude-17-turn-364-f-s1-0",
+     "quote": "Shall I apply changes 1 to 4 to the backfill packet and the live 象 instruction together?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-364-r-7",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "Chunk 2 on 象-sonnet went out under the old instruction.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "baldwin undertagging post-mortem"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

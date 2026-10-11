@@ -1,0 +1,138 @@
+{
+ "record": "turn-4PSq9z",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-439-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "what we were talking about was aligning operator turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-439-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "turns-patterns-PBASE works reasonably well",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-439-f-s3-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "The only thing that might work could be to make a direct patterns-to-R-numbers alignment.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-439-f-s4-0",
+   "kind": "verify",
+   "move": "verify/prior-art-question",
+   "quote": "Possibly this is something that we have tried already.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-439-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "The field is `:node` in `futon0/analysis/audits/pattern-stages-2026-10-01.edn`",
+   "answers": [
+    {
+     "act": "claude-17-turn-439-f-s4-0",
+     "quote": "The field is `:node` in `futon0/analysis/audits/pattern-stages-2026-10-01.edn`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "answers the prior-art question with what already exists"
+  },
+  {
+   "act": "claude-17-turn-439-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "The stages split as follows in `p4ng/empirics-futon/control-stages.edn`:",
+   "answers": [
+    {
+     "act": "claude-17-turn-439-f-s2-0",
+     "quote": "The stages split as follows in `p4ng/empirics-futon/control-stages.edn`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-439-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "The intent table in `futon3/src-cljs/futon3/turnfeed/core.cljs`",
+   "answers": [
+    {
+     "act": "claude-17-turn-439-f-s3-0",
+     "quote": "The intent table in `futon3/src-cljs/futon3/turnfeed/core.cljs`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-439-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I run that cross-tabulation?",
+   "answers": [
+    {
+     "act": "claude-17-turn-439-f-s3-0",
+     "quote": "It reads existing records only, so it's a small job I can do here.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

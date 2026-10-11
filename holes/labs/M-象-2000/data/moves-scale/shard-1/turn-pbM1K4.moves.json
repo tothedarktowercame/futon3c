@@ -1,0 +1,97 @@
+{
+ "record": "turn-pbM1K4",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-445-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I am still seeing the Minard figure as ONE figure, no overlays.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-445-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "Kimi doesn't seem to have had in mind the same thing I did",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-445-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "You're right: what Kimi built still shows a single figure until you click.",
+   "answers": [
+    {
+     "act": "claude-17-turn-445-f-s1-0",
+     "quote": "You're right: what Kimi built still shows a single figure until you click.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-445-f-s2-0",
+     "quote": "You're right: what Kimi built still shows a single figure until you click.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-445-r-1",
+   "kind": "reply-mark",
+   "move": "clarify/ask-decision",
+   "quote": "(what \"overlay\" means here) If that's it, these are the details",
+   "answers": [
+    {
+     "act": "claude-17-turn-445-f-s2-0",
+     "quote": "(what \"overlay\" means here) If that's it",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-445-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(if it looks unchanged) If the page looks exactly like before",
+   "answers": [
+    {
+     "act": "claude-17-turn-445-f-s1-0",
+     "quote": "(if it looks unchanged) If the page looks exactly like before",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

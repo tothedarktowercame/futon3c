@@ -1,0 +1,73 @@
+{
+ "record": "turn-2ncL4X",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-526-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can we bring down the 象 seats on a temporary basis?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-526-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/missing-feature",
+   "quote": "There should be a 象-off function for this",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-526-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "The seats are still registered with Agency; I only stopped new work from reaching them.",
+   "answers": [
+    {
+     "act": "claude-17-turn-526-f-s1-0",
+     "quote": "The seats are still registered with Agency",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-526-r-1",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "Shall I add `象-off` and `象-on` commands to `futon3c/emacs/session-turn-analysis.el`",
+   "answers": [
+    {
+     "act": "claude-17-turn-526-f-s2-0",
+     "quote": "Shall I add `象-off` and `象-on` commands",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}
