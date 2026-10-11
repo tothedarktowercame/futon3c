@@ -85,6 +85,33 @@
   (is (thrown? clojure.lang.ExceptionInfo
                (x/db [{:id "z" :kind :frobnicate :author "joe" :at "2026-10-03T00:00:00Z"}]))))
 
+(deftest ports-and-standings-are-independent-relations
+  (let [at "2026-10-11T10:00:00Z"
+        constraint {:id "rule" :kind :constrain :author "joe" :at at}
+        withdrawn {:id "withdraw" :kind :withdraw :author "joe"
+                   :at "2026-10-11T10:01:00Z"
+                   :target "rule"}]
+    (testing "a constraint is promulgated and in force, but never an open port"
+      (let [db (x/db [constraint])]
+        (is (not (contains? (x/open-ports db at) "rule")))
+        (is (contains? (x/promulgated db at) "rule"))
+        (is (contains? (x/in-force db at) "rule"))))
+    (testing "withdrawal ends the standing"
+      (let [db (x/db [constraint withdrawn])]
+        (is (not (contains? (x/in-force db "2026-10-11T10:02:00Z") "rule")))))))
+
+(deftest an-act-port-flag-overrides-the-kind-table
+  (let [at "2026-10-11T10:00:00Z"
+        proposal {:id "proposal" :kind :propose :author "joe" :at at}]
+    (is (contains? (x/open-ports (x/db [proposal]) at) "proposal")
+        "an unstamped act uses the table default")
+    (is (not (contains? (x/open-ports (x/db [(assoc proposal :port? false)]) at)
+                        "proposal"))
+        "an explicit false flag suppresses the port")))
+
+(deftest every-port-kind-and-adjacency-row-agree
+  (is (= x/port-kinds (set (keys x/adjacency)))))
+
 ;; ---------------------------------------------------------------------------
 ;; Differential: the plain-Clojure readers against the kernel
 

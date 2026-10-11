@@ -100,6 +100,18 @@
    :reply reply
    :commits []})
 
+(deftest session-acts-carry-port-and-standing-declarations
+  (let [turn (synthetic-turn [{:intent "constrain" :text "Keep this rule."}
+                              {:intent "ask-action" :text "Please do this."}
+                              {:intent "propose" :text "We should do this."}]
+                             "")
+        acts (ta/session-acts [turn])
+        by-kind (into {} (map (juxt :kind identity) acts))]
+    (is (every? #(and (contains? % :port?) (contains? % :standing?)) acts))
+    (is (= [false true] ((juxt :port? :standing?) (by-kind :constrain))))
+    (is (= [true false] ((juxt :port? :standing?) (by-kind :ask-action))))
+    (is (= [true true] ((juxt :port? :standing?) (by-kind :propose))))))
+
 (deftest sole-operator-port-infers-table-typed-reply-links
   (let [clarify {:intent "clarify" :text "Is that clarifying?"}
         explain "㊢ (where we are) Yes, that explains it."

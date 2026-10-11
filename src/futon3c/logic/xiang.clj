@@ -91,6 +91,7 @@
 (pldb/db-rel scope ^:index id kind)
 (pldb/db-rel answers ^:index id opener)          ; an explicit dialogical link
 (pldb/db-rel answers-inferred ^:index id opener) ; a link the flow inferred from the matrix
+(pldb/db-rel port ^:index id)                    ; this act opens a reply port
 
 ;; ---------------------------------------------------------------------------
 ;; Adjacency: which intents answer which (a prior, to be tuned on evidence)
@@ -100,8 +101,9 @@
    :closes  the port is answered and closes
    :keeps   the answer bears on the port but leaves it open (a caveat, a
             progress report)
-   An intent absent as a key opens no port: it is annotative or steering and
-   rides the flow. This is the operator's prior over the dialogue game
+   Only kinds declared in `port-kinds` may appear as keys. This table types
+   answers to ports; it does not decide whether an individual act is a port.
+   This is the operator's prior over the dialogue game
    (2026-10-03); scripts/xiang_transitions.py tunes it against the readings."
   {:propose        {:approve :closes :disagree :closes :defer :closes :redirect :closes
                     :extend :closes :commit :closes :withdraw :closes :retract :closes}
@@ -112,13 +114,25 @@
    :promise        {:fulfil :closes :release :closes :lapse :closes :report-problem :keeps :qualify :keeps}
    :report-problem {:verify :closes :explain :closes :redirect :closes :commit :closes :collect :keeps}
    :clarify        {:explain :closes :report :closes}
-   :constrain      {:withdraw :closes :rule-withdraw :closes :qualify :keeps :commit :keeps}
    :verify         {:report :closes :approve :closes :explain :closes :report-problem :closes}})
 ;; Not ports: select-card, grant and withdraw are standings, answered by the
 ;; vertical relations (in-forceo, reversedo), not moves awaiting a reply. A
 ;; withdrawal's undo still links to it through its target.
 
-(def opening-kinds (set (keys adjacency)))
+(def port-kinds
+  "Act kinds whose instances open a move awaiting a reply by default."
+  #{:propose :ask-action :offer :delegate :promise :report-problem :clarify :verify})
+
+(def opening-kinds
+  "Compatibility alias for callers that ask which kinds open ports."
+  port-kinds)
+
+(defn port-act?
+  "Whether ACT declares a port, falling back to its kind for older acts."
+  [{:keys [kind] :as act}]
+  (if (contains? act :port?)
+    (true? (:port? act))
+    (contains? port-kinds kind)))
 
 (defn answer-effect
   "What an act of kind ANSWER does to a port opened by OPENER, or nil."
@@ -175,7 +189,10 @@
   "`facts` plus the explicit `answers` links, plus INFERRED [[answer opener] ..]."
   [history & [inferred]]
   (into (facts history)
-        (concat (for [[r a] (explicit-answers history)] [answers r a])
+        (concat (for [{:keys [id] :as a} history
+                      :when (port-act? a)]
+                  [port id])
+                (for [[r a] (explicit-answers history)] [answers r a])
                 (for [[r a] inferred] [answers-inferred r a]))))
 
 (defn db
@@ -349,9 +366,8 @@
    closing answer. The horizontal counterpart of in-forceo: in-forceo asks
    whether a standing was cancelled, openo asks whether a move was answered."
   [a t s]
-  (fresh [k]
-    (kindo a k)
-    (l/membero k (vec opening-kinds))
+  (fresh []
+    (port a)
     (visibleo a t s)
     (l/nafc closes-porto a t s)))
 
@@ -477,12 +493,12 @@
                  open-before (open-ports linked (dec t) s)
                  open-after (open-ports linked t s)]]
        {:id id :kind kind :author author :at at
-        :opens (boolean (and (opening-kinds kind) (contains? open-after id)))
+        :opens (boolean (and (port-act? a) (contains? open-after id)))
         :answers links
         :closes (vec (sort (clojure.set/difference open-before open-after)))
         :open-after (vec (sort open-after))
         :deposits (deposits a)
-        :annotative (and (not (opening-kinds kind)) (empty? links) (empty? (deposits a)))}))))
+        :annotative (and (not (port-act? a)) (empty? links) (empty? (deposits a)))}))))
 
 (defn transition-counts
   "Evidence of transitions in HISTORY: {:consecutive {[k1 k2] n} :explicit

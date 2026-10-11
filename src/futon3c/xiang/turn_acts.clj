@@ -50,6 +50,13 @@
   [intent]
   (get intent-kinds (some-> intent str/trim)))
 
+(defn- stamp-act
+  "Carry the kind tables' two independent relations on ACT."
+  [{:keys [kind] :as act}]
+  (assoc act
+         :port? (contains? lx/port-kinds kind)
+         :standing? (= :creates (lx/kinds kind))))
+
 ;; ---------------------------------------------------------------------------
 ;; Offers and options
 
@@ -280,7 +287,8 @@
                       (seq frag-acts) (link-quoted-brackets frag-acts))
          commit-acts (cond-> (commit-acts record commits)
                        carries-out (->> (mapv #(assoc % :carries-out carries-out))))]
-     (with-meta (vec (concat (when bell [bell]) frag-acts reply-acts commit-acts))
+     (with-meta (mapv stamp-act
+                      (concat (when bell [bell]) frag-acts reply-acts commit-acts))
        {:skipped (+ frag-skipped reply-skipped)}))))
 
 ;; ---------------------------------------------------------------------------
@@ -469,7 +477,8 @@
                  (-> pointers
                      (update :linked + linked)
                      (update :unlinked + unlinked))))
-        (with-meta acts {:skipped skipped :pointers pointers})))))
+        (with-meta (mapv stamp-act acts)
+          {:skipped skipped :pointers pointers})))))
 
 ;; ---------------------------------------------------------------------------
 ;; The kernel's answer for one turn
@@ -496,7 +505,7 @@
                       vals
                       (mapcat (fn [turn-acts]
                                 (let [openers (filterv #(and (= "operator" (:author %))
-                                                             (lx/opening-kinds (:kind %)))
+                                                             (lx/port-act? %))
                                                        turn-acts)]
                                   (when (= 1 (count openers))
                                     (let [opener (first openers)]
@@ -516,8 +525,8 @@
         ;; request and its answer share one turn (E-agency-work-orders W1),
         ;; and so does an operator request answered in the same reply.
         before (into (lx/open-ports db (instant-minus-1s at))
-                     (keep (fn [{:keys [id turn kind]}]
-                             (when (and (= turn turn-id) (lx/opening-kinds kind)) id)))
+                     (keep (fn [{:keys [id turn] :as act}]
+                             (when (and (= turn turn-id) (lx/port-act? act)) id)))
                      acts)
         after (lx/open-ports db at)
         by-id (into {} (map (juxt :id identity) acts))]
