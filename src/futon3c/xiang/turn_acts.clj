@@ -42,7 +42,7 @@
 (def rules-version
   "Version of the persisted act/port interpretation rules. Bump by hand on
    every change to linking, the kind tables, or the adjacency table."
-  "2026-10-11.2")
+  "2026-10-11.3")
 
 (def intent-kinds
   "The reading/mark intents that name a kernel act kind, as keywords.
@@ -466,14 +466,21 @@
                          (str turn-id "@" record-id)
                          turn-id)
               {:keys [linked unlinked] :as pointers-here} (pointer-targets record seen)
-              turn-acts (link-pointers record
-                                       (turn->acts record reading reply commits
-                                                   {:preceding-offer preceding-offer
-                                                    :carries-out accepted
-                                                    :act-base act-base
-                                                    :record-id record-id})
-                                       pointers-here
-                                       (visible-offers acts))
+              system? (= "system" (:origin record))
+              turn-acts (if system?
+                          (with-meta
+                            (mapv #(update % :kind (fn [kind]
+                                                    (if (keyword? kind) kind (keyword kind))))
+                                  (:acts record))
+                            {:skipped 0})
+                          (link-pointers record
+                                         (turn->acts record reading reply commits
+                                                     {:preceding-offer preceding-offer
+                                                      :carries-out accepted
+                                                      :act-base act-base
+                                                      :record-id record-id})
+                                         pointers-here
+                                         (visible-offers acts)))
               skipped-here (:skipped (meta turn-acts))
               accepted-here (some (fn [{:keys [kind target]}]
                                     (when (= kind :accept) target))

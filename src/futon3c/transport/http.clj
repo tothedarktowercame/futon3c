@@ -11795,7 +11795,7 @@
   "The one service for this JVM, built on first use. Reload-safe: a
    Drawbridge reload of this namespace keeps the running scheduler."
   [config]
-  (or @!xiang-turn-service
+  (or (some-> @!xiang-turn-service xiang-turns/start!)
       (let [built (xiang-turns/service
                    {:store (xiang-store/store)
                     :vocabulary (xiang-vocabulary)
@@ -11841,7 +11841,7 @@
                                    (catch Exception e
                                      {:ok false :error/message (.getMessage e)})))})]
         (if (compare-and-set! !xiang-turn-service nil built)
-          built
+          (xiang-turns/start! built)
           (do (xiang-turns/stop! built) @!xiang-turn-service)))))
 
 (defn- xiang-turn-summary [{:keys [id record]}]

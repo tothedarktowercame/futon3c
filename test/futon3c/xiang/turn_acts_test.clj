@@ -90,6 +90,34 @@
     (is (= (mapv (juxt :id :at) before)
            (mapv (juxt :id :at) same-time)))))
 
+(deftest stored-system-acts-close-only-their-explicit-targets
+  (let [operator {:record-id "turn-open"
+                  :record {:turn_id "agent-turn-1" :created_at "2026-10-11T10:00:00Z"
+                           :agent_id "agent" :session_id "session" :source_text "Please report."}
+                  :reading {:sentences [{:id "s1" :fragments [{:intent "ask-action"
+                                                                :text "Please report."}]}]}
+                  :reply "🈸 Shall I also inspect it?" :commits []}
+        system-acts [{:id "agent-session-end-n-0" :kind :notice :author "system"
+                      :at "2026-10-11T10:01:00Z" :turn "agent-session-end"
+                      :record "turn-end-abc" :port? false :standing? false}
+                     {:id "agent-session-end-l-0" :kind :lapse :author "system"
+                      :at "2026-10-11T10:01:00Z" :turn "agent-session-end"
+                      :record "turn-end-abc" :target "agent-turn-1-r-0"
+                      :port? false :standing? false}]
+        ended {:record-id "turn-end-abc"
+               :record {:turn_id "agent-session-end" :created_at "2026-10-11T10:01:00Z"
+                        :agent_id "agent" :session_id "session" :origin "system"
+                        :acts system-acts}
+               :reading {} :reply "" :commits []}
+        acts (ta/session-acts [operator ended])
+        ports (ta/turn-ports acts "agent-session-end" "turn-end-abc")]
+    (is (= system-acts (filterv #(= "turn-end-abc" (:record %)) acts))
+        "system records contribute exactly their stored acts")
+    (is (some #{"agent-turn-1-r-0"} (:closed-this-turn ports))
+        "the agent-authored ask is lapsed")
+    (is (some #{"agent-turn-1-f-s1-0"} (map :act (:still-open ports)))
+        "the operator ask remains open")))
+
 (deftest offer-options-are-detected
   (let [{:keys [record reading reply commits]} (second (fixture-turns))
         acts (ta/turn->acts record reading reply commits)

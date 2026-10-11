@@ -4,8 +4,10 @@
    drains by hand, so the reap cadence is asserted, not waited for."
   (:require [clojure.java.io :as io]
             [clojure.data.json :as json]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.registry :as registry]
             [futon3c.agency.session-end-test-fixture :as session-end-fixture]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts]
@@ -733,6 +735,104 @@
         (is (= computed (:ports record)) "a later refusal preserves the computed value")
         (is (= ["unknown" "no-acts"]
                ((juxt :state :reason) (:ports_status record))))))))
+
+(deftest session-end-consumption-is-idempotent-and-advances-cursor
+  (let [store (temp-store)
+        h (harness {:store store})
+        transition {:id "session-end:agent:session:2026-10-11T10:00:00Z"
+                    :agent "agent" :old_session "session" :new_session nil
+                    :reason "reset" :at "2026-10-11T10:00:00Z"}]
+    (.mkdirs (io/file (:dir store)))
+    (ts/write-record-id!
+     store "turn-seed"
+     {:turn_id "agent-turn-1" :session_id "session" :agent_id "agent"
+      :created_at "2026-10-11T09:00:00Z" :analysis_status "analyzed"
+      :reply_text "㊢ marked reply"
+      :acts [{:id "agent-turn-1-f-0" :kind "ask-action" :author "operator"}
+             {:id "agent-turn-1-r-0" :kind "ask-action" :author "agent"}]
+      :ports {:still_open [{:act "agent-turn-1-f-0"}
+                           {:act "agent-turn-1-r-0"}]}})
+    (let [first (svc/consume-session-end! (:svc h) transition)
+          second (svc/consume-session-end! (:svc h) transition)
+          record (:record first)
+          [envelope lapse] (:acts record)]
+      (is (:created? first))
+      (is (false? (:created? second)))
+      (is (= (str "turn-end-" (subs (tr/sha256 (:id transition)) 0 12))
+             (:id first)))
+      (is (= {:origin "system" :analysis_status "declared" :agent_id "agent"
+              :session_id "session" :created_at "2026-10-11T10:00:00Z"}
+             (select-keys record [:origin :analysis_status :agent_id :session_id :created_at])))
+      (is (= {:id (:id transition) :reason "reset" :new_session nil}
+             (:session_end record)))
+      (is (= [1 "agent-turn-1-r-0" "agent" "session"]
+             [(:marked_reply_count envelope) (:target lapse) (:agent envelope) (:session envelope)]))
+      (is (= (:id transition)
+             (str/trim (slurp (str (registry/session-end-outbox-path) ".cursor")))))
+      (is (= 1 (count @(:scheduled h))) "the duplicate schedules no recomputation"))))
+
+(deftest start-replays-only-lines-after-session-end-cursor
+  (let [h (harness)
+        path (registry/session-end-outbox-path)
+        one {:id "end-1" :agent "a" :old_session "s1" :new_session nil
+             :reason "reset" :at "2026-10-11T10:00:00Z"}
+        two {:id "end-2" :agent "a" :old_session "s2" :new_session "s3"
+             :reason "replaced" :at "2026-10-11T11:00:00Z"}]
+    (io/make-parents path)
+    (spit path (str (json/write-str one) "\n" (json/write-str two) "\n"))
+    (spit (str path ".cursor") "end-1\n")
+    (try
+      (svc/start! (:svc h))
+      (let [store (get-in (:svc h) [:config :store])
+            records (ts/list-records store :session-id "s2" :limit 10)]
+        (is (= 1 (count records)))
+        (is (empty? (ts/list-records store :session-id "s1" :limit 10)))
+        (is (= "end-2" (str/trim (slurp (str path ".cursor"))))))
+      (finally (svc/stop! (:svc h))))))
+
+(deftest session-end-with-no-records-has-only-envelope
+  (let [h (harness)
+        result (svc/consume-session-end!
+                (:svc h) {:id "empty-end" :agent "agent" :old_session "empty"
+                          :new_session nil :reason "reap" :at "2026-10-11T12:00:00Z"})]
+    (is (= 1 (count (get-in result [:record :acts]))))
+    (is (= 0 (get-in result [:record :acts 0 :marked_reply_count])))
+    (run-next! h)
+    (is (= "computed" (:state (:ports_status
+                                (ts/read-record (get-in (:svc h) [:config :store]) (:id result))))))))
+
+(deftest session-end-lapses-agent-ports-and-marks-operator-ports
+  (doseq [[reply? expected-mark] [[true "orphaned"] [false "unread"]]]
+    (testing expected-mark
+      (let [store (seed-ports-store)
+            h (harness {:store store})
+            last-id (last ports-fixture-ids)
+            session-id (:session_id (ts/read-record store last-id))]
+        (when-not reply?
+          (doseq [id ports-fixture-ids]
+            (ts/update-record! store id #(assoc % :reply_text ""))))
+        (doseq [id ports-fixture-ids]
+          (svc/compute-ports! (:svc h) id {:session-cap 10000}))
+        (let [operator-ids (set (for [id ports-fixture-ids
+                                      act (:acts (ts/read-record store id))
+                                      :when (= "operator" (:author act))]
+                                  (:id act)))
+              result (svc/consume-session-end!
+                      (:svc h) {:id (str "end-" expected-mark) :agent "claude-17"
+                                :old_session session-id :new_session nil :reason "reset"
+                                :at "2026-10-11T12:00:00Z"})]
+          (run-next! h)
+          (let [end-record (ts/read-record store (:id result))
+                lapsed (set (map :act (:closed_this_turn (:ports end-record))))]
+            (when reply?
+              (is (seq lapsed) "the end turn closes at least one agent port"))
+            (is (empty? (set/intersection operator-ids lapsed))
+                "no operator-authored act is targeted by a lapse"))
+          (svc/compute-ports! (:svc h) last-id {:session-cap 10000})
+          (let [record (ts/read-record store last-id)
+                marked (filter #(operator-ids (:act %)) (get-in record [:ports :still_open]))]
+            (is (seq marked))
+            (is (every? #(= expected-mark (:mark %)) marked))))))))
 
 (deftest settle-computes-ports
   (let [store (seed-ports-store)

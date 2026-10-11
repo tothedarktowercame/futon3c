@@ -41,7 +41,10 @@
    delivered here: a web client reads `withdrawal_effects` off the record and
    shows the notice itself, so the record carries no `repl_notice_*` fields
    written by the server."
-  (:require [clojure.string :as str]
+  (:require [cheshire.core :as json]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [futon3c.agency.registry :as registry]
             [futon3c.xiang.reply-target :as rt]
             [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-record :as tr]
@@ -106,7 +109,9 @@
 
 (defn stop!
   "Stop the default scheduler, if this service made one."
-  [{:keys [scheduler]}]
+  [{:keys [scheduler] :as svc}]
+  (when-let [remove-listener! (:session-end-listener @(:state svc))]
+    (remove-listener!))
   (when scheduler (.shutdownNow ^ScheduledExecutorService scheduler))
   nil)
 
@@ -349,11 +354,125 @@
   [:id :kind :author :at :to :turn :record :port? :standing? :target
    :carries-out :about :option :sha :repo :subject :start :end :text])
 
+(def ^:private stored-system-act-keys
+  (into stored-act-keys [:agent :session :reason :marked_reply_count]))
+
 (defn- stored-act
   "The durable, bounded projection of one adapter act."
   [act]
-  (cond-> (select-keys act stored-act-keys)
+  (cond-> (select-keys act (if (= "system" (:author act))
+                             stored-system-act-keys
+                             stored-act-keys))
     (contains? act :text) (update :text trim-act-text)))
+
+(defn- session-end-cursor-path []
+  (str (registry/session-end-outbox-path) ".cursor"))
+
+(defn- advance-session-end-cursor!
+  [transition-id]
+  (let [path (session-end-cursor-path)]
+    (io/make-parents path)
+    (spit path (str transition-id "\n") :encoding "UTF-8")))
+
+(defn- session-records
+  [store session-id]
+  (ts/list-records store :session-id session-id :limit 10000))
+
+(defn- marked-reply-count
+  [records]
+  (reduce + (map #(count (tr/reply-marks (get-in % [:record :reply_text]))) records)))
+
+(defn- last-ported-record
+  [records]
+  (->> records
+       (filter #(map? (get-in % [:record :ports])))
+       (sort-by #(get-in % [:record :created_at]))
+       last))
+
+(defn- session-act-index
+  [records]
+  (into {} (for [{:keys [record]} records
+                 act (:acts record)]
+             [(:id act) act])))
+
+(defn- session-end-record-id
+  [transition-id]
+  (str "turn-end-" (subs (tr/sha256 transition-id) 0 12)))
+
+(defn- session-end-turn-id
+  [{:keys [agent at]}]
+  (str agent "-session-end-" (str/replace at #"[:-]" "")))
+
+(defn consume-session-end!
+  "Persist one registry session-ended transition and schedule its port
+   computation. Deterministic record ids make listener/replay delivery
+   idempotent. The durable cursor advances only after the record exists."
+  [svc {:keys [id agent old_session new_session reason at] :as transition}]
+  (let [store (cfg svc :store)
+        record-id (session-end-record-id id)
+        records (session-records store old_session)]
+    (if (ts/read-record store record-id)
+      (do (advance-session-end-cursor! id)
+          {:id record-id :created? false})
+      (let [turn-id (session-end-turn-id transition)
+            marked (marked-reply-count records)
+            by-id (session-act-index records)
+            open (get-in (last-ported-record records) [:record :ports :still_open])
+            targets (->> open
+                         (keep (fn [{act-id :act}]
+                                 (when (not= "operator" (:author (by-id act-id)))
+                                   act-id)))
+                         distinct
+                         sort
+                         vec)
+            envelope {:id (str turn-id "-n-0") :kind :notice :author "system"
+                      :at at :to agent :agent agent :session old_session
+                      :turn turn-id :record record-id :port? false :standing? false
+                      :reason reason :marked_reply_count marked}
+            lapses (mapv (fn [idx target]
+                           {:id (str turn-id "-l-" idx) :kind :lapse :author "system"
+                            :at at :target target :agent agent :session old_session
+                            :turn turn-id :record record-id :port? false :standing? false})
+                         (range) targets)
+            record {:origin "system" :analysis_status "declared"
+                    :agent_id agent :session_id old_session :created_at at
+                    :turn_id turn-id :source_text (str "session ended: " reason)
+                    :session_end {:id id :reason reason :new_session new_session}
+                    :acts (into [envelope] lapses)}
+            written (ts/write-record-id! store record-id record)]
+        (advance-session-end-cursor! id)
+        ((cfg svc :schedule!) 0
+         #(compute-ports! svc record-id {:session-cap 10000}))
+        written))))
+
+(defn- replay-session-ends!
+  [svc]
+  (let [outbox (io/file (registry/session-end-outbox-path))
+        cursor-file (io/file (session-end-cursor-path))
+        cursor (when (.isFile cursor-file) (str/trim (slurp cursor-file :encoding "UTF-8")))
+        transitions (if (.isFile outbox)
+                      (->> (str/split-lines (slurp outbox :encoding "UTF-8"))
+                           (remove str/blank?)
+                           (map #(json/parse-string % true)))
+                      [])
+        pending (if (str/blank? cursor)
+                  transitions
+                  (let [after (drop-while #(not= cursor (:id %)) transitions)]
+                    (if (seq after) (rest after) transitions)))]
+    (doseq [transition pending]
+      (consume-session-end! svc transition))
+    (count pending)))
+
+(defn start!
+  "Replay unconsumed registry session-end transitions and subscribe to new
+   durable transitions. Safe to call more than once for one service."
+  [svc]
+  (when-not (:session-end-listener @(:state svc))
+    (replay-session-ends! svc)
+    (let [remove! (registry/add-session-end-listener!
+                   #(consume-session-end! svc %))]
+      (swap! (:state svc) assoc :session-end-listener remove!)))
+  svc)
 
 (defn compute-ports!
   "The settled turn's HAPPENED / DIDN'T HAPPEN: run the turn-acts adapter
@@ -382,7 +501,7 @@
                                  ;; reply (E-agency-work-orders W1).
                                  (when (or (contains? #{"analyzed" "drafted"} status)
                                            (and (= "declared" status)
-                                                (= "agent" (:origin r))))
+                                                (contains? #{"agent" "system"} (:origin r))))
                                    {:record r
                                     :record-id rid
                                     :reading (if (= status "analyzed")
@@ -396,6 +515,16 @@
           by-id (into {} (map (juxt :id identity) acts))
           ports (turn-acts/turn-ports acts (:turn_id record) id)
           in-force (set (:in-force ports))
+          session-end (->> settled
+                           (keep (fn [{:keys [record]}]
+                                   (when (= "system" (:origin record))
+                                     (first (:acts record)))))
+                           (sort-by :at)
+                           last)
+          operator-mark (when session-end
+                          (if (pos? (long (or (:marked_reply_count session-end) 0)))
+                            "orphaned"
+                            "unread"))
           record-acts (->> acts
                            (filter #(or (= id (:record %))
                                         (and (nil? (:record %))
@@ -422,7 +551,10 @@
                                  :ports
                                  {:closed_this_turn (mapv entry (:closed-this-turn ports))
                                   :still_open (mapv (fn [{:keys [act since]}]
-                                                      (assoc (entry act) :since since))
+                                                      (cond-> (assoc (entry act) :since since)
+                                                        (and operator-mark
+                                                             (= "operator" (:author (by-id act))))
+                                                        (assoc :mark operator-mark)))
                                                     (:still-open ports))
                                   :inferred (:inferred ports)})))
      (catch Exception e

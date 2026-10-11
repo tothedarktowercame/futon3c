@@ -98,6 +98,21 @@
           (recur (inc attempt))
           (throw (ex-info "Could not allocate a record id" {:reason :store-failure})))))))
 
+(defn write-record-id!
+  "Create RECORD at deterministic ID. Returns {:created? false ...} when ID
+   already exists; never replaces an existing record."
+  [store id record]
+  (ensure-dir! store)
+  (let [path (record-path store id)
+        ^Path p (.toPath (io/file path))]
+    (if (try
+          (Files/createFile p (make-array java.nio.file.attribute.FileAttribute 0))
+          true
+          (catch java.nio.file.FileAlreadyExistsException _ false))
+      (do (write-json! path record)
+          {:id id :path path :record record :created? true})
+      {:id id :path path :record (read-json path) :created? false})))
+
 (defn read-record
   "The record for ID, or nil."
   [store id]
