@@ -41,8 +41,7 @@
             [clojure.core.logic.pldb :as pldb]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.set]
-            [clojure.string :as str]))
+            [clojure.set]))
 
 ;; ---------------------------------------------------------------------------
 ;; Vocabulary
@@ -316,15 +315,25 @@
     (in-forceo g t s)))
 
 (defn answerso
-  "R answers A, explicitly or by inference, with EFFECT from the adjacency
-   table (:closes or :keeps). A target or carries-out link whose pair the
-   table does not list closes the port: the act bore on it directly."
+  "R answers A with EFFECT. An explicit target or carries-out link uses the
+   adjacency table when it has an entry and otherwise closes: explicit
+   evidence says the act bore on the opener directly. An inferred link uses
+   the table only; a pair absent from it establishes no answer."
   [r a effect]
   (fresh [ko kr]
-    (conde [(answers r a)] [(answers-inferred r a)])
-    (kindo a ko)
-    (kindo r kr)
-    (l/project [ko kr] (== effect (or (answer-effect ko kr) :closes)))))
+    (conde
+     [(answers r a)
+      (kindo a ko)
+      (kindo r kr)
+      (l/project [ko kr]
+        (== effect (or (answer-effect ko kr) :closes)))]
+     [(answers-inferred r a)
+      (kindo a ko)
+      (kindo r kr)
+      (l/project [ko kr]
+        (if-let [inferred-effect (answer-effect ko kr)]
+          (== effect inferred-effect)
+          l/fail))])))
 
 (defn closes-porto
   "A visible act closes the port A opened, unless that act was itself
@@ -436,7 +445,7 @@
         db0 (db history)
         by-id (into {} (map (juxt :id identity) history))]
     (vec
-     (for [{:keys [id kind at sys] :as a} (sort-by #(epoch (:at %)) history)
+     (for [{:keys [id kind at sys]} (sort-by #(epoch (:at %)) history)
            :when (not (explicit id))
            :let [t (epoch at) s (epoch (or sys at))
                  open (disj (open-ports db0 t s) id)

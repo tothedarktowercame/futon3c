@@ -92,6 +92,37 @@
     (is (= :report (:kind (first acts))))
     (is (= 2 (:skipped (meta acts))) "the two no-kind intents are counted, not invented")))
 
+(defn- synthetic-turn
+  [fragments reply]
+  {:record {:turn_id "agent-turn-1" :created_at "2026-10-11T04:00:00Z"
+            :agent_id "agent" :session_id "session" :source_text "operator"}
+   :reading {:sentences [{:id "s1" :fragments fragments}]}
+   :reply reply
+   :commits []})
+
+(deftest sole-operator-port-infers-table-typed-reply-links
+  (let [clarify {:intent "clarify" :text "Is that clarifying?"}
+        explain "㊢ (where we are) Yes, that explains it."
+        one (ta/session-acts [(synthetic-turn [clarify] explain)])
+        one-ports (ta/turn-ports one "agent-turn-1")]
+    (is (= [{:answer "agent-turn-1-r-0"
+             :opener "agent-turn-1-f-s1-0"
+             :rule :sole-port
+             :effect :closes}]
+           (:inferred one-ports)))
+    (is (= ["agent-turn-1-f-s1-0"] (:closed-this-turn one-ports)))
+    (testing "two opening fragments are ambiguous"
+      (let [acts (ta/session-acts [(synthetic-turn
+                                    [clarify {:intent "ask-action" :text "Do it?"}]
+                                    explain)])]
+        (is (empty? (:inferred (ta/turn-ports acts "agent-turn-1"))))))
+    (testing "a quoted bracket creates an explicit target, so it is not inferred"
+      (let [reply "㊢ (\"Is that clarifying?\") Yes."
+            acts (ta/session-acts [(synthetic-turn [clarify] reply)])
+            reply-act (first (filter #(= "agent-turn-1-r-0" (:id %)) acts))]
+        (is (= "agent-turn-1-f-s1-0" (:target reply-act)))
+        (is (empty? (:inferred (ta/turn-ports acts "agent-turn-1"))))))))
+
 (deftest session-acts-acceptance-and-carry-out
   (let [acts (ta/session-acts (fixture-turns))
         by-id (into {} (map (juxt :id identity) acts))

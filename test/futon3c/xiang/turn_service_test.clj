@@ -67,7 +67,6 @@
       (is (= "job-1" (:job-id result)))
       (is (= "象-1" (:agent result)) "the least-loaded pool seat")
       (let [bell (first @(:bells h))
-            stored (ts/read-record (:config (:svc h) :store) id)
             stored (ts/read-record (get-in (:svc h) [:config :store]) id)]
         (is (= "象-1" (:agent-id bell)))
         (is (= "turn-capture" (:caller bell)))
@@ -704,6 +703,7 @@
       (is (= reply (:reply_text rec)) "the reply text is stored for 大象")
       (let [ports (:ports rec)]
         (is (some? ports) "the settle computed ports")
+        (is (contains? ports :inferred) "the stored ports carry inference witnesses")
         (is (= [] (:closed_this_turn ports)) "nothing closes in 394")
         (let [open (into {} (map (juxt :act identity) (:still_open ports)))]
           (is (= "ask-action" (get-in open ["claude-17-turn-391-r-3" :kind]))

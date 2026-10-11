@@ -391,7 +391,8 @@
                                  {:closed_this_turn (mapv entry (:closed-this-turn ports))
                                   :still_open (mapv (fn [{:keys [act since]}]
                                                       (assoc (entry act) :since since))
-                                                    (:still-open ports))})))
+                                                    (:still-open ports))
+                                  :inferred (:inferred ports)})))
     (catch Exception e
       (set-health! svc nil (str id ": ports not computed (" (.getMessage e) ")")))))
 
@@ -655,26 +656,26 @@
 
 (defn- dispatch-to!
   [svc id agent store-busy-delays record draft path]
-  (let [store (cfg svc :store)]
-      (let [_ (note-dispatch! svc id agent)
-            candidates (find-pattern-candidates! svc id record draft)
-            brief-fn (if (= "agent" (:origin record)) tr/agent-brief tr/analysis-brief)
-            brief (brief-fn id path (cond-> {:requisition (cfg svc :requisition)
-                                             :paths (cfg svc :brief-paths)
-                                             :vocabulary (cfg svc :vocabulary)}
-                                      draft (assoc :draft draft :draft-path (ts/draft-path store id))
-                                      candidates (assoc :candidates candidates
-                                                        :candidates-path (ts/pattern-candidates-path store id))))
-            reset-every (cfg svc :reset-every)
-            count-before (:dispatch-count @(:state svc))
-            reset? (and reset-every (>= count-before reset-every) (cfg svc :reset-seat!))
-            _ (when reset?
-                (try ((cfg svc :reset-seat!) agent) (catch Exception _ nil)))
-            response (try ((cfg svc :bell!) {:agent-id agent :prompt brief
-                                             :caller (cfg svc :caller)
-                                             :surface (cfg svc :surface)
-                                             :mode "work" :type "request"})
-                          (catch Exception e {:ok false :error (.getMessage e)}))]
+  (let [store (cfg svc :store)
+        _ (note-dispatch! svc id agent)
+        candidates (find-pattern-candidates! svc id record draft)
+        brief-fn (if (= "agent" (:origin record)) tr/agent-brief tr/analysis-brief)
+        brief (brief-fn id path (cond-> {:requisition (cfg svc :requisition)
+                                        :paths (cfg svc :brief-paths)
+                                        :vocabulary (cfg svc :vocabulary)}
+                                 draft (assoc :draft draft :draft-path (ts/draft-path store id))
+                                 candidates (assoc :candidates candidates
+                                                   :candidates-path (ts/pattern-candidates-path store id))))
+        reset-every (cfg svc :reset-every)
+        count-before (:dispatch-count @(:state svc))
+        reset? (and reset-every (>= count-before reset-every) (cfg svc :reset-seat!))
+        _ (when reset?
+            (try ((cfg svc :reset-seat!) agent) (catch Exception _ nil)))
+        response (try ((cfg svc :bell!) {:agent-id agent :prompt brief
+                                         :caller (cfg svc :caller)
+                                         :surface (cfg svc :surface)
+                                         :mode "work" :type "request"})
+                      (catch Exception e {:ok false :error (.getMessage e)}))]
         (if (and (:ok response) (:job-id response))
           (let [job-id (str (:job-id response))]
             (swap! (:state svc) assoc :dispatch-count (if reset? 1 (inc count-before)))
@@ -686,7 +687,7 @@
                             (when-let [s (:status response)] (str " (http " s ")"))
                             (when-let [e (:error response)] (str ": " e)))]
             (set-health! svc :failing reason)
-            {:dispatched false :agent agent :reason reason :response response})))))
+            {:dispatched false :agent agent :reason reason :response response}))))
 
 ;; ---------------------------------------------------------------------------
 ;; Retry (turn_dispatch_reap.py --retry)

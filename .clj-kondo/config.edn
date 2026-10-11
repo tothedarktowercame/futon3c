@@ -9,6 +9,10 @@
   futon3c.agents.tickle-logic
   {:linters {:unresolved-symbol {:level :off}}}
 
+  ;; core.logic pldb relations and fresh variables are introduced by macros
+  futon3c.logic.xiang
+  {:linters {:unresolved-symbol {:level :off}}}
+
   futon3c.agency.federation
   {:linters {:unresolved-var {:exclude [org.httpkit.client/get
                                         org.httpkit.client/post]}}}

@@ -482,14 +482,36 @@
   "Which ports closed in TURN-ID and which are still open after it, over
    ACTS (a session-acts vector): {:closed-this-turn [act-id ..]
    :still-open [{:act :kind :since}] :obligations [{:debtor :creditor
-   :source}]}. The kernel's openo/closedo/obligationo answer, as of the
-   turn's own timestamp."
+   :source}] :inferred [{:answer :opener :rule :effect}]}. Per turn, an
+   untargeted reply paragraph is inferred to answer the sole operator opening
+   fragment, if there is exactly one. The adjacency table alone determines
+   that inferred pair's effect. The kernel's openo/closedo/obligationo answer,
+   as of the turn's own timestamp."
   [acts turn-id]
   (let [at (some (fn [{:keys [turn at]}] (when (= turn turn-id) at)) acts)
         _ (when-not at
             (throw (ex-info (str "No acts for turn " turn-id)
                             {:reason :unknown-turn :turn turn-id})))
-        db (lx/db acts)
+        inferred (->> (group-by :turn acts)
+                      vals
+                      (mapcat (fn [turn-acts]
+                                (let [openers (filterv #(and (= "operator" (:author %))
+                                                             (lx/opening-kinds (:kind %)))
+                                                       turn-acts)]
+                                  (when (= 1 (count openers))
+                                    (let [opener (first openers)]
+                                      (for [answer turn-acts
+                                            :when (and (= "operator" (:to answer))
+                                                       (nil? (:target answer)))]
+                                        {:answer (:id answer)
+                                         :opener (:id opener)
+                                         :rule :sole-port
+                                         :effect (lx/answer-effect (:kind opener)
+                                                                   (:kind answer))}))))))
+                      (sort-by (juxt :answer :opener))
+                      vec)
+        pairs (mapv (juxt :answer :opener) inferred)
+        db (lx/db acts pairs)
         ;; A port the turn itself opened and closed counts too: a bell's
         ;; request and its answer share one turn (E-agency-work-orders W1),
         ;; and so does an operator request answered in the same reply.
@@ -506,4 +528,5 @@
                                        :kind (:kind (by-id id))
                                        :since (:at (by-id id))})
                                     after)))
-     :obligations (vec (lx/obligations db at))}))
+     :obligations (vec (lx/obligations db at))
+     :inferred inferred}))

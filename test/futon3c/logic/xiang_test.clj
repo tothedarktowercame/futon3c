@@ -215,6 +215,24 @@
 ;; ---------------------------------------------------------------------------
 ;; Flow: ports, inferred links, the matrix
 
+(deftest inferred-answers-are-authorised-only-by-the-adjacency-table
+  (let [at "2026-10-11T04:00:00Z"
+        opener (fn [kind] {:id "o" :kind kind :author "operator" :at at})
+        answer (fn [kind & [target]]
+                 (cond-> {:id "r" :kind kind :author "agent" :at at}
+                   target (assoc :target target)))
+        open? (fn [history inferred]
+                (contains? (x/open-ports (x/db history inferred) at) "o"))]
+    (testing "an inferred pair absent from the table does not establish relatedness"
+      (is (open? [(opener :propose) (answer :explain)] [["r" "o"]])))
+    (testing "a table-typed inferred closing answer closes"
+      (is (not (open? [(opener :propose) (answer :approve)] [["r" "o"]])))
+      (is (not (open? [(opener :ask-action) (answer :report)] [["r" "o"]]))))
+    (testing "a table-typed inferred keeping answer leaves the port open"
+      (is (open? [(opener :ask-action) (answer :qualify)] [["r" "o"]])))
+    (testing "an explicit target keeps its authority when the table is silent"
+      (is (not (open? [(opener :propose) (answer :explain "o")] []))))))
+
 (deftest the-flow-deposits-what-outlives-the-conversation
   (let [{:keys [history]} (fixture "red-tape")
         rows (into {} (map (juxt :id identity) (x/flow history)))]
