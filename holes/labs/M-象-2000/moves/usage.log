@@ -3,3 +3,4 @@
 2026-10-11T17:51:43Z 39.0% used (after zai-1 pilot, 20 records)
 2026-10-11T17:55:00Z 39.0% used (before scale shards 1-5: 158 records)
 2026-10-11T18:17:28Z 54.0% used (after scale shards 1-5: 158 records)
+2026-10-11T18:23:19Z 56.0% used; 5-hour window EXHAUSTED at 18:21Z (HTTP 429 on all five batch-2 jobs), resets 22:33Z
