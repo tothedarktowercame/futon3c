@@ -155,3 +155,66 @@ continued happened summaries, healthy idle JVM scheduler, and simultaneous
 loss of the only two `settle-evidence!` products.  Restoring and persisting
 JVM recorder mode is the repair; rebuilding Agency would not address the
 cause.
+
+## Addendum: authorised backfill (2026-10-11)
+
+Joe authorised the settlement replay.  The primary Emacs daemon was first set
+live to `session-mode-turn-recorder = jvm`, then the setting was persisted in
+`~/.emacs-graph/init.el` (mtime 03:37:25Z).  The first subsequent operator
+record was `claude-11-turn-96` at 03:39:26Z; it carries JVM marker
+`analysis_dispatch.scheduled_at = 1791689967065`.  Later operator records do
+too.
+
+I selected the 243 already-analyzed records whose `created_at` was on or after
+2026-10-06, sorted them oldest first, and invoked the live cached service's
+private `settle-evidence!` through Drawbridge.  No analysis was republished and
+no turn was dispatched.  Submissions were paced at 300 ms, and the existing
+single-thread scheduler performed the evidence append and port computation.
+
+Preflight and result:
+
+| result | count |
+|---|---:|
+| settlement replays submitted | 243 |
+| evidence newly written | 235 |
+| evidence already present / quiet duplicate | 8 |
+| evidence failed after drain | 0 |
+| records with ports after replay | 236 |
+| port computations refused (`No acts for turn`) | 7 |
+
+All 243 deterministic evidence IDs subsequently returned HTTP 200 directly
+from futon1b `:7073`.  The eight pre-existing entries and ports were the eight
+Oct 6 records; replay did not disturb them.
+
+The initial normal port pass exposed two bounded backfill cases.  First, 68
+old turns were outside `compute-ports!`'s last-50-turn session window.  I
+called the same live function again with its private session cap scoped to
+10000 by `with-redefs-fn`; the value was restored to 50 when the eval returned.
+This recovered 61.  The remaining seven records have readings from which
+`session-acts` produces no acts at all, so `turn-ports` has no act timestamp for
+the target turn and deliberately throws `No acts for turn ...`:
+
+- `turn-JTuY1v` (`claude-12-turn-6`)
+- `turn-WtIZCU` (`claude-11-turn-33`)
+- `turn-mVytXT` (`claude-11-turn-49`)
+- `turn-VgUJ8K` (`claude-11-turn-53`)
+- `turn-ABYrM4` (`claude-11-turn-54`)
+- `turn-968NVf` (`claude-12-turn-131`)
+- `turn-qX81HV` (`claude-12-turn-145`)
+
+I left those records honest rather than synthesize an act or write invented
+port state outside the service.  This is a separate totality bug in
+`compute-ports!`: an analyzed turn with zero recognized acts needs an explicit
+empty-turn time anchor if it is to carry the session's still-open ports.
+
+The requested direct sample (five records per day) returned evidence HTTP 200
+and had non-null `ports` in every case:
+
+| day | sampled record ids |
+|---|---|
+| Oct 6 | `turn-ErsAQP`, `turn-71JPGN`, `turn-3ohcEz`, `turn-W34IgZ`, `turn-FejOlN` |
+| Oct 9 | `turn-6tfLCi`, `turn-yGoIlB`, `turn-Cq0RT7`, `turn-yQrOe6`, `turn-uaXTGA` |
+| Oct 10 | `turn-RqwRvh`, `turn-OIhzli`, `turn-KsSUqR`, `turn-fOrPLY`, `turn-6d3gdP` |
+| Oct 11 | `turn-mIc3Eh`, `turn-BcboOg`, `turn-5HxdtH`, `turn-KEDpiQ`, `turn-OD2RDe` |
+
+No JVM was restarted or namespace reloaded.
