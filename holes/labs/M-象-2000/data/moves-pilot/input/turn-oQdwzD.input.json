@@ -48,46 +48,253 @@
     }
   ],
   "reply_text": "Before planning the hook-up I need to know what 大象 actually consumes and produces, so the plan is built on it rather than beside it:㊥ (\"hook it all up\") I think we can, without anyone's turns getting an extra model read. The 大象 side is already computed classically by the turn service, so the -40° side only needs to follow it, read-only, into the scratch futon1b. Here's the end-to-end plan; nothing in it restarts or reconfigures a live service.\n\n㊢ (what's already there) The turn service in the Agency JVM writes one record per turn to `~/.emacs-graph/session-turn-analysis/turn-*.json`. Each record carries the reply text, the turn's commits (\"happened\"), and the open and closed ports that `turn-acts/session-acts` computes from the marks. Agent replies are read classically there. Operator turns are read by 象, which happens already, so we add no reading.\n\n㊭ (the pipeline, all against the scratch store on :7093)\n1. **Follow the turn records.** A `minus40 follow` bg.py job, change-detecting like the hook, mirrors each settled turn into the store: the turn, its acts, its commits, and its still-open ports as open items.\n2. **Join memory writes to turns.** The hook already gets the writing session's id on stdin and currently throws it away. Kept, it lets a memory version land in the turn that wrote it, the way 大象 joins commits.\n3. **Crystallise memory writes.**\n   - Classical, in the hook: the seed, repo, seat and port entity rules.\n   - Model reads (entity read, conflict judge against candidate pairs): only for memory writes, which are a handful a day, never for turns. That's the only model use in the pipeline.\n4. **One \"open\" view.** Open ports from 大象, open sorries, unapplied merge and supersession proposals, and recent memory versions, filterable by agent and session. That's the inbox-zero query: a CLI first, then a page the follower regenerates so we can watch it live.\n5. **First case: the claude-14 session.** Its turn records are already in that directory. Replaying it through the follower shows what was open at each point, and which memories existed and would have been relevant. That gives us a concrete crime scene to reason from about Claude agents contributing to the War Machine.\n\n🈝 (deferred, and why)\n- **Embeddings and vector search:** still missing from the spec. They'd be a rebuildable sidecar later; the pipeline doesn't need them to be useful.\n- **Intents ↔ Tornhill signals:** needs the main futon1b, where those signals live. That's a reason for the switch-over, not something to imitate on scratch.\n\n㊟ (switch-over) Everything above is keyed to one base URL plus the store's own ids. Switching to the main futon1b would mean re-running the loads against :7073 and repointing the hook and the follower, and that's your call when we get there.\n\n🈸 (go?) Shall I build 1–4 in that order, committing and checking each, and then run the claude-14 replay?",
+  "reply_acts": [
+    {
+      "id": "claude-15-turn-22-r-0",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊢",
+      "text": "(what's already there) The turn service in the Agency JVM writes one record per turn to `~/.emacs-graph/session-turn-analysis/turn-*.json`. Each record carries the reply text, the turn's commits (\"happened\"), and the open and closed ports that `turn-acts/session-acts` computes from the marks. Agent replies are read classically there. Operator turns are read by 象, which happens already, so we add no reading."
+    },
+    {
+      "id": "claude-15-turn-22-r-1",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊭",
+      "text": "(the pipeline, all against the scratch store on :7093)\n1. **Follow the turn records.** A `minus40 follow` bg.py job, change-detecting like the hook, mirrors each settled turn into the store: the turn, its acts, its commits, and its still-open ports as open items.\n2. **Join memory writes to turns.** The hook already gets the writing session's id on stdin and currently throws it away. Kept, it lets a memory version land in the turn that wrote it, the way 大象 joins commits.\n3. **Crystallise memory writes.**\n   - Classical, in the hook: the seed, repo, seat and port entity rules.\n   - Model reads (entity read, conflict judge against candidate pairs): only for memory writes, which are a handful a day, never for turns. That's the only model use in the pipeline.\n4. **One \"open\" view.** Open ports from 大象, open sorries, unapplied merge and supersession proposals, and recent memory versions, filterable by agent and session. That's the inbox-zero query: a CLI first, then a page the follower regenerates so we can watch it live.\n5. **First case: the claude-14 session.** Its turn records are already in that directory. Replaying it through the follower shows what was open at each point, and which memories existed and would have been relevant. That gives us a concrete crime scene to reason from about Claude agents contributing to the War Machine."
+    },
+    {
+      "id": "claude-15-turn-22-r-2",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "🈝",
+      "text": "(deferred, and why)\n- **Embeddings and vector search:** still missing from the spec. They'd be a rebuildable sidecar later; the pipeline doesn't need them to be useful.\n- **Intents ↔ Tornhill signals:** needs the main futon1b, where those signals live. That's a reason for the switch-over, not something to imitate on scratch."
+    },
+    {
+      "id": "claude-15-turn-22-r-3",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊟",
+      "text": "(switch-over) Everything above is keyed to one base URL plus the store's own ids. Switching to the main futon1b would mean re-running the loads against :7073 and repointing the hook and the follower, and that's your call when we get there."
+    },
+    {
+      "id": "claude-15-turn-22-r-4",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "🈸",
+      "text": "(go?) Shall I build 1–4 in that order, committing and checking each, and then run the claude-14 replay?"
+    }
+  ],
   "previous_reply_acts": [
+    {
+      "id": "claude-15-turn-21-r-0",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "🈖",
+      "text": "(how memory writes map onto that)\n- **Draft tier:** my rule-based entity extraction plays 小象's role. It's classical, gives firm surface forms, and offers proposals.\n- **Candidates tier:** the TF-IDF candidate pairs play `find-many`'s role.\n- **Model tier:** Haiku's entity read and the conflict judge play 象's role, with the same basis stamps.\n- **Ledger:** a conflict found becomes an open item, like an unanswered question in 大象."
+    },
     {
       "id": "claude-15-turn-21-r-1",
       "kind": "reply-mark",
       "author": "claude-15",
-      "mark": null,
-      "label": null,
-      "text": "I'll read how xiaoxiang and daxiang work before proposing anything:㊣ (\"Let's not reinvent the wheel\") Agreed. My item 2 is the 象 pipeline under another name, so I'm dropping my own queue and worker. From `xiang-client/README.md` and `daxiang_live.clj`, the existing pieces are:\n- **A cheap classical draft at record time.** 小象 takes about 0.1 s, cuts the text into fragments with firm offsets, and proposes intents only where it's sure.\n- **Precomputed candidates.** `xlate.py find-many` runs over the library and stores its hits beside the record.\n- **Fire-and-forget dispatch to 象.** The model confirms or corrects, and every fragment is stamped with a `basis` (agreed, relabelled, new), so the classical tier never trains on its own guesses.\n- **大象's ledger.** It reads agent replies classically, joins the commits made during the turn, and tracks what's still open so it gets followed up."
+      "mark": "㊭",
+      "text": "(smallest first step) Treat a memory write as an act in the turn that made it, the way 大象 already joins a turn's commits. The hook already knows the session and the time, so a memory write during a turn would show up in that turn's acts. The drafting and the model reading can then plug into the existing record-time and dispatch hooks rather than mine."
     },
     {
       "id": "claude-15-turn-21-r-2",
       "kind": "reply-mark",
       "author": "claude-15",
-      "mark": "🈖",
-      "label": "how memory writes map onto that",
-      "text": "🈖 (how memory writes map onto that)\n- **Draft tier:** my rule-based entity extraction plays 小象's role. It's classical, gives firm surface forms, and offers proposals.\n- **Candidates tier:** the TF-IDF candidate pairs play `find-many`'s role.\n- **Model tier:** Haiku's entity read and the conflict judge play 象's role, with the same basis stamps.\n- **Ledger:** a conflict found becomes an open item, like an unanswered question in 大象."
+      "mark": "🈳",
+      "text": "(what I haven't read yet) I've read the READMEs, not `turn-seam/dispatch-contract.md` or the code where the JVM runs the draft at record time. Before building, I'd read those to see whether a memory event fits the turn-record schema as a sibling record kind, or should only be joined onto turns like commits are."
     },
     {
       "id": "claude-15-turn-21-r-3",
       "kind": "reply-mark",
       "author": "claude-15",
-      "mark": "㊭",
-      "label": "smallest first step",
-      "text": "㊭ (smallest first step) Treat a memory write as an act in the turn that made it, the way 大象 already joins a turn's commits. The hook already knows the session and the time, so a memory write during a turn would show up in that turn's acts. The drafting and the model reading can then plug into the existing record-time and dispatch hooks rather than mine."
-    },
-    {
-      "id": "claude-15-turn-21-r-4",
-      "kind": "reply-mark",
-      "author": "claude-15",
-      "mark": "🈳",
-      "label": "what I haven't read yet",
-      "text": "🈳 (what I haven't read yet) I've read the READMEs, not `turn-seam/dispatch-contract.md` or the code where the JVM runs the draft at record time. Before building, I'd read those to see whether a memory event fits the turn-record schema as a sibling record kind, or should only be joined onto turns like commits are."
-    },
-    {
-      "id": "claude-15-turn-21-r-5",
-      "kind": "reply-mark",
-      "author": "claude-15",
       "mark": "🈸",
-      "label": "which",
-      "text": "🈸 (which) Shall I read the dispatch contract and the 大象 commit join, then propose the concrete integration? Nothing gets built until you've seen it."
+      "text": "(which) Shall I read the dispatch contract and the 大象 commit join, then propose the concrete integration? Nothing gets built until you've seen it."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s1-0",
+      "kind": "constrain",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 138,
+      "standing?": true,
+      "about": "the cost of reading agent turns: Joe does not want all the agents' turns read by a second agent, which is too heavy",
+      "text": "The reason we need to be careful is that I don't really want all of the agents' turns to be read by a second agent, tha…",
+      "to": "claude-15"
+    },
+    {
+      "port?": false,
+      "start": 140,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s2-0",
+      "kind": "prioritize",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 188,
+      "standing?": false,
+      "about": "the 大象 tooling: the design should still get its benefit",
+      "text": "But we should get the benefit of the 大象 tooling.",
+      "to": "claude-15"
+    },
+    {
+      "port?": true,
+      "start": 189,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s3-0",
+      "kind": "propose",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 250,
+      "standing?": true,
+      "about": "the system: hook it all up (the -40° memory side with the 大象 pipeline)",
+      "text": "I reckon we're pretty much in a position to \"hook it all up\".",
+      "to": "claude-15"
+    },
+    {
+      "port?": false,
+      "start": 252,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s4-0",
+      "kind": "report",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 403,
+      "standing?": false,
+      "about": "the design against the original document: embedding and vector search are still missing, and categorical reasoning has been added",
+      "text": "If we go back to the original design document, we'd still be missing the embedding and vector-based search, but we've a…",
+      "to": "claude-15"
+    },
+    {
+      "port?": false,
+      "start": 404,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s5-0",
+      "kind": "explain",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 539,
+      "standing?": false,
+      "about": "why hook it up now: an end-to-end system we could start to look at 'live' would be clarifying",
+      "text": "I think what would make it all rather clarifying would be to have an end-to-end system hooked up that we could start to…",
+      "to": "claude-15"
+    },
+    {
+      "port?": true,
+      "start": 541,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s6-0",
+      "kind": "propose",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 656,
+      "standing?": true,
+      "about": "where to build it: use the extra futon1b the agent has, then switch it over when satisfied",
+      "text": "Since I think you still have an extra futon1b we could work with that one and then switch it over when we're happy?",
+      "to": "claude-15"
+    },
+    {
+      "port?": false,
+      "start": 658,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s7-0",
+      "kind": "qualify",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 826,
+      "standing?": false,
+      "about": "the scratch route: some things could only be done in the main futon1b, like relating 'intents' to Tornhill signals",
+      "text": "That said, I'm guessing that there are some cool things we could only do in the main futon1b, like dealing with the rel…",
+      "to": "claude-15"
+    },
+    {
+      "port?": true,
+      "start": 828,
+      "author": "operator",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-f-s8-0",
+      "kind": "propose",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "end": 1049,
+      "standing?": true,
+      "about": "the claude-14 transcript: use it as a live case of 'your agent chat is a crime scene', and think about how a viable memory system would let Claude agents contribute to the War Machine",
+      "text": "If we look at the claude-14 transcript we'd also have a live case of \"your agent chat is a crime scene\" so we could thi…",
+      "to": "claude-15"
+    },
+    {
+      "port?": false,
+      "author": "claude-15",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-r-0",
+      "kind": "report",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "standing?": false,
+      "text": "(what's already there) The turn service in the Agency JVM writes one record per turn to `~/.emacs-graph/session-turn-an…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-15",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-r-1",
+      "kind": "propose",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "standing?": true,
+      "text": "(the pipeline, all against the scratch store on :7093)\n1. **Follow the turn records.** A `minus40 follow` bg.py job, ch…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-15",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-r-2",
+      "kind": "defer",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "standing?": false,
+      "text": "(deferred, and why)\n- **Embeddings and vector search:** still missing from the spec. They'd be a rebuildable sidecar la…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-15",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-r-3",
+      "kind": "qualify",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "standing?": false,
+      "text": "(switch-over) Everything above is keyed to one base URL plus the store's own ids. Switching to the main futon1b would m…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-15",
+      "turn": "claude-15-turn-22",
+      "id": "claude-15-turn-22-r-4",
+      "kind": "ask-action",
+      "at": "2026-10-11T02:42:02Z",
+      "record": "turn-oQdwzD",
+      "standing?": false,
+      "text": "(go?) Shall I build 1–4 in that order, committing and checking each, and then run the claude-14 replay?",
+      "to": "operator"
     }
   ]
 }

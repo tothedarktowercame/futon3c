@@ -38,30 +38,178 @@
     }
   ],
   "reply_text": "I've read the Element fork's FUTON changes and am now tracing the chat-api server behind them.Still tracing: the bridge records agent replies as 象 turns too, which is probably where the agent-turn annotations come from. Checking that and the fast draft path now.Nearly done: checking how the turn store lists records, which the Element client hits for every visible message.㊥ (where to make the fast-mode changes) The fast reading you had in mind already runs on the server, but Element never shows it. Each turn gets a 小象 naive-Bayes draft when it is recorded, in about 0.06 s, but the Element code only underlines the LLM's analysis. That analysis can't arrive until after the agent has replied, plus at least one 象 job. The agent-turn annotations come from the bridge asking 象 to analyse every reply. There are four places to change. The first two are in futon3c and the other two are in the Element fork.\n\n㊢ (why it feels slow) The server side is fast:\n- the turn list answers in about 45 ms, Matrix membership check included;\n- the 小象 draft takes 0.06 s.\n\nThe slowness comes from two other places:\n- **The Element client** polls once per message, not once per room. Every rendered message body starts a 10-second timer (`TextualBodyFactory.tsx:294`). Each tick fetches that turn's detail and tears down and rebuilds the underlines in the DOM. With 50 messages on screen, that is 50 fetches and 50 DOM rewrites every 10 s.\n  - The shared turn list is cached per room for 10 s (`FutonIntentMarks.ts:161`, `:176`), but it is a 167 KB response: 300 turns from all sessions, each with its full source text.\n  - Every render of every message also rescans the whole live timeline to collect authors for the Marimo check (`TextualBodyFactory.tsx:343`). That scan is quadratic in the number of messages.\n- **Waiting for 象.** The bridge records the operator turn with `dispatch: later`, so 象 only starts once the agent's reply has landed (`ngircd_bridge.py:1425`, `xiang_turns.py:96`). After that it is an LLM job, and the reap is first scheduled 180 s after dispatch (`turn_service.clj`, `:reap-after 180`). Element shows nothing until then.\n\nI measured the server numbers this turn. The client-side costs come from reading the code; I did not profile Element in a browser.\n\n㊭ (where the changes go)\n1. **Show the draft first** (Element, `FutonIntentMarks.ts:79` `validatedIntentMarks`). `turn-view` already returns `draft` beside `analysis`, but the client reads only `analysis.display_cues` and the lexical `record.sentences[].cues`.\n   - Add a middle tier: `analysis` if present, otherwise `draft.fragments`, otherwise lexical cues.\n   - Show sure fragments (`intent` non-null) outright. Show unsure ones as \"?\" with their two `guesses`.\n   - Style draft underlines differently (dotted, labelled 小象), so a draft is never mistaken for 象's reading.\n   - With this, an operator turn gets its marks within a second of being recorded.\n2. **Use the typed marks** (futon3c, `scripts/xiaoxiang_preview.py:72` `preview`, or `tr/validate-draft`). The draft ignores proforma marks at the moment. I tested `🈸 yes please do that` and it came back as **approve**.\n   - `turn_record.clj:687` `leading-mark`/`reply-marks` already parses them, but only for agent-origin records (`:480`).\n   - Run it for operator turns as well. Let a leading mark set the fragment's intent, as sure, with method `declared`.\n   - Then a turn written with C-c ; (or the Element equivalent) needs no inference at all.\n   - Once marks are read this way, the `skip-routine?` predicate can also clear marked turns. It is off by default (`FUTON3C_XIANG_SKIP_ROUTINE`).\n3. **Stop dispatching agent replies to 象** (futon3c, `scripts/xiang_turns.py:101`). `after_reply` records every reply with `dispatch=\"now\"`, so 象 is asked to analyse each one, and that is the source of the annotations on agent turns.\n   - Changing it to `\"later\"` still records the reply and its `proforma_marks`, so Element can underline the agent's own marks from the record, but no LLM job runs.\n   - That also halves 象's queue, which shortens the wait in item 1 for operator turns.\n   - The live bridge runs from lucy's `~/services/matrix-bridge`, so the change has to be deployed there too.\n4. **Poll once per room** (Element, `TextualBodyFactory.tsx:283-300` and `FutonIntentMarks.ts:180`).\n   - Replace the per-message timer with one room-level poller. It should fetch the turn list filtered by `session`, which the route already supports, and with `source-text` left out of the summary.\n   - It then fetches detail only for turns whose `analysis-status` changed, and only redecorates those messages.\n   - Compute the author list once per room, not once per message.\n\n🈳 (fast annotation from Element) Fast annotation, meaning you correct a draft's mark in Element and 小象 trains on the correction, has no route yet. `xiaoxiang_preview.py correct` writes `xiaoxiang-corrections.jsonl` from Emacs only. The chat proxy (`xiang_chat_server.py`) forwards GETs only, and futon3c has no `/turns/:id/correct` action. Supporting it needs that action, a proxied POST, and a click-to-correct control on the underline.\n\n🈸 (one decision) Items 2 and 3 are small futon3c changes, and 1 and 4 belong in the Element fork you're working on with Codex. Shall I bell 2 and 3 to a Kimi or Zai seat (one handoff each) and send the Element items to your Codex as a written spec?",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-518-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊢",
+      "text": "(why it feels slow) The server side is fast:\n- the turn list answers in about 45 ms, Matrix membership check included;\n- the 小象 draft takes 0.06 s."
+    },
+    {
+      "id": "claude-17-turn-518-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊭",
+      "text": "(where the changes go)\n1. **Show the draft first** (Element, `FutonIntentMarks.ts:79` `validatedIntentMarks`). `turn-view` already returns `draft` beside `analysis`, but the client reads only `analysis.display_cues` and the lexical `record.sentences[].cues`.\n   - Add a middle tier: `analysis` if present, otherwise `draft.fragments`, otherwise lexical cues.\n   - Show sure fragments (`intent` non-null) outright. Show unsure ones as \"?\" with their two `guesses`.\n   - Style draft underlines differently (dotted, labelled 小象), so a draft is never mistaken for 象's reading.\n   - With this, an operator turn gets its marks within a second of being recorded.\n2. **Use the typed marks** (futon3c, `scripts/xiaoxiang_preview.py:72` `preview`, or `tr/validate-draft`). The draft ignores proforma marks at the moment. I tested `🈸 yes please do that` and it came back as **approve**.\n   - `turn_record.clj:687` `leading-mark`/`reply-marks` already parses them, but only for agent-origin records (`:480`).\n   - Run it for operator turns as well. Let a leading mark set the fragment's intent, as sure, with method `declared`.\n   - Then a turn written with C-c ; (or the Element equivalent) needs no inference at all.\n   - Once marks are read this way, the `skip-routine?` predicate can also clear marked turns. It is off by default (`FUTON3C_XIANG_SKIP_ROUTINE`).\n3. **Stop dispatching agent replies to 象** (futon3c, `scripts/xiang_turns.py:101`). `after_reply` records every reply with `dispatch=\"now\"`, so 象 is asked to analyse each one, and that is the source of the annotations on agent turns.\n   - Changing it to `\"later\"` still records the reply and its `proforma_marks`, so Element can underline the agent's own marks from the record, but no LLM job runs.\n   - That also halves 象's queue, which shortens the wait in item 1 for operator turns.\n   - The live bridge runs from lucy's `~/services/matrix-bridge`, so the change has to be deployed there too.\n4. **Poll once per room** (Element, `TextualBodyFactory.tsx:283-300` and `FutonIntentMarks.ts:180`).\n   - Replace the per-message timer with one room-level poller. It should fetch the turn list filtered by `session`, which the route already supports, and with `source-text` left out of the summary.\n   - It then fetches detail only for turns whose `analysis-status` changed, and only redecorates those messages.\n   - Compute the author list once per room, not once per message."
+    },
+    {
+      "id": "claude-17-turn-518-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈳",
+      "text": "(fast annotation from Element) Fast annotation, meaning you correct a draft's mark in Element and 小象 trains on the correction, has no route yet. `xiaoxiang_preview.py correct` writes `xiaoxiang-corrections.jsonl` from Emacs only. The chat proxy (`xiang_chat_server.py`) forwards GETs only, and futon3c has no `/turns/:id/correct` action. Supporting it needs that action, a proxied POST, and a click-to-correct control on the underline."
+    },
+    {
+      "id": "claude-17-turn-518-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Items 2 and 3 are small futon3c changes, and 1 and 4 belong in the Element fork you're working on with Codex. Shall I bell 2 and 3 to a Kimi or Zai seat (one handoff each) and send the Element items to your Codex as a written spec?"
+    }
+  ],
   "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-517-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(committed and pushed) I've updated M-象-2000, committed it as futon3c `964fa778` and pushed futon3c master to GitHub. The push also carried the four commits from the evidence fixes: `3bd7b7fd`, `c182dfa1`, `e44ccd34` and `8ec734fa`. futon3c master is now level with origin. Today's futon2 commits, the mark-act alignment work and codex-10's acts-file edit, were already on `origin/main`, so futon2 had nothing to push."
+    },
     {
       "id": "claude-17-turn-517-r-1",
       "kind": "reply-mark",
       "author": "claude-17",
-      "mark": "㊥",
-      "label": "committed and pushed",
-      "text": "㊥ (committed and pushed) I've updated M-象-2000, committed it as futon3c `964fa778` and pushed futon3c master to GitHub. The push also carried the four commits from the evidence fixes: `3bd7b7fd`, `c182dfa1`, `e44ccd34` and `8ec734fa`. futon3c master is now level with origin. Today's futon2 commits, the mark-act alignment work and codex-10's acts-file edit, were already on `origin/main`, so futon2 had nothing to push."
-    },
-    {
-      "id": "claude-17-turn-517-r-2",
-      "kind": "reply-mark",
-      "author": "claude-17",
       "mark": "㊢",
-      "label": "what the M-象-2000 update says",
-      "text": "㊢ (what the M-象-2000 update says) I added three entries at the end of INSTANTIATE, just before DOCUMENT:\n- **The agreement on codex-10's offer.** Your \"Yes\" couldn't be checked, for three reasons:\n  - the evidence chain was broken for 17 hours, and I replayed it;\n  - user turns replied to the commits record instead of the agent's chat turn;\n  - codex seats recorded their turns under the author `codex` instead of the seat id."
+      "text": "(what the M-象-2000 update says) I added three entries at the end of INSTANTIATE, just before DOCUMENT:\n- **The agreement on codex-10's offer.** Your \"Yes\" couldn't be checked, for three reasons:\n  - the evidence chain was broken for 17 hours, and I replayed it;\n  - user turns replied to the commits record instead of the agent's chat turn;\n  - codex seats recorded their turns under the author `codex` instead of the seat id."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "end": 72,
+      "standing?": false,
+      "about": "the 象×Element+Matrix integration project",
+      "text": "So I have started a big integration of 象 features with Element + Matrix.",
+      "to": "claude-17"
     },
     {
-      "id": "claude-17-turn-517-r-3",
-      "kind": "reply-mark",
+      "port?": false,
+      "start": 74,
+      "author": "operator",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-f-s2-0",
+      "kind": "report",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "end": 143,
+      "standing?": false,
+      "about": "the collaboration arrangement (Codex, web-element fork)",
+      "text": "That's fun and I've been working with Codex in a fork of web-element.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 145,
+      "author": "operator",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-f-s3-0",
+      "kind": "report-problem",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "end": 197,
+      "standing?": false,
+      "about": "the integration's latency",
+      "text": "But  the problem is that it is noticeably VERY slow.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 199,
+      "author": "operator",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-f-s4-0",
+      "kind": "report-problem",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "end": 298,
+      "standing?": false,
+      "about": "象 annotations appearing on agent turns",
+      "text": "Also, 象 annotations are being added to agent turns, which didn't match how I thought that would go.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 300,
+      "author": "operator",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-f-s5-0",
+      "kind": "clarify",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "end": 466,
+      "standing?": false,
+      "about": "the intended fast-mode design",
+      "text": "What I thought was that the xiaoxiang-insert-mark tokens would be used to support FAST inference, and that the xiaoxian…",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 468,
+      "author": "operator",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-f-s6-0",
+      "kind": "delegate",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "end": 570,
+      "standing?": true,
+      "about": "a read-and-locate pass over the Element code",
+      "text": "Can you read the element code and tell me where we'd make changes to support these fast mode features?",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
       "author": "claude-17",
-      "mark": null,
-      "label": null,
-      "text": "The entry gives each fix's commit, and two things still outstanding:\n  - the offer was marked ㊮, not 🈸, so it still won't be read as an offer;\n  - the fixes take effect only after you reload `agent-chat.el` and `codex-repl.el`.\n- **The late withdrawal notice in codex-17's buffer.** It is recorded as found but not fixed, with the proposed fix of quoting the fragment in the notice line.\n- **A pointer to the mark-act alignment in futon2.**"
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-r-0",
+      "kind": "report",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "standing?": false,
+      "text": "(why it feels slow) The server side is fast:\n- the turn list answers in about 45 ms, Matrix membership check included;\n…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-r-1",
+      "kind": "propose",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "standing?": true,
+      "text": "(where the changes go)\n1. **Show the draft first** (Element, `FutonIntentMarks.ts:79` `validatedIntentMarks`). `turn-vi…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-518",
+      "id": "claude-17-turn-518-r-3",
+      "kind": "ask-action",
+      "at": "2026-10-02T22:04:40Z",
+      "record": "turn-34pFgV",
+      "standing?": false,
+      "text": "(one decision) Items 2 and 3 are small futon3c changes, and 1 and 4 belong in the Element fork you're working on with C…",
+      "to": "operator"
     }
   ]
 }

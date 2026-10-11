@@ -18,30 +18,118 @@
     }
   ],
   "reply_text": "㊥ (measuring against the relevant Python) You're right, and my earlier figure was also wrong. Measured against only the Python reachable from the probe entry point at the pin (61f575e), the relevant code is 448 modules and 115k lines, not 164k. All of the Lisp side's ported or tested code falls inside that set: 16k lines, about 14%. Of that, 4.1k lines (about 3.6%) are differential-tested and 11.9k are partial ports. Earlier I said \"6k of 164k ported or tested\", which miscounted: it undercounted the partial ports and used the whole repository as the base. 🈹 I withdraw that figure.\n\n㊬ (how I measured)\n- I scanned the imports of `tools/probe_declaration.py` at 61f575e and followed them through `src/`. That includes imports inside functions and `import_module` calls with a literal module name. The full list is in `/tmp/pyreg/overnight/closure-61f575e.json`.\n- I then intersected that list with `lisp/port-status.json`.\n- None of the 690 files under `src/` are test files; the tests live elsewhere. So the 164k → 115k reduction is real code that the probe path never imports.\n\n㟟ㄴ (caveats) Two caveats pull in opposite directions:\n- The 115k is an upper bound. A module imported along the path may never run for a blank file. Recording `sys.modules` during a real blank-file run would give a smaller number, and that takes one warm run.\n- Imports whose module name is computed at runtime would be missed. I saw none in this path, but I didn't search for them specifically.\n\n㊢ (Rob's removals) As of Rob's `origin/main` (049047a, Oct 1) the cut hasn't happened yet: 686 Python files and 160k lines, against 690 and 164k at our pin. When it lands, the 448-module set above is the part that must survive for the probe path to keep working, so it's also a list to check his cut against.\n\n🈖 (does this change the plan?) Not much. 14% versus 4% doesn't move the hand port much closer to the transpiler. The transpiler already translates every module, so its distance to running depends on runtime gaps and startup, not on how many lines remain. Where the smaller set does help is the inventory job: it should list runtime gaps only for these 448 modules. That makes the job smaller and more accurate.",
+  "reply_acts": [
+    {
+      "id": "claude-4-turn-28-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊥",
+      "text": "(measuring against the relevant Python) You're right, and my earlier figure was also wrong. Measured against only the Python reachable from the probe entry point at the pin (61f575e), the relevant code is 448 modules and 115k lines, not 164k. All of the Lisp side's ported or tested code falls inside that set: 16k lines, about 14%. Of that, 4.1k lines (about 3.6%) are differential-tested and 11.9k are partial ports. Earlier I said \"6k of 164k ported or tested\", which miscounted: it undercounted the partial ports and used the whole repository as the base. 🈹 I withdraw that figure."
+    },
+    {
+      "id": "claude-4-turn-28-r-1",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊬",
+      "text": "(how I measured)\n- I scanned the imports of `tools/probe_declaration.py` at 61f575e and followed them through `src/`. That includes imports inside functions and `import_module` calls with a literal module name. The full list is in `/tmp/pyreg/overnight/closure-61f575e.json`.\n- I then intersected that list with `lisp/port-status.json`.\n- None of the 690 files under `src/` are test files; the tests live elsewhere. So the 164k → 115k reduction is real code that the probe path never imports."
+    },
+    {
+      "id": "claude-4-turn-28-r-2",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊢",
+      "text": "(Rob's removals) As of Rob's `origin/main` (049047a, Oct 1) the cut hasn't happened yet: 686 Python files and 160k lines, against 690 and 164k at our pin. When it lands, the 448-module set above is the part that must survive for the probe path to keep working, so it's also a list to check his cut against."
+    },
+    {
+      "id": "claude-4-turn-28-r-3",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "🈖",
+      "text": "(does this change the plan?) Not much. 14% versus 4% doesn't move the hand port much closer to the transpiler. The transpiler already translates every module, so its distance to running depends on runtime gaps and startup, not on how many lines remain. Where the smaller set does help is the inventory job: it should list runtime gaps only for these 448 modules. That makes the job smaller and more accurate."
+    }
+  ],
   "previous_reply_acts": [
+    {
+      "id": "claude-4-turn-27-r-0",
+      "kind": "reply-mark",
+      "author": "claude-4",
+      "mark": "㊣",
+      "text": "(plan) Agreed. I'll wait for codex-18's summary and choose what to do from that. Nothing else is in flight on my side:\n- The Python jobs are stopped.\n- The 61f575e sweep keeps running on CPU only and uses no credits.\n- codex-19 continues on `Array.extract`."
+    },
     {
       "id": "claude-4-turn-27-r-1",
       "kind": "reply-mark",
       "author": "claude-4",
-      "mark": "㊣",
-      "label": null,
-      "text": "㊣: (plan) Agreed. I'll wait for codex-18's summary and choose what to do from that. Nothing else is in flight on my side:\n- The Python jobs are stopped.\n- The 61f575e sweep keeps running on CPU only and uses no credits.\n- codex-19 continues on `Array.extract`."
-    },
-    {
-      "id": "claude-4-turn-27-r-2",
-      "kind": "reply-mark",
-      "author": "claude-4",
       "mark": "🈯",
-      "label": "for codex-18's summary",
-      "text": "🈯 (for codex-18's summary) It would help most if the report covers:\n1. which Python source revision it translates;\n2. where the current startup failure is;\n3. how many runtime gaps it knows of, or how it would list them in advance;\n4. whether anyone has timed a translated module against Python."
+      "text": "(for codex-18's summary) It would help most if the report covers:\n1. which Python source revision it translates;\n2. where the current startup failure is;\n3. how many runtime gaps it knows of, or how it would list them in advance;\n4. whether anyone has timed a translated module against Python."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-28",
+      "id": "claude-4-turn-28-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-04T05:09:09Z",
+      "record": "turn-mtauh1",
+      "end": 117,
+      "standing?": false,
+      "about": "the 6k-of-164k porting metric",
+      "text": "That said these numbers may be misleading (\"The Lisp side has 6k of the Python port's 164k lines ported or tested\") —",
+      "to": "claude-4"
     },
     {
-      "id": "claude-4-turn-27-r-3",
-      "kind": "reply-mark",
+      "port?": true,
+      "start": 118,
+      "author": "operator",
+      "turn": "claude-4-turn-28",
+      "id": "claude-4-turn-28-f-s1-1",
+      "kind": "propose",
+      "at": "2026-10-04T05:09:09Z",
+      "record": "turn-mtauh1",
+      "end": 302,
+      "standing?": true,
+      "about": "the porting-progress measurement",
+      "text": "Rob has said he plans to remove a lot of Python from mfuton-share (and he may have already) so the 6k should be measure…",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
       "author": "claude-4",
-      "mark": null,
-      "label": null,
-      "text": "If you can pass those four on when you ask, I can decide the team split straight from their reply."
+      "turn": "claude-4-turn-28",
+      "id": "claude-4-turn-28-r-1",
+      "kind": "verify",
+      "at": "2026-10-04T05:09:09Z",
+      "record": "turn-mtauh1",
+      "standing?": false,
+      "text": "(how I measured)\n- I scanned the imports of `tools/probe_declaration.py` at 61f575e and followed them through `src/`. T…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-28",
+      "id": "claude-4-turn-28-r-2",
+      "kind": "report",
+      "at": "2026-10-04T05:09:09Z",
+      "record": "turn-mtauh1",
+      "standing?": false,
+      "text": "(Rob's removals) As of Rob's `origin/main` (049047a, Oct 1) the cut hasn't happened yet: 686 Python files and 160k line…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-4",
+      "turn": "claude-4-turn-28",
+      "id": "claude-4-turn-28-r-3",
+      "kind": "explain",
+      "at": "2026-10-04T05:09:09Z",
+      "record": "turn-mtauh1",
+      "standing?": false,
+      "text": "(does this change the plan?) Not much. 14% versus 4% doesn't move the hand port much closer to the transpiler. The tran…",
+      "to": "operator"
     }
   ]
 }

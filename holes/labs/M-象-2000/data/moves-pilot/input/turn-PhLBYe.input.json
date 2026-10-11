@@ -28,62 +28,214 @@
     }
   ],
   "reply_text": "㊥ (*Warnings* popping up) The warnings popping up now aren't from the 象 recorder. Both of your last turns were recorded through the JVM cleanly (`turn-elJzmq` is analysed; this one, `turn-PhLBYe`, is waiting for my reply to end). The three \"NOT recorded\" lines are left over from before the parser fix. The new warnings come from `server-dead-client.el`: \"20 emacsclient replies dropped in the last 5 min\". It warns when Emacs answers emacsclient calls too slowly and the callers give up.\n\n🈖 (what that warning means) Agency runs emacsclient calls against your Emacs, for example the blackboard projections, and kills them if they're slow. The file's own note says the cause on 2026-10-03 was \"six forgotten tty frames redrawing busy REPL buffers\". The counter is at 1,183 drops in total, with 5 in the current 5-minute window, so it's quieter at the moment. It warns at most once every 10 minutes.\n\n㊬ (not the recorder) I timed the JVM turn route at about 1 ms per request. Recording at send is synchronous, but it doesn't stall Emacs. The polls for readings are asynchronous.\n\n㊟ (frames) Your Emacs has four tty frames besides the initial one:\n- **F16** on `/dev/pts/2`: this buffer\n- **F13** on `/dev/pts/24`: `*codex-repl:codex-19*`\n- **F12** on `/dev/pts/21`: `*codex-repl:codex-10*`\n- **F14** on `/dev/pts/21`: a corfu completion popup\n\nEach visible REPL buffer redraws as it streams, and that's what the earlier incident traced the slowness to.\n\n🈸 (one decision) Is F12 (codex-10, on pts/21) a frame you still use? If not, closing it with `C-x 5 0` in that terminal should cut the redraw load. I can delete it from here if you prefer. Separately, I could make the warning log to `*Messages*` instead of popping up `*Warnings*`, if you'd rather it didn't interrupt.\n\n🈯 (slicing the inference) On the different ways to slice the inference: rather than picking one now, 象 could produce more than one reading of the same pair, and we see which ones prove useful. That fits the M-象-cascade view that multiplicity \"is information too\". I'll put it in the lab note if you want that written.",
+  "reply_acts": [
+    {
+      "id": "claude-17-turn-547-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(*Warnings* popping up) The warnings popping up now aren't from the 象 recorder. Both of your last turns were recorded through the JVM cleanly (`turn-elJzmq` is analysed; this one, `turn-PhLBYe`, is waiting for my reply to end). The three \"NOT recorded\" lines are left over from before the parser fix. The new warnings come from `server-dead-client.el`: \"20 emacsclient replies dropped in the last 5 min\". It warns when Emacs answers emacsclient calls too slowly and the callers give up."
+    },
+    {
+      "id": "claude-17-turn-547-r-1",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈖",
+      "text": "(what that warning means) Agency runs emacsclient calls against your Emacs, for example the blackboard projections, and kills them if they're slow. The file's own note says the cause on 2026-10-03 was \"six forgotten tty frames redrawing busy REPL buffers\". The counter is at 1,183 drops in total, with 5 in the current 5-minute window, so it's quieter at the moment. It warns at most once every 10 minutes."
+    },
+    {
+      "id": "claude-17-turn-547-r-2",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊬",
+      "text": "(not the recorder) I timed the JVM turn route at about 1 ms per request. Recording at send is synchronous, but it doesn't stall Emacs. The polls for readings are asynchronous."
+    },
+    {
+      "id": "claude-17-turn-547-r-3",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊟",
+      "text": "(frames) Your Emacs has four tty frames besides the initial one:\n- **F16** on `/dev/pts/2`: this buffer\n- **F13** on `/dev/pts/24`: `*codex-repl:codex-19*`\n- **F12** on `/dev/pts/21`: `*codex-repl:codex-10*`\n- **F14** on `/dev/pts/21`: a corfu completion popup"
+    },
+    {
+      "id": "claude-17-turn-547-r-4",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈸",
+      "text": "(one decision) Is F12 (codex-10, on pts/21) a frame you still use? If not, closing it with `C-x 5 0` in that terminal should cut the redraw load. I can delete it from here if you prefer. Separately, I could make the warning log to `*Messages*` instead of popping up `*Warnings*`, if you'd rather it didn't interrupt."
+    },
+    {
+      "id": "claude-17-turn-547-r-5",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "🈯",
+      "text": "(slicing the inference) On the different ways to slice the inference: rather than picking one now, 象 could produce more than one reading of the same pair, and we see which ones prove useful. That fits the M-象-cascade view that multiplicity \"is information too\". I'll put it in the lab note if you want that written."
+    }
+  ],
   "previous_reply_acts": [
+    {
+      "id": "claude-17-turn-542-r-0",
+      "kind": "reply-mark",
+      "author": "claude-17",
+      "mark": "㊥",
+      "text": "(your second test) Your turn reached the JVM and became evidence (`e-xiang-turn-turn-wSIRlv`). But Emacs reported it as not recorded, because the JVM took 11 seconds to answer and Emacs gives up after 10. I've fixed that. I've also pointed your buffer at this turn's record, so when this reply ends the reading should come back through the JVM and the stepper should update."
+    },
     {
       "id": "claude-17-turn-542-r-1",
       "kind": "reply-mark",
       "author": "claude-17",
-      "mark": "㊥",
-      "label": "your second test",
-      "text": "㊥ (your second test) Your turn reached the JVM and became evidence (`e-xiang-turn-turn-wSIRlv`). But Emacs reported it as not recorded, because the JVM took 11 seconds to answer and Emacs gives up after 10. I've fixed that. I've also pointed your buffer at this turn's record, so when this reply ends the reading should come back through the JVM and the stepper should update."
+      "mark": "㊩",
+      "text": "(what went wrong) Two separate problems:\n- **The timeout.** The JVM wrote the record at 23:57:56, then ran the 小象 draft inside the same request until 23:58:07. Emacs warned \"Turn structure was NOT recorded … no answer\" and never stored the record's path.\n- **The wrong turn.** Your buffer was still pointing at the previous turn's record (`turn-SuuilW`, already read). Without correcting that, the end of this reply would have reported \"happened\" for the wrong turn."
     },
     {
       "id": "claude-17-turn-542-r-2",
       "kind": "reply-mark",
       "author": "claude-17",
-      "mark": "㊩",
-      "label": "what went wrong",
-      "text": "㊩ (what went wrong) Two separate problems:\n- **The timeout.** The JVM wrote the record at 23:57:56, then ran the 小象 draft inside the same request until 23:58:07. Emacs warned \"Turn structure was NOT recorded … no answer\" and never stored the record's path.\n- **The wrong turn.** Your buffer was still pointing at the previous turn's record (`turn-SuuilW`, already read). Without correcting that, the end of this reply would have reported \"happened\" for the wrong turn."
+      "mark": "㊢",
+      "text": "(fix, `b6cd9da4`) A turn that isn't sent to 象 straight away is now drafted in the background. Dispatch drafts any record that still has no draft, so the routine-turn check still sees one. The test suite is 27 tests, 0 failures, including a new test that the record request returns before the draft runs. I reloaded the JVM and pushed. For this turn, I set your buffer to `turn-wSIRlv.json` by hand."
     },
     {
       "id": "claude-17-turn-542-r-3",
       "kind": "reply-mark",
       "author": "claude-17",
-      "mark": "㊢",
-      "label": "fix, `b6cd9da4`",
-      "text": "㊢ (fix, `b6cd9da4`) A turn that isn't sent to 象 straight away is now drafted in the background. Dispatch drafts any record that still has no draft, so the routine-turn check still sees one. The test suite is 27 tests, 0 failures, including a new test that the record request returns before the draft runs. I reloaded the JVM and pushed. For this turn, I set your buffer to `turn-wSIRlv.json` by hand."
+      "mark": "㊬",
+      "text": "(your first test) The file-path turn worked end to end: `turn-SuuilW` was analysed and its reading landed."
     },
     {
       "id": "claude-17-turn-542-r-4",
       "kind": "reply-mark",
       "author": "claude-17",
-      "mark": "㊬",
-      "label": "your first test",
-      "text": "㊬ (your first test) The file-path turn worked end to end: `turn-SuuilW` was analysed and its reading landed."
+      "mark": "㊟",
+      "text": "(what to watch now) When this reply ends:\n1. Emacs posts \"happened\" for `turn-wSIRlv`, and the JVM sends it to a 象 seat.\n2. When the reading lands, a second evidence entry `e-xiang-reading-turn-wSIRlv` should appear, and the stepper should refresh."
     },
     {
       "id": "claude-17-turn-542-r-5",
       "kind": "reply-mark",
       "author": "claude-17",
-      "mark": "㊟",
-      "label": "what to watch now",
-      "text": "㊟ (what to watch now) When this reply ends:\n1. Emacs posts \"happened\" for `turn-wSIRlv`, and the JVM sends it to a 象 seat.\n2. When the reading lands, a second evidence entry `e-xiang-reading-turn-wSIRlv` should appear, and the stepper should refresh."
-    },
-    {
-      "id": "claude-17-turn-542-r-6",
-      "kind": "reply-mark",
-      "author": "claude-17",
-      "mark": null,
-      "label": null,
-      "text": "Your next turn is the first real test of the fixed send, and it should not show the \"NOT recorded\" warning."
-    },
-    {
-      "id": "claude-17-turn-542-r-7",
-      "kind": "reply-mark",
-      "author": "claude-17",
       "mark": "🈳",
-      "label": "still open",
-      "text": "🈳 (still open) Neither path records the operator turn's evidence id: the record's `evidence_id` is empty on both. The operator evidence row is only acknowledged after the turn is sent (\"queued for durable retry\"), so at recording time there is nothing to cite yet. The record could be updated when the acknowledgement arrives. I'll leave that until after this test."
+      "text": "(still open) Neither path records the operator turn's evidence id: the record's `evidence_id` is empty on both. The operator evidence row is only acknowledged after the turn is sent (\"queued for durable retry\"), so at recording time there is nothing to cite yet. The record could be updated when the acknowledgement arrives. I'll leave that until after this test."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-f-s1-0",
+      "kind": "explore",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "end": 76,
+      "standing?": false,
+      "about": "the multiplicity of valid slicings of the turn/inference structure",
+      "text": "So, the fact that we can slice thes things in different ways is interesting,",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 77,
+      "author": "operator",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-f-s1-1",
+      "kind": "explore",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "end": 202,
+      "standing?": false,
+      "about": "the open choice among the candidate slicings",
+      "text": "i.e., there are several different ways to slice the inference up as a natural deduction rule, I'm not sure which one is…",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 204,
+      "author": "operator",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-f-s2-0",
+      "kind": "report-problem",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "end": 276,
+      "standing?": false,
+      "about": "recurring *Warnings* after the operator's turns",
+      "text": "But, in practical terms, *Warnings* are still popping up after my turns.",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 278,
+      "author": "operator",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-f-s3-0",
+      "kind": "ask-action",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "end": 325,
+      "standing?": false,
+      "about": "the live *Warnings* instance, left in place for the seat to inspect",
+      "text": "I'll let this one sit there so you can inspect.",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-r-1",
+      "kind": "explain",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "standing?": false,
+      "text": "(what that warning means) Agency runs emacsclient calls against your Emacs, for example the blackboard projections, and…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-r-2",
+      "kind": "verify",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "standing?": false,
+      "text": "(not the recorder) I timed the JVM turn route at about 1 ms per request. Recording at send is synchronous, but it doesn…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-r-3",
+      "kind": "qualify",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "standing?": false,
+      "text": "(frames) Your Emacs has four tty frames besides the initial one:\n- **F16** on `/dev/pts/2`: this buffer\n- **F13** on `/…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-r-4",
+      "kind": "ask-action",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "standing?": false,
+      "text": "(one decision) Is F12 (codex-10, on pts/21) a frame you still use? If not, closing it with `C-x 5 0` in that terminal s…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-17",
+      "turn": "claude-17-turn-547",
+      "id": "claude-17-turn-547-r-5",
+      "kind": "clarify",
+      "at": "2026-10-04T00:17:47Z",
+      "record": "turn-PhLBYe",
+      "standing?": false,
+      "text": "(slicing the inference) On the different ways to slice the inference: rather than picking one now, 象 could produce more…",
+      "to": "operator"
     }
   ]
 }
