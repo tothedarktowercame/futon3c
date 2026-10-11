@@ -47,3 +47,108 @@ Rules are exclusive in A → B → C → none order.
 
 Explicit kernel links are live agent acts carrying `target`; inferred links are current-record entries in `ports.inferred`. Missing stored effects are recomputed from the checked-in adjacency table, with the kernel's explicit-link default of `closes`. Sidecar reply ids that differ from kernel ids are joined only by a unique whitespace-normalised quote match.
 
+## Rule B precision; sole-port false positives
+
+B links every untargeted reply paragraph to every opener that is the turn's only opener of its kind. B* retains only adjacency-typed pairs. Labeller-silent is the requested false-positive definition; an omitted label is treated as disagreement, not unknown.
+
+| variant | asserted | labeller-confirmed | same effect | labeller-silent | pair precision | exact-effect precision | labelled-close recall |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| B | 801 | 263 | 150 | 538 | 32.8% | 18.7% | 145/424 (34.2%) |
+| B* | 273 | 104 | 75 | 169 | 38.1% | 27.5% | 70/424 (16.5%) |
+
+### B: top 12 opener/reply kinds
+
+| opener | reply | asserted | confirmed | same effect | silent | precision |
+|---|---|---:|---:|---:|---:|---:|
+| propose | report | 50 | 15 | 10 | 35 | 30.0% |
+| ask-action | report | 46 | 24 | 18 | 22 | 52.2% |
+| report-problem | report | 45 | 19 | 10 | 26 | 42.2% |
+| delegate | report | 34 | 11 | 8 | 23 | 32.4% |
+| verify | report | 28 | 9 | 6 | 19 | 32.1% |
+| clarify | report | 27 | 7 | 4 | 20 | 25.9% |
+| report-problem | propose | 26 | 6 | 3 | 20 | 23.1% |
+| propose | propose | 25 | 13 | 9 | 12 | 52.0% |
+| propose | qualify | 24 | 6 | 1 | 18 | 25.0% |
+| ask-action | qualify | 23 | 5 | 4 | 18 | 21.7% |
+| report-problem | ask-action | 22 | 5 | 1 | 17 | 22.7% |
+| propose | ask-action | 21 | 4 | 0 | 17 | 19.0% |
+
+### B*: top 12 opener/reply kinds
+
+| opener | reply | asserted | confirmed | same effect | silent | precision |
+|---|---|---:|---:|---:|---:|---:|
+| ask-action | report | 46 | 24 | 18 | 22 | 52.2% |
+| delegate | report | 34 | 11 | 8 | 23 | 32.4% |
+| verify | report | 28 | 9 | 6 | 19 | 32.1% |
+| clarify | report | 27 | 7 | 4 | 20 | 25.9% |
+| ask-action | qualify | 23 | 5 | 4 | 18 | 21.7% |
+| report-problem | explain | 20 | 6 | 3 | 14 | 30.0% |
+| report-problem | verify | 19 | 9 | 7 | 10 | 47.4% |
+| clarify | explain | 12 | 3 | 2 | 9 | 25.0% |
+| ask-action | explain | 11 | 5 | 2 | 6 | 45.5% |
+| delegate | report-problem | 10 | 1 | 1 | 9 | 10.0% |
+| propose | commit | 10 | 9 | 9 | 1 | 90.0% |
+| propose | approve | 8 | 5 | 5 | 3 | 62.5% |
+
+### Existing effect disagreements
+
+| opener | reply | direction | pairs |
+|---|---|---|---:|
+| propose | report | kernel closes / labeller keeps | 3 |
+| explore | explain | kernel closes / labeller keeps | 2 |
+| propose | qualify | kernel closes / labeller keeps | 2 |
+| ask-action | delegate | kernel closes / labeller keeps | 1 |
+| ask-action | propose | kernel closes / labeller keeps | 1 |
+| ask-action | report | kernel closes / labeller keeps | 1 |
+| clarify | report | kernel closes / labeller keeps | 1 |
+| delegate | report | kernel closes / labeller keeps | 1 |
+| explore | qualify | kernel closes / labeller keeps | 1 |
+| propose | clarify | kernel closes / labeller keeps | 1 |
+| propose | explain | kernel closes / labeller keeps | 1 |
+| qualify | explain | kernel closes / labeller keeps | 1 |
+| report | clarify | kernel closes / labeller keeps | 1 |
+| report-problem | qualify | kernel closes / labeller keeps | 1 |
+
+Quoted examples (up to three per observed direction):
+
+**kernel closes / labeller keeps.**
+- `turn-FejOlN` — answer: “("a very clear explanation of why") the explanation will cover: - **each row:** what lean produces and what the port pr…”; opener: “ok but we can't a clean row i want a very clear explanation of why.”.
+- `turn-4Vnjnj` — answer: “(where we are against it) the ingest hook already does the first part at write time: exact version and links. entities …”; opener: “that could be a useful guiding principle for our db.”.
+- `turn-8qn3cQ` — answer: “(restored) - **live:** your daemon's `session-mode-turn-recorder` is set to `jvm` via `emacsclient`, which now returns …”; opener: “right, please restore the setting & backfill via 象-sonnet or codex-70 as appropriate”.
+
+**kernel keeps / labeller closes.** None observed.
+
+
+### Current sole-port: batch 1
+
+Current stored sole-port links: **24**; labeller-confirmed **14**; labeller-silent **10**. False-positive rate: **41.7%**.
+
+| reply kind | asserted | confirmed | silent | false-positive rate |
+|---|---:|---:|---:|---:|
+| report | 8 | 7 | 1 | 12.5% |
+| explain | 4 | 1 | 3 | 75.0% |
+| propose | 3 | 3 | 0 | 0.0% |
+| ask-action | 2 | 0 | 2 | 100.0% |
+| continue | 2 | 0 | 2 | 100.0% |
+| qualify | 2 | 0 | 2 | 100.0% |
+| delegate | 1 | 1 | 0 | 0.0% |
+| report-problem | 1 | 1 | 0 | 0.0% |
+| verify | 1 | 1 | 0 | 0.0% |
+
+### Current sole-port: 20-record pilot
+
+Current stored sole-port links: **32**; labeller-confirmed **25**; labeller-silent **7**. False-positive rate: **21.9%**.
+
+| reply kind | asserted | confirmed | silent | false-positive rate |
+|---|---:|---:|---:|---:|
+| report | 8 | 7 | 1 | 12.5% |
+| ask-action | 5 | 4 | 1 | 20.0% |
+| explain | 5 | 3 | 2 | 40.0% |
+| qualify | 5 | 3 | 2 | 40.0% |
+| propose | 4 | 4 | 0 | 0.0% |
+| report-problem | 3 | 3 | 0 | 0.0% |
+| delegate | 1 | 1 | 0 | 0.0% |
+| verify | 1 | 0 | 1 | 100.0% |
+
+Combined (counting the two requested populations independently): **17/56 (30.4%)** labeller-silent.
+

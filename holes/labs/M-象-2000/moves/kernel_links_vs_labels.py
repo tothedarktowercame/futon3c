@@ -60,6 +60,26 @@ def resolve_answer(side_act, agent_acts):
     return matches[0] if len(matches) == 1 else None
 
 
+def load_case(side_path, records_root):
+    side = json.loads(side_path.read_text(encoding="utf-8"))
+    record = json.loads((records_root / f"{side['record']}.json").read_text(encoding="utf-8"))
+    acts = record.get("acts") or []
+    by_id = {act.get("id"): act for act in acts if act.get("id")}
+    operator = [act for act in acts if act.get("author") == "operator"]
+    agent = [act for act in acts if act.get("author") != "operator"]
+    labelled = {}
+    for side_act in side.get("acts", []):
+        answer = resolve_answer(side_act, agent)
+        if answer:
+            for incidence in side_act.get("answers", []):
+                labelled[(answer["id"], incidence.get("act"))] = incidence.get("effect")
+    return side, record, by_id, operator, agent, labelled
+
+
+def move_paths(root):
+    return sorted(root.glob("shard-*/turn-*.moves.json")) or sorted(root.glob("turn-*.moves.json"))
+
+
 def analyse(moves_root, records_root=RECORDS):
     classes = Counter()
     kernel_only = []
@@ -67,7 +87,7 @@ def analyse(moves_root, records_root=RECORDS):
     totals = Counter()
     unmapped_answers = 0
     unmapped_incidences = 0
-    for side_path in sorted(moves_root.glob("shard-*/turn-*.moves.json")):
+    for side_path in move_paths(moves_root):
         side = json.loads(side_path.read_text(encoding="utf-8"))
         record_id = side["record"]
         record = json.loads((records_root / f"{record_id}.json").read_text(encoding="utf-8"))
@@ -147,6 +167,104 @@ def analyse(moves_root, records_root=RECORDS):
             unmapped_answers, unmapped_incidences)
 
 
+def rule_b_analysis(paths, records_root=RECORDS):
+    variants = {"B": Counter(), "B*": Counter()}
+    breakdown = {"B": {}, "B*": {}}
+    disagreements = Counter()
+    disagreement_examples = {"kernel closes / labeller keeps": [],
+                             "kernel keeps / labeller closes": []}
+    sole = Counter()
+    sole_by_kind = {}
+    for side_path in paths:
+        side, record, by_id, operator, agent, labelled = load_case(side_path, records_root)
+        openers = [act for act in operator if act.get("kind") in OPENERS]
+        kind_counts = Counter(act.get("kind") for act in openers)
+        unique = [act for act in openers if kind_counts[act.get("kind")] == 1]
+        # The sidecars are the complete reply-act population.  Canonicalise to
+        # a live id where possible, but retain an unmapped sidecar act: absence
+        # from the live segmentation must not silently shrink recall's
+        # labelled-close denominator.
+        replies = []
+        labelled_all = {}
+        for side_act in side.get("acts", []):
+            if "-r-" not in str(side_act.get("act", "")):
+                continue
+            live = resolve_answer(side_act, agent)
+            side_kind = str(side_act.get("move", "")).split("/", 1)[0]
+            answer = live or {"id": side_act.get("act"), "kind": side_kind,
+                              "text": side_act.get("quote", "")}
+            replies.append(answer)
+            for incidence in side_act.get("answers", []):
+                labelled_all[(answer["id"], incidence.get("act"))] = incidence.get("effect")
+        candidates = {"B": {}, "B*": {}}
+        for answer in replies:
+            if answer.get("target"):
+                continue
+            for opener in unique:
+                pair = (answer["id"], opener["id"])
+                candidates["B"][pair] = effect(opener.get("kind"), answer.get("kind"))
+                typed = ADJACENCY.get(opener.get("kind"), {}).get(answer.get("kind"))
+                if typed:
+                    candidates["B*"][pair] = typed
+        labelled_closes = {pair for pair, value in labelled_all.items() if value == "closes"}
+        for variant, pairs in candidates.items():
+            stats = variants[variant]
+            stats["asserted"] += len(pairs)
+            stats["confirmed"] += sum(pair in labelled_all for pair in pairs)
+            stats["same"] += sum(labelled_all.get(pair) == value for pair, value in pairs.items())
+            stats["silent"] += sum(pair not in labelled_all for pair in pairs)
+            stats["close_reached"] += sum(pair in labelled_closes and value == "closes"
+                                          for pair, value in pairs.items())
+            stats["labelled_closes"] += len(labelled_closes)
+            for pair, value in pairs.items():
+                opener = by_id.get(pair[1], {})
+                answer = next((act for act in replies if act.get("id") == pair[0]), {})
+                key = (opener.get("kind", "?"), answer.get("kind", "?"))
+                row = breakdown[variant].setdefault(key, Counter())
+                row["asserted"] += 1
+                row["confirmed"] += pair in labelled_all
+                row["same"] += labelled_all.get(pair) == value
+                row["silent"] += pair not in labelled_all
+
+        # Reconstruct the 98101d97 effect-disagreement population.
+        kernel = {}
+        for answer in agent:
+            if answer.get("target"):
+                opener = by_id.get(answer["target"], {})
+                kernel[(answer["id"], answer["target"])] = effect(opener.get("kind"), answer.get("kind"))
+        for inferred in (record.get("ports") or {}).get("inferred") or []:
+            pair = (inferred.get("answer"), inferred.get("opener"))
+            if pair[0] in by_id:
+                kernel[pair] = (inferred.get("effect") or
+                                effect(by_id.get(pair[1], {}).get("kind"),
+                                       by_id.get(pair[0], {}).get("kind")))
+        for pair in set(kernel) & set(labelled):
+            if kernel[pair] == labelled[pair]:
+                continue
+            opener, answer = by_id.get(pair[1], {}), by_id.get(pair[0], {})
+            direction = f"kernel {kernel[pair]} / labeller {labelled[pair]}"
+            disagreements[(opener.get("kind", "?"), answer.get("kind", "?"), direction)] += 1
+            if len(disagreement_examples.setdefault(direction, [])) < 3:
+                disagreement_examples[direction].append(
+                    {"record": side["record"], "answer": answer.get("text", ""),
+                     "opener": opener.get("text", "")})
+
+        inferred = [row for row in (record.get("ports") or {}).get("inferred") or []
+                    if row.get("rule") == "sole-port" and row.get("answer") in by_id]
+        sole["asserted"] += len(inferred)
+        for row in inferred:
+            answer = by_id.get(row.get("answer"), {})
+            confirmed = (row.get("answer"), row.get("opener")) in labelled
+            sole["confirmed"] += confirmed
+            sole["silent"] += not confirmed
+            kind = answer.get("kind", "?")
+            krow = sole_by_kind.setdefault(kind, Counter())
+            krow["asserted"] += 1
+            krow["confirmed"] += confirmed
+            krow["silent"] += not confirmed
+    return variants, breakdown, disagreements, disagreement_examples, sole, sole_by_kind
+
+
 def pct(n, d):
     return 100.0 * n / d if d else 0.0
 
@@ -193,6 +311,63 @@ def render(result):
     return "\n".join(lines)
 
 
+def render_rule_b(batch, pilot):
+    variants, breakdown, disagreements, examples, sole, sole_by_kind = batch
+    _, _, _, _, pilot_sole, pilot_by_kind = pilot
+    lines = ["## Rule B precision; sole-port false positives", "",
+             "B links every untargeted reply paragraph to every opener that is the turn's only "
+             "opener of its kind. B* retains only adjacency-typed pairs. Labeller-silent is the "
+             "requested false-positive definition; an omitted label is treated as disagreement, not unknown.", "",
+             "| variant | asserted | labeller-confirmed | same effect | labeller-silent | pair precision | exact-effect precision | labelled-close recall |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for variant in ["B", "B*"]:
+        row = variants[variant]
+        lines.append(f"| {variant} | {row['asserted']} | {row['confirmed']} | {row['same']} | {row['silent']} | "
+                     f"{pct(row['confirmed'], row['asserted']):.1f}% | {pct(row['same'], row['asserted']):.1f}% | "
+                     f"{row['close_reached']}/{row['labelled_closes']} ({pct(row['close_reached'], row['labelled_closes']):.1f}%) |")
+    for variant in ["B", "B*"]:
+        lines += ["", f"### {variant}: top 12 opener/reply kinds", "",
+                  "| opener | reply | asserted | confirmed | same effect | silent | precision |",
+                  "|---|---|---:|---:|---:|---:|---:|"]
+        ranked = sorted(breakdown[variant].items(), key=lambda item: (-item[1]["asserted"], item[0]))[:12]
+        for (opener, answer), row in ranked:
+            lines.append(f"| {opener} | {answer} | {row['asserted']} | {row['confirmed']} | "
+                         f"{row['same']} | {row['silent']} | {pct(row['confirmed'], row['asserted']):.1f}% |")
+    lines += ["", "### Existing effect disagreements", "",
+              "| opener | reply | direction | pairs |", "|---|---|---|---:|"]
+    for (opener, answer, direction), count in sorted(disagreements.items(), key=lambda item: (-item[1], item[0])):
+        lines.append(f"| {opener} | {answer} | {direction} | {count} |")
+    lines += ["", "Quoted examples (up to three per observed direction):", ""]
+    for direction, rows in examples.items():
+        if not rows:
+            lines.append(f"**{direction}.** None observed.")
+            lines.append("")
+            continue
+        lines.append(f"**{direction}.**")
+        for row in rows[:3]:
+            lines.append(f"- `{row['record']}` — answer: “{norm(row['answer'])[:180]}”; opener: “{norm(row['opener'])[:180]}”.")
+        lines.append("")
+
+    def sole_table(title, total, by_kind):
+        out = [f"### {title}", "",
+               f"Current stored sole-port links: **{total['asserted']}**; labeller-confirmed "
+               f"**{total['confirmed']}**; labeller-silent **{total['silent']}**. False-positive rate: "
+               f"**{pct(total['silent'], total['asserted']):.1f}%**.", "",
+               "| reply kind | asserted | confirmed | silent | false-positive rate |",
+               "|---|---:|---:|---:|---:|"]
+        for kind, row in sorted(by_kind.items(), key=lambda item: (-item[1]["asserted"], item[0])):
+            out.append(f"| {kind} | {row['asserted']} | {row['confirmed']} | {row['silent']} | "
+                       f"{pct(row['silent'], row['asserted']):.1f}% |")
+        return out
+
+    lines += [""] + sole_table("Current sole-port: batch 1", sole, sole_by_kind)
+    lines += [""] + sole_table("Current sole-port: 20-record pilot", pilot_sole, pilot_by_kind)
+    combined = sole + pilot_sole
+    lines += ["", f"Combined (counting the two requested populations independently): **{combined['silent']}/{combined['asserted']} "
+              f"({pct(combined['silent'], combined['asserted']):.1f}%)** labeller-silent.", ""]
+    return "\n".join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--moves", type=Path,
@@ -200,7 +375,11 @@ def main():
     parser.add_argument("--records", type=Path, default=RECORDS)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
-    text = render(analyse(args.moves, args.records))
+    pilot_root = Path(__file__).resolve().parents[1] / "data/moves-pilot"
+    batch_paths = move_paths(args.moves)
+    text = (render(analyse(args.moves, args.records)) + "\n" +
+            render_rule_b(rule_b_analysis(batch_paths, args.records),
+                          rule_b_analysis(move_paths(pilot_root), args.records)))
     if args.out:
         args.out.write_text(text + "\n", encoding="utf-8")
     else:
