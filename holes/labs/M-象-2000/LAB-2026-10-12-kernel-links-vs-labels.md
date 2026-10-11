@@ -152,3 +152,82 @@ Current stored sole-port links: **32**; labeller-confirmed **25**; labeller-sile
 
 Combined (counting the two requested populations independently): **17/56 (30.4%)** labeller-silent.
 
+## Sole-port variants
+
+This experiment is restricted to records with exactly one opener total. V3's ask boundary is the first reply act typed `ask-action` or `offer`, or containing 🉸; the boundary act itself is excluded. An absent labeller incidence counts as a false positive.
+
+### Batch 1
+
+Sidecars: **158**; one-opener records: **13**.
+
+| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| V0 | 28 | 16 | 12 | 12 | 57.1% | 42.9% | 11/13 (84.6%) |
+| V1 | 7 | 6 | 5 | 1 | 85.7% | 71.4% | 5/13 (38.5%) |
+| V2 | 3 | 3 | 2 | 0 | 100.0% | 66.7% | 2/13 (15.4%) |
+| V3 | 26 | 16 | 12 | 10 | 61.5% | 46.2% | 11/13 (84.6%) |
+| V4 | 3 | 3 | 2 | 0 | 100.0% | 66.7% | 2/13 (15.4%) |
+
+False positives by reply kind:
+
+| reply kind | V0 | V1 | V2 | V3 | V4 |
+|---|---:|---:|---:|---:|---:|
+| ask-action | 2 | 0 | 0 | 0 | 0 |
+| continue | 2 | 0 | 0 | 2 | 0 |
+| explain | 3 | 0 | 0 | 3 | 0 |
+| qualify | 3 | 0 | 0 | 3 | 0 |
+| report | 2 | 1 | 0 | 2 | 0 |
+
+### 20-record pilot
+
+Sidecars: **20**; one-opener records: **9**.
+
+| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| V0 | 43 | 35 | 13 | 8 | 81.4% | 30.2% | 13/23 (56.5%) |
+| V1 | 9 | 9 | 8 | 0 | 100.0% | 88.9% | 8/23 (34.8%) |
+| V2 | 8 | 7 | 6 | 1 | 87.5% | 75.0% | 6/23 (26.1%) |
+| V3 | 36 | 30 | 13 | 6 | 83.3% | 36.1% | 13/23 (56.5%) |
+| V4 | 8 | 7 | 6 | 1 | 87.5% | 75.0% | 6/23 (26.1%) |
+
+False positives by reply kind:
+
+| reply kind | V0 | V1 | V2 | V3 | V4 |
+|---|---:|---:|---:|---:|---:|
+| ask-action | 1 | 0 | 0 | 0 | 0 |
+| explain | 2 | 0 | 1 | 2 | 1 |
+| qualify | 3 | 0 | 0 | 2 | 0 |
+| report | 1 | 0 | 0 | 1 | 0 |
+| verify | 1 | 0 | 0 | 1 | 0 |
+
+### Batch 2 (currently landed sidecars)
+
+Sidecars: **13**; one-opener records: **13**.
+
+| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| V0 | 44 | 40 | 16 | 4 | 90.9% | 36.4% | 15/17 (88.2%) |
+| V1 | 13 | 13 | 11 | 0 | 100.0% | 84.6% | 11/17 (64.7%) |
+| V2 | 7 | 7 | 7 | 0 | 100.0% | 100.0% | 7/17 (41.2%) |
+| V3 | 42 | 38 | 16 | 4 | 90.5% | 38.1% | 15/17 (88.2%) |
+| V4 | 7 | 7 | 7 | 0 | 100.0% | 100.0% | 7/17 (41.2%) |
+
+False positives by reply kind:
+
+| reply kind | V0 | V1 | V2 | V3 | V4 |
+|---|---:|---:|---:|---:|---:|
+| qualify | 2 | 0 | 0 | 2 | 0 |
+| report | 2 | 0 | 0 | 2 | 0 |
+
+### Reading the 18 effect disagreements
+
+All 18 point in the same direction: the kernel says `closes`, while the labeller says `keeps`. No kernel-keeps/labeller-closes case was observed.
+
+| record | opener/reply kinds | labeller note or labelled reply span |
+|---|---|---|
+| `turn-FejOlN` | ask-action / propose | outlines the owed explanation; the explanation itself is still to come. |
+| `turn-4Vnjnj` | propose / report | (where we are against it) the ingest hook already does the first part at write time: exact version and links. |
+| `turn-8qn3cQ` | ask-action / report | restore half done and persisted; backfill half follows in the next paragraph |
+
+These examples read as partial delivery, qualification, or evidence bearing on an opener—not as the labeller denying that the reply is related to it.
+

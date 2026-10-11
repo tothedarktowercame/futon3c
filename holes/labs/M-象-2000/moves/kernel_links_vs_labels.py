@@ -80,6 +80,22 @@ def move_paths(root):
     return sorted(root.glob("shard-*/turn-*.moves.json")) or sorted(root.glob("turn-*.moves.json"))
 
 
+def canonical_replies(side, agent):
+    """Return ordered reply acts plus labels, retaining unmapped sidecar acts."""
+    replies, labelled = [], {}
+    for side_act in side.get("acts", []):
+        if "-r-" not in str(side_act.get("act", "")):
+            continue
+        live = resolve_answer(side_act, agent)
+        side_kind = str(side_act.get("move", "")).split("/", 1)[0]
+        answer = live or {"id": side_act.get("act"), "kind": side_kind,
+                          "text": side_act.get("quote", "")}
+        replies.append(answer)
+        for incidence in side_act.get("answers", []):
+            labelled[(answer["id"], incidence.get("act"))] = incidence.get("effect")
+    return replies, labelled
+
+
 def analyse(moves_root, records_root=RECORDS):
     classes = Counter()
     kernel_only = []
@@ -184,18 +200,7 @@ def rule_b_analysis(paths, records_root=RECORDS):
         # a live id where possible, but retain an unmapped sidecar act: absence
         # from the live segmentation must not silently shrink recall's
         # labelled-close denominator.
-        replies = []
-        labelled_all = {}
-        for side_act in side.get("acts", []):
-            if "-r-" not in str(side_act.get("act", "")):
-                continue
-            live = resolve_answer(side_act, agent)
-            side_kind = str(side_act.get("move", "")).split("/", 1)[0]
-            answer = live or {"id": side_act.get("act"), "kind": side_kind,
-                              "text": side_act.get("quote", "")}
-            replies.append(answer)
-            for incidence in side_act.get("answers", []):
-                labelled_all[(answer["id"], incidence.get("act"))] = incidence.get("effect")
+        replies, labelled_all = canonical_replies(side, agent)
         candidates = {"B": {}, "B*": {}}
         for answer in replies:
             if answer.get("target"):
@@ -245,9 +250,14 @@ def rule_b_analysis(paths, records_root=RECORDS):
             direction = f"kernel {kernel[pair]} / labeller {labelled[pair]}"
             disagreements[(opener.get("kind", "?"), answer.get("kind", "?"), direction)] += 1
             if len(disagreement_examples.setdefault(direction, [])) < 3:
+                side_answer = next((act for act in side.get("acts", [])
+                                    if (resolve_answer(act, agent) or {}).get("id") == pair[0]), {})
                 disagreement_examples[direction].append(
                     {"record": side["record"], "answer": answer.get("text", ""),
-                     "opener": opener.get("text", "")})
+                     "opener": opener.get("text", ""),
+                     "opener_kind": opener.get("kind", "?"),
+                     "answer_kind": answer.get("kind", "?"),
+                     "label_evidence": side_answer.get("note") or side_answer.get("quote", "")})
 
         inferred = [row for row in (record.get("ports") or {}).get("inferred") or []
                     if row.get("rule") == "sole-port" and row.get("answer") in by_id]
@@ -263,6 +273,90 @@ def rule_b_analysis(paths, records_root=RECORDS):
             krow["confirmed"] += confirmed
             krow["silent"] += not confirmed
     return variants, breakdown, disagreements, disagreement_examples, sole, sole_by_kind
+
+
+def sole_port_variants(paths, records_root=RECORDS):
+    names = ["V0", "V1", "V2", "V3", "V4"]
+    totals = {name: Counter() for name in names}
+    false_kinds = {name: Counter() for name in names}
+    records = 0
+    for side_path in paths:
+        side, _, _, operator, agent, _ = load_case(side_path, records_root)
+        openers = [act for act in operator if act.get("kind") in OPENERS]
+        if len(openers) != 1:
+            continue
+        records += 1
+        opener = openers[0]
+        replies, labelled = canonical_replies(side, agent)
+        untargeted = [act for act in replies if not act.get("target")]
+        first_ask = next((i for i, act in enumerate(untargeted)
+                          if act.get("kind") in {"ask-action", "offer"}
+                          or "🉸" in str(act.get("text", ""))), len(untargeted))
+        before_ask = untargeted[:first_ask]
+        first_closer = next((act for act in untargeted
+                             if ADJACENCY.get(opener.get("kind"), {}).get(act.get("kind")) == "closes"), None)
+        selected = {
+            "V0": untargeted,
+            "V1": untargeted[:1],
+            "V2": [first_closer] if first_closer else [],
+            "V3": before_ask,
+            "V4": [first_closer] if first_closer in before_ask else [],
+        }
+        labelled_closes = {pair for pair, value in labelled.items() if value == "closes"}
+        for name, answers in selected.items():
+            row = totals[name]
+            row["records"] += 1
+            row["labelled_closes"] += len(labelled_closes)
+            for answer in answers:
+                pair = (answer["id"], opener["id"])
+                predicted = effect(opener.get("kind"), answer.get("kind"))
+                row["asserted"] += 1
+                row["confirmed"] += pair in labelled
+                row["same"] += labelled.get(pair) == predicted
+                row["false"] += pair not in labelled
+                row["close_reached"] += pair in labelled_closes and predicted == "closes"
+                if pair not in labelled:
+                    false_kinds[name][answer.get("kind", "?")] += 1
+    return records, totals, false_kinds
+
+
+def render_sole_variants(datasets, disagreement_examples):
+    lines = ["## Sole-port variants", "",
+             "This experiment is restricted to records with exactly one opener total. V3's ask boundary "
+             "is the first reply act typed `ask-action` or `offer`, or containing 🉸; the boundary act "
+             "itself is excluded. An absent labeller incidence counts as a false positive.", ""]
+    for title, paths, result in datasets:
+        records, totals, false_kinds = result
+        lines += [f"### {title}", "",
+                  f"Sidecars: **{len(paths)}**; one-opener records: **{records}**.", "",
+                  "| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |",
+                  "|---|---:|---:|---:|---:|---:|---:|---:|"]
+        for name in ["V0", "V1", "V2", "V3", "V4"]:
+            row = totals[name]
+            lines.append(f"| {name} | {row['asserted']} | {row['confirmed']} | {row['same']} | {row['false']} | "
+                         f"{pct(row['confirmed'], row['asserted']):.1f}% | {pct(row['same'], row['asserted']):.1f}% | "
+                         f"{row['close_reached']}/{row['labelled_closes']} "
+                         f"({pct(row['close_reached'], row['labelled_closes']):.1f}%) |")
+        kinds = sorted({kind for rows in false_kinds.values() for kind in rows})
+        lines += ["", "False positives by reply kind:", "",
+                  "| reply kind | " + " | ".join(["V0", "V1", "V2", "V3", "V4"]) + " |",
+                  "|---|" + "---:|" * 5]
+        for kind in kinds:
+            lines.append(f"| {kind} | " + " | ".join(str(false_kinds[name][kind]) for name in
+                                                      ["V0", "V1", "V2", "V3", "V4"]) + " |")
+        lines.append("")
+    lines += ["### Reading the 18 effect disagreements", "",
+              "All 18 point in the same direction: the kernel says `closes`, while the labeller says "
+              "`keeps`. No kernel-keeps/labeller-closes case was observed.", "",
+              "| record | opener/reply kinds | labeller note or labelled reply span |",
+              "|---|---|---|"]
+    rows = disagreement_examples.get("kernel closes / labeller keeps", [])[:3]
+    for row in rows:
+        evidence = norm(row.get("label_evidence")).replace("|", "\\|")[:300]
+        lines.append(f"| `{row['record']}` | {row['opener_kind']} / {row['answer_kind']} | {evidence} |")
+    lines += ["", "These examples read as partial delivery, qualification, or evidence bearing on an "
+              "opener—not as the labeller denying that the reply is related to it.", ""]
+    return "\n".join(lines)
 
 
 def pct(n, d):
@@ -376,10 +470,19 @@ def main():
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     pilot_root = Path(__file__).resolve().parents[1] / "data/moves-pilot"
+    scale2_root = Path(__file__).resolve().parents[1] / "data/moves-scale2"
     batch_paths = move_paths(args.moves)
+    pilot_paths = move_paths(pilot_root)
+    scale2_paths = move_paths(scale2_root)
+    variant_sets = [("Batch 1", batch_paths, sole_port_variants(batch_paths, args.records)),
+                    ("20-record pilot", pilot_paths, sole_port_variants(pilot_paths, args.records))]
+    if scale2_paths:
+        variant_sets.append(("Batch 2 (currently landed sidecars)", scale2_paths,
+                             sole_port_variants(scale2_paths, args.records)))
+    batch_rule_b = rule_b_analysis(batch_paths, args.records)
     text = (render(analyse(args.moves, args.records)) + "\n" +
-            render_rule_b(rule_b_analysis(batch_paths, args.records),
-                          rule_b_analysis(move_paths(pilot_root), args.records)))
+            render_rule_b(batch_rule_b, rule_b_analysis(pilot_paths, args.records)) + "\n" +
+            render_sole_variants(variant_sets, batch_rule_b[3]))
     if args.out:
         args.out.write_text(text + "\n", encoding="utf-8")
     else:
