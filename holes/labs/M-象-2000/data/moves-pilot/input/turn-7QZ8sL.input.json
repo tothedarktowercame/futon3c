@@ -1,0 +1,47 @@
+{
+  "record": "turn-7QZ8sL",
+  "turn_id": "claude-11-turn-16",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-09T02:47:13Z",
+  "agent_id": "claude-11",
+  "source_text": "no, i forgot about 7. we should review both 6 and 7 to find a best-of",
+  "fragments": [
+    {
+      "id": "claude-11-turn-16-f-s1-0",
+      "intent": "retract",
+      "text": "no, i forgot about 7."
+    },
+    {
+      "id": "claude-11-turn-16-f-s2-0",
+      "intent": "propose",
+      "text": "we should review both 6 and 7 to find a best-of"
+    }
+  ],
+  "reply_text": "The fastest exact copy of preamble 6 is in the packets as Codex received them. Each bell pasted the whole preamble into the agent's first message, and Codex rollouts record that text verbatim. Finding the last one sent before preamble 7 replaced it:That copy predates two later additions: \"EFFICIENCY RULES\" (22:25) and \"TEST RULE REVISED\" (04:45 on 10-06). Looking for a packet that carried the final version:No packet carried the final version, so I'll rebuild it from the 22:22 copy plus the two later appends, which are shell heredocs in the transcript:The 22:22 copy is unmodified; the sed variants that rewrote the workspace line weren't used for it. Assembling the final preamble 6 and adding it to the branch:I have preamble 6 exactly as it stood (40 lines; base text from the 22:22 packet, plus the two appends). Before writing the best-of, checking which of its paths still exist after the rebuild:The venv (`/tmp/mfs-venv`), the Lean comparator dumps and `mk-cold-worktree.sh` were also in `/tmp`, so the draft has to give them new homes. Writing the best-of draft:㊥ (gist) Both preambles are recovered, and I've drafted a best-of for you to review (`bc360e14`, pushed to the `method/recovered-2026-10-06` branch):\n- `holes/method/recovered-2026-10-06/preamble6.md` is exact. Its text up to 22:22 on 10-05 comes from a packet as Codex received it. The two sections added later (\"EFFICIENCY RULES\" and \"TEST RULE REVISED\") come from claude-4's own appends in its transcript.\n- The draft is `holes/method/preamble-best-of-DRAFT.md`, and every section is tagged [6], [7] or [6+7].\n\n🈖 (how they differ) Preamble 7 is a rewrite of 6 based on what went wrong on 10-06, and it's stronger on method. Its additions:\n- facts, not confirmations\n- Lean's steps listed beside the port's calls\n- show the line runs\n- no fix before its discovery returns\n- the capture-tool caveat\n\nBut the rewrite dropped some cost-saving rules from 6 that it didn't mean to replace. The draft brings these back:\n- **Smallest production repro:** a stop inside a dependency is reproduced on that one declaration, not the whole row. Preamble 7 kept the probe command but lost the rule.\n- **Your acceptance rule from 11:10 on 10-05:** don't rerun already-correct rows as controls; acceptance is the target row's before/after comparator result plus the next stop.\n- **The single blocking wait:** use one blocking command instead of polling when a wait inside a turn can't be avoided.\n- **Cache caveats:** `--generated-cache-dir` doesn't clear the object cache, and caches can't be copied between worktrees.\n- **The reasons behind rules:** why the memory cap exists (the Agency crash), and why ledger rows need `commit=` (the page ignores them otherwise).\n\n㊟ (two places I chose, which you may want to overrule)\n1. **Unit tests.** Preamble 6 contradicts itself here. Its \"red means the defect\" and real-path rules demand failing-first unit tests. Its own later \"TEST RULE REVISED\" says not to build unit tests for elaboration changes, because the real-path ones can't be built and stubbed ones passed while production didn't change. I took 7's resolution: the cold comparator is the test, and unit tests are only for tools.\n2. **A wrong prediction.** Preamble 6 says go back to reading. Preamble 7 says the lane stops until the integration owner replies. I took 7's stricter version, because it came from the 10-06 failures, and added that reading can continue. The cost is orchestrator latency on every miss.\n\n㊩ (RESUME items) Several things the preambles refer to were in `/tmp`, so the draft marks them as needing new homes before it's sent:\n- the venv (`/tmp/mfs-venv`)\n- `mk-cold-worktree.sh`\n- the probe ledger (`PARSE-PROBES.tsv`)\n- the BG-WAITS ledger\n- the Lean comparator dumps (these can be regenerated)\n\nWorktrees now go under `~/worktrees/mfuton-share/`.\n\n🈸 (next) Read the draft when you're ready. When you've settled it, I'll make it the new preamble and deal with the RESUME items. zai-1 is still rebuilding the progress tooling, so nothing is waiting on this.",
+  "previous_reply_acts": [
+    {
+      "id": "claude-11-turn-15-r-1",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": null,
+      "label": null,
+      "text": "Checking that against the transcripts. `preamble7.md` describes itself as replacing all earlier preambles, so I need to see what happened to it after claude-4 wrote it:preamble7 was written at 05:39 on 10-06 and sent with at least three packets before the outage. Checking what you said about it in that window:㊟ (\"only preamble 6 is current\") The transcripts suggest preamble 7 was the current one when the drive failed.\n- At 05:39 on 10-06 you told claude-4: \"please update the instructions you give out accordingly and mint new seats to avoid confusion\". That was after its WHY note proposed the instruction changes \"for Joe to decide\".\n- In the same minute claude-4 wrote `preamble7.md`, which begins \"This preamble replaces all earlier ones\". It then sent it with the packets for the new seats it had just created: `hdrcensus` to codex-34, `epslevels` to codex-35 and `sigreaders` to codex-34. That was its last dispatch round before the drive died at 09:45.\n- It also updated its own status line to \"Rules: preamble7.md governs\".\n- You didn't send claude-4 anything else between then and the outage."
+    },
+    {
+      "id": "claude-11-turn-15-r-2",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": null,
+      "label": null,
+      "text": "So preamble 6 was current until 05:39 on 10-06; it ran from 21:42 on 10-04. Preamble 7 is the update you asked for at 05:39, and it ran for the last four hours."
+    },
+    {
+      "id": "claude-11-turn-15-r-3",
+      "kind": "reply-mark",
+      "author": "claude-11",
+      "mark": "🈯",
+      "label": "which do you mean?",
+      "text": "🈯 (which do you mean?) Should the instructions be preamble 6, with preamble 7's rules set aside? Or did you mean the latest one, whatever its number?\n- If preamble 6, I'll ask zai-1 to rebuild it. It was assembled by a shell command from preamble 5 plus additions, and the transcripts have every step. Then I'll make it the current file and mark 7 as superseded in the README.\n- If you meant 7, nothing needs to change."
+    }
+  ]
+}
