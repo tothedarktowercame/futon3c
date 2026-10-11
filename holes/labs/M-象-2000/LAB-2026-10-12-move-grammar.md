@@ -117,3 +117,64 @@ futon1b hyperedges as they are (`:hx/endpoints` is an ordered vector):
 - producer: a 象 loader from the sidecars (claude-16's side), so the seam has
   one producer; the follower reads `:xiang/answers` beside the record's
   `:ports`. Loaded after consolidation, not before.
+
+## Consolidation, first pass
+
+The classical pass in `moves/consolidate.py` read 1,440 acts under 413
+original labels. It normalised spelling and inflections, retained normalised
+labels with at least three uses, and folded rarer labels to the most frequent
+same-kind label with at least two aggregate content words in common. With no
+such candidate it used the kind's `other` label. The result has 94 labels and
+272 acts under `other`.
+
+| kind | labels before | labels after | acts under `other` |
+|---|---:|---:|---:|
+| approve | 4 | 2 | 0 |
+| ask-action | 11 | 6 | 5 |
+| challenge | 2 | 1 | 3 |
+| clarify | 19 | 7 | 12 |
+| collect | 2 | 2 | 1 |
+| constrain | 9 | 3 | 4 |
+| continue | 1 | 1 | 2 |
+| defer | 1 | 1 | 0 |
+| delegate | 8 | 3 | 2 |
+| disagree | 3 | 2 | 3 |
+| explain | 87 | 11 | 62 |
+| explore | 15 | 2 | 13 |
+| extend | 1 | 1 | 1 |
+| prioritize | 7 | 1 | 7 |
+| propose | 127 | 9 | 99 |
+| qualify | 31 | 6 | 24 |
+| redirect | 3 | 1 | 3 |
+| report | 63 | 23 | 20 |
+| report-problem | 8 | 6 | 2 |
+| retract | 4 | 2 | 3 |
+| verify | 7 | 4 | 6 |
+| **total** | **413** | **94** | **272** |
+
+All largest individual folds have two source acts, so ties below are ordered
+by source label. The words in parentheses are the overlap witness.
+
+1. `approve/with-plan` → `approve/plain` (`agree`, `already`, `mining`,
+   `turns`). Plausible, though broader than the source.
+2. `ask-action/operator-step` → `ask-action/commission` (`futon7a`,
+   `page`). **Looks wrong:** project/page names are incidental rather than a
+   shared move.
+3. `challenge/necessity` → `challenge/other` (no eligible overlap).
+4. `constrain/accept` → `constrain/stand-rule` (`bugs`, `claude-4`,
+   `lean-to-python`). **Looks wrong:** identifiers and task nouns dominate.
+5. `constrain/retry-better` → `constrain/for-now` (`fail`, `loop`,
+   `retry`, `same`). **Looks doubtful:** topical overlap does not establish
+   the same constraint.
+6. `continue/waiting-on-decision` → `continue/other` (no eligible overlap).
+7. `disagree/assessment` → `disagree/other` (no eligible overlap).
+8. `explain/decline` → `explain/mechanism` (`after`, `rather`). **Looks
+   wrong:** the witness words are generic discourse terms.
+9. `explain/distinction` → `explain/mechanism` (`different`, `structure`).
+   Plausible but coarse.
+10. `explain/feasibility` → `explain/motive` (`agent`, `turns`). **Looks
+    wrong:** the overlap names participants and units, not explanatory role.
+
+These are recorded rather than corrected by hand. `moves/label-map.json`
+keeps every original-to-consolidated decision and its reason, so a later
+closed-vocabulary or ambiguity pass can revise them reproducibly.

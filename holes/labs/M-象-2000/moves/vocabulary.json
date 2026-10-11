@@ -1,0 +1,1110 @@
+{
+  "schema": "moves/vocabulary/1",
+  "total_acts": 1440,
+  "kinds": {
+    "approve": {
+      "act_count": 63,
+      "labels": [
+        {
+          "label": "approve/plain",
+          "count": 57,
+          "examples": [
+            "that's a good start",
+            "The one-line gray message is better, thanks.",
+            "The red text for R-nodes plus underlining for other things is good enough."
+          ]
+        },
+        {
+          "label": "approve/with-amendment",
+          "count": 6,
+          "examples": [
+            "\"Pipes with intent\" fits what the token machine needs.",
+            "I agree that turning R-nodes into another kind of conversational act would be the wrong move.",
+            "I agree, and the model shows what follows for the site."
+          ]
+        }
+      ]
+    },
+    "ask-action": {
+      "act_count": 116,
+      "labels": [
+        {
+          "label": "ask-action/one-decision",
+          "count": 65,
+          "examples": [
+            "but we need another discriminator to separate the R2/R1 R4/R3 R8/R3a cells.",
+            "If this works for you, I'll add it to the tree as a third split",
+            "Was the 300-second paging the main nuisance, or was it something else"
+          ]
+        },
+        {
+          "label": "ask-action/commission",
+          "count": 25,
+          "examples": [
+            "OK so let's put it in one logical order.",
+            "produce some loss function plots and put them on a page in WIP",
+            "checking in & merging into main the compiled-correct rows"
+          ]
+        },
+        {
+          "label": "ask-action/status-check",
+          "count": 11,
+          "examples": [
+            "Can we bring down the 象 seats on a temporary basis?",
+            "how much of the 22 August to today material has been proceed by 象",
+            "Can you comment"
+          ]
+        },
+        {
+          "label": "ask-action/other",
+          "count": 5,
+          "examples": [
+            "I'll let this one sit there so you can inspect.",
+            "I actually want the forensic report to continue up to today",
+            "let's *generate* a set of keywords that we put into a fully-disambiguated tree."
+          ]
+        },
+        {
+          "label": "ask-action/read-record",
+          "count": 5,
+          "examples": [
+            "You could read the \"joe:\" lines in the codex-19 REPL to get the flavour.",
+            "show me the curriculum that we're working against",
+            "let's look at the graph here from progress.py"
+          ]
+        },
+        {
+          "label": "ask-action/two-decision",
+          "count": 5,
+          "examples": [
+            "Shall I apply changes 1 to 4 to the backfill packet and the live 象 instruction together?",
+            "First, does \"fresh Codex agent\" mean new seats?",
+            "Ask-action (two confirmations):"
+          ]
+        }
+      ]
+    },
+    "challenge": {
+      "act_count": 3,
+      "labels": [
+        {
+          "label": "challenge/other",
+          "count": 3,
+          "examples": [
+            "what more do they need?",
+            "What more are their tests offering?",
+            "But is it on the way to solving real human needs better or faster?"
+          ]
+        }
+      ]
+    },
+    "clarify": {
+      "act_count": 72,
+      "labels": [
+        {
+          "label": "clarify/check-understand",
+          "count": 17,
+          "examples": [
+            "What I thought was that the xiaoxiang-insert-mark tokens would be used to support FAST inference",
+            "I still don't know what texts *should* turn red (R-number node but not an intent).",
+            "I don't understand the semnatics of \"labelling patterns\"."
+          ]
+        },
+        {
+          "label": "clarify/ask-decision",
+          "count": 14,
+          "examples": [
+            "What is needed?",
+            "(what \"overlay\" means here) If that's it, these are the details",
+            "I'd just like to understand it a little bit better"
+          ]
+        },
+        {
+          "label": "clarify/context",
+          "count": 14,
+          "examples": [
+            "I don't have before and after logs",
+            "I should be able to get back into Linode, then back into this box with Lish.",
+            "on voxterm"
+          ]
+        },
+        {
+          "label": "clarify/other",
+          "count": 12,
+          "examples": [
+            "obligations that have closed over the last turn, or others still outstanding from previous turns.",
+            "(no evidence id)",
+            "suppose we want a \"policy for selecting the next M-E-T-A- task to work on\""
+          ]
+        },
+        {
+          "label": "clarify/definition",
+          "count": 6,
+          "examples": [
+            "R-nodes are actual existential requirements.",
+            "I meant in an informal sense, the same general way that Kimi agents are requisitioned",
+            "Understood. §9 says \"requisitioned\" there means putting the job where the War Machine will pick it up"
+          ]
+        },
+        {
+          "label": "clarify/assertion",
+          "count": 5,
+          "examples": [
+            "\"Do not start from scratch\" means read the Lean code",
+            "It's also worth saying: people use very anthropogenic terms",
+            "Possibly the list I was thinking of was a list of"
+          ]
+        },
+        {
+          "label": "clarify/distinction",
+          "count": 4,
+          "examples": [
+            "not a \"blocker\" but an enabler of those things",
+            "a \"wiring diagram\" rather than merely a cascade.",
+            "the scopes themselves are closer to intents than memories"
+          ]
+        }
+      ]
+    },
+    "collect": {
+      "act_count": 4,
+      "labels": [
+        {
+          "label": "collect/ask-option",
+          "count": 3,
+          "examples": [
+            "Are there any strategic ways to speed things up?",
+            "are there ways we can reduce token cost?",
+            "what do you think we should change before it goes public?"
+          ]
+        },
+        {
+          "label": "collect/other",
+          "count": 1,
+          "examples": [
+            "we have the 3/2 category story, we have the \"wants\" token story"
+          ]
+        }
+      ]
+    },
+    "constrain": {
+      "act_count": 45,
+      "labels": [
+        {
+          "label": "constrain/stand-rule",
+          "count": 25,
+          "examples": [
+            "I DO NOT want 象 running over the agent's text,",
+            "I *do* want a full understanding of what happened and what didn't happen",
+            "start-codex-autorunner should turn off 象 analysis until such time as stop-codex-autorunner is run."
+          ]
+        },
+        {
+          "label": "constrain/for-now",
+          "count": 16,
+          "examples": [
+            "I also don't like visual noise.",
+            "Let's keep the experimental design \"design only\" and not bother claude-4 right now.",
+            "we're in early stages of that so we don't need to go to town promising things we don't or can't deliver."
+          ]
+        },
+        {
+          "label": "constrain/other",
+          "count": 4,
+          "examples": [
+            "I'm feeling like there are gaps in the narrative here that merely mining my own old turns won't help with.",
+            "We need to make the method good and then we will get good results.",
+            "you'll have to teach your helpers how to be efficient too"
+          ]
+        }
+      ]
+    },
+    "continue": {
+      "act_count": 2,
+      "labels": [
+        {
+          "label": "continue/other",
+          "count": 2,
+          "examples": [
+            "still waiting on you, from my last message",
+            "The same two questions: should I investigate the turn-evidence outage read-only"
+          ]
+        }
+      ]
+    },
+    "defer": {
+      "act_count": 14,
+      "labels": [
+        {
+          "label": "defer/until",
+          "count": 14,
+          "examples": [
+            "We could in principle use other open source intelligence to feed into that model",
+            "we can leave it in this \"minimal\" format for now.",
+            "that's a problem to solve in the evidence-processing phase not in the evidence-storage phase"
+          ]
+        }
+      ]
+    },
+    "delegate": {
+      "act_count": 35,
+      "labels": [
+        {
+          "label": "delegate/to-agent",
+          "count": 30,
+          "examples": [
+            "What do you suggest?",
+            "Can you read the element code and tell me where we'd make changes to support these fast mode features?",
+            "we should put our heads together with codex-10"
+          ]
+        },
+        {
+          "label": "delegate/handoff-spec",
+          "count": 3,
+          "examples": [
+            "The spec in short: a park on an `emacs*` surface with no `session`",
+            "(two agents on `bind()`)",
+            "(codex-15: the `ParserFn.run` construction bug, psw-ctx1)"
+          ]
+        },
+        {
+          "label": "delegate/other",
+          "count": 2,
+          "examples": [
+            "Do you think Kimi could sort that out using Playwright to validate?",
+            "You can do that as \"priming data\" and then we can ask a few other agents to elaborate"
+          ]
+        }
+      ]
+    },
+    "disagree": {
+      "act_count": 7,
+      "labels": [
+        {
+          "label": "disagree/correction",
+          "count": 4,
+          "examples": [
+            "I don't like the idea of turning R-nodes into another \"conversational act\".",
+            "I don't see it that way.",
+            "In terms of \"shares patterns\" vs \"unblocks\", no, those have different semantics"
+          ]
+        },
+        {
+          "label": "disagree/other",
+          "count": 3,
+          "examples": [
+            "already considerably done in the form of xiaoxiang and daxiang",
+            "I had had the idea to redevelop it in LISP but that is looking like a complete rewrite",
+            "I'm not sure about the slogan"
+          ]
+        }
+      ]
+    },
+    "explain": {
+      "act_count": 190,
+      "labels": [
+        {
+          "label": "explain/mechanism",
+          "count": 72,
+          "examples": [
+            "The server side is fast:",
+            "R19 reads a mission's preferences (C) from the mission's own text",
+            "You only know because you infer it from your context window."
+          ]
+        },
+        {
+          "label": "explain/other",
+          "count": 62,
+          "examples": [
+            "I considered Peirce's categories, separating brute encounter from habit or law",
+            "in *this* session, I seem to be doing knowledge work",
+            "this is why I created the Tickle persona, though we haven't used Tickle for months and months"
+          ]
+        },
+        {
+          "label": "explain/example",
+          "count": 12,
+          "examples": [
+            "I hav three verbs classed as PERCEIVE ㊩ 🈖 ㊢ and the War Machine has three nodes in that layer",
+            "I can simulate that pipe by using the <token>: prefix form",
+            "\"🈸:yes\" would be very easy to code."
+          ]
+        },
+        {
+          "label": "explain/context",
+          "count": 11,
+          "examples": [
+            "You have a critical path.",
+            "And because AIF is what it is, the system is somewhat scale free.",
+            "And they might find that Claude or Claude Code or Mastra"
+          ]
+        },
+        {
+          "label": "explain/motive",
+          "count": 8,
+          "examples": [
+            "That would make the AIF harness more concrete.",
+            "because I've always felt I don't have enough modifier keys on my keyboard.",
+            "we'd get the speech-act intents *and* the existential qualia or whatever read off of my turns"
+          ]
+        },
+        {
+          "label": "explain/answer-question",
+          "count": 5,
+          "examples": [
+            "Mostly no. Part of the explicit-signal inbox doesn't depend on answers being linked",
+            "Probably yes, partly, with that one memory alone.",
+            "Both routes are open."
+          ]
+        },
+        {
+          "label": "explain/g-semantic",
+          "count": 5,
+          "examples": [
+            "to me <mark>: means that I'm replying to your point above",
+            "it doesn't mean that my reply actually shares *your* intent",
+            "minimizing G *doesn't* mean changing the cascade structurally"
+          ]
+        },
+        {
+          "label": "explain/observation",
+          "count": 5,
+          "examples": [
+            "the fact that I have been \"donating\" the learning functionality",
+            "this is actually a potentially quite good \"product\"",
+            "I've started to report on the amount of time it takes"
+          ]
+        },
+        {
+          "label": "explain/hypothesis",
+          "count": 4,
+          "examples": [
+            "customer journeys and development trajectories are closely related",
+            "I have some hypotheses about what would be \"missing\" at XTrace & Tessl",
+            "the War Machine has a *little* room for emergent learning"
+          ]
+        },
+        {
+          "label": "explain/background",
+          "count": 3,
+          "examples": [
+            "describes a speed fix for the Python that proved that turned out not to be workable.",
+            "to use the R-nodes as internal factors, since we've already done the analysis",
+            "I was excited about that."
+          ]
+        },
+        {
+          "label": "explain/map",
+          "count": 3,
+          "examples": [
+            "my rule-based entity extraction plays 小象's role",
+            "Take one refinement step",
+            "What goes, and where it goes"
+          ]
+        }
+      ]
+    },
+    "explore": {
+      "act_count": 18,
+      "labels": [
+        {
+          "label": "explore/other",
+          "count": 13,
+          "examples": [
+            "I'm curious what others might find it specifically useful for,",
+            "curious to think about business cases where someone would encounter it",
+            "what would we actually be selling?"
+          ]
+        },
+        {
+          "label": "explore/open-question",
+          "count": 5,
+          "examples": [
+            "Or in some other way?",
+            "there are several different ways to slice the inference up as a natural deduction rule",
+            "I'm not sure how many people would click on the open source offering"
+          ]
+        }
+      ]
+    },
+    "extend": {
+      "act_count": 1,
+      "labels": [
+        {
+          "label": "extend/other",
+          "count": 1,
+          "examples": [
+            "(relevant to your earlier question) While installing it I saw that Claude Code has two settings,"
+          ]
+        }
+      ]
+    },
+    "prioritize": {
+      "act_count": 7,
+      "labels": [
+        {
+          "label": "prioritize/other",
+          "count": 7,
+          "examples": [
+            "geting rid of the while True seems really important",
+            "then milestone 3",
+            "please start with part 1"
+          ]
+        }
+      ]
+    },
+    "propose": {
+      "act_count": 240,
+      "labels": [
+        {
+          "label": "propose/other",
+          "count": 99,
+          "examples": [
+            "relative to the new Agency work orders, Tickle could have a renewed lease on life.",
+            "curious about my own potential use of it in a \"fast\" mode *before* sending any turn to the 象 annotator.",
+            "we could try to \"zip\" the two sides to form a mission"
+          ]
+        },
+        {
+          "label": "propose/alternative",
+          "count": 51,
+          "examples": [
+            "I'd separate them by what the words are about: the world itself, or your own account of it",
+            "A root order could carry the stopping condition as a check the machine computes",
+            "I would like would be for the associated family to be rendered as a decomposition of the band itself"
+          ]
+        },
+        {
+          "label": "propose/next-step",
+          "count": 29,
+          "examples": [
+            "if I use start-codex-autorunner I think we should *turn off* transcription of my turns as a result,",
+            "A page where a visitor pastes a message and sees it marked up in the browser",
+            "I'd do it in two steps:"
+          ]
+        },
+        {
+          "label": "propose/design",
+          "count": 19,
+          "examples": [
+            "Two searches per fragment: one for the move and one for the subject",
+            "Shall I add `象-off` and `象-on` commands to `futon3c/emacs/session-turn-analysis.el`",
+            "Propose (a mapping, drawn from the two blocks you named):"
+          ]
+        },
+        {
+          "label": "propose/redirect-scope",
+          "count": 17,
+          "examples": [
+            "what we were talking about was aligning operator turns",
+            "I wonder if we should switch focus to 小象 for a while.",
+            "we should use things like Stafford Beer or Manfred Max-Neef"
+          ]
+        },
+        {
+          "label": "propose/order-plan",
+          "count": 12,
+          "examples": [
+            "CORRECT at the top, COMPILES INCORRECT, COMPILES UNTESTED, READY, WAITING",
+            "actual WIP on the rows and then BACKLOG of rows that no one is working on",
+            "**Parallel sweep (I'm starting it now).**"
+          ]
+        },
+        {
+          "label": "propose/extend",
+          "count": 6,
+          "examples": [
+            "the forward model could map pain points",
+            "There's a further refinement beyond that which is the Lean code, with concepts like MachineQ",
+            "just like 小象 reads my turns quickly, 大象 should read your turns quickly"
+          ]
+        },
+        {
+          "label": "propose/icon-choice",
+          "count": 4,
+          "examples": [
+            "on the Legend from feed, EXPLORE could use a roller skate icon?",
+            "WITHDRAW could use the door icon.",
+            "GIST could be classed with the arrow-in-a-loop icon"
+          ]
+        },
+        {
+          "label": "propose/redraft",
+          "count": 3,
+          "examples": [
+            "(the harness section, without 2019)",
+            "(the 0th engagement, in your words)",
+            "I would drop the slogan"
+          ]
+        }
+      ]
+    },
+    "qualify": {
+      "act_count": 125,
+      "labels": [
+        {
+          "label": "qualify/caveat",
+          "count": 85,
+          "examples": [
+            "but there's still a bit left over,",
+            "That's the intention, not a guarantee.",
+            "I've labelled the rows ROLLER SKATE, DOOR and LOOP ARROW, after how they look"
+          ]
+        },
+        {
+          "label": "qualify/other",
+          "count": 24,
+          "examples": [
+            "Your plan about pattern-to-Rnumber is plausible but I think we could do a bit better.",
+            "(the 7 leftovers) Those turns have readings with no recognised acts, and the live `compute-ports!` refuses",
+            "the exact design depends a bit on what the use-cases are"
+          ]
+        },
+        {
+          "label": "qualify/scope",
+          "count": 5,
+          "examples": [
+            "Only the acceptance lines changed.",
+            "This assumes the compiler itself could have been in Lisp, with only its output in Python.",
+            "That may just be for me as a technologist"
+          ]
+        },
+        {
+          "label": "qualify/impact",
+          "count": 4,
+          "examples": [
+            "it might *work* and (b) it might also be *useful*",
+            "**(a) Could it work?** Yes, if the scope is small",
+            "future work could go via the warm image path"
+          ]
+        },
+        {
+          "label": "qualify/risk-assessment",
+          "count": 4,
+          "examples": [
+            "Tonight's three Codex failures were \"model at capacity\"",
+            "(one risk with warm caches)",
+            "This is the bet that failed on 10-06"
+          ]
+        },
+        {
+          "label": "qualify/uncertainty",
+          "count": 3,
+          "examples": [
+            "I don't know if there's much that can be done to improve on claude-4's work.",
+            "I do not know that IF and HOWEVER are the inputs",
+            "I don't remember exactly how many iterations there were"
+          ]
+        }
+      ]
+    },
+    "redirect": {
+      "act_count": 3,
+      "labels": [
+        {
+          "label": "redirect/other",
+          "count": 3,
+          "examples": [
+            "The next question is with codex-17.",
+            "ok, let's go back to late August",
+            "let's focus on the technical aspects."
+          ]
+        }
+      ]
+    },
+    "report": {
+      "act_count": 360,
+      "labels": [
+        {
+          "label": "report/done",
+          "count": 92,
+          "examples": [
+            "Work orders do give Tickle a new role.",
+            "Done: while the Codex autorunner is armed, its repeated prompt is recorded but never sent to 象 for reading",
+            "Understood, and I've sent kimi-1 a corrected spec; it's working on it now."
+          ]
+        },
+        {
+          "label": "report/evidence",
+          "count": 36,
+          "examples": [
+            "I counted turns that name a pattern family outright",
+            "The stages split as follows in `p4ng/empirics-futon/control-stages.edn`:",
+            "The intent table in `futon3/src-cljs/futon3/turnfeed/core.cljs`"
+          ]
+        },
+        {
+          "label": "report/design",
+          "count": 25,
+          "examples": [
+            "Tickle would carry out two of the excursion's requirements:",
+            "While a stage is open:",
+            "Before a turn goes to 象, 小象 marks it in the REPL."
+          ]
+        },
+        {
+          "label": "report/diagnosis",
+          "count": 25,
+          "examples": [
+            "`detect-stalls` in `src/futon3c/agents/tickle.clj`",
+            "The readers search for the move and drop the subject.",
+            "My first packet offered \"in place, or in a linked panel"
+          ]
+        },
+        {
+          "label": "report/dispatch",
+          "count": 25,
+          "examples": [
+            "Kimi job `invoke-1790895564187-29931-37801d98`",
+            "**Job:** `invoke-1790873058224-29744-663ef2c1`, in work mode.",
+            "Job `invoke-…-66163820`, park `park-a5306a1a-…`."
+          ]
+        },
+        {
+          "label": "report/status",
+          "count": 23,
+          "examples": [
+            "The seats are still registered with Agency; I only stopped new work from reaching them.",
+            "The field is `:node` in `futon0/analysis/audits/pattern-stages-2026-10-01.edn`",
+            "It splits a turn into fragments and gives each fragment one intent from 象's list"
+          ]
+        },
+        {
+          "label": "report/in-flight",
+          "count": 22,
+          "examples": [
+            "Step 2 is still with kimi-1. I'll review it when it bells back.",
+            "Chunk 2 on 象-sonnet went out under the old instruction.",
+            "**kimi-1's adapter (running):** covers 大象's marks and commits"
+          ]
+        },
+        {
+          "label": "report/other",
+          "count": 20,
+          "examples": [
+            "Examples of potential characters to use in your proforma presentation:",
+            "\"Shall I send that to kimi-1?\"",
+            "Neither regression was found by codex-17's process"
+          ]
+        },
+        {
+          "label": "report/observation",
+          "count": 15,
+          "examples": [
+            "in many cases they are solving tech problems for tech people",
+            "Mastra seems like a great example of this",
+            "That's what corner shops do."
+          ]
+        },
+        {
+          "label": "report/buffer-excerpt",
+          "count": 14,
+          "examples": [
+            "8 matches for \"(progress)\" in buffer: *codex-repl:codex-17*",
+            "reprobe-2 is at 41 of 62",
+            "20 compiled, 53 awaiting re-probe, 14 in progress, 23 not started"
+          ]
+        },
+        {
+          "label": "report/with-option",
+          "count": 11,
+          "examples": [
+            "**Show the draft first** (Element, `FutonIntentMarks.ts:79` `validatedIntentMarks`).",
+            "Labelling intents on its own isn't worth much",
+            "Frame numbers are cheap: the bar above your prompt could read `── frame 314 ──`"
+          ]
+        },
+        {
+          "label": "report/status-update",
+          "count": 10,
+          "examples": [
+            "Regarding codex 18 and 19, I have \"jiggled\" the machine to make it run.",
+            "So I have started a big integration of 象 features with Element + Matrix.",
+            "regarding the \"live incident\" I think I have resolved it with some firm words to codex-18 and codex-19,"
+          ]
+        },
+        {
+          "label": "report/case-study",
+          "count": 6,
+          "examples": [
+            "Your turn says \"there is no `futon3/library/baldwin/`\".",
+            "I read your `joe:` lines in codex-19.",
+            "This session already has things a HUD would list as still open:"
+          ]
+        },
+        {
+          "label": "report/gap",
+          "count": 6,
+          "examples": [
+            "Fast annotation, meaning you correct a draft's mark in Element and 小象 trains on the correction, has no route yet.",
+            "Does 象's intent list fit other people's speech, or only yours?",
+            "I don't know where 象's readings of your turns are stored durably."
+          ]
+        },
+        {
+          "label": "report/inventory",
+          "count": 6,
+          "examples": [
+            "The 18 `restates` pairs fall into 14 groups.",
+            "There are two outer loops",
+            "Centrality is already in the loop twice"
+          ]
+        },
+        {
+          "label": "report/analysis",
+          "count": 3,
+          "examples": [
+            "I tried the obvious cut inline",
+            "that is the *other* off-diagonal",
+            "The outer-loop diamond is the instance"
+          ]
+        },
+        {
+          "label": "report/built",
+          "count": 3,
+          "examples": [
+            "runs after every Write, Edit and Bash call",
+            "(fault intake: the automatic half of report-futon-bug; `1cf5bc7`) `scripts/fault_intake.py` runs every 60 s",
+            "`minus40.sorries` turns the verdicts into futon1b records"
+          ]
+        },
+        {
+          "label": "report/context",
+          "count": 3,
+          "examples": [
+            "That's fun and I've been working with Codex in a fork of web-element.",
+            "Your Emacs has four tty frames besides the initial one:",
+            "\"Modelling the operator's response\" have considerably motivated our M-象-2000 work"
+          ]
+        },
+        {
+          "label": "report/correction",
+          "count": 3,
+          "examples": [
+            "I take back two of my four criticisms",
+            "The count was nine, not six",
+            "The first run reported 3 failures that were wrong"
+          ]
+        },
+        {
+          "label": "report/fact-check",
+          "count": 3,
+          "examples": [
+            "Agency has both pathways",
+            "(Rob's removals)",
+            "It wasn't a reset credit"
+          ]
+        },
+        {
+          "label": "report/job-spec",
+          "count": 3,
+          "examples": [
+            "`BLANK-CURRICULUM.tsv` and `.md`",
+            "`/tmp/pyreg/overnight/HANDOFF-codex-17.md`",
+            "I asked claude-2 for four things"
+          ]
+        },
+        {
+          "label": "report/next",
+          "count": 3,
+          "examples": [
+            "Crystallisation at write time, as queued.",
+            "When the shards finish I'll merge, load, and run `about` on a few entities",
+            "When the shards finish, I'll load everything into the scratch store"
+          ]
+        },
+        {
+          "label": "report/partial",
+          "count": 3,
+          "examples": [
+            "Rob's `main` hasn't moved since 1 October",
+            "The `ls -l` listings are committed (`b64aa43`).",
+            "No Lean proof was produced this turn, and the full failing application was not replayed."
+          ]
+        }
+      ]
+    },
+    "report-problem": {
+      "act_count": 81,
+      "labels": [
+        {
+          "label": "report-problem/observ",
+          "count": 57,
+          "examples": [
+            "I think undertagging of old turns is laziness.",
+            "the problem is that it is noticeably VERY slow",
+            "象 annotations are being added to agent turns, which didn't match how I thought"
+          ]
+        },
+        {
+          "label": "report-problem/grievance",
+          "count": 9,
+          "examples": [
+            "it looks like they're guessing",
+            "okay, it's a regression, that's not",
+            "They're not making any progress and they're making errors left and right."
+          ]
+        },
+        {
+          "label": "report-problem/suspect",
+          "count": 6,
+          "examples": [
+            "the \"象\" modeline marker in those REPLs is still red so I suspect they are still being transcribed.",
+            "Both come from the probe table, which I read this turn",
+            "these numbers may be misleading"
+          ]
+        },
+        {
+          "label": "report-problem/self-correction",
+          "count": 4,
+          "examples": [
+            "two problems, both fixed",
+            "My first bell went in brief mode",
+            "(\"almost nothing closed\") My Checkpoint said the replies quoted your words and still nothing closed. That was"
+          ]
+        },
+        {
+          "label": "report-problem/concern",
+          "count": 3,
+          "examples": [
+            "this sort of stuff does put me into a sort of awkward position.",
+            "all of this seems very \"by hand\" in comparison to a well-working token-tracking machine",
+            "I'm a bit worried about the other icon."
+          ]
+        },
+        {
+          "label": "report-problem/other",
+          "count": 2,
+          "examples": [
+            "There should be a 象-off function for this",
+            "The first real edit logged `No module named 'crystallise'`."
+          ]
+        }
+      ]
+    },
+    "retract": {
+      "act_count": 10,
+      "labels": [
+        {
+          "label": "retract/correction",
+          "count": 7,
+          "examples": [
+            "You are right, and I take back my acceptance of chunk 1.",
+            "That was wrong and I had not checked it.",
+            "(the ㊯ mark) Taken back. I delivered that paragraph, so it should have opened `㊯:`"
+          ]
+        },
+        {
+          "label": "retract/other",
+          "count": 3,
+          "examples": [
+            "isn't *necessarily* a permanent thing",
+            "which doesn't necessarily motivate starting over in LISP though.",
+            "I withdraw the five decisions I asked for"
+          ]
+        }
+      ]
+    },
+    "verify": {
+      "act_count": 44,
+      "labels": [
+        {
+          "label": "verify/check-live",
+          "count": 32,
+          "examples": [
+            "A new test checks three cases:",
+            "The codex-19 lighter now reads plain grey \"象\".",
+            "I timed the JVM turn route at about 1 ms per request."
+          ]
+        },
+        {
+          "label": "verify/other",
+          "count": 6,
+          "examples": [
+            "find ./ -type f -name \"*.flexiarg\" | xargs grep \" [bB]aldwin \"",
+            "4 minutes per record?",
+            "ok, but how did you register @fucodex?"
+          ]
+        },
+        {
+          "label": "verify/confirm",
+          "count": 3,
+          "examples": [
+            "I click on a band, and I see it highlighted",
+            "OK, I see it on the clickthrough.",
+            "All the characters show up nicely on my screen."
+          ]
+        },
+        {
+          "label": "verify/prior-art-question",
+          "count": 3,
+          "examples": [
+            "Possibly this is something that we have tried already.",
+            "I thought RETRACT had previously been classed with the x-up-arrow icon.",
+            "I'm not sure if we have a lookup table between the 象-recognised intents"
+          ]
+        }
+      ]
+    }
+  },
+  "source_files": [
+    "data/moves-scale/shard-1/turn-0ezGuV.moves.json",
+    "data/moves-scale/shard-1/turn-1E5PTg.moves.json",
+    "data/moves-scale/shard-1/turn-2NRgxJ.moves.json",
+    "data/moves-scale/shard-1/turn-2ncL4X.moves.json",
+    "data/moves-scale/shard-1/turn-34pFgV.moves.json",
+    "data/moves-scale/shard-1/turn-3qRBUm.moves.json",
+    "data/moves-scale/shard-1/turn-4IJPPb.moves.json",
+    "data/moves-scale/shard-1/turn-4PSq9z.moves.json",
+    "data/moves-scale/shard-1/turn-4nfBU0.moves.json",
+    "data/moves-scale/shard-1/turn-7Tht2c.moves.json",
+    "data/moves-scale/shard-1/turn-8a0Q2x.moves.json",
+    "data/moves-scale/shard-1/turn-8aFNoU.moves.json",
+    "data/moves-scale/shard-1/turn-8fGjDp.moves.json",
+    "data/moves-scale/shard-1/turn-GwARoE.moves.json",
+    "data/moves-scale/shard-1/turn-LPN1KW.moves.json",
+    "data/moves-scale/shard-1/turn-O8dzJL.moves.json",
+    "data/moves-scale/shard-1/turn-OtsTKG.moves.json",
+    "data/moves-scale/shard-1/turn-PcHOkg.moves.json",
+    "data/moves-scale/shard-1/turn-PhLBYe.moves.json",
+    "data/moves-scale/shard-1/turn-Sy4JLi.moves.json",
+    "data/moves-scale/shard-1/turn-TAe3yN.moves.json",
+    "data/moves-scale/shard-1/turn-Uc56TD.moves.json",
+    "data/moves-scale/shard-1/turn-VWYDYz.moves.json",
+    "data/moves-scale/shard-1/turn-WBTnHm.moves.json",
+    "data/moves-scale/shard-1/turn-WctyXh.moves.json",
+    "data/moves-scale/shard-1/turn-WdLaYK.moves.json",
+    "data/moves-scale/shard-1/turn-WrDpvf.moves.json",
+    "data/moves-scale/shard-1/turn-XE3XHH.moves.json",
+    "data/moves-scale/shard-1/turn-ZKoe7v.moves.json",
+    "data/moves-scale/shard-1/turn-bSVU00.moves.json",
+    "data/moves-scale/shard-1/turn-dLz02V.moves.json",
+    "data/moves-scale/shard-1/turn-f0Ppwm.moves.json",
+    "data/moves-scale/shard-1/turn-fWxOuE.moves.json",
+    "data/moves-scale/shard-1/turn-g6q1nC.moves.json",
+    "data/moves-scale/shard-1/turn-j1Pdqp.moves.json",
+    "data/moves-scale/shard-1/turn-jIQ9tc.moves.json",
+    "data/moves-scale/shard-1/turn-mKNPUO.moves.json",
+    "data/moves-scale/shard-1/turn-miqHEv.moves.json",
+    "data/moves-scale/shard-1/turn-mlUamp.moves.json",
+    "data/moves-scale/shard-1/turn-n3zH0f.moves.json",
+    "data/moves-scale/shard-1/turn-oTGuOV.moves.json",
+    "data/moves-scale/shard-1/turn-pK5idM.moves.json",
+    "data/moves-scale/shard-1/turn-pbM1K4.moves.json",
+    "data/moves-scale/shard-1/turn-qwRnza.moves.json",
+    "data/moves-scale/shard-1/turn-r1HJhl.moves.json",
+    "data/moves-scale/shard-1/turn-rCBRSE.moves.json",
+    "data/moves-scale/shard-1/turn-tSMlKZ.moves.json",
+    "data/moves-scale/shard-1/turn-uJNPcf.moves.json",
+    "data/moves-scale/shard-1/turn-uy7gV9.moves.json",
+    "data/moves-scale/shard-1/turn-x2RU5I.moves.json",
+    "data/moves-scale/shard-1/turn-xOZ5oh.moves.json",
+    "data/moves-scale/shard-1/turn-xm9Otx.moves.json",
+    "data/moves-scale/shard-2/turn-3RuGAU.moves.json",
+    "data/moves-scale/shard-2/turn-5rUCtR.moves.json",
+    "data/moves-scale/shard-2/turn-7dRWAW.moves.json",
+    "data/moves-scale/shard-2/turn-DYfs4d.moves.json",
+    "data/moves-scale/shard-2/turn-ELTBL4.moves.json",
+    "data/moves-scale/shard-2/turn-FDuXUh.moves.json",
+    "data/moves-scale/shard-2/turn-FejOlN.moves.json",
+    "data/moves-scale/shard-2/turn-HeiWEK.moves.json",
+    "data/moves-scale/shard-2/turn-L3v2a8.moves.json",
+    "data/moves-scale/shard-2/turn-MwN5mA.moves.json",
+    "data/moves-scale/shard-2/turn-N4hhhA.moves.json",
+    "data/moves-scale/shard-2/turn-OxiFT2.moves.json",
+    "data/moves-scale/shard-2/turn-PGeqxq.moves.json",
+    "data/moves-scale/shard-2/turn-Rd3DV5.moves.json",
+    "data/moves-scale/shard-2/turn-TP9fme.moves.json",
+    "data/moves-scale/shard-2/turn-W2Wo3Y.moves.json",
+    "data/moves-scale/shard-2/turn-W34IgZ.moves.json",
+    "data/moves-scale/shard-2/turn-XogEMy.moves.json",
+    "data/moves-scale/shard-2/turn-Yxh05o.moves.json",
+    "data/moves-scale/shard-2/turn-Yy6b9c.moves.json",
+    "data/moves-scale/shard-2/turn-dR1iGY.moves.json",
+    "data/moves-scale/shard-2/turn-eF6fA6.moves.json",
+    "data/moves-scale/shard-2/turn-fgX7g4.moves.json",
+    "data/moves-scale/shard-2/turn-g3s5EO.moves.json",
+    "data/moves-scale/shard-2/turn-gnvjBV.moves.json",
+    "data/moves-scale/shard-2/turn-h7zTox.moves.json",
+    "data/moves-scale/shard-2/turn-llSmbF.moves.json",
+    "data/moves-scale/shard-2/turn-mtauh1.moves.json",
+    "data/moves-scale/shard-2/turn-pxxRHb.moves.json",
+    "data/moves-scale/shard-2/turn-sF3XIm.moves.json",
+    "data/moves-scale/shard-2/turn-tjxDid.moves.json",
+    "data/moves-scale/shard-2/turn-vl2dbJ.moves.json",
+    "data/moves-scale/shard-2/turn-wbmIR9.moves.json",
+    "data/moves-scale/shard-2/turn-wi6Q6y.moves.json",
+    "data/moves-scale/shard-2/turn-yLOqOd.moves.json",
+    "data/moves-scale/shard-3/turn-0aeNn8.moves.json",
+    "data/moves-scale/shard-3/turn-1ij7FV.moves.json",
+    "data/moves-scale/shard-3/turn-4Vnjnj.moves.json",
+    "data/moves-scale/shard-3/turn-5UjoUi.moves.json",
+    "data/moves-scale/shard-3/turn-8VoJLF.moves.json",
+    "data/moves-scale/shard-3/turn-8qn3cQ.moves.json",
+    "data/moves-scale/shard-3/turn-CczJhL.moves.json",
+    "data/moves-scale/shard-3/turn-GnZeXU.moves.json",
+    "data/moves-scale/shard-3/turn-L7qzfD.moves.json",
+    "data/moves-scale/shard-3/turn-LtNoP5.moves.json",
+    "data/moves-scale/shard-3/turn-MDwJCW.moves.json",
+    "data/moves-scale/shard-3/turn-MLCYwI.moves.json",
+    "data/moves-scale/shard-3/turn-Pn04er.moves.json",
+    "data/moves-scale/shard-3/turn-UBmb3D.moves.json",
+    "data/moves-scale/shard-3/turn-UHz87W.moves.json",
+    "data/moves-scale/shard-3/turn-YjPvUs.moves.json",
+    "data/moves-scale/shard-3/turn-b3dxwJ.moves.json",
+    "data/moves-scale/shard-3/turn-bgSPxR.moves.json",
+    "data/moves-scale/shard-3/turn-eebQ4p.moves.json",
+    "data/moves-scale/shard-3/turn-g0WX7n.moves.json",
+    "data/moves-scale/shard-3/turn-jlxoP5.moves.json",
+    "data/moves-scale/shard-3/turn-kC0MbI.moves.json",
+    "data/moves-scale/shard-3/turn-kuEWAB.moves.json",
+    "data/moves-scale/shard-3/turn-mIc3Eh.moves.json",
+    "data/moves-scale/shard-3/turn-n5EIxj.moves.json",
+    "data/moves-scale/shard-3/turn-oQdwzD.moves.json",
+    "data/moves-scale/shard-3/turn-poV4qM.moves.json",
+    "data/moves-scale/shard-3/turn-tqZHsF.moves.json",
+    "data/moves-scale/shard-3/turn-zb5phn.moves.json",
+    "data/moves-scale/shard-3/turn-zjFdHQ.moves.json",
+    "data/moves-scale/shard-4/turn-0IgOYv.moves.json",
+    "data/moves-scale/shard-4/turn-0OmtsL.moves.json",
+    "data/moves-scale/shard-4/turn-5VfZ6V.moves.json",
+    "data/moves-scale/shard-4/turn-8ANSBc.moves.json",
+    "data/moves-scale/shard-4/turn-DE5zRR.moves.json",
+    "data/moves-scale/shard-4/turn-Dmp0fi.moves.json",
+    "data/moves-scale/shard-4/turn-EDnTfo.moves.json",
+    "data/moves-scale/shard-4/turn-LHYRy5.moves.json",
+    "data/moves-scale/shard-4/turn-LZNJ49.moves.json",
+    "data/moves-scale/shard-4/turn-LtmXGv.moves.json",
+    "data/moves-scale/shard-4/turn-SkU5lr.moves.json",
+    "data/moves-scale/shard-4/turn-Vk4oka.moves.json",
+    "data/moves-scale/shard-4/turn-Wcr0h9.moves.json",
+    "data/moves-scale/shard-4/turn-WqJ4mW.moves.json",
+    "data/moves-scale/shard-4/turn-X3R1HJ.moves.json",
+    "data/moves-scale/shard-4/turn-lx5879.moves.json",
+    "data/moves-scale/shard-4/turn-sMH1Sm.moves.json",
+    "data/moves-scale/shard-4/turn-viOqBP.moves.json",
+    "data/moves-scale/shard-4/turn-wM9PAr.moves.json",
+    "data/moves-scale/shard-4/turn-yGoIlB.moves.json",
+    "data/moves-scale/shard-4/turn-zDVNxa.moves.json",
+    "data/moves-scale/shard-5/turn-0r52n8.moves.json",
+    "data/moves-scale/shard-5/turn-4DmSW5.moves.json",
+    "data/moves-scale/shard-5/turn-5HxdtH.moves.json",
+    "data/moves-scale/shard-5/turn-6paVBT.moves.json",
+    "data/moves-scale/shard-5/turn-EO0A4w.moves.json",
+    "data/moves-scale/shard-5/turn-F7l8sk.moves.json",
+    "data/moves-scale/shard-5/turn-FbAbLT.moves.json",
+    "data/moves-scale/shard-5/turn-GE5uDJ.moves.json",
+    "data/moves-scale/shard-5/turn-HD0aXw.moves.json",
+    "data/moves-scale/shard-5/turn-N1PFCg.moves.json",
+    "data/moves-scale/shard-5/turn-Wdb4Sq.moves.json",
+    "data/moves-scale/shard-5/turn-Xsp1x0.moves.json",
+    "data/moves-scale/shard-5/turn-dV8LaA.moves.json",
+    "data/moves-scale/shard-5/turn-fIuIof.moves.json",
+    "data/moves-scale/shard-5/turn-fOrPLY.moves.json",
+    "data/moves-scale/shard-5/turn-hoSA1W.moves.json",
+    "data/moves-scale/shard-5/turn-oxdell.moves.json",
+    "data/moves-scale/shard-5/turn-wbmn6J.moves.json",
+    "data/moves-scale/shard-5/turn-xPSDKd.moves.json",
+    "data/moves-scale/shard-5/turn-zi0gEE.moves.json"
+  ]
+}
