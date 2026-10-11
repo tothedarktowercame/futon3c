@@ -39,6 +39,11 @@
 ;; ---------------------------------------------------------------------------
 ;; Intent -> kind
 
+(def rules-version
+  "Version of the persisted act/port interpretation rules. Bump by hand on
+   every change to linking, the kind tables, or the adjacency table."
+  "2026-10-11.1")
+
 (def intent-kinds
   "The reading/mark intents that name a kernel act kind, as keywords.
    Intents absent here (gist, unresolved, anything a reading invents) have

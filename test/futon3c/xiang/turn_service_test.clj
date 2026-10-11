@@ -707,8 +707,18 @@
     (is (nil? (:acts (ts/read-record store oldest))))
     (is (nil? (:standings (ts/read-record store oldest))))
     (is (nil? (:obligations (ts/read-record store oldest))))
+    (is (= {:state "unknown" :reason "no-acts"
+            :computed_at "1970-01-01T00:16:40Z"
+            :rules_version turn-acts/rules-version}
+           (:ports_status (ts/read-record store oldest))))
     (svc/compute-ports! (:svc h) oldest {:session-cap 10})
-    (is (some? (:ports (ts/read-record store oldest))))))
+    (let [computed (:ports (ts/read-record store oldest))]
+      (is (some? computed))
+      (svc/compute-ports! (:svc h) oldest {:session-cap 1})
+      (let [record (ts/read-record store oldest)]
+        (is (= computed (:ports record)) "a later refusal preserves the computed value")
+        (is (= ["unknown" "no-acts"]
+               ((juxt :state :reason) (:ports_status record))))))))
 
 (deftest settle-computes-ports
   (let [store (seed-ports-store)
@@ -718,6 +728,11 @@
     (svc/attach-happened! (:svc h) "turn-HUylGP" {:reply reply :commits []})
     (let [rec (ts/read-record store "turn-HUylGP")]
       (is (= reply (:reply_text rec)) "the reply text is stored for 大象")
+      (let [{:keys [state reason computed_at rules_version]} (:ports_status rec)]
+        (is (= "computed" state))
+        (is (nil? reason))
+        (is (= turn-acts/rules-version rules_version))
+        (is (instance? java.time.Instant (java.time.Instant/parse computed_at))))
       (let [acts (:acts rec)
             allowed #{:id :kind :author :at :to :turn :record :port? :standing?
                       :target :carries-out :about :option :sha :repo :subject

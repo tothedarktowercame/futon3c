@@ -408,6 +408,11 @@
                      :text (trim-act-text (:text a))}))]
       (ts/update-record! store id
                          #(assoc %
+                                 :ports_status
+                                 {:state "computed"
+                                  :reason nil
+                                  :computed_at (iso (now-ms svc))
+                                  :rules_version turn-acts/rules-version}
                                  :acts record-acts
                                  :standings
                                  {:in_force (:in-force ports)
@@ -421,7 +426,18 @@
                                                     (:still-open ports))
                                   :inferred (:inferred ports)})))
      (catch Exception e
-       (set-health! svc nil (str id ": ports not computed (" (.getMessage e) ")"))))))
+       (let [reason (if (= :unknown-turn (:reason (ex-data e)))
+                      "no-acts"
+                      (.getMessage e))]
+         (try
+           (ts/update-record! (cfg svc :store) id
+                              #(assoc % :ports_status
+                                      {:state "unknown"
+                                       :reason reason
+                                       :computed_at (iso (now-ms svc))
+                                       :rules_version turn-acts/rules-version}))
+           (catch Exception _))
+         (set-health! svc nil (str id ": ports not computed (" (.getMessage e) ")")))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Record (session-mode--record-turn via the store)
