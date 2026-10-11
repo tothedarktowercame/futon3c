@@ -1,0 +1,124 @@
+{
+ "record": "turn-ZKoe7v",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-437-f-s1-0",
+   "kind": "verify",
+   "move": "verify/confirmed",
+   "quote": "OK, I see it on the clickthrough.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-437-f-s2-0",
+   "kind": "propose",
+   "move": "propose/consolidate-ui",
+   "quote": "it would be much nicer if this was shown on ONE interactive infographic.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-437-f-s3-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent-with-tool",
+   "quote": "Do you think Kimi could sort that out using Playwright to validate?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-437-r-0",
+   "kind": "reply-mark",
+   "move": "delegate/to-agent",
+   "quote": "Yes, I think Kimi can do this, so I've handed it to kimi-1 and it's working on it now.",
+   "answers": [
+    {
+     "act": "claude-17-turn-437-f-s2-0",
+     "quote": "The plan is one page where clicking a stage band in the main stream, or its legend entry, opens that stage up into its pattern families in place",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-437-f-s3-0",
+     "quote": "Yes, I think Kimi can do this, so I've handed it to kimi-1 and it's working on it now.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-435-r-4",
+     "quote": "The plan is one page where clicking a stage band in the main stream",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "interactive infographic page",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "one page, as the earlier one-or-two question asked"
+  },
+  {
+   "act": "claude-17-turn-437-r-1",
+   "kind": "reply-mark",
+   "move": "propose/acceptance-plan",
+   "quote": "Kimi has to write a Playwright check that loads the page in headless Chromium and fails on any script error.",
+   "answers": [
+    {
+     "act": "claude-17-turn-437-f-s3-0",
+     "quote": "It also checks the back button, hover values, and light and dark themes.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "interactive infographic page"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-437-r-2",
+   "kind": "reply-mark",
+   "move": "report/process-note",
+   "quote": "My first send was refused because Kimi seats need a requisition line naming a mission.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "misfiled mission flagged for operator correction"
+  },
+  {
+   "act": "claude-17-turn-437-r-3",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "Job `invoke-1790893029289-29903-dcce93af`, park `park-38d969f0-7e9d-494e-80df-435caac0e5db`.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "interactive infographic page"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

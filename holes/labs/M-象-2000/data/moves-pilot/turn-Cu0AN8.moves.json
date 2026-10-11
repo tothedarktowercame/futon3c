@@ -1,0 +1,171 @@
+{
+ "record": "turn-Cu0AN8",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-104-f-s1-0",
+   "kind": "propose",
+   "move": "propose/preregistration",
+   "quote": "be able to preregister any needed improvements against tge latest report card",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-104-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "After we have records we should also",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-104-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "That fits the report card well: each fix states, before it lands, what it should change on the next card",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "each fix states, before it lands, what it should change on the next card, and the next card checks it",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-12-turn-104-r-1",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Yes. Each fix would state, before the next run, what it predicts that run's card will show",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "Yes. Each fix would state, before the next run, what it predicts that run's card will show, and the next card then checks the prediction.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "confirms the interpretation before designing"
+  },
+  {
+   "act": "claude-12-turn-104-r-2",
+   "kind": "reply-mark",
+   "move": "explain/status",
+   "quote": "futon2 already uses preregistration, but at cohort level",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "Nothing yet lets an individual fix declare a prediction against a card.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "names the gap the proposal has to fill"
+  },
+  {
+   "act": "claude-12-turn-104-r-3",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "**Where predictions live:** one file per preregistration under `futon2/holes/labs/wm-contract/preregistrations/`, committed.",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "**Prediction:** fields of the next card, and the value or condition each is expected to show.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "card preregistration design",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-104-r-4",
+   "kind": "reply-mark",
+   "move": "delegate/to-agent",
+   "quote": "The format and evaluator go to codex-28, who owns the report card.",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "Once they exist, I'll write the first batch against click 49's card, before the next click, covering today's merged fixes:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "card preregistration design"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-104-r-5",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "Building the preregistration format, a validator, and the evaluator in the report card.",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "Tests cover each outcome (confirmed, refuted, not exercised, not yet applicable), a malformed file, and close-once.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "card preregistration design"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-104-r-6",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "I write and commit the first preregistrations against click 49's card, so their commit times come before the run.",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "codex-35's close-time trigger publishes the next run's card, with its Preregistrations section, on the WIP site.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "card preregistration design"
+   },
+   "confidence": "high",
+   "note": "orders the work so predictions provably precede the run"
+  }
+ ],
+ "unlabelled": []
+}

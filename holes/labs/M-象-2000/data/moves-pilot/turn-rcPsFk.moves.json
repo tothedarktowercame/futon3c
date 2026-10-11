@@ -1,0 +1,94 @@
+{
+ "record": "turn-rcPsFk",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-8-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "🈸: Can you show me what's in the offing?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(the inbox as it stands) Open ports at the tails of the 86 sessions with ports since 10-01, before the recompute:",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "Open ports at the tails of the 86 sessions with ports since 10-01",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-2",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(next on my path, in order)",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "1. Receipt of the recompute: totals before and after, the four closes in claude-15's sessio…",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "inbox-zero path order",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-8-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "(waiting on you) Two decisions, both about your prior.",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "First, `constrain`: remove it from the adjacency openers so it s…",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-8-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/out-of-scope",
+   "quote": "(not in the offing) The adjacency table otherwise, a futon3c restart, the switch of 40ºBelowDB onto the live store.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": [
+  "claude-16-turn-8-c-4a13ba7f"
+ ]
+}

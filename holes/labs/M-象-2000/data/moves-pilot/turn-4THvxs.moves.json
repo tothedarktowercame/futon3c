@@ -1,0 +1,93 @@
+{
+ "record": "turn-4THvxs",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T20:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-30-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "so, I think blueprints could follow the audits, when those exist, as this builds increasing clarity",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "endorses the blueprint idea, sequenced after audits"
+  },
+  {
+   "act": "claude-14-turn-30-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Set up that way in `3e72c0903`.",
+   "answers": [
+    {
+     "act": "claude-14-turn-30-f-s1-0",
+     "quote": "The order is now: route audit, then a reviewed blueprint of the foundation the audit names, then formalisation one blueprint node at a time.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-14-turn-28-r-5",
+     "quote": "Both foundation programs already have audits, so their next jobs write blueprints.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "implements the go? offer and the operator's sequencing in one commit"
+  },
+  {
+   "act": "claude-14-turn-30-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "**`BLUEPRINTS.md`** in the lab sets out the order and the format",
+   "answers": [
+    {
+     "act": "claude-14-turn-30-f-s1-0",
+     "quote": "one node per future Lean declaration, each with `uses:` edges, the intended Lean type, and the Lean representation wherever there's a choice",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-14-turn-28-r-3",
+     "quote": "A node needing more than about a page gets split, and every hypothesis of the final theorem has to be used by some node.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "the format addresses the limits raised earlier"
+  },
+  {
+   "act": "claude-14-turn-30-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "When all 10 batches are in, I'll group the FOUNDATION verdicts by the foundation they need and rank them by how many problems each serves.",
+   "answers": [
+    {
+     "act": "claude-14-turn-30-f-s1-0",
+     "quote": "I'll elect a blueprint for each of the top few, and those then become programs as the two current ones finish.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "audit-driven blueprint ladder",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "future programs chosen by audit coverage"
+  }
+ ],
+ "unlabelled": []
+}
