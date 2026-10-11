@@ -1,0 +1,152 @@
+{
+ "record": "turn-Wdb4Sq",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-7-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "It's also worth saying: people use very anthropogenic terms",
+   "answers": [],
+   "scope": {
+    "opens": "intents-vs-actions",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "Possibly the list I was thinking of was a list of",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "This seems to be a common theme that the various different",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-f-s4-0",
+   "kind": "propose",
+   "move": "constrain/standing-rule",
+   "quote": "But I think we should be careful to distinguish",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I've recorded this in the mission as tension T8",
+   "answers": [
+    {
+     "act": "claude-13-turn-7-f-s4-0",
+     "quote": "recorded this in the mission as tension T8",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-7-f-s1-0",
+     "quote": "I also added a caveat to GLOSS",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "Take \"memory\" as an example:",
+   "answers": [
+    {
+     "act": "claude-13-turn-7-f-s4-0",
+     "quote": "Take \"memory\" as an example:",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-7-f-s1-0",
+     "quote": "Take \"memory\" as an example:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-r-2",
+   "kind": "report",
+   "move": "propose/design",
+   "quote": "The rows of the \"what people do when they do tech\" list",
+   "answers": [
+    {
+     "act": "claude-13-turn-7-f-s2-0",
+     "quote": "The rows of the \"what people do",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-7-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I draft `landscape/ACTIVITIES.md`",
+   "answers": [
+    {
+     "act": "claude-13-turn-7-f-s2-0",
+     "quote": "Shall I draft `landscape/ACTIVITIES.md`",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-7-f-s3-0",
+     "quote": "Shall I draft `landscape/ACTIVITIES.md`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-7-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

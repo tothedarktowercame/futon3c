@@ -1,0 +1,141 @@
+{
+ "record": "turn-HD0aXw",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-10-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "maybe we could use the example companies I found as a \"kernel\"",
+   "answers": [],
+   "scope": {
+    "opens": "company-kernel",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "in many cases they are solving tech problems for tech people",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-f-s3-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Mastra seems like a great example of this",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-10-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "being good at managing context for developer sessions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-f-s5-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "a possible distinction with the War Machine",
+   "answers": [],
+   "scope": {
+    "opens": "wm-grounded-factory",
+    "closes": null,
+    "within": "claude-13-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-r-0",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "Five groups:",
+   "answers": [
+    {
+     "act": "claude-13-turn-10-f-s2-0",
+     "quote": "Tech for tech people (~36):",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-10-f-s1-0",
+     "quote": "Five groups:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "Your distinction puts the War Machine closest to D",
+   "answers": [
+    {
+     "act": "claude-13-turn-10-f-s5-0",
+     "quote": "Your distinction puts the War Machine closest to D",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-10-f-s4-0",
+     "quote": "Your distinction puts the War Machine",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-10-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-10-r-2",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "Once the customer stories come back, I'll write the concrete client problems as triples",
+   "answers": [
+    {
+     "act": "claude-13-turn-10-f-s1-0",
+     "quote": "Once the customer stories come back",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,275 @@
+{
+ "record": "turn-wbmn6J",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-9-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "good enough for a start, we're not trying to be fully scientific",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s2-0",
+   "kind": "explore",
+   "move": "propose/redirect-scope",
+   "quote": "What starts to become interesting is what actual customer or client problems",
+   "answers": [],
+   "scope": {
+    "opens": "client-problems",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s3-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "could explain why some of the verbs are more interesting than others.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s4-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "in order to start to get the War Machine to work in a reasonable way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s5-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "We're still in the process of validating it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s6-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "as a model of the way people and organisations work, it seems like a great schematic.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s7-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "fitted to the PBASE and R-number outlines",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s6-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s8-0",
+   "kind": "explore",
+   "move": "clarify/context",
+   "quote": "a given company out there in middle America or wherever",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s9-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "to solve some actual problem for themselves or their clients.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s8-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s10-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "having a model of how the space works should allow us to help them solve it faster",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s11-0",
+   "kind": "constrain",
+   "move": "qualify/scope",
+   "quote": "Now, some problems are totally \"human\" problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-f-s12-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "managers that don't listen to their employees won't be \"solved\" with Elephant-2000",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I've added this to the mission as §3.1",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s2-0",
+     "quote": "I've added this to the mission as §3.1",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-9-f-s11-0",
+     "quote": "a test for telling human problems from ones tooling can help with",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "The SVO form gives a fairly clean way to separate the two.",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s11-0",
+     "quote": "The SVO form gives a fairly clean way to separate the two.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-9-f-s12-0",
+     "quote": "The SVO form gives a fairly clean way",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The verbs already map onto PBASE through `xiaoxiang-mark-keys`.",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s7-0",
+     "quote": "The verbs already map onto PBASE",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-3",
+   "kind": "report",
+   "move": "report/gap",
+   "quote": "Some of this work already exists.",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s8-0",
+     "quote": "Some of this work already exists.",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-9-f-s2-0",
+     "quote": "Some of this work already exists.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-9-r-4",
+   "kind": "report",
+   "move": "ask-action/one-decision",
+   "quote": "I could do that pass.",
+   "answers": [
+    {
+     "act": "claude-13-turn-9-f-s2-0",
+     "quote": "I could do that pass.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-9-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

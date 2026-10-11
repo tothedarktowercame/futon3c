@@ -1,0 +1,155 @@
+{
+ "record": "turn-hoSA1W",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-27-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "Here's what I'm thinking about the",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "what if I use this as a kind of \"alternative backlog\"",
+   "answers": [],
+   "scope": {
+    "opens": "alternative-backlog",
+    "closes": null,
+    "within": "claude-13-turn-27-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-f-s3-0",
+   "kind": "extend",
+   "move": "explain/context",
+   "quote": "query the \"alternative backlog\" and find out what methods",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "That may just be for me as a technologist",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "if I keep having to remind claude agents to use bg.py",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "the survey is already indexed the right way for that",
+   "answers": [
+    {
+     "act": "claude-13-turn-27-f-s2-0",
+     "quote": "added it to the mission as §5, \"alternative backlog\"",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-27-f-s5-0",
+     "quote": "with an entry format and bg.py as the first entry",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-r-1",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "There is, and for this case the strongest of them is a **hook**",
+   "answers": [
+    {
+     "act": "claude-13-turn-27-f-s5-0",
+     "quote": "the strongest of them is a **hook**",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-r-2",
+   "kind": "report",
+   "move": "disagree/correction",
+   "quote": "Any rule kept in prose fails this way",
+   "answers": [
+    {
+     "act": "claude-13-turn-27-f-s5-0",
+     "quote": "Any rule kept in prose fails this way",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-27-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I write that hook?",
+   "answers": [
+    {
+     "act": "claude-13-turn-27-f-s5-0",
+     "quote": "Shall I write that hook?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-27-f-s5-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

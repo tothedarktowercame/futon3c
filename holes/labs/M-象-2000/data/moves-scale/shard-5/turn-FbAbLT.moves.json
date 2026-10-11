@@ -1,0 +1,123 @@
+{
+ "record": "turn-FbAbLT",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-6-turn-10-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "Yes, so you can see why I'm a bit angry",
+   "answers": [],
+   "scope": {
+    "opens": "endorsed-idea-followup",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-10-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Your points 1 and 2 are pretty obvious and they could save lots of time;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-10-f-s2-1",
+   "kind": "explain",
+   "move": "explain/background",
+   "quote": "I was excited about that.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-10-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-10-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "better late than never but it just seems weird",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-10-r-0",
+   "kind": "report",
+   "move": "report/diagnosis",
+   "quote": "Your anger is fair, and the record shows how it happened.",
+   "answers": [
+    {
+     "act": "claude-6-turn-10-f-s1-0",
+     "quote": "the record shows how it happened",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-6-turn-10-f-s3-0",
+     "quote": "the record shows how it happened",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-10-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "Each step looked reasonable on its own.",
+   "answers": [
+    {
+     "act": "claude-6-turn-10-f-s1-0",
+     "quote": "Each step looked reasonable on its own.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-10-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I saved a memory note",
+   "answers": [
+    {
+     "act": "claude-6-turn-10-f-s3-0",
+     "quote": "I saved a memory note",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-10-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

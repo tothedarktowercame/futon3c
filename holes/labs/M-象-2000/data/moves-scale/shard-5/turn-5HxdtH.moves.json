@@ -1,0 +1,112 @@
+{
+ "record": "turn-5HxdtH",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-15-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you investigate why codex usage appears as ?",
+   "answers": [],
+   "scope": {
+    "opens": "voxterm-codex-usage",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-15-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "on voxterm",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-15-f-s1-0"
+   },
+   "confidence": "medium",
+   "note": "two-word locator qualifier; quote is the whole fragment"
+  },
+  {
+   "act": "claude-14-turn-15-r-0",
+   "kind": "explain",
+   "move": "report/diagnosis",
+   "quote": "the live `/usage` endpoint returned",
+   "answers": [
+    {
+     "act": "claude-14-turn-15-f-s1-0",
+     "quote": "the live `/usage` endpoint returned",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-15-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-15-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The server now looks for `codex` in three places",
+   "answers": [
+    {
+     "act": "claude-14-turn-15-f-s1-0",
+     "quote": "The server now looks for `codex` in three places",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-15-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-15-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "I ran the reader with the unit's exact PATH, and it returned 73% used",
+   "answers": [
+    {
+     "act": "claude-14-turn-15-f-s1-0",
+     "quote": "I ran the reader with the unit's exact PATH",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-15-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-15-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "`systemctl --user restart voxterm` will load the fix",
+   "answers": [
+    {
+     "act": "claude-14-turn-15-f-s1-0",
+     "quote": "The running server still has the old code.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-15-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

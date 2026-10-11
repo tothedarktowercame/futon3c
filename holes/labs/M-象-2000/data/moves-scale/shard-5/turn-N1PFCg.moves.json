@@ -1,0 +1,175 @@
+{
+ "record": "turn-N1PFCg",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-15-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "Here's a concrete example, a bit related to Doordash actually.",
+   "answers": [],
+   "scope": {
+    "opens": "corner-store-coop",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "how about simply \"we bring food to your neighbourhood\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-f-s3-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "That's what corner shops do.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-f-s4-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "there are \"food deserts\" where people don't have access to healthy food",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-f-s5-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "possibly a \"corner store co-op\" would be in-demand in these neighbourhoods (and possibly not).",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "hedged proposal; the (and possibly not) is taken up by r-0/r-1"
+  },
+  {
+   "act": "claude-13-turn-15-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "there's real evidence on both sides of your \"(and possibly not)\"",
+   "answers": [
+    {
+     "act": "claude-13-turn-15-f-s5-0",
+     "quote": "real evidence on both sides",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "The evidence against:",
+   "answers": [
+    {
+     "act": "claude-13-turn-15-f-s5-0",
+     "quote": "The evidence against:",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-15-f-s4-0",
+     "quote": "The evidence against:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-r-2",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "Healthy-corner-store programmes do report",
+   "answers": [
+    {
+     "act": "claude-13-turn-15-f-s5-0",
+     "quote": "Healthy-corner-store programmes do report",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-r-3",
+   "kind": "report",
+   "move": "clarify/ambiguity",
+   "quote": "\"Corner store co-op\" can mean two different things:",
+   "answers": [
+    {
+     "act": "claude-13-turn-15-f-s5-0",
+     "quote": "can mean two different things",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-15-r-4",
+   "kind": "report",
+   "move": "propose/design",
+   "quote": "The tech side is small and cheap:",
+   "answers": [
+    {
+     "act": "claude-13-turn-15-f-s5-0",
+     "quote": "The tech side is small and cheap:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-15-f-s5-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

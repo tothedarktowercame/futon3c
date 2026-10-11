@@ -1,0 +1,234 @@
+{
+ "record": "turn-fIuIof",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T19:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-11-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "this is a kind of scattering theory problem",
+   "answers": [],
+   "scope": {
+    "opens": "scattering-picture",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "We put a real problem in on one side.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-f-s3-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "it might bounce around inside the tech world for a while",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "For example, consider Doordash or delivery.",
+   "answers": [],
+   "scope": {
+    "opens": "doordash-example",
+    "closes": null,
+    "within": "claude-13-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-f-s5-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "\"We bring food to your house\" solves a real human problem.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-f-s6-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "Inside, no doubt, there's lots of tech involved",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-f-s7-0",
+   "kind": "challenge",
+   "move": "challenge/decision-criterion",
+   "quote": "But is it on the way to solving real human needs better or faster?",
+   "answers": [],
+   "scope": {
+    "opens": "out-channel-test",
+    "closes": null,
+    "within": "claude-13-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The scattering picture works for this.",
+   "answers": [
+    {
+     "act": "claude-13-turn-11-f-s1-0",
+     "quote": "The scattering picture works for this.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-11-f-s7-0",
+     "quote": "It gives a test for every tool on the list",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-r-1",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "In scattering theory the internal detail matters",
+   "answers": [
+    {
+     "act": "claude-13-turn-11-f-s7-0",
+     "quote": "In scattering theory the internal detail matters",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-11-f-s1-0",
+     "quote": "In scattering theory the internal detail matters",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-r-2",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "The example adds one thing: there's more than one out-channel.",
+   "answers": [
+    {
+     "act": "claude-13-turn-11-f-s4-0",
+     "quote": "there's more than one out-channel",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-11-f-s5-0",
+     "quote": "there's more than one out-channel",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-r-3",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "the bounces cancel out",
+   "answers": [
+    {
+     "act": "claude-13-turn-11-f-s7-0",
+     "quote": "the bounces cancel out",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-r-4",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "the R-nodes are internal bounces",
+   "answers": [
+    {
+     "act": "claude-13-turn-11-f-s7-0",
+     "quote": "the R-nodes are internal bounces",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-11-r-5",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "I'll write each client problem in this form:",
+   "answers": [
+    {
+     "act": "claude-13-turn-11-f-s2-0",
+     "quote": "I'll write each client problem in this form:",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-10-r-2",
+     "quote": "I'll write each client problem in this form:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
