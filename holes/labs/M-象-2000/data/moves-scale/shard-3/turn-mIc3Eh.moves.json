@@ -1,0 +1,73 @@
+{
+ "record": "turn-mIc3Eh",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-11-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "let's go with haiku",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-11-r-0",
+   "kind": "report",
+   "move": "report/early-results",
+   "quote": "In the first 26 judgements every quote checked out.",
+   "answers": [
+    {
+     "act": "claude-15-turn-11-f-s1-0",
+     "quote": "(early results) In the first 26 judgements every quote checked out. 11 pairs were unrelated, 6 restate each",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-11-r-1",
+   "kind": "report",
+   "move": "report/built",
+   "quote": "`minus40.sorries` turns the verdicts into futon1b records",
+   "answers": [
+    {
+     "act": "claude-15-turn-11-f-s1-0",
+     "quote": "(loader is ready) `minus40.sorries` turns the verdicts into futon1b records. Only verdicts with verbatim",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-11-r-2",
+   "kind": "continue",
+   "move": "report/next",
+   "quote": "When the shards finish, I'll load everything into the scratch store",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,175 @@
+{
+ "record": "turn-5UjoUi",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-31-f-s1-0",
+   "kind": "propose",
+   "move": "propose/revive-agent",
+   "quote": "we might be able to find the relevant agent and revive them",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "it's been a few days since they did any work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-f-s1-2",
+   "kind": "propose",
+   "move": "propose/checkpoint",
+   "quote": "make a Checkpoint in the M-象-2000 mission document",
+   "answers": [],
+   "scope": {
+    "opens": "M-象-2000-checkpoint",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-f-s2-0",
+   "kind": "propose",
+   "move": "propose/handoff-plan",
+   "quote": "pass that to an available agent when we have a specific need",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/introduce-topic",
+   "quote": "As for the \"inbox from signals that are explicit\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/weigh-deferral",
+   "quote": "whether we need to wait until the M-象-2000 issue is solved",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-f-s5-0",
+   "kind": "propose",
+   "move": "propose/tandem-handover",
+   "quote": "ask claude-16 to take over on that project",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-r-0",
+   "kind": "report",
+   "move": "report/checkpoint-contents",
+   "quote": "no agent has worked on the mission since 10-04",
+   "answers": [
+    {
+     "act": "claude-15-turn-31-f-s1-2",
+     "quote": "(what the Checkpoint records) - **Ownership:** no agent has worked on the mission since 10-04; claude-17 is",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-31-f-s1-0",
+     "quote": "(what the Checkpoint records) - **Ownership:** no agent has worked on the mission since 10-04; claude-17 is",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-r-1",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Mostly no. Part of the explicit-signal inbox doesn't depend on answers being linked",
+   "answers": [
+    {
+     "act": "claude-15-turn-31-f-s4-0",
+     "quote": "Part of the explicit-signal inbox doesn't depend on answers being linked at all",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-r-2",
+   "kind": "propose",
+   "move": "propose/endorse-handover",
+   "quote": "I think that fits well.",
+   "answers": [
+    {
+     "act": "claude-15-turn-31-f-s5-0",
+     "quote": "claude-16 already found the outage, knows the turn-service code",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-31-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I bell claude-16 asking it to take over M-象-2000?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

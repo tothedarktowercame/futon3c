@@ -1,0 +1,105 @@
+{
+ "record": "turn-b3dxwJ",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-9-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes let's go this route",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-9-r-0",
+   "kind": "report",
+   "move": "report/what-was-added",
+   "quote": "Existence markers.",
+   "answers": [
+    {
+     "act": "claude-15-turn-9-f-s1-0",
+     "quote": "A version with no text means the memory existed then",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-9-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The first run reported 7 contradictions and 271 markers.",
+   "answers": [
+    {
+     "act": "claude-15-turn-9-f-s1-0",
+     "quote": "(precision bug, caught) The first run reported 7 contradictions and 271 markers. Both were caused by `stat %W`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-9-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "(results) - **Totals:** 515 versions, 141 of them unknown content: 123 before a first known version, 18 at",
+   "answers": [
+    {
+     "act": "claude-15-turn-9-f-s1-0",
+     "quote": "(results) - **Totals:** 515 versions, 141 of them unknown content: 123 before a first known version, 18 at",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-9-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Transcripts start on 09-01.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-9-r-4",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "The spot-check turned up a better source: `ls -l` output in transcripts",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

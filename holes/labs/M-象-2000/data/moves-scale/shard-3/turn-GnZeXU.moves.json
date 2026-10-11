@@ -1,0 +1,112 @@
+{
+ "record": "turn-GnZeXU",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-14-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "ok",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-14-f-s1-1",
+   "kind": "prioritize",
+   "move": "prioritize/part-one",
+   "quote": "please start with part 1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-14-r-0",
+   "kind": "report",
+   "move": "report/mechanism",
+   "quote": "The 18 `restates` pairs fall into 14 groups.",
+   "answers": [
+    {
+     "act": "claude-15-turn-14-f-s1-1",
+     "quote": "Each group keeps one memory and the others become aliases",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-14-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/self-correction",
+   "quote": "two problems, both fixed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-14-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "I tested on `park-needs-session-id` → `emacs-park-needs-session`.",
+   "answers": [
+    {
+     "act": "claude-15-turn-14-f-s1-0",
+     "quote": "(checked) I tested on `park-needs-session-id` → `emacs-park-needs-session`. After applying, the old id",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-14-r-3",
+   "kind": "report",
+   "move": "report/proposals-list",
+   "quote": "(the proposals; full list in `~/code/data/minus40/aliases-proposed.txt`) Most are the same lesson filed under",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-14-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Applying merges is your call",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,123 @@
+{
+ "record": "turn-kuEWAB",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-17-f-s1-0",
+   "kind": "explore",
+   "move": "explore/directory-trick",
+   "quote": "Maybe we could trick Claude into thinking that the memory system *is* a directory.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-17-f-s2-0",
+   "kind": "explain",
+   "move": "explain/precedent",
+   "quote": "That's something like what Rob does with the mfuton memory system, memories are all addressed with",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-17-f-s3-0",
+   "kind": "propose",
+   "move": "propose/switch-off-route",
+   "quote": "simply turning off the standard memory system and instructing Claude via CLAUDE.md",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-17-f-s4-0",
+   "kind": "prioritize",
+   "move": "prioritize/part-two",
+   "quote": "For now let's work on the Part 2 to get it ready to work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-17-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(built so far) - **Rules** (`scripts/entities.py rules`): repos, agent seats, ports, and a hand-kept seed",
+   "answers": [
+    {
+     "act": "claude-15-turn-17-f-s4-0",
+     "quote": "(built so far) - **Rules** (`scripts/entities.py rules`): repos, agent seats, ports, and a hand-kept seed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-17-r-1",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Both routes are open.",
+   "answers": [
+    {
+     "act": "claude-15-turn-17-f-s1-0",
+     "quote": "(\"trick Claude into thinking that the memory system *is* a directory\") Both routes are open. The directory",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-15-turn-17-f-s3-0",
+     "quote": "(\"trick Claude into thinking that the memory system *is* a directory\") Both routes are open. The directory",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-17-r-2",
+   "kind": "continue",
+   "move": "report/next",
+   "quote": "When the shards finish I'll merge, load, and run `about` on a few entities",
+   "answers": [
+    {
+     "act": "claude-15-turn-17-f-s4-0",
+     "quote": "(next) When the shards finish I'll merge, load, and run `about` on a few entities (phone1, Agency, futon1b) to",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,129 @@
+{
+ "record": "turn-4Vnjnj",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-20-f-s1-0",
+   "kind": "explore",
+   "move": "explore/analogy",
+   "quote": "at -40°, water thrown into the air turns into crystals before it hits the ground",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-20-f-s2-0",
+   "kind": "propose",
+   "move": "propose/guiding-principle",
+   "quote": "That could be a useful guiding principle for our DB.",
+   "answers": [],
+   "scope": {
+    "opens": "crystallise-on-write",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-20-r-0",
+   "kind": "explain",
+   "move": "explain/reading-of-idea",
+   "quote": "structure is added at write time, on the way in",
+   "answers": [
+    {
+     "act": "claude-15-turn-20-f-s2-0",
+     "quote": "structure is added at write time, on the way in",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "crystallise-on-write"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-20-r-1",
+   "kind": "explain",
+   "move": "explain/concretisation",
+   "quote": "Hot memory is the puddle.",
+   "answers": [
+    {
+     "act": "claude-15-turn-20-f-s1-0",
+     "quote": "Hot memory is the puddle.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-20-f-s2-0",
+     "quote": "(what that means concretely for -40°) - **Hot memory is the puddle.** A Claude memory file lands as liquid",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "crystallise-on-write"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-20-r-2",
+   "kind": "report",
+   "move": "report/gap-status",
+   "quote": "(where we are against it) The ingest hook already does the first part at write time: exact version and links.",
+   "answers": [
+    {
+     "act": "claude-15-turn-20-f-s2-0",
+     "quote": "(where we are against it) The ingest hook already does the first part at write time: exact version and links.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-20-r-3",
+   "kind": "propose",
+   "move": "propose/plan",
+   "quote": "(making the hook live up to it) 1. **Synchronous, cheap:** rule-based entity extraction (seed aliases, repos,",
+   "answers": [
+    {
+     "act": "claude-15-turn-20-f-s2-0",
+     "quote": "(making the hook live up to it) 1. **Synchronous, cheap:** rule-based entity extraction (seed aliases, repos,",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "write-time-structure",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-20-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I build 1 and 2?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

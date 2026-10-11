@@ -1,0 +1,91 @@
+{
+ "record": "turn-1ij7FV",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-10-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/back-to-plan",
+   "quote": "ok, let's go back to late August",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-10-f-s1-1",
+   "kind": "prioritize",
+   "move": "prioritize/next-milestone",
+   "quote": "then milestone 3",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-10-r-0",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "The `ls -l` listings are committed (`b64aa43`).",
+   "answers": [
+    {
+     "act": "claude-15-turn-10-f-s1-0",
+     "quote": "The `ls -l` listings are committed (`b64aa43`).",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-10-f-s1-1",
+     "quote": "candidate selection and the judge both work",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-10-r-1",
+   "kind": "report",
+   "move": "report/components",
+   "quote": "picks 631 pairs with no model involved",
+   "answers": [
+    {
+     "act": "claude-15-turn-10-f-s1-1",
+     "quote": "(pieces) - **`scripts/candidates.py`** picks 631 pairs with no model involved: [[link]] pairs, plus pairs that",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-10-r-2",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "one decision: which model judges the full 631 pairs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,124 @@
+{
+ "record": "turn-L7qzfD",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-23-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/review-first",
+   "quote": "Before we proceed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-23-f-s1-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "let's bell a description of the work so far and the plan to claude-16",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-23-r-0",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "The packet is in the repo, committed",
+   "answers": [
+    {
+     "act": "claude-15-turn-23-f-s1-1",
+     "quote": "at `~/code/minus40/docs/REVIEW-REQUEST-2026-10-11-claude-16.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-23-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/self-correction",
+   "quote": "My first bell went in brief mode",
+   "answers": [
+    {
+     "act": "claude-15-turn-23-f-s1-1",
+     "quote": "(one resend) My first bell went in brief mode, the trap my own memory warns about: claude-16 would have seen",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-23-r-2",
+   "kind": "report",
+   "move": "report/parked",
+   "quote": "The park id is `park-f1a6dff2-6260-4592-8f7d-4b47ee2eee6b`",
+   "answers": [
+    {
+     "act": "claude-15-turn-23-f-s1-1",
+     "quote": "(parked) The park id is `park-f1a6dff2-6260-4592-8f7d-4b47ee2eee6b`, with a 60-minute deadline. When the reply",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-23-r-3",
+   "kind": "report",
+   "move": "report/duplicate-resolved",
+   "quote": "This is the duplicate job finishing.",
+   "answers": [
+    {
+     "act": "claude-15-turn-23-f-s1-1",
+     "quote": "same findings, same six answers",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-23-r-4",
+   "kind": "continue",
+   "move": "continue/waiting-on-decision",
+   "quote": "The same two questions: should I investigate the turn-evidence outage read-only",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

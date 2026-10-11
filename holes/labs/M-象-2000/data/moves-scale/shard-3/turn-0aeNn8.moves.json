@@ -1,0 +1,117 @@
+{
+ "record": "turn-0aeNn8",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-21-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/already-built",
+   "quote": "already considerably done in the form of xiaoxiang and daxiang",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-21-f-s2-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "The hook structure is similar to way 象 works.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-21-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "Let's not reinvent the wheel.",
+   "answers": [],
+   "scope": {
+    "opens": "no-reinvention",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-21-r-0",
+   "kind": "explain",
+   "move": "explain/mapping",
+   "quote": "my rule-based entity extraction plays 小象's role",
+   "answers": [
+    {
+     "act": "claude-15-turn-21-f-s1-0",
+     "quote": "(how memory writes map onto that) - **Draft tier:** my rule-based entity extraction plays 小象's role. It's",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-21-f-s2-0",
+     "quote": "(how memory writes map onto that) - **Draft tier:** my rule-based entity extraction plays 小象's role. It's",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "no-reinvention"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-21-r-1",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "Treat a memory write as an act in the turn that made it",
+   "answers": [
+    {
+     "act": "claude-15-turn-21-f-s2-0",
+     "quote": "(smallest first step) Treat a memory write as an act in the turn that made it, the way 大象 already joins a",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "memory-writes-as-acts",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-21-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I've read the READMEs, not `turn-seam/dispatch-contract.md`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-21-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I read the dispatch contract and the 大象 commit join",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

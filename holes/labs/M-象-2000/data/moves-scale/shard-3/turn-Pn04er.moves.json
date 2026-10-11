@@ -1,0 +1,105 @@
+{
+ "record": "turn-Pn04er",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-7-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/hesitation",
+   "quote": "hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-7-f-s2-0",
+   "kind": "propose",
+   "move": "propose/floats-idea",
+   "quote": "I am not sure what the standard practice is for XTDB, but I think insertion time vs record time can differ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-7-r-0",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "futon1b's existing hyperedge route already takes `:hx/valid-time`",
+   "answers": [
+    {
+     "act": "claude-15-turn-7-f-s2-0",
+     "quote": "(checked just now) futon1b's existing hyperedge route already takes `:hx/valid-time`. On the scratch store I",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-7-r-1",
+   "kind": "propose",
+   "move": "propose/milestone-plan",
+   "quote": "Each memory gets one stable `:memory/version` hyperedge.",
+   "answers": [
+    {
+     "act": "claude-15-turn-7-f-s2-0",
+     "quote": "(milestone 2 plan) - Each memory gets one stable `:memory/version` hyperedge. - That hyperedge is written once",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "milestone-2-versions",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-7-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Versions have to be replayed oldest first.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "milestone-2-versions"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-7-r-3",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I've updated the plan in the README (`a80af71`)",
+   "answers": [
+    {
+     "act": "claude-15-turn-7-f-s2-0",
+     "quote": "I've updated the plan in the README (`a80af71`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

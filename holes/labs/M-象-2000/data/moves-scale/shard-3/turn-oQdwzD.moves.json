@@ -1,0 +1,217 @@
+{
+ "record": "turn-oQdwzD",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-22-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "I don't really want all of the agents' turns to be read by a second agent",
+   "answers": [],
+   "scope": {
+    "opens": "no-second-reader",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit-of-tooling",
+   "quote": "But we should get the benefit of the 大象 tooling.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s3-0",
+   "kind": "propose",
+   "move": "propose/hook-it-all-up",
+   "quote": "I reckon we're pretty much in a position to \"hook it all up\".",
+   "answers": [],
+   "scope": {
+    "opens": "hook-it-all-up",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s4-0",
+   "kind": "report",
+   "move": "report/coverage-status",
+   "quote": "we'd still be missing the embedding and vector-based search",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s5-0",
+   "kind": "explain",
+   "move": "explain/live-system-goal",
+   "quote": "I think what would make it all rather clarifying would be to have an end-to-end system hooked up that we could",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s6-0",
+   "kind": "propose",
+   "move": "propose/spare-instance",
+   "quote": "you still have an extra futon1b we could work with",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s7-0",
+   "kind": "qualify",
+   "move": "qualify/main-store-only",
+   "quote": "some cool things we could only do in the main futon1b",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-f-s8-0",
+   "kind": "propose",
+   "move": "propose/crime-scene-case",
+   "quote": "we'd also have a live case of \"your agent chat is a crime scene\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-0",
+   "kind": "report",
+   "move": "report/architecture",
+   "quote": "(what's already there) The turn service in the Agency JVM writes one record per turn to",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s1-0",
+     "quote": "(what's already there) The turn service in the Agency JVM writes one record per turn to",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "no-second-reader"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-1",
+   "kind": "propose",
+   "move": "propose/pipeline",
+   "quote": "Follow the turn records.",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s3-0",
+     "quote": "(the pipeline, all against the scratch store on :7093) 1. **Follow the turn records.** A `minus40 follow`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-22-f-s1-0",
+     "quote": "(the pipeline, all against the scratch store on :7093) 1. **Follow the turn records.** A `minus40 follow`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-22-f-s8-0",
+     "quote": "(the pipeline, all against the scratch store on :7093) 1. **Follow the turn records.** A `minus40 follow`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "hook-it-all-up"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-2",
+   "kind": "qualify",
+   "move": "qualify/deferred",
+   "quote": "Embeddings and vector search:** still missing from the spec",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s4-0",
+     "quote": "(deferred, and why) - **Embeddings and vector search:** still missing from the spec. They'd be a rebuildable",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "(switch-over) Everything above is keyed to one base URL plus the store's own ids. Switching to the main",
+   "answers": [
+    {
+     "act": "claude-15-turn-22-f-s6-0",
+     "quote": "(switch-over) Everything above is keyed to one base URL plus the store's own ids. Switching to the main",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-15-turn-22-f-s7-0",
+     "quote": "(switch-over) Everything above is keyed to one base URL plus the store's own ids. Switching to the main",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-22-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I build 1–4 in that order",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

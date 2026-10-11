@@ -1,0 +1,93 @@
+{
+ "record": "turn-tqZHsF",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-19-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "Is that clarifying?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-19-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Yes, more than I expected.",
+   "answers": [
+    {
+     "act": "claude-15-turn-19-f-s1-0",
+     "quote": "Yes, more than I expected.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-19-r-1",
+   "kind": "explain",
+   "move": "explain/mapping",
+   "quote": "Take one refinement step",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-19-r-2",
+   "kind": "explain",
+   "move": "explain/why-gaps-matter",
+   "quote": "Two of them are exactly where memory search would hit trouble",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-19-r-3",
+   "kind": "explain",
+   "move": "explain/fit",
+   "quote": "The entity aliases I just built are candidate identifications",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-19-r-4",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "This is my reading of the shapes, not a checked correspondence.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

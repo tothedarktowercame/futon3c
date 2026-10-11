@@ -1,0 +1,86 @@
+{
+ "record": "turn-bgSPxR",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-28-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I'm a bit unclear about the plan going forward",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-28-r-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "The core of 40ºBelowDB exists and runs live on the scratch store",
+   "answers": [
+    {
+     "act": "claude-15-turn-28-f-s1-0",
+     "quote": "The core of 40ºBelowDB exists and runs live",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-28-r-1",
+   "kind": "propose",
+   "move": "propose/plan",
+   "quote": "Look at it together (short).",
+   "answers": [
+    {
+     "act": "claude-15-turn-28-f-s1-0",
+     "quote": "(plan going forward) 1. **Look at it together (short).** Open the view and judge whether the 1,854 open ports",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "plan-going-forward",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-28-r-2",
+   "kind": "report",
+   "move": "report/open-questions-for-operator",
+   "quote": "open questions that are yours",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-28-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "My lean is 1 then 2",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

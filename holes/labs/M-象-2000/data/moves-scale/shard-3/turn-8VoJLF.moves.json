@@ -1,0 +1,179 @@
+{
+ "record": "turn-8VoJLF",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-29-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "Sure, let's take it one step at a time.",
+   "answers": [],
+   "scope": {
+    "opens": "one-step-at-a-time",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-0",
+   "kind": "report",
+   "move": "report/false-open-census",
+   "quote": "the kernel counts 24 open acts, and about 20 of them were answered or done",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "one-step-at-a-time"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-1",
+   "kind": "report",
+   "move": "report/genuinely-open",
+   "quote": "Four items, which I'd also have named by hand",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-2",
+   "kind": "report",
+   "move": "report/numbers",
+   "quote": "1,857 open, split three ways:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-3",
+   "kind": "explain",
+   "move": "explain/impact-on-measures",
+   "quote": "It changes step 3 of the plan.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-4",
+   "kind": "propose",
+   "move": "propose/two-ways-forward",
+   "quote": "Report the false-open rate to the 象/kernel side",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-5",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I do both",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-6",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "It's done and holds up under my own check.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "kind inferred (not in the kernel's act list)"
+  },
+  {
+   "act": "claude-15-turn-29-r-7",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "(verified independently, with my own random sample rather than codex-70's) - **The job:** done in work mode,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-8",
+   "kind": "report",
+   "move": "report/delegated-numbers",
+   "quote": "243 records replayed, oldest first",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-9",
+   "kind": "qualify",
+   "move": "qualify/left-unassigned",
+   "quote": "(the 7 leftovers) Those turns have readings with no recognised acts, and the live `compute-ports!` refuses",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-10",
+   "kind": "explain",
+   "move": "explain/cross-check-use",
+   "quote": "(useful for minus40) Live records since 10-09 carry the service's own ports again, so the follower's computed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-29-r-11",
+   "kind": "continue",
+   "move": "continue/waiting-on-decision",
+   "quote": "still waiting on you, from my last message",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

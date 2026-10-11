@@ -1,0 +1,149 @@
+{
+ "record": "turn-eebQ4p",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-35-f-s1-0",
+   "kind": "propose",
+   "move": "propose/design-forward",
+   "quote": "I am wondering if, rather than trying to chase down a complete historical picture, maybe we just need to use",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "the historical data won't go away, and I don't want to read an old inbox",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-f-s3-0",
+   "kind": "propose",
+   "move": "propose/orphan-warning-route",
+   "quote": "if otphaned items raise a warning in the future I could feed them into report-futon-bug",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The inbox now shows ports only for live sessions",
+   "answers": [
+    {
+     "act": "claude-15-turn-35-f-s2-0",
+     "quote": "(\"I don't want to read an old inbox\") The inbox now shows ports only for live sessions, meaning each agent's",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-15-turn-35-f-s1-0",
+     "quote": "(\"I don't want to read an old inbox\") The inbox now shows ports only for live sessions, meaning each agent's",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(\"if orphaned items raise a warning in the future\") When an agent's registry session changes and your asks are",
+   "answers": [
+    {
+     "act": "claude-15-turn-35-f-s3-0",
+     "quote": "(\"if orphaned items raise a warning in the future\") When an agent's registry session changes and your asks are",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(\"feed them into report-futon-bug\") `fault_intake.py report <fault-id>` writes a normal report-futon-bug",
+   "answers": [
+    {
+     "act": "claude-15-turn-35-f-s3-0",
+     "quote": "(\"feed them into report-futon-bug\") `fault_intake.py report <fault-id>` writes a normal report-futon-bug",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-r-3",
+   "kind": "report-problem",
+   "move": "report-problem/self-correction",
+   "quote": "I accidentally killed the scratch store on :7093",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-r-4",
+   "kind": "qualify",
+   "move": "qualify/remaining-noise",
+   "quote": "Even inside the 184 there are answered asks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-35-r-5",
+   "kind": "qualify",
+   "move": "qualify/perf",
+   "quote": "Rebuilding the inbox page takes about 10 minutes per pass",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,105 @@
+{
+ "record": "turn-jlxoP5",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-15-f-s1-0",
+   "kind": "explore",
+   "move": "explore/steering-idea",
+   "quote": "whether we can convince Claude NOT to use files",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-15-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Probably yes, partly, with that one memory alone.",
+   "answers": [
+    {
+     "act": "claude-15-turn-15-f-s1-0",
+     "quote": "Probably yes, partly, with that one memory alone.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-15-r-1",
+   "kind": "explain",
+   "move": "explain/why-insufficient",
+   "quote": "Claude Code's memory has two sides, and they behave differently",
+   "answers": [
+    {
+     "act": "claude-15-turn-15-f-s1-0",
+     "quote": "(why one memory isn't enough) Claude Code's memory has two sides, and they behave differently: - **Writing.**",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-15-r-2",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "Ingest on write.",
+   "answers": [
+    {
+     "act": "claude-15-turn-15-f-s1-0",
+     "quote": "(what I'd build instead) 1. **Ingest on write.** A Claude Code hook that runs after any Write or Edit to a",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "files-as-view",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-15-r-3",
+   "kind": "explore",
+   "move": "explore/measurable",
+   "quote": "Whether the instruction alone would work is testable.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-15-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Do you want the experiment first",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

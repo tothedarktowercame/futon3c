@@ -1,0 +1,60 @@
+{
+ "record": "turn-LtNoP5",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-36-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes to both",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-36-r-0",
+   "kind": "report",
+   "move": "report/relayed",
+   "quote": "I've passed both to claude-16 with your words quoted.",
+   "answers": [
+    {
+     "act": "claude-15-turn-36-f-s1-0",
+     "quote": "I've passed both to claude-16 with your words quoted.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-36-r-1",
+   "kind": "report",
+   "move": "report/next-plan",
+   "quote": "claude-16 will make the two kernel changes as small packets with tests",
+   "answers": [
+    {
+     "act": "claude-15-turn-36-f-s1-0",
+     "quote": "(what happens next) claude-16 will make the two kernel changes as small packets with tests, recomputing only",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
