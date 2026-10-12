@@ -1,0 +1,197 @@
+{
+  "record": "turn-pXX2By",
+  "turn_id": "claude-14-turn-5",
+  "session_id": "75b00893-43cc-4172-917a-06a591193b20",
+  "created_at": "2026-10-10T14:16:25Z",
+  "agent_id": "claude-14",
+  "source_text": "they need to extend mathlib not stop. named theorems can be added to a list but that is not a blocker or reason to stop working.  it is valid to restrategise periodically.",
+  "fragments": [
+    {
+      "id": "claude-14-turn-5-f-s1-0",
+      "intent": "redirect",
+      "text": "they need to extend mathlib not stop."
+    },
+    {
+      "id": "claude-14-turn-5-f-s2-0",
+      "intent": "constrain",
+      "text": "named theorems can be added to a list but that is not a blocker or reason to stop working."
+    },
+    {
+      "id": "claude-14-turn-5-f-s3-0",
+      "intent": "approve",
+      "text": "it is valid to restrategise periodically."
+    }
+  ],
+  "reply_text": "Understood. A missing theorem is something to build, not a reason to stop. Named gaps go on a list for strategy to pick up, and stop-after-two should lead to re-planning rather than parking. That touches three places: the work prompt, how build_step counts stops, and the strategy rule. I'll start with how STOPs are counted.Lint and tests pass. Now I'll check that a STOP receipt with `:missing-theorems` actually lands on the list, using a scratch copy of the lab so the real list isn't touched.The name extraction picked up stray words (\"is\", \"appears\"), so I'll write the seed entries' names by hand from the reasons I read.㊥ (\"extend mathlib not stop\") Done, in `e71e1cec`. Authors now have to prove a missing theorem themselves instead of stopping on it. Anything they can't finish goes on a list, and every strategy checkpoint re-plans from that list. Both loops are running, and since the prompts are shared, both pick this up on their next dispatch.\n\n㊢ (\"named theorems can be added to a list\")\n- **Work prompt:** when a proof needs a theorem that neither Mathlib nor `ConstructionTargets/` has, the author states it and proves it in the row's scope, at the generality its consumers need. Each such theorem goes in the receipt's `:missing-theorems`, marked proved, partial or not started. If the job runs out of time, the author commits what compiles and lists the rest. A STOP that ends work on a row's mathematics is reserved for refutations, backed by a compiled counterexample or the exact missing hypothesis.\n- **The list:** when a receipt is applied, `build_step.bb` appends its missing theorems to `topology-contract/missing-theorems.edn`, a file shared by both loops. It isn't committed to git (`.gitignore`). The entries also stay in each row's evidence, so the file can be rebuilt from the ledger. I tested it on a scratch copy of the lab: an applied STOP records both of its theorems, and a rejected receipt records nothing.\n- **Seeded:** the list starts with tonight's seven gaps:\n  - `IsCoveringMap.restrictPathComponent` and `cyclicThreeCirclesPullback_pathConnected` (t99J01)\n  - `kleinOrbitQuotient_homeomorph` (t93J03)\n  - `restrictedDoubleCoverGluingEquiv` and the two model homotopy equivalences (t97A03)\n  - `polygonRadialOpenCoverPackages` and `genericPointWedgeOverlapInclusionSquares` (t97A01)\n- **Review prompt:** reviewers FAIL a STOP that cites a missing theorem the author didn't attempt.\n\n㊢ (\"valid to restrategise periodically\") `TOPOLOGY-ROUTES.md` rule 4 changes: stop-after-two now parks a row, never its problem. A strategy checkpoint treats parked rows as problems to re-route by electing their listed theorems, and it may not declare itself out of work while unbuilt theorems remain for an open problem. This replaces the 09-29 rule that held a problem until an outside seat re-routed it.\n\n🈳 (Schreier rank) This one is still parked, and it isn't a missing theorem. The frozen statement is false at r = 0, and the seat compiled a proof of that. The fix is to add `0 < r`, which changes a registered problem statement. That's your decision.\n\n㊟ (results) The loops have now run about 11 hours with no problem closed: 63 closed, 153 placeholders. Codex weekly use is at 37%. The next checkpoint receipts will show whether authors build these theorems or keep stopping. Run `~/topo-watch/check.py` to see the count.",
+  "reply_acts": [
+    {
+      "id": "claude-14-turn-5-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊢",
+      "text": "(\"named theorems can be added to a list\")\n- **Work prompt:** when a proof needs a theorem that neither Mathlib nor `ConstructionTargets/` has, the author states it and proves it in the row's scope, at the generality its consumers need. Each such theorem goes in the receipt's `:missing-theorems`, marked proved, partial or not started. If the job runs out of time, the author commits what compiles and lists the rest. A STOP that ends work on a row's mathematics is reserved for refutations, backed by a compiled counterexample or the exact missing hypothesis.\n- **The list:** when a receipt is applied, `build_step.bb` appends its missing theorems to `topology-contract/missing-theorems.edn`, a file shared by both loops. It isn't committed to git (`.gitignore`). The entries also stay in each row's evidence, so the file can be rebuilt from the ledger. I tested it on a scratch copy of the lab: an applied STOP records both of its theorems, and a rejected receipt records nothing.\n- **Seeded:** the list starts with tonight's seven gaps:\n  - `IsCoveringMap.restrictPathComponent` and `cyclicThreeCirclesPullback_pathConnected` (t99J01)\n  - `kleinOrbitQuotient_homeomorph` (t93J03)\n  - `restrictedDoubleCoverGluingEquiv` and the two model homotopy equivalences (t97A03)\n  - `polygonRadialOpenCoverPackages` and `genericPointWedgeOverlapInclusionSquares` (t97A01)\n- **Review prompt:** reviewers FAIL a STOP that cites a missing theorem the author didn't attempt."
+    },
+    {
+      "id": "claude-14-turn-5-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊢",
+      "text": "(\"valid to restrategise periodically\") `TOPOLOGY-ROUTES.md` rule 4 changes: stop-after-two now parks a row, never its problem. A strategy checkpoint treats parked rows as problems to re-route by electing their listed theorems, and it may not declare itself out of work while unbuilt theorems remain for an open problem. This replaces the 09-29 rule that held a problem until an outside seat re-routed it."
+    },
+    {
+      "id": "claude-14-turn-5-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "🈳",
+      "text": "(Schreier rank) This one is still parked, and it isn't a missing theorem. The frozen statement is false at r = 0, and the seat compiled a proof of that. The fix is to add `0 < r`, which changes a registered problem statement. That's your decision."
+    },
+    {
+      "id": "claude-14-turn-5-r-3",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊟",
+      "text": "(results) The loops have now run about 11 hours with no problem closed: 63 closed, 153 placeholders. Codex weekly use is at 37%. The next checkpoint receipts will show whether authors build these theorems or keep stopping. Run `~/topo-watch/check.py` to see the count."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-14-turn-4-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "🈹",
+      "text": "(my earlier explanation) I said the authors were stopping on an unwritten rule about signatures. That was only the surface. After my prompt fix, all eight reopened rows stopped twice again. This time each author agreed the signatures were theirs to choose (\"supporting signatures are not the issue\"), and named the actual missing theorem with its Lean type:\n- **t99J01 component cover:** restricting a covering map to a path component is still a covering map (`IsCoveringMap.restrictPathComponent`). It's not in Mathlib.\n- **t99J01 cyclic cover:** path-connectedness of the degree-n pullback cover of `ThreeCircles` (`cyclicThreeCirclesPullback_pathConnected`).\n- **t93J03:** the fundamental-domain theorem, that the orbit quotient of the plane by the Klein group is homeomorphic to the frozen `KleinBottle` model.\n- **t97A03, two rows:**\n  - the double cover, glued from the sphere and arc strata, is homeomorphic to one of the two frozen models;\n  - homotopy equivalences from both models to a bouquet of two spheres and three circles.\n- **Polygon radial package:** the whole quotient-topology construction for two polygon surfaces.\n- **Point-wedge overlap:** the comparison square for the overlap inclusions.\n- **Schreier rank:** a genuine refutation. The frozen statement is false at rank r = 0, because natural-number subtraction makes `(r-1)*n+1 = 1`. The seat compiled a proof that the statement is false, using only standard axioms. The fix is to require `0 < r`; both consumers use positive rank."
+    },
+    {
+      "id": "claude-14-turn-4-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "🈖",
+      "text": "(why rows come out that size) Strategy checkpoints elect rows at the level of a \"route step\". For these covering-space problems, a route step is a chapter of a textbook. The probe phase lets that through by freezing a fixture that takes the entire step as one axiom, so the row looks finished on paper. The author then faces a theorem too big for one row, and STOP is its only allowed answer. STOP twice and the row parks as needs-owner."
+    },
+    {
+      "id": "claude-14-turn-4-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊢",
+      "text": "(since the reopen) The loop has started electing the named prerequisites as separate rows. 16 reviews have passed since 11:00, including the Schreier arborescence and complement counts. Still no problem has closed: 63 closed, 153 placeholders. Codex weekly use is at 37%."
+    },
+    {
+      "id": "claude-14-turn-4-r-3",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊭",
+      "text": "(what would help) A STOP that names a missing prerequisite with its Lean type should turn that prerequisite into a new row (REVISE), rather than count toward stop-after-two. Today that only happens if a later strategy checkpoint happens to re-elect it, and in the meantime the row gets parked. Separately, the Schreier statement's `0 < r` correction is a change to a frozen problem statement, so it's yours to make or approve."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-14-turn-5",
+      "id": "claude-14-turn-5-f-s1-0",
+      "kind": "redirect",
+      "at": "2026-10-10T14:16:25Z",
+      "record": "turn-pXX2By",
+      "end": 37,
+      "standing?": false,
+      "about": "the authors' response to a theorem missing from Mathlib",
+      "text": "they need to extend mathlib not stop.",
+      "to": "claude-14"
+    },
+    {
+      "port?": false,
+      "start": 38,
+      "author": "operator",
+      "turn": "claude-14-turn-5",
+      "id": "claude-14-turn-5-f-s2-0",
+      "kind": "constrain",
+      "at": "2026-10-10T14:16:25Z",
+      "record": "turn-pXX2By",
+      "end": 128,
+      "standing?": true,
+      "about": "the missing-theorems list's force in the loop",
+      "text": "named theorems can be added to a list but that is not a blocker or reason to stop working.",
+      "to": "claude-14"
+    },
+    {
+      "port?": false,
+      "start": 130,
+      "author": "operator",
+      "turn": "claude-14-turn-5",
+      "id": "claude-14-turn-5-f-s3-0",
+      "kind": "approve",
+      "at": "2026-10-10T14:16:25Z",
+      "record": "turn-pXX2By",
+      "end": 171,
+      "standing?": false,
+      "about": "periodic re-planning by the strategy loop",
+      "text": "it is valid to restrategise periodically.",
+      "to": "claude-14"
+    },
+    {
+      "port?": false,
+      "author": "claude-14",
+      "turn": "claude-14-turn-5",
+      "id": "claude-14-turn-5-r-0",
+      "kind": "report",
+      "at": "2026-10-10T14:16:25Z",
+      "record": "turn-pXX2By",
+      "target": "claude-14-turn-5-f-s2-0",
+      "standing?": false,
+      "text": "(\"named theorems can be added to a list\")\n- **Work prompt:** when a proof needs a theorem that neither Mathlib nor `Con…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-14",
+      "turn": "claude-14-turn-5",
+      "id": "claude-14-turn-5-r-1",
+      "kind": "report",
+      "at": "2026-10-10T14:16:25Z",
+      "record": "turn-pXX2By",
+      "target": "claude-14-turn-5-f-s3-0",
+      "standing?": false,
+      "text": "(\"valid to restrategise periodically\") `TOPOLOGY-ROUTES.md` rule 4 changes: stop-after-two now parks a row, never its p…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-14",
+      "turn": "claude-14-turn-5",
+      "id": "claude-14-turn-5-r-3",
+      "kind": "qualify",
+      "at": "2026-10-10T14:16:25Z",
+      "record": "turn-pXX2By",
+      "standing?": false,
+      "text": "(results) The loops have now run about 11 hours with no problem closed: 63 closed, 153 placeholders. Codex weekly use i…",
+      "to": "operator"
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-14-turn-2-r-0",
+      "kind": "report-problem",
+      "text": "(\"it says there are 112 open problems\") I don't get 112. `~/topo-watch/check.py` counts by real `sorry`/`admit` in `pro…",
+      "since": "2026-10-10T03:40:53Z"
+    },
+    {
+      "act": "claude-14-turn-4-r-3",
+      "kind": "propose",
+      "text": "(what would help) A STOP that names a missing prerequisite with its Lean type should turn that prerequisite into a new …",
+      "since": "2026-10-10T14:13:15Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-14-turn-2-f-s2-0",
+      "kind": "constrain",
+      "text": "i expect to see progress on that by morning."
+    },
+    {
+      "act": "claude-14-turn-5-f-s2-0",
+      "kind": "constrain",
+      "text": "named theorems can be added to a list but that is not a blocker or reason to stop working."
+    }
+  ]
+}

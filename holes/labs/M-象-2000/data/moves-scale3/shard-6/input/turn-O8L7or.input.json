@@ -1,0 +1,146 @@
+{
+  "record": "turn-O8L7or",
+  "turn_id": "claude-5-turn-3",
+  "session_id": "b52510f9-275c-44e1-a74f-243df3750115",
+  "created_at": "2026-10-04T21:50:09Z",
+  "agent_id": "claude-5",
+  "source_text": "Thanks. Now ask me one 🈸 question about whether to delete the file, and then stop.",
+  "fragments": [
+    {
+      "id": "claude-5-turn-3-f-s1-0",
+      "intent": "approve",
+      "text": "Thanks."
+    },
+    {
+      "id": "claude-5-turn-3-f-s2-0",
+      "intent": "constrain",
+      "text": "Now ask me one 🈸 question about whether to delete the file,"
+    },
+    {
+      "id": "claude-5-turn-3-f-s2-1",
+      "intent": "constrain",
+      "text": "and then stop."
+    }
+  ],
+  "reply_text": "🈸 (\"whether to delete the file\") Shall I delete elephant.txt from /tmp/xiang-demo?",
+  "reply_acts": [
+    {
+      "id": "claude-5-turn-3-r-0",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "🈸",
+      "text": "(\"whether to delete the file\") Shall I delete elephant.txt from /tmp/xiang-demo?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-5-turn-2-r-0",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "㊢",
+      "text": "(\"do it in a new git repo at /tmp/xiang-demo, with a commit\") Done. I created a new repo at /tmp/xiang-demo with a single file, elephant.txt, containing the line `An elephant never forgets.`, and committed it as b400ad1."
+    },
+    {
+      "id": "claude-5-turn-2-r-1",
+      "kind": "reply-mark",
+      "author": "claude-5",
+      "mark": "㊟",
+      "text": "(commit trailers) The commit has no Agent-Session or Agent-Id trailers. The signing hook is only linked into repos under ~/code, and this repo is in /tmp, so 象's rewind would not recognise b400ad1 as this turn's commit. If the demo needs that, I can link the hook into the repo and amend the commit."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-5-turn-3",
+      "id": "claude-5-turn-3-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-04T21:50:09Z",
+      "record": "turn-O8L7or",
+      "end": 7,
+      "standing?": false,
+      "about": "claude-5's immediately preceding work",
+      "text": "Thanks.",
+      "to": "claude-5"
+    },
+    {
+      "port?": false,
+      "start": 8,
+      "author": "operator",
+      "turn": "claude-5-turn-3",
+      "id": "claude-5-turn-3-f-s2-0",
+      "kind": "constrain",
+      "at": "2026-10-04T21:50:09Z",
+      "record": "turn-O8L7or",
+      "end": 67,
+      "standing?": true,
+      "about": "deletion of the file (elephant.txt in /tmp/xiang-demo)",
+      "text": "Now ask me one 🈸 question about whether to delete the file,",
+      "to": "claude-5"
+    },
+    {
+      "port?": false,
+      "start": 68,
+      "author": "operator",
+      "turn": "claude-5-turn-3",
+      "id": "claude-5-turn-3-f-s2-1",
+      "kind": "constrain",
+      "at": "2026-10-04T21:50:09Z",
+      "record": "turn-O8L7or",
+      "end": 82,
+      "standing?": true,
+      "about": "the interaction after the 🈸 question",
+      "text": "and then stop.",
+      "to": "claude-5"
+    },
+    {
+      "port?": true,
+      "author": "claude-5",
+      "turn": "claude-5-turn-3",
+      "id": "claude-5-turn-3-r-0",
+      "kind": "ask-action",
+      "at": "2026-10-04T21:50:09Z",
+      "record": "turn-O8L7or",
+      "target": "claude-5-turn-3-f-s2-0",
+      "standing?": false,
+      "text": "(\"whether to delete the file\") Shall I delete elephant.txt from /tmp/xiang-demo?",
+      "to": "operator"
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-5-turn-3-r-0",
+      "kind": "ask-action",
+      "text": "(\"whether to delete the file\") Shall I delete elephant.txt from /tmp/xiang-demo?",
+      "since": "2026-10-04T21:50:09Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-5-turn-1-f-s3-0",
+      "kind": "constrain",
+      "text": "Don't do anything yet."
+    },
+    {
+      "act": "claude-5-turn-1-r-1",
+      "kind": "offer",
+      "text": "(\"the one line to write in it\") Which line should I write in it?\n1. `An elephant never forgets.`\n2. `象 reads this line.`"
+    },
+    {
+      "act": "claude-5-turn-2-f-s2-0",
+      "kind": "accept",
+      "text": "🈸: yes 1"
+    },
+    {
+      "act": "claude-5-turn-3-f-s2-0",
+      "kind": "constrain",
+      "text": "Now ask me one 🈸 question about whether to delete the file,"
+    },
+    {
+      "act": "claude-5-turn-3-f-s2-1",
+      "kind": "constrain",
+      "text": "and then stop."
+    }
+  ]
+}

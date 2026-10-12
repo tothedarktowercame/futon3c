@@ -1,0 +1,152 @@
+{
+  "record": "turn-s0fPFb",
+  "turn_id": "claude-14-turn-7",
+  "session_id": "75b00893-43cc-4172-917a-06a591193b20",
+  "created_at": "2026-10-10T14:30:17Z",
+  "agent_id": "claude-14",
+  "source_text": "regarding strategy, previous loops maintained a DAG so they could keep track of the priority of lemmas",
+  "fragments": [
+    {
+      "id": "claude-14-turn-7-f-s1-0",
+      "intent": "explain",
+      "text": "regarding strategy, previous loops maintained a DAG so they could keep track of the priority of lemmas"
+    }
+  ],
+  "reply_text": "㊥ (\"previous loops maintained a DAG\") You're right, and that's what's missing now. Until 09-28 the loops kept `TOPOLOGY-DEPENDENCY-DAG.md`. It's a tree of shared lemmas, each with a state (BANKED, UPTAKE, LOCAL-GO, API-GAP, FOUNDATION, SPEC-DEFECT), with edges down to the problems that need them, and elections worked from it. When `TOPOLOGY-ROUTES.md` replaced it for elections on 09-28, nobody kept the DAG up to date; its last edit was 09-10. Since then, a strategy checkpoint only sees per-problem routes and the previous checkpoint's receipt. Nothing persistent records which lemmas depend on which, or how many open problems each one would unblock. That fits what we saw today: chapter-sized rows, and a flat list of missing theorems that I added this afternoon.\n\n㊭ (how I'd restore it) Make the missing lemmas nodes in the ledger itself, rather than a separate file:\n1. **Backlog state:** a missing theorem becomes a ledger row in a new `:backlog` state. It carries its Lean type, `:depends-on` edges to other lemma rows, and `:consumer`/`:other-consumers` naming the problems it serves. The ledger already validates dependency edges, commits atomically with each transition, and merges concurrent writes, so the DAG gets all of that for free and can't drift from the ledger. A separate file would need its own commit path, and we've just seen what an extra uncommitted file does to the loops.\n2. **Filling it:** when build_step applies a receipt with `:missing-theorems`, it adds or updates backlog rows, matched by theorem name. `missing-theorems.edn` then goes away.\n3. **Priority:** a new command, `build_step.bb priorities`, ranks backlog lemmas by how many open problems they unblock, counted through the DAG, and by how close each problem then is to closing. Each strategy checkpoint runs it and promotes the top lemmas from `:backlog` to `:open`. Rule 0 (close what's nearly closed first) still applies.\n4. **Seeding:** start from today's nine named gaps, plus the API-GAP/FOUNDATION nodes still open in the old DAG that bear on current problems.\n\n🈯 (go?) This changes the loops' data model, which is why I'm asking before building it. It's about half a day's work: build_step, the validator, the strategy prompt and tests. Both loops keep running in the meantime. Shall I go ahead?",
+  "reply_acts": [
+    {
+      "id": "claude-14-turn-7-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊥",
+      "text": "(\"previous loops maintained a DAG\") You're right, and that's what's missing now. Until 09-28 the loops kept `TOPOLOGY-DEPENDENCY-DAG.md`. It's a tree of shared lemmas, each with a state (BANKED, UPTAKE, LOCAL-GO, API-GAP, FOUNDATION, SPEC-DEFECT), with edges down to the problems that need them, and elections worked from it. When `TOPOLOGY-ROUTES.md` replaced it for elections on 09-28, nobody kept the DAG up to date; its last edit was 09-10. Since then, a strategy checkpoint only sees per-problem routes and the previous checkpoint's receipt. Nothing persistent records which lemmas depend on which, or how many open problems each one would unblock. That fits what we saw today: chapter-sized rows, and a flat list of missing theorems that I added this afternoon."
+    },
+    {
+      "id": "claude-14-turn-7-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊭",
+      "text": "(how I'd restore it) Make the missing lemmas nodes in the ledger itself, rather than a separate file:\n1. **Backlog state:** a missing theorem becomes a ledger row in a new `:backlog` state. It carries its Lean type, `:depends-on` edges to other lemma rows, and `:consumer`/`:other-consumers` naming the problems it serves. The ledger already validates dependency edges, commits atomically with each transition, and merges concurrent writes, so the DAG gets all of that for free and can't drift from the ledger. A separate file would need its own commit path, and we've just seen what an extra uncommitted file does to the loops.\n2. **Filling it:** when build_step applies a receipt with `:missing-theorems`, it adds or updates backlog rows, matched by theorem name. `missing-theorems.edn` then goes away.\n3. **Priority:** a new command, `build_step.bb priorities`, ranks backlog lemmas by how many open problems they unblock, counted through the DAG, and by how close each problem then is to closing. Each strategy checkpoint runs it and promotes the top lemmas from `:backlog` to `:open`. Rule 0 (close what's nearly closed first) still applies.\n4. **Seeding:** start from today's nine named gaps, plus the API-GAP/FOUNDATION nodes still open in the old DAG that bear on current problems."
+    },
+    {
+      "id": "claude-14-turn-7-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "🈯",
+      "text": "(go?) This changes the loops' data model, which is why I'm asking before building it. It's about half a day's work: build_step, the validator, the strategy prompt and tests. Both loops keep running in the meantime. Shall I go ahead?"
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-14-turn-6-r-0",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊬",
+      "text": "(original statements)\n- **t99J01:** asks about n-fold covers of the wedge of three circles for every positive n, so rank 3 and n > 0.\n- **t97A03:** is about a connected 2-fold cover, so rank 2 and index 2.\n- **Registered Lean:** both problems' registered Lean statements match their LaTeX; t99J01's already has `0 < n`."
+    },
+    {
+      "id": "claude-14-turn-6-r-1",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊩",
+      "text": "(what was wrong) It was false in two ways. I compiled both counterexamples, using only standard axioms:\n- **r = 0** (the seat found this): natural-number subtraction makes `(r - 1) * n + 1 = 1`, so the trivial group would have to be isomorphic to a free group of rank 1.\n- **n = 0** (the seat missed this): Mathlib's `Subgroup.index` is 0 for a subgroup of infinite index. So the r = 3 specialization, the one t99J01 relies on, would make the trivial subgroup of `FreeGroup (Fin 3)` free of rank 1."
+    },
+    {
+      "id": "claude-14-turn-6-r-2",
+      "kind": "reply-mark",
+      "author": "claude-14",
+      "mark": "㊢",
+      "text": "(repair)\n- **New fixture:** `topology-contract/frozen/finite-index-free-group-schreier-rank-probe.lean`, committed to git rather than left in `/tmp`. It adds `(hr : 0 < r) (hn : 0 < n)` to the axiom, and `hn` to the rank-3 specialization. It compiles, and its only non-standard axiom is the interface the row is supposed to prove.\n- **Counterexamples:** kept next to it, in `...-old-refutations.lean`.\n- **Ledger:** the row now points at the new fixture and its hash, with its counts reset and an `:owner-repair` note. It's running on topo-2."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-14-turn-7",
+      "id": "claude-14-turn-7-f-s1-0",
+      "kind": "explain",
+      "at": "2026-10-10T14:30:17Z",
+      "record": "turn-s0fPFb",
+      "end": 102,
+      "standing?": false,
+      "about": "the lapsed dependency-DAG practice of earlier loops",
+      "text": "regarding strategy, previous loops maintained a DAG so they could keep track of the priority of lemmas",
+      "to": "claude-14"
+    },
+    {
+      "port?": true,
+      "author": "claude-14",
+      "turn": "claude-14-turn-7",
+      "id": "claude-14-turn-7-r-1",
+      "kind": "propose",
+      "at": "2026-10-10T14:30:17Z",
+      "record": "turn-s0fPFb",
+      "standing?": true,
+      "text": "(how I'd restore it) Make the missing lemmas nodes in the ledger itself, rather than a separate file:\n1. **Backlog stat…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-14",
+      "turn": "claude-14-turn-7",
+      "id": "claude-14-turn-7-r-2",
+      "kind": "clarify",
+      "at": "2026-10-10T14:30:17Z",
+      "record": "turn-s0fPFb",
+      "standing?": false,
+      "text": "(go?) This changes the loops' data model, which is why I'm asking before building it. It's about half a day's work: bui…",
+      "to": "operator"
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-14-turn-2-r-0",
+      "kind": "report-problem",
+      "text": "(\"it says there are 112 open problems\") I don't get 112. `~/topo-watch/check.py` counts by real `sorry`/`admit` in `pro…",
+      "since": "2026-10-10T03:40:53Z"
+    },
+    {
+      "act": "claude-14-turn-4-r-3",
+      "kind": "propose",
+      "text": "(what would help) A STOP that names a missing prerequisite with its Lean type should turn that prerequisite into a new …",
+      "since": "2026-10-10T14:13:15Z"
+    },
+    {
+      "act": "claude-14-turn-6-r-1",
+      "kind": "report-problem",
+      "text": "(what was wrong) It was false in two ways. I compiled both counterexamples, using only standard axioms:\n- **r = 0** (th…",
+      "since": "2026-10-10T14:20:41Z"
+    },
+    {
+      "act": "claude-14-turn-7-r-1",
+      "kind": "propose",
+      "text": "(how I'd restore it) Make the missing lemmas nodes in the ledger itself, rather than a separate file:\n1. **Backlog stat…",
+      "since": "2026-10-10T14:30:17Z"
+    },
+    {
+      "act": "claude-14-turn-7-r-2",
+      "kind": "clarify",
+      "text": "(go?) This changes the loops' data model, which is why I'm asking before building it. It's about half a day's work: bui…",
+      "since": "2026-10-10T14:30:17Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-14-turn-2-f-s2-0",
+      "kind": "constrain",
+      "text": "i expect to see progress on that by morning."
+    },
+    {
+      "act": "claude-14-turn-5-f-s2-0",
+      "kind": "constrain",
+      "text": "named theorems can be added to a list but that is not a blocker or reason to stop working."
+    },
+    {
+      "act": "claude-14-turn-6-f-s1-0",
+      "kind": "constrain",
+      "text": "regarding the refutation, please check if the error is in tye original latex problem statement, if so, make a note ther…"
+    }
+  ]
+}
