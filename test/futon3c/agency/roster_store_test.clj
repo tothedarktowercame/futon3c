@@ -245,3 +245,28 @@
                                :agent/metadata {"remote-proxy?" true}}}
         snapshot (roster/roster-snapshot registry)]
     (is (= ["claude-1"] (mapv :agent-id (:agents snapshot))))))
+
+(deftest unchanged-restore-payload-is-not-rewritten
+  ;; The registry watch fires on every swap; a swap that leaves the restore
+  ;; payload unchanged must not rewrite the roster file (NVMe write storm,
+  ;; 2026-10-12). A real payload change still writes.
+  (let [writes (atom 0)
+        real-spit @#'roster/atomic-spit!]
+    (with-redefs-fn {#'roster/atomic-spit! (fn [file content]
+                                             (swap! writes inc)
+                                             (real-spit file content))}
+      (fn []
+        (let [snap {:k 1}]
+          (roster/persist-registry! @reg/!registry)
+          (let [after-first @writes]
+            (roster/persist-registry! @reg/!registry)
+            (roster/persist-registry! @reg/!registry)
+            (is (= after-first @writes) "identical payload rewrote the roster")
+            (swap! reg/!registry
+                   (fn [r] (assoc r "roster-skip-probe"
+                                  {:agent/id {:id/value "roster-skip-probe" :id/type :continuity}
+                                   :agent/type :claude})))
+            (is (> @writes after-first) "a changed payload was not persisted")
+            (is (some #{"roster-skip-probe"}
+                      (map :agent-id (:agents (edn/read-string (slurp (roster/roster-store-path))))))))
+          snap)))))

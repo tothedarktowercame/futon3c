@@ -176,13 +176,25 @@
       (finally
         (Files/deleteIfExists tmp)))))
 
+(defonce ^:private !last-persisted
+  ;; path -> the :agents vector last made durable by this JVM. The registry
+  ;; watch fires on every registry swap (status, last-active, invoke state),
+  ;; most of which leave the restore payload unchanged; rewriting the file and
+  ;; its .bak on each was ~60 whole-file writes a minute (claude-15,
+  ;; 2026-10-12, NVMe write storm). Unchanged payloads are now skipped.
+  (atom {}))
+
 (defn persist-registry!
-  "Persist REGISTRY as a durable roster EDN snapshot. Returns the snapshot."
+  "Persist REGISTRY as a durable roster EDN snapshot. Returns the snapshot.
+   A snapshot whose :agents equal the last one this JVM persisted to the same
+   path is not rewritten (only :generated-at would differ)."
   [registry]
   (let [snapshot (roster-snapshot registry)
         path (roster-store-path)
         file (io/file path)]
     (locking persist-lock
+      (when-not (and (= (:agents snapshot) (get @!last-persisted path))
+                     (.exists file))
       (try
         (when-let [parent (.getParentFile file)]
           (.mkdirs parent))
@@ -203,10 +215,11 @@
             ;; <path>.bak. (M-agency-hardening roster safety, 2026-06-13.)
             (when (.exists file)
               (try (io/copy file (io/file (str path ".bak"))) (catch Throwable _)))
-            (atomic-spit! file (pr-str snapshot))))
+            (atomic-spit! file (pr-str snapshot))
+            (swap! !last-persisted assoc path (:agents snapshot))))
         (catch Throwable t
           (println (str "[agent-roster] persist failed: " (.getMessage t)))
-          (flush))))
+          (flush)))))
     snapshot))
 
 (defn load-roster
