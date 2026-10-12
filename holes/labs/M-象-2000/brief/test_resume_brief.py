@@ -46,20 +46,35 @@ class ResumeBriefTest(unittest.TestCase):
             second["ports"] = {"still_open": [
                 {"act": "agent-open", "since": "2026-10-10T00:00:00Z"}],
                 "closed_this_turn": []}
+            third = dict(first, turn_id="turn-3", evidence_id="record-3",
+                         created_at="2026-10-12T00:00:00Z")
+            third["ports"] = dict(first["ports"], closed_this_turn=[], inferred=[])
             self.write(root, "turn-a.json", first)
             self.write(root, "turn-b.json", second)
+            self.write(root, "turn-c.json", third)
             records, join = brief.load_records(root, "M-test", set())
             now = dt.datetime(2026, 10, 12, tzinfo=dt.timezone.utc)
             data = brief.prepare(records, now)
             text = brief.render("M-test", join, [], data, now)
             self.assertEqual(1, text.count("I will return the tested patch"))
+            self.assertIn("Awaiting you: agent proposals and asks (1)", text)
             self.assertIn("Asked by the operator, no answer linked (1)", text)
             self.assertIn("Keep the statement frozen", text)
             self.assertIn("inferred: sole-port", text)
             path = brief.write_measurement(root, "M-test", "claude-1", now, data)
             payload = json.loads(path.read_text())
-            self.assertEqual(["agent-open"], payload["sections"]["owed_to_operator"])
-            self.assertEqual(["record-1", "record-2"], payload["record_ids"])
+            self.assertEqual(["agent-open"], payload["sections"]["awaiting_you"])
+            self.assertEqual(["turn-a", "turn-b", "turn-c"], payload["record_ids"])
+
+    def test_seed_block_and_inline_quotes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mission.md"
+            path.write_text(
+                '**Operator-voice anchor (Joe, 2026-10-12, verbatim):** "new inline"\n'
+                '**Operator-voice anchor** (Joe, 2026-10-11, verbatim):\n\n'
+                '> older block\n'
+            )
+            self.assertEqual(["new inline", "> older block"], brief.seeds(path))
 
 if __name__ == "__main__":
     unittest.main()
