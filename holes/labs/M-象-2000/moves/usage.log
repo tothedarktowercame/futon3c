@@ -6,3 +6,4 @@
 2026-10-11T18:23:19Z 56.0% used; 5-hour window EXHAUSTED at 18:21Z (HTTP 429 on all five batch-2 jobs), resets 22:33Z
 2026-10-12T04:39:30Z 56.0% used, 5h window clear (before batch 2 re-dispatch, shards 1-2)
 2026-10-12T05:00:22Z 65.0% monthly, 5h window 43% (after batch 2 shard 2, 59 records; shard 1 still running)
+2026-10-12T05:02:01Z 65.0% monthly, 5h window 43% (after batch 2 shards 1+2, 127 records; before shards 3-5, 73 records)
