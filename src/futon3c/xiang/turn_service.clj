@@ -29,6 +29,9 @@
      :pattern-candidates (fn [queries] -> {query [{:id :score :title ..}]} or nil)
                       optional; BM25 per fragment before dispatch, so the seat
                       reads candidates instead of searching
+     :agent-roster    (fn [agent-id] -> registry agent map or nil), optional;
+                      supplies mission metadata without coupling this service
+                      to the live registry
      :skip-routine?   true to record a routine turn (tr/routine-draft?) as
                       \"drafted\" and never queue it; default false until
                       the agreement numbers justify it
@@ -118,6 +121,16 @@
 (defn- cfg [svc k] (get-in svc [:config k]))
 (defn- now-ms [svc] ((cfg svc :now-ms)))
 (defn- iso [ms] (str (.truncatedTo (java.time.Instant/ofEpochMilli (long ms)) java.time.temporal.ChronoUnit/SECONDS)))
+
+(defn- agent-mission-id
+  [svc agent-id]
+  (when-let [roster (cfg svc :agent-roster)]
+    (try
+      (let [agent (roster (str agent-id))]
+        (some-> (or (get-in agent [:agent/metadata :mission-id])
+                    (get-in agent [:agent/metadata "mission-id"]))
+                str str/trim not-empty))
+      (catch Exception _ nil))))
 
 (defn- set-health! [svc state detail]
   (swap! (:state svc) assoc :health {:state state :detail detail :at (now-ms svc)})
@@ -434,11 +447,13 @@
                             :at at :target target :agent agent :session old_session
                             :turn turn-id :record record-id :port? false :standing? false})
                          (range) targets)
-            record {:origin "system" :analysis_status "declared"
+            mission-id (agent-mission-id svc agent)
+            record (cond-> {:origin "system" :analysis_status "declared"
                     :agent_id agent :session_id old_session :created_at at
                     :turn_id turn-id :source_text (str "session ended: " reason)
                     :session_end {:id id :reason reason :new_session new_session}
                     :acts (into [envelope] lapses)}
+                     mission-id (assoc :mission_id mission-id))
             written (ts/write-record-id! store record-id record)]
         (advance-session-end-cursor! id)
         ((cfg svc :schedule!) 0
@@ -599,7 +614,10 @@
                                                          (dissoc opts :dispatch :caller)))
         ;; A bell turn (origin "agent") names who sent it; make-record has no
         ;; :caller opt, so it rides here (E-agency-work-orders W1).
-        record (cond-> record caller (assoc :caller (str caller)))
+        mission-id (agent-mission-id svc agent-id)
+        record (cond-> record
+                 caller (assoc :caller (str caller))
+                 mission-id (assoc :mission_id mission-id))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
         _ (when (seq quotes) (ts/write-quotes! (cfg svc :store) id quotes))
         ;; Which agent turn this operator turn answers (Joe's `<mark>:`

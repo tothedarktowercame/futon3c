@@ -121,6 +121,26 @@
         "retry leaves a declared record settled")
     (is (empty? @(:bells h)))))
 
+(deftest records-carry-the-recipient-mission-from-the-injected-roster
+  (let [roster (fn [agent-id]
+                 (when (= "claude-17" agent-id)
+                   {:agent/metadata {:mission-id "  M-warp  "}}))
+        h (harness {:agent-roster roster})]
+    (testing "operator turn"
+      (is (= "M-warp" (:mission_id (:record (turn! h))))))
+    (testing "agent-origin bell turn"
+      (let [{:keys [record]} (turn! h {:dispatch :none :origin "agent"})]
+        (is (= "M-warp" (:mission_id record)))))))
+
+(deftest blank-or-absent-roster-missions-stay-absent
+  (doseq [mission-id [::no-agent nil "" "  "]]
+    (let [h (harness {:agent-roster (if (= ::no-agent mission-id)
+                                      (constantly nil)
+                                      (constantly {:agent/metadata
+                                                   {:mission-id mission-id}}))})
+          record (:record (turn! h))]
+      (is (not (contains? record :mission_id)) (pr-str mission-id)))))
+
 (deftest a-not-requested-turn-is-never-dispatched
   ;; 象-off (session-turn-analysis.el, policy 'never') records turns with
   ;; analysis_status "not-requested". dispatch! must not queue them — before
@@ -738,7 +758,10 @@
 
 (deftest session-end-consumption-is-idempotent-and-advances-cursor
   (let [store (temp-store)
-        h (harness {:store store})
+        h (harness {:store store
+                    :agent-roster (fn [agent-id]
+                                    (when (= "agent" agent-id)
+                                      {:agent/metadata {:mission-id "M-ended"}}))})
         transition {:id "session-end:agent:session:2026-10-11T10:00:00Z"
                     :agent "agent" :old_session "session" :new_session nil
                     :reason "reset" :at "2026-10-11T10:00:00Z"}]
@@ -761,8 +784,10 @@
       (is (= (str "turn-end-" (subs (tr/sha256 (:id transition)) 0 12))
              (:id first)))
       (is (= {:origin "system" :analysis_status "declared" :agent_id "agent"
-              :session_id "session" :created_at "2026-10-11T10:00:00Z"}
-             (select-keys record [:origin :analysis_status :agent_id :session_id :created_at])))
+              :session_id "session" :created_at "2026-10-11T10:00:00Z"
+              :mission_id "M-ended"}
+             (select-keys record [:origin :analysis_status :agent_id :session_id
+                                  :created_at :mission_id])))
       (is (= {:id (:id transition) :reason "reset" :new_session nil}
              (:session_end record)))
       (is (= [1 "agent-turn-1-r-0" "agent" "session"]

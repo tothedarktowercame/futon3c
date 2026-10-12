@@ -11837,6 +11837,7 @@
                    {:store (xiang-store/store)
                     :vocabulary (xiang-vocabulary)
                     :draft xiang-draft
+                    :agent-roster #(reg/get-agent (str %))
                     :recent-agent-turns recent-agent-turns
                     :pattern-candidates xiang-pattern-candidates
                     :skip-routine? (contains? #{"1" "true" "yes"}
