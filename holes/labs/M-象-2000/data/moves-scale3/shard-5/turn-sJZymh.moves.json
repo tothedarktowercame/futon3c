@@ -1,0 +1,48 @@
+{
+ "record": "turn-sJZymh",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-74-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "Before you said \"I've started the investigation ...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-74-f-s2-0",
+   "kind": "verify",
+   "move": "verify/confirm",
+   "quote": "will show which tests hit the cap and which are fine.\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-74-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-74-f-s3-0",
+   "kind": "redirect",
+   "move": "propose/next-step",
+   "quote": "If we know which tests are hitting the cap we could try to fix them!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-74-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

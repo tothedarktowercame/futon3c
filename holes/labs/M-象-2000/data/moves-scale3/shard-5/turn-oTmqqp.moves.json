@@ -1,0 +1,22 @@
+{
+ "record": "turn-oTmqqp",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-14-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/read-record",
+   "quote": "You should learn how to use Emacsclient and read *claude-repl:claude-4*.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

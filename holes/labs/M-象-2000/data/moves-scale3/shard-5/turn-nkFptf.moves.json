@@ -1,0 +1,113 @@
+{
+ "record": "turn-nkFptf",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-330-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "OK, I should have usage ready again.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you look at the codex-17 work and see which is worth using?",
+   "answers": [],
+   "scope": {
+    "opens": "review-codex-17",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s3-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "codex-18 also made some recent commits",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-330-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "the claude-4-pin is probably quite far back.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-330-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s5-0",
+   "kind": "verify",
+   "move": "verify/other",
+   "quote": "it would be worth reviewing them before we decide.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-330-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s6-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "The LISP port is ongoing, both via codex-18",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s7-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "It would be good to review both of those efforts as well",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-330-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-330-f-s8-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "I was surprised that the transpiler seems to require threading",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-330-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

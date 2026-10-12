@@ -1,0 +1,86 @@
+{
+ "record": "turn-T1cx7k",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-400-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "so, we might not know the exact fix that broke a row,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-400-f-s1-1",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "but that doesn't matter because the fies are known correct due to the comparator.",
+   "answers": [],
+   "scope": {
+    "opens": "fixes-known-correct",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-400-f-s2-0",
+   "kind": "explain",
+   "move": "explain/hypothesis",
+   "quote": "so if they break a row they reveal a separate problem",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-400-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-400-r-0",
+   "kind": "report",
+   "move": "report/other",
+   "quote": "(\"they reveal a separate problem\") Agreed.",
+   "answers": [
+    {
+     "act": "claude-4-turn-400-f-s2-0",
+     "quote": "Agreed. If a fix that matches Lean breaks a row",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-400-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-400-r-1",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "(\"known correct due to the comparator\") One limit:",
+   "answers": [
+    {
+     "act": "claude-4-turn-400-f-s1-1",
+     "quote": "One limit: the comparator only checks",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-400-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,79 @@
+{
+ "record": "turn-hAWOna",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-552-f-s1-0",
+   "kind": "collect",
+   "move": "ask-action/status-check",
+   "quote": "Have we gotten any CLEAN rows yet?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-552-r-0",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "Not yet. No row has been comparator-clean so far.",
+   "answers": [
+    {
+     "act": "claude-4-turn-552-f-s1-0",
+     "quote": "Not yet. No row has been comparator-clean",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-552-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(closest rows, with what's left)",
+   "answers": [
+    {
+     "act": "claude-4-turn-552-f-s1-0",
+     "quote": "(closest rows, with what's left)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-552-r-2",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "(why it's slow) Each of these has been one or two differences from clean",
+   "answers": [
+    {
+     "act": "claude-4-turn-552-f-s1-0",
+     "quote": "(why it's slow) Each of these has been one or two differences from clean",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

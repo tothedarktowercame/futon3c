@@ -1,0 +1,79 @@
+{
+ "record": "turn-Ua8qVd",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "codex-19-turn-193-f-s1-0",
+   "kind": "continue",
+   "move": "continue/other",
+   "quote": "please continue",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-19-turn-193-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(progress) Committed **b62734d**",
+   "answers": [
+    {
+     "act": "codex-19-turn-193-f-s1-0",
+     "quote": "(progress) Committed",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-19-turn-193-r-1",
+   "kind": "report",
+   "move": "report-problem/self-correction",
+   "quote": "(review) Independent tests found six incorrect results",
+   "answers": [
+    {
+     "act": "codex-19-turn-193-f-s1-0",
+     "quote": "found six incorrect results",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-19-turn-193-r-2",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "(remaining) `atEnd` is not unblocked yet",
+   "answers": [
+    {
+     "act": "codex-19-turn-193-f-s1-0",
+     "quote": "`atEnd` is not unblocked yet",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

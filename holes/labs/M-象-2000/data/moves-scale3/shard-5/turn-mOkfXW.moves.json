@@ -1,0 +1,80 @@
+{
+ "record": "turn-mOkfXW",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-135-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Sounds great",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "two-word approval; quote is the whole fragment"
+  },
+  {
+   "act": "claude-4-turn-135-r-0",
+   "kind": "report",
+   "move": "report/dispatch",
+   "quote": "(step 1 dispatched) Step 1, the dump of Lean's own state, is with codex-5",
+   "answers": [
+    {
+     "act": "claude-4-turn-135-f-s1-0",
+     "quote": "Step 1, the dump of Lean's own state",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-135-r-1",
+   "kind": "report",
+   "move": "report/design",
+   "quote": "(what it dumps) Real Lean's registries, at two points:",
+   "answers": [
+    {
+     "act": "claude-4-turn-135-f-s1-0",
+     "quote": "Real Lean's registries",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-135-r-2",
+   "kind": "report",
+   "move": "report/design",
+   "quote": "(checks built into the runner) The runner fails loudly if any of these break:",
+   "answers": [
+    {
+     "act": "claude-4-turn-135-f-s1-0",
+     "quote": "The runner fails loudly",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

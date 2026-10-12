@@ -1,0 +1,99 @@
+{
+ "record": "turn-eSdgnm",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-604-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "the comparator plus the source probe are good enough.",
+   "answers": [],
+   "scope": {
+    "opens": "comparator-ground-truth",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-604-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I also think that Codex is quite good at following instructions.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-604-f-s3-0",
+   "kind": "redirect",
+   "move": "constrain/stand-rule",
+   "quote": "we need to figure out what's wrong with the instructions",
+   "answers": [],
+   "scope": {
+    "opens": "instructions-are-the-suspect",
+    "closes": null,
+    "within": "claude-4-turn-604-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-604-f-s3-1",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "so too do our methods & the audit.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-604-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-604-r-0",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "I agree. Today's record fits it:",
+   "answers": [
+    {
+     "act": "claude-4-turn-604-f-s3-0",
+     "quote": "I agree. Today's record fits it:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-604-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-604-r-1",
+   "kind": "report",
+   "move": "report/dispatch",
+   "quote": "(audit addendum) I sent your assessment to claude-2 in your words",
+   "answers": [
+    {
+     "act": "claude-4-turn-604-f-s3-0",
+     "quote": "(audit addendum) I sent your assessment to claude-2 in your words",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-604-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,124 @@
+{
+ "record": "turn-zjuICu",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-342-f-s1-0",
+   "kind": "report",
+   "move": "clarify/assertion",
+   "quote": "The image speeds up finding the fix; it doesn't count as evidence that the fix is right.\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-342-f-s2-0",
+   "kind": "agree",
+   "move": "approve/plain",
+   "quote": "— Yes, this is what I'm thinking too.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-342-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "in way LISP can act as a \"proof search\" tool",
+   "answers": [],
+   "scope": {
+    "opens": "search-vs-checker-rule",
+    "closes": null,
+    "within": "claude-4-turn-342-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-342-r-0",
+   "kind": "report",
+   "move": "constrain/stand-rule",
+   "quote": "(your search and checker analogy) I agree, and I've saved it to memory.",
+   "answers": [
+    {
+     "act": "claude-4-turn-342-f-s3-0",
+     "quote": "(your search and checker analogy) I agree, and I've saved it to memory.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-342-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "(where the analogy holds) In a proof assistant, search can be fast and unsound",
+   "answers": [
+    {
+     "act": "claude-4-turn-342-f-s3-0",
+     "quote": "(where the analogy holds)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-342-r-2",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "(where it doesn't quite hold) A kernel checks the whole proof",
+   "answers": [
+    {
+     "act": "claude-4-turn-342-f-s3-0",
+     "quote": "A kernel checks the whole proof",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-342-r-3",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "(why the checker can't run in the image)",
+   "answers": [
+    {
+     "act": "claude-4-turn-342-f-s3-0",
+     "quote": "(why the checker can't run in the image)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

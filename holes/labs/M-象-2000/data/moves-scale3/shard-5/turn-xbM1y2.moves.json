@@ -1,0 +1,22 @@
+{
+ "record": "turn-xbM1y2",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-80-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "is Kimi-1 working?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

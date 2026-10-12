@@ -1,0 +1,48 @@
+{
+ "record": "turn-f2HclI",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-12-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Sure, let's build the proposed next slice.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-12-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "An interesting thing here is the documentation hypergraph annotations",
+   "answers": [],
+   "scope": {
+    "opens": "doc-hypergraph-layer",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-12-f-s2-1",
+   "kind": "propose",
+   "move": "qualify/caveat",
+   "quote": "(and if it doesn't have enough detail, we could go further)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-12-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

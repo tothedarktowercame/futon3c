@@ -1,0 +1,176 @@
+{
+ "record": "turn-pYwIRA",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "codex-18-turn-2-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I have briefed codex-19 that they should continue to work on a validated Lean port.",
+   "answers": [],
+   "scope": {
+    "opens": "codex-19-validated-port",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "They will use your transpiled code as a guide,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "but from now on they will not be stopped by any bugs in that code.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "They will notify you if they find Transpiler bugs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Your responsibility remains the transpiler itself.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-f-s5-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "You cannot simply wait for codex-19 to surface bugs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-f-s6-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "You should instead focus on extending the transpiler",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-r-0",
+   "kind": "report",
+   "move": "report/acknowledge",
+   "quote": "(responsibility) I own proactive transpiler development",
+   "answers": [
+    {
+     "act": "codex-18-turn-2-f-s4-0",
+     "quote": "I own proactive transpiler development",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(completed) Commit `a722551` adds ordinary class decorators.",
+   "answers": [
+    {
+     "act": "codex-18-turn-2-f-s6-0",
+     "quote": "Commit `a722551`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s6-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-r-2",
+   "kind": "verify",
+   "move": "verify/check-live",
+   "quote": "(validation) CPython-versus-SBCL tests pass",
+   "answers": [
+    {
+     "act": "codex-18-turn-2-f-s6-0",
+     "quote": "CPython-versus-SBCL tests pass",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s6-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-2-r-3",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "(next work) The remaining translation gaps are two `__new__` implementations",
+   "answers": [
+    {
+     "act": "codex-18-turn-2-f-s6-0",
+     "quote": "The remaining translation gaps",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-2-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

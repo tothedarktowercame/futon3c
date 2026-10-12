@@ -1,0 +1,61 @@
+{
+ "record": "turn-dFhnGH",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-94-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "is it a reasonable option to load the startup into a stack machine",
+   "answers": [],
+   "scope": {
+    "opens": "stack-machine-startup",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94-f-s2-0",
+   "kind": "extend",
+   "move": "extend/other",
+   "quote": "This is one thing that the \"curriculum\" should be able to help answer.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-94-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94-f-s4-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "if we just opened up a Python REPL and loaded things",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-94-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94-f-s4-1",
+   "kind": "verify",
+   "move": "verify/other",
+   "quote": "I don't know if Python allows us to pop things back off the way LISP does",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-94-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

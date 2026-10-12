@@ -1,0 +1,79 @@
+{
+ "record": "turn-Wv9A0Q",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "codex-18-turn-40-f-s1-0",
+   "kind": "continue",
+   "move": "continue/other",
+   "quote": "Can you continue with these remaining obligations",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-40-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(completed obligation) Committed `fc464e0`",
+   "answers": [
+    {
+     "act": "codex-18-turn-40-f-s1-0",
+     "quote": "(completed obligation)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-40-r-1",
+   "kind": "verify",
+   "move": "verify/check-live",
+   "quote": "(evidence) [Verification receipt]",
+   "answers": [
+    {
+     "act": "codex-18-turn-40-f-s1-0",
+     "quote": "(evidence)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-18-turn-40-r-2",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "(remaining obligations) Universal correspondence between actual Lisp execution",
+   "answers": [
+    {
+     "act": "codex-18-turn-40-f-s1-0",
+     "quote": "remains open",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

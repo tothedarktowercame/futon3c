@@ -1,0 +1,22 @@
+{
+ "record": "turn-yCmzaK",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-52-f-s1-0",
+   "kind": "continue",
+   "move": "continue/other",
+   "quote": "Let's continue, futon1b is being repaired",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-nw3i23",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-7-f-s1-0",
+   "kind": "report",
+   "move": "explain/context",
+   "quote": "I remember building PLISP from source, this can't be much more complex.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-7-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "(OK, maybe it will be a little more complex...)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-7-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

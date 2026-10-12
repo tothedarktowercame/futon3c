@@ -1,0 +1,73 @@
+{
+ "record": "turn-ns6i0w",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-309-f-s1-0",
+   "kind": "agree",
+   "move": "approve/plain",
+   "quote": "Yeah, I understand about the bellbacks from other agents.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-309-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "as long as we don't send anymore dispatches back out.",
+   "answers": [],
+   "scope": {
+    "opens": "no-new-dispatches",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-309-r-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "(reviewing the five) Agreed. As each of the five open jobs comes back",
+   "answers": [
+    {
+     "act": "claude-4-turn-309-f-s2-0",
+     "quote": "I won't dispatch any new work",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-309-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-309-r-1",
+   "kind": "report",
+   "move": "report/dispatch",
+   "quote": "(codex-17 told) I've sent codex-17 a short note on the split",
+   "answers": [
+    {
+     "act": "claude-4-turn-309-f-s2-0",
+     "quote": "I've sent codex-17 a short note",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-309-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

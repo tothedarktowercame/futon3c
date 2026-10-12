@@ -1,0 +1,22 @@
+{
+ "record": "turn-SYMm6u",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-59-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK let's do your 1-2-3 please",
+   "answers": [],
+   "scope": {
+    "opens": "one-two-three-plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-kmIYKh",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-84-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Sure let's push.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-84-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I think we should look into making a PR when we get startup working",
+   "answers": [],
+   "scope": {
+    "opens": "upstream-pr-when-startup-works",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,98 @@
+{
+ "record": "turn-upM8t8",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-378-f-s1-0",
+   "kind": "collect",
+   "move": "ask-action/status-check",
+   "quote": "what discovery should I know about",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-378-r-0",
+   "kind": "report",
+   "move": "report/with-option",
+   "quote": "The decision waiting on you is a discovery task for stop C.",
+   "answers": [
+    {
+     "act": "claude-4-turn-378-f-s1-0",
+     "quote": "The decision waiting on you",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-378-r-1",
+   "kind": "report",
+   "move": "qualify/impact",
+   "quote": "(why it matters for row 1) Stop C blocks 6 of the 14 row-1 constants",
+   "answers": [
+    {
+     "act": "claude-4-turn-378-f-s1-0",
+     "quote": "Stop C blocks 6 of the 14 row-1 constants",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-378-r-2",
+   "kind": "report",
+   "move": "report-problem/self-correction",
+   "quote": "(other findings since this morning)",
+   "answers": [
+    {
+     "act": "claude-4-turn-378-f-s1-0",
+     "quote": "(other findings since this morning)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-378-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "(shall I send it?) Shall I send the do-lowering discovery to codex-31?",
+   "answers": [
+    {
+     "act": "claude-4-turn-378-f-s1-0",
+     "quote": "Shall I send the do-lowering discovery",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

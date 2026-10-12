@@ -1,0 +1,98 @@
+{
+ "record": "turn-fOAoHW",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-402-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "you may be able to cancel some work and get back to fixing the compiles incirrect rows",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-402-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "- **Audit of the correct rows:** I killed its last lane.",
+   "answers": [
+    {
+     "act": "claude-4-turn-402-f-s1-0",
+     "quote": "I killed its last lane",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-402-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(where the work goes now) Once stop C is cleared, 4 rows hit the same next error.",
+   "answers": [
+    {
+     "act": "claude-4-turn-402-f-s1-0",
+     "quote": "(where the work goes now)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-402-r-2",
+   "kind": "report",
+   "move": "report/dispatch",
+   "quote": "(dispatch) codex-30 has the packet:",
+   "answers": [
+    {
+     "act": "claude-4-turn-402-f-s1-0",
+     "quote": "codex-30 has the packet",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-402-r-3",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(still running)",
+   "answers": [
+    {
+     "act": "claude-4-turn-402-f-s1-0",
+     "quote": "(still running)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

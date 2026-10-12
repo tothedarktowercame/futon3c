@@ -1,0 +1,79 @@
+{
+ "record": "turn-YljeQ1",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-236-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "and we should get back to the blank-file startup rather than the comprehensive startup excursion",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-236-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(what the excursion showed) codex-4's classification fix worked.",
+   "answers": [
+    {
+     "act": "claude-4-turn-236-f-s1-0",
+     "quote": "codex-4's classification fix worked",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-236-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-236-r-1",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "(your emulate rule) The brief repeats your rule.",
+   "answers": [
+    {
+     "act": "claude-4-turn-236-f-s1-0",
+     "quote": "The brief repeats your rule",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-236-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-236-r-2",
+   "kind": "report",
+   "move": "report-problem/observ",
+   "quote": "(late pickup) codex-4 finished at 14:03, but nothing woke me until your message",
+   "answers": [
+    {
+     "act": "claude-4-turn-236-f-s1-0",
+     "quote": "(late pickup) codex-4 finished at 14:03",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-236-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

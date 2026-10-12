@@ -1,0 +1,35 @@
+{
+ "record": "turn-YSmfrp",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-43-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK, let's disable push to origin right now",
+   "answers": [],
+   "scope": {
+    "opens": "own-fork-only",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-43-f-s1-1",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "so we work in our own fork",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-43-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

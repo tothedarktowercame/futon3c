@@ -1,0 +1,48 @@
+{
+ "record": "turn-zfD8FQ",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-49-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "Rob was also very interested to understand our \"way of working\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-49-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "Right now the PR doesn't include any specific diagramprover analysis.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-49-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-49-f-s3-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "Just saying \"it didn't work before but it works now\" is quite minimal",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-49-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

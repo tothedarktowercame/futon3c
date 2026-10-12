@@ -1,0 +1,48 @@
+{
+ "record": "turn-veUA05",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-26-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "docstrings are a cheap way to get coverage",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-26-f-s1-1",
+   "kind": "constrain",
+   "move": "qualify/caveat",
+   "quote": "Haskell is lazy while this is strict so we'd want to be careful",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-26-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-26-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Thesis 3.6 and 6 sound like we don't need them right now.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

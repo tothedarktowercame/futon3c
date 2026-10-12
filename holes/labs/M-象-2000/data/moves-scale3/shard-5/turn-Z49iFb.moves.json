@@ -1,0 +1,111 @@
+{
+ "record": "turn-Z49iFb",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-313-f-s1-0",
+   "kind": "explain",
+   "move": "report-problem/grievance",
+   "quote": "I asked for these features this morning",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-313-f-s1-1",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "but I did ask Rick quite a long time ago.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-313-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-313-r-0",
+   "kind": "report",
+   "move": "report-problem/self-correction",
+   "quote": "You did, and it's in the record.",
+   "answers": [
+    {
+     "act": "claude-4-turn-313-f-s1-0",
+     "quote": "You did, and it's in the record.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-313-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(where it stands now)",
+   "answers": [
+    {
+     "act": "claude-4-turn-313-f-s1-0",
+     "quote": "(where it stands now)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-313-r-2",
+   "kind": "report",
+   "move": "constrain/stand-rule",
+   "quote": "(memory) I've added to my standing note on endorsed requests:",
+   "answers": [
+    {
+     "act": "claude-4-turn-313-f-s1-0",
+     "quote": "(memory) I've added to my standing note on endorsed requests:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "endorsed-requests-first",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-313-r-3",
+   "kind": "report",
+   "move": "clarify/ask-decision",
+   "quote": "Who's Rick? I don't recognise the name",
+   "answers": [
+    {
+     "act": "claude-4-turn-313-f-s1-1",
+     "quote": "Who's Rick?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-313-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,92 @@
+{
+ "record": "turn-kv3qZ7",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-13-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "I guess we're still waiting for codx-19 to finish Array.extract.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-13-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "It looks like it is still making decent progress",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-13-r-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(waiting for Array.extract) Agreed, splitting the rows can wait",
+   "answers": [
+    {
+     "act": "claude-4-turn-13-f-s1-0",
+     "quote": "Agreed, splitting the rows can wait",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-13-r-1",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "(when it lands) Once `Array.extract` is credited",
+   "answers": [
+    {
+     "act": "claude-4-turn-13-f-s1-0",
+     "quote": "Once `Array.extract` is credited",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-13-r-2",
+   "kind": "report",
+   "move": "report-problem/observ",
+   "quote": "(the same repo) The async and nested-class commits from the same period",
+   "answers": [
+    {
+     "act": "claude-4-turn-13-f-s1-0",
+     "quote": "(the same repo) The async and nested-class commits",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

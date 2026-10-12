@@ -1,0 +1,48 @@
+{
+ "record": "turn-Thay7e",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-17-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Let's bell claude-18 to take over on the LSP stuff",
+   "answers": [],
+   "scope": {
+    "opens": "claude-18-lsp-handoff",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-17-f-s1-1",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "b/c it is directly coordinating some Codex work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-17-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-17-f-s1-2",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "that way we won't lose focus on the Lean compiler stuff",
+   "answers": [],
+   "scope": {
+    "opens": "lean-compiler-focus",
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

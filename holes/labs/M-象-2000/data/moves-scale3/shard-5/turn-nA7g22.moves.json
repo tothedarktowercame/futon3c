@@ -1,0 +1,79 @@
+{
+ "record": "turn-nA7g22",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "codex-19-turn-5-f-s1-0",
+   "kind": "continue",
+   "move": "continue/other",
+   "quote": "ok, please continue",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-19-turn-5-r-0",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(Array.extract) Connected declaration drafts to a native source-value dispatcher.",
+   "answers": [
+    {
+     "act": "codex-19-turn-5-f-s1-0",
+     "quote": "Connected declaration drafts",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-19-turn-5-r-1",
+   "kind": "verify",
+   "move": "verify/check-live",
+   "quote": "(validation) Native-parser dispatch tests, refusal checks",
+   "answers": [
+    {
+     "act": "codex-19-turn-5-f-s1-0",
+     "quote": "(validation)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-19-turn-5-r-2",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(progress) `progress.py` remains **0/110**",
+   "answers": [
+    {
+     "act": "codex-19-turn-5-f-s1-0",
+     "quote": "remains **0/110**",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

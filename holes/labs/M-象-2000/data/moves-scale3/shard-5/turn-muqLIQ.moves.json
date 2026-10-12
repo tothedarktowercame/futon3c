@@ -1,0 +1,62 @@
+{
+ "record": "turn-muqLIQ",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-89-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "So, curious about the 19 minute startup...",
+   "answers": [],
+   "scope": {
+    "opens": "startup-cost-problem",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-89-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "that's going to make development cycles slow, unless",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-89-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-89-f-s2-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "*compile that*.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-89-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "truncated fragment: the proposal is 'compile that' (the startup)"
+  },
+  {
+   "act": "claude-4-turn-89-f-s3-0",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "Otherwise every new addition is going to take 19 minutes plus",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-89-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

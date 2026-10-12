@@ -1,0 +1,92 @@
+{
+ "record": "turn-jedqCo",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-21@turn-jedqCo-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "I'm exploring it directly with codex-18",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-21@turn-jedqCo-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I passed them your earlier tips.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-21@turn-jedqCo-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-21@turn-jedqCo-r-0",
+   "kind": "report",
+   "move": "approve/plain",
+   "quote": "(codex-18 Lean proof) Good, I'll leave that thread to you and codex-18.",
+   "answers": [
+    {
+     "act": "claude-4-turn-21@turn-jedqCo-f-s1-0",
+     "quote": "I'll leave that thread to you and codex-18",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-21@turn-jedqCo-r-1",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "(proof claims) Please pass on one thing",
+   "answers": [
+    {
+     "act": "claude-4-turn-21@turn-jedqCo-f-s1-0",
+     "quote": "(proof claims) Please pass on one thing",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-21@turn-jedqCo-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-21@turn-jedqCo-r-2",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(Python port, nothing merged since d2bffb8) Three discovery or implementation jobs are open:",
+   "answers": [
+    {
+     "act": "claude-4-turn-21@turn-jedqCo-f-s1-0",
+     "quote": "Three discovery or implementation jobs are open",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

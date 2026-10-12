@@ -1,0 +1,92 @@
+{
+ "record": "turn-StJxHy",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-211-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I like the \"show movement\" and \"find next steps\" suggestions.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-211-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "As long as we are leaving Rob's main in a good state we can check in work there",
+   "answers": [],
+   "scope": {
+    "opens": "robs-main-stays-good",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-211-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "It's at https://zone.hyperreal.enterprises/wip/mfuton-progress.html",
+   "answers": [
+    {
+     "act": "claude-4-turn-211-f-s1-0",
+     "quote": "(the movement chart) It's at",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-211-r-1",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(finding the next stops)",
+   "answers": [
+    {
+     "act": "claude-4-turn-211-f-s1-0",
+     "quote": "(finding the next stops)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-211-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(Rob's main) Understood. The dropped work is restored:",
+   "answers": [
+    {
+     "act": "claude-4-turn-211-f-s2-0",
+     "quote": "The dropped work is restored:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-211-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-yoq84B",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-42-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Let's make our own fork of mfuton-share",
+   "answers": [],
+   "scope": {
+    "opens": "own-fork-of-mfuton-share",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-42-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "private if that one is private, I don't remember, but we'll follow Rob's choice",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-42-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-42-f-s1-2",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "so that we send PRs and/or issues",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-42-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

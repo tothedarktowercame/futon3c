@@ -1,0 +1,48 @@
+{
+ "record": "turn-gOvDlE",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-9-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "So, \"yes\" to the paper-source registry please.",
+   "answers": [],
+   "scope": {
+    "opens": "paper-source-registry",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-9-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I haven't used Arxana Docs for a while, so it is far out of date",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-9-f-s3-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "This would be the first use case for building a code-to-docs alignment for external code.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-6-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

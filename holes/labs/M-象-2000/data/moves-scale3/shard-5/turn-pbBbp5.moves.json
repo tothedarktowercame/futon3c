@@ -1,0 +1,22 @@
+{
+ "record": "turn-pbBbp5",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-71-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "Right so how long is this test going to take?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

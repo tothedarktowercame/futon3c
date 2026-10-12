@@ -1,0 +1,80 @@
+{
+ "record": "turn-mflxD1",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-341@turn-mflxD1-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "one-word approval; quote is the whole fragment"
+  },
+  {
+   "act": "claude-4-turn-341@turn-mflxD1-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(how I pushed) I pushed once, straight to Rob's repository URL.",
+   "answers": [
+    {
+     "act": "claude-4-turn-341@turn-mflxD1-f-s1-0",
+     "quote": "I pushed once, straight to Rob's repository URL",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-341@turn-mflxD1-r-1",
+   "kind": "report",
+   "move": "report/job-spec",
+   "quote": "(stop C) The packet is `psw2/c1-stopC.md`",
+   "answers": [
+    {
+     "act": "claude-4-turn-341@turn-mflxD1-f-s1-0",
+     "quote": "The packet is `psw2/c1-stopC.md`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-341@turn-mflxD1-r-2",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(also running) Four hash-seed runs of Array.back!",
+   "answers": [
+    {
+     "act": "claude-4-turn-341@turn-mflxD1-f-s1-0",
+     "quote": "Four hash-seed runs",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

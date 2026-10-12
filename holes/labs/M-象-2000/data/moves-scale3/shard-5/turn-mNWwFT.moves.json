@@ -1,0 +1,79 @@
+{
+ "record": "turn-mNWwFT",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-362-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "To fall back to how lean behaves, that's a little bit strange",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-362-r-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "Yes. The commit keeps the port's own special-case coercion first",
+   "answers": [
+    {
+     "act": "claude-4-turn-362-f-s1-0",
+     "quote": "Lean's behaviour is the fallback",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-362-r-1",
+   "kind": "report",
+   "move": "explain/motive",
+   "quote": "(why it was written this way) The special syntax-action coercion was added earlier",
+   "answers": [
+    {
+     "act": "claude-4-turn-362-f-s1-0",
+     "quote": "(why it was written this way) The special syntax-action coercion was added earlier",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-362-r-2",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "(what I'll ask codex-19) I'll send codex-19 two steps:",
+   "answers": [
+    {
+     "act": "claude-4-turn-362-f-s1-0",
+     "quote": "I'll send codex-19 two steps",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

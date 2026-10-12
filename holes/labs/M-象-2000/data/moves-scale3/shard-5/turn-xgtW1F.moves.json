@@ -1,0 +1,49 @@
+{
+ "record": "turn-xgtW1F",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-31-f-s1-0",
+   "kind": "continue",
+   "move": "explore/other",
+   "quote": "Hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "hesitation fragment; quote is the whole fragment"
+  },
+  {
+   "act": "claude-4-turn-31-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK, the kimi-1 slice is good;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-31-f-s2-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "once that's in, we could compile a selection of proofs from my apm-lean work",
+   "answers": [],
+   "scope": {
+    "opens": "apm-lean-coverage-test",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

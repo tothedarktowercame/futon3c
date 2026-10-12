@@ -1,0 +1,35 @@
+{
+ "record": "turn-uWgdog",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-4-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "This is an inefficient use of resources on a box of this size",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-3-turn-4-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Can you steal from the tail of the queue and create 2 more seats",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3-turn-4-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

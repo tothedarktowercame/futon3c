@@ -1,0 +1,35 @@
+{
+ "record": "turn-noMK3U",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-61-f-s1-0",
+   "kind": "continue",
+   "move": "continue/other",
+   "quote": "Let's not stop it, it's doing useful work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-61-f-s1-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "you can continue with your items (inculding the array measurements)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

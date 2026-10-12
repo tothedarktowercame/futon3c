@@ -1,0 +1,79 @@
+{
+ "record": "turn-T6cr97",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-276-f-s1-0",
+   "kind": "report",
+   "move": "report-problem/grievance",
+   "quote": "This is really a remarkable amount of work to get to \"\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-276-r-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "(why \"\" costs so much) Almost none of this work is about the empty file.",
+   "answers": [
+    {
+     "act": "claude-4-turn-276-f-s1-0",
+     "quote": "Almost none of this work is about the empty file",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-276-r-1",
+   "kind": "report",
+   "move": "explain/answer-question",
+   "quote": "(what \"hello world\" would add) Very little on the parse side.",
+   "answers": [
+    {
+     "act": "claude-4-turn-276-f-s1-0",
+     "quote": "Very little on the parse side.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-276-r-2",
+   "kind": "report",
+   "move": "report/diagnosis",
+   "quote": "(where the remaining cost is) The rows still blocked come down to a handful of causes",
+   "answers": [
+    {
+     "act": "claude-4-turn-276-f-s1-0",
+     "quote": "come down to a handful of causes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

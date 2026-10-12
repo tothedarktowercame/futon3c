@@ -1,0 +1,98 @@
+{
+ "record": "turn-W93WBG",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-12T12:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-513-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "sounds like binder is a priority!",
+   "answers": [],
+   "scope": {
+    "opens": "binder-priority",
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-513-r-0",
+   "kind": "report",
+   "move": "report/dispatch",
+   "quote": "Agreed, and it's started.",
+   "answers": [
+    {
+     "act": "claude-4-turn-513-f-s1-0",
+     "quote": "Agreed, and it's started.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-513-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-513-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "(why this route) In Lean a type is just a term.",
+   "answers": [
+    {
+     "act": "claude-4-turn-513-f-s1-0",
+     "quote": "(why this route)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-513-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-513-r-2",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(codex-31, `invoke-1791229403596-33071`",
+   "answers": [
+    {
+     "act": "claude-4-turn-513-f-s1-0",
+     "quote": "(codex-31,",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-513-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-513-r-3",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "(the paused branch) The five commits on `psw/typelevels` stay unmerged.",
+   "answers": [
+    {
+     "act": "claude-4-turn-513-f-s1-0",
+     "quote": "stay unmerged",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-513-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
