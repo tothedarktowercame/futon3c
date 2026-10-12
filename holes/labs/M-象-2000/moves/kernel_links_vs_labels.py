@@ -276,40 +276,56 @@ def rule_b_analysis(paths, records_root=RECORDS):
 
 
 def sole_port_variants(paths, records_root=RECORDS):
-    names = ["V0", "V1", "V2", "V3", "V4"]
+    names = ["V0", "V1", "V2", "V3", "V4", "V5"]
     totals = {name: Counter() for name in names}
     false_kinds = {name: Counter() for name in names}
     records = 0
     for side_path in paths:
         side, _, _, operator, agent, _ = load_case(side_path, records_root)
         openers = [act for act in operator if act.get("kind") in OPENERS]
+        if not operator:
+            input_path = side_path.parent / "input" / f"{side['record']}.input.json"
+            if input_path.exists():
+                input_record = json.loads(input_path.read_text(encoding="utf-8"))
+                operator = [{"id": row.get("id"), "kind": row.get("intent"),
+                             "text": row.get("text", ""), "author": "operator"}
+                            for row in input_record.get("fragments", [])]
+                openers = [act for act in operator if act.get("kind") in OPENERS]
         if len(openers) != 1:
             continue
         records += 1
         opener = openers[0]
         replies, labelled = canonical_replies(side, agent)
-        untargeted = [act for act in replies if not act.get("target")]
-        first_ask = next((i for i, act in enumerate(untargeted)
+        first_ask = next((i for i, act in enumerate(replies)
                           if act.get("kind") in {"ask-action", "offer"}
-                          or "🉸" in str(act.get("text", ""))), len(untargeted))
-        before_ask = untargeted[:first_ask]
+                          or "🉸" in str(act.get("text", ""))), len(replies))
+        untargeted = [act for act in replies if not act.get("target")]
+        before_ask = [act for act in replies[:first_ask] if not act.get("target")]
         first_closer = next((act for act in untargeted
                              if ADJACENCY.get(opener.get("kind"), {}).get(act.get("kind")) == "closes"), None)
+        typed_before_ask = [act for act in before_ask
+                            if ADJACENCY.get(opener.get("kind"), {}).get(act.get("kind"))
+                            in {"closes", "keeps"}]
         selected = {
             "V0": untargeted,
             "V1": untargeted[:1],
             "V2": [first_closer] if first_closer else [],
             "V3": before_ask,
             "V4": [first_closer] if first_closer in before_ask else [],
+            "V5": typed_before_ask,
         }
-        labelled_closes = {pair for pair, value in labelled.items() if value == "closes"}
+        labelled_closes = {pair for pair, value in labelled.items()
+                           if value == "closes" and pair[1] == opener["id"]}
+        record_has_close = any(value == "closes" for value in labelled.values())
         for name, answers in selected.items():
             row = totals[name]
             row["records"] += 1
             row["labelled_closes"] += len(labelled_closes)
+            predicted_close = False
             for answer in answers:
                 pair = (answer["id"], opener["id"])
                 predicted = effect(opener.get("kind"), answer.get("kind"))
+                predicted_close = predicted_close or predicted == "closes"
                 row["asserted"] += 1
                 row["confirmed"] += pair in labelled
                 row["same"] += labelled.get(pair) == predicted
@@ -317,6 +333,7 @@ def sole_port_variants(paths, records_root=RECORDS):
                 row["close_reached"] += pair in labelled_closes and predicted == "closes"
                 if pair not in labelled:
                     false_kinds[name][answer.get("kind", "?")] += 1
+            row["mis_close"] += predicted_close and not record_has_close
     return records, totals, false_kinds
 
 
@@ -356,6 +373,34 @@ def render_sole_variants(datasets, disagreement_examples):
         lines.append(f"| `{row['record']}` | {row['opener_kind']} / {row['answer_kind']} | {evidence} |")
     lines += ["", "These examples read as partial delivery, qualification, or evidence bearing on an "
               "opener—not as the labeller denying that the reply is related to it.", ""]
+    return "\n".join(lines)
+
+
+def render_batch2_variants(paths, result):
+    records, totals, false_kinds = result
+    names = ["V0", "V1", "V2", "V3", "V4", "V5"]
+    lines = ["## Sole-port variants, batch 2", "",
+             f"All **{len(paths)}** batch-2 sidecars are present; **{records}** have exactly one opener.", "",
+             "| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall | mis-closes |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for name in names:
+        row = totals[name]
+        lines.append(f"| {name} | {row['asserted']} | {row['confirmed']} | {row['same']} | {row['false']} | "
+                     f"{pct(row['confirmed'], row['asserted']):.1f}% | {pct(row['same'], row['asserted']):.1f}% | "
+                     f"{row['close_reached']}/{row['labelled_closes']} "
+                     f"({pct(row['close_reached'], row['labelled_closes']):.1f}%) | {row['mis_close']} |")
+    kinds = sorted({kind for rows in false_kinds.values() for kind in rows})
+    lines += ["", "False positives by reply kind:", "",
+              "| reply kind | " + " | ".join(names) + " |",
+              "|---|" + "---:|" * len(names)]
+    for kind in kinds:
+        lines.append(f"| {kind} | " + " | ".join(str(false_kinds[name][kind]) for name in names) + " |")
+    lines += ["", "### Pick", "",
+              "1. I would put **V3 (before the ask)** in the kernel.",
+              "2. It preserves almost all of V0's close recall while reducing both asserted pairs and false positives.",
+              "3. It also reduces mis-closes; that matters most because a false close hides an owed item.",
+              "4. V2, V4, and V5 cut mis-closes further, but each loses more than one third of V0's close recall.",
+              "5. V1 loses too much recall without improving mis-closes enough; a visible false open is safer than that trade."]
     return "\n".join(lines)
 
 
@@ -476,13 +521,13 @@ def main():
     scale2_paths = move_paths(scale2_root)
     variant_sets = [("Batch 1", batch_paths, sole_port_variants(batch_paths, args.records)),
                     ("20-record pilot", pilot_paths, sole_port_variants(pilot_paths, args.records))]
-    if scale2_paths:
-        variant_sets.append(("Batch 2 (currently landed sidecars)", scale2_paths,
-                             sole_port_variants(scale2_paths, args.records)))
+    batch2_variants = sole_port_variants(scale2_paths, args.records) if scale2_paths else None
     batch_rule_b = rule_b_analysis(batch_paths, args.records)
     text = (render(analyse(args.moves, args.records)) + "\n" +
             render_rule_b(batch_rule_b, rule_b_analysis(pilot_paths, args.records)) + "\n" +
-            render_sole_variants(variant_sets, batch_rule_b[3]))
+            render_sole_variants(variant_sets, batch_rule_b[3]) +
+            (("\n" + render_batch2_variants(scale2_paths, batch2_variants))
+             if batch2_variants else ""))
     if args.out:
         args.out.write_text(text + "\n", encoding="utf-8")
     else:

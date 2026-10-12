@@ -114,7 +114,7 @@ Quoted examples (up to three per observed direction):
 **kernel closes / labeller keeps.**
 - `turn-FejOlN` — answer: “("a very clear explanation of why") the explanation will cover: - **each row:** what lean produces and what the port pr…”; opener: “ok but we can't a clean row i want a very clear explanation of why.”.
 - `turn-4Vnjnj` — answer: “(where we are against it) the ingest hook already does the first part at write time: exact version and links. entities …”; opener: “that could be a useful guiding principle for our db.”.
-- `turn-8qn3cQ` — answer: “(restored) - **live:** your daemon's `session-mode-turn-recorder` is set to `jvm` via `emacsclient`, which now returns …”; opener: “right, please restore the setting & backfill via 象-sonnet or codex-70 as appropriate”.
+- `turn-8qn3cQ` — answer: “(backfill → codex-70) i sent it to codex-70 rather than 象-sonnet. 象-sonnet is the seat that *reads* operator turns, whi…”; opener: “right, please restore the setting & backfill via 象-sonnet or codex-70 as appropriate”.
 
 **kernel keeps / labeller closes.** None observed.
 
@@ -162,11 +162,11 @@ Sidecars: **158**; one-opener records: **13**.
 
 | variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| V0 | 28 | 16 | 12 | 12 | 57.1% | 42.9% | 11/13 (84.6%) |
-| V1 | 7 | 6 | 5 | 1 | 85.7% | 71.4% | 5/13 (38.5%) |
-| V2 | 3 | 3 | 2 | 0 | 100.0% | 66.7% | 2/13 (15.4%) |
-| V3 | 26 | 16 | 12 | 10 | 61.5% | 46.2% | 11/13 (84.6%) |
-| V4 | 3 | 3 | 2 | 0 | 100.0% | 66.7% | 2/13 (15.4%) |
+| V0 | 28 | 16 | 12 | 12 | 57.1% | 42.9% | 11/11 (100.0%) |
+| V1 | 7 | 6 | 5 | 1 | 85.7% | 71.4% | 5/11 (45.5%) |
+| V2 | 3 | 3 | 2 | 0 | 100.0% | 66.7% | 2/11 (18.2%) |
+| V3 | 26 | 16 | 12 | 10 | 61.5% | 46.2% | 11/11 (100.0%) |
+| V4 | 3 | 3 | 2 | 0 | 100.0% | 66.7% | 2/11 (18.2%) |
 
 False positives by reply kind:
 
@@ -180,15 +180,15 @@ False positives by reply kind:
 
 ### 20-record pilot
 
-Sidecars: **20**; one-opener records: **9**.
+Sidecars: **20**; one-opener records: **10**.
 
 | variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| V0 | 43 | 35 | 13 | 8 | 81.4% | 30.2% | 13/23 (56.5%) |
-| V1 | 9 | 9 | 8 | 0 | 100.0% | 88.9% | 8/23 (34.8%) |
-| V2 | 8 | 7 | 6 | 1 | 87.5% | 75.0% | 6/23 (26.1%) |
-| V3 | 36 | 30 | 13 | 6 | 83.3% | 36.1% | 13/23 (56.5%) |
-| V4 | 8 | 7 | 6 | 1 | 87.5% | 75.0% | 6/23 (26.1%) |
+| V0 | 43 | 35 | 13 | 8 | 81.4% | 30.2% | 13/13 (100.0%) |
+| V1 | 9 | 9 | 8 | 0 | 100.0% | 88.9% | 8/13 (61.5%) |
+| V2 | 8 | 7 | 6 | 1 | 87.5% | 75.0% | 6/13 (46.2%) |
+| V3 | 36 | 30 | 13 | 6 | 83.3% | 36.1% | 13/13 (100.0%) |
+| V4 | 8 | 7 | 6 | 1 | 87.5% | 75.0% | 6/13 (46.2%) |
 
 False positives by reply kind:
 
@@ -200,25 +200,6 @@ False positives by reply kind:
 | report | 1 | 0 | 0 | 1 | 0 |
 | verify | 1 | 0 | 0 | 1 | 0 |
 
-### Batch 2 (currently landed sidecars)
-
-Sidecars: **13**; one-opener records: **13**.
-
-| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| V0 | 44 | 40 | 16 | 4 | 90.9% | 36.4% | 15/17 (88.2%) |
-| V1 | 13 | 13 | 11 | 0 | 100.0% | 84.6% | 11/17 (64.7%) |
-| V2 | 7 | 7 | 7 | 0 | 100.0% | 100.0% | 7/17 (41.2%) |
-| V3 | 42 | 38 | 16 | 4 | 90.5% | 38.1% | 15/17 (88.2%) |
-| V4 | 7 | 7 | 7 | 0 | 100.0% | 100.0% | 7/17 (41.2%) |
-
-False positives by reply kind:
-
-| reply kind | V0 | V1 | V2 | V3 | V4 |
-|---|---:|---:|---:|---:|---:|
-| qualify | 2 | 0 | 0 | 2 | 0 |
-| report | 2 | 0 | 0 | 2 | 0 |
-
 ### Reading the 18 effect disagreements
 
 All 18 point in the same direction: the kernel says `closes`, while the labeller says `keeps`. No kernel-keeps/labeller-closes case was observed.
@@ -227,7 +208,46 @@ All 18 point in the same direction: the kernel says `closes`, while the labeller
 |---|---|---|
 | `turn-FejOlN` | ask-action / propose | outlines the owed explanation; the explanation itself is still to come. |
 | `turn-4Vnjnj` | propose / report | (where we are against it) the ingest hook already does the first part at write time: exact version and links. |
-| `turn-8qn3cQ` | ask-action / report | restore half done and persisted; backfill half follows in the next paragraph |
+| `turn-8qn3cQ` | ask-action / delegate | i sent it to codex-70 rather than 象-sonnet. |
 
 These examples read as partial delivery, qualification, or evidence bearing on an opener—not as the labeller denying that the reply is related to it.
 
+## Sole-port variants, batch 2
+
+All **200** batch-2 sidecars are present; **200** have exactly one opener.
+
+| variant | asserted | confirmed | same effect | false positives | pair precision | exact precision | close recall | mis-closes |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| V0 | 744 | 510 | 252 | 234 | 68.5% | 33.9% | 237/261 (90.8%) | 17 |
+| V1 | 196 | 168 | 138 | 28 | 85.7% | 70.4% | 137/261 (52.5%) | 17 |
+| V2 | 141 | 117 | 98 | 24 | 83.0% | 69.5% | 98/261 (37.5%) | 8 |
+| V3 | 677 | 470 | 251 | 207 | 69.4% | 37.1% | 236/261 (90.4%) | 16 |
+| V4 | 140 | 117 | 98 | 23 | 83.6% | 70.0% | 98/261 (37.5%) | 8 |
+| V5 | 273 | 198 | 138 | 75 | 72.5% | 50.5% | 123/261 (47.1%) | 8 |
+
+False positives by reply kind:
+
+| reply kind | V0 | V1 | V2 | V3 | V4 | V5 |
+|---|---:|---:|---:|---:|---:|---:|
+| approve | 4 | 3 | 1 | 4 | 1 | 1 |
+| ask-action | 19 | 0 | 0 | 0 | 0 | 0 |
+| clarify | 3 | 0 | 0 | 3 | 0 | 0 |
+| commit | 6 | 3 | 4 | 6 | 4 | 5 |
+| delegate | 3 | 0 | 0 | 3 | 0 | 0 |
+| explain | 24 | 1 | 3 | 24 | 3 | 10 |
+| extend | 2 | 1 | 1 | 2 | 1 | 1 |
+| offer | 1 | 0 | 0 | 0 | 0 | 0 |
+| propose | 17 | 0 | 0 | 17 | 0 | 0 |
+| qualify | 36 | 0 | 0 | 34 | 0 | 7 |
+| report | 77 | 14 | 15 | 75 | 14 | 48 |
+| report-problem | 22 | 4 | 0 | 20 | 0 | 3 |
+| retract | 3 | 1 | 0 | 3 | 0 | 0 |
+| verify | 17 | 1 | 0 | 16 | 0 | 0 |
+
+### Pick
+
+1. I would put **V3 (before the ask)** in the kernel.
+2. It preserves almost all of V0's close recall while reducing both asserted pairs and false positives.
+3. It also reduces mis-closes; that matters most because a false close hides an owed item.
+4. V2, V4, and V5 cut mis-closes further, but each loses more than one third of V0's close recall.
+5. V1 loses too much recall without improving mis-closes enough; a visible false open is safer than that trade.
