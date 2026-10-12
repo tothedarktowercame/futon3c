@@ -1,0 +1,167 @@
+{
+ "record": "turn-lYECzg",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-31-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/refocus",
+   "quote": "I'm less worried about the figure right now and more worried about the paper",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Given that most of the features *could* have a Lean representation and *could* get runtime certification I",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-f-s3-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "We can update the figure later.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-r-0",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "codex-10 has your instruction verbatim and has started the first job",
+   "answers": [
+    {
+     "act": "claude-2-turn-31-f-s2-0",
+     "quote": "Dispatched. codex-10 has your instruction verbatim",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-r-1",
+   "kind": "propose",
+   "move": "propose/order-of-work",
+   "quote": "One node per job, in codex-10's own order",
+   "answers": [
+    {
+     "act": "claude-2-turn-31-f-s2-0",
+     "quote": "(how I split the work) One node per job, in codex-10's own order: R10, R11, R12, R15, R20, CTAU-CLASS. Each",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-r-2",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "what the R10 job asks for",
+   "answers": [
+    {
+     "act": "claude-2-turn-31-f-s2-0",
+     "quote": "(what the R10 job asks for) A new module under `DarkTower/WarMachine`, with no edits to `Holes.lean` or any",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "one thing I found while preparing it",
+   "answers": [
+    {
+     "act": "claude-2-turn-31-f-s2-0",
+     "quote": "(one thing I found while preparing it) The runtime route check for R10 refuses production authority; its own",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-r-4",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "coverage of the existing certificates",
+   "answers": [
+    {
+     "act": "claude-2-turn-31-f-s2-0",
+     "quote": "(coverage of the existing certificates) The certificate file covers R9, R10, R11, R12 and R15. R20 and",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-31-r-5",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "The job is running; the figure is left as it is.",
+   "answers": [
+    {
+     "act": "claude-2-turn-31-f-s3-0",
+     "quote": "the figure is left as it is",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-31-f-s1-0",
+     "quote": "The job is running",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

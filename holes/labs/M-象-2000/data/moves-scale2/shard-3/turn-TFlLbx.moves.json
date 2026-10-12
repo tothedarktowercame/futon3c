@@ -1,0 +1,146 @@
+{
+ "record": "turn-TFlLbx",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-29-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "we have 64% of Zai to spend in 34 hours or so",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "it occurs to me that we could use that for mini g the grammar of moves",
+   "answers": [],
+   "scope": {
+    "opens": "move-grammar-campaign",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-f-s3-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "this could allow future fast -- either classical or Kimi backed -- scope based inference",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "indeed we may get to demo-ready faster",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Taken up as a mining campaign, and shaped so it feeds the one gap the inbox still has",
+   "answers": [
+    {
+     "act": "claude-16-turn-29-f-s2-0",
+     "quote": "Design, schema and the first packet are committed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-16-turn-29-f-s1-0",
+     "quote": "Zai usage before anything runs: 36.0% of the month used",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-16-turn-29-f-s4-0",
+     "quote": "rather than producing a survey",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "move-grammar-campaign"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-r-1",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "Three things, all over the settled records that now carry acts",
+   "answers": [
+    {
+     "act": "claude-16-turn-29-f-s2-0",
+     "quote": "(what gets mined, and why each) Three things, all over the settled records that now carry acts. 1. **Answer",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-16-turn-29-f-s3-0",
+     "quote": "(what gets mined, and why each) Three things, all over the settled records that now carry acts. 1. **Answer",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Offline, over records, as you proposed",
+   "answers": [
+    {
+     "act": "claude-16-turn-29-f-s2-0",
+     "quote": "A label without a verbatim quote is void",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-29-r-3",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "codex-70's reload and live recompute of the four record fields",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

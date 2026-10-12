@@ -1,0 +1,73 @@
+{
+ "record": "turn-qNamSx",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-22-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "so, now that there is an agreed -40 spec, I wonder if we can continue to build the Xiang system so that we",
+   "answers": [],
+   "scope": {
+    "opens": "application-led-build",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-22-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Yes, and the review I sent claude-15 last night already lists what the inbox needs",
+   "answers": [
+    {
+     "act": "claude-16-turn-22-f-s1-0",
+     "quote": "Started. The spec is at DRAFT 3",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "application-led-build"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-22-r-1",
+   "kind": "propose",
+   "move": "propose/order-of-work",
+   "quote": "(order, one seat for the record changes) The turn service is one shared file, so the record changes run in",
+   "answers": [
+    {
+     "act": "claude-16-turn-22-f-s1-0",
+     "quote": "(order, one seat for the record changes) The turn service is one shared file, so the record changes run in",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-22-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "held, with reasons",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

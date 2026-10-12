@@ -1,0 +1,162 @@
+{
+ "record": "turn-i3c2qN",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-24-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The published figure is still not full-size for me, maybe I overwrote your changes?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes you can republish the notebook.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-f-s3-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Naming as Joe is fine.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "You did not overwrite it",
+   "answers": [
+    {
+     "act": "claude-2-turn-24-f-s1-0",
+     "quote": "You did not overwrite it",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-r-1",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "(\"The published figure is still not full-size for me\") - **Git:** my commit `9d3762c` is under your `c76ffda`",
+   "answers": [
+    {
+     "act": "claude-2-turn-24-f-s1-0",
+     "quote": "(\"The published figure is still not full-size for me\") - **Git:** my commit `9d3762c` is under your `c76ffda`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-r-2",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "The server sends no cache instruction for `harness.html`",
+   "answers": [
+    {
+     "act": "claude-2-turn-24-f-s1-0",
+     "quote": "(why you still see the old one) The server sends no cache instruction for `harness.html`, so a browser that",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-r-3",
+   "kind": "clarify",
+   "move": "clarify/answer-question",
+   "quote": "two ways to clear it",
+   "answers": [
+    {
+     "act": "claude-2-turn-24-f-s1-0",
+     "quote": "a hard reload of the About page",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-r-4",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Done. I rendered the notebook at HEAD",
+   "answers": [
+    {
+     "act": "claude-2-turn-24-f-s2-0",
+     "quote": "Done. I rendered the notebook at HEAD",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-24-r-5",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The notebook keeps \"(Joe)\" in the setting sentence",
+   "answers": [
+    {
+     "act": "claude-2-turn-24-f-s3-0",
+     "quote": "(\"Naming as Joe is fine\") The notebook keeps \"(Joe)\" in the setting sentence, your name on the author line,",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

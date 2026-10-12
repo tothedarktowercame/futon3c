@@ -1,0 +1,89 @@
+{
+ "record": "turn-3ohcEz",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-128-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "What if instead of \"rulings\" we follow your suggestions as a \"default setting\"",
+   "answers": [],
+   "scope": {
+    "opens": "defaults-not-rulings",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-128-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Yes, and done: all ten recommendations are now in force as defaults",
+   "answers": [
+    {
+     "act": "claude-2-turn-128-f-s1-0",
+     "quote": "Yes, and done: all ten recommendations are now in force as defaults",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-2-turn-127-r-3",
+     "quote": "(\"follow your suggestions as a 'default setting'\") Yes, and done: all ten recommendations are now in force as",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-128-r-1",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "R3 was mine to apply",
+   "answers": [
+    {
+     "act": "claude-2-turn-128-f-s1-0",
+     "quote": "(what the defaults released, and what moved at once) R3 was mine to apply: `MeetWitness` in",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-2-turn-127-r-1",
+     "quote": "(what the defaults released, and what moved at once) R3 was mine to apply: `MeetWitness` in",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-128-r-2",
+   "kind": "propose",
+   "move": "propose/order-of-work",
+   "quote": "B4 part 2 under R5/R6 — rank the 103 cones with the item sheet",
+   "answers": [
+    {
+     "act": "claude-2-turn-128-f-s1-0",
+     "quote": "(order after A3) B4 part 2 under R5/R6 — rank the 103 cones with the item sheet, attention and the provisional",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

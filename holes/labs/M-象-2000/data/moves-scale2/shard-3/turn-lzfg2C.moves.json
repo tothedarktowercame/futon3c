@@ -1,0 +1,102 @@
+{
+ "record": "turn-lzfg2C",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-3-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "For me \"constrain\" is classed as EVALUATE",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-3-f-s1-1",
+   "kind": "clarify",
+   "move": "clarify/ask-fact",
+   "quote": "I'm not sure what's meant by \"standings\" above.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-3-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "The kernel already treats a constraint as a rule",
+   "answers": [
+    {
+     "act": "claude-16-turn-3-f-s1-1",
+     "quote": "(how `constrain` sits today) The kernel already treats a constraint as a rule: its kind table says `:constrain",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-16-turn-1-r-4",
+     "quote": "(how `constrain` sits today) The kernel already treats a constraint as a rule: its kind table says `:constrain",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-3-r-1",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "That is the stage column of the proforma table",
+   "answers": [
+    {
+     "act": "claude-16-turn-3-f-s1-0",
+     "quote": "(\"classed as EVALUATE\") That is the stage column of the proforma table, where 🈲 constrain is evaluate",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-3-r-2",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "Only the double count: take `constrain` out of the adjacency keys",
+   "answers": [
+    {
+     "act": "claude-16-turn-1-r-4",
+     "quote": "take `constrain` out of the adjacency keys so it opens no port",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-16-turn-3-f-s1-0",
+     "quote": "(what I would change) Only the double count: take `constrain` out of the adjacency keys so it opens no port.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

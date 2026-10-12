@@ -1,0 +1,156 @@
+{
+ "record": "turn-qnYgVz",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-81-f-s1-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "I think the narrow fix you've recommended does make sense",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "flag it as something that we want to investigate in detail in the next click or two",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-f-s1-2",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "so that we can see what things actually look like",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-f-s1-3",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "but also validating it empirically.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "what changed",
+   "answers": [
+    {
+     "act": "claude-2-turn-81-f-s1-0",
+     "quote": "Positive record:** now needs at least one selected want classed reached",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-r-1",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "(tests) Two new tests use the selected action of the last click (four wants, four patterns) and build the want",
+   "answers": [
+    {
+     "act": "claude-2-turn-81-f-s1-0",
+     "quote": "(tests) Two new tests use the selected action of the last click (four wants, four patterns) and build the want",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I saved this as a standing note",
+   "answers": [
+    {
+     "act": "claude-2-turn-81-f-s1-1",
+     "quote": "(\"flag it as something that we want to investigate\") I saved this as a standing note. On each of the next",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "two things the examples will run into",
+   "answers": [
+    {
+     "act": "claude-2-turn-81-f-s1-2",
+     "quote": "A failed want changes nothing the next selection reads",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-81-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/two-decisions",
+   "quote": "Two decisions",
+   "answers": [
+    {
+     "act": "claude-2-turn-81-f-s1-1",
+     "quote": "May codex-10 run one click now?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

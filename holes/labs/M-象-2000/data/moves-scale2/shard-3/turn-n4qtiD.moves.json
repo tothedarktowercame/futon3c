@@ -1,0 +1,136 @@
+{
+ "record": "turn-n4qtiD",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-31-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Broadly from the memory angle it would be great if jumping into an agent chat felt like continuing a familiar",
+   "answers": [],
+   "scope": {
+    "opens": "familiar-conversation",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-31-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "That is the test the whole inbox and memory work should be measured by",
+   "answers": [
+    {
+     "act": "claude-16-turn-31-f-s1-0",
+     "quote": "recording your words verbatim in the mission",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "familiar-conversation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-31-r-1",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "Picking up a conversation means knowing four things without rereading it",
+   "answers": [
+    {
+     "act": "claude-16-turn-31-f-s1-0",
+     "quote": "(what \"familiar\" would be made of) Picking up a conversation means knowing four things without rereading it:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-31-r-2",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "All of it is keyed by session, and a conversation is not a session",
+   "answers": [
+    {
+     "act": "claude-16-turn-31-f-s1-0",
+     "quote": "(the gap) All of it is keyed by session, and a conversation is not a session. M-象-2000 ran through claude-14,",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-31-r-3",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "(the join exists; the artifact does not) Every agent-chat turn on the live store already carries its excursion",
+   "answers": [
+    {
+     "act": "claude-16-turn-31-f-s1-0",
+     "quote": "(the join exists; the artifact does not) Every agent-chat turn on the live store already carries its excursion",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "familiar-conversation"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-31-r-4",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "The measure I would fix before building",
+   "answers": [
+    {
+     "act": "claude-16-turn-31-f-s1-0",
+     "quote": "(how to know it worked) The measure I would fix before building: after a resume with the brief, does the",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-31-r-5",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "You were thinking aloud, so nothing is dispatched for this beyond the record",
+   "answers": [
+    {
+     "act": "claude-16-turn-31-f-s1-0",
+     "quote": "nothing is dispatched for this beyond the record",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

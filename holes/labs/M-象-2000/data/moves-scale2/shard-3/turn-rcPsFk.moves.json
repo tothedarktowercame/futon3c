@@ -1,0 +1,111 @@
+{
+ "record": "turn-rcPsFk",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-8-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can you show me what's in the offing?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "A board follows: what is running, what comes next, what waits on you.",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "what is running, what comes next, what waits on you",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-1",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "the inbox as it stands",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "Open ports at the tails of the 86 sessions with ports since 10-01",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-2",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "next on my path, in order",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "(next on my path, in order) 1. Receipt of the recompute: totals before and after, the four closes in",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/two-decisions",
+   "quote": "Two decisions, both about your prior",
+   "answers": [
+    {
+     "act": "claude-16-turn-8-f-s1-0",
+     "quote": "(waiting on you) Two decisions, both about your prior. First, `constrain`: remove it from the adjacency",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-8-r-4",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "not in the offing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

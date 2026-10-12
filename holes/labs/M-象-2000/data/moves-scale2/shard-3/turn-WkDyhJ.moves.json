@@ -1,0 +1,137 @@
+{
+ "record": "turn-WkDyhJ",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-83-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Okay, well it very clearly is a stopgap measure because the way the patterns are stored, Is in a library in",
+   "answers": [],
+   "scope": {
+    "opens": "giant-cascade-first",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-f-s1-1",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "that cascade is the repository of learning about patterns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "where it is",
+   "answers": [
+    {
+     "act": "claude-2-turn-83-f-s1-0",
+     "quote": "(where it is) - **File:** `/home/joe/code/storage/operator-turns/mined-pattern-graph.json`, last written 1",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-r-1",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "Every link carries its kind and the evidence for it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-r-2",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Readers exist but are not called.",
+   "answers": [
+    {
+     "act": "claude-2-turn-83-f-s1-1",
+     "quote": "(the War Machine side) - **Readers exist but are not called.** futon2 has three modules that load this graph",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I did not look at the copy in XTDB",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-r-4",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "A first sketch, for you to correct",
+   "answers": [
+    {
+     "act": "claude-2-turn-83-f-s1-0",
+     "quote": "(\"what feedback looks like relative to that cascade\") A first sketch, for you to correct: 1. **A click becomes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-83-r-5",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "(\"giant connected pattern cascade\") Is this file the cascade you mean, or is the one you have been building",
+   "answers": [
+    {
+     "act": "claude-2-turn-83-f-s1-0",
+     "quote": "Is this file the cascade you mean",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

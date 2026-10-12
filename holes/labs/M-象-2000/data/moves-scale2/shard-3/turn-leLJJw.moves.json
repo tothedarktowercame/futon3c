@@ -1,0 +1,67 @@
+{
+ "record": "turn-leLJJw",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-7-turn-3-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Thanks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-3-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Now ask me one 🈸 question about whether to delete the file",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-3-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "and then stop.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-3-r-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "Should I delete `elephant.txt` from /tmp/xiang-demo-2 and commit the deletion?",
+   "answers": [
+    {
+     "act": "claude-7-turn-3-f-s2-0",
+     "quote": "Should I delete `elephant.txt`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,98 @@
+{
+ "record": "turn-ErsAQP",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-127-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "please write the items for me into the E-aif-cascade",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-127-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The ten items are in `futon2/holes/E-aif-cascade.md`",
+   "answers": [
+    {
+     "act": "claude-2-turn-127-f-s1-0",
+     "quote": "The ten items are in `futon2/holes/E-aif-cascade.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-127-r-1",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "the ten, one line each, recommendation in brackets",
+   "answers": [
+    {
+     "act": "claude-2-turn-127-f-s1-0",
+     "quote": "R1 the eleven-edge cut of the harness figure",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-127-r-2",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I reconstructed the \"two v3 decisions\" from the draft's §4 and §7",
+   "answers": [
+    {
+     "act": "claude-2-turn-127-f-s1-0",
+     "quote": "(R9 and R10) I reconstructed the \"two v3 decisions\" from the draft's §4 and §7 since the earlier report naming",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-127-r-3",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "codex-33 is idle; nothing dispatchable remains without a ruling",
+   "answers": [
+    {
+     "act": "claude-2-turn-127-f-s1-0",
+     "quote": "Rulings can come in any order or as one batch",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

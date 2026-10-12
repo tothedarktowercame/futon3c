@@ -1,0 +1,86 @@
+{
+ "record": "turn-CBKG8g",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-7-turn-1-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "This is a demo session for testing 象.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-1-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Please reply in the proforma with two questions for me and nothing else",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-1-f-s3-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Don't do anything yet.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-1-r-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "Should the demo file be called elephant.txt?",
+   "answers": [
+    {
+     "act": "claude-7-turn-1-f-s2-0",
+     "quote": "(\"should be called elephant.txt\") Should the demo file be called elephant.txt?",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-7-turn-1-r-1",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "Which line should go in it?",
+   "answers": [
+    {
+     "act": "claude-7-turn-1-f-s2-0",
+     "quote": "(\"the one line to write in it\") Which line should go in it? 1. `象 means elephant.` 2. `This file was written",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

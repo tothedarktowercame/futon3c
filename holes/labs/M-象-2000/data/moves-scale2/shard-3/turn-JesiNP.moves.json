@@ -1,0 +1,111 @@
+{
+ "record": "turn-JesiNP",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-25-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "make mouse-over pop it to nearly full screen",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-25-r-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "The drawing is 2.84 times as wide as it is tall",
+   "answers": [
+    {
+     "act": "claude-2-turn-25-f-s1-0",
+     "quote": "(why it slides) The drawing is 2.84 times as wide as it is tall, and the figure in the page already takes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-25-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I took this as 10% on each side",
+   "answers": [
+    {
+     "act": "claude-2-turn-25-f-s1-0",
+     "quote": "(\"leaving a 20% margin, so mouse-away to the margin can exit\") I took this as 10% on each side, so the box is",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-25-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "I served the site locally and drove a real Chromium with Playwright",
+   "answers": [
+    {
+     "act": "claude-2-turn-25-f-s1-0",
+     "quote": "(what I checked) I served the site locally and drove a real Chromium with Playwright at 1600 by 900. Every",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-25-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Aiming:** because the drawing slides as you move",
+   "answers": [
+    {
+     "act": "claude-2-turn-25-f-s1-0",
+     "quote": "(two things you may notice) - **Aiming:** because the drawing slides as you move, a box shifts a little as you",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-25-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Push, then hard-reload the About page once",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

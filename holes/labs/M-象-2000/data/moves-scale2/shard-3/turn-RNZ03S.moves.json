@@ -1,0 +1,60 @@
+{
+ "record": "turn-RNZ03S",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-3-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Please pass the notes (polish and strategy) to claude-17",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-3-r-0",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "Sent. The bell to claude-17 carries the eight polish notes",
+   "answers": [
+    {
+     "act": "claude-2-turn-3-f-s1-0",
+     "quote": "Sent. The bell to claude-17 carries the eight polish notes",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-3-r-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I told claude-17 these are review notes, not instructions",
+   "answers": [
+    {
+     "act": "claude-2-turn-3-f-s1-0",
+     "quote": "(how I framed it) I told claude-17 these are review notes, not instructions, and that you have not ruled on",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

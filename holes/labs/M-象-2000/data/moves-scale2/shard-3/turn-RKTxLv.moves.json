@@ -1,0 +1,111 @@
+{
+ "record": "turn-RKTxLv",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-1-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "take over on the M-象-2000 mission",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-1-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Done: I accepted in the bell from claude-15",
+   "answers": [
+    {
+     "act": "claude-16-turn-1-f-s1-0",
+     "quote": "the mission's Owner line now reads claude-16",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "M-象-2000-takeover",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-1-r-1",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "(false-open ports) Checked this turn against the record files and the live store. Neither the quote matcher",
+   "answers": [
+    {
+     "act": "claude-16-turn-1-f-s1-0",
+     "quote": "(false-open ports) Checked this turn against the record files and the live store. Neither the quote matcher",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-1-r-2",
+   "kind": "propose",
+   "move": "propose/plan",
+   "quote": "Three contact points, in the order I'd build them",
+   "answers": [
+    {
+     "act": "claude-16-turn-1-f-s1-0",
+     "quote": "(\"compatibility surface with claude-15's work on -40°\") Three contact points, in the order I'd build them. 1.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "compatibility-surface",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-1-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Ports first.",
+   "answers": [
+    {
+     "act": "claude-16-turn-1-f-s1-0",
+     "quote": "Until reply text is restored",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "compatibility-surface"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-1-r-4",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "(one thing to confirm) `constrain` is an opener in the adjacency table, so Joe's standing rules sit in the",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,79 @@
+{
+ "record": "turn-oUIVIz",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-5-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Please pass it to claude-4 and this time do ask for a bell back",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-5-r-0",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "Sent, and claude-4 has started on it",
+   "answers": [
+    {
+     "act": "claude-2-turn-5-f-s1-0",
+     "quote": "I asked for a reply item by item",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-5-r-1",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "I am parked on the job, so claude-4's answer will arrive here as its own turn",
+   "answers": [
+    {
+     "act": "claude-2-turn-5-f-s1-0",
+     "quote": "(how the reply reaches you) I am parked on the job, so claude-4's answer will arrive here as its own turn and",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-5-r-2",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "what the bell contained",
+   "answers": [
+    {
+     "act": "claude-2-turn-5-f-s1-0",
+     "quote": "(what the bell contained) The per-seat token table, the three token-cost changes, the four speed items, and",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
