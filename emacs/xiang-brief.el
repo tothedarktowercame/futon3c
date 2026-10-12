@@ -22,10 +22,12 @@
     (when (= 0 (call-process "curl" nil t nil "-sS" "--max-time" "5"
                              "http://127.0.0.1:7070/api/alpha/agents"))
       (goto-char (point-min))
-      (let* ((payload (json-parse-buffer :object-type 'alist))
+      (let* ((payload (json-parse-buffer :object-type 'alist :null-object nil))
              (agents (alist-get 'agents payload))
-             (agent (alist-get (intern seat) agents)))
-        (alist-get 'mission-id agent)))))
+             (agent (alist-get (intern seat) agents))
+             (mission (alist-get 'mission-id agent)))
+        ;; A seat with no mission answers JSON null; only a string is a default.
+        (and (stringp mission) (not (string-empty-p mission)) mission)))))
 
 (defun xiang-brief--script ()
   (expand-file-name "../holes/labs/M-象-2000/brief/resume_brief.py"
@@ -38,7 +40,9 @@
    (let* ((seat (or (xiang-brief--seat-from-buffer-name)
                     (user-error "Not in a Claude or Codex REPL buffer")))
           (default (xiang-brief--roster-mission seat)))
-     (list (read-string "Mission: " default nil default))))
+     (list (if default
+               (read-string "Mission: " default nil default)
+             (read-string "Mission (seat has none on the roster): " "M-象-2000")))))
   (let ((seat (or (xiang-brief--seat-from-buffer-name)
                   (user-error "Not in a Claude or Codex REPL buffer"))))
     (unless (and mission (not (string-empty-p mission)))
