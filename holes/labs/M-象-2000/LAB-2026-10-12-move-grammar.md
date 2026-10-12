@@ -321,3 +321,88 @@ keeps the port open. That needs the move on the act, which is what the fast
 tier is for, and the 1,540 labelled incidences are its training and test set.
 False witnesses (234 of 744) are evidence noise, not closure errors; they go
 when `inferred` carries the move.
+
+## Batch 3 (2026-10-12, 20:08Z–20:37Z): futon missions, scopes across turns
+
+Joe (2026-10-12): "if we have a 5 hour window back we could continue with
+the zai mining of Futon related scopes". Three waves on a fresh 5h window,
+seven shards, 405 records, Zai monthly meter 73% → 92% (19 points):
+
+| wave | pool | records | shards | seats |
+|---|---|---|---|---|
+| 1 | operator turns stamped with a futon mission other than M-diagramprover (M-landscape-positioning 82, M-futonzero-prelim-practice 57, M-G-over-cascades 55, M-象-2000 12, M-warrant-limit 2) | 208 | 1–3 | zai-1..3 |
+| 2 | M-diagramprover, the reply-rich mission | 114 | 4–5 | zai-4..5 |
+| 3 | records without a mission id (pre-stamping sessions: claude-17, claude-14, claude-2) that carry marked reply paragraphs | 83 | 6–7 | zai-1..2 |
+
+Every shard revalidated by the owner: 405 files, 1,474 acts valid, void 0.
+Each shard returned 7–13 minutes after dispatch; the notes' own time
+claims ("about 2 h", "5 h of seat time") are false by the job clock, and
+the seats build sidecars with scripts plus the validator, not by hand.
+
+**Inputs changed for this batch** (`moves/sample.py`): `mission_id`;
+`open_ports`, the kernel's still-open ports at the record (cap 12 in waves
+1–2, 24 in wave 3); and, from wave 3, `in_force`, the kernel's standings in
+force at the record resolved to act text. The validator accepts both as
+answer and scope targets, and now ranks the reading's fragments above the
+stored 120-character act prefix (shard 2 found 42 of 200 fragments cut).
+
+**Totals.** 1,474 acts (889 operator fragments, 585 reply paragraphs); 477
+answers (217 closes, 260 keeps); scopes: 109 opens, 669 within, 12 closes.
+Cross-turn targets, i.e. an answer or scope pointing outside the record:
+200 of 1,159 targets. Of those, 102 point at open ports (94 within, 8
+answers; waves 1–2, which had no standings) and 98 at in-force standings
+(67 answers, 30 within, 1 closes; wave 3, where **no target at all went to
+an open port**).
+
+**Findings.**
+
+1. *Standings carry the cross-turn structure; ports mostly do not.* In the
+   two shards that had both, every cross-turn target was a standing. In
+   waves 1–2, three labellers independently refused to link to the
+   kernel's held-open ports because they were stale (59 of 69 records at
+   the port cap in shard 2; the 09-27 "象 lighter is still pink" port open in
+   every futonzero record). Replies answer the same turn's asks: 8 of 477
+   answers hit an open port. This is the sole-port rule's false-open
+   problem seen from the labelling side, and the case for an effect rule
+   by move (above) plus retirement of stale ports.
+2. *A one-word approval closes the agent's last ask.* All ten of shard 7's
+   scope closes, and most of its 92 answer closes, are the operator's
+   "Yes", "🈸:Yes", "That sounds like a good plan", "Informally: yes please"
+   (or "No, let's try a different approach") against the preceding reply's
+   ask or proposal paragraph. Ten labelled instances for the classical rule
+   proposed to Joe on 2026-10-12 (operator ok/yes/go in the same session
+   answers the agent's last ask), which the brief can apply.
+3. *The kernel's standings include adopted decisions.* "🈸:Yes"
+   (`claude-17-turn-421-f-s1-0`) is cited 8 times as a governing opener; a
+   standing is sometimes a decision in force, not a rule. The brief's "In
+   force" should say which.
+4. *Mission-defining openers govern most of a mission.* claude-4's "build a
+   DiagramProver checker adapted to Lean itself" governs 39 later acts
+   across two shards; claude-2's "all of these artifacts are supposed to be
+   demonstrating an application of active inference" 9; claude-17's "run it
+   for an hour and check quality" 12. These are the warp openers a
+   per-mission brief should lead with.
+5. *The shard-1 "rule dropped out of open_ports" report was an input gap,
+   not a kernel one*: the rule (turn-88's "use the debugger and watch it")
+   sat in `standings.in_force`, which waves 1–2 did not ship.
+
+**Consolidation over all three batches** (`moves/consolidate.py` over
+`data/moves-scale*/shard-*/`): 763 sidecars, 4,129 acts, 25 kinds, 131
+labels (batch 1 alone: 1,440 acts, 94 labels). The batch-1 vocabulary
+lacked the batch-2 labels, so every batch-3 note reported `propose/tentative`
+(now 73) and `propose/directive` (48) as inventions. New since batch 1:
+`report/finding` 19, `explain/reason` 17, `explain/decline` 10,
+`verify/status-check` 9, `report/ack` 9, `challenge/grievance` 8 (the
+M-G-over-cascades rupture turns, which no existing label fit).
+
+**Graph view** (`graph/build_mission_graph.py`, codex-57 aeb75232): after
+batch 3, M-象-2000 (seats join) 648 records, 524 edges (closes 151, keeps
+126, within 231, kernel closes 16 unmatched + 20 agreed); M-landscape-
+positioning 147 records, 264 edges; M-diagramprover 1,008 records, 1,061
+edges (43 kernel closes all agreed with a labelled close). No cycles.
+
+**Next.** (a) The approvals rule in the brief; (b) stale-port retirement
+and the effect rule by move in the kernel; (c) the hyperedge carrier from
+these 763 sidecars; (d) Joe's verdicts through the graph's review table as
+the first measurement. Zai work for this campaign is finished; the monthly
+meter resets 2026-10-13 02:04Z.

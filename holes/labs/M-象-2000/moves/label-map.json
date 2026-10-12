@@ -1,13 +1,25 @@
 {
   "schema": "moves/label-map/1",
   "labels": {
+    "agree/other": {
+      "label": "agree/other",
+      "reason": "other"
+    },
+    "agree/with-reasoning": {
+      "label": "agree/other",
+      "reason": "other"
+    },
+    "approve/other": {
+      "label": "approve/other",
+      "reason": "other"
+    },
     "approve/plain": {
       "label": "approve/plain",
       "reason": "kept"
     },
     "approve/provisional": {
-      "label": "approve/plain",
-      "reason": "folded:enough,good"
+      "label": "approve/provisional",
+      "reason": "kept"
     },
     "approve/with-amendment": {
       "label": "approve/with-amendment",
@@ -22,6 +34,10 @@
       "reason": "kept"
     },
     "ask-action/counterfactual-question": {
+      "label": "ask-action/status-check",
+      "reason": "folded:gotten,started"
+    },
+    "ask-action/example-request": {
       "label": "ask-action/other",
       "reason": "other"
     },
@@ -30,8 +46,8 @@
       "reason": "other"
     },
     "ask-action/fix-request": {
-      "label": "ask-action/other",
-      "reason": "other"
+      "label": "ask-action/one-decision",
+      "reason": "folded:report,today"
     },
     "ask-action/generate": {
       "label": "ask-action/other",
@@ -41,13 +57,17 @@
       "label": "ask-action/other",
       "reason": "other"
     },
+    "ask-action/look-at-buffer": {
+      "label": "ask-action/one-decision",
+      "reason": "folded:before,look,repl"
+    },
     "ask-action/one-decision": {
       "label": "ask-action/one-decision",
       "reason": "kept"
     },
     "ask-action/operator-step": {
-      "label": "ask-action/other",
-      "reason": "other"
+      "label": "ask-action/one-decision",
+      "reason": "folded:origin,page,push"
     },
     "ask-action/read-record": {
       "label": "ask-action/read-record",
@@ -57,19 +77,67 @@
       "label": "ask-action/status-check",
       "reason": "kept"
     },
+    "ask-action/test-script": {
+      "label": "ask-action/one-decision",
+      "reason": "folded:delete,file,question,whether"
+    },
+    "ask-action/two-decision": {
+      "label": "ask-action/two-decision",
+      "reason": "kept"
+    },
     "ask-action/two-decisions": {
       "label": "ask-action/two-decision",
       "reason": "normalised"
+    },
+    "challenge/analogy": {
+      "label": "challenge/other",
+      "reason": "other"
+    },
+    "challenge/claim": {
+      "label": "challenge/other",
+      "reason": "other"
     },
     "challenge/decision-criterion": {
       "label": "challenge/other",
       "reason": "other"
     },
+    "challenge/grievance": {
+      "label": "challenge/grievance",
+      "reason": "kept"
+    },
     "challenge/necessity": {
       "label": "challenge/other",
       "reason": "other"
     },
+    "challenge/other": {
+      "label": "challenge/other",
+      "reason": "other"
+    },
+    "challenge/premise": {
+      "label": "challenge/premise",
+      "reason": "kept"
+    },
+    "challenge/proposal": {
+      "label": "challenge/other",
+      "reason": "other"
+    },
+    "challenge/term": {
+      "label": "challenge/other",
+      "reason": "other"
+    },
+    "challenge/trust": {
+      "label": "challenge/other",
+      "reason": "other"
+    },
     "clarify/ambiguity": {
+      "label": "clarify/check-understand",
+      "reason": "folded:co-op,mean"
+    },
+    "clarify/answer": {
+      "label": "clarify/context",
+      "reason": "folded:someone,version"
+    },
+    "clarify/answer-question": {
       "label": "clarify/other",
       "reason": "other"
     },
@@ -93,9 +161,17 @@
       "label": "clarify/assertion",
       "reason": "kept"
     },
+    "clarify/check-understand": {
+      "label": "clarify/check-understand",
+      "reason": "kept"
+    },
     "clarify/check-understanding": {
       "label": "clarify/check-understand",
       "reason": "normalised"
+    },
+    "clarify/condition": {
+      "label": "clarify/assertion",
+      "reason": "folded:lean,worth"
     },
     "clarify/context": {
       "label": "clarify/context",
@@ -110,8 +186,8 @@
       "reason": "kept"
     },
     "clarify/examples": {
-      "label": "clarify/other",
-      "reason": "other"
+      "label": "clarify/ask-decision",
+      "reason": "folded:last,turn,turns"
     },
     "clarify/introduce-topic": {
       "label": "clarify/other",
@@ -129,33 +205,57 @@
       "label": "clarify/other",
       "reason": "other"
     },
+    "clarify/other": {
+      "label": "clarify/other",
+      "reason": "other"
+    },
     "clarify/quoted-constraint": {
       "label": "clarify/definition",
       "reason": "folded:account,administrator,homeserver,must,provision"
     },
+    "clarify/repeat-question": {
+      "label": "clarify/ask-decision",
+      "reason": "folded:question,same"
+    },
     "clarify/scenario": {
       "label": "clarify/other",
       "reason": "other"
+    },
+    "clarify/scope": {
+      "label": "clarify/context",
+      "reason": "folded:blank,file"
     },
     "clarify/status": {
       "label": "clarify/other",
       "reason": "other"
     },
     "clarify/weigh-deferral": {
-      "label": "clarify/other",
-      "reason": "other"
+      "label": "clarify/check-understand",
+      "reason": "folded:until,wait"
+    },
+    "collect/ask-option": {
+      "label": "collect/ask-option",
+      "reason": "kept"
     },
     "collect/ask-options": {
       "label": "collect/ask-option",
       "reason": "normalised"
     },
+    "collect/idea": {
+      "label": "collect/idea",
+      "reason": "kept"
+    },
     "collect/ingredients": {
       "label": "collect/other",
       "reason": "other"
     },
+    "collect/offer-example": {
+      "label": "collect/other",
+      "reason": "other"
+    },
     "constrain/accept": {
-      "label": "constrain/stand-rule",
-      "reason": "folded:bugs,lean-to-python"
+      "label": "constrain/accept",
+      "reason": "kept"
     },
     "constrain/for-now": {
       "label": "constrain/for-now",
@@ -163,30 +263,46 @@
     },
     "constrain/hold-dispatch": {
       "label": "constrain/stand-rule",
-      "reason": "folded:before,time"
+      "reason": "folded:before,change,dispatches,time"
     },
     "constrain/measurement-scope": {
       "label": "constrain/other",
       "reason": "other"
     },
     "constrain/method-first": {
+      "label": "constrain/for-now",
+      "reason": "folded:good,results"
+    },
+    "constrain/other": {
       "label": "constrain/other",
       "reason": "other"
     },
     "constrain/retry-better": {
-      "label": "constrain/for-now",
-      "reason": "folded:fail,loop,retry,same"
+      "label": "constrain/stand-rule",
+      "reason": "folded:better,forever,improvements,loop,same"
     },
     "constrain/scope-limit": {
-      "label": "constrain/other",
-      "reason": "other"
+      "label": "constrain/stand-rule",
+      "reason": "folded:gaps,turns,won't"
+    },
+    "constrain/stand-rule": {
+      "label": "constrain/stand-rule",
+      "reason": "kept"
     },
     "constrain/standing-rule": {
       "label": "constrain/stand-rule",
       "reason": "normalised"
     },
     "constrain/teach-helpers": {
-      "label": "constrain/other",
+      "label": "constrain/stand-rule",
+      "reason": "folded:each,efficient"
+    },
+    "continue/other": {
+      "label": "continue/other",
+      "reason": "other"
+    },
+    "continue/resume-work": {
+      "label": "continue/other",
       "reason": "other"
     },
     "continue/waiting-on-decision": {
@@ -205,11 +321,31 @@
       "label": "delegate/to-agent",
       "reason": "folded:give,send"
     },
+    "delegate/end-to-end": {
+      "label": "delegate/to-agent",
+      "reason": "folded:don't,spec"
+    },
     "delegate/handoff-spec": {
       "label": "delegate/handoff-spec",
       "reason": "kept"
     },
+    "delegate/investigate": {
+      "label": "delegate/other",
+      "reason": "other"
+    },
+    "delegate/other": {
+      "label": "delegate/other",
+      "reason": "other"
+    },
     "delegate/prime-then-elaborate": {
+      "label": "delegate/other",
+      "reason": "other"
+    },
+    "delegate/relay-question": {
+      "label": "delegate/relay-question",
+      "reason": "kept"
+    },
+    "delegate/retire-seats": {
       "label": "delegate/other",
       "reason": "other"
     },
@@ -219,7 +355,7 @@
     },
     "delegate/swarm-per-node": {
       "label": "delegate/to-agent",
-      "reason": "folded:agent,code,read"
+      "reason": "folded:agent,code,codex,each,read"
     },
     "delegate/to-agent": {
       "label": "delegate/to-agent",
@@ -229,25 +365,33 @@
       "label": "delegate/to-agent",
       "reason": "label:agent"
     },
+    "delegate/two-asks": {
+      "label": "delegate/to-agent",
+      "reason": "folded:notes,polish,strategy"
+    },
     "disagree/already-built": {
       "label": "disagree/other",
       "reason": "other"
     },
     "disagree/assessment": {
-      "label": "disagree/other",
-      "reason": "other"
+      "label": "disagree/correction",
+      "reason": "folded:complete,idea,lisp"
     },
     "disagree/correction": {
       "label": "disagree/correction",
       "reason": "kept"
     },
-    "explain/accept-retraction": {
-      "label": "explain/other",
+    "disagree/other": {
+      "label": "disagree/other",
       "reason": "other"
     },
+    "explain/accept-retraction": {
+      "label": "explain/reason",
+      "reason": "folded:machine,until"
+    },
     "explain/accumulator": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:memory,searched"
     },
     "explain/accumulator-example": {
       "label": "explain/example",
@@ -261,37 +405,49 @@
       "label": "explain/other",
       "reason": "other"
     },
-    "explain/analogy": {
+    "explain/alternative": {
       "label": "explain/other",
       "reason": "other"
+    },
+    "explain/analogy": {
+      "label": "explain/analogy",
+      "reason": "kept"
     },
     "explain/answer-question": {
       "label": "explain/answer-question",
       "reason": "kept"
     },
+    "explain/apology": {
+      "label": "explain/other",
+      "reason": "other"
+    },
     "explain/background": {
       "label": "explain/background",
       "reason": "kept"
+    },
+    "explain/comparison": {
+      "label": "explain/other",
+      "reason": "other"
     },
     "explain/composition": {
       "label": "explain/other",
       "reason": "other"
     },
     "explain/concept": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/context",
+      "reason": "folded:basically,guess"
     },
     "explain/conceptual-blend": {
       "label": "explain/mechanism",
-      "reason": "folded:pattern,unit"
+      "reason": "folded:itself,pattern,unit"
     },
     "explain/concretisation": {
       "label": "explain/other",
       "reason": "other"
     },
     "explain/consequence": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:already,pattern"
     },
     "explain/context": {
       "label": "explain/context",
@@ -301,27 +457,35 @@
       "label": "explain/other",
       "reason": "other"
     },
+    "explain/counter": {
+      "label": "explain/example",
+      "reason": "folded:interpretation,nodes"
+    },
     "explain/counterfactual": {
       "label": "explain/other",
       "reason": "other"
     },
     "explain/cross-check-use": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:live,records,since"
     },
     "explain/decision-reversal": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:because,rule"
     },
     "explain/decline": {
-      "label": "explain/mechanism",
-      "reason": "folded:after,rather"
+      "label": "explain/decline",
+      "reason": "kept"
     },
     "explain/decline-alternative": {
+      "label": "explain/decline",
+      "reason": "label:decline"
+    },
+    "explain/deferred-payoff": {
       "label": "explain/other",
       "reason": "other"
     },
-    "explain/deferred-payoff": {
+    "explain/design": {
       "label": "explain/other",
       "reason": "other"
     },
@@ -329,13 +493,17 @@
       "label": "explain/other",
       "reason": "other"
     },
+    "explain/diagnosis": {
+      "label": "explain/other",
+      "reason": "other"
+    },
     "explain/difference": {
       "label": "explain/mechanism",
-      "reason": "folded:operator,turns"
+      "reason": "folded:fairly,operator,turns"
     },
     "explain/distinction": {
-      "label": "explain/mechanism",
-      "reason": "folded:different,structure"
+      "label": "explain/distinction",
+      "reason": "kept"
     },
     "explain/edge-kinds": {
       "label": "explain/answer-question",
@@ -362,20 +530,24 @@
       "reason": "other"
     },
     "explain/error-to-agent": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:agent,error,gets"
     },
     "explain/evidence": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:buffer,list"
     },
     "explain/example": {
       "label": "explain/example",
       "reason": "kept"
     },
+    "explain/expectation": {
+      "label": "explain/mechanism",
+      "reason": "folded:agents,self-talk"
+    },
     "explain/feasibility": {
-      "label": "explain/motive",
-      "reason": "folded:agent,turns"
+      "label": "explain/mechanism",
+      "reason": "folded:agent,correspondence,turns"
     },
     "explain/fit": {
       "label": "explain/other",
@@ -394,8 +566,8 @@
       "reason": "normalised"
     },
     "explain/generalisation": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:emacs,intent"
     },
     "explain/hypothesis": {
       "label": "explain/hypothesis",
@@ -405,13 +577,17 @@
       "label": "explain/other",
       "reason": "other"
     },
+    "explain/implication": {
+      "label": "explain/other",
+      "reason": "other"
+    },
     "explain/improvable-loop": {
       "label": "explain/other",
       "reason": "other"
     },
     "explain/integration": {
       "label": "explain/mechanism",
-      "reason": "folded:existing,fits"
+      "reason": "folded:existing,fits,shape,source"
     },
     "explain/intent": {
       "label": "explain/other",
@@ -421,25 +597,33 @@
       "label": "explain/mechanism",
       "reason": "folded:machine,produce"
     },
+    "explain/interpretation": {
+      "label": "explain/interpretation",
+      "reason": "kept"
+    },
     "explain/iteration": {
       "label": "explain/mechanism",
-      "reason": "folded:each,structure"
+      "reason": "folded:each,explicit,structure"
     },
     "explain/justification": {
-      "label": "explain/mechanism",
-      "reason": "folded:because,sense"
+      "label": "explain/justification",
+      "reason": "kept"
     },
     "explain/lean-grounding": {
       "label": "explain/other",
       "reason": "other"
     },
     "explain/lean-is-model": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/context",
+      "reason": "folded:basically,given"
     },
     "explain/live-system-goal": {
       "label": "explain/other",
       "reason": "other"
+    },
+    "explain/map": {
+      "label": "explain/map",
+      "reason": "kept"
     },
     "explain/mapping": {
       "label": "explain/map",
@@ -450,8 +634,8 @@
       "reason": "kept"
     },
     "explain/metaphor": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/motive",
+      "reason": "folded:head,keeping"
     },
     "explain/motive": {
       "label": "explain/motive",
@@ -470,6 +654,10 @@
       "reason": "kept"
     },
     "explain/offering": {
+      "label": "explain/justification",
+      "reason": "folded:custom,provision,service"
+    },
+    "explain/other": {
       "label": "explain/other",
       "reason": "other"
     },
@@ -482,20 +670,20 @@
       "reason": "other"
     },
     "explain/pieces-in-place": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:already,pieces,place"
     },
     "explain/position": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/position",
+      "reason": "kept"
     },
     "explain/positioning": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/position",
+      "reason": "normalised"
     },
     "explain/precedent": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/context",
+      "reason": "folded:mfuton,system"
     },
     "explain/premise-history": {
       "label": "explain/other",
@@ -510,16 +698,20 @@
       "reason": "other"
     },
     "explain/reading": {
-      "label": "explain/mechanism",
-      "reason": "folded:pattern,reading"
+      "label": "explain/read",
+      "reason": "normalised"
     },
     "explain/reading-of-idea": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/read",
+      "reason": "label:read"
     },
     "explain/reason": {
-      "label": "explain/mechanism",
-      "reason": "folded:after,because,same"
+      "label": "explain/reason",
+      "reason": "kept"
+    },
+    "explain/reasoning": {
+      "label": "explain/reason",
+      "reason": "normalised"
     },
     "explain/recap": {
       "label": "explain/other",
@@ -528,6 +720,10 @@
     "explain/reference": {
       "label": "explain/other",
       "reason": "other"
+    },
+    "explain/reflection": {
+      "label": "explain/mechanism",
+      "reason": "folded:comparator,found,four"
     },
     "explain/relate-debugger": {
       "label": "explain/other",
@@ -539,27 +735,27 @@
     },
     "explain/roadmap": {
       "label": "explain/mechanism",
-      "reason": "folded:emacs,memory"
+      "reason": "folded:emacs,memory,rapid,whole"
     },
     "explain/role-tension": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/context",
+      "reason": "folded:doing,session"
     },
     "explain/semantics": {
       "label": "explain/g-semantic",
       "reason": "label:semantic"
     },
     "explain/signal-scope": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:error,explicit"
     },
     "explain/step": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:doing,selection"
     },
     "explain/structure-change": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:change,fixed,structure"
     },
     "explain/subject-to-constraints": {
       "label": "explain/other",
@@ -574,40 +770,44 @@
       "reason": "other"
     },
     "explain/why-gaps-matter": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:memory,search"
     },
     "explain/why-insufficient": {
       "label": "explain/mechanism",
       "reason": "folded:differently,memory"
     },
     "explain/workflow-idea": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/answer-question",
+      "reason": "folded:last,night"
     },
     "explain/zeroth-engagement": {
       "label": "explain/other",
       "reason": "other"
     },
     "explore/analogy": {
-      "label": "explore/other",
-      "reason": "other"
+      "label": "explore/open-question",
+      "reason": "folded:before,operator"
     },
     "explore/business-case": {
       "label": "explore/other",
       "reason": "other"
     },
     "explore/directory-trick": {
-      "label": "explore/other",
-      "reason": "other"
+      "label": "explore/open-question",
+      "reason": "folded:claude,maybe,thinking"
     },
     "explore/goal-question": {
       "label": "explore/open-question",
       "reason": "label:question"
     },
     "explore/historical-count": {
-      "label": "explore/other",
-      "reason": "other"
+      "label": "explore/open-question",
+      "reason": "folded:look,many"
+    },
+    "explore/hypothesis": {
+      "label": "explore/hypothesis",
+      "reason": "kept"
     },
     "explore/measurable": {
       "label": "explore/other",
@@ -620,6 +820,10 @@
     "explore/open-question": {
       "label": "explore/open-question",
       "reason": "kept"
+    },
+    "explore/other": {
+      "label": "explore/other",
+      "reason": "other"
     },
     "explore/other-users": {
       "label": "explore/other",
@@ -649,19 +853,47 @@
       "label": "explore/other",
       "reason": "other"
     },
+    "extend/deepen": {
+      "label": "extend/other",
+      "reason": "other"
+    },
+    "extend/other": {
+      "label": "extend/other",
+      "reason": "other"
+    },
+    "extend/possibility": {
+      "label": "extend/possibility",
+      "reason": "kept"
+    },
     "extend/settings-discovery": {
       "label": "extend/other",
       "reason": "other"
     },
+    "prioritize/benefit": {
+      "label": "prioritize/benefit",
+      "reason": "kept"
+    },
     "prioritize/benefit-of-tooling": {
+      "label": "prioritize/benefit",
+      "reason": "label:benefit"
+    },
+    "prioritize/efficiency": {
       "label": "prioritize/other",
       "reason": "other"
+    },
+    "prioritize/focus": {
+      "label": "prioritize/focus",
+      "reason": "kept"
     },
     "prioritize/hook-first": {
       "label": "prioritize/other",
       "reason": "other"
     },
     "prioritize/next-milestone": {
+      "label": "prioritize/other",
+      "reason": "other"
+    },
+    "prioritize/other": {
       "label": "prioritize/other",
       "reason": "other"
     },
@@ -673,7 +905,27 @@
       "label": "prioritize/other",
       "reason": "other"
     },
+    "prioritize/refocus": {
+      "label": "prioritize/other",
+      "reason": "other"
+    },
+    "prioritize/reorder": {
+      "label": "prioritize/other",
+      "reason": "other"
+    },
     "prioritize/review-first": {
+      "label": "prioritize/other",
+      "reason": "other"
+    },
+    "prioritize/sequence": {
+      "label": "prioritize/other",
+      "reason": "other"
+    },
+    "prioritize/sequencing": {
+      "label": "prioritize/other",
+      "reason": "other"
+    },
+    "prioritize/trade-off": {
       "label": "prioritize/other",
       "reason": "other"
     },
@@ -681,13 +933,17 @@
       "label": "prioritize/other",
       "reason": "other"
     },
+    "promise/commitment": {
+      "label": "promise/other",
+      "reason": "other"
+    },
     "propose/acceptance-plan": {
-      "label": "propose/order-plan",
-      "reason": "label:plan"
+      "label": "propose/acceptance-plan",
+      "reason": "kept"
     },
     "propose/aif-integration": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:alignment,start"
     },
     "propose/aligned-ledgers": {
       "label": "propose/other",
@@ -696,6 +952,10 @@
     "propose/alternative": {
       "label": "propose/alternative",
       "reason": "kept"
+    },
+    "propose/analogy": {
+      "label": "propose/alternative",
+      "reason": "folded:kind,rather"
     },
     "propose/applied-idea": {
       "label": "propose/other",
@@ -706,16 +966,16 @@
       "reason": "other"
     },
     "propose/build-cascade": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:cascade,develop"
     },
     "propose/cheat-sheet": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/checklist": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:before,goes"
     },
     "propose/checkpoint": {
       "label": "propose/other",
@@ -730,19 +990,23 @@
       "reason": "other"
     },
     "propose/comparison": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/alternative",
+      "reason": "folded:both,potentially"
     },
     "propose/complexify": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/design",
+      "reason": "folded:cascade,loop"
+    },
+    "propose/conditional": {
+      "label": "propose/design",
+      "reason": "folded:cheap,good"
     },
     "propose/consolidate-ui": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/cost-reductions": {
-      "label": "propose/order-plan",
+      "label": "propose/next-step",
       "reason": "folded:changes,three"
     },
     "propose/coverage": {
@@ -750,20 +1014,20 @@
       "reason": "other"
     },
     "propose/crime-scene-case": {
-      "label": "propose/alternative",
-      "reason": "folded:agent,we'd"
+      "label": "propose/tentative",
+      "reason": "folded:agent,case,chat,live,we'd"
     },
     "propose/cross-pollinate": {
-      "label": "propose/alternative",
+      "label": "propose/tentative",
       "reason": "folded:machine,maybe"
     },
     "propose/data-source": {
-      "label": "propose/redirect-scope",
+      "label": "propose/next-step",
       "reason": "folded:code,rather"
     },
     "propose/debugger-vision": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:another,start,thought"
     },
     "propose/demo-session": {
       "label": "propose/alternative",
@@ -777,6 +1041,10 @@
       "label": "propose/design",
       "reason": "label:design"
     },
+    "propose/directive": {
+      "label": "propose/directive",
+      "reason": "kept"
+    },
     "propose/discovery": {
       "label": "propose/other",
       "reason": "other"
@@ -786,24 +1054,24 @@
       "reason": "other"
     },
     "propose/document": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/redirect-scope",
+      "reason": "folded:material,training"
     },
     "propose/document-key": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/driver": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:cascade,live"
     },
     "propose/edit": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/elaborate-cascade": {
-      "label": "propose/design",
-      "reason": "folded:loop,maybe"
+      "label": "propose/tentative",
+      "reason": "folded:continue,loop,maybe"
     },
     "propose/encoding": {
       "label": "propose/other",
@@ -814,8 +1082,8 @@
       "reason": "other"
     },
     "propose/evidence": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:emacs,live"
     },
     "propose/example": {
       "label": "propose/alternative",
@@ -842,12 +1110,12 @@
       "reason": "label:scope"
     },
     "propose/fast-mode": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:before,turn"
     },
     "propose/figure-idea": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:figure,probably"
     },
     "propose/first-class-tracking": {
       "label": "propose/redirect-scope",
@@ -862,6 +1130,10 @@
       "reason": "other"
     },
     "propose/forward-model": {
+      "label": "propose/next-step",
+      "reason": "folded:improved,start"
+    },
+    "propose/framing": {
       "label": "propose/other",
       "reason": "other"
     },
@@ -882,20 +1154,20 @@
       "reason": "other"
     },
     "propose/hud": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:start,turn"
     },
     "propose/hydra-as-tools": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:hydra,verbs"
     },
     "propose/icon-choice": {
       "label": "propose/icon-choice",
       "reason": "kept"
     },
     "propose/idea": {
-      "label": "propose/alternative",
-      "reason": "folded:another,idea"
+      "label": "propose/tentative",
+      "reason": "folded:another,good,interesting,while"
     },
     "propose/include-faults": {
       "label": "propose/other",
@@ -906,36 +1178,36 @@
       "reason": "other"
     },
     "propose/infer-from-behaviour": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:high,priority"
     },
     "propose/infrastructure-need": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/inner-structure": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:each,itself"
     },
     "propose/linkage": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/living-object": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:changes,time"
     },
     "propose/mark-correction": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/merge-staging": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:branch,bring,site"
     },
     "propose/merge-workstream": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:merge,start"
     },
     "propose/milestone-plan": {
       "label": "propose/order-plan",
@@ -946,16 +1218,16 @@
       "reason": "other"
     },
     "propose/new-variant": {
-      "label": "propose/design",
-      "reason": "folded:classical,create"
+      "label": "propose/tentative",
+      "reason": "folded:create,probably,variant"
     },
     "propose/next-step": {
       "label": "propose/next-step",
       "reason": "kept"
     },
     "propose/one-cascade": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:cascade,items"
     },
     "propose/operator-availability": {
       "label": "propose/other",
@@ -965,6 +1237,14 @@
       "label": "propose/other",
       "reason": "other"
     },
+    "propose/order-of-work": {
+      "label": "propose/order-of-work",
+      "reason": "kept"
+    },
+    "propose/order-plan": {
+      "label": "propose/order-plan",
+      "reason": "kept"
+    },
     "propose/ordered-plan": {
       "label": "propose/order-plan",
       "reason": "normalised"
@@ -973,25 +1253,29 @@
       "label": "propose/other",
       "reason": "other"
     },
+    "propose/other": {
+      "label": "propose/redirect-scope",
+      "reason": "folded:compiles,rows"
+    },
     "propose/parallel-training": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/pipeline": {
       "label": "propose/next-step",
-      "reason": "folded:build,turn"
+      "reason": "folded:build,follow,turn"
     },
     "propose/plan": {
-      "label": "propose/order-plan",
-      "reason": "label:plan"
+      "label": "propose/plan",
+      "reason": "kept"
     },
     "propose/positioning": {
       "label": "propose/alternative",
       "reason": "folded:idea,inference"
     },
     "propose/practical-improvements": {
-      "label": "propose/redirect-scope",
-      "reason": "folded:notebook,system"
+      "label": "propose/tentative",
+      "reason": "folded:system,various"
     },
     "propose/priority-order": {
       "label": "propose/order-plan",
@@ -1002,8 +1286,8 @@
       "reason": "other"
     },
     "propose/project-idea": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:cascade,r-nodes"
     },
     "propose/reading-claim": {
       "label": "propose/other",
@@ -1018,6 +1302,10 @@
       "reason": "kept"
     },
     "propose/refinement": {
+      "label": "propose/next-step",
+      "reason": "folded:later,paper"
+    },
+    "propose/reframe": {
       "label": "propose/other",
       "reason": "other"
     },
@@ -1026,20 +1314,20 @@
       "reason": "other"
     },
     "propose/rename": {
-      "label": "propose/redirect-scope",
-      "reason": "folded:brendan,rather"
+      "label": "propose/alternative",
+      "reason": "folded:isn't,rather"
     },
     "propose/renew-role": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/reorganization": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:probably,under"
     },
     "propose/requisition": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:machine,send"
     },
     "propose/research-question": {
       "label": "propose/other",
@@ -1050,48 +1338,48 @@
       "reason": "other"
     },
     "propose/restatement": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:cascade,produce"
     },
     "propose/review-path": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:after,read"
     },
     "propose/revise-page": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/revision": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:instructions,shall"
     },
     "propose/revive-agent": {
-      "label": "propose/alternative",
-      "reason": "folded:able,agent"
+      "label": "propose/tentative",
+      "reason": "folded:able,agent,find"
     },
     "propose/riff": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/row-loop": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:already,dependencies,time"
     },
     "propose/session-backlog": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/shape-claim": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:cascade,look"
     },
     "propose/side-benefit": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/alternative",
+      "reason": "folded:code,question"
     },
     "propose/simplification": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/design",
+      "reason": "folded:cascade,elaborated"
     },
     "propose/smart-repl": {
       "label": "propose/alternative",
@@ -1122,8 +1410,8 @@
       "reason": "other"
     },
     "propose/switch-off-route": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:memory,system"
     },
     "propose/system-commands": {
       "label": "propose/other",
@@ -1132,6 +1420,10 @@
     "propose/tandem-handover": {
       "label": "propose/other",
       "reason": "other"
+    },
+    "propose/tentative": {
+      "label": "propose/tentative",
+      "reason": "kept"
     },
     "propose/toggle-feature": {
       "label": "propose/next-step",
@@ -1150,20 +1442,20 @@
       "reason": "other"
     },
     "propose/two-sided-work": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/order-of-work",
+      "reason": "label:work"
     },
     "propose/two-ways-forward": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:report,side"
     },
     "propose/upsell-idea": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/use-case-mining": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/redirect-scope",
+      "reason": "folded:terms,wonder"
     },
     "propose/validate-early": {
       "label": "propose/other",
@@ -1173,21 +1465,25 @@
       "label": "propose/other",
       "reason": "other"
     },
+    "propose/with-options": {
+      "label": "propose/next-step",
+      "reason": "folded:fixes,order"
+    },
     "propose/wording": {
       "label": "propose/next-step",
-      "reason": "folded:build,each"
+      "reason": "folded:build,each,other"
     },
     "propose/working-division": {
-      "label": "propose/alternative",
-      "reason": "folded:related,side"
+      "label": "propose/order-of-work",
+      "reason": "label:work"
     },
     "propose/write-spec": {
-      "label": "propose/alternative",
-      "reason": "folded:lean,maybe,theory"
+      "label": "propose/next-step",
+      "reason": "folded:including,lean"
     },
     "propose/zip-two-sides": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:form,mission"
     },
     "qualify/agree-with-caveat": {
       "label": "qualify/caveat",
@@ -1210,8 +1506,8 @@
       "reason": "kept"
     },
     "qualify/contextual": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:itself,note,question"
     },
     "qualify/could-do-better": {
       "label": "qualify/other",
@@ -1222,12 +1518,12 @@
       "reason": "other"
     },
     "qualify/deferred": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:missing,search"
     },
     "qualify/deferred-to-operator": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:before,stopped"
     },
     "qualify/depends-on-use-cases": {
       "label": "qualify/other",
@@ -1237,9 +1533,13 @@
       "label": "qualify/other",
       "reason": "other"
     },
+    "qualify/expectation": {
+      "label": "qualify/caveat",
+      "reason": "folded:example,running"
+    },
     "qualify/gap": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/gap",
+      "reason": "kept"
     },
     "qualify/hesitation": {
       "label": "qualify/other",
@@ -1249,9 +1549,13 @@
       "label": "qualify/impact",
       "reason": "kept"
     },
-    "qualify/least-change": {
+    "qualify/implication": {
       "label": "qualify/other",
       "reason": "other"
+    },
+    "qualify/least-change": {
+      "label": "qualify/caveat",
+      "reason": "folded:change,xtdb"
     },
     "qualify/left-unassigned": {
       "label": "qualify/other",
@@ -1259,31 +1563,35 @@
     },
     "qualify/main-store-only": {
       "label": "qualify/caveat",
-      "reason": "folded:main,only"
+      "reason": "folded:cool,main,only"
     },
     "qualify/open-question": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:change,questions"
     },
     "qualify/open-questions": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:change,questions"
+    },
+    "qualify/other": {
+      "label": "qualify/caveat",
+      "reason": "folded:it's,maybe"
     },
     "qualify/out-of-scope": {
       "label": "qualify/scope",
       "reason": "label:scope"
     },
     "qualify/perf": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:page,pass"
     },
     "qualify/precedent": {
       "label": "qualify/caveat",
       "reason": "folded:mining,turns"
     },
     "qualify/reassessment": {
-      "label": "qualify/other",
-      "reason": "other"
+      "label": "qualify/caveat",
+      "reason": "folded:less,looks"
     },
     "qualify/remaining-noise": {
       "label": "qualify/other",
@@ -1317,12 +1625,32 @@
       "label": "redirect/other",
       "reason": "other"
     },
+    "redirect/change-of-plan": {
+      "label": "redirect/other",
+      "reason": "other"
+    },
+    "redirect/method": {
+      "label": "redirect/other",
+      "reason": "other"
+    },
+    "redirect/other": {
+      "label": "redirect/other",
+      "reason": "other"
+    },
+    "redirect/requeue": {
+      "label": "redirect/other",
+      "reason": "other"
+    },
     "redirect/to-technical": {
       "label": "redirect/other",
       "reason": "other"
     },
     "redirect/topic": {
       "label": "redirect/other",
+      "reason": "other"
+    },
+    "reframe/other": {
+      "label": "reframe/other",
       "reason": "other"
     },
     "report-problem/concern": {
@@ -1339,7 +1667,11 @@
     },
     "report-problem/missing-pathway": {
       "label": "report-problem/observ",
-      "reason": "folded:don't,people"
+      "reason": "folded:demo,don't,people"
+    },
+    "report-problem/observ": {
+      "label": "report-problem/observ",
+      "reason": "kept"
     },
     "report-problem/observed": {
       "label": "report-problem/observ",
@@ -1348,6 +1680,14 @@
     "report-problem/observed-then-fixed": {
       "label": "report-problem/observ",
       "reason": "label:observ"
+    },
+    "report-problem/retrospective": {
+      "label": "report-problem/retrospective",
+      "reason": "kept"
+    },
+    "report-problem/self-audit": {
+      "label": "report-problem/self-correction",
+      "reason": "label:self"
     },
     "report-problem/self-correction": {
       "label": "report-problem/self-correction",
@@ -1358,28 +1698,28 @@
       "reason": "normalised"
     },
     "report/ack": {
-      "label": "report/with-option",
-      "reason": "folded:above,reply"
+      "label": "report/ack",
+      "reason": "kept"
     },
     "report/acknowledge": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/acknowledge",
+      "reason": "kept"
     },
     "report/analysis": {
       "label": "report/analysis",
       "reason": "kept"
     },
     "report/answer": {
-      "label": "report/done",
-      "reason": "folded:found,sent,three"
+      "label": "report/answer",
+      "reason": "kept"
     },
     "report/architecture": {
       "label": "report/done",
-      "reason": "folded:agency,already,what's,writes"
+      "reason": "folded:agency,already,turn,what's,writes"
     },
     "report/assessment": {
       "label": "report/done",
-      "reason": "folded:cascade,it's"
+      "reason": "folded:agents,cascade,it's,other,rules,written"
     },
     "report/buffer-excerpt": {
       "label": "report/buffer-excerpt",
@@ -1395,7 +1735,7 @@
     },
     "report/checkpoint-contents": {
       "label": "report/done",
-      "reason": "folded:agent,mission"
+      "reason": "folded:agent,mission,worked"
     },
     "report/commits": {
       "label": "report/other",
@@ -1433,6 +1773,10 @@
       "label": "report/diagnosis",
       "reason": "kept"
     },
+    "report/dispatch": {
+      "label": "report/dispatch",
+      "reason": "kept"
+    },
     "report/dispatched": {
       "label": "report/dispatch",
       "reason": "normalised"
@@ -1446,8 +1790,8 @@
       "reason": "other"
     },
     "report/early-results": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/done",
+      "reason": "folded:checked,every"
     },
     "report/estimate": {
       "label": "report/other",
@@ -1456,6 +1800,10 @@
     "report/evidence": {
       "label": "report/evidence",
       "reason": "kept"
+    },
+    "report/evidence-chain": {
+      "label": "report/evidence",
+      "reason": "label:evidence"
     },
     "report/examples": {
       "label": "report/other",
@@ -1466,16 +1814,16 @@
       "reason": "kept"
     },
     "report/false-open-census": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/status",
+      "reason": "folded:acts,open"
     },
     "report/findings": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/finding",
+      "reason": "normalised"
     },
     "report/first-findings": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/finding",
+      "reason": "label:find"
     },
     "report/gap": {
       "label": "report/gap",
@@ -1493,13 +1841,21 @@
       "label": "report/other",
       "reason": "other"
     },
+    "report/impact": {
+      "label": "report/other",
+      "reason": "other"
+    },
     "report/in-flight": {
       "label": "report/in-flight",
       "reason": "kept"
     },
     "report/inbox-view": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/done",
+      "reason": "folded:every,rewritten"
+    },
+    "report/intent": {
+      "label": "report/finding",
+      "reason": "folded:quote,turn"
     },
     "report/inventory": {
       "label": "report/inventory",
@@ -1510,12 +1866,16 @@
       "reason": "kept"
     },
     "report/mapping": {
-      "label": "report/done",
-      "reason": "folded:already,three"
+      "label": "report/map",
+      "reason": "normalised"
     },
     "report/mechanism": {
       "label": "report/inventory",
       "reason": "folded:fall,groups"
+    },
+    "report/negative": {
+      "label": "report/other",
+      "reason": "other"
     },
     "report/next": {
       "label": "report/next",
@@ -1533,13 +1893,21 @@
       "label": "report/observation",
       "reason": "kept"
     },
+    "report/observed-output": {
+      "label": "report/done",
+      "reason": "folded:finished,says,solve"
+    },
     "report/open-questions-for-operator": {
+      "label": "report/design",
+      "reason": "folded:open,questions"
+    },
+    "report/other": {
       "label": "report/other",
       "reason": "other"
     },
     "report/outline": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/done",
+      "reason": "folded:port,standing"
     },
     "report/parked": {
       "label": "report/other",
@@ -1550,16 +1918,16 @@
       "reason": "kept"
     },
     "report/plan": {
-      "label": "report/done",
-      "reason": "folded:i've,note,order,recorded"
+      "label": "report/plan",
+      "reason": "kept"
     },
     "report/planned": {
-      "label": "report/done",
-      "reason": "folded:i've,note,order,recorded"
+      "label": "report/plan",
+      "reason": "normalised"
     },
     "report/post-mortem": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/done",
+      "reason": "folded:found,wrong"
     },
     "report/process-note": {
       "label": "report/done",
@@ -1573,17 +1941,21 @@
       "label": "report/other",
       "reason": "other"
     },
+    "report/re-baseline": {
+      "label": "report/done",
+      "reason": "folded:changed,order"
+    },
     "report/redirect-issued": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/done",
+      "reason": "folded:asked,change,line"
     },
     "report/relayed": {
       "label": "report/done",
-      "reason": "folded:both,i've"
+      "reason": "folded:both,i've,passed,words"
     },
     "report/resource-state": {
-      "label": "report/other",
-      "reason": "other"
+      "label": "report/done",
+      "reason": "folded:audit,usage"
     },
     "report/running-jobs": {
       "label": "report/job-spec",
@@ -1593,17 +1965,29 @@
       "label": "report/status",
       "reason": "kept"
     },
+    "report/status-check": {
+      "label": "report/status",
+      "reason": "label:status"
+    },
     "report/status-update": {
       "label": "report/status-update",
       "reason": "kept"
     },
     "report/tooling": {
-      "label": "report/diagnosis",
-      "reason": "folded:every,record"
+      "label": "report/done",
+      "reason": "folded:codex,every"
+    },
+    "report/uncertainty": {
+      "label": "report/evidence",
+      "reason": "folded:enough,good,ones"
     },
     "report/what-was-added": {
       "label": "report/other",
       "reason": "other"
+    },
+    "report/with-option": {
+      "label": "report/with-option",
+      "reason": "kept"
     },
     "report/with-options": {
       "label": "report/with-option",
@@ -1618,12 +2002,24 @@
       "reason": "kept"
     },
     "retract/decision-requests": {
-      "label": "retract/other",
-      "reason": "other"
+      "label": "retract/correction",
+      "reason": "folded:asked,withdraw"
     },
     "retract/idea": {
       "label": "retract/other",
       "reason": "other"
+    },
+    "retract/other": {
+      "label": "retract/other",
+      "reason": "other"
+    },
+    "verify/check-live": {
+      "label": "verify/check-live",
+      "reason": "kept"
+    },
+    "verify/check-understand": {
+      "label": "verify/check-live",
+      "reason": "label:check"
     },
     "verify/checked-live": {
       "label": "verify/check-live",
@@ -1632,6 +2028,10 @@
     "verify/command-suggested": {
       "label": "verify/other",
       "reason": "other"
+    },
+    "verify/confirm": {
+      "label": "verify/confirm",
+      "reason": "kept"
     },
     "verify/confirmed": {
       "label": "verify/confirm",
@@ -1649,9 +2049,41 @@
       "label": "verify/other",
       "reason": "other"
     },
+    "verify/other": {
+      "label": "verify/check-live",
+      "reason": "folded:before,lisp"
+    },
+    "verify/pointer": {
+      "label": "verify/other",
+      "reason": "other"
+    },
     "verify/prior-art-question": {
       "label": "verify/prior-art-question",
       "reason": "kept"
+    },
+    "verify/provenance-question": {
+      "label": "verify/prior-art-question",
+      "reason": "label:question"
+    },
+    "verify/sanity-check-request": {
+      "label": "verify/check-live",
+      "reason": "label:check"
+    },
+    "verify/status-check": {
+      "label": "verify/status-check",
+      "reason": "kept"
+    },
+    "verify/status-request": {
+      "label": "verify/status-check",
+      "reason": "label:status"
+    },
+    "verify/test-turn": {
+      "label": "verify/check-live",
+      "reason": "folded:test,testing,turn"
+    },
+    "withdraw/stop-work": {
+      "label": "withdraw/other",
+      "reason": "other"
     }
   }
 }
