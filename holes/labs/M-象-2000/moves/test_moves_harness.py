@@ -121,7 +121,7 @@ class OpenPortsAreAnswerTargets(unittest.TestCase):
                 "open_ports": [{"act": "turn-a-f-s1-0", "kind": "ask-action",
                                 "text": "please backfill", "since": "2026-10-10T00:00:00Z"}]}
             (root / "turn-b.input.json").write_text(json.dumps(source))
-            sidecar = {"schema": "moves/1", "record": "turn-b", "acts": [
+            sidecar = {"schema": "moves/1", "record": "turn-b", "at": "2026-10-12T20:00:00Z", "labeller": "test", "acts": [
                 {"act": "turn-b-r-0", "kind": "report", "move": "report/done", "quote": "The loader is in",
                  "answers": [{"act": "turn-a-f-s1-0", "quote": "the backfill you asked for is done",
                               "effect": "closes"},
