@@ -1,0 +1,143 @@
+{
+  "record": "turn-345Cv3",
+  "turn_id": "claude-13-turn-37",
+  "session_id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+  "created_at": "2026-10-11T10:37:22Z",
+  "agent_id": "claude-13",
+  "source_text": "so, it is unsurprising that mastra won as of now, given that minus40 is still being developed!  my goal is to learn from the best, and if we can use ideas from these projects to improve FUTON we should do so.",
+  "fragments": [
+    {
+      "id": "claude-13-turn-37-f-s1-0",
+      "intent": "qualify",
+      "text": "so, it is unsurprising that mastra won as of now, given that minus40 is still being developed!"
+    },
+    {
+      "id": "claude-13-turn-37-f-s2-0",
+      "intent": "propose",
+      "text": "my goal is to learn from the best, and if we can use ideas from these projects to improve FUTON we should do so."
+    }
+  ],
+  "reply_text": "Agreed. minus40 isn't finished yet, so this was more a reading of where it stands than a contest. Mastra's memory test is now a fixed benchmark for minus40 to beat.\n\nYour answer corrects my guess at the goal. I had written \"demonstrate\", which was your means, when your goal is \"improve FUTON\". That's the same goal/method mix-up the intake algorithm warns about, just showing up in its first question; asking you settled it. Demonstrations now become the tests that an adopted idea works.\n\nI've merged both projects' borrow lists into one ranked table in mission §6 (futon0 `d62c2de`). It puts problems we've already hit first, then the cheapest changes. The top five:\n\n1. **A typed park payload, and refusing a second resume** (from Mastra; I saw it work in the test). This fixes the park-without-session bug, where a wake gets stranded.\n2. **Separate job states**: permission, acceptance, completion and shutdown (from Alinery). This fixes the `agency_send` trap where a bell runs nothing and still reports \"done\".\n3. **Two timestamps per fact in minus40**: when it was said, and when it refers to. Also, combine superseded facts rather than drop them. That's how Mastra's memory passed the test.\n4. **A fixed benchmark for minus40**: Mastra's LongMemEval harness, plus the corner-store test as a standing comparison.\n5. **A pass / scored / failed verdict for the warrant suite**, with no verdict when nothing could be scored.\n\nFurther down are strict flexiarg parsing, a reachability check, Alinery's playbook-building process for `cascade-construction/`, and run-claim fencing on restart. The War Machine half of that last one goes to Codex. Last is Mastra's paid \"trace intelligence\", where we'd take the idea only. Applied here, that means grouping turns by their 象 marks over time.\n\nI suggest starting with #1: it fixes a bug we've already hit, and Mastra showed the behaviour to copy. It's a change to Agency code, so you'd do the :7070 restart. Shall I go ahead?",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-13-turn-37",
+      "id": "claude-13-turn-37-f-s1-0",
+      "kind": "qualify",
+      "at": "2026-10-11T10:37:22Z",
+      "record": "turn-345Cv3",
+      "end": 94,
+      "standing?": false,
+      "about": "claude-13's comparison of Mastra with -40° (the Mastra test, turn-UbtDi4): Mastra winning for now is unsurprising, since -40° is still being developed",
+      "text": "so, it is unsurprising that mastra won as of now, given that minus40 is still being developed!",
+      "to": "claude-13"
+    },
+    {
+      "port?": true,
+      "start": 96,
+      "author": "operator",
+      "turn": "claude-13-turn-37",
+      "id": "claude-13-turn-37-f-s2-0",
+      "kind": "propose",
+      "at": "2026-10-11T10:37:22Z",
+      "record": "turn-345Cv3",
+      "end": 208,
+      "standing?": true,
+      "about": "what to do with the comparison: learn from the best, and use ideas from these projects to improve FUTON where possible",
+      "text": "my goal is to learn from the best, and if we can use ideas from these projects to improve FUTON we should do so.",
+      "to": "claude-13"
+    },
+    {
+      "port?": false,
+      "author": "claude-13",
+      "turn": "claude-13-turn-37",
+      "id": "claude-13-turn-37-c-d62c2dea",
+      "kind": "commit",
+      "at": "2026-10-11T10:37:22Z",
+      "record": "turn-345Cv3",
+      "repo": "futon0",
+      "subject": "M-landscape §6: Joe's goal (improve FUTON from the best); ranked borrow list (+45 -1 over 2 files)",
+      "sha": "d62c2dea",
+      "standing?": false
+    }
+  ],
+  "mission_id": "M-象-2000",
+  "open_ports": [
+    {
+      "act": "claude-13-turn-2-f-s5-0",
+      "kind": "propose",
+      "text": "But it would be good for me to at least be acquainted with the problems that different folks are solving, particularly …",
+      "since": "2026-10-10T00:10:19Z"
+    },
+    {
+      "act": "claude-13-turn-2-r-3",
+      "kind": "clarify",
+      "text": "(\"Lean-backed dispatches\") One quick search didn't turn up the Lean-backed one. Do you remember a name, or is it in the…",
+      "since": "2026-10-10T00:10:19Z"
+    },
+    {
+      "act": "claude-13-turn-2-r-4",
+      "kind": "propose",
+      "text": "(next) I suggest running MAP in this order:\n1. Write the one-sentence problem statement for every entry, about 45 of th…",
+      "since": "2026-10-10T00:10:19Z"
+    },
+    {
+      "act": "claude-13-turn-4-f-s12-0",
+      "kind": "clarify",
+      "text": "In terms of a \"thesis\" broadly I'm not asserting that we're different from anything, just that we should be enabled and…",
+      "since": "2026-10-10T00:19:39Z"
+    },
+    {
+      "act": "claude-13-turn-4-f-s3-0",
+      "kind": "propose",
+      "text": "But, broadly this makes me think we could do a kind of Consumer Reports approach to these things: can we get them, can …",
+      "since": "2026-10-10T00:19:39Z"
+    },
+    {
+      "act": "claude-13-turn-4-f-s9-0",
+      "kind": "ask-action",
+      "text": "Let's start by committing and completing the rest of the investigation, as you said.",
+      "since": "2026-10-10T00:19:39Z"
+    },
+    {
+      "act": "claude-13-turn-4-r-2",
+      "kind": "clarify",
+      "text": "(\"an interesting list of verbs\") Do you remember which tool had that verb list? If not, the agents are copying out any …",
+      "since": "2026-10-10T00:19:39Z"
+    },
+    {
+      "act": "claude-13-turn-5-f-s3-0",
+      "kind": "propose",
+      "text": "We could try to characterise the various things we've found with a few verbs each, since otherwise it is tremendously c…",
+      "since": "2026-10-10T00:42:33Z"
+    },
+    {
+      "act": "claude-13-turn-6-r-2",
+      "kind": "propose",
+      "text": "(making it Cognisee-like rather than another list) Cognisee's idea is that know-how gets captured *from the people who …",
+      "since": "2026-10-10T00:49:16Z"
+    },
+    {
+      "act": "claude-13-turn-6-r-3",
+      "kind": "ask-action",
+      "text": "(one decision) Shall I draft it as `landscape/ACTIVITIES.md`? Each activity would list the human activity, the tool ver…",
+      "since": "2026-10-10T00:49:16Z"
+    },
+    {
+      "act": "claude-13-turn-7-f-s1-0",
+      "kind": "clarify",
+      "text": "It's also worth saying: people use very anthropogenic terms like \"memory\" (I do this too) when in fact the reality is a…",
+      "since": "2026-10-10T00:53:53Z"
+    },
+    {
+      "act": "claude-13-turn-7-f-s2-0",
+      "kind": "clarify",
+      "text": "Possibly the list I was thinking of was a list of \"intents\" that the agents could carry out on behalf of their operator…",
+      "since": "2026-10-10T00:53:53Z"
+    }
+  ]
+}

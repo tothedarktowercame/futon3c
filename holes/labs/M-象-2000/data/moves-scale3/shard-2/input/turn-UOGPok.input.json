@@ -1,0 +1,170 @@
+{
+  "record": "turn-UOGPok",
+  "turn_id": "claude-18-turn-107",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-29T04:48:15Z",
+  "agent_id": "claude-18",
+  "source_text": "Sure, I think 10 attempts followed by a strategy pass makes sense, I'm relatively sure the agent doing the strategy pass would notice if the problem is close to closing.  I used 50 before not because it was a magic number but because I saw one sample problem close at 130 turns and I gained confidence that they *could be closed*.  But strategy after 10 wouldn't hurt, I don't think.",
+  "fragments": [
+    {
+      "id": "claude-18-turn-107-f-s1-0",
+      "intent": "approve",
+      "text": "Sure, I think 10 attempts followed by a strategy pass makes sense"
+    },
+    {
+      "id": "claude-18-turn-107-f-s1-1",
+      "intent": "extend",
+      "text": "I'm relatively sure the agent doing the strategy pass would notice if the problem is close to closing."
+    },
+    {
+      "id": "claude-18-turn-107-f-s2-0",
+      "intent": "explain",
+      "text": "I used 50 before not because it was a magic number but because I saw one sample problem close at 130 turns and I gained confidence that they *could be closed*."
+    },
+    {
+      "id": "claude-18-turn-107-f-s3-0",
+      "intent": "approve",
+      "text": "But strategy after 10 wouldn't hurt, I don't think."
+    }
+  ],
+  "reply_text": "Testing the worker with stubbed attempts, so no seats are used and nothing is written to the ledger:All three paths behave as intended. Registering the strategy seat on gpt-5.6-sol and committing:The solve loop now runs a strategy pass after 10 attempts without progress, rather than just stopping (ec773cef). It takes effect when you restart it tomorrow.\n\n**How it works:**\n- After 10 attempts without a new low in the `sorry` count, a fresh seat called `solve-strategy` reads the problem, the partial proof, the last residual note and the recent attempts. It's registered on gpt-5.6-sol.\n- It says where the proof is stuck, whether it's close, and what route to take. It can compile a test of the riskiest step, and it may search the newer Mathlib copy.\n- It ends with `STRATEGY_RESULT continue` or `stop`.\n- **On continue:** the stall count resets, and its route is saved to `holes/labs/solve-loop/strategy/<id>.md` and included in the prompts for the next attempts.\n- **On stop:** the problem ends, and the note records why. That gives you the list of hard problems along with a reason for each.\n- **Limits:** at most 2 strategy passes per problem. So a problem that never makes progress gets at most 30 attempts. One that keeps making progress can use all 50, and 50 can be raised again if something looks like it needs 130.\n\n**Tested:** I ran the loop with stubbed attempts, so no seat usage and no ledger writes. Continue-then-stop ran 20 attempts; stop at the first pass ran 10; two continues ran 30 and then stopped. The real strategy prompt hasn't been run yet, so the first live pass is worth a look in `*topology-tail*`.\n\nThat also means m02J02 doesn't need to be skipped by hand any more. The strategy seat can decide whether its missing Sobolev-basis theory is too much to build in the proof file.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-107",
+      "id": "claude-18-turn-107-f-s1-0",
+      "kind": "approve",
+      "at": "2026-09-29T04:48:15Z",
+      "record": "turn-UOGPok",
+      "end": 65,
+      "standing?": false,
+      "about": "the 10-attempts-plus-strategy-pass arrangement",
+      "text": "Sure, I think 10 attempts followed by a strategy pass makes sense",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 67,
+      "author": "operator",
+      "turn": "claude-18-turn-107",
+      "id": "claude-18-turn-107-f-s1-1",
+      "kind": "extend",
+      "at": "2026-09-29T04:48:15Z",
+      "record": "turn-UOGPok",
+      "end": 169,
+      "standing?": false,
+      "about": "the strategy pass as a near-closure detector",
+      "text": "I'm relatively sure the agent doing the strategy pass would notice if the problem is close to closing.",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 171,
+      "author": "operator",
+      "turn": "claude-18-turn-107",
+      "id": "claude-18-turn-107-f-s2-0",
+      "kind": "explain",
+      "at": "2026-09-29T04:48:15Z",
+      "record": "turn-UOGPok",
+      "end": 330,
+      "standing?": false,
+      "about": "the previous 50-attempt parameter",
+      "text": "I used 50 before not because it was a magic number but because I saw one sample problem close at 130 turns and I gained…",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 332,
+      "author": "operator",
+      "turn": "claude-18-turn-107",
+      "id": "claude-18-turn-107-f-s3-0",
+      "kind": "approve",
+      "at": "2026-09-29T04:48:15Z",
+      "record": "turn-UOGPok",
+      "end": 383,
+      "standing?": false,
+      "about": "strategy pass after 10 attempts",
+      "text": "But strategy after 10 wouldn't hurt, I don't think.",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "record": "turn-Y1SUGR",
+  "turn_id": "claude-18-turn-99",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-29T01:20:22Z",
+  "agent_id": "claude-18",
+  "source_text": "Might as well change the lop.  I noticed that topo2 is doing a \"repair\" again so there is some underlying problem.  Topo1 similarly had to do a \"repair\".  I think we should stop both, investigate, make your change, and restart.",
+  "fragments": [
+    {
+      "id": "claude-18-turn-99-f-s1-0",
+      "intent": "continue",
+      "text": "Might as well change the lop."
+    },
+    {
+      "id": "claude-18-turn-99-f-s2-0",
+      "intent": "report-problem",
+      "text": "I noticed that topo2 is doing a \"repair\" again so there is some underlying problem."
+    },
+    {
+      "id": "claude-18-turn-99-f-s3-0",
+      "intent": "report",
+      "text": "Topo1 similarly had to do a \"repair\"."
+    },
+    {
+      "id": "claude-18-turn-99-f-s4-0",
+      "intent": "propose",
+      "text": "I think we should stop both, investigate, make your change, and restart."
+    }
+  ],
+  "reply_text": "Now the race case itself, simulated: the loop changes one row while someone else adds a row to the file on disk.The rebase keeps both writers' rows. Next, the loop's handling of failed jobs:Testing the new branch with the two real failed jobs from last night, plus a failure after execution with no receipt:All three cases behave as intended. Committing and restarting both loops:I stopped both loops, fixed two problems, and restarted them at 01:22. topo1 is back on t98A06 and topo2 has picked its job back up (ab9f8db7).\n\n**What caused the repairs.** There were three supervisor repairs: topo1 at 23:54, and topo2 at 00:01 and 00:10. All three came from futon1b being overloaded, which you've since fixed. Its request queue was waiting 120–145 s, so the Agency couldn't read or write its per-turn records in time. Two things made the loops handle that badly:\n- **Two failed before the seat did anything** (`store-busy`). The loop only knew to retry specific error codes, so it treated these as fatal. The 23:56 fix covered only this one code.\n- **One failed after the seat had finished** (`activity-decision-failed` at 00:10). The seat had done its work and written its receipt. Only the Agency's record-keeping afterwards failed, so a completed job was thrown away and a repair was spent.\n\n**Fix 1: failed jobs.** When a job fails, the loop now checks two things before calling a repair:\n- If the seat's last message contains its receipt, the loop uses it as a completed job. The usual receipt checks still apply.\n- If the seat never ran anything, the loop waits and resends, whatever the error code.\n\nA failure after real work with no receipt still goes to repair, as before. I tested this on the two real failed jobs from last night and on a made-up failure of the third kind. All three behaved as intended.\n\n**Fix 2: worklist writes, the race that dropped my t99J04 row.**\n- The loop now re-reads the worklist just before writing, and applies only its own row changes to what's on disk.\n- It checks the file again after validation, which takes a few seconds, and redoes the merge if the file changed meanwhile.\n\nA simulated race test kept both the hand-added row and the loop's own edit. All three re-route rows are still in topo1's worklist after the restart.\n\n**Also:** topo1's first three refill rows (t98A06, t98J01 and t98J02) all came back as \"revise\". That's ordinary review sending work back to the author, not a failure. You'll see those in `*topology-tail*` as \"applied revise\".",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-99",
+      "id": "claude-18-turn-99-f-s1-0",
+      "kind": "continue",
+      "at": "2026-09-29T01:20:22Z",
+      "record": "turn-Y1SUGR",
+      "end": 29,
+      "standing?": false,
+      "about": "the pending change to the lop",
+      "text": "Might as well change the lop.",
+      "to": "claude-18"
+    },
+    {
+      "port?": true,
+      "start": 31,
+      "author": "operator",
+      "turn": "claude-18-turn-99",
+      "id": "claude-18-turn-99-f-s2-0",
+      "kind": "report-problem",
+      "at": "2026-09-29T01:20:22Z",
+      "record": "turn-Y1SUGR",
+      "end": 114,
+      "standing?": false,
+      "about": "recurring self-repair behaviour in topo2",
+      "text": "I noticed that topo2 is doing a \"repair\" again so there is some underlying problem.",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 116,
+      "author": "operator",
+      "turn": "claude-18-turn-99",
+      "id": "claude-18-turn-99-f-s3-0",
+      "kind": "report",
+      "at": "2026-09-29T01:20:22Z",
+      "record": "turn-Y1SUGR",
+      "end": 153,
+      "standing?": false,
+      "about": "the same repair behaviour in topo1",
+      "text": "Topo1 similarly had to do a \"repair\".",
+      "to": "claude-18"
+    },
+    {
+      "port?": true,
+      "start": 155,
+      "author": "operator",
+      "turn": "claude-18-turn-99",
+      "id": "claude-18-turn-99-f-s4-0",
+      "kind": "propose",
+      "at": "2026-09-29T01:20:22Z",
+      "record": "turn-Y1SUGR",
+      "end": 227,
+      "standing?": true,
+      "about": "the stop-investigate-change-restart sequence for topo1 and topo2",
+      "text": "I think we should stop both, investigate, make your change, and restart.",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "record": "turn-haaEfv",
+  "turn_id": "claude-12-turn-44",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T14:48:50Z",
+  "agent_id": "claude-12",
+  "source_text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.  M-x arxana-browse gives me a list of ranked misdiins and a few other excursions and tickets, tgough some are marked as \"excluded\".  however the misdions are categorised and ranked, the excursions and tickets should be too.  practically, thus is a global rank and we don't need to compute the whole sort each time, we are just trying yo find a good task to work on so presumably the global sort will remsin fairly stable",
+  "fragments": [
+    {
+      "id": "claude-12-turn-44-f-s1-0",
+      "intent": "propose",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context."
+    },
+    {
+      "id": "claude-12-turn-44-f-s2-0",
+      "intent": "report",
+      "text": "M-x arxana-browse gives me a list of ranked misdiins and a few other excursions and tickets, tgough some are marked as \"excluded\"."
+    },
+    {
+      "id": "claude-12-turn-44-f-s3-0",
+      "intent": "extend",
+      "text": "however the misdions are categorised and ranked, the excursions and tickets should be too."
+    },
+    {
+      "id": "claude-12-turn-44-f-s4-0",
+      "intent": "constrain",
+      "text": "practically, thus is a global rank and we don't need to compute the whole sort each time, we are just trying yo find a good task to work on so presumably the global sort will remsin fairly stable"
+    }
+  ],
+  "reply_text": "Two directions, then: an agent classifies excursions and tickets from content and context, the way missions already are, and ranking becomes a stable global order that's updated as things change, not recomputed from scratch on every click. The second also changes how to handle the scorer's timing problem. First I need to see how missions are categorised and ranked behind `arxana-browse`, and what \"excluded\" means there.The \"current map\" is futon3c's `cascade-real` pipeline graph (`/api/alpha/cascade-real/graph`). A task is ranked only if it's a node in that graph. Checking how missions get into it.Both tasks are dispatched and parked on my session.\n\n**Why excursions and tickets aren't ranked:** what `arxana-browse` shows comes from the meta-preview. It ranks only tasks that sit on futon3c's `cascade-real` map, and that map is built from substrate links: lineage, mined patterns, cluster membership and hole targets. Missions mostly have those links. Most excursions and tickets don't, so 508 tasks are excluded as `not-on-current-map`: 437 excursions, all 78 tickets and a few missions. Only 2 excursions are ranked today.\n\n**1. Classifying excursions and tickets** (codex-35, fresh session): work out how to classify them from content and context, then do it.\n- **Lifecycle state:** open, active, done, superseded, abandoned or unknown. It comes from what each document says, plus context: git history and recency, parent links, whether later documents cite it as done, and the ticket's linked finding. Each call carries its evidence and a confidence. Anything unclear stays unknown, and unknown stays live.\n- **Map placement:** work out how missions get their links and categories, and give excursions and tickets the same links through the same producers, with no separate map.\n- **Output:** a ledger you can review first. Only high-confidence rows get applied, and every write is listed. It also fixes the RESOLVED bug and reports the meta-preview's supported and excluded counts before and after.\n\n**2. A stable global rank** (codex-30, replacing \"score everything every click\"):\n- Each task's scored policies are cached, keyed to a digest of their inputs: the document, library pin, model and consumed beliefs.\n- A click re-scores only tasks whose inputs changed, plus the current top few (where the choice is actually made), plus a small slice of the stalest entries so nothing ages forever.\n- The certificate marks every G as fresh or cached, with its age. A cached G counts toward Q8 only while its digest still matches.\n\nAn ordinary click should then take seconds, and only a cold start scores everything. codex-29's full-census measurement is still useful for that cold-start case.\n\n**Still out:** q6 round 2 (zai-3) and census-measure (codex-29). Nothing is hot-loaded, and no click until this lands and you grant one.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-44",
+      "id": "claude-12-turn-44-f-s1-0",
+      "kind": "propose",
+      "at": "2026-10-09T14:48:50Z",
+      "record": "turn-haaEfv",
+      "end": 108,
+      "standing?": true,
+      "about": "classifying excursions and tickets from content and context",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 110,
+      "author": "operator",
+      "turn": "claude-12-turn-44",
+      "id": "claude-12-turn-44-f-s2-0",
+      "kind": "report",
+      "at": "2026-10-09T14:48:50Z",
+      "record": "turn-haaEfv",
+      "end": 240,
+      "standing?": false,
+      "about": "what arxana-browse currently shows",
+      "text": "M-x arxana-browse gives me a list of ranked misdiins and a few other excursions and tickets, tgough some are marked as …",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 242,
+      "author": "operator",
+      "turn": "claude-12-turn-44",
+      "id": "claude-12-turn-44-f-s3-0",
+      "kind": "extend",
+      "at": "2026-10-09T14:48:50Z",
+      "record": "turn-haaEfv",
+      "end": 332,
+      "standing?": false,
+      "about": "the mission categorisation and ranking mechanism",
+      "text": "however the misdions are categorised and ranked, the excursions and tickets should be too.",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 334,
+      "author": "operator",
+      "turn": "claude-12-turn-44",
+      "id": "claude-12-turn-44-f-s4-0",
+      "kind": "constrain",
+      "at": "2026-10-09T14:48:50Z",
+      "record": "turn-haaEfv",
+      "end": 529,
+      "standing?": true,
+      "about": "the ranking implementation",
+      "text": "practically, thus is a global rank and we don't need to compute the whole sort each time, we are just trying yo find a …",
+      "to": "claude-12"
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    },
+    {
+      "act": "claude-12-turn-15-f-s2-0",
+      "kind": "delegate",
+      "text": "these could be put out in parallel to codex seats or zai seats,",
+      "since": "2026-10-09T13:41:54Z"
+    },
+    {
+      "act": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "text": "what is going on with the excursions,",
+      "since": "2026-10-09T14:41:47Z"
+    },
+    {
+      "act": "claude-12-turn-44-f-s1-0",
+      "kind": "propose",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.",
+      "since": "2026-10-09T14:48:50Z"
+    }
+  ]
+}

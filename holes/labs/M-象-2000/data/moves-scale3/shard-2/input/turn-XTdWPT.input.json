@@ -1,0 +1,110 @@
+{
+  "record": "turn-XTdWPT",
+  "turn_id": "claude-11-turn-34",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-09T04:12:22Z",
+  "agent_id": "claude-11",
+  "source_text": "right, now I remember that the real target was CLEAN not COMPILES",
+  "fragments": [
+    {
+      "id": "claude-11-turn-34-f-s1-0",
+      "intent": "redirect",
+      "text": "right, now I remember that the real target was CLEAN not COMPILES"
+    }
+  ],
+  "reply_text": "Switching the queued sweep from \"compiles\" probes to cold term captures, so it measures clean.Building Lean reference dumps for all 21 rows (the comparator needs them). Checking how codex-36 built the atEnd one.Lean dumps done for all 21. Now queueing the cold captures at `c9c6b44f`.Agreed, and that changes three things.\n\n1. **\"21 rows\" means 21 rows that compile with correct behaviour. It doesn't mean 21 clean rows.** As of 10-06 no row was clean; that's what `WHY-NO-CLEAN-ROW-2026-10-06.md` is about.\n2. **atEnd won't be clean even if the fix works.** The prediction is 12 match, 0 differ, 0 not captured, 2 Lean-only, 0 port-only. Clean means every Lean node matches, and the two Lean-only nodes don't. They're the two synthetic `binrel` observations, which become the next stop for that row.\n3. **The regression check measures clean now.** I've changed the queued sweep from \"does it compile\" to a cold term capture for each of the 21 rows at `c9c6b44f`. A capture also fails if the row doesn't compile, so nothing is lost. I generated Lean's reference dumps for all 21 rows (`~/mfuton-notes/sweep/lean/`) and rebuilt the declaration-ranges table the dumps need, since the old one was lost with /tmp. The sweep starts when the compile sweep frees memory.\n\nThe result will be a per-row count of matched nodes: the first real measure of how close each row is to clean. It also becomes the baseline, and from then on a regression means a node that used to match and no longer does.\n\nOne thing I still need to check: my generated range for atEnd ends at a different column from the one codex-36 wrote by hand (81:72 against 82:1). It probably makes no difference to the dump, but I'll confirm before trusting the comparisons.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-11-turn-34",
+      "id": "claude-11-turn-34-f-s1-0",
+      "kind": "redirect",
+      "at": "2026-10-09T04:12:22Z",
+      "record": "turn-XTdWPT",
+      "end": 65,
+      "standing?": false,
+      "about": "the acceptance criterion for the 21-row sweep (CLEAN = term-comparator equality, not COMPILES)",
+      "text": "right, now I remember that the real target was CLEAN not COMPILES",
+      "to": "claude-11"
+    }
+  ],
+  "mission_id": "M-landscape-positioning",
+  "open_ports": [
+    {
+      "act": "claude-11-turn-2-f-s1-0",
+      "kind": "propose",
+      "text": "I think we should work on a health scan that goes beyond just the XTDB endpoint.",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-f-s2-0",
+      "kind": "report-problem",
+      "text": "unpushed repos are a liability",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-r-3",
+      "kind": "ask-action",
+      "text": "(next) Should I add a daily timer that sends only *changes* in the scan result to the zone-alerts room through `zone-no…",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-3-r-2",
+      "kind": "ask-action",
+      "text": "(next) If you agree, I'll start on the evidence-store nightly backup now. The basis is `futon3c/scripts/backup_evidence…",
+      "since": "2026-10-09T01:18:24Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-1",
+      "kind": "report-problem",
+      "text": "(powerbi-tui) Its remote is `https://github.com/holtzermann17/powerbi-tui.git`. The only GitHub login on zone is tothed…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-3",
+      "kind": "offer",
+      "text": "(two decisions)\n1. **powerbi-tui:** do you want to push it yourself with your holtzermann17 login, or should I create `…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-7-r-0",
+      "kind": "clarify",
+      "text": "(\"https://zone.hyperreal.enterprises/voxterm/) Your message seems to stop at the URL. voxterm is up: the service is act…",
+      "since": "2026-10-09T01:41:21Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-0",
+      "kind": "report-problem",
+      "text": "(`rowtree.py` is harder) claude-4 never wrote it in one piece. It was created with a shell heredoc at 13:14 on 10-04 an…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-1",
+      "kind": "propose",
+      "text": "(plan)\n1. Rebuild these six files by replaying the edits in order, into `mfuton-share/tools/progress/` rather than `/tm…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-2",
+      "kind": "ask-action",
+      "text": "(go?) Should I dispatch that, or do it myself?",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-12-r-2",
+      "kind": "propose",
+      "text": "(on return) When zai-1 reports back, I'll review it myself:\n1. Diff `history.tsv` against the page.\n2. Spot-check `rowt…",
+      "since": "2026-10-09T02:40:37Z"
+    },
+    {
+      "act": "claude-11-turn-13-r-3",
+      "kind": "report-problem",
+      "text": "(what's missing) Several files were made with shell commands, so they weren't recovered by the replay:\n- preambles 1–6\n…",
+      "since": "2026-10-09T02:43:14Z"
+    }
+  ]
+}

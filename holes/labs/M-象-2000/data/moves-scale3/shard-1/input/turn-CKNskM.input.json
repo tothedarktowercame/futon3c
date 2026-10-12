@@ -1,0 +1,110 @@
+{
+  "record": "turn-CKNskM",
+  "turn_id": "claude-18-turn-115",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-29T19:30:27Z",
+  "agent_id": "claude-18",
+  "source_text": "Any news back?",
+  "fragments": [
+    {
+      "id": "claude-18-turn-115-f-s1-0",
+      "intent": "collect",
+      "text": "Any news back?"
+    }
+  ],
+  "reply_text": "[no text or tool calls in this turn]",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-115",
+      "id": "claude-18-turn-115-f-s1-0",
+      "kind": "collect",
+      "at": "2026-09-29T19:30:27Z",
+      "record": "turn-CKNskM",
+      "end": 14,
+      "standing?": false,
+      "about": "the results of outstanding work previously sent out (replies, probe outcomes, or returns not yet delivered to this channel)",
+      "text": "Any news back?",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}

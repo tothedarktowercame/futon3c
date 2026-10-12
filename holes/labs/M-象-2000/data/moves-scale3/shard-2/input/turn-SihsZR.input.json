@@ -1,0 +1,115 @@
+{
+  "record": "turn-SihsZR",
+  "turn_id": "claude-12-turn-10",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T13:16:33Z",
+  "agent_id": "claude-12",
+  "source_text": "yes the budget for 1 click is granted.  if you can get token counts for zai please do",
+  "fragments": [
+    {
+      "id": "claude-12-turn-10-f-s1-0",
+      "intent": "approve",
+      "text": "yes the budget for 1 click is granted."
+    },
+    {
+      "id": "claude-12-turn-10-f-s2-0",
+      "intent": "ask-action",
+      "text": "if you can get token counts for zai please do"
+    }
+  ],
+  "reply_text": "Thanks. I'll do the Zai token fix first, so this click has per-step token figures, then record renewal 8 and fire. Starting with how renewals are recorded and read.Renewals are recorded by adding a section to the renewal-7 document and raising `allocated` (47 → 48). I'll do that once the token fix is in. Now the Zai usage path.The terminal Agency job needs a `:usage` map. Next I'm finding where codex supplies one and where Zai's per-round counts live.I'm writing the Zai fix. Each turn will add up its per-round token counts and return the total as the job's `:usage`, which the WM run ledger already reads.Now writing the code and its test.Two syntax problems: one paren too many at the end of the loop, and `summary-result` isn't in scope where I used it. Fixing both.Lint is clean. Adding a test for a multi-round turn whose result carries summed usage.Loaded with no Zai seat mid-turn. Now checking it in the serving process: one tiny work turn on zai-4, which isn't in the click's cast, then reading the terminal job's `:usage`.Verified in the serving JVM. The probe job on zai-4 finished with `:usage` of 9,392 input (4,608 of them cached), 71 output, 2 calls, model glm-5.3. Committing, then recording the renewal.Now recording the renewal, following that document's own rule: add a section, then raise `allocated` from 47 to 48.Both parks are in place, pinned to my session, with a 6-hour deadline. Firing click 48.Joe, click 48 is running under the debugger.\n\n**Firing details**\n- Click `wm-click-28b44d70-08a9-4060-b174-a0c30ee27229`, run `2026-10-09-513e6445-4ce6-4bc4-a685-c5a5617a56de`, fired at 13:19:49 UTC.\n- It's past budget admission (the ledger recorded the issue) and is in `substrate-preflight`.\n- Cast: zai-1 author, zai-2 reviewer, zai-3 repair reviewer.\n- The launcher runs detached from this session, so a restart of mine won't affect it. Its log is at `/tmp/c10/click48.log`.\n\n**How I'll report back:** two parks, both pinned to this REPL session, each with a 6-hour deadline.\n- `wm-debugger/stop`: wakes me at any debugger stop. I then follow A-self-heal: diagnose the stop, send one bounded repair to zai-4 with zai-5 reviewing, hot-load only after review, then `:retry` or `:abort`. I report each stop to you.\n- `wm-click/end`: wakes me when the click finishes. I then report three things: the Lean requirements verdict (written to `<run-record>.requirements.edn` by `wm_run_alert.py`, which runs automatically); token spend per job and phase; and per-phase timing, with time held at debugger stops shown separately.\n\n**Done before firing:**\n- **Zai token counts** (futon3c `7498313b`, live): each Zai turn now returns its summed usage, so the job record carries tokens. I checked it in the running Agency process: a test turn on zai-4 recorded 9,392 input (4,608 cached), 71 output, 2 calls, glm-5.3. One limit: if a seat compacts its context before a turn, the tokens for that summary are only counted on newly registered seats. Seats that are already running still count every round of the turn itself.\n- **Your grant** is recorded as a new section of the renewal-7 authorization document (futon2 `0d1e3ab7c`), with `allocated` raised to 48 (futon3c `a29246dc`, live).\n- **Park signals** for click end and debugger stops are committed and live (futon3c `a6bfba52`). Two older runner-service tests also fail on a clean tree, so they aren't caused by this. The full runner-service suite hasn't completed a run.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-10",
+      "id": "claude-12-turn-10-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-09T13:16:33Z",
+      "record": "turn-SihsZR",
+      "end": 38,
+      "standing?": false,
+      "about": "budget for one War Machine click",
+      "text": "yes the budget for 1 click is granted.",
+      "to": "claude-12"
+    },
+    {
+      "port?": true,
+      "start": 40,
+      "author": "operator",
+      "turn": "claude-12-turn-10",
+      "id": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "at": "2026-10-09T13:16:33Z",
+      "record": "turn-SihsZR",
+      "end": 85,
+      "standing?": false,
+      "about": "token counts for Zai seats",
+      "text": "if you can get token counts for zai please do",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-10",
+      "id": "claude-12-turn-10-c-0d1e3ab7",
+      "kind": "commit",
+      "at": "2026-10-09T13:16:33Z",
+      "record": "turn-SihsZR",
+      "repo": "futon2",
+      "subject": "Allocate ordinary click 48 to claude-12 (Joe, 2026-10-09)",
+      "sha": "0d1e3ab7",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-10",
+      "id": "claude-12-turn-10-c-7498313b",
+      "kind": "commit",
+      "at": "2026-10-09T13:16:33Z",
+      "record": "turn-SihsZR",
+      "repo": "futon3c",
+      "subject": "Z.AI turns return their summed usage, so WM jobs on zai seats carry tokens",
+      "sha": "7498313b",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-10",
+      "id": "claude-12-turn-10-c-a29246dc",
+      "kind": "commit",
+      "at": "2026-10-09T13:16:33Z",
+      "record": "turn-SihsZR",
+      "repo": "futon3c",
+      "subject": "Allocate ordinary click 48 (claude-12, Joe 2026-10-09)",
+      "sha": "a29246dc",
+      "standing?": false
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    }
+  ]
+}

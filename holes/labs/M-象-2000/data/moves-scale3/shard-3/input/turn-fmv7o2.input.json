@@ -1,0 +1,175 @@
+{
+  "record": "turn-fmv7o2",
+  "turn_id": "claude-12-turn-142",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-10T14:34:05Z",
+  "agent_id": "claude-12",
+  "source_text": "ok please run it",
+  "fragments": [
+    {
+      "id": "claude-12-turn-142-f-s1-0",
+      "intent": "approve",
+      "text": "ok please run it"
+    }
+  ],
+  "reply_text": "Taking \"run it\" as: go ahead with the D32 fix and the replay. Firing another click now would fail exactly the same way. Starting with what goes into the trace record, and who reads it:The trace readers use `edn/read` on a stream, not line splitting, so a long line is fine to read. Reading the writer and the readers in full:Only two of the ~30 trace readers mention the certificate. Checking whether they take it from trace records or from somewhere else:Lint is clean. Checking the other `src` readers for their own direct reads of trace files:`bulletin.clj:226` also reads the trace directory with its own reader. Hydrating there too, since that's harmless on uncompressed records. Then the tests:The interner only acts on records over its 8 MB threshold, by design, so the test record was too small. Making it large enough:Passes. Now the real-scale check: build the trace record from this click's own selection checkpoint, append it with the new writer, read it back through `trace/read-trace`, and compare.At real scale: the trace record went from 1.16 GB to **132 MB**, written in 8.5 s and read back in 4.5 s, identical to the original. Running only the test namespaces for the four readers I touched:All pass. Committing, merging, and loading the four files into the server (no click is running):All four loads failed with a syntax error at line 1, the `ns` form, even though the same files compiled in the tests. Getting the full error:Loading the same file through a `try` wrapper succeeds, so the problem is in dev-admin's `load-file` command, not in my code. Loading the other three the same way and verifying:All four are loaded: the new writer is present, and the runner source checks as current. Handing to codex-68 for a replay with the real trace writer, then a re-sign:I fixed the trace-write failure (D32) and loaded the fix into the server. I haven't run the click yet, because it would have failed in exactly the same place. codex-68 is now replaying with the real trace writer, and I'll fire the click as soon as it re-signs.\n\n**The fix:**\n- **Cause:** after construction, each click appends its selection to the daily trace file. The writer built the whole record as one string. The selection certificate alone is over 1 GB (scoring 581 MB, node traces 105 MB, candidates 87 MB and more), so the string passed Java's 2 GB limit.\n- **Change:** the trace line is now streamed to the file with its decision losslessly compressed, the same way run records are. Every trace reader on the click path restores it: `trace/read-trace` and the functions built on it, the strict history reader, the futility reader, the run narrative, and the bulletin.\n- **Real scale, on this click's own selection:** the trace record went from 1.16 GB to 132 MB, written in 8.5 s and read back in 4.5 s, identical to the original.\n- **Tests:** the new regression test plus the four reader test namespaces, 86 tests, all passing. I didn't run the full suite.\n- **Merged and loaded:** futon2 `862a20ee0`, merged as `117ec62df`, into the server (the click was not running). The runner's source still checks as current.\n\n**Also:**\n- **Faster selection:** every selection reads the last 12 trace records. They're now about 130 MB each instead of over 1 GB.\n- **Some analysis scripts aren't updated:** a few babashka and Python scripts that read trace files directly and look deep inside the decision will see compressed references in new records. They're not on the click path, and they can restore the data with `durable-hydrate`, which works in babashka.\n- **New tooling problem:** dev-admin's `load-file` command now fails with a syntax error on any file. Plain `load-file` inside the server works, so that's how I loaded these four. I haven't looked into it further.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-142",
+      "id": "claude-12-turn-142-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-10T14:34:05Z",
+      "record": "turn-fmv7o2",
+      "end": 16,
+      "standing?": false,
+      "about": "the agent's proposed next step (what 'it' refers to is not in the record; the agent read it as the D32 fix and the replay)",
+      "text": "ok please run it",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-142",
+      "id": "claude-12-turn-142-c-039751d8",
+      "kind": "commit",
+      "at": "2026-10-10T14:34:05Z",
+      "record": "turn-fmv7o2",
+      "repo": "futon2",
+      "subject": "Publish repair ticket T-repair-occ-10b67fac78ac48c9aa5be0ee3766e4c0de30aeef93fe8837964a1eca3c310190 (finding repair-occ-10b67fac78ac48c9aa5be0ee3766e4c0de30aeef93fe8837964a1eca3c310190)",
+      "sha": "039751d8",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-142",
+      "id": "claude-12-turn-142-c-2952c327",
+      "kind": "commit",
+      "at": "2026-10-10T14:34:05Z",
+      "record": "turn-fmv7o2",
+      "repo": "futon2",
+      "subject": "Exercise production writers in WM replay",
+      "sha": "2952c327",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-142",
+      "id": "claude-12-turn-142-c-f7732a1b",
+      "kind": "commit",
+      "at": "2026-10-10T14:34:05Z",
+      "record": "turn-fmv7o2",
+      "repo": "futon2",
+      "subject": "Record replay trace-writer gap as D32",
+      "sha": "f7732a1b",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-142",
+      "id": "claude-12-turn-142-c-862a20ee",
+      "kind": "commit",
+      "at": "2026-10-10T14:34:05Z",
+      "record": "turn-fmv7o2",
+      "repo": "futon2",
+      "subject": "D32: stream trace lines with the decision interned; trace readers hydrate",
+      "sha": "862a20ee",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-142",
+      "id": "claude-12-turn-142-c-117ec62d",
+      "kind": "commit",
+      "at": "2026-10-10T14:34:05Z",
+      "record": "turn-fmv7o2",
+      "repo": "futon2",
+      "subject": "Merge wmq/d32 (trace lines streamed with the decision interned; claude-12) Agent-Session: 5a109aed-1c56-4c99-9876-b5c2d6aac003",
+      "sha": "117ec62d",
+      "standing?": false
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    },
+    {
+      "act": "claude-12-turn-15-f-s2-0",
+      "kind": "delegate",
+      "text": "these could be put out in parallel to codex seats or zai seats,",
+      "since": "2026-10-09T13:41:54Z"
+    },
+    {
+      "act": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "text": "what is going on with the excursions,",
+      "since": "2026-10-09T14:41:47Z"
+    },
+    {
+      "act": "claude-12-turn-44-f-s1-0",
+      "kind": "propose",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.",
+      "since": "2026-10-09T14:48:50Z"
+    },
+    {
+      "act": "claude-12-turn-68-f-s1-0",
+      "kind": "ask-action",
+      "text": "let's hot load now.",
+      "since": "2026-10-09T17:56:42Z"
+    },
+    {
+      "act": "claude-12-turn-68-f-s2-0",
+      "kind": "verify",
+      "text": "please tell me after that if the known defects are fixed or not",
+      "since": "2026-10-09T17:56:42Z"
+    },
+    {
+      "act": "claude-12-turn-86-f-s1-0",
+      "kind": "clarify",
+      "text": "what is the hairsplitting detail about 0.05 vs 0.06 ?",
+      "since": "2026-10-09T18:37:30Z"
+    },
+    {
+      "act": "claude-12-turn-88-f-s2-1",
+      "kind": "report-problem",
+      "text": "and right now we don't even have a runnable or valid machine.",
+      "since": "2026-10-09T18:42:15Z"
+    },
+    {
+      "act": "claude-12-turn-88-f-s7-0",
+      "kind": "report-problem",
+      "text": "4 sure, but tge way you ran it before was intransparent.",
+      "since": "2026-10-09T18:42:15Z"
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "record": "turn-8X7BbX",
+  "turn_id": "claude-11-turn-38",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-09T04:27:53Z",
+  "agent_id": "claude-11",
+  "source_text": "so are we doing every efficiency enhancement noted so far?",
+  "fragments": [
+    {
+      "id": "claude-11-turn-38-f-s1-0",
+      "intent": "verify",
+      "text": "so are we doing every efficiency enhancement noted so far?"
+    }
+  ],
+  "reply_text": "Not all of them yet. Here's each one and where it stands.\n\n| Enhancement | Status |\n|---|---|\n| 1. Sound cache key, so warm runs can be trusted | **Running** (codex-39) |\n| 2. Lean-side census, port by mechanism | **Running** (codex-38) |\n| 3. Store each row's captures per commit | **Running**: the 21 captures at `c9c6b44f` are the first set |\n| 4. Regression gate at merge, target is clean | **Done just now**: preamble 8 rule 10 rewritten (`fc40c0d0`, pushed to fork) |\n| 5. Impact map (diff → rows it can reach) | **Not started** |\n| 6. Nightly sweep of all 110 rows | **Not started** |\n| 7. Tracing the three regressions back to their commits | **Held** |\n\n**Why 5–7 are waiting:**\n- **Impact map (5):** it's built from capture records, so it can start once the 21 baseline captures are in. I'll dispatch it then, and it needs no new runs.\n- **Nightly sweep (6):** until the cache key is fixed it would be about 2 hours of cold runs a night. With the fix it's mostly warm. Either way it starts once the cache key lands. The 89 rows that never compile fail early, so they're cheap.\n- **Regression tracing (7):** that's about 20 probes, a minute each once the cache is fixed and about a working day cold. Holding it is the efficient choice.\n\nRule 10 no longer says \"the all-rows rebuild finds those\", which nobody ran. It now says the integration owner gates every merge: the rows the diff can reach are captured and compared with the previous merge's stored captures, and a node that stops matching blocks the merge. It also names the target as clean, not \"compiles\".",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-11-turn-38",
+      "id": "claude-11-turn-38-f-s1-0",
+      "kind": "verify",
+      "at": "2026-10-09T04:27:53Z",
+      "record": "turn-8X7BbX",
+      "end": 58,
+      "standing?": false,
+      "about": "coverage of every noted efficiency enhancement",
+      "text": "so are we doing every efficiency enhancement noted so far?",
+      "to": "claude-11"
+    }
+  ],
+  "mission_id": "M-landscape-positioning",
+  "open_ports": [
+    {
+      "act": "claude-11-turn-2-f-s1-0",
+      "kind": "propose",
+      "text": "I think we should work on a health scan that goes beyond just the XTDB endpoint.",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-f-s2-0",
+      "kind": "report-problem",
+      "text": "unpushed repos are a liability",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-r-3",
+      "kind": "ask-action",
+      "text": "(next) Should I add a daily timer that sends only *changes* in the scan result to the zone-alerts room through `zone-no…",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-3-r-2",
+      "kind": "ask-action",
+      "text": "(next) If you agree, I'll start on the evidence-store nightly backup now. The basis is `futon3c/scripts/backup_evidence…",
+      "since": "2026-10-09T01:18:24Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-1",
+      "kind": "report-problem",
+      "text": "(powerbi-tui) Its remote is `https://github.com/holtzermann17/powerbi-tui.git`. The only GitHub login on zone is tothed…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-3",
+      "kind": "offer",
+      "text": "(two decisions)\n1. **powerbi-tui:** do you want to push it yourself with your holtzermann17 login, or should I create `…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-7-r-0",
+      "kind": "clarify",
+      "text": "(\"https://zone.hyperreal.enterprises/voxterm/) Your message seems to stop at the URL. voxterm is up: the service is act…",
+      "since": "2026-10-09T01:41:21Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-0",
+      "kind": "report-problem",
+      "text": "(`rowtree.py` is harder) claude-4 never wrote it in one piece. It was created with a shell heredoc at 13:14 on 10-04 an…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-1",
+      "kind": "propose",
+      "text": "(plan)\n1. Rebuild these six files by replaying the edits in order, into `mfuton-share/tools/progress/` rather than `/tm…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-2",
+      "kind": "ask-action",
+      "text": "(go?) Should I dispatch that, or do it myself?",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-12-r-2",
+      "kind": "propose",
+      "text": "(on return) When zai-1 reports back, I'll review it myself:\n1. Diff `history.tsv` against the page.\n2. Spot-check `rowt…",
+      "since": "2026-10-09T02:40:37Z"
+    },
+    {
+      "act": "claude-11-turn-13-r-3",
+      "kind": "report-problem",
+      "text": "(what's missing) Several files were made with shell commands, so they weren't recovered by the replay:\n- preambles 1–6\n…",
+      "since": "2026-10-09T02:43:14Z"
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "record": "turn-M4cqxa",
+  "turn_id": "claude-12-turn-67",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T17:51:39Z",
+  "agent_id": "claude-12",
+  "source_text": "lets apply all of them but call it VERDICT and date it so that it is clear this is provisional",
+  "fragments": [
+    {
+      "id": "claude-12-turn-67-f-s1-0",
+      "intent": "approve",
+      "text": "lets apply all of them but call it VERDICT and date it so that it is clear this is provisional"
+    }
+  ],
+  "reply_text": "Applying them as dated provisional verdicts. The plan:\n- Each document gets a `**VERDICT (2026-10-09, provisional):** <STATUS>` line, with its existing `Status:` line left intact.\n- The registry reads the VERDICT line as the task's state and keeps the \"provisional\" marker on the entry.\n\nFirst, how tickets carry status, and where the line can sit without breaking the requisition parser, which reads the first line after the H1.That plans 319 VERDICT lines: 231 DONE, 65 OPEN, 17 ACTIVE, 4 ABANDONED and 2 SUPERSEDED. The 7 unknowns get none. Now the writer, run dry on a few files first to check placement.The ticket loader comes before my helper in the file, so I'm moving the helper above it.All 48 tests pass (198 assertions). Before writing anything, I'm taking a baseline count of live excursions and tickets from the registry.I've applied the classifications as **319 provisional, dated VERDICT lines**, and the registry now reads them. Live excursions drop from 436 to 200 and live tickets from 78 to 77, so open tasks fall from about 692 to about 455. Commits are local in 10 repos; I haven't pushed anything.\n\n**What a line looks like:**\n\n> **VERDICT (2026-10-09, provisional):** DONE — Git commits record PHASE D COMPLETE with lucy fully switched… _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_\n\n- **Placement:** each line sits after the document's `Status:` line if it has one, otherwise after its Requisition line, otherwise under the title. Existing Status and Requisition lines are untouched.\n- **Overrides:** where a Status line looks stale (for example `E-futon1b-operational-switchover`, declared OPEN), the VERDICT takes precedence, but the old line stays visible.\n\n**Counts:** 231 DONE, 65 OPEN, 17 ACTIVE, 4 ABANDONED and 2 SUPERSEDED (by `M-apm-demonstration`).\n\n**Registry change:** `mission_registry` now reads a VERDICT line ahead of the `Status:` line for excursions and tickets. It keeps `:verdict {:date … :provisional? true}` on the entry, so anything downstream can tell the state is provisional. It only accepts the dated \"provisional\" form. Tests pass: 48 tests, 198 assertions.\n\n**Commits:**\n\n| repo | branch | commit | files |\n|---|---|---|---|\n| futon2 | main | `3d2c3b2e5` | 187, plus the registry change |\n| futon3c | master | `fc44c954` | 82 |\n| futon6 | master | `d9eecee` | 18 |\n| futon5a | master | `8e68f62` | 15 |\n| futon0 | main | `f70689c` | 7 |\n| futon3 | main | `c4767e1` | 3 |\n| futon1b | master | `02566fd` | 2 |\n| futon4 | main | `c83655f` | 2 |\n| futon7 | master | `07713fc` | 2 |\n| mmca-clj | main | `e23f273` | 1 |\n\nDuplicate copies in `futon6-old-copy`, `futon2-p9-baseline.*` and `futon3c-index-check` were left alone.\n\n**Not written:**\n- The 7 unknowns, for example `E-bg-check` and `E-distributed-formalisation`.\n- `E-invariant-stepper`, which the seats skipped.\n\n**Not live yet:** `arxana-browse` will reflect the verdicts once futon2 is hot-loaded, together with the other merged work. Tell me if you want that hot-load now. It's separate from a click.\n\n**Next, as you said:** priority, now that status is known.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-f-s1-0",
+      "kind": "approve",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "end": 94,
+      "standing?": false,
+      "about": "bulk application of the excursion/ticket classifications, amended to dated provisional VERDICT lines",
+      "text": "lets apply all of them but call it VERDICT and date it so that it is clear this is provisional",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-f70689c9",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon0",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 7 task documents",
+      "sha": "f70689c9",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-02566fd3",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon1b",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 2 task documents",
+      "sha": "02566fd3",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-3d2c3b2e",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon2",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 187 task documents; registry reads them",
+      "sha": "3d2c3b2e",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-c4767e15",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon3",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 3 task documents",
+      "sha": "c4767e15",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-fc44c954",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon3c",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 82 task documents",
+      "sha": "fc44c954",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-c83655f7",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon4",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 2 task documents",
+      "sha": "c83655f7",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-8e68f62b",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon5a",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 15 task documents",
+      "sha": "8e68f62b",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-d9eeceeb",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon6",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 18 task documents",
+      "sha": "d9eeceeb",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-67",
+      "id": "claude-12-turn-67-c-07713fc8",
+      "kind": "commit",
+      "at": "2026-10-09T17:51:39Z",
+      "record": "turn-M4cqxa",
+      "repo": "futon7",
+      "subject": "Add provisional 2026-10-09 VERDICT lines to 2 task documents",
+      "sha": "07713fc8",
+      "standing?": false
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    },
+    {
+      "act": "claude-12-turn-15-f-s2-0",
+      "kind": "delegate",
+      "text": "these could be put out in parallel to codex seats or zai seats,",
+      "since": "2026-10-09T13:41:54Z"
+    },
+    {
+      "act": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "text": "what is going on with the excursions,",
+      "since": "2026-10-09T14:41:47Z"
+    },
+    {
+      "act": "claude-12-turn-44-f-s1-0",
+      "kind": "propose",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.",
+      "since": "2026-10-09T14:48:50Z"
+    }
+  ]
+}

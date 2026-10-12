@@ -1,0 +1,110 @@
+{
+  "record": "turn-S6Y2O5",
+  "turn_id": "claude-18-turn-136",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-30T15:53:40Z",
+  "agent_id": "claude-18",
+  "source_text": "Let's look into m99A01 and see if we can repair the statement",
+  "fragments": [
+    {
+      "id": "claude-18-turn-136-f-s1-0",
+      "intent": "ask-action",
+      "text": "Let's look into m99A01 and see if we can repair the statement"
+    }
+  ],
+  "reply_text": "m99A01 had the same encoding defect as m95A03 and m02A05, and I've repaired the statement (50c9a431, pushed). The original problem is fine.\n\n**The defect:** the first part said every C² stationary curve *equals* the extremal `cosh t − tanh(π/4)·sinh t − 1` as a function on all of ℝ. The functional only looks at [0, π/2], so the extremal plus a smooth bump near −2 is a second stationary curve. The seat had compiled the bump lemmas but not packaged the refutation, so the falsity is established on paper rather than by a compiled file.\n\n**The repair:** for a C² curve meeting the boundary conditions, being stationary is equivalent to agreeing with the extremal on [0, π/2]. I also moved the regularity and boundary conditions out of the equivalence into hypotheses. Otherwise the reverse direction would fail, since agreeing on the interval says nothing about smoothness outside it. This is the same form m02A05 uses.\n\n**Why I think the revision is true** (not yet formalised):\n- **Stationary implies agreement:** a stationary C² curve satisfies y″ − y = 1 on the interval, and that boundary-value problem has a unique solution.\n- **Agreement implies stationary:** a curve agreeing with the extremal on the interval has the same integrand there for every variation, so it is stationary because the extremal is.\n\n**What is already proved:** I installed the seat's partial proof with the new statement. The file compiles with one `sorry`, the classification itself. The other three parts are proved: the extremal is admissible, it is the global minimum, and there is no maximum.\n\n**What remains for the loop:** derive the differential equation from stationarity, using differentiation under the integral, integration by parts and Mathlib's fundamental lemma. Then prove uniqueness for the boundary-value problem and the easier reverse direction.\n\nI moved the seat's old handoff note, which said to finish the refutation, into `superseded/`. m99A01 stays in the queue of open problems, and I did not send this one to the grader, as with m95A03.\n\nm98A06 and m97A06 use the same \"curves on ℝ, functional on an interval\" setup and may have the same defect; I haven't checked them.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-136",
+      "id": "claude-18-turn-136-f-s1-0",
+      "kind": "ask-action",
+      "at": "2026-09-30T15:53:40Z",
+      "record": "turn-S6Y2O5",
+      "end": 61,
+      "standing?": false,
+      "about": "problem item m99A01's formal statement",
+      "text": "Let's look into m99A01 and see if we can repair the statement",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}

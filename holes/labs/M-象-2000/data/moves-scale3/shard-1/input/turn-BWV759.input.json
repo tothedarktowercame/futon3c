@@ -1,0 +1,170 @@
+{
+  "record": "turn-BWV759",
+  "turn_id": "claude-11-turn-98",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-11T03:53:36Z",
+  "agent_id": "claude-11",
+  "source_text": "So, my main comment is that if we look back through work on mfuton, we spent A LOT of work on something that wasn't actually needed, though it may have been \"needed\" in a way to come up with the discovery of what did work.  That era started with a map of \"causality\" using the M-diagramprover ideas.  Can we find that work and think about how that got us unto a false start?",
+  "fragments": [
+    {
+      "id": "claude-11-turn-98-f-s1-0",
+      "intent": "report-problem",
+      "text": "So, my main comment is that if we look back through work on mfuton, we spent A LOT of work on something that wasn't actually needed,"
+    },
+    {
+      "id": "claude-11-turn-98-f-s1-1",
+      "intent": "qualify",
+      "text": "though it may have been \"needed\" in a way to come up with the discovery of what did work."
+    },
+    {
+      "id": "claude-11-turn-98-f-s2-0",
+      "intent": "explain",
+      "text": "That era started with a map of \"causality\" using the M-diagramprover ideas."
+    },
+    {
+      "id": "claude-11-turn-98-f-s3-0",
+      "intent": "ask-action",
+      "text": "Can we find that work and think about how that got us unto a false start?"
+    }
+  ],
+  "reply_text": "That's a lot of files. I'll have an agent reconstruct the history while I wait.I'll spot-check the two claims the story turns on before relying on them:Here's what the record shows, then my reading of how the map led us into a false start.\n\n## What happened\n\n- **29 Sep: the map is drawn.** `~/code/lean-wiring` started as \"Lean-native counterpart to futon3c's DiagramProver wiring checker\". It drew Lean's compiler passes as boxes, and the data they hand each other as wires. M-diagramprover itself (`futon3c/holes/missions/M-diagramprover.md`) is about pattern-driven proof search. mfuton only borrowed its lowest rung, the \"flow maps\".\n- **30 Sep: the map sets the job.** `docs/futon/startup-model.md` framed it this way: \"what can fail is a finite set we can enumerate from Lean before running anything\", so \"list the remaining fixes in advance\". The causal layer added on 2 October required \"causal arrows with warrants\" for each repair. It tracked 25 mechanisms in `CAUSAL-MODEL.tsv`.\n- **The thing being fixed was Rob's existing Lean-source-to-Python compiler**, which had to get through Lean's startup code. The era ran from 29 Sep to 9 Oct, with a gap for the NVMe failure. It produced about 2,000 commits, 444 branches and 1,586 files in `pyreg/`, plus a Lisp transpiler side effort.\n- **Its own milestones:**\n  - 110 \"curriculum\" constants needed to parse a blank file;\n  - 20 of 110 compiled by 3 October (`TN-lean-continued-port-review.md`: \"Neither effort has compiled any of the 110\" at one point);\n  - regressions by 9 October;\n  - it never parsed a blank file.\n- **9 Oct, 05:30: the right route is rejected.** A route review in `lanes/core/CORE.md` considered \"Route M (mechanical, from Lean's compiled IR)\" and recommended against it. It \"cannot by itself deliver the stated source compiler\". It recommended hand-transcribing Lean's core instead, sized at 20–35 agent-days.\n- **06:35: you redirected the work.** \"Everything directed at the blank-file path, defined by the C/C++.\" That afternoon, discovery found 85% of the executed functions already had compiled IR in the toolchain. The blank file parsed at 18:40 the same day, and Pythagoras on Mathlib about two days later.\n\n## How the map produced the false start\n\n1. **The map was drawn inside the wrong frame.** It answered \"what does Rob's compiler need in order to handle Lean?\", and every node and wire lived inside that question. A different question sat outside it: \"can Lean's own compiled code just be run?\" The map had no node where that question could show up. So it could be accurate about its own territory and still point the wrong way.\n2. **The map had the answer in hand and read it as a specification.** On 29–30 September lean-wiring was already reading Lean's IR. It counted `ap`/`fap`, `reset`/`reuse` and `goto _start`, but only to decide what a source compiler must imitate. Ten days later we executed that same IR. The knowledge was right; it was being read as a spec rather than run as a program.\n3. **The rigour was spent on the repairs, not the direction.**\n   - The causal layer demanded warrants and falsifiable checks for every fix.\n   - It never put the route itself to a falsifiable test.\n   - The \"20/110\" progress metric only measured progress along the chosen route, so it looked like steady advance.\n   - The diagramprover review of 2 October said the work \"does not yet validate the Python port\". That was a warning about the level the checking was happening at.\n4. **The mission text was read literally, not Rob's goal.** Route M was rejected because it couldn't deliver \"the stated source compiler\". Rob's real goal turned out to be typed objects that print back without loss, and that doesn't need a source compiler at all. He only spelled that out on 10 October, after we'd switched.\n5. **What broke it was choosing a definition of correct.** \"Defined by the C/C++\" made the native binary the definition. Once the reference implementation is the definition and it can be executed, running its compiled form is the obvious first move. Every earlier frame treated Lean as something to re-derive.\n\n## Was the detour \"needed\"?\n\nPartly. It left four useful things:\n- the 110-constant curriculum and its native Callgrind driver, which became the definition of the blank-file path;\n- the habit of comparing everything against native Lean;\n- most of the runtime transcription;\n- fluency in Lean's IR, which is why the IR path worked within hours.\n\nBut the switch itself needed none of that apparatus. It needed one question asked early: \"Is there an executable form of the reference, and can we just run it?\" Checking that would have taken about a day of discovery. It was first seriously considered ten days in, and even then rejected.\n\n## Lessons I'd draw\n\n- **Run the reference first.** Before mapping how to rebuild a system's behaviour, ask whether its compiled form can simply be executed. Mapping only makes sense once the answer is no.\n- **Check the route, not just the repairs.** Every map should carry a standing check: what would make this whole map unnecessary? Revisit that question on a schedule, not only when someone forces it.\n- **Read the client's goal, not the mission text.** When the stated deliverable (\"a source compiler\") and the underlying goal (\"lossless typed round trip\") could differ, confirm the goal with the client before choosing a route.\n\nI could turn this into a postmortem note and pattern entries. Where would you like it: `mfuton-notes`, the futon3 pattern library, or both? One thing I can't tell from the files is which agent wrote the 9 October route review that rejected Route M. If that matters for the postmortem, I'll trace it.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-11-turn-98",
+      "id": "claude-11-turn-98-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-11T03:53:36Z",
+      "record": "turn-BWV759",
+      "end": 132,
+      "standing?": false,
+      "about": "the mfuton work: much of it went into something that was not actually needed",
+      "text": "So, my main comment is that if we look back through work on mfuton, we spent A LOT of work on something that wasn't act…",
+      "to": "claude-11"
+    },
+    {
+      "port?": false,
+      "start": 133,
+      "author": "operator",
+      "turn": "claude-11-turn-98",
+      "id": "claude-11-turn-98-f-s1-1",
+      "kind": "qualify",
+      "at": "2026-10-11T03:53:36Z",
+      "record": "turn-BWV759",
+      "end": 222,
+      "standing?": false,
+      "about": "the same work: it may have been 'needed' as a way to discover what did work",
+      "text": "though it may have been \"needed\" in a way to come up with the discovery of what did work.",
+      "to": "claude-11"
+    },
+    {
+      "port?": false,
+      "start": 224,
+      "author": "operator",
+      "turn": "claude-11-turn-98",
+      "id": "claude-11-turn-98-f-s2-0",
+      "kind": "explain",
+      "at": "2026-10-11T03:53:36Z",
+      "record": "turn-BWV759",
+      "end": 299,
+      "standing?": false,
+      "about": "the false-start era: it started with a map of 'causality' using the M-diagramprover ideas",
+      "text": "That era started with a map of \"causality\" using the M-diagramprover ideas.",
+      "to": "claude-11"
+    },
+    {
+      "port?": true,
+      "start": 301,
+      "author": "operator",
+      "turn": "claude-11-turn-98",
+      "id": "claude-11-turn-98-f-s3-0",
+      "kind": "ask-action",
+      "at": "2026-10-11T03:53:36Z",
+      "record": "turn-BWV759",
+      "end": 374,
+      "standing?": false,
+      "about": "the mfuton false start: claude-11 is to find that work and think about how it led there",
+      "text": "Can we find that work and think about how that got us unto a false start?",
+      "to": "claude-11"
+    }
+  ],
+  "mission_id": "M-landscape-positioning",
+  "open_ports": [
+    {
+      "act": "claude-11-turn-2-f-s1-0",
+      "kind": "propose",
+      "text": "I think we should work on a health scan that goes beyond just the XTDB endpoint.",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-f-s2-0",
+      "kind": "report-problem",
+      "text": "unpushed repos are a liability",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-r-3",
+      "kind": "ask-action",
+      "text": "(next) Should I add a daily timer that sends only *changes* in the scan result to the zone-alerts room through `zone-no…",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-3-r-2",
+      "kind": "ask-action",
+      "text": "(next) If you agree, I'll start on the evidence-store nightly backup now. The basis is `futon3c/scripts/backup_evidence…",
+      "since": "2026-10-09T01:18:24Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-1",
+      "kind": "report-problem",
+      "text": "(powerbi-tui) Its remote is `https://github.com/holtzermann17/powerbi-tui.git`. The only GitHub login on zone is tothed…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-3",
+      "kind": "offer",
+      "text": "(two decisions)\n1. **powerbi-tui:** do you want to push it yourself with your holtzermann17 login, or should I create `…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-7-r-0",
+      "kind": "clarify",
+      "text": "(\"https://zone.hyperreal.enterprises/voxterm/) Your message seems to stop at the URL. voxterm is up: the service is act…",
+      "since": "2026-10-09T01:41:21Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-0",
+      "kind": "report-problem",
+      "text": "(`rowtree.py` is harder) claude-4 never wrote it in one piece. It was created with a shell heredoc at 13:14 on 10-04 an…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-1",
+      "kind": "propose",
+      "text": "(plan)\n1. Rebuild these six files by replaying the edits in order, into `mfuton-share/tools/progress/` rather than `/tm…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-2",
+      "kind": "ask-action",
+      "text": "(go?) Should I dispatch that, or do it myself?",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-12-r-2",
+      "kind": "propose",
+      "text": "(on return) When zai-1 reports back, I'll review it myself:\n1. Diff `history.tsv` against the page.\n2. Spot-check `rowt…",
+      "since": "2026-10-09T02:40:37Z"
+    },
+    {
+      "act": "claude-11-turn-13-r-3",
+      "kind": "report-problem",
+      "text": "(what's missing) Several files were made with shell commands, so they weren't recovered by the replay:\n- preambles 1–6\n…",
+      "since": "2026-10-09T02:43:14Z"
+    }
+  ]
+}

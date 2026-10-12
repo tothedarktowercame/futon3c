@@ -1,0 +1,192 @@
+{
+  "record": "turn-57qRKT",
+  "turn_id": "claude-16-turn-78",
+  "session_id": "00e653e3-28f7-4add-8304-47ca0475b5c2",
+  "created_at": "2026-10-12T13:51:06Z",
+  "agent_id": "claude-16",
+  "source_text": "I ran that in the fresg claude-19 buffer and got list: Wrong type argument: stringp, :null",
+  "fragments": [
+    {
+      "id": "claude-16-turn-78-f-s1-0",
+      "intent": "report-problem",
+      "text": "I ran that in the fresg claude-19 buffer and got list: Wrong type argument: stringp, :null"
+    }
+  ],
+  "reply_text": "The roster's mission for claude-19 is JSON null, which the Emacs JSON parser returns as `:null`, and the command passes that where a string is expected. Fixing it directly.㊢ (\"Wrong type argument: stringp, :null\") Fixed and reloaded into your running Emacs (7b17af56). claude-19 has no mission on the roster, so the lookup got JSON null, which the parser returned as the symbol `:null`, and the command handed that to the prompt as a string. It now treats a null or empty mission as \"no default\" and asks for the mission with M-象-2000 offered, and an ERT test pins the null case. I did it myself since it is a four-line fix.\n\n㊟ (what the error shows about seats) claude-19 is a new seat with no clock decision yet, which is the normal state of a fresh buffer, so the brief command has to work for exactly that case. The brief itself does not depend on the seat's mission; it depends on which mission you name.\n\n🈸 (\"I ran that\") Try again in the same buffer: `M-x xiang-resume-brief`, accept M-象-2000 at the prompt. It takes a few seconds to read the records, then inserts at point. One line back on how it reads is all I need.",
+  "reply_acts": [
+    {
+      "id": "claude-16-turn-78-r-0",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊟",
+      "text": "(what the error shows about seats) claude-19 is a new seat with no clock decision yet, which is the normal state of a fresh buffer, so the brief command has to work for exactly that case. The brief itself does not depend on the seat's mission; it depends on which mission you name."
+    },
+    {
+      "id": "claude-16-turn-78-r-1",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "🈸",
+      "text": "(\"I ran that\") Try again in the same buffer: `M-x xiang-resume-brief`, accept M-象-2000 at the prompt. It takes a few seconds to read the records, then inserts at point. One line back on how it reads is all I need."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-16-turn-77-r-0",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊥",
+      "text": "(\"how far off we are from a demo\") Not far: the artifact exists and runs now. The demo is you opening a REPL buffer and typing `M-x xiang-resume-brief`, then asking something and seeing whether the agent already knows it. Nothing more needs to be built to try it. Let me show the current first screen rather than describe it.㊢ (that is the demo, as it stands) The screen above is what a fresh 象 seat would see before its first turn: your three anchors verbatim, then 245 agent items awaiting you, grouped by kind, dated, with the older ones folded. It reads from 1,009 records across 22 sessions by mission and declared excursion. To see it working: open any REPL buffer, type `M-x xiang-resume-brief`, accept the default mission, and then ask the agent something you asked a previous seat. That costs five minutes and needs nothing further from me."
+    },
+    {
+      "id": "claude-16-turn-77-r-1",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊣",
+      "text": "(\"I don't want to bask in inefficient loops\") Agreed, and the last several hours were that. Since the brief existed at 06:45 I have spent roughly three hours on: two Codex capacity failures and re-dispatches, a stub that passed where the real system failed, an export typo of mine, a backfill run twice, an excursion join that over-matched, and a 13-hour follower outage traced across the seam. Each was a real defect, but together they are the inefficient loop: fixing the plumbing of the demo instead of running it. I am stopping dispatches here. Nothing is in flight."
+    },
+    {
+      "id": "claude-16-turn-77-r-2",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊟",
+      "text": "(what the first screen already tells us, which the loop did not) Reading it as you would: the \"Lean concept-blending\" question and \"needs you: three things\" are nine hours and a day old and still listed, as they should be. But \"Shall I build topo4?\" and \"shall I draft it as a mission-style spec\" were both answered, by you and by me, and are still there. The join is now good enough; the linking is what makes the brief lie. A brief that lists answered questions as awaiting you is worse than no brief, because it trains the reader to skim it."
+    },
+    {
+      "id": "claude-16-turn-77-r-3",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊭",
+      "text": "(order, nothing dispatched until you say) 1. You run the brief in a fresh REPL and tell me in one line whether it felt like continuing a conversation or like being handed a backlog. That answer decides more than anything I can build. 2. If the backlog feeling wins, the one change worth making is to the brief's own linking: when your next operator turn in the same session says yes, ok, or go, treat the agent's last ask as answered in the brief, which is the sole-port rule applied from your side and is classical. 3. Measurement only after a week of real resumes, from the recorded briefs, not from a metric chosen now."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-16-turn-78",
+      "id": "claude-16-turn-78-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-12T13:51:06Z",
+      "record": "turn-57qRKT",
+      "end": 90,
+      "standing?": false,
+      "about": "the Emacs error from running the agent's code in a fresh claude-19 buffer",
+      "text": "I ran that in the fresg claude-19 buffer and got list: Wrong type argument: stringp, :null",
+      "to": "claude-16"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-78",
+      "id": "claude-16-turn-78-r-0",
+      "kind": "qualify",
+      "at": "2026-10-12T13:51:54Z",
+      "record": "turn-57qRKT",
+      "standing?": false,
+      "text": "(what the error shows about seats) claude-19 is a new seat with no clock decision yet, which is the normal state of a f…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-16",
+      "turn": "claude-16-turn-78",
+      "id": "claude-16-turn-78-r-1",
+      "kind": "ask-action",
+      "at": "2026-10-12T13:51:54Z",
+      "record": "turn-57qRKT",
+      "target": "claude-16-turn-78-f-s1-0",
+      "standing?": false,
+      "text": "(\"I ran that\") Try again in the same buffer: `M-x xiang-resume-brief`, accept M-象-2000 at the prompt. It takes a few se…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-78",
+      "id": "claude-16-turn-78-c-7b17af56",
+      "kind": "commit",
+      "at": "2026-10-12T13:51:54Z",
+      "record": "turn-57qRKT",
+      "repo": "futon3c",
+      "subject": "xiang-brief: a seat with no roster mission gets a prompt, not a :null default (Joe hit it in claude-19) (+18 -4 over 2 files)",
+      "sha": "7b17af56",
+      "standing?": false
+    }
+  ],
+  "mission_id": "M-landscape-positioning",
+  "open_ports": [
+    {
+      "act": "invoke-1791686762417-3860-37689490-b-0",
+      "kind": "ask-action",
+      "text": "Joe asked me to send you this for comments before we build the next step. Please read the packet below (also at ~/code/…",
+      "since": "2026-10-11T02:46:02Z"
+    },
+    {
+      "act": "invoke-1791690998492-4081-000d9ded-b-0",
+      "kind": "ask-action",
+      "text": "From claude-15, at Joe's request: Joe would like you to take over M-象-2000, so that\nyou and I work in tandem (you on th…",
+      "since": "2026-10-11T03:56:38Z"
+    },
+    {
+      "act": "claude-16-turn-1-r-2",
+      "kind": "propose",
+      "text": "(\"compatibility surface with claude-15's work on -40°\") Three contact points, in the order I'd build them.\n1. **Same id…",
+      "since": "2026-10-11T04:07:15Z"
+    },
+    {
+      "act": "claude-16-turn-1-r-4",
+      "kind": "clarify",
+      "text": "(one thing to confirm) `constrain` is an opener in the adjacency table, so Joe's standing rules sit in the inbox as deb…",
+      "since": "2026-10-11T04:07:15Z"
+    },
+    {
+      "act": "claude-16-turn-3-r-2",
+      "kind": "propose",
+      "text": "(what I would change) Only the double count: take `constrain` out of the adjacency keys so it opens no port. It stays a…",
+      "since": "2026-10-11T04:24:17Z"
+    },
+    {
+      "act": "claude-16-turn-5-f-s1-0",
+      "kind": "propose",
+      "text": "㊭: I'd suggest that you bell codex-68 about this b/c they are doing a very deep dive into category theory and dealing w…",
+      "since": "2026-10-11T04:38:15Z"
+    },
+    {
+      "act": "claude-16-turn-8-r-2",
+      "kind": "propose",
+      "text": "(next on my path, in order)\n1. Receipt of the recompute: totals before and after, the four closes in claude-15's sessio…",
+      "since": "2026-10-11T04:52:02Z"
+    },
+    {
+      "act": "claude-16-turn-9-r-3",
+      "kind": "propose",
+      "text": "(then) Placeholder-session records and the seven zero-act records, each a small packet; then faults as report-problem a…",
+      "since": "2026-10-11T04:54:26Z"
+    },
+    {
+      "act": "invoke-1791714662580-5072-71588601-b-0",
+      "kind": "ask-action",
+      "text": "From claude-15, relaying Joe's word verbatim from my REPL (2026-10-11): \"yes to both\".\n\nThat is yes to your two pending…",
+      "since": "2026-10-11T10:31:02Z"
+    },
+    {
+      "act": "invoke-1791715588861-5127-28ef4c7e-b-0",
+      "kind": "ask-action",
+      "text": "Requisition: M-landscape-positioning — minus40 adopts Mastra OM ideas (borrow rows 3, 4)\n\nFrom claude-13, at Joe's requ…",
+      "since": "2026-10-11T10:46:28Z"
+    },
+    {
+      "act": "invoke-1791736934784-5621-a4ed2943-b-0",
+      "kind": "ask-action",
+      "text": "From claude-15, at Joe's request: please give a first read to the draft spec ~/code/minus40/docs/SPEC-open-items.md (mi…",
+      "since": "2026-10-11T16:42:14Z"
+    },
+    {
+      "act": "claude-16-turn-22-f-s1-0",
+      "kind": "propose",
+      "text": "so, now that there is an agreed -40 spec, I wonder if we can continue to build the Xiang system so that we push forward…",
+      "since": "2026-10-11T16:54:59Z"
+    }
+  ]
+}

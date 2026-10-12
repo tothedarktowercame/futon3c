@@ -1,0 +1,190 @@
+{
+  "record": "turn-2aojFu",
+  "turn_id": "claude-12-turn-118",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T23:49:26Z",
+  "agent_id": "claude-12",
+  "source_text": "So, firstly, I created a Warrant system; if we use that, then we won't have to rerun tests we won't have to rerun them when code doesn't change.  That is a separate issue from \"slow tests\".  Secondly,  what you said above about \"The performance cliff is isolated\" ... that is interesting, I wonder what is going on with the one policy that takes so long to process?  Can you explain that before we proceed with anything else?",
+  "fragments": [
+    {
+      "id": "claude-12-turn-118-f-s1-0",
+      "intent": "report",
+      "text": "firstly, I created a Warrant system; if we use that, then we won't have to rerun tests we won't have to rerun them when code doesn't change."
+    },
+    {
+      "id": "claude-12-turn-118-f-s2-0",
+      "intent": "clarify",
+      "text": "That is a separate issue from \"slow tests\"."
+    },
+    {
+      "id": "claude-12-turn-118-f-s3-0",
+      "intent": "explore",
+      "text": "Secondly,  what you said above about \"The performance cliff is isolated\" ..."
+    },
+    {
+      "id": "claude-12-turn-118-f-s4-0",
+      "intent": "explore",
+      "text": "that is interesting, I wonder what is going on with the one policy that takes so long to process?"
+    },
+    {
+      "id": "claude-12-turn-118-f-s5-0",
+      "intent": "prioritize",
+      "text": "Can you explain that before we proceed with anything else?"
+    }
+  ],
+  "reply_text": "Investigating the slow policy first. Starting with the census output and that policy's shape compared with the others.Node count doesn't explain it: a 16-node policy scored in 149 ms, and this one has 13 nodes. Reading the scorer's cost model and its width guard.Loading the census script started the census itself (it runs on load), so it timed out. Copying just its `artifacts` definition instead:The main thread just waits on a worker. Sampling the worker thread:The time goes into `observation_model.clj`'s `state-information-gain`, inside `ordered`. Before explaining, I'll measure the state space at each width, to be sure the arithmetic matches.My `pkill` pattern matched its own shell again. Killing the scorer by PID and rerunning:distinct-4 has **1,536 reachable completion states**. distinct-11 has 64, and the other xiang policies at most 13. Checking when the hot code arrived, since the guard was calibrated on 2026-09-30:That policy is slow because of one inefficient loop that arrived today, and the width guard didn't catch it because it was calibrated before that loop existed.\n\n**1. This policy has far more possible states than the others.** `01-M-xiang-2000/distinct-4` has 13 patterns, but only 4 ordering constraints between them. Nine can complete in any order, so the scorer has to consider **1,536 different sets of completed patterns**. The other xiang policies are nearly linear chains with at most 13 states, and the next-slowest policy, `distinct-11` (5 s), has 64.\n\n**2. The scorer's cost grows with the square of that number.** The time goes into `state-information-gain` in `observation_model.clj`, the information-gain term. For every possible observation it rebuilds the posterior over every state. Inside that loop it calls `ordered`, which re-sorts the whole belief each time, and the sort key is `pr-str` of each state's sorted token set, recomputed on every comparison. So each step costs roughly states² × a full sort with string keys: about 1,536² ≈ 2.4 million state pairs, each wrapped in sorting work. That's repeated for 10 steps. Compared with `distinct-11`'s 64 states, that's about 576 times the work. 5 s × 576 is tens of minutes, which matches the 21 minutes measured.\n\n**3. Why the guard let it through.** `cascade_shape_g.clj` refuses exact scoring only when the policy's width (how many patterns can be in progress side by side) exceeds 9. That limit was measured on 2026-09-30 (`86822f367`), when width-9 fixtures scored in 1.6 s. `state-information-gain` came later: it was added today at 13:58 by codex-30's Q4 change (`3a9db457f`). So the limit was calibrated against a cheaper scorer. distinct-4 sits exactly at width 9, so it was admitted.\n\n**What that means:**\n- **It's mostly avoidable.** Sorting the belief once per step, instead of once per observation, gives exactly the same summation order, so the same numbers. That leaves about 2.4 million multiply-adds per step, which is milliseconds. distinct-4 would likely drop from about 21 minutes to seconds. This is likely also part of why live selection takes 5 minutes, since the same scorer runs over 5,365 policies, though those are small.\n- **The guard should be re-measured** against the current scorer, and probably expressed as the number of reachable states rather than width. Width 9 can mean anything from 512 to several thousand states, depending on how the patterns are ordered.\n- **Live clicks today aren't affected by this particular cliff.** Provisional cascades have at most 2 patterns, and attested ones are small. It does show up in head-policy scoring, and it would in any wide cascade the machine builds later.\n\n**On the Warrant system:** understood. Re-running a test whose code hasn't changed should be skipped by a warrant, and that's separate from tests being slow. I haven't used it today: I re-ran whole suites after every merge. I'll look at how it works and use it for the post-merge checks, rather than re-running everything. The full-suite run I started on main for codex-29's close fix is still going in the background. I won't act on it, or on anything else, until you've said how you want to proceed.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 4,
+      "author": "operator",
+      "turn": "claude-12-turn-118",
+      "id": "claude-12-turn-118-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-09T23:49:26Z",
+      "record": "turn-2aojFu",
+      "end": 144,
+      "standing?": false,
+      "about": "the Warrant system Joe built",
+      "text": "firstly, I created a Warrant system; if we use that, then we won't have to rerun tests we won't have to rerun them when…",
+      "to": "claude-12"
+    },
+    {
+      "port?": true,
+      "start": 146,
+      "author": "operator",
+      "turn": "claude-12-turn-118",
+      "id": "claude-12-turn-118-f-s2-0",
+      "kind": "clarify",
+      "at": "2026-10-09T23:49:26Z",
+      "record": "turn-2aojFu",
+      "end": 189,
+      "standing?": false,
+      "about": "boundary between the warrant system and the slow-tests problem",
+      "text": "That is a separate issue from \"slow tests\".",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 191,
+      "author": "operator",
+      "turn": "claude-12-turn-118",
+      "id": "claude-12-turn-118-f-s3-0",
+      "kind": "explore",
+      "at": "2026-10-09T23:49:26Z",
+      "record": "turn-2aojFu",
+      "end": 267,
+      "standing?": false,
+      "about": "the one slow scoring policy behind the performance cliff",
+      "text": "Secondly,  what you said above about \"The performance cliff is isolated\" ...",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 268,
+      "author": "operator",
+      "turn": "claude-12-turn-118",
+      "id": "claude-12-turn-118-f-s4-0",
+      "kind": "explore",
+      "at": "2026-10-09T23:49:26Z",
+      "record": "turn-2aojFu",
+      "end": 365,
+      "standing?": false,
+      "about": "the mechanism of the one slow policy",
+      "text": "that is interesting, I wonder what is going on with the one policy that takes so long to process?",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 367,
+      "author": "operator",
+      "turn": "claude-12-turn-118",
+      "id": "claude-12-turn-118-f-s5-0",
+      "kind": "prioritize",
+      "at": "2026-10-09T23:49:26Z",
+      "record": "turn-2aojFu",
+      "end": 425,
+      "standing?": false,
+      "about": "diagnosis of the slow policy sequenced before all other work",
+      "text": "Can you explain that before we proceed with anything else?",
+      "to": "claude-12"
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    },
+    {
+      "act": "claude-12-turn-15-f-s2-0",
+      "kind": "delegate",
+      "text": "these could be put out in parallel to codex seats or zai seats,",
+      "since": "2026-10-09T13:41:54Z"
+    },
+    {
+      "act": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "text": "what is going on with the excursions,",
+      "since": "2026-10-09T14:41:47Z"
+    },
+    {
+      "act": "claude-12-turn-44-f-s1-0",
+      "kind": "propose",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.",
+      "since": "2026-10-09T14:48:50Z"
+    },
+    {
+      "act": "claude-12-turn-68-f-s1-0",
+      "kind": "ask-action",
+      "text": "let's hot load now.",
+      "since": "2026-10-09T17:56:42Z"
+    },
+    {
+      "act": "claude-12-turn-68-f-s2-0",
+      "kind": "verify",
+      "text": "please tell me after that if the known defects are fixed or not",
+      "since": "2026-10-09T17:56:42Z"
+    },
+    {
+      "act": "claude-12-turn-86-f-s1-0",
+      "kind": "clarify",
+      "text": "what is the hairsplitting detail about 0.05 vs 0.06 ?",
+      "since": "2026-10-09T18:37:30Z"
+    },
+    {
+      "act": "claude-12-turn-88-f-s2-1",
+      "kind": "report-problem",
+      "text": "and right now we don't even have a runnable or valid machine.",
+      "since": "2026-10-09T18:42:15Z"
+    },
+    {
+      "act": "claude-12-turn-88-f-s7-0",
+      "kind": "report-problem",
+      "text": "4 sure, but tge way you ran it before was intransparent.",
+      "since": "2026-10-09T18:42:15Z"
+    }
+  ]
+}

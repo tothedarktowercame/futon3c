@@ -1,0 +1,110 @@
+{
+  "record": "turn-9bbs6t",
+  "turn_id": "claude-12-turn-129",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-10T03:30:45Z",
+  "agent_id": "claude-12",
+  "source_text": "why is there such a huge checkpoint?",
+  "fragments": [
+    {
+      "id": "claude-12-turn-129-f-s1-0",
+      "intent": "explain",
+      "text": "why is there such a huge checkpoint?"
+    }
+  ],
+  "reply_text": "153,367 copies of a cascade candidate, for 5,381 policies: about 28 copies of each. Measuring where in the checkpoint the copies sit:The checkpoint holds the same ~1.2 GB decision twice. Now checking what fills each copy:Mostly because the checkpoint stores the whole selection twice, and each copy holds everything the scorer computed for every policy, not just the result. I measured click 51's 2.38 GB checkpoint by locating its keys in the file.\n\n**1. The whole decision is written twice: about 1.19 GB each.** One copy is under `:judgment :controller-decision` and an identical one is under `:ground`. Removing that duplication alone halves the file.\n\n**2. Each copy keeps the scorer's working detail for all 5,381 policies:**\n\n| Part | Size | What it holds |\n|---|---|---|\n| `:observation-schedules` | ~578 MB | Per-step observation rows and node evaluations for every policy. Only the chosen policy's rows are needed in full afterwards. |\n| `:selection-certificate` | ~370 MB | The 5,381 scored candidates, each embedding its full policy, with construction and interpretation receipts, several times over. |\n| Token-belief stage and rate lanes | ~130 MB | |\n| Per-policy argmax, target construction, policy prefixes | ~100 MB | |\n\n**3. Each policy is copied about 28 times across the file.** The file holds 153,367 full candidate copies for 5,381 policies. Within a policy's own certificate entry it reappears as its id, inside its inputs, inside its F prefix, and in its habit provenance.\n\n**Why it got this big now:** this morning's fixes let 340 of the 428 targets get 16 policies each, instead of a handful. A format that stores every policy in full, more than once, then grew from megabytes to gigabytes.\n\n**What I've sent codex-29** for the slimming fix, in order of saving:\n1. Store the decision once, and reference it from the second place.\n2. Keep the observation rows only for the chosen policy, and a digest for the rest.\n3. Write each policy once, in one table, with every other occurrence a reference to it.\n\nThe decision held in memory and the gates that check it stay unchanged, which is what broke last time. I'd expect this to bring the checkpoint well under 100 MB.\n\nI sent this as a separate message, so codex-29 may pick it up as a second job alongside the current one. If so, I'll fold the two together when I review.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-129",
+      "id": "claude-12-turn-129-f-s1-0",
+      "kind": "explain",
+      "at": "2026-10-10T03:30:45Z",
+      "record": "turn-9bbs6t",
+      "end": 36,
+      "standing?": false,
+      "about": "the unexpectedly large (2.38 GB) click-51 checkpoint file",
+      "text": "why is there such a huge checkpoint?",
+      "to": "claude-12"
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    },
+    {
+      "act": "claude-12-turn-15-f-s2-0",
+      "kind": "delegate",
+      "text": "these could be put out in parallel to codex seats or zai seats,",
+      "since": "2026-10-09T13:41:54Z"
+    },
+    {
+      "act": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "text": "what is going on with the excursions,",
+      "since": "2026-10-09T14:41:47Z"
+    },
+    {
+      "act": "claude-12-turn-44-f-s1-0",
+      "kind": "propose",
+      "text": "I think it would be a good task for an agent to figue out hiw to classify them based on content and context.",
+      "since": "2026-10-09T14:48:50Z"
+    },
+    {
+      "act": "claude-12-turn-68-f-s1-0",
+      "kind": "ask-action",
+      "text": "let's hot load now.",
+      "since": "2026-10-09T17:56:42Z"
+    },
+    {
+      "act": "claude-12-turn-68-f-s2-0",
+      "kind": "verify",
+      "text": "please tell me after that if the known defects are fixed or not",
+      "since": "2026-10-09T17:56:42Z"
+    },
+    {
+      "act": "claude-12-turn-86-f-s1-0",
+      "kind": "clarify",
+      "text": "what is the hairsplitting detail about 0.05 vs 0.06 ?",
+      "since": "2026-10-09T18:37:30Z"
+    },
+    {
+      "act": "claude-12-turn-88-f-s2-1",
+      "kind": "report-problem",
+      "text": "and right now we don't even have a runnable or valid machine.",
+      "since": "2026-10-09T18:42:15Z"
+    },
+    {
+      "act": "claude-12-turn-88-f-s7-0",
+      "kind": "report-problem",
+      "text": "4 sure, but tge way you ran it before was intransparent.",
+      "since": "2026-10-09T18:42:15Z"
+    }
+  ]
+}

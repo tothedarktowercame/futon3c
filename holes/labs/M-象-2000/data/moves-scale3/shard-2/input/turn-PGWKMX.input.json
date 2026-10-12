@@ -1,0 +1,170 @@
+{
+  "record": "turn-PGWKMX",
+  "turn_id": "claude-11-turn-35",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-09T04:16:56Z",
+  "agent_id": "claude-11",
+  "source_text": "I think you need to think ahead.  we have 110 rows and can't rerun them all as a regression suite all the time.  i am just a bit shocked that this has been so slow.  are there not increasing quantities  of checks that we can run without compiling anything?",
+  "fragments": [
+    {
+      "id": "claude-11-turn-35-f-s1-0",
+      "intent": "constrain",
+      "text": "I think you need to think ahead."
+    },
+    {
+      "id": "claude-11-turn-35-f-s2-0",
+      "intent": "report-problem",
+      "text": "we have 110 rows and can't rerun them all as a regression suite all the time."
+    },
+    {
+      "id": "claude-11-turn-35-f-s3-0",
+      "intent": "report-problem",
+      "text": "i am just a bit shocked that this has been so slow."
+    },
+    {
+      "id": "claude-11-turn-35-f-s4-0",
+      "intent": "propose",
+      "text": "are there not increasing quantities  of checks that we can run without compiling anything?"
+    }
+  ],
+  "reply_text": "Yes, there are. Cold runs are slow because of a defect we already found and measured, not because elaboration is inherently expensive. Here is a ladder of checks, cheapest first.\n\n**Why everything is cold.** A note recovered from /tmp (`~/mfuton-notes/pyreg/issue-cache-key.md`) shows the cache key hashes the git HEAD and 54 extraction files. It ignores the other 316 files that generate code. That has two effects:\n- An uncommitted edit to one of those files is served stale from the cache, so warm runs can't be trusted for decisions.\n- Any commit at all rebuilds everything.\n\nOn the measurements in that note: cold took 1231 s, warm with nothing changed took 65 s, and an empty commit took 822 s. Rule \"every decision uses a cold run\" is a workaround for this bug, and it's why every check costs 20 minutes.\n\n**The ladder**\n\n0. **Fix the cache key** so each cached entry is keyed on the contents of the compiler files that produced it. Then a warm run is as trustworthy as a cold one, a check costs about a minute plus whatever actually changed, and cold runs drop to a nightly confirmation. Everything below gets cheaper too. This is the biggest win and should come first. The question was drafted for Rob and may never have been sent.\n1. **Seconds, no compiling: what a diff can touch.** Every capture already records `port_stack` and producer for every node. One coverage pass per row maps each row to the source lines it executes. A commit's diff, crossed with that map, gives the rows it can affect. Most commits touch a handful of the 110 rows, not all of them. `c61f4d41` would have flagged `isNone` and its group on the spot.\n2. **Seconds: keep Lean's reference terms.** Lean's dumps are fixed and computed once; all 21 now take a few minutes. The comparator is pure Python over saved files.\n3. **About a minute per row: capture plus compare, warm**, only for the rows step 1 flags. Once the key is fixed, that becomes the gate on every merge.\n4. **Golden captures.** Store each row's capture per commit. A regression is a node whose term changed, and that's a plain file diff with no Lean reasoning needed. It also catches drift in rows that still compile.\n5. **Nightly: all 110 rows cold, in batches.** At about 6 GB each that's around 25 at a time, roughly 2 hours overnight on this box. It backstops the impact map and the cache.\n\nIf the nightly run alone had been in place since 10-05, the `c61f4d41` break would have surfaced the next morning instead of four days later.\n\n**What I'd do now.** Make the cache-key fix the next lane, ahead of the regression tracing. It turns the three tracing jobs (about 20 probes) into warm runs of a minute each instead of a full working day of cold ones. The captures at `c9c6b44f` are already queued and become the first golden baseline. Then build the coverage map from those same captures.\n\nChanging the cache key touches Rob's design, since it deliberately copies Lean's githash check. If you'd rather keep his key, the fallback is a key that adds the 316-file content hash on our branch only. Shall I dispatch the cache-key lane?",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-11-turn-35",
+      "id": "claude-11-turn-35-f-s1-0",
+      "kind": "constrain",
+      "at": "2026-10-09T04:16:56Z",
+      "record": "turn-PGWKMX",
+      "end": 32,
+      "standing?": true,
+      "about": "the loop's design horizon (regression cost at 110 rows)",
+      "text": "I think you need to think ahead.",
+      "to": "claude-11"
+    },
+    {
+      "port?": true,
+      "start": 34,
+      "author": "operator",
+      "turn": "claude-11-turn-35",
+      "id": "claude-11-turn-35-f-s2-0",
+      "kind": "report-problem",
+      "at": "2026-10-09T04:16:56Z",
+      "record": "turn-PGWKMX",
+      "end": 111,
+      "standing?": false,
+      "about": "the full-suite regression cost at curriculum scale",
+      "text": "we have 110 rows and can't rerun them all as a regression suite all the time.",
+      "to": "claude-11"
+    },
+    {
+      "port?": true,
+      "start": 113,
+      "author": "operator",
+      "turn": "claude-11-turn-35",
+      "id": "claude-11-turn-35-f-s3-0",
+      "kind": "report-problem",
+      "at": "2026-10-09T04:16:56Z",
+      "record": "turn-PGWKMX",
+      "end": 164,
+      "standing?": false,
+      "about": "the cold-run latency (13–20 minutes per row, 6 GB)",
+      "text": "i am just a bit shocked that this has been so slow.",
+      "to": "claude-11"
+    },
+    {
+      "port?": true,
+      "start": 166,
+      "author": "operator",
+      "turn": "claude-11-turn-35",
+      "id": "claude-11-turn-35-f-s4-0",
+      "kind": "propose",
+      "at": "2026-10-09T04:16:56Z",
+      "record": "turn-PGWKMX",
+      "end": 256,
+      "standing?": true,
+      "about": "a graduated ladder of cheaper-than-compile checks",
+      "text": "are there not increasing quantities  of checks that we can run without compiling anything?",
+      "to": "claude-11"
+    }
+  ],
+  "mission_id": "M-landscape-positioning",
+  "open_ports": [
+    {
+      "act": "claude-11-turn-2-f-s1-0",
+      "kind": "propose",
+      "text": "I think we should work on a health scan that goes beyond just the XTDB endpoint.",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-f-s2-0",
+      "kind": "report-problem",
+      "text": "unpushed repos are a liability",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-r-3",
+      "kind": "ask-action",
+      "text": "(next) Should I add a daily timer that sends only *changes* in the scan result to the zone-alerts room through `zone-no…",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-3-r-2",
+      "kind": "ask-action",
+      "text": "(next) If you agree, I'll start on the evidence-store nightly backup now. The basis is `futon3c/scripts/backup_evidence…",
+      "since": "2026-10-09T01:18:24Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-1",
+      "kind": "report-problem",
+      "text": "(powerbi-tui) Its remote is `https://github.com/holtzermann17/powerbi-tui.git`. The only GitHub login on zone is tothed…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-3",
+      "kind": "offer",
+      "text": "(two decisions)\n1. **powerbi-tui:** do you want to push it yourself with your holtzermann17 login, or should I create `…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-7-r-0",
+      "kind": "clarify",
+      "text": "(\"https://zone.hyperreal.enterprises/voxterm/) Your message seems to stop at the URL. voxterm is up: the service is act…",
+      "since": "2026-10-09T01:41:21Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-0",
+      "kind": "report-problem",
+      "text": "(`rowtree.py` is harder) claude-4 never wrote it in one piece. It was created with a shell heredoc at 13:14 on 10-04 an…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-1",
+      "kind": "propose",
+      "text": "(plan)\n1. Rebuild these six files by replaying the edits in order, into `mfuton-share/tools/progress/` rather than `/tm…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-2",
+      "kind": "ask-action",
+      "text": "(go?) Should I dispatch that, or do it myself?",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-12-r-2",
+      "kind": "propose",
+      "text": "(on return) When zai-1 reports back, I'll review it myself:\n1. Diff `history.tsv` against the page.\n2. Spot-check `rowt…",
+      "since": "2026-10-09T02:40:37Z"
+    },
+    {
+      "act": "claude-11-turn-13-r-3",
+      "kind": "report-problem",
+      "text": "(what's missing) Several files were made with shell commands, so they weren't recovered by the replay:\n- preambles 1–6\n…",
+      "since": "2026-10-09T02:43:14Z"
+    }
+  ]
+}

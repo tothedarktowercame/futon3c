@@ -1,0 +1,110 @@
+{
+  "record": "turn-rQodNK",
+  "turn_id": "claude-18-turn-116",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-29T19:30:40Z",
+  "agent_id": "claude-18",
+  "source_text": "Any news back?",
+  "fragments": [
+    {
+      "id": "claude-18-turn-116-f-s1-0",
+      "intent": "collect",
+      "text": "Any news back?"
+    }
+  ],
+  "reply_text": "Yes, all six runs have finished, and on these three problems the LSP tools made no measurable difference to results. Both arms removed 3 `sorry`s in total. The one clear change is that the LSP seats almost stopped recompiling the whole file.\n\nThe first LSP round was wasted, as you said. Those seats had the tools, which I checked with a separate probe, but never called them. I stopped that round, kept its files in `round1-unprompted/`, and reran the LSP arm with a prompt that requires the tools. The figures below use that rerun. I checked every output file myself: each compiles, and each keeps the main theorem's statement unchanged.\n\n| Problem | Arm | `sorry` 3 → | Whole-file compiles | LSP calls | Tokens (uncached in+out) | Minutes |\n|---|---|---|---|---|---|---|\n| t91J06 | control | **2** | 30 | 0 | 102k | 12 |\n| t91J06 | LSP | 3 | 1 | 8 | 44k | ~2 |\n| t95J02 | control | **1** | 4 | 0 | 50k | 1 |\n| t95J02 | LSP | **1** | 1 | 13 | 52k | ~3 |\n| t99J04 | control | 3 | 11 | 0 | 114k | 6 |\n| t99J04 | LSP | **2** | 1 | 42 | 173k | 6 |\n\n- **Results:** a tie, 3 `sorry`s removed by each arm. Each arm made progress on one problem the other didn't (control on t91J06, LSP on t99J04), and both got t95J02 to 1. Three pairs can't separate that from chance.\n- **What the LSP seats did instead of compiling:** mostly `lean_local_search` (28 calls), `lean_multi_attempt` (18) and `lean_goal` (7). Whole-file compiles fell from 45 to 3.\n- **Why that didn't save anything here:** these files are only 185–249 lines, and a compile takes about 5 seconds. Total tokens came out the same: 266k for control, 269k for LSP. The saving should show up on large partial files, where each compile is slow, and this test didn't include any.\n- **Short runs:** every run stopped between 1 and 12 minutes, well inside the 60-minute cap. None of the six removed the `sorry` its task targeted. In t95J02, for example, both arms closed the same two easier `sorry`s and left the vertical-kernel bridge.\n- **Cost:** your weekly Codex usage went from 42% to 43% for the whole test, including the wasted first round.\n\n**Suggestion:** if you want another round, run it on the solve loop's big stalled files, such as m02J02's 86 KB. That's where the LSP should help if it helps anywhere. I'd also make the prompt keep seats working until they reach the target `sorry`. Otherwise I'd leave the loops as they are: nothing here justifies adding a 3.6 GB LSP server to every seat.\n\nEverything is in `~/lsp-trial/ab/`: prompts, JSON logs, the output files under `apm-lean/.lsp-ab/` (excluded from git), and `check.py`, which I used to check the files.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-116",
+      "id": "claude-18-turn-116-f-s1-0",
+      "kind": "collect",
+      "at": "2026-09-29T19:30:40Z",
+      "record": "turn-rQodNK",
+      "end": 14,
+      "standing?": false,
+      "about": "the results of outstanding work previously sent out — the same outstanding returns polled in turn-CKNskM thirteen seconds earlier",
+      "text": "Any news back?",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}

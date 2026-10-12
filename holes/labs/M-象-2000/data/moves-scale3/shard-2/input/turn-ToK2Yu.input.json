@@ -1,0 +1,94 @@
+{
+  "record": "turn-ToK2Yu",
+  "turn_id": "claude-12-turn-43",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T14:41:47Z",
+  "agent_id": "claude-12",
+  "source_text": "what is going on with the excursions, do you mean they are closed, or you don't know if they are closed?",
+  "fragments": [
+    {
+      "id": "claude-12-turn-43-f-s1-0",
+      "intent": "clarify",
+      "text": "what is going on with the excursions,"
+    },
+    {
+      "id": "claude-12-turn-43-f-s1-1",
+      "intent": "challenge",
+      "text": "do you mean they are closed, or you don't know if they are closed?"
+    }
+  ],
+  "reply_text": "Short answer: the registry counts them as **open**, and I **don't know** whether they're actually finished. When I said \"many are probably stale\", I was guessing without evidence. Checking what the files themselves say.Most excursion files carry no status line at all, so I'm checking how the registry decides one is open. That includes the three whose status reads \"resolved\".They're not marked closed. They count as open, and I don't know whether they're actually finished. My earlier \"probably stale or abandoned\" was a guess, so I checked what the files say.\n\n**Why the War Machine counts them as open:** an excursion's state comes from a `Status:` line near the top of its file. Of the 389 excursions with no closure criteria:\n- **299 have no `Status:` line at all.** The registry deliberately treats an unknown status as open, on the rule \"a work queue should not silently hide work\". So these are open only by default, not because anyone said so.\n- The remaining 90 have a status: IDENTIFY 19, OPEN 15, DERIVE 7, PROPOSED 3, RESOLVED 3, plus a handful of others.\n\n**A bug I found while checking:** `RESOLVED` isn't on the classifier's list of closed words. That list is COMPLETE, CLOSED, DONE, DISCHARGED, ANSWERED and DISSOLVED. So three excursions that say they're resolved are still counted as open. For example, `futon3/holes/excursions/E-substrate-2-directed-edge-id.md` reads \"**Status:** RESOLVED (2026-04-27…)\". That's a plain defect with no judgement call, so I'll fix it.\n\n**File ages:** for all 389, by last modification:\n\n| last modified | excursions |\n|---|---|\n| under 7 days | 7 |\n| 7–30 days | 179 |\n| 30–90 days | 106 |\n| 90 days or more | 90 |\n\nThe 90 older files are the most likely to be finished or abandoned, but nothing in the files says so.\n\n**What I can't tell you:** whether any of the 299 without a status are done. Only their content, or you, can say.\n\n**Your call: should an excursion with no `Status:` line count as open work?**\n- **Yes (today's rule):** each needs closure criteria written before it can be scored.\n- **No:** add a status in each file, or change the default for excursions.\n\nA middle path would be for seats to read each status-less excursion and propose a status (open, done or abandoned) with a one-line reason, for you to confirm in bulk.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-43",
+      "id": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "at": "2026-10-09T14:41:47Z",
+      "record": "turn-ToK2Yu",
+      "end": 37,
+      "standing?": false,
+      "about": "the state of the 389 excursions without closure criteria",
+      "text": "what is going on with the excursions,",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "start": 38,
+      "author": "operator",
+      "turn": "claude-12-turn-43",
+      "id": "claude-12-turn-43-f-s1-1",
+      "kind": "disagree",
+      "at": "2026-10-09T14:41:47Z",
+      "record": "turn-ToK2Yu",
+      "end": 104,
+      "standing?": false,
+      "about": "the epistemic status of the agent's staleness claim",
+      "text": "do you mean they are closed, or you don't know if they are closed?",
+      "to": "claude-12"
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    },
+    {
+      "act": "claude-12-turn-15-f-s2-0",
+      "kind": "delegate",
+      "text": "these could be put out in parallel to codex seats or zai seats,",
+      "since": "2026-10-09T13:41:54Z"
+    },
+    {
+      "act": "claude-12-turn-43-f-s1-0",
+      "kind": "clarify",
+      "text": "what is going on with the excursions,",
+      "since": "2026-10-09T14:41:47Z"
+    }
+  ]
+}

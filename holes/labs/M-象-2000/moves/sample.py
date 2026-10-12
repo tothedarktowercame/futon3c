@@ -79,6 +79,25 @@ def reply_marks(record):
     return result
 
 
+OPEN_PORTS_CAP = 12
+
+
+def open_ports(record, cap=OPEN_PORTS_CAP):
+    """The kernel's still-open ports at this record (ports.still_open), oldest
+    first, as candidate answer and scope targets from earlier turns of the
+    session: act id, kind, text, since.  Capped so an input stays small."""
+    ports = (record.get("ports") or {}).get("still_open") or []
+    rows = []
+    for port in ports:
+        if not isinstance(port, dict) or not port.get("act"):
+            continue
+        rows.append({"act": port["act"], "kind": port.get("kind"),
+                     "text": (port.get("text") or "")[:240],
+                     "since": port.get("since")})
+    rows.sort(key=lambda row: row.get("since") or "")
+    return rows[:cap]
+
+
 def records(root=ROOT):
     loaded = []
     for path in sorted(root.glob("turn-*.json")):
@@ -160,6 +179,11 @@ def write_inputs(chosen, out):
                    "previous_reply_acts": previous}
         if record.get("acts") is not None:
             payload["acts"] = record["acts"]
+        if record.get("mission_id"):
+            payload["mission_id"] = record["mission_id"]
+        ports = open_ports(record)
+        if ports:
+            payload["open_ports"] = ports
         target = out / f"{record_id}.input.json"
         target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
                           encoding="utf-8")

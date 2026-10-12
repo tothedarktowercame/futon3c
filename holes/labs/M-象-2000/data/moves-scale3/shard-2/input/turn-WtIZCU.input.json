@@ -1,0 +1,110 @@
+{
+  "record": "turn-WtIZCU",
+  "turn_id": "claude-11-turn-33",
+  "session_id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+  "created_at": "2026-10-09T04:10:49Z",
+  "agent_id": "claude-11",
+  "source_text": "how do you account for regressions under the circumstances?",
+  "fragments": [
+    {
+      "id": "claude-11-turn-33-f-s1-0",
+      "intent": "challenge",
+      "text": "how do you account for regressions under the circumstances?"
+    }
+  ],
+  "reply_text": "The method had no step that catches regressions.\n\n**Why they got through**\n- Your rule from 10-05 11:10 (\"do not rerun already-correct rows as controls\") stopped lanes from wasting cold runs. Preamble 8 rule 10 keeps it and says \"the all-rows cold rebuild finds\" regressions. As far as I can find, that all-rows rebuild was never scheduled between merges. Each merge was accepted only on its own target row.\n- The fixes aren't local to one row. Stop-C and today's atEnd fix both change the general application path, which every row goes through. Any of them can break a row that was already correct.\n- Since 10-05 cand-1 has taken a long run of merges with no check in between, so breakages pile up quietly. `c61f4d41` broke `Lean.Syntax.isNone`, and `Array.extract` has now broken too, probably at a different commit because its error is different. I haven't bisected it yet.\n\n**What I'd change**\n- **A regression check at every integration merge, not every lane experiment.** Run all 21 correct rows cold and in parallel, about 25 minutes elapsed and roughly 130 GB at peak on this box. That's one batch per merge, so it keeps your punch-card economy. A merge goes in only if no correct row breaks.\n- **Record each check with the commit in the ledger.** Then the progress page shows the correct-row count over time, and a drop is visible the same day.\n- **Grow the set as rows are fixed.** atEnd joins the regression set once its verify comes back.\n\nThe sweep running now is the first instance of this check. It compares the old tip with the corrected atEnd fix (`c9c6b44f`) and ends the same way the checks will: two lists of the 21 rows.\n\nAfter that I'll find where `Array.extract` broke. One cold probe at each of three points in the history (`078b3475`, `f11c6b1e`, `c61f4d41`) should narrow it before any fix is dispatched.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-11-turn-33",
+      "id": "claude-11-turn-33-f-s1-0",
+      "kind": "disagree",
+      "at": "2026-10-09T04:10:49Z",
+      "record": "turn-WtIZCU",
+      "end": 59,
+      "standing?": false,
+      "about": "the mfuton loop's regression-catching coverage (or its absence)",
+      "text": "how do you account for regressions under the circumstances?",
+      "to": "claude-11"
+    }
+  ],
+  "mission_id": "M-landscape-positioning",
+  "open_ports": [
+    {
+      "act": "claude-11-turn-2-f-s1-0",
+      "kind": "propose",
+      "text": "I think we should work on a health scan that goes beyond just the XTDB endpoint.",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-f-s2-0",
+      "kind": "report-problem",
+      "text": "unpushed repos are a liability",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-2-r-3",
+      "kind": "ask-action",
+      "text": "(next) Should I add a daily timer that sends only *changes* in the scan result to the zone-alerts room through `zone-no…",
+      "since": "2026-10-09T01:12:32Z"
+    },
+    {
+      "act": "claude-11-turn-3-r-2",
+      "kind": "ask-action",
+      "text": "(next) If you agree, I'll start on the evidence-store nightly backup now. The basis is `futon3c/scripts/backup_evidence…",
+      "since": "2026-10-09T01:18:24Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-1",
+      "kind": "report-problem",
+      "text": "(powerbi-tui) Its remote is `https://github.com/holtzermann17/powerbi-tui.git`. The only GitHub login on zone is tothed…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-5-r-3",
+      "kind": "offer",
+      "text": "(two decisions)\n1. **powerbi-tui:** do you want to push it yourself with your holtzermann17 login, or should I create `…",
+      "since": "2026-10-09T01:33:29Z"
+    },
+    {
+      "act": "claude-11-turn-7-r-0",
+      "kind": "clarify",
+      "text": "(\"https://zone.hyperreal.enterprises/voxterm/) Your message seems to stop at the URL. voxterm is up: the service is act…",
+      "since": "2026-10-09T01:41:21Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-0",
+      "kind": "report-problem",
+      "text": "(`rowtree.py` is harder) claude-4 never wrote it in one piece. It was created with a shell heredoc at 13:14 on 10-04 an…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-1",
+      "kind": "propose",
+      "text": "(plan)\n1. Rebuild these six files by replaying the edits in order, into `mfuton-share/tools/progress/` rather than `/tm…",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-11-r-2",
+      "kind": "ask-action",
+      "text": "(go?) Should I dispatch that, or do it myself?",
+      "since": "2026-10-09T02:38:40Z"
+    },
+    {
+      "act": "claude-11-turn-12-r-2",
+      "kind": "propose",
+      "text": "(on return) When zai-1 reports back, I'll review it myself:\n1. Diff `history.tsv` against the page.\n2. Spot-check `rowt…",
+      "since": "2026-10-09T02:40:37Z"
+    },
+    {
+      "act": "claude-11-turn-13-r-3",
+      "kind": "report-problem",
+      "text": "(what's missing) Several files were made with shell commands, so they weren't recovered by the replay:\n- preambles 1–6\n…",
+      "since": "2026-10-09T02:43:14Z"
+    }
+  ]
+}

@@ -1,0 +1,250 @@
+{
+  "record": "turn-wQOVV4",
+  "turn_id": "claude-18-turn-84",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-28T22:40:02Z",
+  "agent_id": "claude-18",
+  "source_text": "Naturally I could be convinced to prioritise it if the \"what it's for\" questions get increasing evidence behind them.  Broadly though I think I would sequence this after the \"ai-passes-prelims\" capability star, which we are on the way to closing, if we interpret a \"pass\" to mean, all the problems are solved in Lean (and graded, as you've noted).  We could up the ante and require a pass on a *second* set of problems (Berkeley Problems in Mathemics or BPM), but I'd see that as a bonus round rather than a capability certification.  But I haven't even put the \"joe-passes-prelims\" capability star on the map yet!  However if you look in the pudding prover I believe some related concepts are implied, i.e., what we're doing here should provide scaffolding for others.  It doesn't do much good for me to simply gratuitously pass prelims unless doing so makes it considerably easier for others to do so, assuming value or use of doing so is indeed attested (which remains to be seen).  In other words, joe-passes-prelims may or may not actually be worth pursuing, but that depends on a calculation over the rest of the potential-capability landscape",
+  "fragments": [
+    {
+      "id": "claude-18-turn-84-f-s1-0",
+      "intent": "qualify",
+      "text": "Naturally I could be convinced to prioritise it if the \"what it's for\" questions get increasing evidence behind them."
+    },
+    {
+      "id": "claude-18-turn-84-f-s2-0",
+      "intent": "prioritize",
+      "text": "Broadly though I think I would sequence this after the \"ai-passes-prelims\" capability star, which we are on the way to closing, if we interpret a \"pass\" to mean, all the problems are solved in Lean (and graded, as you've noted)."
+    },
+    {
+      "id": "claude-18-turn-84-f-s2-1",
+      "intent": "clarify",
+      "text": "if we interpret a \"pass\" to mean, all the problems are solved in Lean (and graded, as you've noted)."
+    },
+    {
+      "id": "claude-18-turn-84-f-s3-0",
+      "intent": "qualify",
+      "text": "We could up the ante and require a pass on a *second* set of problems (Berkeley Problems in Mathemics or BPM), but I'd see that as a bonus round rather than a capability certification."
+    },
+    {
+      "id": "claude-18-turn-84-f-s4-0",
+      "intent": "report",
+      "text": "But I haven't even put the \"joe-passes-prelims\" capability star on the map yet!"
+    },
+    {
+      "id": "claude-18-turn-84-f-s5-0",
+      "intent": "explain",
+      "text": "However if you look in the pudding prover I believe some related concepts are implied, i.e., what we're doing here should provide scaffolding for others."
+    },
+    {
+      "id": "claude-18-turn-84-f-s6-0",
+      "intent": "constrain",
+      "text": "It doesn't do much good for me to simply gratuitously pass prelims unless doing so makes it considerably easier for others to do so, assuming value or use of doing so is indeed attested (which remains to be seen)."
+    },
+    {
+      "id": "claude-18-turn-84-f-s7-0",
+      "intent": "defer",
+      "text": "In other words, joe-passes-prelims may or may not actually be worth pursuing, but that depends on a calculation over the rest of the potential-capability landscape"
+    }
+  ],
+  "reply_text": "Looking in the pudding prover (futon7) for the related concepts you mentioned:The pudding prover already has this shape, under T2. A human passing prelims would count as the base case, not the witness. The witness would be someone else getting further with the scaffolding. Before the prelims star can close by your definition, grading has to extend beyond topology. I've recorded both points and the sequencing in the mission (4fc52cd).\n\n**What the pudding prover already says:**\n- **T3.4:** \"an AI system can pass mathematics prelims\". It's held and compute-gated, and it's the same claim as the `ai-passes-prelims` star.\n- **T2:** \"FUTON is the AI tutor, a capability others can follow\". The base case is you (n=1). Its own criterion says the claim is discharged only when someone outside the loop is accepted. By that standard, you passing prelims doesn't count as evidence. Others passing more easily does, which is the point you made.\n- **T-inf.3** asks \"how does AI change what it means to learn and become an expert\". That's the value question you left open.\n\n**What closing `ai-passes-prelims` still needs.** A pass on your definition means every problem proved in Lean against a graded statement. Right now:\n- The statement registry covers only topology. Of the 166 topology problems, 61 are proved against graded statements.\n- The closed algebra, analysis and a/b problems have never been graded. Yesterday's topology audit found weakened statements, so the same check could find some there.\n\nGrading those statements is a job for an outside grader, like the topology grading. The solve loop working through the 51 open non-topology problems doesn't need to wait for it. Its fingerprint only stops a statement from being changed; it can't tell whether the original statement was faithful. So some of its proofs may land against statements that later fail grading.\n\n**On evidence changing the priority.** The \"what it's for\" question has a cheap computed answer: for each concept, list which later Mathlib results depend on it. That produces evidence without spending any of the 500 hours, so it's the pilot to run first if you want the priority question to move.\n\n**I haven't put `joe-passes-prelims` on the star map,** because you said it depends on a calculation over the rest of the landscape. If you want it tracked meanwhile, I can add it as held and unattested, requiring `ai-passes-prelims` and linked to T2. The alternative is to leave it only in the mission file until the calculation is done. Which do you prefer?",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s1-0",
+      "kind": "qualify",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 117,
+      "standing?": false,
+      "about": "the prioritisation of the item under discussion",
+      "text": "Naturally I could be convinced to prioritise it if the \"what it's for\" questions get increasing evidence behind them.",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 119,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s2-0",
+      "kind": "prioritize",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 347,
+      "standing?": false,
+      "about": "the item under discussion, sequenced after the ai-passes-prelims capability star",
+      "text": "Broadly though I think I would sequence this after the \"ai-passes-prelims\" capability star, which we are on the way to …",
+      "to": "claude-18"
+    },
+    {
+      "port?": true,
+      "start": 247,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s2-1",
+      "kind": "clarify",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 347,
+      "standing?": false,
+      "about": "the success criterion of the ai-passes-prelims star",
+      "text": "if we interpret a \"pass\" to mean, all the problems are solved in Lean (and graded, as you've noted).",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 349,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s3-0",
+      "kind": "qualify",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 533,
+      "standing?": false,
+      "about": "a possible BPM second-set requirement",
+      "text": "We could up the ante and require a pass on a *second* set of problems (Berkeley Problems in Mathemics or BPM), but I'd …",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 535,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s4-0",
+      "kind": "report",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 614,
+      "standing?": false,
+      "about": "the joe-passes-prelims capability star's absence from the map",
+      "text": "But I haven't even put the \"joe-passes-prelims\" capability star on the map yet!",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 616,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s5-0",
+      "kind": "explain",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 769,
+      "standing?": false,
+      "about": "the value of the current work: scaffolding transferable to others, hinted at in the pudding prover",
+      "text": "However if you look in the pudding prover I believe some related concepts are implied, i.e., what we're doing here shou…",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 771,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s6-0",
+      "kind": "constrain",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 984,
+      "standing?": true,
+      "about": "the worth condition on joe-passes-prelims: must ease others' passage, with attested value",
+      "text": "It doesn't do much good for me to simply gratuitously pass prelims unless doing so makes it considerably easier for oth…",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 986,
+      "author": "operator",
+      "turn": "claude-18-turn-84",
+      "id": "claude-18-turn-84-f-s7-0",
+      "kind": "defer",
+      "at": "2026-09-28T22:40:02Z",
+      "record": "turn-wQOVV4",
+      "end": 1149,
+      "standing?": false,
+      "about": "the decision whether joe-passes-prelims is worth pursuing",
+      "text": "In other words, joe-passes-prelims may or may not actually be worth pursuing, but that depends on a calculation over th…",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}

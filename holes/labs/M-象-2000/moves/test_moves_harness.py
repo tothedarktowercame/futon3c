@@ -100,6 +100,43 @@ class MovesHarnessTest(unittest.TestCase):
             self.assertEqual(2, report["incidence"])
             self.assertEqual(0.5, report["precision_answered_vs_open"])
 
+class OpenPortsAreAnswerTargets(unittest.TestCase):
+    def test_open_ports_oldest_first_and_capped(self):
+        record = {"ports": {"still_open": [
+            {"act": f"a{i}", "kind": "ask-action", "text": "t" * 300,
+             "since": f"2026-10-{20 - i:02d}T00:00:00Z"} for i in range(15)]}}
+        ports = sample.open_ports(record)
+        self.assertEqual(12, len(ports))
+        self.assertEqual("a14", ports[0]["act"])
+        self.assertEqual(240, len(ports[0]["text"]))
+
+    def test_validator_accepts_an_open_port_as_answer_target(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = {"record": "turn-b", "fragments": [
+                {"id": "op", "intent": "approve", "text": "ok go"}],
+                "reply_acts": [{"id": "turn-b-r-0", "author": "agent",
+                                "text": "The loader is in; the backfill you asked for is done."}],
+                "previous_reply_acts": [],
+                "open_ports": [{"act": "turn-a-f-s1-0", "kind": "ask-action",
+                                "text": "please backfill", "since": "2026-10-10T00:00:00Z"}]}
+            (root / "turn-b.input.json").write_text(json.dumps(source))
+            sidecar = {"schema": "moves/1", "record": "turn-b", "acts": [
+                {"act": "turn-b-r-0", "kind": "report", "move": "report/done", "quote": "The loader is in",
+                 "answers": [{"act": "turn-a-f-s1-0", "quote": "the backfill you asked for is done",
+                              "effect": "closes"},
+                             {"act": "turn-zzz-f-s1-0", "quote": "The loader is in",
+                              "effect": "closes"}],
+                 "scope": {"opens": None, "closes": None, "within": "turn-a-f-s1-0"},
+                 "confidence": "high"}], "unlabelled": []}
+            path = root / "turn-b.moves.json"
+            path.write_text(json.dumps(sidecar))
+            valid, void, errors = validate.validate(path)
+            self.assertEqual((1, 0), (valid, void))
+            self.assertEqual(1, len(errors), errors)
+            self.assertIn("turn-zzz-f-s1-0", errors[0])
+
+
 class ReplyMarksFollowKernelNumbering(unittest.TestCase):
     def test_marked_only_zero_based_body_text(self):
         record = {"turn_id": "a-turn-1", "agent_id": "a",

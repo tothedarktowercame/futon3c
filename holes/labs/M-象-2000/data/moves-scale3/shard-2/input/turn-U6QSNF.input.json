@@ -1,0 +1,101 @@
+{
+  "record": "turn-U6QSNF",
+  "turn_id": "claude-12-turn-13",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T13:23:40Z",
+  "agent_id": "claude-12",
+  "source_text": "that should have triggered a debbable error",
+  "fragments": [
+    {
+      "id": "claude-12-turn-13-f-s1-0",
+      "intent": "report-problem",
+      "text": "that should have triggered a debbable error"
+    }
+  ],
+  "reply_text": "Agreed. A run that fails while the debugger is attached should stop in it, and this one ran straight to its end. Finding out why it slipped past.Lint is clean. Re-indenting the wrapped block to match the code around it.Next, the runner service. If a stop happens before admission, the endpoint must stop waiting and report that the click is paused in the debugger, rather than holding the HTTP request open.The whole debugger suite passes (19 tests, 76 assertions), along with the runner-service tests. Committing both repos now. I'll load the fix once click 48 ends, not while it's running.You're right: that refusal should have stopped in the debugger. The cause is found and fixed in both repos. The fix isn't loaded yet, because click 48 is still running.\n\n**Why it didn't stop:** four early checks ran before the first `run-phase!`, and only failures inside a phase can stop in the debugger. Those checks were agent readiness, code state, author availability and the click-budget admission. So the budget refusal closed run 2503d598 as `:untyped-failure` even though the debugger was attached.\n\n**The fix**\n- **futon2 `34c093fc6`:** those checks now run as a phase of their own, `:admission`. A refusal stops in the debugger.\n  - `:retry` re-attempts the budget admission, so once a budget is renewed the same click goes ahead.\n  - `:abort` closes the run exactly as a run with no debugger would.\n  - The roster and code-state readings are taken before this phase, so a retry re-checks the same readings rather than taking new ones.\n- **futon3c `cc60e966`:** a stop before admission now releases the click endpoint's wait, so the HTTP caller gets \"paused in debugger\" instead of hanging until someone picks a restart.\n\n**Tests**\n- New: budget refusal stops at `:admission`, then `:retry` after renewal goes ahead; `:abort` gives the same failure as with no debugger. Both pass.\n- The whole futon2 debugger suite passes (19 tests, 76 assertions).\n- The runner-service test for releasing the endpoint passes, along with the park-signal tests.\n\n**Not loaded yet:** I'll hot-load it when click 48 ends. Swapping runner code in mid-run would change the very thing being measured.\n\n**Click 48** (watching live):\n- selection OK (54 s)\n- author `zai-1` OK (224 s)\n- build resolution OK\n- reviewer dispatch OK\n- now in `reviewer-wait` with zai-2, since 13:25\n\nNo errors and no debugger stops so far.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-13",
+      "id": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "at": "2026-10-09T13:23:40Z",
+      "record": "turn-U6QSNF",
+      "end": 43,
+      "standing?": false,
+      "about": "the click-48 budget refusal running past the attached debugger",
+      "text": "that should have triggered a debbable error",
+      "to": "claude-12"
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-13",
+      "id": "claude-12-turn-13-c-34c093fc",
+      "kind": "commit",
+      "at": "2026-10-09T13:23:40Z",
+      "record": "turn-U6QSNF",
+      "repo": "futon2",
+      "subject": "Admission is a runner phase, so its refusals stop an attached debugger",
+      "sha": "34c093fc",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-13",
+      "id": "claude-12-turn-13-c-cc60e966",
+      "kind": "commit",
+      "at": "2026-10-09T13:23:40Z",
+      "record": "turn-U6QSNF",
+      "repo": "futon3c",
+      "subject": "A debugger stop before admission answers the click caller",
+      "sha": "cc60e966",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-12",
+      "turn": "claude-12-turn-13",
+      "id": "claude-12-turn-13-c-ce2159c0",
+      "kind": "commit",
+      "at": "2026-10-09T13:23:40Z",
+      "record": "turn-U6QSNF",
+      "repo": "futon7",
+      "subject": "arm B (apm-lean): full runnable retrieve/process/evaluate/report path",
+      "sha": "ce2159c0",
+      "standing?": false
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    },
+    {
+      "act": "claude-12-turn-13-f-s1-0",
+      "kind": "report-problem",
+      "text": "that should have triggered a debbable error",
+      "since": "2026-10-09T13:23:40Z"
+    }
+  ]
+}

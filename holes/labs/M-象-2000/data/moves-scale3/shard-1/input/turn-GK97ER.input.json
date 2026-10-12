@@ -1,0 +1,56 @@
+{
+  "record": "turn-GK97ER",
+  "turn_id": "claude-12-turn-12",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T13:22:26Z",
+  "agent_id": "claude-12",
+  "source_text": "if one run already completed you should summarizr that one",
+  "fragments": [
+    {
+      "id": "claude-12-turn-12-f-s1-0",
+      "intent": "redirect",
+      "text": "if one run already completed you should summarizr that one"
+    }
+  ],
+  "reply_text": "Run `2026-10-09-2503d598…` (click `ad1e8839`, this morning) was refused early, before it did any work, so it says little about the model. Here it is on your three axes.\n\n- **What it did:** it passed agent readiness and the code-state check, then stopped at the click budget check (\"budget exhausted\"). Nothing was selected and no agent was dispatched. The terminal outcome is `:incomplete`.\n- **Lean model:** the check returned \"ALERT FOR JOE\".\n  - **Q7 is violated:** 6 typed path absences. Every part of the path the model requires is missing from the record because the run never reached it.\n  - **Q1–Q6 and Q8–Q10 are unverifiable:** the run recorded nothing about candidate enumeration, policies, cascades, G or preferences. The machine still saw the work available: 694 open tasks and 1,436 patterns in the pool.\n  - Loop nodes R6, R13, R14 and CTAU-CLASS each say they were not exercised, each with its own reason. For example, R6 says `candidate-space-not-retained`.\n  - The verdict is saved next to the run record as `.requirements.edn`.\n- **Tokens:** none, because no jobs were dispatched (`:no-wm-jobs-dispatched`).\n- **Timing:** 20.5 s wall clock. Agent readiness took 12 ms and code state 136 ms; the remaining ~11.8 s was opportunity setup before the budget refusal. The debugger never stopped it (0 ms held).\n\nIt's a refused run, so the alert is expected; this one shows the Lean check pipeline works on today's records.\n\n**Click 48** is the real test: it's in `author-wait`, with zai-1 writing. Selection succeeded in 54 s and every phase so far ended OK. I'm watching it live and will give you the same summary when it ends, or debug at the first error.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-12",
+      "id": "claude-12-turn-12-f-s1-0",
+      "kind": "redirect",
+      "at": "2026-10-09T13:22:26Z",
+      "record": "turn-GK97ER",
+      "end": 58,
+      "standing?": false,
+      "about": "which run the agent should summarize",
+      "text": "if one run already completed you should summarizr that one",
+      "to": "claude-12"
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    },
+    {
+      "act": "claude-12-turn-10-f-s2-0",
+      "kind": "ask-action",
+      "text": "if you can get token counts for zai please do",
+      "since": "2026-10-09T13:16:33Z"
+    }
+  ]
+}

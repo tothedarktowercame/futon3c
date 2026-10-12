@@ -1,0 +1,50 @@
+{
+  "record": "turn-k0AnLN",
+  "turn_id": "claude-12-turn-8",
+  "session_id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+  "created_at": "2026-10-09T13:13:09Z",
+  "agent_id": "claude-12",
+  "source_text": "please report",
+  "fragments": [
+    {
+      "id": "claude-12-turn-8-f-s1-0",
+      "intent": "report",
+      "text": "please report"
+    }
+  ],
+  "reply_text": "[no text or tool calls in this turn]",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-12-turn-8",
+      "id": "claude-12-turn-8-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-09T13:13:09Z",
+      "record": "turn-k0AnLN",
+      "end": 13,
+      "standing?": false,
+      "about": "the agent's current work state",
+      "text": "please report",
+      "to": "claude-12"
+    }
+  ],
+  "mission_id": "M-G-over-cascades",
+  "open_ports": [
+    {
+      "act": "claude-12-turn-4-f-s1-0",
+      "kind": "delegate",
+      "text": "please run it and report back.",
+      "since": "2026-10-09T03:52:20Z"
+    },
+    {
+      "act": "claude-12-turn-7-f-s1-0",
+      "kind": "propose",
+      "text": "you should be able to park on any dep",
+      "since": "2026-10-09T04:06:47Z"
+    }
+  ]
+}

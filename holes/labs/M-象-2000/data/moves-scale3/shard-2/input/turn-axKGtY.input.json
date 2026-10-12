@@ -1,0 +1,330 @@
+{
+  "record": "turn-axKGtY",
+  "turn_id": "claude-18-turn-85",
+  "session_id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+  "created_at": "2026-09-28T22:48:05Z",
+  "agent_id": "claude-18",
+  "source_text": "So, I somewhat disagree, about the \"which later Mathlib results depend on it\".  That's the trees (proof trees at that).  The better question is: what is mathematics useful for?  And another question is: what is the *human capability* to do mathematics good for?  These are both philosophical and pragmatic questions.  For example, one argument might be that mathematics is useful for understanding AI algorithms, and that may be the case, but it's interesting to wonder whether mathematics is useful for understanding the kinds of AI algorithms I'm likely to encounter in my life, or if knowing mathematics changes the probability of encountering different AI algorithms, and similarly, whether understanding those algorithms is actually useful for anything.  I realise that this kind of boils down to the question \"why do anything\" and the answer to that is my own personal answer to the dark room problem.  So, e.g., if instead of some generic \"AI algorithms\" the mathematics I understood allowed me to develop a much more capable understanding and facility for thinking about active inference, I'd be all for it.  But Active Inference doesn't seem to come from the mathematics department at all, it comes from the neuroscience department that happens to have a foot in the physics department.  Which could be fine, maybe if I built my understanding of mathematics I'd start to develop a properly mathematical understanding of active inference and that might actually be useful for something.  My point, though, is that I'm likely to be \"applications based\" in my interest.  Putting in 50 hour weeks for 10 weeks on something is really only useful if it's going to be used.",
+  "fragments": [
+    {
+      "id": "claude-18-turn-85-f-s1-0",
+      "intent": "disagree",
+      "text": "So, I somewhat disagree, about the \"which later Mathlib results depend on it\"."
+    },
+    {
+      "id": "claude-18-turn-85-f-s2-0",
+      "intent": "explain",
+      "text": "That's the trees (proof trees at that)."
+    },
+    {
+      "id": "claude-18-turn-85-f-s3-0",
+      "intent": "redirect",
+      "text": "The better question is: what is mathematics useful for?"
+    },
+    {
+      "id": "claude-18-turn-85-f-s4-0",
+      "intent": "extend",
+      "text": "And another question is: what is the *human capability* to do mathematics good for?"
+    },
+    {
+      "id": "claude-18-turn-85-f-s5-0",
+      "intent": "qualify",
+      "text": "These are both philosophical and pragmatic questions."
+    },
+    {
+      "id": "claude-18-turn-85-f-s6-0",
+      "intent": "explain",
+      "text": "For example, one argument might be that mathematics is useful for understanding AI algorithms, and that may be the case, but it's interesting to wonder whether mathematics is useful for understanding the kinds of AI algorithms I'm likely to encounter in my life, or if knowing mathematics changes the probability of encountering different AI algorithms, and similarly, whether understanding those algorithms is actually useful for anything."
+    },
+    {
+      "id": "claude-18-turn-85-f-s7-0",
+      "intent": "explain",
+      "text": "I realise that this kind of boils down to the question \"why do anything\" and the answer to that is my own personal answer to the dark room problem."
+    },
+    {
+      "id": "claude-18-turn-85-f-s8-0",
+      "intent": "propose",
+      "text": "So, e.g., if instead of some generic \"AI algorithms\" the mathematics I understood allowed me to develop a much more capable understanding and facility for thinking about active inference, I'd be all for it."
+    },
+    {
+      "id": "claude-18-turn-85-f-s9-0",
+      "intent": "report-problem",
+      "text": "But Active Inference doesn't seem to come from the mathematics department at all, it comes from the neuroscience department that happens to have a foot in the physics department."
+    },
+    {
+      "id": "claude-18-turn-85-f-s10-0",
+      "intent": "qualify",
+      "text": "Which could be fine, maybe if I built my understanding of mathematics I'd start to develop a properly mathematical understanding of active inference and that might actually be useful for something."
+    },
+    {
+      "id": "claude-18-turn-85-f-s11-0",
+      "intent": "clarify",
+      "text": "My point, though, is that I'm likely to be \"applications based\" in my interest."
+    },
+    {
+      "id": "claude-18-turn-85-f-s12-0",
+      "intent": "constrain",
+      "text": "Putting in 50 hour weeks for 10 weeks on something is really only useful if it's going to be used."
+    }
+  ],
+  "reply_text": "You're right. Asking which later Mathlib results depend on a theorem tells you what else the theorem is used to prove. It doesn't tell you what the mathematics is used for in a life. For you the test is applications-first, with active inference as the case you'd care about. I'd reverse the direction: start from the mathematics active inference actually uses, and see which prelim problems fall inside it. That turns the corpus into a curriculum indexed by the application. It might also show that the prelims are the wrong set of problems for you.\n\n**What active inference draws on,** as far as I know the free-energy literature (Friston's \"particular physics\" papers, and the Parr, Pezzulo and Friston book):\n- **Variational calculus and KL divergence.** Free energy is a functional minimised over a space of distributions. Its foundations are measure theory and functional analysis, which the m-problems cover (Lp spaces, Hilbert spaces). The corpus also has m98J04 (Euler–Lagrange) and m98A05 (the implicit function theorem).\n- **Flows of vector fields.** The free-energy principle describes dynamics as a flow, split by a Helmholtz decomposition into a part that climbs a gradient and a part that circulates. That's the mathematics of vector fields and their flows: t92J08 and t98A06 (flows on manifolds), t91A01 (the index of a zero), and m99J01 (global solutions and trapping regions).\n- **Information geometry.** Belief updating viewed as motion on a statistical manifold with the Fisher metric. That's manifolds, tangent spaces and metrics, which is the differential-topology half of the t-problems.\n- **Stochastic dynamics.** Langevin equations and Fokker–Planck, including the non-equilibrium steady states that Markov blankets are defined over. My guess is that prelims mostly don't cover this. That would be a real finding, and it would suggest a different curriculum.\n\n**Your own system is an application.** The War Machine's decisions run through an expected-free-energy model (`futon2.aif.efe`). A mathematical understanding of active inference would have an immediate use: judging whether that model computes what it claims to. So the question isn't \"will I encounter AI algorithms?\" You already operate one daily.\n\n**Why this matters for the 50-hour weeks.** If a map from active-inference mathematics to corpus problems shows substantial overlap, the hours have a use you already care about. If it shows the overlap is thin, the better project is \"the mathematics of the free-energy principle\", using the same method (objects, morphisms, edges, patterns) on a different problem set. Either result is worth having before committing the time. The map itself is a few hours of reading, not a build.\n\nShall I record this in the mission as your value criterion (applications-first, with active inference as the test case), and add the map as a pilot?",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s1-0",
+      "kind": "disagree",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 78,
+      "standing?": false,
+      "about": "the framing question 'which later Mathlib results depend on it'",
+      "text": "So, I somewhat disagree, about the \"which later Mathlib results depend on it\".",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 80,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s2-0",
+      "kind": "explain",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 119,
+      "standing?": false,
+      "about": "why the Mathlib-dependency question is the wrong level",
+      "text": "That's the trees (proof trees at that).",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 121,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s3-0",
+      "kind": "redirect",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 176,
+      "standing?": false,
+      "about": "the question under discussion, replaced with the usefulness-of-mathematics question",
+      "text": "The better question is: what is mathematics useful for?",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 178,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s4-0",
+      "kind": "extend",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 261,
+      "standing?": false,
+      "about": "the reframe, extended from mathematics to the human capability to do it",
+      "text": "And another question is: what is the *human capability* to do mathematics good for?",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 263,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s5-0",
+      "kind": "qualify",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 316,
+      "standing?": false,
+      "about": "the two reframed questions",
+      "text": "These are both philosophical and pragmatic questions.",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 318,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s6-0",
+      "kind": "explain",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 758,
+      "standing?": false,
+      "about": "the standard 'math helps you understand AI' argument, interrogated recursively",
+      "text": "For example, one argument might be that mathematics is useful for understanding AI algorithms, and that may be the case…",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 760,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s7-0",
+      "kind": "explain",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 907,
+      "standing?": false,
+      "about": "the terminal ground of the usefulness chain: 'why do anything'",
+      "text": "I realise that this kind of boils down to the question \"why do anything\" and the answer to that is my own personal answ…",
+      "to": "claude-18"
+    },
+    {
+      "port?": true,
+      "start": 909,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s8-0",
+      "kind": "propose",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 1115,
+      "standing?": true,
+      "about": "the acceptability condition for the mathematics investment: facility with active inference",
+      "text": "So, e.g., if instead of some generic \"AI algorithms\" the mathematics I understood allowed me to develop a much more cap…",
+      "to": "claude-18"
+    },
+    {
+      "port?": true,
+      "start": 1117,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s9-0",
+      "kind": "report-problem",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 1295,
+      "standing?": false,
+      "about": "the hope that mathematics leads to active inference: AIF's intellectual genealogy bypasses mathematics",
+      "text": "But Active Inference doesn't seem to come from the mathematics department at all, it comes from the neuroscience depart…",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 1297,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s10-0",
+      "kind": "qualify",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 1494,
+      "standing?": false,
+      "about": "the genealogical objection, concessively softened",
+      "text": "Which could be fine, maybe if I built my understanding of mathematics I'd start to develop a properly mathematical unde…",
+      "to": "claude-18"
+    },
+    {
+      "port?": true,
+      "start": 1496,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s11-0",
+      "kind": "clarify",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 1575,
+      "standing?": false,
+      "about": "Joe's own motivation structure",
+      "text": "My point, though, is that I'm likely to be \"applications based\" in my interest.",
+      "to": "claude-18"
+    },
+    {
+      "port?": false,
+      "start": 1577,
+      "author": "operator",
+      "turn": "claude-18-turn-85",
+      "id": "claude-18-turn-85-f-s12-0",
+      "kind": "constrain",
+      "at": "2026-09-28T22:48:05Z",
+      "record": "turn-axKGtY",
+      "end": 1675,
+      "standing?": true,
+      "about": "the 500-hour mathematics investment: conditioned on actual use",
+      "text": "Putting in 50 hour weeks for 10 weeks on something is really only useful if it's going to be used.",
+      "to": "claude-18"
+    }
+  ],
+  "mission_id": "M-futonzero-prelim-practice",
+  "open_ports": [
+    {
+      "act": "claude-18-turn-5-f-s1-1",
+      "kind": "report-problem",
+      "text": "my 象 lighter in emacs is still pink",
+      "since": "2026-09-27T20:35:23Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-1",
+      "kind": "ask-action",
+      "text": "but, quick question,",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-6-f-s1-2",
+      "kind": "propose",
+      "text": "can you make it non-bold",
+      "since": "2026-09-27T20:37:56Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-2",
+      "kind": "propose",
+      "text": "however it might be enough to provide a good training set for a Linode based tool that would tag the rest,",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-7-f-s2-3",
+      "kind": "ask-action",
+      "text": "what do you think?",
+      "since": "2026-09-27T20:43:44Z"
+    },
+    {
+      "act": "claude-18-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should run 象 over several historical epochs",
+      "since": "2026-09-27T20:46:01Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s1-1",
+      "kind": "ask-action",
+      "text": "and write up an E-象-catchup excursion note.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we are already at 26% we might as well process the whole thing.",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-9-f-s4-0",
+      "kind": "propose",
+      "text": "The point about aligning intent labels seems like a good case for hierarchical modelling",
+      "since": "2026-09-27T21:03:08Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s1-0",
+      "kind": "report-problem",
+      "text": "Currently I am a bit vexed with https://zone.hyperreal.enterprises:8443/demos/cascade.html",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-10-f-s2-0",
+      "kind": "report-problem",
+      "text": "This doesn't look or feel like hyberbolic space to me",
+      "since": "2026-09-27T21:04:13Z"
+    },
+    {
+      "act": "claude-18-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "can you please make the improvements",
+      "since": "2026-09-27T21:06:13Z"
+    }
+  ]
+}
