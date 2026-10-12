@@ -1,0 +1,23 @@
+{
+ "record": "turn-OGfY1m",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-75-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Please look into the 35 failures, I don't have a preference about order",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

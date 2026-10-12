@@ -1,0 +1,57 @@
+{
+ "record": "turn-0F402l",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-130-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "2+ hours under bg.py to get a full trace would be fine with me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-130-r-0",
+   "kind": "reply-mark",
+   "move": "defer/until",
+   "quote": "I've queued a follow-up job that starts as soon as the trace finishes",
+   "answers": [
+    {
+     "act": "claude-4-turn-130-f-s1-0",
+     "quote": "I've queued a follow-up job that starts as soon as the trace finishes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-130-r-1",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "The first job, `…29381-d0a50e6b`, is running",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

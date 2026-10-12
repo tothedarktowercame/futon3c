@@ -1,0 +1,65 @@
+{
+ "record": "turn-18sOcs",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-90-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "until we have a theory of the way the system is going to work, I won't know for sure",
+   "answers": [],
+   "scope": {
+    "opens": "need-a-theory",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-90-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "the error-production is not path-dependent, cyclical",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-90-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-90-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I don't actually believe that to be the case",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-90-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-90-f-s2-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "produce a proof that we can fix the correct seri",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-90-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

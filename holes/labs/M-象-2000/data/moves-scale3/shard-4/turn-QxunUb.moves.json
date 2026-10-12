@@ -1,0 +1,63 @@
+{
+ "record": "turn-QxunUb",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-309@turn-QxunUb-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "yes finish the comparator as a matter of priority.",
+   "answers": [],
+   "scope": {
+    "opens": "comparator-priority",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-309@turn-QxunUb-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(how it compares) Both sides produce, for each syntax node",
+   "answers": [
+    {
+     "act": "claude-4-turn-309@turn-QxunUb-f-s1-0",
+     "quote": "(how it compares) Both sides produce, for each syntax node",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-309@turn-QxunUb-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-309@turn-QxunUb-r-1",
+   "kind": "delegate",
+   "move": "delegate/handoff-spec",
+   "quote": "(who does what)",
+   "answers": [
+    {
+     "act": "claude-4-turn-309@turn-QxunUb-f-s1-0",
+     "quote": "(who does what)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-309@turn-QxunUb-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  }
+ ],
+ "unlabelled": []
+}

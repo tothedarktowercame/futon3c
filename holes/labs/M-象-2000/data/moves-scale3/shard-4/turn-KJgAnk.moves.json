@@ -1,0 +1,103 @@
+{
+ "record": "turn-KJgAnk",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-407-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "compiles-correct is no longer the ideal measure",
+   "answers": [],
+   "scope": {
+    "opens": "rebuild-not-reverify",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-407-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed. By the comparator's measure, no row is finished yet",
+   "answers": [
+    {
+     "act": "claude-4-turn-407-f-s1-0",
+     "quote": "Agreed. By the comparator's measure, no row is finished yet",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-407-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-407-r-1",
+   "kind": "delegate",
+   "move": "report/dispatch",
+   "quote": "I've sent codex-23 one row to work through: `mkListNode`",
+   "answers": [
+    {
+     "act": "claude-4-turn-407-f-s1-0",
+     "quote": "I've sent codex-23 one row to work through: `mkListNode`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-407-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-407-r-2",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "Once `mkListNode` is clean, I'll rebuild every row cold",
+   "answers": [
+    {
+     "act": "claude-4-turn-407-f-s1-0",
+     "quote": "Once `mkListNode` is clean, I'll rebuild every row cold",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-407-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-407-r-3",
+   "kind": "continue",
+   "move": "report/in-flight",
+   "quote": "(meanwhile) withRef and atEnd carry on",
+   "answers": [
+    {
+     "act": "claude-4-turn-407-f-s1-0",
+     "quote": "(meanwhile) withRef and atEnd carry on",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-407-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

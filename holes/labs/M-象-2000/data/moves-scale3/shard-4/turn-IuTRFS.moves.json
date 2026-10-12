@@ -1,0 +1,83 @@
+{
+ "record": "turn-IuTRFS",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-141-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes to the overnight kimi job",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-141-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(kimi-1 kind map) kimi-1 is now mapping Lean's 1,724 Init syntax kinds",
+   "answers": [
+    {
+     "act": "claude-4-turn-141-f-s1-0",
+     "quote": "(kimi-1 kind map) kimi-1 is now mapping Lean's 1,724 Init syntax kinds",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-141-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-141-r-1",
+   "kind": "report",
+   "move": "report/design",
+   "quote": "(what it produces) `/tmp/pyreg/state/kind-map.tsv`",
+   "answers": [
+    {
+     "act": "claude-4-turn-141-f-s1-0",
+     "quote": "(what it produces) `/tmp/pyreg/state/kind-map.tsv`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-141-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-141-r-2",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(overnight) Four jobs are running",
+   "answers": [
+    {
+     "act": "claude-4-turn-141-f-s1-0",
+     "quote": "(overnight) Four jobs are running",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-141-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

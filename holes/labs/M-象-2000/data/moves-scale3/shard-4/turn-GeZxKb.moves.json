@@ -1,0 +1,51 @@
+{
+ "record": "turn-GeZxKb",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-14-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Let's go with the exporter",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-6-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-14-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Arxana would be able to read directly from futon1b so let's write that",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-14-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-14-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "Then we can do your kimi-1 and kimi-2 dispatches without losing pace",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-14-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

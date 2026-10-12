@@ -1,0 +1,102 @@
+{
+ "record": "turn-8AvW7X",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-399-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/impact",
+   "quote": "the need to verify compiled-correct rows per fix is low",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-399-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "verification will not add much in my view",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-399-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-399-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed. Fixes will no longer recheck rows that already comp",
+   "answers": [
+    {
+     "act": "claude-4-turn-399-f-s1-0",
+     "quote": "Agreed. Fixes will no longer recheck rows that already comp",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-399-f-s2-0",
+     "quote": "Agreed. Fixes will no longer recheck rows that already comp",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-399-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-4-turn-399-r-1",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "Two jobs already started include some correct rows as controls",
+   "answers": [
+    {
+     "act": "claude-4-turn-399-f-s1-0",
+     "quote": "Two jobs already started include some correct rows as controls",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-399-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-399-r-2",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "One earlier fix, `0c2e4898`, did break the `term[_]` row",
+   "answers": [
+    {
+     "act": "claude-4-turn-399-f-s1-0",
+     "quote": "One earlier fix, `0c2e4898`, did break the `term[_]` row",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-399-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

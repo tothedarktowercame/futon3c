@@ -1,0 +1,69 @@
+{
+ "record": "turn-0nXxZb",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "codex-19-turn-29-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Committed **6200373**",
+   "answers": [
+    {
+     "act": "codex-19-turn-2-f-s1-0",
+     "quote": "Committed **6200373**",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-19-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-19-turn-29-r-1",
+   "kind": "verify",
+   "move": "verify/check-live",
+   "quote": "Lean/Lisp controls pass",
+   "answers": [
+    {
+     "act": "codex-19-turn-2-f-s1-0",
+     "quote": "Lean/Lisp controls pass",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-19-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-19-turn-29-r-2",
+   "kind": "report",
+   "move": "report/next",
+   "quote": "Tracker updated: connect source HAdd/OfNat obligations to dictionary emission",
+   "answers": [
+    {
+     "act": "codex-19-turn-2-f-s1-0",
+     "quote": "Tracker updated: connect source HAdd/OfNat obligations to dictionary emission",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-19-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,23 @@
+{
+ "record": "turn-NXWDX4",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-63-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "Did you build the pytest runner we discussed before?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

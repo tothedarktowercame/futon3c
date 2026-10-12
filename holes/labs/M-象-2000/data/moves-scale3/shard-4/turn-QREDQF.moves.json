@@ -1,0 +1,23 @@
+{
+ "record": "turn-QREDQF",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-57-f-s1-0",
+   "kind": "collect",
+   "move": "ask-action/status-check",
+   "quote": "OK so what happened so far?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

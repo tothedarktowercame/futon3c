@@ -1,0 +1,51 @@
+{
+ "record": "turn-GkSCpT",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-76-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we could the cache-counting patterns in a \"normal\" test run",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-76-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall we try to get the startup working here?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-76-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-76-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "I don't know about the fixture, and I don't know if it works on Windows",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-76-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

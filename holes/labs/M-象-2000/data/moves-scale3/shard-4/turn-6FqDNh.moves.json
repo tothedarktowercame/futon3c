@@ -1,0 +1,37 @@
+{
+ "record": "turn-6FqDNh",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-73-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "I don't know if you would wake — earlier turns did not",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-73-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "You might need to use bg.py, parks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-73-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

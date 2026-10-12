@@ -1,0 +1,110 @@
+{
+ "record": "turn-38U1S2",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-116-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Let's wait to push to upstream until startup completes",
+   "answers": [],
+   "scope": {
+    "opens": "no-upstream-until-startup",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-116-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "I have low Claude usage (8% left) so we'll have to keep pushing work out",
+   "answers": [],
+   "scope": {
+    "opens": "keep-session-light",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-116-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed: nothing goes to upstream `main` until startup completes",
+   "answers": [
+    {
+     "act": "claude-4-turn-116-f-s1-0",
+     "quote": "Agreed: nothing goes to upstream `main` until startup completes",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-116-f-s2-0",
+     "quote": "I'll keep this session light",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-116-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-116-r-1",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "(keeping it light)",
+   "answers": [
+    {
+     "act": "claude-4-turn-116-f-s2-0",
+     "quote": "(keeping it light)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-116-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-116-r-2",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "Six jobs are running, each with a park that wakes me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-116-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-116-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I add Rob as a collaborator on `lean-wiring` and `mfuton-linux-binding`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-116-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

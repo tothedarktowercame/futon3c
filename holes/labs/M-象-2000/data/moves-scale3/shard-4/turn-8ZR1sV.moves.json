@@ -1,0 +1,37 @@
+{
+ "record": "turn-8ZR1sV",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-86-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "he said somewhere there's a test for \"compile a blank file\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-86-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/read-record",
+   "quote": "Can you find it?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-86-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

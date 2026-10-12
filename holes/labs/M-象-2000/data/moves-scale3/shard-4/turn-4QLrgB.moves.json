@@ -1,0 +1,23 @@
+{
+ "record": "turn-4QLrgB",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-3-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understand",
+   "quote": "I'm confused about this ask, should you wait until they finish or check them now?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

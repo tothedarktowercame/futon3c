@@ -1,0 +1,123 @@
+{
+ "record": "turn-BrdsXD",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-1-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "Emacs crashed, reconnecting here.",
+   "answers": [],
+   "scope": {
+    "opens": "reconnect-after-crash",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-1-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Nothing was lost. Five Python jobs are running",
+   "answers": [
+    {
+     "act": "claude-4-turn-1-f-s1-0",
+     "quote": "Nothing was lost. Five Python jobs are running",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-1-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(jobs running, all from candidate 234c9e6)",
+   "answers": [
+    {
+     "act": "claude-4-turn-1-f-s1-0",
+     "quote": "(jobs running, all from candidate 234c9e6)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-1-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-1-r-2",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "parseHeader and parseCommand both stop on",
+   "answers": [
+    {
+     "act": "claude-4-turn-1-f-s1-0",
+     "quote": "parseHeader and parseCommand both stop on",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-1-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-1-r-3",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "If this buffer is a new sessio",
+   "answers": [
+    {
+     "act": "claude-4-turn-1-f-s1-0",
+     "quote": "If this buffer is a new sessio",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-4-turn-1-r-4",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(Lisp side) codex-19's last milestone",
+   "answers": [
+    {
+     "act": "claude-4-turn-1-f-s1-0",
+     "quote": "(Lisp side) codex-19's last milestone",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-1-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  }
+ ],
+ "unlabelled": []
+}

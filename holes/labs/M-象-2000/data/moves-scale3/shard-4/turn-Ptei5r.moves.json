@@ -1,0 +1,63 @@
+{
+ "record": "turn-Ptei5r",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-342@turn-Ptei5r-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "please trim your continuation reminder to a reasonable size",
+   "answers": [],
+   "scope": {
+    "opens": "trim-reminder",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-342@turn-Ptei5r-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"trim your continuation reminder\") I've cut the continuation reminder from about 14 KB to 1.5 KB",
+   "answers": [
+    {
+     "act": "claude-4-turn-342@turn-Ptei5r-f-s1-0",
+     "quote": "I've cut the continuation reminder from about 14 KB to 1.5 KB",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342@turn-Ptei5r-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-342@turn-Ptei5r-r-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "(older parks) A few parks I set earlier still hold the long version",
+   "answers": [
+    {
+     "act": "claude-4-turn-342@turn-Ptei5r-f-s1-0",
+     "quote": "(older parks) A few parks I set earlier still hold the long version",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-342@turn-Ptei5r-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

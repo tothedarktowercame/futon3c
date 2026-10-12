@@ -1,0 +1,51 @@
+{
+ "record": "turn-AxU5u0",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-45-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "I think we should do more than just mark up Basic.c",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-42-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-45-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "we should build to a proof of contribution not just a proof of work",
+   "answers": [],
+   "scope": {
+    "opens": "proof-of-contribution",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-45-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Maybe we need to build our own roadmap for what \"complete\" looks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-45-f-s1-1"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

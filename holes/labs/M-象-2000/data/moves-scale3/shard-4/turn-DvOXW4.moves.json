@@ -1,0 +1,37 @@
+{
+ "record": "turn-DvOXW4",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-54-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "we should probably use the new test-registry system so that we don't have to rerun all te",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-54-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "No dispatch requested this turn.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-54-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

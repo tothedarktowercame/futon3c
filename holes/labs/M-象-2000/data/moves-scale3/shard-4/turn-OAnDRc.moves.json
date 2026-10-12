@@ -1,0 +1,23 @@
+{
+ "record": "turn-OAnDRc",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-60-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "the kimi-1 run  is taking a very long time",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

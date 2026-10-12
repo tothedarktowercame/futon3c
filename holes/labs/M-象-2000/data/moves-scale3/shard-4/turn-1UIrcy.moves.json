@@ -1,0 +1,163 @@
+{
+ "record": "turn-1UIrcy",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-289-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "I think Zai has hit a five-hour limit just now",
+   "answers": [],
+   "scope": {
+    "opens": "zai-frozen",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-289-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "I see it too: none of the three Zai jobs has logged anything",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "I see it too: none of the three Zai jobs has logged anything",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-289-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "zai-1 had already committed its test",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "zai-1 had already committed its test",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-289-r-2",
+   "kind": "qualify",
+   "move": "qualify/risk-assessment",
+   "quote": "the fix rebuilds one by reading the syntax as a type",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "the fix rebuilds one by reading the syntax as a type",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncates before the doubt it expresses; quote kept inside the stored span"
+  },
+  {
+   "act": "claude-4-turn-289-r-3",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "zai-2 had only just started",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "zai-2 had only just started",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-289-r-4",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "I don't know when the five-hour window started",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "I don't know when the five-hour window started",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-289-r-5",
+   "kind": "report",
+   "move": "report/next",
+   "quote": "Nothing will wake me when the two background runs finish",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "Nothing will wake me when the two background runs finish",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-289-r-6",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(open jobs)",
+   "answers": [
+    {
+     "act": "claude-4-turn-289-f-s1-0",
+     "quote": "(open jobs)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-289-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  }
+ ],
+ "unlabelled": []
+}

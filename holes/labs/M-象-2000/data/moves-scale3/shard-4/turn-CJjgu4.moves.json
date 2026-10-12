@@ -1,0 +1,37 @@
+{
+ "record": "turn-CJjgu4",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-1-f-s1-0",
+   "kind": "propose",
+   "move": "propose/other",
+   "quote": "the \"COMPILES, INCORRECT\" rows from py",
+   "answers": [],
+   "scope": {
+    "opens": "compiles-incorrect-rows",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-3-turn-1-f-s2-0",
+   "kind": "verify",
+   "move": "clarify/check-understand",
+   "quote": "Or am I getting overly excited?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,83 @@
+{
+ "record": "turn-RtViPB",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-160-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "You can push my fork or other private tothedarktowercame repos as commits build up",
+   "answers": [],
+   "scope": {
+    "opens": "push-fork-allowed",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-160-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've pushed the five reviewed branches to your fork",
+   "answers": [
+    {
+     "act": "claude-4-turn-160-f-s1-0",
+     "quote": "I've pushed the five reviewed branches to your fork",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-160-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-160-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(what went up)",
+   "answers": [
+    {
+     "act": "claude-4-turn-160-f-s1-0",
+     "quote": "(what went up)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-160-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-160-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(recorded) The permission is noted in the project memory",
+   "answers": [
+    {
+     "act": "claude-4-turn-160-f-s1-0",
+     "quote": "(recorded) The permission is noted in the project memory",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-160-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

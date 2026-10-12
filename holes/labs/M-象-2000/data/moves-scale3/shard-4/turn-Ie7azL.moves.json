@@ -1,0 +1,37 @@
+{
+ "record": "turn-Ie7azL",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-18-f-s1-0",
+   "kind": "continue",
+   "move": "continue/other",
+   "quote": "Right...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "five-char fragment at the quote floor"
+  },
+  {
+   "act": "claude-4-turn-18-f-s2-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "any progress?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

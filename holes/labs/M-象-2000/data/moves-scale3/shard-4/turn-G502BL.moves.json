@@ -1,0 +1,37 @@
+{
+ "record": "turn-G502BL",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-11-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "\"four tests failed for the wrong reason\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-3-turn-11-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "It seems as though dispatches are problematic",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3-turn-11-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

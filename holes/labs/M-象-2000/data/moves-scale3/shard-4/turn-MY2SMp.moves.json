@@ -1,0 +1,23 @@
+{
+ "record": "turn-MY2SMp",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-12-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/concern",
+   "quote": "I thought claude-4 was going to set up the working environments for the agents",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3-turn-11-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

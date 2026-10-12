@@ -1,0 +1,143 @@
+{
+ "record": "turn-JXBPpb",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "Let's pull resources from the Python port now and set a new pin.",
+   "answers": [],
+   "scope": {
+    "opens": "new-pin",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Done. I cancelled both Python jobs that were still running",
+   "answers": [
+    {
+     "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+     "quote": "Done. I cancelled both Python jobs that were still running",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24@turn-JXBPpb-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(what I stopped)",
+   "answers": [
+    {
+     "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+     "quote": "(what I stopped)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24@turn-JXBPpb-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-r-2",
+   "kind": "qualify",
+   "move": "explain/motive",
+   "quote": "(why 61f575e and not cand-1's head, d2bffb8)",
+   "answers": [
+    {
+     "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+     "quote": "(why 61f575e and not cand-1's head, d2bffb8)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24@turn-JXBPpb-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-r-3",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "(pin references in the Lisp docs)",
+   "answers": [
+    {
+     "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+     "quote": "(pin references in the Lisp docs)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24@turn-JXBPpb-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-r-4",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "The 61f575e sweep is at 52/110",
+   "answers": [
+    {
+     "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+     "quote": "The 61f575e sweep is at 52/110",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24@turn-JXBPpb-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-24@turn-JXBPpb-r-5",
+   "kind": "ask-action",
+   "move": "ask-action/two-decision",
+   "quote": "(team) Two decisions are yours",
+   "answers": [
+    {
+     "act": "claude-4-turn-24@turn-JXBPpb-f-s1-0",
+     "quote": "(team) Two decisions are yours",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24@turn-JXBPpb-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

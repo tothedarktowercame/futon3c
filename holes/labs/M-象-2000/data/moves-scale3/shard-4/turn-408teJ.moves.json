@@ -1,0 +1,103 @@
+{
+ "record": "turn-408teJ",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-288-f-s1-0",
+   "kind": "accept",
+   "move": "approve/plain",
+   "quote": "Yes you can use codex-6 and codex-4",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-288-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "Both Codex jobs have started; neither hit a capacity error",
+   "answers": [
+    {
+     "act": "claude-4-turn-288-f-s1-0",
+     "quote": "Both Codex jobs have started; neither hit a capacity error",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-288-r-1",
+   "kind": "explain",
+   "move": "report/job-spec",
+   "quote": "(what each job must do)",
+   "answers": [
+    {
+     "act": "claude-4-turn-288-f-s1-0",
+     "quote": "(what each job must do)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-288-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-288-r-2",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "The re-probe is partly through, and one more row now compiles",
+   "answers": [
+    {
+     "act": "claude-4-turn-288-f-s1-0",
+     "quote": "The re-probe is partly through, and one more row now compiles",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-288-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-288-r-3",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(open jobs)",
+   "answers": [
+    {
+     "act": "claude-4-turn-288-f-s1-0",
+     "quote": "(open jobs)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-288-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  }
+ ],
+ "unlabelled": []
+}

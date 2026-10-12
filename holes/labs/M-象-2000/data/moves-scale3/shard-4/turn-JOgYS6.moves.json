@@ -1,0 +1,51 @@
+{
+ "record": "turn-JOgYS6",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-83-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "Rob said he added more morpheus tests etc.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-42-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-83-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "we should do our merge procedure, sooner rather than later",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-83-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-83-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "but not lose the work we're doing on my fork of course",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-83-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

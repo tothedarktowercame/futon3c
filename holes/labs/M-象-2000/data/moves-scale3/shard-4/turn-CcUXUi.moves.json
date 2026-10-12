@@ -1,0 +1,37 @@
+{
+ "record": "turn-CcUXUi",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-2-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "I wonder if we can get the references, some of them may be openly available",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-2-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Regarding the wiring and only reading Clojure, maybe could use interop",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

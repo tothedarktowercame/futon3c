@@ -1,0 +1,111 @@
+{
+ "record": "turn-9yK5Av",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-345-f-s1-0",
+   "kind": "accept",
+   "move": "approve/plain",
+   "quote": "yes please.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-345-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Once the LISP material is ready from claude-19 we can try the new workflow",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-345-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-345-f-s2-1",
+   "kind": "continue",
+   "move": "propose/directive",
+   "quote": "please keep pushing the Python side forward in the meantime",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-345-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-345-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(dispatched; each park deadline is 90 min)",
+   "answers": [
+    {
+     "act": "claude-4-turn-345-f-s2-1",
+     "quote": "(dispatched; each park deadline is 90 min)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-345-f-s2-1"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-4-turn-345-r-1",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "It's rerunning the seven timed-out p",
+   "answers": [
+    {
+     "act": "claude-4-turn-345-f-s2-1",
+     "quote": "It's rerunning the seven timed-out p",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-345-r-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-4-turn-345-r-2",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "(Lisp side, so you know where it stands)",
+   "answers": [
+    {
+     "act": "claude-4-turn-345-f-s2-0",
+     "quote": "(Lisp side, so you know where it stands)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-345-f-s2-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  }
+ ],
+ "unlabelled": []
+}

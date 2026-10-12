@@ -1,0 +1,51 @@
+{
+ "record": "turn-5jcFPQ",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-87-f-s1-0",
+   "kind": "continue",
+   "move": "clarify/check-understand",
+   "quote": "Got it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "three-char fragment at the quote floor"
+  },
+  {
+   "act": "claude-4-turn-87-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "this goes back to our Diagram prover concepts",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-87-f-s3-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "it would be great if the items that we were clearing were also \"theory backed\"",
+   "answers": [],
+   "scope": {
+    "opens": "theory-backed-clearing",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

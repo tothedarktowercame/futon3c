@@ -1,0 +1,51 @@
+{
+ "record": "turn-QKb1Gm",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-16-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "Rob told me that there's a Lean LSP",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-16-f-s1-1",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "something else important",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-16-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-16-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Different concept but similar-ish to what we're talking about",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-16-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

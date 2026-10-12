@@ -1,0 +1,69 @@
+{
+ "record": "turn-ADnSgn",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "codex-18-turn-39-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Committed `1fc59e0`. Lean now proves, for the modeled checker",
+   "answers": [
+    {
+     "act": "codex-18-turn-22-f-s1-0",
+     "quote": "Committed `1fc59e0`. Lean now proves, for the modeled checker",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-22-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-18-turn-39-r-1",
+   "kind": "verify",
+   "move": "verify/check-live",
+   "quote": "Proofs passed without `sorry`",
+   "answers": [
+    {
+     "act": "codex-18-turn-22-f-s1-0",
+     "quote": "Proofs passed without `sorry`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-39-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-18-turn-39-r-2",
+   "kind": "qualify",
+   "move": "qualify/gap",
+   "quote": "Universal correspondence between the actual Lisp AST decoder/host primitives and the proved model remains open",
+   "answers": [
+    {
+     "act": "codex-18-turn-22-f-s1-0",
+     "quote": "Universal correspondence between the actual Lisp AST decoder/host primitives and the proved model remains open",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-39-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

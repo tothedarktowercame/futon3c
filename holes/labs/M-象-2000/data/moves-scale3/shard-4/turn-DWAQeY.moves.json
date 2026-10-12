@@ -1,0 +1,82 @@
+{
+ "record": "turn-DWAQeY",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-263-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "a separate demo crashed Agency but the problem is solved now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-263-f-s1-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "a separate demo crashed Agency but the problem is solved now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-263-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-263-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "So the restart was caused by the other demo, and nothing in this work needs to change",
+   "answers": [
+    {
+     "act": "claude-4-turn-263-f-s1-0",
+     "quote": "So the restart was caused by the other demo, and nothing in this work needs to change",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-263-f-s1-1",
+     "quote": "So the restart was caused by the other demo, and nothing in this work needs to change",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-263-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-263-r-1",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "(still running)",
+   "answers": [
+    {
+     "act": "claude-4-turn-263-f-s1-1",
+     "quote": "(still running)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-263-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  }
+ ],
+ "unlabelled": []
+}

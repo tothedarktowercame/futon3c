@@ -1,0 +1,43 @@
+{
+ "record": "turn-3yrIna",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-117-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "Let's leave the other repos private until we push.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-117-r-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Understood. `lean-wiring` and `mfuton-linux-binding` stay private",
+   "answers": [
+    {
+     "act": "claude-4-turn-117-f-s1-0",
+     "quote": "Understood. `lean-wiring` and `mfuton-linux-binding` stay private",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-117-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

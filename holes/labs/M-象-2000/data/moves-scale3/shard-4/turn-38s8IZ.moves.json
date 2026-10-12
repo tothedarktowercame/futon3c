@@ -1,0 +1,37 @@
+{
+ "record": "turn-38s8IZ",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-93-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes this is what we should build.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-93-f-s2-0",
+   "kind": "propose",
+   "move": "delegate/to-agent",
+   "quote": "You can also use Codex to help with the verification of the model",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,51 @@
+{
+ "record": "turn-PLaQJU",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-24-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "Let's work on the 2nd paper for now, as we are still waiting for the new mfuton-share repo",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-3-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-24-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "Possibly we can move on to \"more fields\" after that",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-24-f-s3-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "We may well be able to build a \"theory-complete model\" before we even see the python compiler",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-24-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

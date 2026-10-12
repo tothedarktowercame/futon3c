@@ -1,0 +1,65 @@
+{
+ "record": "turn-0sx81v",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-110-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "let's push any outstanding commits because this is good stuff",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-42-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-110-f-s2-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "we should create an explainer note including reproduction instructions",
+   "answers": [],
+   "scope": {
+    "opens": "explainer-note",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-110-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "We could mention in the message that the zai-3 work is pending",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-110-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-4-turn-110-f-s4-0",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "I think this gives a nice flavour of our way of working",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-turn-110-f-s2-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}
