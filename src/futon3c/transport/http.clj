@@ -11828,6 +11828,20 @@
                 (when (map? parsed) parsed)))))
         (catch Exception _ nil)))))
 
+(defn- xiang-agent-roster
+  "The roster view the turn service reads a seat's mission from. A seat's
+   mission is held by the clock store (its current clock), not by the
+   registry's :agent/metadata; merge the clock's mission into the metadata
+   so turn-service/agent-mission-id finds it. Nil when the seat is unknown."
+  [agent-id]
+  (when-let [agent (reg/get-agent (str agent-id))]
+    (let [clock (try (clock-store/current-clock (str agent-id) (:agent/session-id agent))
+                     (catch Exception _ nil))
+          mission (some-> (:mission-id clock) str str/trim not-empty)]
+      (cond-> agent
+        (and mission (not (get-in agent [:agent/metadata :mission-id])))
+        (assoc-in [:agent/metadata :mission-id] mission)))))
+
 (defn- xiang-turn-service
   "The one service for this JVM, built on first use. Reload-safe: a
    Drawbridge reload of this namespace keeps the running scheduler."
@@ -11837,7 +11851,7 @@
                    {:store (xiang-store/store)
                     :vocabulary (xiang-vocabulary)
                     :draft xiang-draft
-                    :agent-roster #(reg/get-agent (str %))
+                    :agent-roster xiang-agent-roster
                     :recent-agent-turns recent-agent-turns
                     :pattern-candidates xiang-pattern-candidates
                     :skip-routine? (contains? #{"1" "true" "yes"}

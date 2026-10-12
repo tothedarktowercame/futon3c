@@ -3646,3 +3646,13 @@
       (let [response (ask "")]
         (is (= 400 (:status response)))
         (is (= "namespace-required" (:reason (body response))))))))
+
+(deftest xiang-agent-roster-takes-the-mission-from-the-clock-store
+  (let [roster #'futon3c.transport.http/xiang-agent-roster]
+    (with-redefs [futon3c.agency.registry/get-agent
+                  (fn [id] (when (= id "codex-70") {:agent/id {:id/value "codex-70"} :agent/session-id "s1" :agent/metadata {:cwd "/x"}}))
+                  futon3c.agency.clock-store/current-clock
+                  (fn [id sid] (when (and (= id "codex-70") (= sid "s1")) {:mission-id " M-象-2000 "}))]
+      (is (= "M-象-2000" (get-in (roster "codex-70") [:agent/metadata :mission-id])))
+      (is (= "/x" (get-in (roster "codex-70") [:agent/metadata :cwd])) "metadata is merged, not replaced")
+      (is (nil? (roster "nobody"))))))
