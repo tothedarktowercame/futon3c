@@ -29,8 +29,22 @@
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
       (config/env-bool "FUTON3C_DURABLE_QUEUE" true))))
 
+(defonce ^:private !test-run-store-dir
+  (delay (str (Files/createTempDirectory "futon3c-test-run-"
+                                         (make-array java.nio.file.attribute.FileAttribute 0)))))
+
+(defn- test-run-store-path
+  "Under the test runner (-Dfuton3c.test-run=true, set by the :test aliases) a
+   store path left at its default resolves to a per-JVM temp dir, so a suite
+   that forgets to rebind it cannot write over the live Agency's state
+   (2026-10-12: a test JVM overwrote the live invoke-ledger snapshot)."
+  [file-name]
+  (when (= "true" (System/getProperty "futon3c.test-run"))
+    (str @!test-run-store-dir "/" file-name)))
+
 (defn queue-store-path []
   (or (config/env "FUTON3C_DURABLE_QUEUE_PATH")
+      (test-run-store-path "durable-turn-queue.edn")
       "/tmp/futon3c-durable-turn-queue.edn"))
 
 (defn- empty-state []

@@ -57,7 +57,12 @@
          :jvm-opts ["--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED"
                     "-Dio.netty.tryReflectionSetAccessible=true"
                     "-Djava.net.preferIPv4Stack=true"
-                    "-Xmx2g" "-XX:MaxDirectMemorySize=768m"]
+                    "-Xmx2g" "-XX:MaxDirectMemorySize=768m"
+                    ;; Store paths whose default is the live Agency's state
+                    ;; (invoke ledger, turn queue) resolve to a per-JVM temp
+                    ;; dir under this flag unless set explicitly (2026-10-12:
+                    ;; a suite run overwrote the live ledger snapshot).
+                    "-Dfuton3c.test-run=true"]
          :extra-deps {io.github.cognitect-labs/test-runner
                       {:git/url "https://github.com/cognitect-labs/test-runner.git"
                        :sha "5e91ee0989d93115cfb5e15b6f242f5ec7ab762e"}}
@@ -77,6 +82,7 @@
                              io.github.cognitect-labs/test-runner
                              {:git/url "https://github.com/cognitect-labs/test-runner.git"
                               :sha "5e91ee0989d93115cfb5e15b6f242f5ec7ab762e"}}
+              :jvm-opts ["-Dfuton3c.test-run=true"]
               :main-opts ["-m" "cognitect.test-runner" "-e" ":slow"]}
 
   ;; Overlay on :test that lifts the ^:slow exclusion. Always combine:

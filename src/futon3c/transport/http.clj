@@ -462,9 +462,23 @@
   (reset! !invoke-jobs-ledger nil)
   (reset! !active-invoke-job-index nil))
 
+(defonce ^:private !test-run-store-dir
+  (delay (str (Files/createTempDirectory "futon3c-test-run-"
+                                         (make-array java.nio.file.attribute.FileAttribute 0)))))
+
+(defn- test-run-store-path
+  "Under the test runner (-Dfuton3c.test-run=true, set by the :test aliases) a
+   store path left at its default resolves to a per-JVM temp dir, so a suite
+   that forgets to rebind it cannot write over the live Agency's state
+   (2026-10-12: a test JVM overwrote the live invoke-ledger snapshot)."
+  [file-name]
+  (when (= "true" (System/getProperty "futon3c.test-run"))
+    (str @!test-run-store-dir "/" file-name)))
+
 (defn- invoke-jobs-store-path
   []
   (or (System/getenv "FUTON3C_INVOKE_JOBS_FILE")
+      (test-run-store-path "invoke-jobs.edn")
       "/tmp/futon3c-invoke-jobs.edn"))
 
 (defn- default-invoke-jobs-ledger
