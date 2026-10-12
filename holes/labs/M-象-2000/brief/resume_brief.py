@@ -16,7 +16,7 @@ def instant(s):
 def aid(x):
     return x if isinstance(x, str) else x.get("act", x.get("id", ""))
 
-def load_records(directory, mission, seats, since=None):
+def load_records(directory, mission, seats, since=None, join="auto"):
     rows = []
     for path in sorted(directory.glob("turn-*.json")):
         try:
@@ -32,7 +32,7 @@ def load_records(directory, mission, seats, since=None):
         row["_record_id"] = path.name.split(".", 1)[0]
         rows.append(row)
     matched = [r for r in rows if r.get("mission_id") == mission]
-    if matched:
+    if join == "mission" or (join == "auto" and matched):
         return matched, "mission"
     if not seats:
         raise SystemExit("no mission_id records found; provide --seats")
@@ -253,10 +253,12 @@ def main(argv=None):
     p.add_argument("--since")
     p.add_argument("--dir", type=Path, default=DEFAULT_DIR)
     p.add_argument("--out", type=Path)
+    p.add_argument("--join", choices=["auto", "mission", "seats"], default="auto",
+                   help="auto: mission_id when any record has it, else seats; mission / seats force one")
     args = p.parse_args(argv)
     seat_text = args.seats or args.seat or ""
     records, join = load_records(args.dir, args.mission,
-                                 set(filter(None, seat_text.split(","))), args.since)
+                                 set(filter(None, seat_text.split(","))), args.since, args.join)
     now = dt.datetime.now(dt.timezone.utc)
     data = prepare(records, now)
     output = render(args.mission, join,
