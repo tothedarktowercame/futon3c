@@ -55,9 +55,11 @@
    under the debugger, plus one more granted to claude-12 on 2026-10-09 for the
    click that scores the first report-card preregistrations, and one on
    2026-10-10 after the close-overflow fix, and one more on 2026-10-10 for the
-   click codex-68 signed off (PRELAUNCH-DEFECTS.md). All grants are recorded
-   in the authorization document named above."
-  52)
+  click codex-68 signed off (PRELAUNCH-DEFECTS.md), plus one granted directly
+  by Joe to codex-68 on 2026-10-12 for a debugger-attached click after the
+  giant-checkpoint repair. All grants are recorded in the operator thread or
+  the authorization document named above."
+  53)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
