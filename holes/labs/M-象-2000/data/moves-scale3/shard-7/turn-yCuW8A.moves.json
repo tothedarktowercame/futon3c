@@ -1,0 +1,175 @@
+{
+ "record": "turn-yCuW8A",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-421-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "🈸:Yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-17-turn-420-r-4",
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-0",
+   "kind": "reply-mark",
+   "move": "report/built",
+   "quote": "(setup)",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(setup)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-1",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(the checker, tested before launch)",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(the checker, tested before launch)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(watching it)",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(watching it)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-3",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(afterwards)",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(afterwards)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-4",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "Gist: 90 of the 97 patterns are labelled",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "Gist: 90 of the 97 patterns are labelled",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-5",
+   "kind": "reply-mark",
+   "move": "report/analysis",
+   "quote": "(five labels read against their source)",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(five labels read against their source)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Sample read personally: two clearly fit, three arguable."
+  },
+  {
+   "act": "claude-17-turn-421-r-6",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(two things to watch)",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(two things to watch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-421-r-7",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(next) When the last pack lands",
+   "answers": [
+    {
+     "act": "claude-17-turn-421-f-s1-0",
+     "quote": "(next) When the last pack lands",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,120 @@
+{
+ "record": "turn-xJ4TAP",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-392-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "OK, I've tried the hydra, and 🈸:yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-392-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Informal yes outside any posted offer; the replies diagnose why nothing was recorded."
+  },
+  {
+   "act": "claude-17-turn-392-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Gist: Elephant-2000 already has most of what we need",
+   "answers": [
+    {
+     "act": "claude-17-turn-392-f-s1-0",
+     "quote": "Gist: Elephant-2000 already has most of what we need",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-392-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what P11 already does, all in futon3c)",
+   "answers": [
+    {
+     "act": "claude-17-turn-392-f-s1-0",
+     "quote": "(what P11 already does, all in futon3c)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-392-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what \"🈸:yes\" did) Nothing was recorded, for two reasons",
+   "answers": [
+    {
+     "act": "claude-17-turn-392-f-s1-0",
+     "quote": "(what \"🈸:yes\" did) Nothing was recorded, for two reasons",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "No offer posted and the parsers do not accept the marked spelling."
+  },
+  {
+   "act": "claude-17-turn-392-r-3",
+   "kind": "reply-mark",
+   "move": "delegate/other",
+   "quote": "(the offer now open)",
+   "answers": [
+    {
+     "act": "claude-17-turn-392-f-s1-0",
+     "quote": "(the offer now open)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Posts the numbered offer that makes a marked yes recordable."
+  },
+  {
+   "act": "claude-17-turn-392-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Reply \"yes 1\" or \"yes 2\".",
+   "answers": [
+    {
+     "act": "claude-17-turn-392-f-s1-0",
+     "quote": "(one decision) Reply \"yes 1\" or \"yes 2\".",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

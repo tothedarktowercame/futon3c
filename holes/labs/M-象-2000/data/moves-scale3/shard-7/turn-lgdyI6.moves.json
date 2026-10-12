@@ -1,0 +1,189 @@
+{
+ "record": "turn-lgdyI6",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-496-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "the other thing we looked at with the external agent",
+   "answers": [],
+   "scope": {
+    "opens": "glyphs-as-decorators exploration",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "we might see flows that cross between agents and sessions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-f-s3-0",
+   "kind": "report",
+   "move": "qualify/impact",
+   "quote": "gives us a proof-of-concept",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-f-s4-0",
+   "kind": "extend",
+   "move": "extend/other",
+   "quote": "now that we have both operator & agent intents",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "The patterns-as-causal-diagrams extension sits past the truncated span."
+  },
+  {
+   "act": "claude-17-turn-496-f-s5-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "Maybe the glyphs are \"decorators\" in Fong's sense?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-r-0",
+   "kind": "reply-mark",
+   "move": "explain/answer-question",
+   "quote": "(glyphs as decorations) Yes, with one adjustment",
+   "answers": [
+    {
+     "act": "claude-17-turn-496-f-s5-0",
+     "quote": "(glyphs as decorations) Yes, with one adjustment",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(the decoration reading)",
+   "answers": [
+    {
+     "act": "claude-17-turn-496-f-s5-0",
+     "quote": "(the decoration reading)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-r-2",
+   "kind": "reply-mark",
+   "move": "explain/map",
+   "quote": "(glyphs as types, and where Agency comes in)",
+   "answers": [
+    {
+     "act": "claude-17-turn-496-f-s1-0",
+     "quote": "(glyphs as types, and where Agency comes in)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(bringing patterns back in)",
+   "answers": [
+    {
+     "act": "claude-17-turn-496-f-s4-0",
+     "quote": "(bringing patterns back in)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-r-4",
+   "kind": "reply-mark",
+   "move": "propose/order-plan",
+   "quote": "(order, if you want to take it further)",
+   "answers": [
+    {
+     "act": "claude-17-turn-496-f-s2-0",
+     "quote": "(order, if you want to take it further)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-496-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I do step 1?",
+   "answers": [
+    {
+     "act": "claude-17-turn-496-f-s2-0",
+     "quote": "(one decision) Shall I do step 1?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-496-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

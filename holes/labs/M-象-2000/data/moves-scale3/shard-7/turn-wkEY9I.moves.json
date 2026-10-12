@@ -1,0 +1,130 @@
+{
+ "record": "turn-wkEY9I",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-488-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "\"patterns as small causal models\" would be a very good fit",
+   "answers": [],
+   "scope": {
+    "opens": "patterns-as-causal-models question",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-488-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "but I don't know if that's true",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-488-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-488-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(the correspondence) A WM pattern reading converts almost mechanically",
+   "answers": [
+    {
+     "act": "claude-17-turn-488-f-s1-0",
+     "quote": "(the correspondence) A WM pattern reading converts almost mechanically",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-488-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-488-r-1",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(where it doesn't fit yet)",
+   "answers": [
+    {
+     "act": "claude-17-turn-488-f-s2-0",
+     "quote": "(where it doesn't fit yet)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-488-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-488-r-2",
+   "kind": "reply-mark",
+   "move": "explain/map",
+   "quote": "(the giant connected cascade)",
+   "answers": [
+    {
+     "act": "claude-17-turn-488-f-s1-0",
+     "quote": "(the giant connected cascade)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-488-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-488-r-3",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(a cheap way to find out)",
+   "answers": [
+    {
+     "act": "claude-17-turn-488-f-s2-0",
+     "quote": "(a cheap way to find out)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-488-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-488-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I try that on one click?",
+   "answers": [
+    {
+     "act": "claude-17-turn-488-f-s1-0",
+     "quote": "(one decision) Shall I try that on one click?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-488-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

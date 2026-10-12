@@ -1,0 +1,63 @@
+{
+ "record": "turn-YCVI7M",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-3-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "14 ptoblems is plenty for 1 overnight run.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"ptoblems\" kept verbatim; accepts the coverage picture."
+  },
+  {
+   "act": "claude-14-turn-3-r-0",
+   "kind": "reply-mark",
+   "move": "approve/other",
+   "quote": "Agreed, coverage isn't the limit for one night",
+   "answers": [
+    {
+     "act": "claude-14-turn-3-f-s1-0",
+     "quote": "Agreed, coverage isn't the limit for one night",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Invented approve/other: plain agreement that also refocuses the criterion."
+  },
+  {
+   "act": "claude-14-turn-3-r-1",
+   "kind": "reply-mark",
+   "move": "reframe/other",
+   "quote": "(what I'll watch instead)",
+   "answers": [
+    {
+     "act": "claude-14-turn-3-f-s1-0",
+     "quote": "(what I'll watch instead)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium",
+   "note": "Invented label: redirects attention from coverage to STOP-rate; no vocabulary label covers this move."
+  }
+ ],
+ "unlabelled": []
+}

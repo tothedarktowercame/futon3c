@@ -1,0 +1,80 @@
+{
+ "record": "turn-qv0U42",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-64-f-s1-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "a better approach, with blueprints that match the real need",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-14-turn-63-r-5",
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typos kept verbatim; approves the pause-and-redesign offer."
+  },
+  {
+   "act": "claude-14-turn-64-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(paused, and what keeps running)",
+   "answers": [
+    {
+     "act": "claude-14-turn-64-f-s1-0",
+     "quote": "(paused, and what keeps running)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-64-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(the three route jobs, all running)",
+   "answers": [
+    {
+     "act": "claude-14-turn-64-f-s1-0",
+     "quote": "(the three route jobs, all running)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-64-r-2",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(next)",
+   "answers": [
+    {
+     "act": "claude-14-turn-64-f-s1-0",
+     "quote": "(next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

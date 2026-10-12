@@ -1,0 +1,114 @@
+{
+ "record": "turn-mJAwOZ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-49-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "oh,that is starting to sound good.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-49-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/other",
+   "quote": "a bit like ghe ArSE we made earlier",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-49-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Typos \"ghe\"/\"strwamlined\" kept verbatim; maps the design onto a known artifact."
+  },
+  {
+   "act": "claude-15-turn-49-f-s3-0",
+   "kind": "explain",
+   "move": "clarify/other",
+   "quote": "your \"next\" reminds me of duplicate question detection",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-49-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-49-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "push beyond \"duplicate\" to something bettet",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-49-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-49-r-0",
+   "kind": "reply-mark",
+   "move": "report-problem/self-correction",
+   "quote": "(why I missed it)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-49-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "The repeat happened because the earlier note sat outside the loaded index."
+  },
+  {
+   "act": "claude-15-turn-49-r-1",
+   "kind": "reply-mark",
+   "move": "explain/answer-question",
+   "quote": "(\"like the ArSE\") The comparison fits",
+   "answers": [
+    {
+     "act": "claude-15-turn-49-f-s2-0",
+     "quote": "(\"like the ArSE\") The comparison fits",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-49-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-49-r-2",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(how to build it)",
+   "answers": [
+    {
+     "act": "claude-15-turn-49-f-s4-0",
+     "quote": "(how to build it)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-49-f-s4-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

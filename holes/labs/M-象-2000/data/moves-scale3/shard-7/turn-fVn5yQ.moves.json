@@ -1,0 +1,82 @@
+{
+ "record": "turn-fVn5yQ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-423-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I'm happy for bind-the-subject to be classes as \"assurance\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"classes\" for \"classed\" kept verbatim."
+  },
+  {
+   "act": "claude-17-turn-423-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Gist: Done. `bind-the-subject` is now labelled assurance",
+   "answers": [
+    {
+     "act": "claude-17-turn-423-f-s1-0",
+     "quote": "Gist: Done. `bind-the-subject` is now labelled assurance",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-423-r-1",
+   "kind": "reply-mark",
+   "move": "report/other",
+   "quote": "(the edit)",
+   "answers": [
+    {
+     "act": "claude-17-turn-423-f-s1-0",
+     "quote": "(the edit)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "One row changed, with the new quote from the pattern's own conclusion."
+  },
+  {
+   "act": "claude-17-turn-423-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(timing)",
+   "answers": [
+    {
+     "act": "claude-17-turn-423-f-s1-0",
+     "quote": "(timing)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The running rebuild may have read the old label; self-check planned since the note to zai-2 will land late."
+  }
+ ],
+ "unlabelled": []
+}

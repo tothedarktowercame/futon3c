@@ -1,0 +1,60 @@
+{
+ "record": "turn-leLaVS",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-476-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "I'm on a terminal so all your fancy UI stuff can't work for me",
+   "answers": [],
+   "scope": {
+    "opens": "terminal-display constraint",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-476-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(terminal Emacs) That explains a lot.",
+   "answers": [
+    {
+     "act": "claude-17-turn-476-f-s1-0",
+     "quote": "(terminal Emacs) That explains a lot.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-476-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-476-r-1",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(the 象 underlines in a terminal)",
+   "answers": [
+    {
+     "act": "claude-17-turn-476-f-s1-0",
+     "quote": "(the 象 underlines in a terminal)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-476-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

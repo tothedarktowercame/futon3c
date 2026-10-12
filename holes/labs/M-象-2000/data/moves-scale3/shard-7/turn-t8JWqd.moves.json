@@ -1,0 +1,100 @@
+{
+ "record": "turn-t8JWqd",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-25-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "let's fo both",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"fo\" for \"do\" kept verbatim."
+  },
+  {
+   "act": "claude-14-turn-25-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(status) Both foundation programs are dispatched",
+   "answers": [
+    {
+     "act": "claude-14-turn-25-f-s1-0",
+     "quote": "(status) Both foundation programs are dispatched",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Two marks glued in one paragraph; the dispatch answers the both-approval."
+  },
+  {
+   "act": "claude-14-turn-25-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(foundation programs, `38a2a5ac6`)",
+   "answers": [
+    {
+     "act": "claude-14-turn-25-f-s1-0",
+     "quote": "(foundation programs, `38a2a5ac6`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-25-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(route audits)",
+   "answers": [
+    {
+     "act": "claude-14-turn-25-f-s1-0",
+     "quote": "(route audits)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-25-r-3",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(READY problems)",
+   "answers": [
+    {
+     "act": "claude-14-turn-25-f-s1-0",
+     "quote": "(READY problems)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

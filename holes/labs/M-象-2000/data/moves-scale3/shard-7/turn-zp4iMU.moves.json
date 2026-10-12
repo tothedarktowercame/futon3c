@@ -1,0 +1,93 @@
+{
+ "record": "turn-zp4iMU",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-12-f-s1-0",
+   "kind": "agree",
+   "move": "approve/with-amendment",
+   "quote": "a good approach for individual problems which can get \"ratioed\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-12-f-s1-1",
+   "kind": "extend",
+   "move": "qualify/scope",
+   "quote": "the DAG should still collect lemmas and theoretical areas",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-12-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-12-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how it works)",
+   "answers": [
+    {
+     "act": "claude-14-turn-12-f-s1-1",
+     "quote": "(how it works)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-12-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-12-r-1",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(checked) Tagging through `add-lemmas` validates",
+   "answers": [
+    {
+     "act": "claude-14-turn-12-f-s1-1",
+     "quote": "(checked) Tagging through `add-lemmas` validates",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-12-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-12-r-2",
+   "kind": "reply-mark",
+   "move": "report/observation",
+   "quote": "(wide areas outside both loops)",
+   "answers": [
+    {
+     "act": "claude-14-turn-12-f-s1-1",
+     "quote": "(wide areas outside both loops)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-12-f-s1-1"
+   },
+   "confidence": "high",
+   "note": "Widest areas belong to problems neither loop may touch — a workload-balance signal."
+  }
+ ],
+ "unlabelled": []
+}

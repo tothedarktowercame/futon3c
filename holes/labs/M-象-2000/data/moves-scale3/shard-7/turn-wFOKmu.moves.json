@@ -1,0 +1,163 @@
+{
+ "record": "turn-wFOKmu",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-61-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "R20 is basically the one where we put together the entire certificate",
+   "answers": [],
+   "scope": {
+    "opens": "R20-as-assembly reading",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "And I hope it's active inference at the end of the day.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-r-0",
+   "kind": "reply-mark",
+   "move": "report/correction",
+   "quote": "(\"put together the entire certificate\") That changes what I had for R20",
+   "answers": [
+    {
+     "act": "claude-2-turn-61-f-s1-0",
+     "quote": "(\"put together the entire certificate\") That changes what I had for R20",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-r-1",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(R20 deferred)",
+   "answers": [
+    {
+     "act": "claude-2-turn-61-f-s1-0",
+     "quote": "(R20 deferred)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Both the deferral and the not-built table rested on the misreading."
+  },
+  {
+   "act": "claude-2-turn-61-r-2",
+   "kind": "reply-mark",
+   "move": "report/observation",
+   "quote": "(where it already lives in code)",
+   "answers": [
+    {
+     "act": "claude-2-turn-61-f-s1-0",
+     "quote": "(where it already lives in code)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-r-3",
+   "kind": "reply-mark",
+   "move": "explain/answer-question",
+   "quote": "(\"F is the same for every policy or F is not\")",
+   "answers": [
+    {
+     "act": "claude-2-turn-61-f-s1-0",
+     "quote": "(\"F is the same for every policy or F is not\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-r-4",
+   "kind": "reply-mark",
+   "move": "explain/context",
+   "quote": "(theory anchor)",
+   "answers": [
+    {
+     "act": "claude-2-turn-61-f-s2-0",
+     "quote": "(theory anchor)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-r-5",
+   "kind": "reply-mark",
+   "move": "propose/order-plan",
+   "quote": "(order of work)",
+   "answers": [
+    {
+     "act": "claude-2-turn-61-f-s1-0",
+     "quote": "(order of work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-61-r-6",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(status)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-61-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

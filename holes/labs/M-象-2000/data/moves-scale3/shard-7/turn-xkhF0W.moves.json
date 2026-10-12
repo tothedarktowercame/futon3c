@@ -1,0 +1,99 @@
+{
+ "record": "turn-xkhF0W",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-370-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "Codex Sol can do a good job of this task if Sonnet can do it",
+   "answers": [],
+   "scope": {
+    "opens": "Codex-vs-Sonnet fairness test",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-370-r-0",
+   "kind": "reply-mark",
+   "move": "approve/other",
+   "quote": "Gist: Agreed, it probably can",
+   "answers": [
+    {
+     "act": "claude-17-turn-370-f-s1-0",
+     "quote": "Gist: Agreed, it probably can",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-370-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Converts the hunch into a like-for-like reread rather than a guess."
+  },
+  {
+   "act": "claude-17-turn-370-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(why the first result is not a fair comparison)",
+   "answers": [
+    {
+     "act": "claude-17-turn-370-f-s1-0",
+     "quote": "(why the first result is not a fair comparison)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-370-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-370-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the test)",
+   "answers": [
+    {
+     "act": "claude-17-turn-370-f-s1-0",
+     "quote": "(the test)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-370-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-370-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what I will measure against Sonnet on the same turns)",
+   "answers": [
+    {
+     "act": "claude-17-turn-370-f-s1-0",
+     "quote": "(what I will measure against Sonnet on the same turns)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-370-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

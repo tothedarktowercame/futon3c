@@ -1,0 +1,87 @@
+{
+ "record": "turn-dlK3nv",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-520-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "\"correcting\" is a bonus feature, I haven't even started that workflow",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-520-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "Let's focus on the Element handoff for Codex",
+   "answers": [],
+   "scope": {
+    "opens": "Element handoff focus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-520-r-0",
+   "kind": "reply-mark",
+   "move": "report/built",
+   "quote": "(what the spec asks for)",
+   "answers": [
+    {
+     "act": "claude-17-turn-520-f-s2-0",
+     "quote": "(what the spec asks for)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-520-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-520-r-1",
+   "kind": "reply-mark",
+   "move": "report-problem/observ",
+   "quote": "(found while writing it)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-520-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "Session-privacy leak in the chat proxy, found and addressed during the handoff work."
+  },
+  {
+   "act": "claude-17-turn-520-r-2",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(still to do on my side)",
+   "answers": [
+    {
+     "act": "claude-17-turn-520-f-s2-0",
+     "quote": "(still to do on my side)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-520-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

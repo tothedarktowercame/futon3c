@@ -1,0 +1,138 @@
+{
+ "record": "turn-e3C50c",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-534-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "You can fix.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "The other thing that Cloud Claude said",
+   "answers": [],
+   "scope": {
+    "opens": "JVM turn-recording question",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "(I'm not sure if that was done or just commented upon.)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-534-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "Of course that won't apply for 小象.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-534-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(has the move to the JVM happened?) Half of it has.",
+   "answers": [
+    {
+     "act": "claude-17-turn-534-f-s3-0",
+     "quote": "(has the move to the JVM happened?) Half of it has.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-534-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what's there)",
+   "answers": [
+    {
+     "act": "claude-17-turn-534-f-s2-0",
+     "quote": "(what's there)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-534-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-r-2",
+   "kind": "reply-mark",
+   "move": "propose/order-plan",
+   "quote": "(order of work)",
+   "answers": [
+    {
+     "act": "claude-17-turn-534-f-s2-0",
+     "quote": "(order of work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-534-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-534-r-3",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"You can fix\") I took this as \"push\"",
+   "answers": [
+    {
+     "act": "claude-17-turn-534-f-s1-0",
+     "quote": "(\"You can fix\") I took this as \"push\"",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Interprets the two-word approval and states the alternate reading for correction."
+  }
+ ],
+ "unlabelled": []
+}

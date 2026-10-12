@@ -1,0 +1,79 @@
+{
+ "record": "turn-s0fPFb",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-7-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "previous loops maintained a DAG",
+   "answers": [],
+   "scope": {
+    "opens": "lemma-DAG restoration",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-7-r-0",
+   "kind": "reply-mark",
+   "move": "explain/context",
+   "quote": "(\"previous loops maintained a DAG\") You're right",
+   "answers": [
+    {
+     "act": "claude-14-turn-7-f-s1-0",
+     "quote": "(\"previous loops maintained a DAG\") You're right",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-7-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-7-r-1",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(how I'd restore it)",
+   "answers": [
+    {
+     "act": "claude-14-turn-7-f-s1-0",
+     "quote": "(how I'd restore it)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-7-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-7-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(go?) This changes the loops' data model",
+   "answers": [
+    {
+     "act": "claude-14-turn-7-f-s1-0",
+     "quote": "(go?) This changes the loops' data model",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-7-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,113 @@
+{
+ "record": "turn-VCSjvG",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-2-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "right now it says there are 112 open problems.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-2-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "i expect to see progress on that by morning.",
+   "answers": [],
+   "scope": {
+    "opens": "progress-by-morning deadline",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-2-r-0",
+   "kind": "reply-mark",
+   "move": "disagree/correction",
+   "quote": "I don't get 112.",
+   "answers": [
+    {
+     "act": "claude-14-turn-2-f-s1-0",
+     "quote": "I don't get 112.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Counts 93 open by real sorry/admit and asks where 112 came from."
+  },
+  {
+   "act": "claude-14-turn-2-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(why the progress will be modest)",
+   "answers": [
+    {
+     "act": "claude-14-turn-2-f-s2-0",
+     "quote": "(why the progress will be modest)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-2-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-2-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(what I set up)",
+   "answers": [
+    {
+     "act": "claude-14-turn-2-f-s2-0",
+     "quote": "(what I set up)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-2-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "The overnight watch that will catch stalls before morning."
+  },
+  {
+   "act": "claude-14-turn-2-r-3",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(first results since restart)",
+   "answers": [
+    {
+     "act": "claude-14-turn-2-f-s2-0",
+     "quote": "(first results since restart)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-2-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

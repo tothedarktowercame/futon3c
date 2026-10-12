@@ -1,0 +1,100 @@
+{
+ "record": "turn-WDPgC6",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-20-turn-3-f-s1-0",
+   "kind": "ask-action",
+   "move": "propose/directive",
+   "quote": "move now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-3-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"move now\") Where the files went",
+   "answers": [
+    {
+     "act": "claude-20-turn-3-f-s1-0",
+     "quote": "(\"move now\") Where the files went",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-3-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what stayed in `tools/`)",
+   "answers": [
+    {
+     "act": "claude-20-turn-3-f-s1-0",
+     "quote": "(what stayed in `tools/`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-3-r-2",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(checked before pushing)",
+   "answers": [
+    {
+     "act": "claude-20-turn-3-f-s1-0",
+     "quote": "(checked before pushing)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Same result before and after the move; the 6 failures pre-exist on Rob main."
+  },
+  {
+   "act": "claude-20-turn-3-r-3",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(follow-on)",
+   "answers": [
+    {
+     "act": "claude-20-turn-3-f-s1-0",
+     "quote": "(follow-on)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Rebase request to claude-11 parked; one straggler run still going."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,235 @@
+{
+ "record": "turn-m5wXHi",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-377-f-s1-0",
+   "kind": "redirect",
+   "move": "constrain/other",
+   "quote": "run a big chunk of work on Kimi and/or Codex leaving Sonnet out",
+   "answers": [],
+   "scope": {
+    "opens": "Kimi/Codex-only backfill run",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "we could run it for an hour and check quality after that",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-0",
+   "kind": "reply-mark",
+   "move": "report/built",
+   "quote": "(what is running) A new script, `scripts/backfill_loop.py`",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s1-0",
+     "quote": "(what is running) A new script, `scripts/backfill_loop.py`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-1",
+   "kind": "reply-mark",
+   "move": "report/other",
+   "quote": "(which turns)",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s1-0",
+     "quote": "(which turns)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits of this run)",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s2-0",
+     "quote": "(limits of this run)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-3",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(check at the hour)",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s2-0",
+     "quote": "(check at the hour)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-4",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "Gist: This wake-up is a stray",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-5",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(state) The unit `xiang-backfill-loop` is active.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-6",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "Gist: The hour produced about 340 new readings",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s2-0",
+     "quote": "Gist: The hour produced about 340 new readings",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "Readings good; Codex over-citing flagged with the two bad citations named."
+  },
+  {
+   "act": "claude-17-turn-377-r-7",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(throughput) The loop stopped by itself at 21:50.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-8",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(Codex citations)",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s2-0",
+     "quote": "(Codex citations)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-9",
+   "kind": "reply-mark",
+   "move": "report-problem/observ",
+   "quote": "(non-operator text)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "Harness auto-resume read as the operator — a block-contamination finding."
+  },
+  {
+   "act": "claude-17-turn-377-r-10",
+   "kind": "reply-mark",
+   "move": "report/other",
+   "quote": "(小象 edition 7) Accuracy 0.377",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-377-r-11",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(changes before the next run)",
+   "answers": [
+    {
+     "act": "claude-17-turn-377-f-s2-0",
+     "quote": "(changes before the next run)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-377-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

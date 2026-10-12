@@ -1,0 +1,114 @@
+{
+ "record": "turn-pXX2By",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-5-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/other",
+   "quote": "they need to extend mathlib not stop.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-5-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "named theorems can be added to a list but that is not a blocker",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-5-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-5-f-s3-0",
+   "kind": "approve",
+   "move": "constrain/other",
+   "quote": "it is valid to restrategise periodically.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-5-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-5-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(\"named theorems can be added to a list\")",
+   "answers": [
+    {
+     "act": "claude-14-turn-5-f-s2-0",
+     "quote": "(\"named theorems can be added to a list\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-5-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-5-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(\"valid to restrategise periodically\")",
+   "answers": [
+    {
+     "act": "claude-14-turn-5-f-s3-0",
+     "quote": "(\"valid to restrategise periodically\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-5-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-5-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(Schreier rank)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-5-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "A false-at-r=0 statement needs the operator's decision to change it."
+  },
+  {
+   "act": "claude-14-turn-5-r-3",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(results)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-5-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "11 hours with no close; the next receipts test the new rule."
+  }
+ ],
+ "unlabelled": []
+}

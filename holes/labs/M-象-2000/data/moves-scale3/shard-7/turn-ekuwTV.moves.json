@@ -1,0 +1,74 @@
+{
+ "record": "turn-ekuwTV",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-466-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/other",
+   "quote": "No, let's try a different approach.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-17-turn-465-r-3",
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-466-f-s2-0",
+   "kind": "report",
+   "move": "delegate/other",
+   "quote": "I've asked codex-10",
+   "answers": [],
+   "scope": {
+    "opens": "stepped-run narration",
+    "closes": null,
+    "within": "claude-17-turn-466-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-466-r-0",
+   "kind": "reply-mark",
+   "move": "report/observation",
+   "quote": "(codex-10 narrating a click)",
+   "answers": [
+    {
+     "act": "claude-17-turn-466-f-s2-0",
+     "quote": "(codex-10 narrating a click)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-466-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "The narration covers the 19 code-only nodes transcripts couldn't."
+  },
+  {
+   "act": "claude-17-turn-466-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(one thing to watch)",
+   "answers": [
+    {
+     "act": "claude-17-turn-466-f-s2-0",
+     "quote": "(one thing to watch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-466-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

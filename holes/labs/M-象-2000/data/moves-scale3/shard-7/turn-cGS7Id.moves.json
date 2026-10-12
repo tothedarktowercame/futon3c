@@ -1,0 +1,136 @@
+{
+ "record": "turn-cGS7Id",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "No, we don't want a special one off watcher.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "We want a fully functional token-management system",
+   "answers": [],
+   "scope": {
+    "opens": "token-management system requirement",
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the token system) Understood, no watcher",
+   "answers": [
+    {
+     "act": "claude-17-turn-10@turn-cGS7Id-f-s2-0",
+     "quote": "(the token system) Understood, no watcher",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-10@turn-cGS7Id-f-s1-0",
+     "quote": "(the token system) Understood, no watcher",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how the stasis happens)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the design, `6819c30d` in E-agency-work-orders)",
+   "answers": [
+    {
+     "act": "claude-17-turn-10@turn-cGS7Id-f-s2-0",
+     "quote": "(the design, `6819c30d` in E-agency-work-orders)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-r-3",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(two packets running, with parks)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-r-4",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(then W3)",
+   "answers": [
+    {
+     "act": "claude-17-turn-10@turn-cGS7Id-f-s2-0",
+     "quote": "(then W3)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-10@turn-cGS7Id-r-5",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(one gap)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-10@turn-cGS7Id-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

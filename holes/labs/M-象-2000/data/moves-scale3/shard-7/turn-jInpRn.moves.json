@@ -1,0 +1,116 @@
+{
+ "record": "turn-jInpRn",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-416-f-s1-0",
+   "kind": "withdraw",
+   "move": "constrain/other",
+   "quote": "we can stop backfill outside of the pre-August 22nd window",
+   "answers": [],
+   "scope": {
+    "opens": "analysis-over-backfill focus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-416-f-s1-1",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "and do the analysis",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-416-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-416-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "Gist: The backfill is stopped, and two analysis jobs are running",
+   "answers": [
+    {
+     "act": "claude-17-turn-416-f-s1-0",
+     "quote": "Gist: The backfill is stopped, and two analysis jobs are running",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-416-f-s1-1",
+     "quote": "Gist: The backfill is stopped, and two analysis jobs are running",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-416-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-416-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(backfill stopped)",
+   "answers": [
+    {
+     "act": "claude-17-turn-416-f-s1-0",
+     "quote": "(backfill stopped)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-416-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-416-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(the two jobs)",
+   "answers": [
+    {
+     "act": "claude-17-turn-416-f-s1-1",
+     "quote": "(the two jobs)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-416-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-416-r-3",
+   "kind": "reply-mark",
+   "move": "defer/until",
+   "quote": "(labelling the new patterns)",
+   "answers": [
+    {
+     "act": "claude-17-turn-416-f-s1-1",
+     "quote": "(labelling the new patterns)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-416-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

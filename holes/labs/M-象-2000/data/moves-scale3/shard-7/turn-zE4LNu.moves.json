@@ -1,0 +1,118 @@
+{
+ "record": "turn-zE4LNu",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-491-f-s1-0",
+   "kind": "retract",
+   "move": "retract/correction",
+   "quote": "Sorry I meant C-c ;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-491-r-0",
+   "kind": "reply-mark",
+   "move": "explain/answer-question",
+   "quote": "(`C-c ;`) Thanks, found it.",
+   "answers": [
+    {
+     "act": "claude-17-turn-491-f-s1-0",
+     "quote": "(`C-c ;`) Thanks, found it.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "C-c ; marks exploration",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-491-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what's on record) 50 analyses",
+   "answers": [
+    {
+     "act": "claude-17-turn-491-f-s1-0",
+     "quote": "(what's on record) 50 analyses",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-491-r-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-491-r-2",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(how an example would be built)",
+   "answers": [
+    {
+     "act": "claude-17-turn-491-f-s1-0",
+     "quote": "(how an example would be built)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-491-r-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-491-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/impact",
+   "quote": "(what it would show of the 象 model)",
+   "answers": [
+    {
+     "act": "claude-17-turn-491-f-s1-0",
+     "quote": "(what it would show of the 象 model)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-491-r-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-491-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits) Exchanges would be joined by the names they share",
+   "answers": [
+    {
+     "act": "claude-17-turn-491-f-s1-0",
+     "quote": "(limits) Exchanges would be joined by the names they share",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-491-r-0"
+   },
+   "confidence": "high",
+   "note": "Honest scope: a hand-built exemplar, not mined automation."
+  }
+ ],
+ "unlabelled": []
+}

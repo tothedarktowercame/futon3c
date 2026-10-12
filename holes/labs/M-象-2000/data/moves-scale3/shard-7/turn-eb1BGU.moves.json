@@ -1,0 +1,188 @@
+{
+ "record": "turn-eb1BGU",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-58-f-s1-0",
+   "kind": "explain",
+   "move": "explore/open-question",
+   "quote": "R11 in this framing sounds close to ideas from E-the-dark-tower-3.md",
+   "answers": [],
+   "scope": {
+    "opens": "R11 vs dark-tower-3 comparison",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(status) The revised R11 module builds.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-1",
+   "kind": "reply-mark",
+   "move": "explain/map",
+   "quote": "(first: what \"compose coherently\" means)",
+   "answers": [
+    {
+     "act": "claude-2-turn-58-f-s1-0",
+     "quote": "(first: what \"compose coherently\" means)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-2",
+   "kind": "reply-mark",
+   "move": "report/analysis",
+   "quote": "(resource conservation)",
+   "answers": [
+    {
+     "act": "claude-2-turn-58-f-s1-0",
+     "quote": "(resource conservation)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-3",
+   "kind": "reply-mark",
+   "move": "explain/map",
+   "quote": "(second: the operator as one of the parties)",
+   "answers": [
+    {
+     "act": "claude-2-turn-58-f-s1-0",
+     "quote": "(second: the operator as one of the parties)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-4",
+   "kind": "reply-mark",
+   "move": "explain/map",
+   "quote": "(third: silence)",
+   "answers": [
+    {
+     "act": "claude-2-turn-58-f-s1-0",
+     "quote": "(third: silence)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-5",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(silence, limit)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-6",
+   "kind": "reply-mark",
+   "move": "disagree/other",
+   "quote": "(where they differ)",
+   "answers": [
+    {
+     "act": "claude-2-turn-58-f-s1-0",
+     "quote": "(where they differ)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-7",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(review of `d84a603bba`)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-8",
+   "kind": "reply-mark",
+   "move": "report/other",
+   "quote": "(records)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-58-r-9",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next)",
+   "answers": [
+    {
+     "act": "claude-2-turn-58-f-s1-0",
+     "quote": "(next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

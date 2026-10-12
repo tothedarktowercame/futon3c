@@ -1,0 +1,87 @@
+{
+ "record": "turn-uOMwsQ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-11-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "lemma works should lead to closures",
+   "answers": [],
+   "scope": {
+    "opens": "lemmas-must-close expectation",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-11-f-s1-1",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "it did historically",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-11-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what changed)",
+   "answers": [
+    {
+     "act": "claude-14-turn-11-f-s1-0",
+     "quote": "(what changed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-11-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(where each problem stands now)",
+   "answers": [
+    {
+     "act": "claude-14-turn-11-f-s1-0",
+     "quote": "(where each problem stands now)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-11-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Header-only paragraph; the per-problem table is not in the record."
+  },
+  {
+   "act": "claude-14-turn-11-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(loops) Both loops restarted at 16:41.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-11-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,80 @@
+{
+ "record": "turn-vVl2qr",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-519-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "That sounds like a good plan",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-17-turn-518-r-3",
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-519-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatch",
+   "quote": "(items 2 and 3)",
+   "answers": [
+    {
+     "act": "claude-17-turn-519-f-s1-0",
+     "quote": "(items 2 and 3)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-519-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the Element spec)",
+   "answers": [
+    {
+     "act": "claude-17-turn-519-f-s1-0",
+     "quote": "(the Element spec)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The spec for Codex-owned items, with the draft-first ordering and dotted 小象 style."
+  },
+  {
+   "act": "claude-17-turn-519-r-2",
+   "kind": "reply-mark",
+   "move": "defer/until",
+   "quote": "(correcting marks from Element)",
+   "answers": [
+    {
+     "act": "claude-17-turn-519-f-s1-0",
+     "quote": "(correcting marks from Element)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

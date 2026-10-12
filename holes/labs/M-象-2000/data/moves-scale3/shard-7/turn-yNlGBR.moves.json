@@ -1,0 +1,81 @@
+{
+ "record": "turn-yNlGBR",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-527-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-17-turn-526-r-1",
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-527-r-0",
+   "kind": "reply-mark",
+   "move": "report/built",
+   "quote": "(how they work) `M-x 象-off`",
+   "answers": [
+    {
+     "act": "claude-17-turn-527-f-s1-0",
+     "quote": "(how they work) `M-x 象-off`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Implements 象-off/象-on per the war-room pattern: a required re-arm condition."
+  },
+  {
+   "act": "claude-17-turn-527-r-1",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(testing) I tested them in a separate batch Emacs",
+   "answers": [
+    {
+     "act": "claude-17-turn-527-f-s1-0",
+     "quote": "(testing) I tested them in a separate batch Emacs",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-527-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits)",
+   "answers": [
+    {
+     "act": "claude-17-turn-527-f-s1-0",
+     "quote": "(limits)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "No deregistration (not asked); off state is per-Emacs-session."
+  }
+ ],
+ "unlabelled": []
+}

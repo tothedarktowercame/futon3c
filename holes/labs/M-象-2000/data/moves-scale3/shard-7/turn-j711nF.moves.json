@@ -1,0 +1,61 @@
+{
+ "record": "turn-j711nF",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-55@turn-j711nF-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-55@turn-j711nF-r-0",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(one change from what I proposed)",
+   "answers": [
+    {
+     "act": "claude-17-turn-55@turn-j711nF-f-s1-0",
+     "quote": "(one change from what I proposed)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The two-item acceptance split is scoped out of W1."
+  },
+  {
+   "act": "claude-17-turn-55@turn-j711nF-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what W1 builds)",
+   "answers": [
+    {
+     "act": "claude-17-turn-55@turn-j711nF-f-s1-0",
+     "quote": "(what W1 builds)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

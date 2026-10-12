@@ -1,0 +1,135 @@
+{
+ "record": "turn-xZsZGu",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-396-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "we've basically delivered what M-points-de-fuite was asking for",
+   "answers": [],
+   "scope": {
+    "opens": "points-de-fuite delivery review",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-396-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I think the new system is better.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-396-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-396-r-0",
+   "kind": "reply-mark",
+   "move": "approve/other",
+   "quote": "Gist: I agree the new marks are better",
+   "answers": [
+    {
+     "act": "claude-17-turn-396-f-s2-0",
+     "quote": "Gist: I agree the new marks are better",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-396-f-s1-0",
+     "quote": "Gist: I agree the new marks are better",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-396-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-396-r-1",
+   "kind": "reply-mark",
+   "move": "report/context",
+   "quote": "(what the mission asked for)",
+   "answers": [
+    {
+     "act": "claude-17-turn-396-f-s1-0",
+     "quote": "(what the mission asked for)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-396-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-396-r-2",
+   "kind": "reply-mark",
+   "move": "explain/map",
+   "quote": "(why the new setup fits better)",
+   "answers": [
+    {
+     "act": "claude-17-turn-396-f-s1-0",
+     "quote": "(why the new setup fits better)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-396-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-396-r-3",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(the mission's acceptance list)",
+   "answers": [
+    {
+     "act": "claude-17-turn-396-f-s1-0",
+     "quote": "(the mission's acceptance list)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-396-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-396-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Offer",
+   "answers": [
+    {
+     "act": "claude-17-turn-396-f-s1-0",
+     "quote": "(one decision) Offer",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-396-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

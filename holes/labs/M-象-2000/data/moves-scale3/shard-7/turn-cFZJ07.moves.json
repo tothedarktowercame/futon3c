@@ -1,0 +1,113 @@
+{
+ "record": "turn-cFZJ07",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-464-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "what I'm more interested in in whether the keywords",
+   "answers": [],
+   "scope": {
+    "opens": "do-the-keywords-detect criterion",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-464-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "We can always rejig the tree to make the keywords fall differently",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-464-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-464-r-0",
+   "kind": "reply-mark",
+   "move": "verify/confirm",
+   "quote": "(do the keywords detect anything?) Yes",
+   "answers": [
+    {
+     "act": "claude-17-turn-464-f-s1-0",
+     "quote": "(do the keywords detect anything?) Yes",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Held-out agreement better than chance — the first route this week to clear that bar."
+  },
+  {
+   "act": "claude-17-turn-464-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(on all your recent turns)",
+   "answers": [
+    {
+     "act": "claude-17-turn-464-f-s1-0",
+     "quote": "(on all your recent turns)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-464-r-2",
+   "kind": "reply-mark",
+   "move": "report/analysis",
+   "quote": "(with the everyday words removed)",
+   "answers": [
+    {
+     "act": "claude-17-turn-464-f-s1-0",
+     "quote": "(with the everyday words removed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Ablation: detection drops but holds above chance without the 12 everyday cues."
+  },
+  {
+   "act": "claude-17-turn-464-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what I'd look at next)",
+   "answers": [
+    {
+     "act": "claude-17-turn-464-f-s2-0",
+     "quote": "(what I'd look at next)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-464-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

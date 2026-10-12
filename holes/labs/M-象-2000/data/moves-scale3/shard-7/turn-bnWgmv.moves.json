@@ -1,0 +1,112 @@
+{
+ "record": "turn-bnWgmv",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-395-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "the timing issues between Emacs and JVM are worth exploring",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-395-f-s1-1",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "(㊭:agree)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-17-turn-394-r-3",
+    "within": "claude-17-turn-395-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Agrees to fix 1 now, 2 later."
+  },
+  {
+   "act": "claude-17-turn-395-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the log shows)",
+   "answers": [
+    {
+     "act": "claude-17-turn-395-f-s1-0",
+     "quote": "(what the log shows)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-395-r-1",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what I couldn't pin down)",
+   "answers": [
+    {
+     "act": "claude-17-turn-395-f-s1-0",
+     "quote": "(what I couldn't pin down)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-395-r-2",
+   "kind": "reply-mark",
+   "move": "report/built",
+   "quote": "(the Emacs change, commits 53dbffd2, 6fdced7f, d63d2647)",
+   "answers": [
+    {
+     "act": "claude-17-turn-395-f-s1-1",
+     "quote": "(the Emacs change, commits 53dbffd2, 6fdced7f, d63d2647)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-395-r-3",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-17-turn-395-f-s1-1",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

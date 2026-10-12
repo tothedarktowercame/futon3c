@@ -1,0 +1,81 @@
+{
+ "record": "turn-m18HXL",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-46@turn-m18HXL-f-s1-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I've done the dialogue as instructed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-46@turn-m18HXL-r-0",
+   "kind": "reply-mark",
+   "move": "verify/check-live",
+   "quote": "(what I checked) I copied the three stored records",
+   "answers": [
+    {
+     "act": "claude-17-turn-46@turn-m18HXL-f-s1-0",
+     "quote": "(what I checked) I copied the three stored records",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Turn-by-turn check of the kernel run against what was typed."
+  },
+  {
+   "act": "claude-17-turn-46@turn-m18HXL-r-1",
+   "kind": "reply-mark",
+   "move": "report/observation",
+   "quote": "(two smaller observations)",
+   "answers": [
+    {
+     "act": "claude-17-turn-46@turn-m18HXL-f-s1-0",
+     "quote": "(two smaller observations)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The new bracket rule linked the operator's words at once."
+  },
+  {
+   "act": "claude-17-turn-46@turn-m18HXL-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I fix the two defects",
+   "answers": [
+    {
+     "act": "claude-17-turn-46@turn-m18HXL-f-s1-0",
+     "quote": "(one decision) Shall I fix the two defects",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
