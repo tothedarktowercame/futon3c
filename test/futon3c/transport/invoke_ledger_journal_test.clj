@@ -198,3 +198,22 @@
         (#'http/invoke-ledger-write! (assoc-in d [:jobs "a" :finished-at] "t"))
         (is (= (assoc-in d [:jobs "a" :finished-at] "t")
                (#'http/load-invoke-jobs-ledger)))))))
+
+(deftest snapshot-replaced-by-another-writer-is-re-snapshotted
+  ;; 2026-10-12: a test JVM on the live default path left a 102-byte empty
+  ;; ledger under the live journal; appends continued against a snapshot that
+  ;; was no longer there, and the next load would have refused.
+  (with-store
+    (fn [target _]
+      (let [a (ledger {"a" {:job-id "a" :state "queued"}} ["a"] {} 1)
+            b (assoc-in a [:jobs "a" :state] "running")
+            c (assoc-in b [:jobs "a" :state] "done")]
+        (#'http/invoke-ledger-write! a)
+        (swap! (var-get #'http/!invoke-ledger-journal-state)
+               update-vals #(assoc % :snapshot-size Long/MAX_VALUE))
+        (#'http/invoke-ledger-write! b)
+        (Thread/sleep 5)
+        (spit target (pr-str {:jobs {} :job-order [] :trace->job {}
+                              :journal/snapshot-id "stray"}))
+        (#'http/invoke-ledger-write! c)
+        (is (= c (#'http/load-invoke-jobs-ledger)))))))

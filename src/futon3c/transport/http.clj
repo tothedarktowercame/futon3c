@@ -757,6 +757,18 @@
 (defn- invoke-jobs-journal-path []
   (str (invoke-jobs-store-path) ".journal"))
 
+(defn- file-stamp
+  "Identity of the file at PATH as [file-key size mtime-ms], or nil when absent.
+   A journal writer records the stamp of the snapshot it wrote; a different
+   stamp before an append means another process replaced the snapshot."
+  [path]
+  (try
+    (let [attrs (Files/readAttributes (Path/of (str path) (make-array String 0))
+                                      java.nio.file.attribute.BasicFileAttributes
+                                      (make-array java.nio.file.LinkOption 0))]
+      [(str (.fileKey attrs)) (.size attrs) (.toMillis (.lastModifiedTime attrs))])
+    (catch Throwable _ nil)))
+
 (defn- force-parent-directory!
   [^Path parent]
   (with-open [directory (FileChannel/open
@@ -828,6 +840,7 @@
     (let [state {:ledger ledger
                  :snapshot-id snapshot-id
                  :snapshot-size (.length (io/file (invoke-jobs-store-path)))
+                 :snapshot-stamp (file-stamp (invoke-jobs-store-path))
                  :journal-seq 0}]
       (try
         (replace-journal! snapshot-id)
@@ -895,7 +908,17 @@
                       (Path/of (invoke-jobs-store-path) (make-array String 0))))
           state (get @!invoke-ledger-journal-state store)
           journal-file (io/file (invoke-jobs-journal-path))]
+      ;; Another process can replace the snapshot (seen 2026-10-12: a test JVM
+      ;; on the default path left a 102-byte empty ledger under the live
+      ;; journal). Appending against a snapshot that is not ours would make the
+      ;; next load fail; take a fresh snapshot instead, as the whole-file
+      ;; writer used to heal such a clobber at its next flush.
+      (when (and state (not= (:snapshot-stamp state) (file-stamp store)))
+        (binding [*out* *err*]
+          (println (str "[invoke-ledger] snapshot at " store
+                        " was replaced by another writer; re-snapshotting"))))
       (if (or (nil? state)
+              (not= (:snapshot-stamp state) (file-stamp store))
               (> (.length journal-file) (long (:snapshot-size state))))
         (try
           (let [new-state (persist-invoke-jobs-snapshot! ledger)]

@@ -133,3 +133,21 @@
         (let [next (assoc old :entries {"new" {:id "new"}})]
           (persist! next)
           (is (= (assoc next :draining #{}) (load-state))))))))
+
+(deftest snapshot-replaced-by-another-writer-is-re-snapshotted
+  ;; Another JVM on the same path (2026-10-12: a test run on the live default)
+  ;; replaces the snapshot. The next write must not append against it.
+  (with-store
+    (fn [store _]
+      (let [a (mutate (empty-state) 1)
+            b (mutate a 2)
+            c (mutate b 3)]
+        (persist! a)
+        ;; keep the size rule from re-snapshotting, so only the guard can
+        (swap! (var-get #'turn-queue/!journal-state)
+               update-vals #(assoc % :snapshot-size Long/MAX_VALUE))
+        (persist! b)
+        (Thread/sleep 5)
+        (spit store (pr-str (assoc (empty-state) :journal/snapshot-id "stray")))
+        (persist! c)
+        (is (= (assoc c :draining #{}) (load-state)))))))

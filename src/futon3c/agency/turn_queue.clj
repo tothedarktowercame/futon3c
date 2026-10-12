@@ -73,6 +73,18 @@
 
 (defn- journal-path [] (str (queue-store-path) ".journal"))
 
+(defn- file-stamp
+  "Identity of the file at PATH as [file-key size mtime-ms], or nil when absent.
+   A different stamp before an append means another process replaced the
+   snapshot under this writer's journal."
+  [path]
+  (try
+    (let [attrs (Files/readAttributes (Path/of (str path) (make-array String 0))
+                                      java.nio.file.attribute.BasicFileAttributes
+                                      (make-array java.nio.file.LinkOption 0))]
+      [(str (.fileKey attrs)) (.size attrs) (.toMillis (.lastModifiedTime attrs))])
+    (catch Throwable _ nil)))
+
 (defn- apply-journal-record [state record]
   (let [state (-> state
                   (update :entries #(apply dissoc % (:entries-drop record)))
@@ -175,7 +187,8 @@
         target (.toAbsolutePath (Path/of (queue-store-path) (make-array String 0)))]
     (atomic-write! target (pr-str (assoc state :journal/snapshot-id snapshot-id)) :snapshot)
     (let [coordinates {:state state :snapshot-id snapshot-id
-                       :snapshot-size (.length (.toFile target)) :journal-seq 0}]
+                       :snapshot-size (.length (.toFile target))
+                       :snapshot-stamp (file-stamp target) :journal-seq 0}]
       (try
         (replace-journal! snapshot-id)
         coordinates
@@ -233,7 +246,11 @@
       (try
         (let [coordinates (get @!journal-state store)
               journal (io/file (journal-path))]
+          (when (and coordinates (not= (:snapshot-stamp coordinates) (file-stamp store)))
+            (println (str "[turn-queue] snapshot at " store
+                          " was replaced by another writer; re-snapshotting")))
           (if (or (nil? coordinates)
+                  (not= (:snapshot-stamp coordinates) (file-stamp store))
                   (> (.length journal) (long (:snapshot-size coordinates))))
             (try
               (swap! !journal-state assoc store (snapshot-write! state))
