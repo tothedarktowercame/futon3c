@@ -1,0 +1,79 @@
+{
+ "record": "turn-6pNItP",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-384-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe we should use that example as a \"negative example\" for priming future seats",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-384-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Gist: Done. Every new pack now carries two negative examples",
+   "answers": [
+    {
+     "act": "claude-17-turn-384-f-s1-0",
+     "quote": "Done. Every new pack now carries two negative examples",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-384-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the pack now says)",
+   "answers": [
+    {
+     "act": "claude-17-turn-384-f-s1-0",
+     "quote": "(what the pack now says)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-384-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what this doesn't cover) It only affects packs built from now on.",
+   "answers": [
+    {
+     "act": "claude-17-turn-384-f-s1-0",
+     "quote": "(what this doesn't cover)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

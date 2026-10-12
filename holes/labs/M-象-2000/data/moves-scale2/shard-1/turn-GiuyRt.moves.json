@@ -1,0 +1,98 @@
+{
+ "record": "turn-GiuyRt",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-50-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "a no visible offer message in claude-4 repl is an interesting exercise",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-50-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Your \"yes\" got \"no-visible-offer\"",
+   "answers": [
+    {
+     "act": "claude-17-turn-50-f-s1-0",
+     "quote": "Your \"yes\" got \"no-visible-offer\"",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-50-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(why it's a good exercise) The one paragraph shows four gaps:",
+   "answers": [
+    {
+     "act": "claude-17-turn-50-f-s1-0",
+     "quote": "(why it's a good exercise)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-50-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(a fix for 1 and 2, small) Treat a 🈳 paragraph",
+   "answers": [
+    {
+     "act": "claude-17-turn-50-f-s1-0",
+     "quote": "(a fix for 1 and 2, small)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-50-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I make that change to the recorder",
+   "answers": [
+    {
+     "act": "claude-17-turn-50-f-s1-0",
+     "quote": "(one decision) Shall I make that change",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

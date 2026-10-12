@@ -1,0 +1,244 @@
+{
+ "record": "turn-nYWAqm",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-537-f-s1-0",
+   "kind": "extend",
+   "move": "constrain/standing-rule",
+   "quote": "a multi-part work order should be accepted if all the parts are delivered",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s2-0",
+   "kind": "extend",
+   "move": "constrain/standing-rule",
+   "quote": "if the task involves routing handoffs to some other agent",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s3-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "a task may involve many such assignments, bellbacks, handoffs, routing.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s4-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "the \"handoff to another agent\" is just a step in the chain.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "But pausing there is not good.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s6-0",
+   "kind": "report",
+   "move": "report/case-study",
+   "quote": "Livee case: codex-18, line 6077.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s8-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "This probably needs a code-level intervention, not just strong words",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s9-0",
+   "kind": "explain",
+   "move": "report/context",
+   "quote": "We have a pattern called structure/cook-ting.flexiarg",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s10-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "It's a bit like we're creating a \"marble run\" for the xiaoxiang marks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-f-s11-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "codex-18 is not using these marks makes it all the more difficult",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-537-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the two examples) Both examples are now in `E-agency-work-orders.md` as requirements",
+   "answers": [
+    {
+     "act": "claude-17-turn-537-f-s1-0",
+     "quote": "(the two examples) Both examples are now in `E-agency-work-orders.md`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-537-f-s2-0",
+     "quote": "(the two examples)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-537-r-1",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "(the codex-18 case) Around line 6077 of codex-18's REPL buffer",
+   "answers": [
+    {
+     "act": "claude-17-turn-537-f-s6-0",
+     "quote": "(the codex-18 case) Around line 6077",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-537-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(the marks) codex-18 does use the marks",
+   "answers": [
+    {
+     "act": "claude-17-turn-537-f-s11-0",
+     "quote": "(the marks) codex-18 does use the marks",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-537-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the marble run) The excursion adds your image.",
+   "answers": [
+    {
+     "act": "claude-17-turn-537-f-s10-0",
+     "quote": "(the marble run) The excursion adds your image.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-537-f-s9-0",
+     "quote": "(the marble run)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-537-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(the open fix) The `inspect` fix is still an order nobody has given.",
+   "answers": [
+    {
+     "act": "claude-17-turn-537-f-s8-0",
+     "quote": "(the open fix)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

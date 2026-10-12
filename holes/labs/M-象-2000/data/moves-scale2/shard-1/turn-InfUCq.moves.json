@@ -1,0 +1,78 @@
+{
+ "record": "turn-InfUCq",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-474-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I still see that for now the red terms are underlined.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-474-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "They don't need underlining if they are red!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-474-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(red, no underline) Red terms no longer have an underline.",
+   "answers": [
+    {
+     "act": "claude-17-turn-474-f-s2-0",
+     "quote": "Red terms no longer have an underline.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-474-f-s1-0",
+     "quote": "Red terms no longer have an underline.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-474-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(checked) \"for now\" at the end of your last turn now shows the red face",
+   "answers": [
+    {
+     "act": "claude-17-turn-474-f-s1-0",
+     "quote": "(checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

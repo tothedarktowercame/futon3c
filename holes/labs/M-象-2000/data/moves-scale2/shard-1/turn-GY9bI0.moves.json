@@ -1,0 +1,111 @@
+{
+ "record": "turn-GY9bI0",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-465-f-s2-0",
+   "kind": "explain",
+   "move": "explain/expectation",
+   "quote": "The War Machine's agents should have self-talk or exchanges between them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-465-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "If we can find those transcripts, we should be able to figure out what they are doing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-465-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(the War Machine's own agents) The transcripts exist, but only four R-nodes have speakers.",
+   "answers": [
+    {
+     "act": "claude-17-turn-465-f-s2-0",
+     "quote": "The transcripts exist, but only four R-nodes have speakers.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "wm agent corpus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-465-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what's retained) There are two sources:",
+   "answers": [
+    {
+     "act": "claude-17-turn-465-f-s3-0",
+     "quote": "(what's retained) There are two sources:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "wm agent corpus"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-465-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits) This covers 4 of the 23 nodes.",
+   "answers": [
+    {
+     "act": "claude-17-turn-465-f-s3-0",
+     "quote": "(limits) This covers 4 of the 23 nodes.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "wm agent corpus"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-465-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(go-ahead) Shall I build the corpus and run the contrast?",
+   "answers": [
+    {
+     "act": "claude-17-turn-465-f-s3-0",
+     "quote": "(go-ahead) Shall I build the corpus",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "wm agent corpus"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

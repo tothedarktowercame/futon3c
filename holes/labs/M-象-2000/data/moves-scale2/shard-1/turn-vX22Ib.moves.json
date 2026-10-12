@@ -1,0 +1,80 @@
+{
+ "record": "turn-vX22Ib",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-2@turn-vX22Ib-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "M-x turn-stepper isn't available",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-2@turn-vX22Ib-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(M-x turn-stepper) `M-x turn-stepper` works again.",
+   "answers": [
+    {
+     "act": "claude-17-turn-2@turn-vX22Ib-f-s1-0",
+     "quote": "(M-x turn-stepper) `M-x turn-stepper` works again.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-2@turn-vX22Ib-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what changed) Two lines:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-2@turn-vX22Ib-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(other files not loaded) `futon-config.el` doesn't load two other 象 files",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-2@turn-vX22Ib-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(still open) After the restart the recorder is back to `files`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,98 @@
+{
+ "record": "turn-MEqvCK",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-413-f-s1-0",
+   "kind": "verify",
+   "move": "verify/feasibility-question",
+   "quote": "whether tasks like \"read and analyse all of Joe's circa-5000 turns\" would hammer futon1b",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-413-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Gist: Reading and analysing your roughly 5,000 turns doesn't load futon1b at all.",
+   "answers": [
+    {
+     "act": "claude-17-turn-413-f-s1-0",
+     "quote": "Reading and analysing your roughly 5,000 turns doesn't load futon1b at all.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-413-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I measured this turn)",
+   "answers": [
+    {
+     "act": "claude-17-turn-413-f-s1-0",
+     "quote": "(what I measured this turn)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-413-r-2",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(what is still unsafe)",
+   "answers": [
+    {
+     "act": "claude-17-turn-413-f-s1-0",
+     "quote": "(what is still unsafe)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-413-r-3",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why the Minard extraction was slower)",
+   "answers": [
+    {
+     "act": "claude-17-turn-413-f-s1-0",
+     "quote": "(why the Minard extraction was slower)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

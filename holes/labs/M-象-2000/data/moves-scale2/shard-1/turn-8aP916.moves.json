@@ -1,0 +1,143 @@
+{
+ "record": "turn-8aP916",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-506-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I think those could still be carried out in \"self-talk\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-506-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "I can \"clarify\" something based on investigating its properties.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-506-f-s4-0",
+   "kind": "explore",
+   "move": "explore/analogy",
+   "quote": "the operator turns here are just an elaborate self-talk",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-506-r-0",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "(self-talk) Taking that seriously fills most of the gap.",
+   "answers": [
+    {
+     "act": "claude-17-turn-506-f-s1-0",
+     "quote": "(self-talk) Taking that seriously fills most of the gap.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "self-talk reading",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-506-r-1",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "(how the uncovered nodes might read as self-talk)",
+   "answers": [
+    {
+     "act": "claude-17-turn-506-f-s1-0",
+     "quote": "(how the uncovered nodes might read as self-talk)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "self-talk reading"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-506-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(your operator turns as overheard self-talk) This fits the D3 ruling",
+   "answers": [
+    {
+     "act": "claude-17-turn-506-f-s4-0",
+     "quote": "(your operator turns as overheard self-talk)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "self-talk reading"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-506-r-3",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(what this changes in the table) The acts file already records who an act is addressed to",
+   "answers": [
+    {
+     "act": "claude-17-turn-506-f-s1-0",
+     "quote": "(what this changes in the table)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "self-talk reading"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-506-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I add a self-talk section",
+   "answers": [
+    {
+     "act": "claude-17-turn-506-f-s1-0",
+     "quote": "(one decision) Shall I add a self-talk section",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "self-talk reading"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

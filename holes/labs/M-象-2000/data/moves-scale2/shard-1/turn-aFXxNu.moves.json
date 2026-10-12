@@ -1,0 +1,73 @@
+{
+ "record": "turn-aFXxNu",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-53@turn-aFXxNu-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "please do those 2 unresolved actions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-53@turn-aFXxNu-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(the second cause) Emacs only sent a turn's reply to the JVM",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-53@turn-aFXxNu-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(backfill)",
+   "answers": [
+    {
+     "act": "claude-17-turn-53@turn-aFXxNu-f-s1-0",
+     "quote": "(backfill)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-53@turn-aFXxNu-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(discovery) kimi-1 has the packet.",
+   "answers": [
+    {
+     "act": "claude-17-turn-53@turn-aFXxNu-f-s1-0",
+     "quote": "(discovery) kimi-1 has the packet.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,117 @@
+{
+ "record": "turn-KeY5M3",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-403-f-s1-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "we'd want a similar table for understanding \"WM\" acts as well.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-403-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "the WM doesn't run in a REPL, the actions would be less linguistic, often.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-403-f-s3-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "We could send the legend to codex-10 and ask it to complete its version of the table.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-403-f-s4-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "That could become part of the run-time reporting from WM clicks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-403-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "Gist: I've asked codex-10 to build the War Machine's version of the table",
+   "answers": [
+    {
+     "act": "claude-17-turn-403-f-s3-0",
+     "quote": "I've asked codex-10 to build the War Machine's version of the table",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-403-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(the handoff)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-403-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why the packet is shaped this way) Since WM acts are mostly not linguistic",
+   "answers": [
+    {
+     "act": "claude-17-turn-403-f-s2-0",
+     "quote": "(why the packet is shaped this way)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-403-f-s1-0",
+     "quote": "(why the packet is shaped this way)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

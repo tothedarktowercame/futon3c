@@ -1,0 +1,130 @@
+{
+ "record": "turn-Mkg80S",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-497-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "That works for me.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-497-f-s2-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "We could do this for any set of turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-497-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "by sending from operator to  象  to agent",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-497-f-s4-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "maybe we won't do it live right away.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-497-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what I did) The probe is `holes/labs/M-diagramprover/flow_23519_agency_probe.clj`",
+   "answers": [
+    {
+     "act": "claude-17-turn-497-f-s1-0",
+     "quote": "(what I did)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-497-r-1",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what the gap means)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-497-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(the live version) Your pipeline, operator → 象 → agent",
+   "answers": [
+    {
+     "act": "claude-17-turn-497-f-s2-0",
+     "quote": "(the live version)",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-17-turn-497-f-s3-0",
+     "quote": "(the live version)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-497-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I add the \"nothing before this point\" flag",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

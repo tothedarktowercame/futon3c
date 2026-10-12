@@ -1,0 +1,105 @@
+{
+ "record": "turn-4Y6qFF",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-489-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Let's bring it onto master and try it out",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-489-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I seem to recall that we made some over the last couple of days",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-489-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what I did)",
+   "answers": [
+    {
+     "act": "claude-17-turn-489-f-s1-0",
+     "quote": "Fast-forwarded futon3c master",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-489-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(findings, in more detail)",
+   "answers": [
+    {
+     "act": "claude-17-turn-489-f-s2-0",
+     "quote": "(findings, in more detail)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-489-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-489-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next) The step from here to the War Machine",
+   "answers": [
+    {
+     "act": "claude-17-turn-489-f-s1-0",
+     "quote": "(next) The step from here to the War Machine",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

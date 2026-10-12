@@ -1,0 +1,111 @@
+{
+ "record": "turn-1sNkzc",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-47@turn-1sNkzc-f-s1-0",
+   "kind": "explain",
+   "move": "explain/expectation",
+   "quote": "it would be relatively easy to close the ports on my requests",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-47@turn-1sNkzc-f-s2-0",
+   "kind": "ask-action",
+   "move": "approve/plain",
+   "quote": "yes please fix/improve it and let me know whet it's ready for me to test",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-47@turn-1sNkzc-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what changed)",
+   "answers": [
+    {
+     "act": "claude-17-turn-47@turn-1sNkzc-f-s2-0",
+     "quote": "(what changed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-47@turn-1sNkzc-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Ports are still computed from 象's reading, not 小象's, for now.",
+   "answers": [
+    {
+     "act": "claude-17-turn-47@turn-1sNkzc-f-s1-0",
+     "quote": "Ports are still computed from 象's reading, not 小象's, for now.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-47@turn-1sNkzc-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked) Each fix has a test built from the three demo records.",
+   "answers": [
+    {
+     "act": "claude-17-turn-47@turn-1sNkzc-f-s2-0",
+     "quote": "(what I checked) Each fix has a test built from the three demo records.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-47@turn-1sNkzc-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(expected this time)",
+   "answers": [
+    {
+     "act": "claude-17-turn-47@turn-1sNkzc-f-s2-0",
+     "quote": "(expected this time)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

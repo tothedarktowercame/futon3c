@@ -1,0 +1,60 @@
+{
+ "record": "turn-NodQbx",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-517-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "please make commits including any updates to M-象-2000 and push to github",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-517-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(committed and pushed) I've updated M-象-2000",
+   "answers": [
+    {
+     "act": "claude-17-turn-517-f-s1-0",
+     "quote": "(committed and pushed) I've updated M-象-2000",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-517-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what the M-象-2000 update says) I added three entries",
+   "answers": [
+    {
+     "act": "claude-17-turn-517-f-s1-0",
+     "quote": "(what the M-象-2000 update says)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

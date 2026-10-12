@@ -1,0 +1,119 @@
+{
+ "record": "turn-WpMWo2",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-428-f-s1-0",
+   "kind": "continue",
+   "move": "approve/plain",
+   "quote": "OK, let's assume it will complete eventually!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-428-f-s2-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "the extended/new Minard diagram is not that different nor contains many surprises.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-428-f-s3-0",
+   "kind": "explore",
+   "move": "explore/hypothesis",
+   "quote": "Possibly an increased emphasis on \"assurance\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-428-f-s4-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "what would be useful would be a further-detail analysis",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-428-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "Gist: Yes, your guess holds.",
+   "answers": [
+    {
+     "act": "claude-17-turn-428-f-s3-0",
+     "quote": "Gist: Yes, your guess holds.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-428-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(families, 22 Aug–21 Sep vs 21 Sep–1 Oct, share of each window's hits)",
+   "answers": [
+    {
+     "act": "claude-17-turn-428-f-s4-0",
+     "quote": "(families, 22 Aug–21 Sep vs 21 Sep–1 Oct, share of each window's hits)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "low",
+   "note": "heading-only paragraph over a table"
+  },
+  {
+   "act": "claude-17-turn-428-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(how far this goes)",
+   "answers": [
+    {
+     "act": "claude-17-turn-428-f-s4-0",
+     "quote": "(how far this goes)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,79 @@
+{
+ "record": "turn-SuuilW",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-541-f-s1-0",
+   "kind": "verify",
+   "move": "verify/test-turn",
+   "quote": "This is a test turn, I have *象 stepper* open",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-541-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(your test turn) This turn is testing the old file-based path",
+   "answers": [
+    {
+     "act": "claude-17-turn-541-f-s1-0",
+     "quote": "(your test turn) This turn is testing the old file-based path",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-541-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what I did) I loaded the current `session-turn-analysis.el`",
+   "answers": [
+    {
+     "act": "claude-17-turn-541-f-s1-0",
+     "quote": "(what I did)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-541-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(watching the JVM test) For the turn after you switch",
+   "answers": [
+    {
+     "act": "claude-17-turn-541-f-s1-0",
+     "quote": "(watching the JVM test)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,86 @@
+{
+ "record": "turn-1dLu4P",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-430-f-s1-0",
+   "kind": "continue",
+   "move": "report/context",
+   "quote": "Speaking of colour,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-430-f-s1-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we could get some colour-codes for the \"C-c ;\" marks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-430-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why \"a few of them are already in colour\") The marks that already looked coloured",
+   "answers": [
+    {
+     "act": "claude-17-turn-430-f-s1-1",
+     "quote": "(why \"a few of them are already in colour\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "mark colour codes",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-430-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(the test) A new test checks four marks against their faces.",
+   "answers": [
+    {
+     "act": "claude-17-turn-430-f-s1-1",
+     "quote": "(the test) A new test checks four marks against their faces.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "mark colour codes"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-430-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(families figure) Still running with zai-2",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

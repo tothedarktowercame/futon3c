@@ -1,0 +1,130 @@
+{
+ "record": "turn-LSq0D1",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-492-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "what could be interesting would be to look at a small \"flow\" of turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-492-f-s3-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "we could look at how operator intent to explore an idea relates to agent-follow-up",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-492-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the six turns, as 象 read them)",
+   "answers": [
+    {
+     "act": "claude-17-turn-492-f-s1-0",
+     "quote": "(the six turns, as 象 read them)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "turn flow exemplar",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-492-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(operator intent and agent follow-up)",
+   "answers": [
+    {
+     "act": "claude-17-turn-492-f-s3-0",
+     "quote": "(operator intent and agent follow-up)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "turn flow exemplar"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-492-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(whether the patterns predicted anything)",
+   "answers": [
+    {
+     "act": "claude-17-turn-492-f-s3-0",
+     "quote": "(whether the patterns predicted anything)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "turn flow exemplar"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-492-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(making it the exemplar) Two steps, then the join:",
+   "answers": [
+    {
+     "act": "claude-17-turn-492-f-s1-0",
+     "quote": "(making it the exemplar)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "turn flow exemplar"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-492-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I start with step 1, the held-out prediction?",
+   "answers": [
+    {
+     "act": "claude-17-turn-492-f-s1-0",
+     "quote": "(one decision) Shall I start with step 1",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "turn flow exemplar"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

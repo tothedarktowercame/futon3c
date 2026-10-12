@@ -1,0 +1,130 @@
+{
+ "record": "turn-es3xLj",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-478-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK, that's good.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-478-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "it's better if I *don't* know what the keywords are so that I'm not biased towards them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-478-f-s3-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "we need to do is start to develop the strategy for 象 to look for \"more words like this\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-478-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we could do is create a Wittgenstein-style definition for the R-nodes,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-478-f-s4-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "we'd also want to be careful that we're capturing the actual Friston/AIF meaning",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-478-f-s5-0",
+   "kind": "explain",
+   "move": "report/context",
+   "quote": "The old glossary.tex would have *technical* definitions for AIF keywords in it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-478-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(a strategy for \"more words like this\") I'd give each R-node a two-part definition",
+   "answers": [
+    {
+     "act": "claude-17-turn-478-f-s3-0",
+     "quote": "(a strategy for \"more words like this\")",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-478-f-s4-0",
+     "quote": "I'd give each R-node a two-part definition",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "rnode definitions",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-478-r-1",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next step) I'd draft `rnode-definitions.edn`",
+   "answers": [
+    {
+     "act": "claude-17-turn-478-f-s5-0",
+     "quote": "the glossary paragraph it rests on",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "rnode definitions"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

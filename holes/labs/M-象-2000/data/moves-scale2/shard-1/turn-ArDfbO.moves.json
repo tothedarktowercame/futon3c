@@ -1,0 +1,118 @@
+{
+ "record": "turn-ArDfbO",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-27-f-s1-0",
+   "kind": "report",
+   "move": "report/intent",
+   "quote": "I also want to send a turn with a long quote in it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-27-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "I will ensure that I use the triple-greater-than form for that quote",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-27-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "On feed.html it should be given visible blockquote styling",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-27-f-s4-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "I won't send the turn until you assure me this is OK.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-27-r-0",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-17-turn-27-f-s2-0",
+     "quote": "(what I checked)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-27-r-1",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "(each reader of your turn)",
+   "answers": [
+    {
+     "act": "claude-17-turn-27-f-s2-0",
+     "quote": "(each reader of your turn)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-27-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(one thing outside this) Agent-chat's ordinary evidence row",
+   "answers": [
+    {
+     "act": "claude-17-turn-27-f-s2-0",
+     "quote": "(one thing outside this)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

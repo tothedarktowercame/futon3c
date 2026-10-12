@@ -1,0 +1,105 @@
+{
+ "record": "turn-hFxHzc",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-479-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "this is super interesting because it puts 象 in the position of being a tiny AIF agent itself,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-479-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "we don't need the same degree of processing that the War Machine has;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-479-f-s1-2",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "it should *itself* have policies for tagging texts etc.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-479-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(象 as a small AIF agent) Yes.",
+   "answers": [
+    {
+     "act": "claude-17-turn-479-f-s1-0",
+     "quote": "(象 as a small AIF agent) Yes.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-479-r-1",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "(keeping it small) This needs no Lean, cascades or War Machine machinery.",
+   "answers": [
+    {
+     "act": "claude-17-turn-479-f-s1-1",
+     "quote": "(keeping it small) This needs no Lean",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-479-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(order of work)",
+   "answers": [
+    {
+     "act": "claude-17-turn-479-f-s1-2",
+     "quote": "(order of work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

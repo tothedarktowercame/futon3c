@@ -1,0 +1,92 @@
+{
+ "record": "turn-CoAnc5",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-429-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I think \"figure\" would be nice b/c we could basically repeat the same style",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-429-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "Gist: zai-2, who built the current Minard page, is now building the family figure.",
+   "answers": [
+    {
+     "act": "claude-17-turn-429-f-s1-0",
+     "quote": "zai-2, who built the current Minard page, is now building the family figure",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "family figure",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-429-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(job and park) Job `invoke-1790892198239-29892-7955b4be`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-429-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the design)",
+   "answers": [
+    {
+     "act": "claude-17-turn-429-f-s1-0",
+     "quote": "(the design)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "family figure"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-429-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what will make it trustworthy) One test checks",
+   "answers": [
+    {
+     "act": "claude-17-turn-429-f-s1-0",
+     "quote": "(what will make it trustworthy)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "family figure"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

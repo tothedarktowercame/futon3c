@@ -1,0 +1,142 @@
+{
+ "record": "turn-LhnBVw",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-366-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Let's try Codex as a reader b/c I have a reset token for Codex",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-366-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "We could see if GPT-6-luna can do it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-366-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Gist: `gpt-6-luna` is refused, so the Codex reader is running on the default",
+   "answers": [
+    {
+     "act": "claude-17-turn-366-f-s1-0",
+     "quote": "the Codex reader is running on the default Codex model",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-366-f-s2-0",
+     "quote": "`gpt-6-luna` is refused",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-366-r-1",
+   "kind": "reply-mark",
+   "move": "explain/decline",
+   "quote": "(luna) I registered a new Codex seat, codex-9, with `gpt-6-luna`. Its first job failed",
+   "answers": [
+    {
+     "act": "claude-17-turn-366-f-s2-0",
+     "quote": "(luna) I registered a new Codex seat",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-366-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(what is running) I switched codex-9 to `gpt-5.6-sol`",
+   "answers": [
+    {
+     "act": "claude-17-turn-366-f-s1-0",
+     "quote": "(what is running)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-366-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what changed in the packet for chunk 3)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-366-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(comparing readers) Chunk 3 is the first under the new rules",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-366-r-5",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(if you want luna or astra)",
+   "answers": [
+    {
+     "act": "claude-17-turn-366-f-s2-0",
+     "quote": "(if you want luna or astra)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

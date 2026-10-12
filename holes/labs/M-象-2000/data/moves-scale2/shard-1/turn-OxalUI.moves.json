@@ -1,0 +1,80 @@
+{
+ "record": "turn-OxalUI",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-528-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "An external agent did some work on the McCarthy elephant logic",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-528-f-s1-1",
+   "kind": "verify",
+   "move": "verify/pointer",
+   "quote": "I believe it is in PR#68",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-528-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what else landed) Three commits since the merge build on it",
+   "answers": [
+    {
+     "act": "claude-17-turn-528-f-s1-1",
+     "quote": "(what else landed) Three commits since the merge build on it",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-528-r-1",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(the 象-off from earlier) This affects what I told you last turn.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-528-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "(two options)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

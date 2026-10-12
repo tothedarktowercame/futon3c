@@ -1,0 +1,79 @@
+{
+ "record": "turn-JVOrQG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-480-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/end-to-end",
+   "quote": "I'm happy for you to do 1-3 end to end, I don't need to preview the spec",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-480-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(step 1: the definitions file) futon0 `9725f42`",
+   "answers": [
+    {
+     "act": "claude-17-turn-480-f-s1-0",
+     "quote": "(step 1: the definitions file) futon0 `9725f42`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "rnode definitions rollout",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-480-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(step 2: what Codex is building)",
+   "answers": [
+    {
+     "act": "claude-17-turn-480-f-s1-0",
+     "quote": "(step 2: what Codex is building)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "rnode definitions rollout"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-480-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(step 3, next) The fixed rule above gets replaced by policies",
+   "answers": [
+    {
+     "act": "claude-17-turn-480-f-s1-0",
+     "quote": "(step 3, next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "rnode definitions rollout"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

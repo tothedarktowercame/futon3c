@@ -1,0 +1,105 @@
+{
+ "record": "turn-WQZmPC",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-508-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Regarding correcting the R7 row and adding the two proposed intents",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-508-f-s2-0",
+   "kind": "qualify",
+   "move": "clarify/ask-decision",
+   "quote": "I'm not sure how the wm-click-acts is used",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-508-f-s3-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "We could also point to our proposed alignment from the 象 side",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-508-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(belled to codex-10) I've belled codex-10 the three edits",
+   "answers": [
+    {
+     "act": "claude-17-turn-508-f-s1-0",
+     "quote": "(belled to codex-10) I've belled codex-10 the three edits",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-508-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(your question about how the file is used) I searched futon2",
+   "answers": [
+    {
+     "act": "claude-17-turn-508-f-s2-0",
+     "quote": "(your question about how the file is used)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-508-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what the bellback will be checked against)",
+   "answers": [
+    {
+     "act": "claude-17-turn-508-f-s1-0",
+     "quote": "(what the bellback will be checked against)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,67 @@
+{
+ "record": "turn-O2SDeG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-473-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "for the moment can you make all R-node terms in my turns red so I notice them?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-473-f-s2-0",
+   "kind": "extend",
+   "move": "ask-action/example-request",
+   "quote": "Give me an example as well for testing purposes.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-473-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "It should work the same way as underlining",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-473-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(details) The 112 existing tags in this buffer have switched to red",
+   "answers": [
+    {
+     "act": "claude-17-turn-473-f-s1-0",
+     "quote": "(details) The 112 existing tags",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

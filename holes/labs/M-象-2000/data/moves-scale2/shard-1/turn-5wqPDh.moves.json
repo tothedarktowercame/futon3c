@@ -1,0 +1,98 @@
+{
+ "record": "turn-5wqPDh",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-501-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "codex-10 (although it doesn't know it yet) is running the self-heal algorithm",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-501-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(codex-10 is running the self-heal arm) Agreed",
+   "answers": [
+    {
+     "act": "claude-17-turn-501-f-s1-0",
+     "quote": "(codex-10 is running the self-heal arm) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-501-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what's on file) I found nothing like it among the A items",
+   "answers": [
+    {
+     "act": "claude-17-turn-501-f-s1-0",
+     "quote": "(what's on file) I found nothing like it",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-501-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what the A item would say, in the draft's slots)",
+   "answers": [
+    {
+     "act": "claude-17-turn-501-f-s1-0",
+     "quote": "(what the A item would say",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-501-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I bell codex-10 with this?",
+   "answers": [
+    {
+     "act": "claude-17-turn-501-f-s1-0",
+     "quote": "(one decision) Shall I bell codex-10 with this?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

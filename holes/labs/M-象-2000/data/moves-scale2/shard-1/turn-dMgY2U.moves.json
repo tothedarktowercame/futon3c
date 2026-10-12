@@ -1,0 +1,86 @@
+{
+ "record": "turn-dMgY2U",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-51-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "i would imagine the ask was marked up correctly in an earlier claude round...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-51-f-s2-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "still waiting is a reminder about an earlier ask.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-51-r-0",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "I agree that's what 🈳 means here.",
+   "answers": [
+    {
+     "act": "claude-17-turn-51-f-s2-0",
+     "quote": "I agree that's what 🈳 means here.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-51-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what that shows) Most of the failure is at the point where the ask is made.",
+   "answers": [
+    {
+     "act": "claude-17-turn-51-f-s1-0",
+     "quote": "(what that shows) Most of the failure",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-51-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I make both changes?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,125 @@
+{
+ "record": "turn-nMBR9W",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "while we are waiting on the kimi stuff, I think we should work some on the actual logic;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-f-s1-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we had done a small pilot looking at a Fong-style interpretation",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(Fong per turn) Yes, I think it can run live and classically",
+   "answers": [
+    {
+     "act": "claude-17-turn-15@turn-nMBR9W-f-s1-1",
+     "quote": "(Fong per turn) Yes, I think it can run live and classically",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "fong per turn",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(the encoding) A flexiarg already has the shape of an open theory",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(spike, just run) I built wr-26 and r20 that way",
+   "answers": [
+    {
+     "act": "claude-17-turn-15@turn-nMBR9W-f-s1-1",
+     "quote": "(spike, just run)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what per turn would compute)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(the bottleneck) Each pattern needs its two tests",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-15@turn-nMBR9W-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) The Kimis are all busy. Shall I build the core myself",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

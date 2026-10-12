@@ -1,0 +1,112 @@
+{
+ "record": "turn-STbLRn",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-498-f-s1-0",
+   "kind": "report-problem",
+   "move": "clarify/ask-decision",
+   "quote": "I'm not sure what the refusals are saying.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-498-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "You claimed \"my 🈸 posted no offer\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-498-f-s3-0",
+   "kind": "explain",
+   "move": "explain/counter",
+   "quote": "🈸:yes does have an obvious interpretation",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-498-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(what the refusal says) The refusal reports a gap in the record",
+   "answers": [
+    {
+     "act": "claude-17-turn-498-f-s1-0",
+     "quote": "(what the refusal says) The refusal reports a gap in the record",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-498-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why it's built that way) Offers were designed as explicit records",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-498-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(fix on the reading side) When no stored offer is visible",
+   "answers": [
+    {
+     "act": "claude-17-turn-498-f-s2-0",
+     "quote": "(fix on the reading side)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-498-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I make that change",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

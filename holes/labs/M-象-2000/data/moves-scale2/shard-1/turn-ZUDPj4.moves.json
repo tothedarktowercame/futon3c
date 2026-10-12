@@ -1,0 +1,85 @@
+{
+ "record": "turn-ZUDPj4",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-533-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "On turn-stepper: OK, I see it but it is currently far out of date.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-533-f-s2-0",
+   "kind": "report",
+   "move": "report/observed-output",
+   "quote": "It says frame 182 / 182, with a date that's 2 days ago",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-533-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(cause and fix) `M-x turn-stepper` opened from its cache",
+   "answers": [
+    {
+     "act": "claude-17-turn-533-f-s1-0",
+     "quote": "(cause and fix)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-533-f-s2-0",
+     "quote": "(cause and fix)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-533-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why 281, not 286) The stepper leaves out your newest turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-533-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(still not pushed) futon3c master is now 3 commits ahead",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,124 @@
+{
+ "record": "turn-9RyYna",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-507-f-s1-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "Regarding \"🈸 is the exception\", that's similar to the War Machine too",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-507-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/repeat-question",
+   "quote": "Same question as your 🈸.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-507-f-s3-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "As to your \"one decision\", yes I approve.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-507-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "extend at R17 doesn't hold.",
+   "answers": [
+    {
+     "act": "claude-17-turn-507-f-s1-0",
+     "quote": "extend at R17 doesn't hold.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-507-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what \"holds up\" means) For each candidate I opened the function",
+   "answers": [
+    {
+     "act": "claude-17-turn-507-f-s1-0",
+     "quote": "(what \"holds up\" means)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-507-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the ones that didn't hold)",
+   "answers": [
+    {
+     "act": "claude-17-turn-507-f-s2-0",
+     "quote": "(the ones that didn't hold)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-507-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(still open) Last turn's question about correcting the R7 row",
+   "answers": [
+    {
+     "act": "claude-17-turn-507-f-s3-0",
+     "quote": "(still open) Last turn's question",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

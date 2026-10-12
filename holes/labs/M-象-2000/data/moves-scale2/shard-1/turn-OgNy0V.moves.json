@@ -1,0 +1,93 @@
+{
+ "record": "turn-OgNy0V",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-470-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "OK, please use Codex",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-470-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(R-node draft layer to Codex) codex-11 is building the deterministic R-node layer now.",
+   "answers": [
+    {
+     "act": "claude-17-turn-470-f-s1-0",
+     "quote": "codex-11 is building the deterministic R-node layer now.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-470-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what's in the job) Two parts, one commit each:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-470-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(tracking) Job `invoke-1790902221507-29999-6bd64aaa`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-470-r-3",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked) codex-15's commits are futon0 `06d2743`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-470-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what to expect) These are draft tags from a word list",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

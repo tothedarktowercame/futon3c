@@ -1,0 +1,118 @@
+{
+ "record": "turn-wSIRlv",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-542-f-s1-0",
+   "kind": "verify",
+   "move": "verify/test-turn",
+   "quote": "session-mode-turn-recorder configured, testing again",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-542-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(your second test) Your turn reached the JVM and became evidence",
+   "answers": [
+    {
+     "act": "claude-17-turn-542-f-s1-0",
+     "quote": "(your second test) Your turn reached the JVM",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-542-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what went wrong) Two separate problems:",
+   "answers": [
+    {
+     "act": "claude-17-turn-542-f-s1-0",
+     "quote": "(what went wrong) Two separate problems:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-542-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(fix, `b6cd9da4`) A turn that isn't sent to 象 straight away is now drafted",
+   "answers": [
+    {
+     "act": "claude-17-turn-542-f-s1-0",
+     "quote": "(fix, `b6cd9da4`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-542-r-3",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(your first test) The file-path turn worked end to end",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-542-r-4",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what to watch now) When this reply ends",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-542-r-5",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(still open) Neither path records the operator turn's evidence id",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

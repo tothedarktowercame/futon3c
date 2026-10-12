@@ -1,0 +1,80 @@
+{
+ "record": "turn-V3oRdx",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-8@turn-V3oRdx-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Yes please add it to E-agency-work-orders and bell it to kimi-1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-8@turn-V3oRdx-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(HUD in the excursion, adapter to kimi-1) Both done.",
+   "answers": [
+    {
+     "act": "claude-17-turn-8@turn-V3oRdx-f-s1-0",
+     "quote": "(HUD in the excursion, adapter to kimi-1) Both done.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-8@turn-V3oRdx-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the excursion section) It records:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-8@turn-V3oRdx-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the adapter packet) One behaviour",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-8@turn-V3oRdx-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(review) When it returns, I'll test the claim in the other direction too",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

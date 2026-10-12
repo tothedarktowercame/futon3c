@@ -1,0 +1,149 @@
+{
+ "record": "turn-IOt3kq",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I've passed Fable's deep research task to an external agent;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+   "kind": "ask-action",
+   "move": "delegate/two-asks",
+   "quote": "can you please 🈰 implement their polish notes and 🈯 discuss their strategy with me?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(implement their polish notes) All are done",
+   "answers": [
+    {
+     "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+     "quote": "(implement their polish notes) All are done",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(their strategy) The strategy has three parts:",
+   "answers": [
+    {
+     "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+     "quote": "(their strategy) The strategy has three parts:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "external strategy review",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(where the two join) Start with part 3.",
+   "answers": [
+    {
+     "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+     "quote": "(where the two join) Start with part 3.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "external strategy review"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(McCarthy side, order) I'd do R19 next.",
+   "answers": [
+    {
+     "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+     "quote": "(McCarthy side, order)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "external strategy review"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-r-4",
+   "kind": "reply-mark",
+   "move": "explain/decline",
+   "quote": "(Fong side) I'd hold off building typed ports and kernels",
+   "answers": [
+    {
+     "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+     "quote": "(Fong side) I'd hold off",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "external strategy review"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-37@turn-IOt3kq-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I count last week's agent ㊭ paragraphs",
+   "answers": [
+    {
+     "act": "claude-17-turn-37@turn-IOt3kq-f-s1-1",
+     "quote": "(one decision) Shall I count",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "external strategy review"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

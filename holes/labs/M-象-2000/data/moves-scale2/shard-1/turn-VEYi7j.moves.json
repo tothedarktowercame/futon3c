@@ -1,0 +1,99 @@
+{
+ "record": "turn-VEYi7j",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-49@turn-VEYi7j-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I have a new dialogue in the claude-7 repl to look at.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-49@turn-VEYi7j-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Let's add your order of work notes to E-agency-work-orders",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-49@turn-VEYi7j-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(the fourth defect)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-49@turn-VEYi7j-r-1",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "(claude-7's session, now)",
+   "answers": [
+    {
+     "act": "claude-17-turn-49@turn-VEYi7j-f-s1-0",
+     "quote": "(claude-7's session, now)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-49@turn-VEYi7j-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what went into E-agency-work-orders)",
+   "answers": [
+    {
+     "act": "claude-17-turn-49@turn-VEYi7j-f-s2-0",
+     "quote": "(what went into E-agency-work-orders)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-49@turn-VEYi7j-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I backfill ports for today's records",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

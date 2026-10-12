@@ -1,0 +1,112 @@
+{
+ "record": "turn-EMwTyb",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-410-f-s1-0",
+   "kind": "verify",
+   "move": "verify/status-request",
+   "quote": "let's make sure the processing is actually queued and running",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-410-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "ideally with counts that are tailable via a simple command",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-410-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Let's hold the \"One job\" until such time as we have the 象 dataset complete",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-410-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what's queued) The 68 pending turns",
+   "answers": [
+    {
+     "act": "claude-17-turn-410-f-s1-0",
+     "quote": "(what's queued) The 68 pending turns",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-410-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(watching progress)",
+   "answers": [
+    {
+     "act": "claude-17-turn-410-f-s1-1",
+     "quote": "(watching progress)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-410-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(pipes, your point from last turn) You were right",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-410-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(pipes fix) Shall I propose changing the author on park-resume",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

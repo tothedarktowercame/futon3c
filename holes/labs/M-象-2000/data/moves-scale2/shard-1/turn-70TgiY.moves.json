@@ -1,0 +1,232 @@
+{
+ "record": "turn-70TgiY",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-440-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Let's ask Zai for the cross tab",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-440-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(cross-tab to Zai) zai-1 is running the cross-tab now.",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "zai-1 is running the cross-tab now",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "pattern-intent cross-tab",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-440-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what I asked for) The inputs are the existing records",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(what I asked for)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(tracking) Zai job `invoke-1790893424519-29906-ca88b424`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-3",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(cross-tab result) The cross-tab says no",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(cross-tab result) The cross-tab says no",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-440-r-4",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked) futon0 `4f8f8244`, by zai-1",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(what I checked) futon0 `4f8f8244`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-5",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(why the headline numbers need a chance baseline)",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(why the headline numbers need a chance baseline)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-6",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what this suggests) The two labels seem to describe different things",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(what this suggests)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-7",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next step for R-numbers) For the patterns-to-R-numbers alignment",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(next step for R-numbers)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-8",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(go-ahead) Shall I start that labelling",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(go-ahead) Shall I start that labelling",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-9",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked) futon0 `f1d2b23`, by kimi-1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-10",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits of the check)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-440-r-11",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(R-number labelling, from the cross-tab) The question from the cross-tab result is still open",
+   "answers": [
+    {
+     "act": "claude-17-turn-440-f-s1-0",
+     "quote": "(R-number labelling, from the cross-tab)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "pattern-intent cross-tab"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

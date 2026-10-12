@@ -1,0 +1,105 @@
+{
+ "record": "turn-MW216j",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-52@turn-MW216j-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I think that overly constrains \"unresolved\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-52@turn-MW216j-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "it is better for us to try to parse it classically based on standard punctuation marks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-52@turn-MW216j-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what counts as a question) A \"?\" counts",
+   "answers": [
+    {
+     "act": "claude-17-turn-52@turn-MW216j-f-s2-0",
+     "quote": "(what counts as a question) A \"?\" counts",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-52@turn-MW216j-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-17-turn-52@turn-MW216j-f-s2-0",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-52@turn-MW216j-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(a cost) A rhetorical question in an explanation now makes an offer too.",
+   "answers": [
+    {
+     "act": "claude-17-turn-52@turn-MW216j-f-s1-0",
+     "quote": "(a cost)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-52@turn-MW216j-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(still open) The two earlier questions are still waiting",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

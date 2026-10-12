@@ -1,0 +1,98 @@
+{
+ "record": "turn-aihw20",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-3@turn-aihw20-f-s1-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "Probably the others should be added the same way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-3@turn-aihw20-f-s1-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "also to the futon-hot reloaded in case we work on them live during this session",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-3@turn-aihw20-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the other 象 files) Done. `futon-config.el` now requires `xiang-trace`",
+   "answers": [
+    {
+     "act": "claude-17-turn-3@turn-aihw20-f-s1-0",
+     "quote": "(the other 象 files) Done.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-3@turn-aihw20-f-s1-1",
+     "quote": "All three files (including `turn-stepper`) are on the hot-reload list",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-3@turn-aihw20-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(checked)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-3@turn-aihw20-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(a likely false alarm)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-3@turn-aihw20-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(still open) The recorder is still `files` after the restart",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

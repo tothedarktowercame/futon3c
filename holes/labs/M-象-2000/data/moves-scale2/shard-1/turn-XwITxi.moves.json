@@ -1,0 +1,136 @@
+{
+ "record": "turn-XwITxi",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-383-f-s1-0",
+   "kind": "explore",
+   "move": "explore/hypothesis",
+   "quote": "I guess that's the risk of batching things.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-383-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "We could give randomly assigned turns in the batches",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-383-f-s3-0",
+   "kind": "report",
+   "move": "report/uncertainty",
+   "quote": "I don'tk now what to do about this.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-383-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Gist: I don't think batching is the cause.",
+   "answers": [
+    {
+     "act": "claude-17-turn-383-f-s1-0",
+     "quote": "Gist: I don't think batching is the cause.",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-383-f-s3-0",
+     "quote": "My suggestion is to keep context and record the repetition",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-383-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why not batching) The loop picks turns oldest first",
+   "answers": [
+    {
+     "act": "claude-17-turn-383-f-s1-0",
+     "quote": "(why not batching)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-383-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what the repeats mean) When kimi-16 cites",
+   "answers": [
+    {
+     "act": "claude-17-turn-383-f-s3-0",
+     "quote": "(what the repeats mean)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-383-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what I'd do)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-383-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I add `context_patterns`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

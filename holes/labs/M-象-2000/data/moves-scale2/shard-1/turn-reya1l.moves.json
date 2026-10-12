@@ -1,0 +1,151 @@
+{
+ "record": "turn-reya1l",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-484-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK, got it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-484-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "It's kind of fun to discover the red words!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-484-f-s3-0",
+   "kind": "report",
+   "move": "report/uncertainty",
+   "quote": "I don't know enough about them to decide which are good ones",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-484-f-s4-0",
+   "kind": "continue",
+   "move": "defer/until",
+   "quote": "We can keep going for a while under these circumstances and then audit it later.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-484-f-s5-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall we look at M-aif-over-the-operator",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-484-f-s6-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "any overlap with what's in the mission will be pretty incidental.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-484-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(where the overlap is)",
+   "answers": [
+    {
+     "act": "claude-17-turn-484-f-s5-0",
+     "quote": "(where the overlap is)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-484-r-1",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(the decision log) Eight of the R-node/象 tests",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-484-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(writing it into the mission) I suggest adding a short \"Side C",
+   "answers": [
+    {
+     "act": "claude-17-turn-484-f-s5-0",
+     "quote": "(writing it into the mission)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-484-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I add that section?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

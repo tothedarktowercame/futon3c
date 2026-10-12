@@ -1,0 +1,111 @@
+{
+ "record": "turn-ZXmbOe",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-414-f-s1-0",
+   "kind": "agree",
+   "move": "approve/plain",
+   "quote": "I think we have now hardened futon1b a good amount",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-414-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "we're pretty much ready, in this case, to do the Minard analysis on the full window?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-414-r-0",
+   "kind": "reply-mark",
+   "move": "approve/with-amendment",
+   "quote": "Gist: Almost.",
+   "answers": [
+    {
+     "act": "claude-17-turn-414-f-s2-0",
+     "quote": "Gist: Almost.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-414-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(on \"without alarm bells\") Today I measured single pages",
+   "answers": [
+    {
+     "act": "claude-17-turn-414-f-s1-0",
+     "quote": "(on \"without alarm bells\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-414-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what the extension needs besides the fetch)",
+   "answers": [
+    {
+     "act": "claude-17-turn-414-f-s2-0",
+     "quote": "(what the extension needs besides the fetch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-414-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I dispatch step 1?",
+   "answers": [
+    {
+     "act": "claude-17-turn-414-f-s2-0",
+     "quote": "(one decision) Shall I dispatch step 1?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

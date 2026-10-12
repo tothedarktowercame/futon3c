@@ -1,0 +1,175 @@
+{
+ "record": "turn-9sg8SX",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-382-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "Rather than spending two hours reviewing everything meticulously",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-f-s2-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "E.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-f-s3-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "we could catch mismatches like your read-only-first-then-extend example",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-f-s4-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "This could also be a step towards adding classical heuristics to xiao-xiang",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what I built, commit 6be52885) `scripts/citation_audit.py`",
+   "answers": [
+    {
+     "act": "claude-17-turn-382-f-s1-0",
+     "quote": "(what I built, commit 6be52885)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "citation audit",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-382-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(word overlap doesn't work)",
+   "answers": [
+    {
+     "act": "claude-17-turn-382-f-s1-0",
+     "quote": "(word overlap doesn't work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "citation audit"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the frequency measures that do work)",
+   "answers": [
+    {
+     "act": "claude-17-turn-382-f-s3-0",
+     "quote": "(the frequency measures that do work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "citation audit"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next)",
+   "answers": [
+    {
+     "act": "claude-17-turn-382-f-s1-0",
+     "quote": "(next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "citation audit"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-382-r-4",
+   "kind": "reply-mark",
+   "move": "propose/extend",
+   "quote": "(toward 小象 heuristics) Two of these measures could serve as simple rules",
+   "answers": [
+    {
+     "act": "claude-17-turn-382-f-s4-0",
+     "quote": "(toward 小象 heuristics)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "citation audit"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-382-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I mark the 418 repeated citations as unverified now?",
+   "answers": [
+    {
+     "act": "claude-17-turn-382-f-s1-0",
+     "quote": "(one decision) Shall I mark the 418",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "citation audit"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

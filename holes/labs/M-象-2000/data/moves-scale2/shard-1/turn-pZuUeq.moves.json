@@ -1,0 +1,86 @@
+{
+ "record": "turn-pZuUeq",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-452-f-s1-0",
+   "kind": "verify",
+   "move": "verify/provenance-question",
+   "quote": "I don't know where the 52 @holds-at markers came from",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-452-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "we'll have several different ways of forming associations now.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-452-f-s3-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "You can ㊩:please rerun",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-452-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(provenance of the 52 markers) Taking each file's first `@holds-at` commit",
+   "answers": [
+    {
+     "act": "claude-17-turn-452-f-s1-0",
+     "quote": "(provenance of the 52 markers)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-452-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(not saved yet) The regenerated graph is written over the old file",
+   "answers": [
+    {
+     "act": "claude-17-turn-452-f-s3-0",
+     "quote": "(not saved yet)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

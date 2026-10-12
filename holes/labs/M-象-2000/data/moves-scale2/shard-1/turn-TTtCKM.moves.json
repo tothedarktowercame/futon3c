@@ -1,0 +1,137 @@
+{
+ "record": "turn-TTtCKM",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-425-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I have looked at the new Minard diagram.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-425-f-s2-0",
+   "kind": "agree",
+   "move": "approve/plain",
+   "quote": "there hasn't been any autonomous work outside of 6-hour gaps, which is plausible",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-425-f-s2-1",
+   "kind": "explain",
+   "move": "explain/reason",
+   "quote": "because I have done a lot of hands-on-the-keyboard work while here in Dallas.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-425-f-s3-0",
+   "kind": "verify",
+   "move": "verify/sanity-check-request",
+   "quote": "as a sanity check perhaps we could make a second box-diagram for 3-hour gaps",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-425-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "Gist: The figure doesn't show that.",
+   "answers": [
+    {
+     "act": "claude-17-turn-425-f-s2-0",
+     "quote": "Gist: The figure doesn't show that.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-425-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how the lower panel is built) It comes from `FORENSIC-autopilot-2026-09-21.md`",
+   "answers": [
+    {
+     "act": "claude-17-turn-425-f-s3-0",
+     "quote": "(how the lower panel is built)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-425-r-2",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "(other things a 3-hour version needs)",
+   "answers": [
+    {
+     "act": "claude-17-turn-425-f-s3-0",
+     "quote": "(other things a 3-hour version needs)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-425-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I dispatch this to zai-2?",
+   "answers": [
+    {
+     "act": "claude-17-turn-425-f-s3-0",
+     "quote": "(one decision) Shall I dispatch this to zai-2?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

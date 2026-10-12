@@ -1,0 +1,137 @@
+{
+ "record": "turn-TQBr0s",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-408-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "Hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-408-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "If there is too much evidence in the Evidence Landscape, I'm not sure what to do",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-408-f-s3-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "If the \"coordination traffic\" is actually automated material",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-408-f-s4-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I also find it somewhat implausible that I personally sent around 200 turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-408-r-0",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(my earlier count) I made the 843 sound like your turns, and they weren't.",
+   "answers": [
+    {
+     "act": "claude-17-turn-408-f-s4-0",
+     "quote": "(my earlier count) I made the 843 sound like your turns",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-408-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(the pipes) In this sample the labelling already does what you asked",
+   "answers": [
+    {
+     "act": "claude-17-turn-408-f-s3-0",
+     "quote": "(the pipes) In this sample the labelling already does what you asked",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-408-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(the Minard method) It's in `futon0/analysis/audits/`",
+   "answers": [
+    {
+     "act": "claude-17-turn-408-f-s2-0",
+     "quote": "(the Minard method)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-408-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I send the 21 September to today extension",
+   "answers": [
+    {
+     "act": "claude-17-turn-408-f-s2-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

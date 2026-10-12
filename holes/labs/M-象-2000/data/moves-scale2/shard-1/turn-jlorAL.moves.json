@@ -1,0 +1,80 @@
+{
+ "record": "turn-jlorAL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-536-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "This is more of an Excursion than a missions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-536-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Let's make it E-agency-work-orders.md as an excursion attached to M-象-2000",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-536-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(contents) The excursion has:",
+   "answers": [
+    {
+     "act": "claude-17-turn-536-f-s2-0",
+     "quote": "(contents) The excursion has:",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-536-r-1",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(the codex-19 case) I couldn't find it yet.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-536-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(step 1) kimi-1 is still working on step 1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

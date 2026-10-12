@@ -1,0 +1,123 @@
+{
+ "record": "turn-1XWJmJ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-485-f-s1-0",
+   "kind": "propose",
+   "move": "propose/framing",
+   "quote": "what we have done is a relatively arduous version of MAP.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-485-f-s2-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "The IDENTIFY gap was real and attested to already.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-485-f-s3-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "What we've done by developing this operator-facing language is try to show \"what's there already\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-485-f-s4-0",
+   "kind": "explain",
+   "move": "explain/metaphor",
+   "quote": "We needed some hard-won red pixels to do that.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-485-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(MAP framing) I agree, and I've written it into the mission that way",
+   "answers": [
+    {
+     "act": "claude-17-turn-485-f-s1-0",
+     "quote": "(MAP framing) I agree",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-17-turn-485-f-s3-0",
+     "quote": "(MAP framing) I agree",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "MAP section",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-485-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(contents of the section)",
+   "answers": [
+    {
+     "act": "claude-17-turn-485-f-s1-0",
+     "quote": "(contents of the section)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "MAP section"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-485-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(where this leaves IDENTIFY's work items) None of the eight work items has been completed.",
+   "answers": [
+    {
+     "act": "claude-17-turn-485-f-s2-0",
+     "quote": "(where this leaves IDENTIFY's work items)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "MAP section"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

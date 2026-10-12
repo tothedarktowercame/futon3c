@@ -1,0 +1,72 @@
+{
+ "record": "turn-qCKjmS",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-475-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I question whether AIF terms can semantically overlap intent queues.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-475-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the previous turn has been massively over-underlined",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-475-f-s5-0",
+   "kind": "report",
+   "move": "report/impact",
+   "quote": "It is confusing.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-475-r-0",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "(the purple fragments) Want me to change how they're shown? Two options:",
+   "answers": [
+    {
+     "act": "claude-17-turn-475-f-s3-0",
+     "quote": "(the purple fragments) Want me to change how they're shown?",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-17-turn-475-f-s5-0",
+     "quote": "(the purple fragments)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

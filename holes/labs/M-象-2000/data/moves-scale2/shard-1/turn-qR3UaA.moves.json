@@ -1,0 +1,98 @@
+{
+ "record": "turn-qR3UaA",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-44-f-s1-0",
+   "kind": "verify",
+   "move": "verify/status-request",
+   "quote": "are we in a position to show some \"real\" examples of the 象 family system working?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-44-r-0",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "Partly. One complete real example already works end to end",
+   "answers": [
+    {
+     "act": "claude-17-turn-44-f-s1-0",
+     "quote": "Partly. One complete real example already works end to end",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-44-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what is real today)",
+   "answers": [
+    {
+     "act": "claude-17-turn-44-f-s1-0",
+     "quote": "(what is real today)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-44-r-2",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what is not yet shown on real data)",
+   "answers": [
+    {
+     "act": "claude-17-turn-44-f-s1-0",
+     "quote": "(what is not yet shown on real data)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-44-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I check the reminder machine's log",
+   "answers": [
+    {
+     "act": "claude-17-turn-44-f-s1-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

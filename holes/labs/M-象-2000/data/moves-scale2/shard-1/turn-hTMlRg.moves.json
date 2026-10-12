@@ -1,0 +1,99 @@
+{
+ "record": "turn-hTMlRg",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-41@turn-hTMlRg-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Taking your briefing for codex-18 as the basis of an excursion",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-41@turn-hTMlRg-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "we can develop a robust and *repeatable* analysis strategy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-41@turn-hTMlRg-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(where it is) The file is `futon3c/holes/excursions/E-象-evaluation-strategy.md`",
+   "answers": [
+    {
+     "act": "claude-17-turn-41@turn-hTMlRg-f-s1-0",
+     "quote": "(where it is) The file is",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-41@turn-hTMlRg-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(how it uses 象's logic)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-41@turn-hTMlRg-r-2",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(making it repeatable) The fixed parts are the split into acts",
+   "answers": [
+    {
+     "act": "claude-17-turn-41@turn-hTMlRg-f-s1-1",
+     "quote": "(making it repeatable)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-41@turn-hTMlRg-r-3",
+   "kind": "reply-mark",
+   "move": "report/with-options",
+   "quote": "(things the first run must test)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

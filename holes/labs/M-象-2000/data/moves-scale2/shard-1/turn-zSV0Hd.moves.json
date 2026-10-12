@@ -1,0 +1,92 @@
+{
+ "record": "turn-zSV0Hd",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-451-f-s1-0",
+   "kind": "explain",
+   "move": "report/context",
+   "quote": "the R-numbers themselves are directly mapped to patterns in plop-2026",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-451-f-s1-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we could come at them via yet another method if they are in the giant connected component",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-451-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what the graph has) The graph is `storage/operator-turns/mined-pattern-graph.json`",
+   "answers": [
+    {
+     "act": "claude-17-turn-451-f-s1-1",
+     "quote": "(what the graph has)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-451-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(how the third route would work) For each sampled pattern",
+   "answers": [
+    {
+     "act": "claude-17-turn-451-f-s1-1",
+     "quote": "(how the third route would work)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-451-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(gaps the graph can't cover) R1 and R7 sit outside the giant component",
+   "answers": [
+    {
+     "act": "claude-17-turn-451-f-s1-1",
+     "quote": "(gaps the graph can't cover)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

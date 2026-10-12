@@ -1,0 +1,105 @@
+{
+ "record": "turn-YrgOAz",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-512-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes, please bell that out.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-512-f-s2-0",
+   "kind": "ask-action",
+   "move": "delegate/investigate",
+   "quote": "please investigate line 2651 and surrounding context",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-512-f-s3-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "QUOTE",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-512-r-0",
+   "kind": "reply-mark",
+   "move": "report/case-study",
+   "quote": "(timeline from 象's record `~/.emacs-graph/session-turn-analysis/turn-GYGJ2e.json`)",
+   "answers": [
+    {
+     "act": "claude-17-turn-512-f-s2-0",
+     "quote": "(timeline from 象's record",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-512-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what's wrong with how it showed up)",
+   "answers": [
+    {
+     "act": "claude-17-turn-512-f-s2-0",
+     "quote": "(what's wrong with how it showed up)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-512-r-2",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(the bells)",
+   "answers": [
+    {
+     "act": "claude-17-turn-512-f-s1-0",
+     "quote": "(the bells)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}
