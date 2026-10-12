@@ -1,0 +1,3239 @@
+{
+  "exported_at" : "2026-10-12T06:49:25.191032658Z",
+  "n_sessions" : 552,
+  "rows" : [ {
+    "agent" : "象",
+    "session" : "kimi-1cc6d772-7c79-4bf0-a061-21a33afc8203",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T17:13:28.598044965Z"
+  }, {
+    "agent" : "codex-2",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T15:22:45.192814467Z"
+  }, {
+    "agent" : "象-4",
+    "session" : "kimi-77ec1cb2-469c-4977-85b4-134f3a49ee71",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T02:06:19.611318547Z"
+  }, {
+    "agent" : "zai-4",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T15:53:18.216066380Z"
+  }, {
+    "agent" : "codex-26",
+    "session" : "01a107ff-2b55-73b0-a43d-2fef3f21b3d0",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T17:49:30.631546641Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4c8-44a9-7d03-a8a3-d3d09ce8c5ef",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:09:22.590877586Z"
+  }, {
+    "agent" : "codex-1",
+    "session" : null,
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T14:02:09.095347616Z"
+  }, {
+    "agent" : "codex-3",
+    "session" : null,
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T16:56:24.828507961Z"
+  }, {
+    "agent" : "象-1",
+    "session" : null,
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T20:20:54.214144538Z"
+  }, {
+    "agent" : "codex-25",
+    "session" : "01a1074e-16f0-7d82-ba2e-53c0859268b8",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T06:27:38.227032484Z"
+  }, {
+    "agent" : "codex-39",
+    "session" : "01a11ee9-15b4-73e1-90ec-7316de45a73e",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:15:21.839779159Z"
+  }, {
+    "agent" : "zai-3",
+    "session" : "b8a74b89-9674-49a9-9f9e-c2f5d29acde8",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T02:08:51.043705801Z"
+  }, {
+    "agent" : "zai-5",
+    "session" : "zai-c9c7efe4-be4c-4c13-94e7-51968b44f0bb",
+    "mission_id" : "M-aif-over-the-operator",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T14:52:37.974648147Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-5b0edbf9-b05b-44f7-b71b-c452d31874f8",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T03:26:03.836315176Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-2a7258f7-67dd-488d-87dd-b2d3ec704221",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T14:09:09.255951058Z"
+  }, {
+    "agent" : "codex-31",
+    "session" : "01a10ae0-9062-7e93-a1eb-2cb7f15c88c1",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T23:00:47.678511814Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f437-b5b6-72d2-8e22-6e82d80cf17f",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:32:35.472180747Z"
+  }, {
+    "agent" : "claude-3",
+    "session" : "355a71b9-163b-4f96-bebe-0497607deff0",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T16:36:43.865730841Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0d1a6-bbd4-7121-8ce4-a98b5ee5040c",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:18:47.057708649Z"
+  }, {
+    "agent" : "codex-43",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:23:19.853291753Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f347-73ae-7172-90d0-de269c41fefd",
+    "mission_id" : "M-formal-patterns",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T17:32:15.086959296Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a1074a-17d2-7dc3-aa4f-ddf3858d4ecf",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T14:42:38.072241824Z"
+  }, {
+    "agent" : "codex-61",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:48:40.024271650Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-4116de5b-8c44-4f57-96c0-073aea593eb0",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T18:14:22.141448078Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-8cc59ae7-a32a-4b10-83ab-82b67bbb9fb4",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T08:54:31.441165452Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-8e26d344-cdc1-4479-b274-010265b8674f",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T21:27:49.912859578Z"
+  }, {
+    "agent" : "codex-proof2b",
+    "session" : "01a0ea42-52eb-76a0-8ee6-05e66bea17a5",
+    "mission_id" : "M-autonomous-pattern-lifecycle",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T21:31:08.822289116Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f934-5aef-7f53-ba3c-ae85ecca4ecd",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T20:45:08.135124222Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f41a-2540-7a41-bacd-166d30b2ff5e",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:00:19.211138022Z"
+  }, {
+    "agent" : "claude-3",
+    "session" : "49d366f7-dd42-4437-8b80-72ce9baf2e39",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T23:12:19.029699852Z"
+  }, {
+    "agent" : "codex-24",
+    "session" : "01a10742-6e4a-7280-a913-fcb16368522f",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T16:50:34.646922821Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4bb-b9b7-7b30-bb35-8649d124bdb6",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:56:53.528560513Z"
+  }, {
+    "agent" : "codex-proof2b",
+    "session" : null,
+    "mission_id" : "M-a-wmc-scaling",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T23:03:24.148959241Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f429-34d8-7241-9b7c-a187bd3eb261",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:13:03.964725871Z"
+  }, {
+    "agent" : "codex-20",
+    "session" : "01a103ce-30a5-7231-9cda-1a852a412036",
+    "mission_id" : null,
+    "excursion_id" : "E-outer-loop-improvement",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T05:51:19.276676069Z"
+  }, {
+    "agent" : "codex-27",
+    "session" : "01a108c4-5070-7260-b374-61ac7d9f5a7d",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T06:45:36.636134483Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-704b2c39-1d8e-4a7a-b72e-088a628b9a6e",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T11:51:23.069683327Z"
+  }, {
+    "agent" : "codex-58",
+    "session" : "01a11f33-ebd0-78e3-a9db-3c7109f22230",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T18:26:56.502761005Z"
+  }, {
+    "agent" : "codex-71",
+    "session" : "01a1294b-dec3-78b0-9f4f-74dcc5f0c7d0",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:48:29.075015117Z"
+  }, {
+    "agent" : "zai-2",
+    "session" : "e1f0a21a-4969-4348-8982-2b01dc8ae5ba",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:25:09.726308903Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-aaca9b21-cb6d-4f4f-991a-530751988dab",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:57:22.378741798Z"
+  }, {
+    "agent" : "codex-55",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:36:16.163141941Z"
+  }, {
+    "agent" : "claude-7",
+    "session" : "863a1038-8214-4cbd-a04a-17ba557e3076",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T16:32:37.062927784Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4b4-7a32-7392-9c1a-bd5047c80842",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:48:07.989635870Z"
+  }, {
+    "agent" : "codex-66",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:55:03.752905755Z"
+  }, {
+    "agent" : "codex-24",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T16:51:16.026398428Z"
+  }, {
+    "agent" : "kimi-2",
+    "session" : null,
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T20:11:03.056698598Z"
+  }, {
+    "agent" : "codex-45",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:24:07.020177317Z"
+  }, {
+    "agent" : "codex-59",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:47:31.756378692Z"
+  }, {
+    "agent" : "codex-50",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:27:38.482054947Z"
+  }, {
+    "agent" : "claude-10",
+    "session" : "158bb5ed-3985-4627-878d-c8babeaeb9d8",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T18:27:04.517451097Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-878e8dbf-e3df-4267-a34f-684a427233ef",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T04:32:42.501444047Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-72f07b8b-2dbc-4a86-be72-e9edc2c6bda7",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T15:56:54.823583760Z"
+  }, {
+    "agent" : "claude-10",
+    "session" : "0cd9214b-27d2-4901-8d45-cc2304c1db87",
+    "mission_id" : null,
+    "excursion_id" : "E-street-sweeper",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:59:19.207467532Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "4d71d151-f45c-4797-a0b7-0cae4f9cdf39",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T23:52:11.001854855Z"
+  }, {
+    "agent" : "topo-10",
+    "session" : null,
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T22:11:31.122993574Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f41a-a993-77f0-9404-764692c81448",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T20:59:54.807954340Z"
+  }, {
+    "agent" : "claude-12",
+    "session" : "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T15:49:28.168700199Z"
+  }, {
+    "agent" : "codex-14",
+    "session" : "01a0ff7c-18cc-76d2-9a81-fe60ebec7088",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T02:06:35.624283364Z"
+  }, {
+    "agent" : "codex-16",
+    "session" : "01a0fa88-af14-7b33-876f-17fcb488b1b7",
+    "mission_id" : null,
+    "excursion_id" : "E-outer-loop-improvement",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T16:53:14.163352093Z"
+  }, {
+    "agent" : "codex-10",
+    "session" : "01a0c430-22c7-7142-97f7-f169061cd9ad",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:20:01.987253634Z"
+  }, {
+    "agent" : "zai-1",
+    "session" : "47ab93d3-dd9f-4ad9-a3c6-b06f458a3f27",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:21:24.946761324Z"
+  }, {
+    "agent" : "claude-1",
+    "session" : "cb1be3dd-5b2d-4986-911c-74c178f84408",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T19:25:16.912415453Z"
+  }, {
+    "agent" : "codex-12",
+    "session" : "01a0c431-ae24-7cb2-beab-a8731bc14d1c",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:14:54.702158554Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a1073d-4b2f-7070-a944-6e52bcd51315",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T14:11:41.263219612Z"
+  }, {
+    "agent" : "claude-8",
+    "session" : "8f600dcc-05a6-4ce6-af20-7caf77b57cdf",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T16:17:06.927735736Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f420-022e-7dc0-b0d7-6be8402b931a",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:06:25.840976635Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f937-31ca-7a60-8e45-064e67e08915",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T20:46:27.879047375Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f422-2698-7c73-9cc0-e78fc81cc971",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:08:04.559481926Z"
+  }, {
+    "agent" : "claude-4",
+    "session" : "6cf867e9-6bab-452d-ba2d-67a561959d12",
+    "mission_id" : "M-autoclock-in",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T23:02:17.698723157Z"
+  }, {
+    "agent" : "codex-65",
+    "session" : "01a11f35-52b8-71c3-a75e-3604c32f293b",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T08:57:08.497925490Z"
+  }, {
+    "agent" : "codex-14",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-mfuton-lisp-binding-review-codex14-20261003",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T01:58:33.677483216Z"
+  }, {
+    "agent" : "zai-3",
+    "session" : "zai-d4bb1dd0-c443-4504-8563-f3842d6752d2",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T14:17:39.549984211Z"
+  }, {
+    "agent" : "claude-1",
+    "session" : "b24467ae-519b-4310-b7c2-201cd5d78938",
+    "mission_id" : null,
+    "excursion_id" : "E-cascade-real",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T03:30:38.433695461Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-d5f7cdfa-acf5-404e-9382-63c504793d7c",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T22:21:50.055341298Z"
+  }, {
+    "agent" : "象-sonnet",
+    "session" : null,
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:00:23.555510429Z"
+  }, {
+    "agent" : "codex-22",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-outer-loop-improvement",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T03:16:08.697941847Z"
+  }, {
+    "agent" : "codex-42",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:23:06.237361364Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f938-3025-77a3-9edc-7b0dd103c112",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T20:49:47.349907324Z"
+  }, {
+    "agent" : "codex-proof2c",
+    "session" : null,
+    "mission_id" : "M-a-wmc-scaling",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T23:03:30.609144221Z"
+  }, {
+    "agent" : "codex-58",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:47:26.388241322Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f415-1a96-7cf3-a45f-6f6ae678a4d5",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T20:52:53.397313939Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "1eed43c7-031e-4158-ac23-a0a680d195bb",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T02:36:11.898387393Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f43a-b8aa-7021-9fff-656788591360",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:33:04.293733506Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4a8-a727-7cb1-9ec3-e75f4cc8be3d",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:35:25.217559509Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4d6-9c3e-7bc0-924f-9a812f2f2b90",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T15:20:30.205680144Z"
+  }, {
+    "agent" : "codex-2",
+    "session" : "01a0fd35-fff2-78e0-ade7-b57dad263dd9",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T14:37:24.374042190Z"
+  }, {
+    "agent" : "象-sonnet",
+    "session" : "35b33e1c-fbf2-458f-8ffc-81fcab62be6e",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:48:02.273808773Z"
+  }, {
+    "agent" : "zai-4",
+    "session" : "94440421-5a6c-42eb-bfd0-d9cdc87cf746",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:20:18.763760282Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4c3-d2a5-72f1-b680-99cbfdee1497",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:01:43.987611919Z"
+  }, {
+    "agent" : "codex-67",
+    "session" : "01a120d9-303a-7fd0-bb1d-b983df65855b",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T10:33:44.000805816Z"
+  }, {
+    "agent" : "codex-45",
+    "session" : "01a11f1e-9fb6-7eb2-8b33-7ac817ae7ee4",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:25:23.657014968Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4ca-c3ff-70d1-87e0-dd9187bcaf1c",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:12:21.546580806Z"
+  }, {
+    "agent" : "象",
+    "session" : null,
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T03:16:34.419218007Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4ce-805a-7760-8cc1-77ca2d3bfe55",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:16:02.739984077Z"
+  }, {
+    "agent" : "codex-13",
+    "session" : "01a0c431-cb93-7cd3-a50e-2c03f99d120d",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:07:57.642724831Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f421-b1c5-7692-b0ab-d4c6e55bc778",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:07:46.417904114Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-8ef21d30-6d0e-40c7-818a-8c79abf2fc59",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T19:13:26.560435504Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-95102283-bb21-42b3-a902-dfd7f04b5ad0",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T05:53:20.826620885Z"
+  }, {
+    "agent" : "codex-63",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:48:50.280465797Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a10808-3eb7-7480-ad83-d8643b264856",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T03:38:30.126555788Z"
+  }, {
+    "agent" : "codex-66",
+    "session" : "01a11f3a-c730-7d91-91a5-a10e81250b93",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T08:29:57.656191538Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-09c6fe94-250d-4c4b-9186-23864d37782f",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T20:09:45.693575293Z"
+  }, {
+    "agent" : "zai-5",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T15:53:19.926048658Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "14435327-0707-4052-9eb6-d03c0e4e78cd",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T01:05:56.920554420Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-63804892-b59f-40d7-88f2-e2b33b7c91bf",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T05:36:35.929255915Z"
+  }, {
+    "agent" : "claude-11",
+    "session" : "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+    "mission_id" : "M-landscape-positioning",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T04:40:10.553146598Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-e1c51615-75b2-4b82-8e5a-53aa73e91817",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T01:15:59.703192844Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "c0992d61-3649-4e58-9b53-3f00e8e0a29e",
+    "mission_id" : "M-f11-find-production-successor",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T01:13:25.223252757Z"
+  }, {
+    "agent" : "kimi-2",
+    "session" : "kimi-739f76d7-f083-44be-a356-777aa117cc79",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T01:52:02.873262561Z"
+  }, {
+    "agent" : "codex-44",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:24:02.153961503Z"
+  }, {
+    "agent" : "codex-18",
+    "session" : "01a0c5c2-802d-71e2-bb9a-2b36b400053f",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-21T21:15:29.856694978Z"
+  }, {
+    "agent" : "codex-23",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T15:04:11.354357199Z"
+  }, {
+    "agent" : "codex-56",
+    "session" : "01a11f33-ab55-70e3-b4cd-193e93ee48d8",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T19:50:47.868735741Z"
+  }, {
+    "agent" : "codex-18",
+    "session" : "01a0fc7a-ac3d-7143-9a54-39f9ced0fd9a",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T20:31:13.628088545Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-0b2614fd-5beb-4b4a-8207-30195f334858",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T07:51:10.540264690Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-0de9f45c-1e7f-42de-ae1c-6b246997750f",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T09:33:57.538537005Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f42b-589c-79e2-a2ef-0cfcae52662a",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:17:57.414716144Z"
+  }, {
+    "agent" : "kimi-3",
+    "session" : "kimi-f536da7e-a54b-4e61-8422-1ad60b857054",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-1",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T00:43:14.567871832Z"
+  }, {
+    "agent" : "codex-55",
+    "session" : "01a11f29-93e8-74b2-b32d-495274542854",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:46:41.864608531Z"
+  }, {
+    "agent" : "codex-34",
+    "session" : "01a10fba-a930-7ae3-a390-fb67ae3d8464",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T06:02:11.094076344Z"
+  }, {
+    "agent" : "codex-34",
+    "session" : "01a120f7-bee6-79a2-a8df-21eb5346af8a",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T04:50:15.894221498Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f434-987d-76b2-afa6-5ea5573c143b",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:27:47.784293376Z"
+  }, {
+    "agent" : "codex-18",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T13:55:18.159759152Z"
+  }, {
+    "agent" : "象-sonnet",
+    "session" : "78108eb0-2be7-44ea-b36e-5ec362152df3",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T04:59:35.529980566Z"
+  }, {
+    "agent" : "codex-7",
+    "session" : "01a0e51d-04b4-7191-8162-9acef0801769",
+    "mission_id" : "M-warrant-limit",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T01:08:44.951063894Z"
+  }, {
+    "agent" : "codex-13",
+    "session" : "01a0f594-1be6-7703-bbd8-e17ebb735011",
+    "mission_id" : "M-formal-patterns",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T12:19:18.057191059Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4c4-76a9-7b21-b6a6-65349b678354",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:04:05.197776710Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "38238a3e-8de5-4999-93d9-0de9f424b5d6",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T00:38:42.079894927Z"
+  }, {
+    "agent" : "codex-43",
+    "session" : "01a11f1d-c18d-7710-998b-55cdc139732d",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:52:24.025447146Z"
+  }, {
+    "agent" : "codex-10",
+    "session" : "01a0f4ae-af56-7191-b610-291a1bcfaeed",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T21:56:04.256650514Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-92706260-1191-41b0-a438-c3893d8baac4",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T10:11:50.092037179Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4b8-2cb0-7d90-9d22-207c5002e328",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:51:35.348615267Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f42d-9f09-7e20-9e5f-242a7ff50d38",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:20:39.137004328Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-6c0776af-2912-4efd-a816-7d2f92b05dee",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T16:07:32.019255187Z"
+  }, {
+    "agent" : "codex-8",
+    "session" : "01a0f19d-767c-7843-bce4-dd428b65de9d",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T06:01:23.112340961Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-4b9ddc9b-0eaf-4aa3-bdaf-a305c9369f0f",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T02:21:26.939500186Z"
+  }, {
+    "agent" : "codex-60",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:48:35.052170620Z"
+  }, {
+    "agent" : "zai-2",
+    "session" : "zai-0f6a8e07-17d2-4bc6-80e2-015a56869e23",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:20:03.009900019Z"
+  }, {
+    "agent" : "codex-29",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:44:28.168602342Z"
+  }, {
+    "agent" : "codex-56",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:47:17.018255818Z"
+  }, {
+    "agent" : "codex-18",
+    "session" : "01a10732-979d-77b2-be6e-e4cba26541cd",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T03:19:01.927611814Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-89b634fc-1bab-4721-8332-3eac2844e9c7",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T18:59:25.968591391Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4bf-0d72-7632-94a4-9f271477c0e2",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:59:18.426044606Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-2219d951-2d23-4491-a178-eefda31310c9",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T02:02:12.208747920Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4c1-fb5b-7e90-bb1a-e45f309caa95",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:02:09.545421134Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4a6-1f4b-7ed1-b59c-0c786290a2f1",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:31:11.676554830Z"
+  }, {
+    "agent" : "codex-1",
+    "session" : "01a0fcec-2528-7953-bce5-37fedc767dee",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T16:16:54.674835351Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-eed9b10e-462d-47d8-9d54-d965d99d40ea",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T04:24:49.028794658Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-c30cad34-bc6b-4223-8476-c6026ac1d6a6",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T15:45:24.998002145Z"
+  }, {
+    "agent" : "codex-15",
+    "session" : "01a0f991-b404-7c23-9715-f1396e76d4db",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T01:53:51.821111357Z"
+  }, {
+    "agent" : "codex-54",
+    "session" : "01a11f22-3b6c-7022-8996-da0aa487a61c",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:31:29.761140248Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4b8-e451-74e0-9c4b-5eaec9e17e5a",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:51:59.769708730Z"
+  }, {
+    "agent" : "codex-23",
+    "session" : "01a10771-aad6-7cb1-b417-c77aae5b92ae",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T14:00:04.879873021Z"
+  }, {
+    "agent" : "claude-5",
+    "session" : "dc9abc2b-12d5-47fd-8655-375ba9a3b747",
+    "mission_id" : "M-autoclock-in",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T02:33:44.808728257Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a10781-8e42-7882-b62f-5e2324b5dd25",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T18:11:37.478563003Z"
+  }, {
+    "agent" : "象-4",
+    "session" : "kimi-96ac0c34-917c-44cf-b525-86472b3524a6",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T21:45:20.583893541Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-5706c6c4-005e-4f1c-bf9f-81d6ccc0e863",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T18:41:27.516397731Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f425-7d95-7543-bb7a-92780db0befc",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:12:05.595474818Z"
+  }, {
+    "agent" : "codex-3",
+    "session" : "01a0d17d-2e82-70e1-9eb0-3c744e4fe941",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:18:57.784039425Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4ad-54a2-76c3-8333-92cf63c02eef",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:39:14.655536769Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4c6-5d5b-74f3-994e-2a85b43b89f8",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:08:51.760846852Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-05430b4d-d5f1-4ce1-a09f-88afb81f3ff3",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T00:00:45.344634301Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f415-36cb-74c3-9e91-d401d21ffb13",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T20:55:35.968052153Z"
+  }, {
+    "agent" : "codex-32",
+    "session" : "01a120e8-8139-7641-b87f-d145eba5aff6",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T19:35:13.857236891Z"
+  }, {
+    "agent" : "codex-30",
+    "session" : "01a120e9-57b5-71f3-9907-9db45a26fefd",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T01:09:19.058739298Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "c1b4c642-1185-4cd8-949d-a1627d8ca3ce",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T02:14:29.132157161Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f41e-dc2d-79d2-a8ba-afbff4cc09c9",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:03:46.862944847Z"
+  }, {
+    "agent" : "codex-5",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-103",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T19:15:23.365908510Z"
+  }, {
+    "agent" : "claude-16",
+    "session" : "00e653e3-28f7-4add-8304-47ca0475b5c2",
+    "mission_id" : "M-landscape-positioning",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:46:30.324850636Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "907d9598-e062-485a-a033-9dcda191e1eb",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T01:27:09.897654272Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-a830389f-a0e0-430e-ad2b-41c355ef1d7d",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T04:10:52.314045556Z"
+  }, {
+    "agent" : "codex-60",
+    "session" : "01a11f34-dc89-70d2-90e5-ac6cc2df7570",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T19:51:30.489072920Z"
+  }, {
+    "agent" : "codex-13",
+    "session" : "01a0ff73-66a0-7301-8a4e-ac3842da7427",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T07:29:23.001620196Z"
+  }, {
+    "agent" : "codex-68",
+    "session" : null,
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T03:38:46.116998318Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-25cfdeae-0f90-42e4-b184-73e6d2091ce4",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:18:24.911523956Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-b71dca0e-ec9b-46f9-9204-a8699ce5db2f",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T23:26:48.713699618Z"
+  }, {
+    "agent" : "kimi-1",
+    "session" : "kimi-19f47d29-6721-48d6-92b8-51d8fcfc3928",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T15:32:58.374566505Z"
+  }, {
+    "agent" : "topo-11",
+    "session" : null,
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T22:14:46.831959132Z"
+  }, {
+    "agent" : "codex-51",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:27:43.180293962Z"
+  }, {
+    "agent" : "codex-33",
+    "session" : "01a10e39-5646-78f1-a1e6-33664325ab14",
+    "mission_id" : null,
+    "excursion_id" : "E-aif-cascade",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T07:01:05.041098932Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-523f2792-119e-49f5-be78-338f832d5eef",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T22:18:38.674246011Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-e550f69f-8de6-43c4-990c-aa4d7f389d40",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T21:51:00.062342637Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-9ac97358-b97b-49aa-97e4-b91fc3374691",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T13:54:30.275251153Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4d2-a0ff-7152-bbdd-aff6617318fb",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:21:44.187365255Z"
+  }, {
+    "agent" : "codex-1",
+    "session" : "01a0de93-936a-7682-8a17-ddd7bed6b408",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T18:27:36.925145658Z"
+  }, {
+    "agent" : "codex-5",
+    "session" : "01a0e411-7deb-70a0-833c-82e8fd8c3c64",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T01:29:28.891027104Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-f4610455-bc9e-4eaf-993c-505f2bf39ef6",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T00:47:39.383103650Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f425-9abf-7750-89c6-3af06109a6b5",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:10:57.299673742Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-4d7f7372-8dd5-4efe-bf73-f0fcd9b9789b",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T21:47:36.964388133Z"
+  }, {
+    "agent" : "codex-72",
+    "session" : "01a12a53-7e37-7cf3-95f1-1cf6b82b8338",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:18:00.917026995Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f116-1ead-7a73-a697-9ce4859b5f97",
+    "mission_id" : "M-distributed-proofreaders",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T16:35:29.616939861Z"
+  }, {
+    "agent" : "codex-31",
+    "session" : "01a120e9-558e-7732-8948-5a5c067514cb",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T18:33:07.153374222Z"
+  }, {
+    "agent" : "codex-33",
+    "session" : "01a120e8-826d-7441-8ed3-1b1d6d778de7",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T18:22:51.234160485Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4a2-1359-70b3-a3c3-68d76b3a46a3",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:28:22.236586769Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f930-8f42-7483-b175-5fdbe2e64b36",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T20:42:14.211474426Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-4cbb4b9a-e97e-4d93-80b1-74a660b5ae25",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T16:20:26.678100864Z"
+  }, {
+    "agent" : "codex-28",
+    "session" : "01a120e8-7071-7083-8169-9a7b62617897",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T22:50:11.274533832Z"
+  }, {
+    "agent" : "codex-22",
+    "session" : "01a104e9-87c2-78e1-a9b4-fb57dc137476",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T05:57:59.786783576Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4c2-df41-7793-a7c1-8bfe9629aa49",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:00:56.037938570Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4a5-9275-7882-9c1a-a95b5b24e19b",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:32:36.725168299Z"
+  }, {
+    "agent" : "codex-53",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:28:00.831066541Z"
+  }, {
+    "agent" : "codex-59",
+    "session" : "01a11f33-eefa-7770-9ce5-4b49aa2ea24e",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T06:26:24.325244530Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "b4830bee-26bf-46f5-80ba-663861a93f2d",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T00:21:31.700820817Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-ebdefc0b-268a-40ef-a1a4-240bcd277591",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T23:25:38.017182292Z"
+  }, {
+    "agent" : "claude-16",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T02:45:36.906157381Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f434-654f-7ea2-94b5-775dab4c08b9",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:27:37.989242949Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-8c5583f7-19c2-4df8-8bf6-bc13ea0790c5",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T04:47:11.012831792Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-b97a2a64-2fc4-4b32-aa30-766c4a2f567c",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T14:53:29.938144282Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f42e-c3cd-74a1-b2f5-7a662d84253b",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:20:51.674427636Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4c0-f7d4-7e51-a9d0-21b2dd42c164",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:00:00.120019661Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "2a86a56d-fdd0-48bf-95cf-e0ef30778d4b",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T21:33:35.561923580Z"
+  }, {
+    "agent" : "codex-50",
+    "session" : "01a11f21-c873-78f0-bfac-9a764975f000",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:31:09.831630852Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f41e-6fe6-75c2-9f99-681e00a487a3",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:04:22.221645196Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-249e0e88-ee71-4bc4-b7da-754d1e4234fb",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T01:16:07.537402081Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-4663abc7-29ac-4f0a-ba02-e6457781d2bc",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T04:30:15.323461278Z"
+  }, {
+    "agent" : "codex-35",
+    "session" : "01a10fba-e6da-7443-bb6f-12fe0a048160",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T05:58:49.957510433Z"
+  }, {
+    "agent" : "codex-70",
+    "session" : "01a128ee-8003-7791-8af2-32028cb9e369",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:48:23.975022236Z"
+  }, {
+    "agent" : "codex-46",
+    "session" : "01a11f1e-b57d-73c2-b997-05441444042f",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:33:08.073494794Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-c384d77c-20e0-452d-af90-ac156f85e710",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T14:36:33.185307169Z"
+  }, {
+    "agent" : "codex-2",
+    "session" : "01a0ba4b-15ed-7143-99be-3d2876afb09d",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:20:35.675765527Z"
+  }, {
+    "agent" : "codex-52",
+    "session" : "01a11f22-0aa2-7163-b302-86ca3eb56b89",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:31:28.216304620Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a1082e-a906-7c73-a580-bb867a78b865",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T05:35:50.562416746Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-cbea1352-1d95-4e5d-8d9e-3346df11a910",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T20:09:07.361184081Z"
+  }, {
+    "agent" : "codex-62",
+    "session" : "01a11f35-1c23-7061-b0c6-7f4f51f1ba84",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T12:28:26.350226069Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-caf96621-73c9-4557-853b-9eeb56de7616",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T03:40:57.221168967Z"
+  }, {
+    "agent" : "codex-35",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T14:49:57.599710792Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-a3e023e8-ec43-4244-8111-b7253aaa87e8",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T02:45:17.521994306Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-037b10c9-dba5-4f93-8098-8c27db657bce",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T04:09:23.319343076Z"
+  }, {
+    "agent" : "codex-19",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T13:57:36.307910282Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "005318d7-eae8-4fa9-990f-01cdc70106d1",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T21:15:16.341189706Z"
+  }, {
+    "agent" : "codex-36",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T03:24:08.555998577Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "ea4aa989-6856-4e96-935e-aaafabe46db0",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T22:32:08.912792494Z"
+  }, {
+    "agent" : "codex-64",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:48:57.288099026Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-83bc989d-1671-4fc0-9085-a19ab2dd3b60",
+    "mission_id" : "M-G-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T09:13:02.443575131Z"
+  }, {
+    "agent" : "claude-8",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T06:46:23.697927682Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "d130bdc6-f3ab-4dfe-9c1c-210ee6e40393",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T22:23:58.629364449Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f42a-2904-71a0-a602-524826809be4",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:16:39.284338855Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f43c-9f01-7ea2-b1c6-871b94b6991b",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:37:58.900571693Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-36a18e93-5abe-46f8-8ad0-7210b04a4c05",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T14:39:49.911728597Z"
+  }, {
+    "agent" : "kimi-1",
+    "session" : "kimi-e545a8ea-412c-499e-b495-2a421d67bd2b",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T07:57:23.862702906Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-25b36a86-5148-4c8a-afb4-01085ad19885",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T16:57:26.534906670Z"
+  }, {
+    "agent" : "claude-17",
+    "session" : "564c8e50-c240-46fc-81ad-55afafbc63ee",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T21:55:59.853709283Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-f084d01c-3144-4fa0-b676-e3e1cb6acaad",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T04:35:12.999551609Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-6b0b4821-ad3f-4b06-9682-5fc8426d0185",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T20:20:59.176760055Z"
+  }, {
+    "agent" : "zai-4",
+    "session" : "zai-ab07af6b-0c40-4cd9-9504-6083477f0144",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:02:23.187225429Z"
+  }, {
+    "agent" : "zai-5",
+    "session" : "zai-72e43dfb-37ad-40a9-a3f0-3e6cc0a981da",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:02:28.024451157Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4ac-6ec8-7211-941f-58490deaa313",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:39:12.201842376Z"
+  }, {
+    "agent" : "codex-52",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:27:55.232299896Z"
+  }, {
+    "agent" : "codex-47",
+    "session" : "01a11f1e-ea5b-74b3-a98e-627c9d549f1f",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:25:59.808552701Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-6d572741-3758-45d2-b0c9-19547e1111b0",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T14:35:07.584400506Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-5e70c553-7476-4a54-be39-083d4dd322a6",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:23:59.851091012Z"
+  }, {
+    "agent" : "codex-38",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T04:25:44.640181020Z"
+  }, {
+    "agent" : "codex-44",
+    "session" : "01a11f1e-69f9-76f3-b647-738da227753c",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:32:17.489787258Z"
+  }, {
+    "agent" : "codex-42",
+    "session" : "01a11f1d-8b15-7d73-9d60-d8453cdfbba6",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:33:35.381455257Z"
+  }, {
+    "agent" : "codex-36",
+    "session" : "01a11eb0-9bc4-7a51-9f6b-d8ab6f524485",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:30:15.456650030Z"
+  }, {
+    "agent" : "codex-41",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:23:05.480100634Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4af-e8ed-73c0-a965-ad580dc39e4d",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:45:25.385613104Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4b0-c185-7132-98d9-bc14f6867d06",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:44:15.585501312Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4d1-a26b-7b81-b6f5-db6f87ea0d09",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:19:25.287728140Z"
+  }, {
+    "agent" : "zai-5",
+    "session" : "zai-f41895bc-b093-4fa8-9efe-c757674854b1",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:56:13.865467836Z"
+  }, {
+    "agent" : "codex-37",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T03:24:19.563989805Z"
+  }, {
+    "agent" : "kimi-3",
+    "session" : "kimi-02c4fa81-5061-470b-933f-ca8f2d69e0f0",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T01:38:54.209417398Z"
+  }, {
+    "agent" : "kimi-1",
+    "session" : "kimi-gate-test-1790276487",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T19:59:52.616708043Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-f7704a12-0683-4a90-aa6f-88d19bbaa68f",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T19:46:17.880512141Z"
+  }, {
+    "agent" : "kimi-2",
+    "session" : "kimi-55a94d9c-cdda-4911-8a91-4c251b25ce33",
+    "mission_id" : null,
+    "excursion_id" : "E-cascade-real",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T02:40:23.719619895Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-da5e2ae3-d3c9-436b-b21f-9078bcdf2eb9",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T00:02:15.496519Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "b6ffb4ef-f605-4d55-a7d0-c275e08d25e6",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T23:09:11.583100237Z"
+  }, {
+    "agent" : "codex-17",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T03:00:53.213900766Z"
+  }, {
+    "agent" : "codex-33",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:44:26.609693899Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-8933da34-348d-4413-b843-d95c871e4e6b",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T11:54:06.270714617Z"
+  }, {
+    "agent" : "claude-4",
+    "session" : "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T06:57:15.630083393Z"
+  }, {
+    "agent" : "codex-53",
+    "session" : "01a11f22-25ce-7920-bde7-8f07d2e58e0e",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:31:17.956262529Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-3b103cde-6152-4849-96e7-14b908dbd957",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T22:29:14.044635204Z"
+  }, {
+    "agent" : "codex-17",
+    "session" : "01a0fa8e-cb5c-7361-b267-4be544a002a6",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T03:13:41.763056458Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f418-a7ee-7403-b6bc-1e3de0127324",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T20:57:47.679440349Z"
+  }, {
+    "agent" : "codex-40",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:20:17.956861673Z"
+  }, {
+    "agent" : "zai-3",
+    "session" : "zai-52828332-789d-4541-bed7-5e9bacb1f465",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:03:48.571552524Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4a2-39fc-7061-b47e-c20eb51eed9a",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:30:29.431436547Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-c13f3d98-5715-436c-9591-e5179d4cdba0",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T22:34:51.012656451Z"
+  }, {
+    "agent" : "codex-27",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T21:13:58.950653904Z"
+  }, {
+    "agent" : "codex-1",
+    "session" : "01a0d113-03d6-7281-a49f-d763dbf0a16b",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:21:21.170942965Z"
+  }, {
+    "agent" : "codex-13",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T01:49:05.033950215Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f415-50a8-7b12-8267-3e42d6089a9f",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T20:54:00.444792517Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-3928ad4c-d1f0-4eb3-9c78-0c518d241ebb",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T13:41:20.778946600Z"
+  }, {
+    "agent" : "codex-26",
+    "session" : "01a1074e-bfd1-7bb0-86fd-31b82acb7724",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T17:37:57.639907588Z"
+  }, {
+    "agent" : "topo-9",
+    "session" : "01a127d7-33e2-74b0-bdd5-a34db1f8e5db",
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:45:37.035246998Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-32d76997-94b5-4e89-9e67-f8aedf9de482",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T11:51:33.690636553Z"
+  }, {
+    "agent" : "codex-57",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:47:21.695333113Z"
+  }, {
+    "agent" : "zai-1",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T15:53:12.268061055Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4d2-90e1-7b03-ad2b-6e663b003880",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:21:29.658976806Z"
+  }, {
+    "agent" : "codex-47",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:24:26.888287316Z"
+  }, {
+    "agent" : "claude-9",
+    "session" : "e1f64e20-157f-415d-bcd8-056b97561996",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T23:29:27.441637365Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-8214af73-a217-4857-aa01-429230f6aeb3",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T15:48:22.075249080Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-ce4eea06-298e-4b8b-9986-38f34386edc3",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T02:01:33.535074649Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-e5802b1c-34a8-421d-afaa-220a44e37907",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T06:51:06.475941546Z"
+  }, {
+    "agent" : "codex-35",
+    "session" : "01a12124-6e1e-7e93-b7c6-2e08790a7d75",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T22:33:37.055460215Z"
+  }, {
+    "agent" : "codex-34",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T14:01:09.171497256Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4ce-4e22-7eb0-a0b6-ea27bd698d0b",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:17:00.699685248Z"
+  }, {
+    "agent" : "codex-69",
+    "session" : "01a126a8-c457-7660-bcf6-a5ffbb3c5460",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T10:11:41.907829323Z"
+  }, {
+    "agent" : "象-3",
+    "session" : null,
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T17:14:36.101530514Z"
+  }, {
+    "agent" : "codex-28",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:44:25.974462759Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4a9-e931-7f40-954f-ba29e7184bac",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:34:42.537579877Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-891076d0-9398-4d57-8977-b75843b119b0",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T22:30:15.545433619Z"
+  }, {
+    "agent" : "codex-41",
+    "session" : "01a11f1d-88f0-71b1-9425-743aade74ed7",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:30:15.662569611Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-2683f42b-94e1-4d44-be7a-bf7e20a02612",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T22:33:28.130867205Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-8db908d9-ff5c-4dea-a242-059d895d645b",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T02:13:14.705698368Z"
+  }, {
+    "agent" : "kimi-2",
+    "session" : "kimi-de6db1e7-f7bb-4a1f-8d86-e4b1876124c4",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-1",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T00:43:11.592273530Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-2d29d5f5-fc08-40cf-8c1d-5f3022b5715d",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T20:38:22.575395403Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-a814a823-6cfb-47c8-a02a-6434ec1936db",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T19:25:09.422161060Z"
+  }, {
+    "agent" : "codex-14",
+    "session" : "01a0c489-1ec2-7553-9e83-52d0f2bea66e",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:21:21.978568749Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0fee7-d1b6-7f01-b832-267d0af445b1",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T05:10:40.575823345Z"
+  }, {
+    "agent" : "codex-48",
+    "session" : "01a11f1f-06cd-7541-8588-5bb425b555f7",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:35:15.171024355Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-6e4aa608-bdc3-44e5-b0a7-6a8719ae4bb4",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T19:02:48.575676137Z"
+  }, {
+    "agent" : "codex-46",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:24:12.056265569Z"
+  }, {
+    "agent" : "codex-3",
+    "session" : "01a0de72-a95e-7c43-9004-0a3fa74b47ef",
+    "mission_id" : "M-mission-coherence-patterns",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T01:47:33.938169355Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-462157db-2313-407a-9e61-2dbc303f6033",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T04:23:44.335680184Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4c2-4437-73e1-9099-febb690158ac",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:03:35.495586740Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-badb141a-6dd1-4b21-979c-84050bd54b4d",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T03:12:49.500642805Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-f5541114-b684-49e6-b1e2-cd35b796fe62",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T23:55:55.402704172Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-3d1bfa94-951e-4cce-9085-ee808e74a47b",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T03:04:39.627426244Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f438-f3be-7082-b9ff-dd9b817b0a93",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:33:08.873693226Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-0bf8bc38-cc47-4814-9a00-289337ece9aa",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T18:00:29.359895839Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4a8-130f-7522-b4e1-877dd418de9c",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:36:24.377556052Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f428-466b-7703-97da-e185dcbdc7c1",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:14:09.712468834Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-974d5f22-68e6-4335-8491-1bbaa225dcf7",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T12:54:37.356959824Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-c59ad81b-0298-4021-ac9e-bea1b99d4e7e",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T20:17:15.884834706Z"
+  }, {
+    "agent" : "claude-14",
+    "session" : "75b00893-43cc-4172-917a-06a591193b20",
+    "mission_id" : null,
+    "excursion_id" : "E-xiang-turn-evidence-outage-2026-10-11",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T05:29:20.504864052Z"
+  }, {
+    "agent" : "codex-68",
+    "session" : "01a123e4-5da0-7130-bcc2-d8be5a21d32c",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:47:57.861952552Z"
+  }, {
+    "agent" : "codex-23",
+    "session" : "01a1073f-2d91-7593-b3c6-bca0be6eddfb",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T15:01:14.911157956Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f428-8269-7b71-995b-8a391e1deacd",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:15:58.435987487Z"
+  }, {
+    "agent" : "claude-6",
+    "session" : "14ebf970-6e85-4f6f-a8bc-968cabb1394a",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-28",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T13:17:08.965884388Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "b4014a0c-7b25-41e5-affe-aa9f38a3ad22",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T00:05:28.358761363Z"
+  }, {
+    "agent" : "象-4",
+    "session" : null,
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T23:14:33.428051552Z"
+  }, {
+    "agent" : "kimi-3",
+    "session" : "kimi-811c05fb-516c-46ee-9eee-b3017e4c4d59",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-103",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T15:27:36.289792249Z"
+  }, {
+    "agent" : "topo-9",
+    "session" : null,
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T22:02:55.216461836Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f43c-b323-7b92-9ba3-ccea9b9ad1f4",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:34:36.282478815Z"
+  }, {
+    "agent" : "codex-29",
+    "session" : "01a108dc-3276-7ee3-9505-eab1f191156f",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T03:17:54.388995095Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-7bfb738c-0927-4a7f-b896-5d4dc3c2ba2a",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T13:50:03.967824809Z"
+  }, {
+    "agent" : "kimi-3",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-127",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T21:03:10.380248480Z"
+  }, {
+    "agent" : "codex-1",
+    "session" : "019ff2d6-072c-7083-bcc3-6757ea31dbb5",
+    "mission_id" : "M-warrant-limit",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T01:48:18.839195931Z"
+  }, {
+    "agent" : "codex-31",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:45:24.673694816Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4cf-1f1c-7780-8ee1-8d906e4933d4",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:17:03.463876345Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f42c-f47c-7951-a8d9-92b4c1d81fa8",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:20:31.870314474Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f41e-121b-77a0-805a-d52567ae0f78",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:01:54.475396085Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4bb-4c57-7251-bde0-2d1b5773ced0",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:55:41.395808655Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4d6-f81a-79e2-a078-90ca3a11f0c7",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T14:05:49.580796741Z"
+  }, {
+    "agent" : "kimi-1",
+    "session" : null,
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T20:09:59.989304733Z"
+  }, {
+    "agent" : "codex-49",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:27:33.955455420Z"
+  }, {
+    "agent" : "codex-54",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:28:08.162114426Z"
+  }, {
+    "agent" : "codex-5",
+    "session" : "01a0fe0a-ecff-7b70-8f8e-ee9d8b329ebe",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-103",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T20:03:01.688326673Z"
+  }, {
+    "agent" : "codex-26",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T17:38:45.253011564Z"
+  }, {
+    "agent" : "codex-32",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:44:30.059351056Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4ba-229a-76c3-9064-996c736c21e5",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:53:43.842050754Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4cb-aaea-7c62-bc3d-bbab85f8ca9d",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:12:29.669705627Z"
+  }, {
+    "agent" : "codex-25",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T14:25:11.357742234Z"
+  }, {
+    "agent" : "topo-11",
+    "session" : "01a127e2-1b88-7b72-b3db-b47b3518bb21",
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:40:46.128030967Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4b5-c2da-7940-8a82-bc40d8f0359e",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:50:08.788745026Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a10747-5d15-79b3-90a3-6d0f013e26e4",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T14:20:20.337846930Z"
+  }, {
+    "agent" : "codex-proof2a",
+    "session" : "01a0e9fd-1e7f-7890-98cb-3ec9e7d37ffd",
+    "mission_id" : "M-autonomous-pattern-lifecycle",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T21:31:08.862312206Z"
+  }, {
+    "agent" : "zai-2",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T15:53:14.111231995Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4c0-1369-7a22-aa10-fdd13dd1c3b2",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:58:52.663469170Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-b7f55995-ce4a-4439-a166-52c7e2f0df62",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T06:22:41.126060721Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "20669450-1cbb-462e-87cf-d254681bd106",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T01:48:47.182705856Z"
+  }, {
+    "agent" : "codex-19",
+    "session" : "01a10734-c514-7e73-9973-2d40a41855c0",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T09:28:24.197087644Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f346-ed6f-7243-87cb-2a799dbbab75",
+    "mission_id" : "M-formal-patterns",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T17:05:08.991357100Z"
+  }, {
+    "agent" : "topo-10",
+    "session" : "01a127df-1331-7de2-818e-e96d97f4fb08",
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:38:17.083806966Z"
+  }, {
+    "agent" : "claude-18",
+    "session" : "66c595ba-5098-4ba8-8ae4-def07343f76a",
+    "mission_id" : "M-futonzero-prelim-practice",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T22:01:29.910905182Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "40369bd2-11a6-47b9-a440-f319b68bbbf8",
+    "mission_id" : null,
+    "excursion_id" : "E-aif-cascade",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T07:01:51.989544316Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T18:30:37.444583938Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4c6-bad7-7d82-8db6-45a2f55be2b8",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:08:31.095594719Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-39f747a4-a548-4eba-b0a5-d80dae2ca227",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T07:23:27.376680852Z"
+  }, {
+    "agent" : "象-2",
+    "session" : null,
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T16:40:14.572522743Z"
+  }, {
+    "agent" : "codex-3",
+    "session" : "01a0fd8b-af80-7b41-87e8-1560e5bb6732",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T20:19:36.608642276Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f92d-6f66-7ee0-a487-472de3fad460",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T20:38:08.727597463Z"
+  }, {
+    "agent" : "codex-29",
+    "session" : "01a120e8-7a37-7aa0-899b-982a123b81e1",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T03:52:54.076033654Z"
+  }, {
+    "agent" : "zai-2",
+    "session" : "zai-d19c3168-7064-4b54-8279-e1bf18d646de",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T04:39:37.151278186Z"
+  }, {
+    "agent" : "codex-64",
+    "session" : "01a11f35-4934-7e43-8040-7aee331d6613",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T20:49:18.197228959Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-7e59397e-bc9c-4d5d-a527-c79d0d640f23",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T18:04:07.428085021Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T17:48:39.467188928Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-48ffb055-25cb-4429-b368-cd358180fd54",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T09:13:13.154538484Z"
+  }, {
+    "agent" : "codex-19",
+    "session" : "01a0ffa6-1850-7dc2-a283-9b6eb06d5913",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T13:31:53.852602298Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-2ed44972-87f2-434f-9f28-b5996f493dec",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T20:36:04.706542519Z"
+  }, {
+    "agent" : "codex-69",
+    "session" : null,
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T16:32:27.349957344Z"
+  }, {
+    "agent" : "codex-2",
+    "session" : "01a0de16-6f18-7bd0-948e-3a8a98adc826",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T01:02:41.493033952Z"
+  }, {
+    "agent" : "象-4",
+    "session" : "kimi-a86a0dd8-4fea-4805-aeb1-91226ef5234c",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T21:24:25.829336907Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-81cfc620-ff5e-4b71-b18b-9ef257fda4d2",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T05:25:20.897720549Z"
+  }, {
+    "agent" : "zai-3",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T15:53:16.019867615Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-ac0d3eaa-5f6e-4eea-87bd-1d22596b2fdf",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T16:40:39.921216509Z"
+  }, {
+    "agent" : "codex-20",
+    "session" : "01a0c688-227d-79f2-92ab-6d8bc042a048",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:01:26.216632113Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-5b0cf4df-1aa6-44ab-b18b-0730b99da40e",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T08:20:01.027440518Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4cb-0ba8-7e21-9bd0-b5dde6d570f2",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:13:04.469247017Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4b5-c1b3-7602-a931-dc982ab8cd25",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:49:05.044085315Z"
+  }, {
+    "agent" : "claude-8",
+    "session" : "9824b707-fdaf-40c6-886e-9ce6eed1cee9",
+    "mission_id" : "M-warrant-limit",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-28T20:52:31.678391214Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0e39b-68f7-7b50-b9c1-c5a9ed147ae9",
+    "mission_id" : "M-distributed-proofreaders",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T16:20:10.529784418Z"
+  }, {
+    "agent" : "codex-12",
+    "session" : "01a0f58d-cb02-7f13-b9fb-ee9f4d26d721",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T07:28:29.242784278Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4ab-c8f1-7882-8cdf-d01b3218496d",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:40:07.980561936Z"
+  }, {
+    "agent" : "codex-63",
+    "session" : "01a11f35-23db-7ac1-9a7b-9ea5fad1be4d",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T17:20:33.129389949Z"
+  }, {
+    "agent" : "codex-39",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T04:25:48.733223372Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f431-6447-78c1-8541-fe5961871715",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:24:29.154534143Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "16aba043-1aca-4ad0-a480-963bca0a0c54",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T23:26:13.683169147Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4bd-4350-7693-bac2-29b791e9f7f4",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:57:39.472589188Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f427-3935-7bd1-bcf3-296fc9dd58dc",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:11:04.354880201Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-03c8b68f-70d9-49e5-93d5-af2f42164c14",
+    "mission_id" : "M-G-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T03:03:37.069122059Z"
+  }, {
+    "agent" : "codex-17",
+    "session" : "01a0c4f5-d9c3-7653-b641-3c9ed105b119",
+    "mission_id" : "M-autoclock-in",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-21T19:38:00.541081117Z"
+  }, {
+    "agent" : "codex-61",
+    "session" : "01a11f34-fb26-79b0-bba3-2f67cd0d959e",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T17:18:31.882754224Z"
+  }, {
+    "agent" : "codex-1",
+    "session" : "01a0a660-41ba-7a10-bc9b-2e72ddb426ad",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-27T23:18:32.412701223Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-741c74bd-e99d-421d-b49c-52b15bfc192a",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T03:43:09.300308980Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f424-0f1d-7d12-b4b0-521fee566c49",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:09:48.185444821Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f431-65ed-7771-8e43-2c538ff443eb",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:23:38.878565306Z"
+  }, {
+    "agent" : "codex-40",
+    "session" : "01a11f1a-f79c-76b2-8be1-74f7c68a0e9d",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:22:34.187229415Z"
+  }, {
+    "agent" : "codex-73",
+    "session" : "01a12a7b-9e52-7460-8c43-f39ea3298903",
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T12:10:16.086950654Z"
+  }, {
+    "agent" : "codex-51",
+    "session" : "01a11f21-df01-7b20-8a26-e3f4c97a7853",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:31:10.866432621Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T02:23:21.780183347Z"
+  }, {
+    "agent" : "codex-11",
+    "session" : "01a0f574-8fc9-7981-a991-b4dd5e0f34da",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T06:18:12.566900026Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f431-0bb5-7501-a057-9d08461835bb",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:23:58.850956276Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-ebda3db9-490e-401d-9a88-a20b1f2b8110",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T10:24:52.137395825Z"
+  }, {
+    "agent" : "codex-30",
+    "session" : null,
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T13:45:25.349622616Z"
+  }, {
+    "agent" : "codex-73",
+    "session" : null,
+    "mission_id" : "M-G-over-cascades",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T10:21:36.488128723Z"
+  }, {
+    "agent" : "claude-15",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-10T19:36:28.385019291Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f4a2-27b9-7080-8d7a-d21e440c711a",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:27:51.172002759Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4b0-2438-7212-ab2d-2446c8f107c0",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:42:24.556106033Z"
+  }, {
+    "agent" : "codex-32",
+    "session" : "01a10cdf-7854-7192-80a6-450f24ab7daa",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-06T05:41:18.647727374Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-7096f714-0a55-462a-bc7c-ea6784ac4032",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T09:40:10.632029813Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f4b2-ee67-7341-bc86-21b4bafaa259",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T23:45:26.015570358Z"
+  }, {
+    "agent" : "claude-5",
+    "session" : "de4c2047-bf32-4b18-bd55-8f97e94c6252",
+    "mission_id" : null,
+    "excursion_id" : "E-cascade-real",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T22:22:52.365289103Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-0c932a08-6876-4b71-b5df-46a34347f810",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T15:59:48.001084560Z"
+  }, {
+    "agent" : "codex-57",
+    "session" : "01a11f33-c242-7b60-97ec-e941fecb92bf",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:50:33.578696770Z"
+  }, {
+    "agent" : "codex-62",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:48:45.701357708Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f417-dc55-7361-bb5a-dfe605077890",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T20:56:01.303647888Z"
+  }, {
+    "agent" : "zai-1",
+    "session" : "zai-7e12e334-63b7-4518-821f-065359c09051",
+    "mission_id" : "M-the-perfect-crime",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-24T05:01:30.875865725Z"
+  }, {
+    "agent" : "zai-1",
+    "session" : "zai-c02b13ca-b1db-4357-8f76-b6f9382b7a1f",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T04:39:33.263917675Z"
+  }, {
+    "agent" : "codex-18",
+    "session" : "01a0fe50-5eb3-75b2-b686-b434dc17c357",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T13:49:07.854272808Z"
+  }, {
+    "agent" : "codex-30",
+    "session" : "01a10ac1-5811-7021-b013-848ed69e9539",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T22:48:11.154272087Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "aeb7fee0-8e05-4183-9ae0-c5e8253db17c",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T21:58:06.272487495Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "92706bcc-a97f-472d-b391-4f2ff0052041",
+    "mission_id" : null,
+    "excursion_id" : "E-convert-operator-turns-to-patterns",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-29T03:20:35.613601361Z"
+  }, {
+    "agent" : "claude-13",
+    "session" : "ae883f3a-6164-4404-834e-e89a0381ce6a",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-11T11:00:28.887367687Z"
+  }, {
+    "agent" : "象",
+    "session" : "kimi-ed1271e5-bc0b-473f-a2f9-8ec3dca37309",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T01:45:43.740343480Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-e1ac4dab-74f9-4bc5-8498-a2e028f823dc",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T10:57:40.747932823Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4c5-2169-7dd0-9ad9-12092f2284df",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:05:34.217662831Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-7f98f8d2-3df8-4aab-8541-5d8f5cb73ec4",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-03T03:02:16.048062726Z"
+  }, {
+    "agent" : "codex-38",
+    "session" : "01a11ee9-067c-7b43-95d5-6df5bbcac017",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:16:55.429880366Z"
+  }, {
+    "agent" : "codex-48",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:24:33.872192286Z"
+  }, {
+    "agent" : "claude-15",
+    "session" : "ec3a9b31-6656-4530-90db-53a22762c17f",
+    "mission_id" : "M-象-2000",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-12T06:13:20.247426057Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f41c-5ed5-7f61-8f80-e9c7284e3066",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:00:35.596552746Z"
+  }, {
+    "agent" : "象-4",
+    "session" : "kimi-63aba2ac-f40c-402a-90ac-cac12cc23638",
+    "mission_id" : "M-G-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T09:14:22.229935616Z"
+  }, {
+    "agent" : "象-3",
+    "session" : "kimi-551c2ec7-e47e-4529-8f1f-45b2bf0d9c19",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T08:05:11.168626058Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-8cf32199-674f-48da-864b-1c0adec96fd7",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-04T21:39:05.910110937Z"
+  }, {
+    "agent" : "codex-37",
+    "session" : "01a11eb0-be5f-7010-8038-693f0eed7d24",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T03:25:37.551405667Z"
+  }, {
+    "agent" : "codex-49",
+    "session" : "01a11f21-a14e-7800-82ac-fa2a033e1165",
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:28:49.905339378Z"
+  }, {
+    "agent" : "codex-65",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-agency-work-orders",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:49:03.054603947Z"
+  }, {
+    "agent" : "claude-9",
+    "session" : "402e0cbd-0cf8-40d3-a986-ed1e0cb1e7de",
+    "mission_id" : null,
+    "excursion_id" : "E-cascade-real",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-25T02:40:40.538610604Z"
+  }, {
+    "agent" : "codex-4",
+    "session" : "01a0f434-9868-7b40-b8df-09792caa1fa5",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:29:00.384619997Z"
+  }, {
+    "agent" : "codex-24",
+    "session" : "01a107d3-b1ca-7890-9f7b-3f22f2e228fb",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T22:50:37.810308217Z"
+  }, {
+    "agent" : "codex-6",
+    "session" : "01a0f437-92c2-7d33-be9f-937e2aa57e4e",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:30:55.677280256Z"
+  }, {
+    "agent" : "codex-28",
+    "session" : "01a108cf-b2fa-78e2-94e2-9bd33f752f3d",
+    "mission_id" : "M-diagramprover",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-05T03:14:02.244434392Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f43c-1639-76c2-a6d8-4e9bdef4ca02",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-09-30T21:36:09.242152368Z"
+  }, {
+    "agent" : "象-1",
+    "session" : "kimi-d19f35d1-248b-429c-a755-3b80aa43d594",
+    "mission_id" : "M-futon-seams",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-09T05:15:44.604146245Z"
+  }, {
+    "agent" : "claude-2",
+    "session" : "77f297d2-efc9-4289-998d-79182b8461dd",
+    "mission_id" : "M-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-09-26T16:32:50.996028055Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : "01a0f4d4-c273-7600-9628-b41ddb046570",
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T00:25:01.086556745Z"
+  }, {
+    "agent" : "codex-9",
+    "session" : null,
+    "mission_id" : null,
+    "excursion_id" : "E-kimi-task-139",
+    "campaign_id" : null,
+    "decided_at" : "2026-10-02T23:16:39.560710952Z"
+  }, {
+    "agent" : "象-2",
+    "session" : "kimi-a879cb2b-4068-43d3-ac6b-792456b944cb",
+    "mission_id" : "M-G-wm-wiring",
+    "excursion_id" : null,
+    "campaign_id" : null,
+    "decided_at" : "2026-10-01T01:19:29.117437331Z"
+  } ]
+}
