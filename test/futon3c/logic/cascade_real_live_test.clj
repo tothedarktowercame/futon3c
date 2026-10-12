@@ -100,8 +100,20 @@
                   ;; Must stay below Futon1b's five-second query deadline;
                   ;; completeness comes from the cursor walk, not one giant page.
                   (is (= 100 (:page-size opts)))
+                  (is (nil? (:fields opts)))
                   sample-clock-edges)]
     (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
+
+(deftest pattern-read-projects-only-consumed-storage-columns
+  (with-redefs [substrate/hyperedges-by-type
+                (fn [type opts]
+                  (is (= "mission-scope/pattern" type))
+                  (is (= ["hx/id" "hx/type" "hx/endpoints"
+                          "hx/props.pattern/ref" "hx/props.pattern/ident"
+                          "hx/props.pattern/state"]
+                         (:fields opts)))
+                  [])]
+    (is (= [] (live/fetch-edges "mission-scope/pattern")))))
 
 (deftest fetch-edges-refuses-partial-authoritative-walk
   (with-redefs [substrate/hyperedges-by-type

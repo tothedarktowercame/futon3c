@@ -188,12 +188,16 @@
 
 (defn hyperedges-by-type
   ([type] (hyperedges-by-type type {}))
-  ([type {:keys [valid-as-of system-as-of] :as options}]
+  ([type {:keys [valid-as-of system-as-of fields] :as options}]
    (paged-hyperedges
     (fn [page-limit after]
       (str (configured-url) "/api/alpha/hyperedges?type=" (encode type)
            "&limit=" page-limit
            "&include-total=false"
+           (when (seq fields)
+             (str "&fields="
+                  (encode (str/join "," (map #(str/replace-first (str %) ":" "")
+                                              fields)))))
            (when after (str "&after=" (encode after)))
            (when valid-as-of
              (str "&valid-as-of=" (encode valid-as-of)))

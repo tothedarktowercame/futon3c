@@ -56,6 +56,17 @@
          (is (thrown? clojure.lang.ExceptionInfo
                       (sut/hyperedges-by-type :test/edge {:page-size 1001})))))))
 
+(deftest hyperedge-read-encodes-projected-fields
+  (let [seen (atom nil)]
+    (with-redefs [sut/get-edn! (fn [url _]
+                                (reset! seen url)
+                                {:hyperedges []})]
+      (is (= [] (sut/hyperedges-by-type
+                 :test/edge {:fields ["hx/id" "hx/endpoints"
+                                      "hx/props.pattern/ref"]})))
+      (is (re-find #"fields=hx%2Fid%2Chx%2Fendpoints%2Chx%2Fprops.pattern%2Fref"
+                   @seen)))))
+
 (deftest hyperedge-budget-exhaustion-is-marked-partial
   (let [get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
     (with-redefs-fn

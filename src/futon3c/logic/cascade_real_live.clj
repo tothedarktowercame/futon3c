@@ -35,6 +35,11 @@
 (def ^:private fetch-timeout-ms 30000)
 (def ^:private fetch-page-size 100)
 
+(def ^:private fetch-fields-by-type
+  {"mission-scope/pattern"
+   ["hx/id" "hx/type" "hx/endpoints"
+    "hx/props.pattern/ref" "hx/props.pattern/ident" "hx/props.pattern/state"]})
+
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
 
@@ -44,7 +49,9 @@
   authoritative query was exhausted and empty."
   [hx-type]
   (let [rows (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms
-                                                     :page-size fetch-page-size})]
+                                                     :page-size fetch-page-size
+                                                     :fields (get fetch-fields-by-type
+                                                                  hx-type)})]
     (when (substrate/partial-result? rows)
       (throw (ex-info "authoritative substrate walk incomplete"
                       {:hyperedge-type hx-type
