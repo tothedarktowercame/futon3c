@@ -1,0 +1,150 @@
+{
+  "record": "turn-qvjvv2",
+  "turn_id": "claude-4-turn-46",
+  "session_id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+  "created_at": "2026-09-30T00:57:20Z",
+  "agent_id": "claude-4",
+  "source_text": "OK, for a PR, I think we should do more than just mark up Basic.c — that's relevant but I think we should build to a proof of contribution not just a proof of work.  Maybe we need to build our own roadmap for what \"complete\" looks like before we can find a good first milestone.",
+  "fragments": [
+    {
+      "id": "claude-4-turn-46-f-s1-0",
+      "intent": "redirect",
+      "text": "OK, for a PR, I think we should do more than just mark up Basic.c — that's relevant but"
+    },
+    {
+      "id": "claude-4-turn-46-f-s1-1",
+      "intent": "constrain",
+      "text": "I think we should build to a proof of contribution not just a proof of work."
+    },
+    {
+      "id": "claude-4-turn-46-f-s2-0",
+      "intent": "propose",
+      "text": "Maybe we need to build our own roadmap for what \"complete\" looks like before we can find a good first milestone."
+    }
+  ],
+  "reply_text": "Before drafting, I want to see what \"complete\" means on Rob's side, so our roadmap targets his definition of done rather than ours. Reading the acceptance criteria and open items in his missions.That matrix is dated July; the C-authority tests use \"LCS-NNN\" ids, which suggests a ledger with a later state. Checking the newest sections and those ids.Only a missing dependency so far (`networkx`, which isn't in their requirements files). Adding missing packages until collection succeeds.My recommended first milestone is to test a prediction from our model of the compiler against Rob's own code: that the Python port breaks on long inputs where Lean's C doesn't. Either result is a contribution, because the evidence comes from their code rather than ours. The draft roadmap is in `~/code/lean-docs-align/ROADMAP-mfuton.md` (commit `58ac368`).\n\n**What \"complete\" means for them.** Their compiler must turn the Lean source that defines Lean's parser into executable Python. The rest of their pipeline must use that generated code, and the hand-written parser code must be gone. Lean's generated C decides what the Python must do, but they port its meaning, not its runtime machinery. Telling those two apart is what our work maps. Their acceptance table was last updated in July: 3 of 12 criteria met, 4 partial, 5 not met. I don't know the current state.\n\n**What their tests show on Linux.** I ran their 230 compiler-vs-C tests from a clean checkout in a throwaway environment.\n- 141 pass without any Lean libraries.\n- 42 fail because they need the Windows-built bridge between Python and Lean's libraries.\n- About 8 fail because the tests use names that don't exist in the exported source.\n- The rest still need sorting.\n- Three dependencies are missing from their requirements files: `networkx`, `boltons` and `pympler`.\n\n**What \"complete\" means for us:**\n- **A.** Their full suite runs on Linux.\n- **B.** A machine-readable reading guide to the C for the Lean files their compiler handles: which C function carries the meaning of each definition, and which are compiler output.\n- **C.** Each of our registry claims about their code turned into a test in their suite. The test either exposes a defect that needs a general fix, or fixes current behaviour in place.\n\n**The first milestone, M1.**\n- Lean's C turns a function calling itself as its last step into a loop; 21 functions in Basic.c do this.\n- Their compiler appears to emit plain Python recursion for these, and I found no handling for this case.\n- If so, a parser loop over a long input hits Python's recursion limit, and the C version doesn't.\n- This is unverified. A test would settle it, and it may run without the Windows bridge.\n- If the test fails, the PR is the test plus a general fix, e.g. turning such calls into a `while` loop.\n\nThe setup step, M0, is small: a PR adding the three missing requirements, and an issue listing the tests that don't match the exported source.\n\nNothing has been sent. The local setup is a throwaway environment in `/tmp/mfs-venv`, plus a link at `tools/lean4/src` in the mfuton-share checkout. That folder is excluded from git, so the checkout is otherwise clean.\n\nIf M1 as first milestone suits you, I'd start with the recursion test. It's a small, self-contained job, so I'd do it directly rather than hand it to Kimi.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-4-turn-46",
+      "id": "claude-4-turn-46-f-s1-0",
+      "kind": "redirect",
+      "at": "2026-09-30T00:57:20Z",
+      "record": "turn-qvjvv2",
+      "end": 87,
+      "standing?": false,
+      "about": "the planned PR scope (marking up Basic.c)",
+      "text": "OK, for a PR, I think we should do more than just mark up Basic.c — that's relevant but",
+      "to": "claude-4"
+    },
+    {
+      "port?": false,
+      "start": 88,
+      "author": "operator",
+      "turn": "claude-4-turn-46",
+      "id": "claude-4-turn-46-f-s1-1",
+      "kind": "constrain",
+      "at": "2026-09-30T00:57:20Z",
+      "record": "turn-qvjvv2",
+      "end": 164,
+      "standing?": true,
+      "about": "the PR's success criterion",
+      "text": "I think we should build to a proof of contribution not just a proof of work.",
+      "to": "claude-4"
+    },
+    {
+      "port?": true,
+      "start": 166,
+      "author": "operator",
+      "turn": "claude-4-turn-46",
+      "id": "claude-4-turn-46-f-s2-0",
+      "kind": "propose",
+      "at": "2026-09-30T00:57:20Z",
+      "record": "turn-qvjvv2",
+      "end": 278,
+      "standing?": true,
+      "about": "the mfuton-share contribution roadmap (define 'complete' first, then pick the first milestone)",
+      "text": "Maybe we need to build our own roadmap for what \"complete\" looks like before we can find a good first milestone.",
+      "to": "claude-4"
+    }
+  ],
+  "mission_id": "M-diagramprover",
+  "open_ports": [
+    {
+      "act": "claude-4-turn-2-f-s2-0",
+      "kind": "propose",
+      "text": "Regarding the wiring and only reading Clojure, maybe could use interop, though that adds another level of indirection.",
+      "since": "2026-09-29T15:37:41Z"
+    },
+    {
+      "act": "claude-4-turn-3-f-s1-0",
+      "kind": "propose",
+      "text": "how about we start to build a DiagramProver checker adapted to Lean itself,",
+      "since": "2026-09-29T15:57:14Z"
+    },
+    {
+      "act": "claude-4-turn-6-f-s1-0",
+      "kind": "propose",
+      "text": "So, I'm also wondering if we could use Arxana to align Lean's source with its published documentation (the .PDFs you fo…",
+      "since": "2026-09-29T16:25:16Z"
+    },
+    {
+      "act": "claude-4-turn-6-f-s4-0",
+      "kind": "propose",
+      "text": "But if we could use an Arxana hypergraph to help make sense of it, that would be useful for us!",
+      "since": "2026-09-29T16:25:16Z"
+    },
+    {
+      "act": "claude-4-turn-12-f-s2-0",
+      "kind": "propose",
+      "text": "An interesting thing here is the documentation hypergraph annotations may provide a layer that the diagram prover can u…",
+      "since": "2026-09-29T16:49:57Z"
+    },
+    {
+      "act": "claude-4-turn-12-f-s2-1",
+      "kind": "propose",
+      "text": "(and if it doesn't have enough detail, we could go further)",
+      "since": "2026-09-29T16:49:57Z"
+    },
+    {
+      "act": "claude-4-turn-17-f-s1-0",
+      "kind": "delegate",
+      "text": "Let's bell claude-18 to take over on the LSP stuff",
+      "since": "2026-09-29T17:25:08Z"
+    },
+    {
+      "act": "claude-4-turn-18-f-s2-0",
+      "kind": "verify",
+      "text": "any progress?",
+      "since": "2026-09-29T17:57:49Z"
+    },
+    {
+      "act": "claude-4-turn-26-f-s1-0",
+      "kind": "propose",
+      "text": "docstrings are a cheap way to get coverage",
+      "since": "2026-09-29T18:38:48Z"
+    },
+    {
+      "act": "claude-4-turn-31-f-s2-1",
+      "kind": "propose",
+      "text": "once that's in, we could compile a selection of proofs from my apm-lean work to see if our tooling really does give cov…",
+      "since": "2026-09-29T19:42:20Z"
+    },
+    {
+      "act": "claude-4-turn-42-f-s1-0",
+      "kind": "ask-action",
+      "text": "Let's make our own fork of mfuton-share",
+      "since": "2026-09-30T00:51:21Z"
+    },
+    {
+      "act": "claude-4-turn-42-f-s1-2",
+      "kind": "propose",
+      "text": "so that we send PRs and/or issues",
+      "since": "2026-09-30T00:51:21Z"
+    }
+  ]
+}
