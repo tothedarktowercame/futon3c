@@ -1,0 +1,36 @@
+{
+ "record": "turn-76Ae9x",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-60-f-s1-0",
+   "kind": "report",
+   "move": "constrain/stand-rule",
+   "quote": "Rob said hecprefers direct push to PR, and tothedarktowercame should be a contributor",
+   "answers": [],
+   "scope": {
+    "opens": "direct push, no PRs",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "records Rob's standing collaboration preference as a rule for this work"
+  },
+  {
+   "act": "claude-11-turn-60-f-s1-1",
+   "kind": "verify",
+   "move": "clarify/ask-decision",
+   "quote": "please clarify?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-60-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

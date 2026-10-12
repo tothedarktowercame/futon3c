@@ -1,0 +1,86 @@
+{
+ "record": "turn-8AU38e",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-25-f-s1-0",
+   "kind": "extend",
+   "move": "propose/next-step",
+   "quote": "lets try it on atEnd",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-25-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(how the lane works)",
+   "answers": [
+    {
+     "act": "claude-11-turn-25-f-s1-0",
+     "quote": "(how the lane works)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-11-turn-25-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(the likely outcome) The remaining difference",
+   "answers": [
+    {
+     "act": "claude-11-turn-25-f-s1-0",
+     "quote": "(the likely outcome)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-11-turn-25-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(mechanics) A cold run takes about 20 minutes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-11-turn-25-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(also pending) The two isNone probes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

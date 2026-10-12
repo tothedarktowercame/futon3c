@@ -1,0 +1,22 @@
+{
+ "record": "turn-968NVf",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-131-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "i feel as though you are approaching this without much seriousness",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

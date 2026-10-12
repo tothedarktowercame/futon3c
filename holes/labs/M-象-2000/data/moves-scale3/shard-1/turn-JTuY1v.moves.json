@@ -1,0 +1,35 @@
+{
+ "record": "turn-JTuY1v",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-6-f-s1-0",
+   "kind": "challenge",
+   "move": "ask-action/status-check",
+   "quote": "did you use parks?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-4-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-6-f-s2-0",
+   "kind": "challenge",
+   "move": "clarify/ask-decision",
+   "quote": "how will you report back if not?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-6-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

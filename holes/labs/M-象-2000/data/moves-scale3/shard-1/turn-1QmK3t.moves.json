@@ -1,0 +1,23 @@
+{
+ "record": "turn-1QmK3t",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-138-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "ok, please run 1 click",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-4-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "a concrete run inside the standing run-and-report delegation"
+  }
+ ],
+ "unlabelled": []
+}

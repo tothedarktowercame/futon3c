@@ -1,0 +1,22 @@
+{
+ "record": "turn-K2Po4x",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-101-f-s1-0",
+   "kind": "report",
+   "move": "report/observed-output",
+   "quote": "I see \"02:24 solve   solve loop finished\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-6mpGKG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-39-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "bell the jobs to claude-16 since it is working on -40",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-Glz20I",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-86-f-s1-0",
+   "kind": "clarify",
+   "move": "ask-action/status-check",
+   "quote": "what is the hairsplitting detail about 0.05 vs 0.06 ?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

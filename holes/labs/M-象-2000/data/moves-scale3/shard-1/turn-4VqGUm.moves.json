@@ -1,0 +1,23 @@
+{
+ "record": "turn-4VqGUm",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-141-f-s1-0",
+   "kind": "prioritize",
+   "move": "ask-action/commission",
+   "quote": "why dont you look into the http 403 now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-13-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "re-prioritisation inside the session's standing debugging lane"
+  }
+ ],
+ "unlabelled": []
+}

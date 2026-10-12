@@ -1,0 +1,35 @@
+{
+ "record": "turn-7mgeed",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-71-f-s1-0",
+   "kind": "prioritize",
+   "move": "propose/directive",
+   "quote": "Let's start with the first item.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-71-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I know our first target isn't Mathlib",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

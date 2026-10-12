@@ -1,0 +1,36 @@
+{
+ "record": "turn-FgowBB",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-4-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "please run it and report back.",
+   "answers": [],
+   "scope": {
+    "opens": "run and report",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "the standing delegation most later runs in this session sit inside"
+  },
+  {
+   "act": "claude-12-turn-4-f-s2-0",
+   "kind": "approve",
+   "move": "constrain/standing-rule",
+   "quote": "you can use zai agents as the staff",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-4-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

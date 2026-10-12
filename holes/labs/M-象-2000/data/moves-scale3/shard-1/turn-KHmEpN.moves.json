@@ -1,0 +1,48 @@
+{
+ "record": "turn-KHmEpN",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-86-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yeah, that's a good point.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-86-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe we could find a use for t96J01 after all:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-86-f-s2-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "can we separate the AIF-relevant problems from the AIF-irrelevant problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-86-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

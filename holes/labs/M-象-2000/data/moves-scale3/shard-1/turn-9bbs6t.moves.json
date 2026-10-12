@@ -1,0 +1,23 @@
+{
+ "record": "turn-9bbs6t",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-129-f-s1-0",
+   "kind": "explain",
+   "move": "ask-action/status-check",
+   "quote": "why is there such a huge checkpoint?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-13-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "questioning observed output inside the debugging lane"
+  }
+ ],
+ "unlabelled": []
+}

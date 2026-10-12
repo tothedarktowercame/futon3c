@@ -1,0 +1,36 @@
+{
+ "record": "turn-K1IY3h",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-127-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/commission",
+   "quote": "ok, please check it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-4-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-127-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "if it looks goid, run 1 click wiyh yhe debugger engaged",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-4-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "continues the debugger-engaged variant of the standing run rule"
+  }
+ ],
+ "unlabelled": []
+}

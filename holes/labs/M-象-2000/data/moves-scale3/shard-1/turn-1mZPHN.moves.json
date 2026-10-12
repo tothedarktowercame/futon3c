@@ -1,0 +1,61 @@
+{
+ "record": "turn-1mZPHN",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-99-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "this is a lot of design patterns which would perhaps go a bit cleverly into library/parsing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-99-f-s2-0",
+   "kind": "explain",
+   "move": "explain/reflection",
+   "quote": "What's interesting I think about the \"four useful things\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-99-f-s3-0",
+   "kind": "explain",
+   "move": "explain/reflection",
+   "quote": "Once I had found the \"comparator\" I figured everything could be mechanical.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-99-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "that itself turned out to be  a precession of simulacra for the real solution.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

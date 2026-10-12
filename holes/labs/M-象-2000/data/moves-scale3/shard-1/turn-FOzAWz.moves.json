@@ -1,0 +1,48 @@
+{
+ "record": "turn-FOzAWz",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-95-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "stopped for 2 tries without progress isn't great.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-95-f-s3-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "it's also a bit strange b/c Codex (GPT) is supposed to be the best",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-95-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-95-f-s3-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "we'd presumably want to ask a Codex agent to find the new route!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-95-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

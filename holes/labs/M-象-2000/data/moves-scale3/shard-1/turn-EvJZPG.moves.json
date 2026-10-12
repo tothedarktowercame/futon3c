@@ -1,0 +1,48 @@
+{
+ "record": "turn-EvJZPG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-76-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "OK I did the reset,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-76-f-s1-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "let's bring up 3x loops: One nontopology solving loop",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-76-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-76-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "All on Codex sol fresh sessions.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-76-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

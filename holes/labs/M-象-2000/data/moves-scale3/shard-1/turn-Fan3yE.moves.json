@@ -1,0 +1,35 @@
+{
+ "record": "turn-Fan3yE",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-126-f-s1-0",
+   "kind": "report",
+   "move": "report-problem/suspected",
+   "quote": "m96J03 had a potential defect according to earlier comments",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-126-f-s1-1",
+   "kind": "verify",
+   "move": "ask-action/commission",
+   "quote": "that should be investigated",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-126-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

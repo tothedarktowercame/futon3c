@@ -1,0 +1,49 @@
+{
+ "record": "turn-DryWNa",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-144-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "You've created OOMs, you've fabricated an inner loop",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-144-f-s1-1",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "you've rerun the machine under conditions that are known to fail",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "cites the standing debugger-watching rule from turn 88, which this record's open_ports no longer lists"
+  },
+  {
+   "act": "claude-12-turn-144-f-s2-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "I don't know if you've paid any attention to Lean.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

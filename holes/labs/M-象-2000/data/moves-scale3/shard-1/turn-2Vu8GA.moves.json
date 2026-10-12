@@ -1,0 +1,35 @@
+{
+ "record": "turn-2Vu8GA",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-13-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "the other thing to look at is the claude-4 instructions to itself.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-13-f-s2-0",
+   "kind": "qualify",
+   "move": "approve/plain",
+   "quote": "if we got to 21 rows that is real progress and the new method works!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,23 @@
+{
+ "record": "turn-19mnmt",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-114-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "if the agent makes no LSP calls certainly won't give us info on whether LSP is useful or not!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-7-f-s2-2"
+   },
+   "confidence": "high",
+   "note": "objection inside the LSP-training-set proposal"
+  }
+ ],
+ "unlabelled": []
+}

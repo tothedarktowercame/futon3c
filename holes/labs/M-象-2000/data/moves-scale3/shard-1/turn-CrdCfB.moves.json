@@ -1,0 +1,61 @@
+{
+ "record": "turn-CrdCfB",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-138-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "according to my *APM report* we have 111 left as open problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-138-f-s2-0",
+   "kind": "disagree",
+   "move": "challenge/other",
+   "quote": "Your writeup of \"three places where the statement says less than it could",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-18-turn-138-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/definition",
+   "quote": "permitted weakening?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-138-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-138-f-s4-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "That's concerning, please look into it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-138-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

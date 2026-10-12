@@ -1,0 +1,35 @@
+{
+ "record": "turn-IMPmwr",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-78-f-s1-0",
+   "kind": "extend",
+   "move": "report-problem/retrospective",
+   "quote": "the APM machine was worse than just weakening statements",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-78-f-s1-1",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "it was built on a \"red tape\"; it kept failing, breaking down",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-78-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

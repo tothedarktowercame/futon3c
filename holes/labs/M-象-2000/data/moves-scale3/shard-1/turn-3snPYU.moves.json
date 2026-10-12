@@ -1,0 +1,35 @@
+{
+ "record": "turn-3snPYU",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-109-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-109-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "we can't run lean with these settings in the same cgroup",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

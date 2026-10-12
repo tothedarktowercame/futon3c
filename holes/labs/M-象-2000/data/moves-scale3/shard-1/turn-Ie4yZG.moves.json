@@ -1,0 +1,35 @@
+{
+ "record": "turn-Ie4yZG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-104-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-104-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "m02J02 is up to 47 attempts so they are running into a real infrastructure problem",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

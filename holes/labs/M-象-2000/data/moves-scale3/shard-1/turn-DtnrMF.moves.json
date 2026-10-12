@@ -1,0 +1,101 @@
+{
+ "record": "turn-DtnrMF",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-105-f-s1-0",
+   "kind": "withdraw",
+   "move": "constrain/for-now",
+   "quote": "Let's take the 3 loops down.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-105-f-s2-0",
+   "kind": "approve",
+   "move": "qualify/caveat",
+   "quote": "they can run effectively but I think they may still need supervision",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-105-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "I think they may still need supervision via watching the logs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-105-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-105-f-s3-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "I can run them tomorrow.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-105-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-105-f-s4-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "We're nearly into the last hundred problems.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-105-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I used 40% of my codex subscription in one day",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-105-f-s5-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "I used 40% of my codex subscription in one day",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-105-f-s5-0"
+   },
+   "confidence": "low",
+   "note": "duplicate of f-s5-0 under a second intent"
+  }
+ ],
+ "unlabelled": []
+}

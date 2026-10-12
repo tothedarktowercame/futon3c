@@ -1,0 +1,22 @@
+{
+ "record": "turn-GK97ER",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-12-f-s1-0",
+   "kind": "redirect",
+   "move": "constrain/for-now",
+   "quote": "if one run already completed you should summarizr that one",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-4-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

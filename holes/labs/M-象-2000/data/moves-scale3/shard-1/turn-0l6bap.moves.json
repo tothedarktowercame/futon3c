@@ -1,0 +1,23 @@
+{
+ "record": "turn-0l6bap",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-27-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "there are many probe jobs listed on voxterm is thst expectecd?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "medium",
+   "note": "questioning observed output of the probe lane the scan opened"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,79 @@
+{
+ "record": "turn-Cq0RT7",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-3-f-s1-0",
+   "kind": "prioritize",
+   "move": "ask-action/status-check",
+   "quote": "are any of the failures \"critical\" at the moment?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-3-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(gist) Nothing is critical",
+   "answers": [
+    {
+     "act": "claude-11-turn-3-f-s1-0",
+     "quote": "(gist) Nothing is critical",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-3-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the rest, by how much damage each could do)",
+   "answers": [
+    {
+     "act": "claude-11-turn-3-f-s1-0",
+     "quote": "(the rest, by how much damage each could do)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-11-turn-3-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(next) If you agree, I'll start on the evidence-store nightly backup",
+   "answers": [
+    {
+     "act": "claude-11-turn-3-f-s1-0",
+     "quote": "(next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

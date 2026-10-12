@@ -1,0 +1,36 @@
+{
+ "record": "turn-5iFDkQ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-135-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "Are the other 10 problems considered \"hard\" or \"easy\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-135-f-s1-1",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "Are the other 10 problems considered \"hard\" or \"easy\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "duplicate fragment carrying the same text under two intents"
+  }
+ ],
+ "unlabelled": []
+}

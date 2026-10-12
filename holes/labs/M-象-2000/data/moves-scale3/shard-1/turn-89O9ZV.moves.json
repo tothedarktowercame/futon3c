@@ -1,0 +1,48 @@
+{
+ "record": "turn-89O9ZV",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-128-f-s1-0",
+   "kind": "continue",
+   "move": "ask-action/commission",
+   "quote": "Let's start the topology loop again",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-128-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "with the same topology loop agents from before",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-128-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-128-f-s1-2",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "picking up where they left off",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-128-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

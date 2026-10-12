@@ -1,0 +1,35 @@
+{
+ "record": "turn-9y7ov6",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-7-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "so I think we can delete the image.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-7-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(\"https://zone.hyperreal.enterprises/voxterm/) Your message seems to stop",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

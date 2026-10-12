@@ -1,0 +1,61 @@
+{
+ "record": "turn-HBUcH2",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-106-f-s1-0",
+   "kind": "report",
+   "move": "report-problem/retrospective",
+   "quote": "it is pretty remarkable that we didn't close *any* topology problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-106-f-s1-1",
+   "kind": "approve",
+   "move": "qualify/caveat",
+   "quote": "we did discover some where the bookkeeping hadn't been done",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-106-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-106-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "if we do this again we'd get down to a residual of \"hard problems\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-106-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-106-f-s2-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "particularly if we drop your 20-attempt rule to, say, 10.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-106-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,92 @@
+{
+ "record": "turn-5HLIOX",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-21-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "fixing up metameso isn't a priority right now, I'd fit that under M-hardening.md ...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-21-f-s2-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "if I was running a virtual startup on Metameso and one on Lucy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-21-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"I'd fit that under M-hardening.md\") I've deferred the metameso recall gap.",
+   "answers": [
+    {
+     "act": "claude-13-turn-21-f-s1-0",
+     "quote": "(\"I'd fit that under M-hardening.md\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-13-turn-21-r-1",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(\"a virtual startup on Metameso and one on Lucy\") I like that as a way to play",
+   "answers": [
+    {
+     "act": "claude-13-turn-21-f-s2-0",
+     "quote": "(\"a virtual startup on Metameso and one on Lucy\") I like that",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-13-turn-21-r-2",
+   "kind": "reply-mark",
+   "move": "clarify/ask-decision",
+   "quote": "(M-hardening) Is `M-hardening` a new mission you have in mind",
+   "answers": [
+    {
+     "act": "claude-13-turn-21-f-s1-0",
+     "quote": "(M-hardening) Is `M-hardening` a new mission",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

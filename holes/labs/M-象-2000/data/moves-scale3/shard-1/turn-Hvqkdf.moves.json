@@ -1,0 +1,87 @@
+{
+ "record": "turn-Hvqkdf",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-156-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "So, this is a bit of a discrepancy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-156-f-s2-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "You're able to do expansive thinking, but only when it suits you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-156-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-156-f-s3-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "you're not actually combining expansive with critical thinking.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-156-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-156-f-s4-0",
+   "kind": "explore",
+   "move": "explore/hypothesis",
+   "quote": "If I'm asleep, maybe there's no critical facility around here.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-156-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-156-f-s5-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "You're suggesting as much when you said \"question for Joe\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-156-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-156-f-s6-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "But then you ran the machine anyway.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-156-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

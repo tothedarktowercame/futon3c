@@ -1,0 +1,35 @@
+{
+ "record": "turn-BaIo42",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-89-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "the original \"solver\" role card for APM was getting good results",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-89-f-s2-0",
+   "kind": "disagree",
+   "move": "explain/decline",
+   "quote": "I'm a bit dubious about asceding to the request to check the m02J05",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

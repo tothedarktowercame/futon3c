@@ -1,0 +1,75 @@
+{
+ "record": "turn-2aojFu",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-118-f-s1-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I created a Warrant system; if we use that, then we won't have to rerun tests",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-118-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/distinction",
+   "quote": "That is a separate issue from \"slow tests\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-118-f-s3-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "what you said above about \"The performance cliff is isolated\" ...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-12-turn-118-f-s4-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "I wonder what is going on with the one policy that takes so long to process?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-118-f-s5-0",
+   "kind": "prioritize",
+   "move": "constrain/for-now",
+   "quote": "Can you explain that before we proceed with anything else?",
+   "answers": [],
+   "scope": {
+    "opens": "explain the slow policy first",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "blocks further work until the explanation lands"
+  }
+ ],
+ "unlabelled": []
+}

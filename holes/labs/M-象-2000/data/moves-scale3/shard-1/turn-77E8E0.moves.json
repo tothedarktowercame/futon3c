@@ -1,0 +1,35 @@
+{
+ "record": "turn-77E8E0",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-82-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "this can show us what success looks like",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-82-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "most of Lean's parser is written in correct Lean, so we should be able to port it to Python",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-82-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

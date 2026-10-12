@@ -1,0 +1,22 @@
+{
+ "record": "turn-8N1Ph6",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-83-f-s1-0",
+   "kind": "prioritize",
+   "move": "propose/directive",
+   "quote": "let's work on the parser-only mode first",
+   "answers": [],
+   "scope": {
+    "opens": "parser-only mode first",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

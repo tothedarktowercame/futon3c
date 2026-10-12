@@ -1,0 +1,22 @@
+{
+ "record": "turn-7ThP4r",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-94-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "OK, let's reset topo1 with some more problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

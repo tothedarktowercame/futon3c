@@ -1,0 +1,35 @@
+{
+ "record": "turn-345Cv3",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-37-f-s1-0",
+   "kind": "qualify",
+   "move": "clarify/context",
+   "quote": "it is unsurprising that mastra won as of now, given that minus40 is still being developed!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-37-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "my goal is to learn from the best, and if we can use ideas from these projects to improve FUTON we should do so.",
+   "answers": [],
+   "scope": {
+    "opens": "learn from the best",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

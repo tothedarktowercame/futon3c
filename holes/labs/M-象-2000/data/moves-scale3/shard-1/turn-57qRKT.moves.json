@@ -1,0 +1,60 @@
+{
+ "record": "turn-57qRKT",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-78-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I ran that in the fresg claude-19 buffer and got list: Wrong type argument: stringp, :null",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-78-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(what the error shows about seats) claude-19 is a new seat with no clock decision yet",
+   "answers": [
+    {
+     "act": "claude-16-turn-78-f-s1-0",
+     "quote": "(what the error shows about seats)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-78-r-1",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(\"I ran that\") Try again in the same buffer: `M-x xiang-resume-brief`",
+   "answers": [
+    {
+     "act": "claude-16-turn-78-f-s1-0",
+     "quote": "Try again in the same buffer",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

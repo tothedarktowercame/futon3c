@@ -1,0 +1,36 @@
+{
+ "record": "turn-2jeD5k",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-87-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "here's an interesting thought: since we have a writeup of AIF *in Lean*",
+   "answers": [],
+   "scope": {
+    "opens": "lean-derived curriculum",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "starts the formal-AIF-as-curriculum idea that later turns elaborate"
+  },
+  {
+   "act": "claude-18-turn-87-f-s2-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "we could map back to the informal problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-87-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

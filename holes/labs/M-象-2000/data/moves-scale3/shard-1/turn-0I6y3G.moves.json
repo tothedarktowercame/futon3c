@@ -1,0 +1,36 @@
+{
+ "record": "turn-0I6y3G",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-70-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/sequencing",
+   "quote": "let's aim for M3 before we push for Rob.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "orders milestones inside the health-scan work the session opened"
+  },
+  {
+   "act": "claude-11-turn-70-f-s2-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "The other thing he was talking about was somehow expressing math as Python types",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

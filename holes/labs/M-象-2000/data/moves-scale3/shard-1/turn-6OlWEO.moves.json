@@ -1,0 +1,22 @@
+{
+ "record": "turn-6OlWEO",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-88-f-s1-0",
+   "kind": "collect",
+   "move": "report/context",
+   "quote": "here's what Rob says he's after:",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

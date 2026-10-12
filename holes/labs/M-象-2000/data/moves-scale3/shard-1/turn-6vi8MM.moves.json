@@ -1,0 +1,35 @@
+{
+ "record": "turn-6vi8MM",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-58-f-s1-0",
+   "kind": "explore",
+   "move": "clarify/ask-decision",
+   "quote": "so, what would be the next order of business.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-58-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe parsing hello world?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-58-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

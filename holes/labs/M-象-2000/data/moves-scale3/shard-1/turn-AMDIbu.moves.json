@@ -1,0 +1,48 @@
+{
+ "record": "turn-AMDIbu",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-147-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "the entire \"claude\" offering seems intent on wrecking this work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-147-f-s2-0",
+   "kind": "retract",
+   "move": "retract/correction",
+   "quote": "I thought it was OK because it was well specified but",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-147-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-147-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "for whatever reason only Codex can be trusted with it at this point in the build process.",
+   "answers": [],
+   "scope": {
+    "opens": "codex only for build work",
+    "closes": null,
+    "within": "claude-12-turn-147-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-8X7BbX",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-38-f-s1-0",
+   "kind": "verify",
+   "move": "clarify/ask-decision",
+   "quote": "so are we doing every efficiency enhancement noted so far?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
