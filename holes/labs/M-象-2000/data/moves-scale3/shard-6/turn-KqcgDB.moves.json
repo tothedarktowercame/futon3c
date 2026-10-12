@@ -1,0 +1,164 @@
+{
+ "record": "turn-KqcgDB",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-20-turn-1-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "a few points from Rob...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-f-s2-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I checked in futon1 and 4 -",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-f-s2-1",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "old configuration stuff.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-f-s3-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Also update mfuton-shared were your agents are adding in your code.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-20-turn-1-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-f-s4-0",
+   "kind": "ask-action",
+   "move": "constrain/standing-rule",
+   "quote": "please ask them to get latest and use those configs -",
+   "answers": [],
+   "scope": {
+    "opens": "use latest shared configs",
+    "closes": null,
+    "within": "claude-20-turn-1-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the standing config rule Rob's points established"
+  },
+  {
+   "act": "claude-20-turn-1-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"I checked in futon1 and 4\") Both were already pulled last night",
+   "answers": [
+    {
+     "act": "claude-20-turn-1-f-s2-0",
+     "quote": "(\"I checked in futon1 and 4\") Both were already pulled",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"Also update mfuton-shared\") The local `main`",
+   "answers": [
+    {
+     "act": "claude-20-turn-1-f-s3-0",
+     "quote": "(\"Also update mfuton-shared\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"a working arrangement to enforce\") I added a section",
+   "answers": [
+    {
+     "act": "claude-20-turn-1-f-s2-0",
+     "quote": "(\"a working arrangement to enforce\") I added a section",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-r-3",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"please ask them to get latest\") claude-11 led",
+   "answers": [
+    {
+     "act": "claude-20-turn-1-f-s4-0",
+     "quote": "(\"please ask them to get latest\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-20-turn-1-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-20-turn-1-r-4",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(an example of the problem) Two checkouts have LeanPy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-20-turn-1-f-s4-0"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,144 @@
+{
+ "record": "turn-NEBxBC",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-105-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "It's a blend with emergent structure.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-105-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "the idea  was described formally with regard to Goguen 1-and-a-half categories",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-105-f-s3-0",
+   "kind": "explain",
+   "move": "clarify/definition",
+   "quote": "a houseboat and a boathouse are two different blends of \"boat\" and \"house\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-105-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"Goguen 1-and-a-half categories\") The source is Goguen's",
+   "answers": [
+    {
+     "act": "claude-2-turn-105-f-s2-0",
+     "quote": "(\"Goguen 1-and-a-half categories\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-105-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"a houseboat and a boathouse\") His 2006 paper gives the full example",
+   "answers": [
+    {
+     "act": "claude-2-turn-105-f-s3-0",
+     "quote": "(\"a houseboat and a boathouse\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-105-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"emergent structure\") Two statements of his",
+   "answers": [
+    {
+     "act": "claude-2-turn-105-f-s1-0",
+     "quote": "(\"emergent structure\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-105-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(what the draft says, in brief)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-105-r-4",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(one check in the library)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-105-r-5",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(in flight) claude-17 and codex-10",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

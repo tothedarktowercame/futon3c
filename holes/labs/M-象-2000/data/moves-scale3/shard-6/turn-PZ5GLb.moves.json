@@ -1,0 +1,144 @@
+{
+ "record": "turn-PZ5GLb",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-102-f-s1-0",
+   "kind": "redirect",
+   "move": "constrain/for-now",
+   "quote": "I think you need to take a step back and understand the fundamentals better",
+   "answers": [],
+   "scope": {
+    "opens": "step back to fundamentals",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "stops dispatching until the specification is understood"
+  },
+  {
+   "act": "claude-2-turn-102-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(\"take a step back and understand the fundamentals better\") Yes",
+   "answers": [
+    {
+     "act": "claude-2-turn-102-f-s1-0",
+     "quote": "(\"take a step back and understand the fundamentals better\") Yes",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-102-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the fundamentals as I now read them, for you to correct)",
+   "answers": [
+    {
+     "act": "claude-2-turn-102-f-s1-0",
+     "quote": "(the fundamentals as I now read them",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-102-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the last click against the requirements)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-102-r-3",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(what I got wrong today)",
+   "answers": [
+    {
+     "act": "claude-2-turn-102-f-s1-0",
+     "quote": "(what I got wrong today)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-102-r-4",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what I have not settled)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-102-r-5",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what I would do next, in order)",
+   "answers": [
+    {
+     "act": "claude-2-turn-102-f-s1-0",
+     "quote": "(what I would do next, in order)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-102-r-6",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "(two things I need)",
+   "answers": [
+    {
+     "act": "claude-2-turn-102-f-s1-0",
+     "quote": "(two things I need)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-102-f-s1-0"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

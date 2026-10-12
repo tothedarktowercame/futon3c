@@ -1,0 +1,86 @@
+{
+ "record": "turn-E5Dkcd",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-10-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "i have 2 resets available",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-10-f-s1-1",
+   "kind": "continue",
+   "move": "approve/plain",
+   "quote": "if the make progress we can keep going for a while!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-10-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"2 resets available\") Good.",
+   "answers": [
+    {
+     "act": "claude-14-turn-10-f-s1-0",
+     "quote": "(\"2 resets available\") Good.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-10-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(watch adjusted) Two changes so a quota stop comes straight to you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-10-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(keep going?) The open question is whether the lemma work",
+   "answers": [
+    {
+     "act": "claude-14-turn-10-f-s1-1",
+     "quote": "(keep going?)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

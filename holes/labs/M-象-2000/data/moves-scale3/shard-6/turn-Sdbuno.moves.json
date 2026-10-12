@@ -1,0 +1,80 @@
+{
+ "record": "turn-Sdbuno",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-426-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "the gap-per-N hours should already exist as part of xiao-xiang.py",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-426-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what its gaps measure: three differences from the Minard panel)",
+   "answers": [
+    {
+     "act": "claude-17-turn-426-f-s1-0",
+     "quote": "(what its gaps measure",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-426-r-1",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(where it writes)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-426-r-2",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "Gist: This wake-up came early.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-426-r-3",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(the park) A park with an empty `awaiting` list",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

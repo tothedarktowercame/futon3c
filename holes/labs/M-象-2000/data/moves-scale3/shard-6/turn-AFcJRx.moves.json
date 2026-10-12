@@ -1,0 +1,61 @@
+{
+ "record": "turn-AFcJRx",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-6-turn-9-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "Can you please summarise more succinctly what the change implies",
+   "answers": [],
+   "scope": {
+    "opens": "succinct summaries",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "a standing preference for brevity in reports"
+  },
+  {
+   "act": "claude-6-turn-9-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what the change implies) Agents will stop guessing where the port goes wrong",
+   "answers": [
+    {
+     "act": "claude-6-turn-9-f-s1-0",
+     "quote": "(what the change implies)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-9-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-6-turn-9-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits) It only sees steps the port records",
+   "answers": [
+    {
+     "act": "claude-6-turn-9-f-s1-0",
+     "quote": "(limits)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-9-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

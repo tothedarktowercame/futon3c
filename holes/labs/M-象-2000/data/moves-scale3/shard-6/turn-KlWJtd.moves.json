@@ -1,0 +1,67 @@
+{
+ "record": "turn-KlWJtd",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-433-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "they should be foreground not background faces",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-433-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(foreground, not background) The background tint is gone",
+   "answers": [
+    {
+     "act": "claude-17-turn-433-f-s1-0",
+     "quote": "(foreground, not background) The background tint is gone",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-433-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(where it stands) Committed as futon3c `f6fc84d3`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-433-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "(the emoji marks) If you want the emoji marks coloured by stage too",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

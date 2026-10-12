@@ -1,0 +1,124 @@
+{
+ "record": "turn-627KUC",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-54-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "i think done meaning stopped was noted before",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-54-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "please look onto it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-54-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-54-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(my 10-11 fix) You had flagged this before",
+   "answers": [
+    {
+     "act": "claude-14-turn-54-f-s1-0",
+     "quote": "(my 10-11 fix) You had flagged this before",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-54-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(how much it affected)",
+   "answers": [
+    {
+     "act": "claude-14-turn-54-f-s1-0",
+     "quote": "(how much it affected)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-54-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the fix)",
+   "answers": [
+    {
+     "act": "claude-14-turn-54-f-s1-1",
+     "quote": "(the fix)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-54-r-3",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(migration)",
+   "answers": [
+    {
+     "act": "claude-14-turn-54-f-s1-1",
+     "quote": "(migration)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-54-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(the t93J03 round now running)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

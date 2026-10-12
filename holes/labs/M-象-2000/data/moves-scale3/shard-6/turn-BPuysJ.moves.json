@@ -1,0 +1,144 @@
+{
+ "record": "turn-BPuysJ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-60-f-s1-0",
+   "kind": "explain",
+   "move": "report/context",
+   "quote": "I was starting to look, from the elephant side, Add building up models of collaboration",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-60-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "we should keep the implementation simple so that we can get back to running experiments",
+   "answers": [],
+   "scope": {
+    "opens": "simple implementation first",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "governs how the R11 work is read: simplicity over generality"
+  },
+  {
+   "act": "claude-2-turn-60-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(\"the war machine has two agents inside of it\") Understood",
+   "answers": [
+    {
+     "act": "claude-2-turn-60-f-s1-0",
+     "quote": "(\"the war machine has two agents inside of it\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-60-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"the theory should generalize if possible\") It does",
+   "answers": [
+    {
+     "act": "claude-2-turn-60-f-s1-0",
+     "quote": "(\"the theory should generalize if possible\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-60-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"one of my instructions might have gotten dropped\")",
+   "answers": [
+    {
+     "act": "claude-2-turn-60-f-s1-0",
+     "quote": "(\"one of my instructions might have gotten dropped\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-60-r-3",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(\"keep the implementation simple\") For the War Machine I will hold R11",
+   "answers": [
+    {
+     "act": "claude-2-turn-60-f-s1-1",
+     "quote": "(\"keep the implementation simple\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-60-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-60-r-4",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(order of work, revised)",
+   "answers": [
+    {
+     "act": "claude-2-turn-60-f-s1-1",
+     "quote": "(order of work, revised)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-60-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-60-r-5",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-60-f-s1-1"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

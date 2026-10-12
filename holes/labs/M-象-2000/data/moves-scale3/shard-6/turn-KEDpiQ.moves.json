@@ -1,0 +1,54 @@
+{
+ "record": "turn-KEDpiQ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-16-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-16-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"yes\") voxterm has restarted",
+   "answers": [
+    {
+     "act": "claude-14-turn-16-f-s1-0",
+     "quote": "(\"yes\") voxterm has restarted",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-16-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(checked) I queried the live `/usage` after the restart",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

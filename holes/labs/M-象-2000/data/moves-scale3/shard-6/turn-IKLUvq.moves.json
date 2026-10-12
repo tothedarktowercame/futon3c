@@ -1,0 +1,86 @@
+{
+ "record": "turn-IKLUvq",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-494-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "agent turns DO carry intents, that's denoted by the characters and the Legend",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-494-r-0",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(my claim that agent turns have no readings) You're right, and I take it back",
+   "answers": [
+    {
+     "act": "claude-17-turn-494-f-s1-0",
+     "quote": "(my claim that agent turns have no readings)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-494-r-1",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(two things I found while checking the marks)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-494-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(what this gives the flow)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-494-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I build that joined model of the six turns",
+   "answers": [
+    {
+     "act": "claude-17-turn-494-f-s1-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

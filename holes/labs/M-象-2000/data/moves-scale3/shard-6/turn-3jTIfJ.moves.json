@@ -1,0 +1,138 @@
+{
+ "record": "turn-3jTIfJ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-42-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Okay, that's great",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-42-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "we can also revise the paper to match the lean code",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-42-f-s1-2",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "the main point is that all of these artifacts are supposed to be demonstrating",
+   "answers": [],
+   "scope": {
+    "opens": "artifacts demonstrate applied AIF",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "standing frame governing how all paper/code work is read"
+  },
+  {
+   "act": "claude-2-turn-42-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(\"they can't just be decorative bits\") Agreed",
+   "answers": [
+    {
+     "act": "claude-2-turn-42-f-s1-2",
+     "quote": "(\"they can't just be decorative bits\") Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-42-f-s1-2"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-42-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what each node contributes to the active-inference account)",
+   "answers": [
+    {
+     "act": "claude-2-turn-42-f-s1-2",
+     "quote": "(what each node contributes to the active-inference account)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-42-f-s1-2"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-42-r-2",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(where this is not yet met) The paper currently calls R9, R10 and R11",
+   "answers": [
+    {
+     "act": "claude-2-turn-42-f-s1-2",
+     "quote": "(where this is not yet met)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-42-f-s1-2"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-42-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(order) I'll finish stating each role from the paper first",
+   "answers": [
+    {
+     "act": "claude-2-turn-42-f-s1-2",
+     "quote": "(order)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-42-f-s1-2"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-42-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status) The R20 job `invoke-1791168970981-32460-80c4995c` is running",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-42-f-s1-2"
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

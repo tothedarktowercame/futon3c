@@ -1,0 +1,80 @@
+{
+ "record": "turn-HUylGP",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-394-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "🈸:yes 1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-394-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what happened)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-394-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why it matters) A yes that is recorded while the buffer says",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-394-r-2",
+   "kind": "reply-mark",
+   "move": "propose/with-options",
+   "quote": "(fixes, in order of size)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-394-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I do 1 now",
+   "answers": [
+    {
+     "act": "claude-17-turn-394-f-s1-0",
+     "quote": "(one decision) Shall I do 1 now",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

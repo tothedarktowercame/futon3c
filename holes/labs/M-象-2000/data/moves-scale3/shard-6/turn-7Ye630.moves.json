@@ -1,0 +1,137 @@
+{
+ "record": "turn-7Ye630",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-487-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I got an external agent to comment on the relationship",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-487-f-s2-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "f0ce648 adds the flow-map kit, now rung 0 of the ladder.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-487-f-s3-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "b6feb2c adds the ladder of diagram types",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-487-f-s4-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "f7ba3a34 adds open causal theories",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-487-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the skeleton computes)",
+   "answers": [
+    {
+     "act": "claude-17-turn-487-f-s4-0",
+     "quote": "(what the skeleton computes)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-487-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits it states itself)",
+   "answers": [
+    {
+     "act": "claude-17-turn-487-f-s4-0",
+     "quote": "(limits it states itself)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-487-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(relation to M-aif-over-the-operator and today's MAP)",
+   "answers": [
+    {
+     "act": "claude-17-turn-487-f-s1-0",
+     "quote": "(relation to M-aif-over-the-operator",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-487-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(next step) If you want it in the running system",
+   "answers": [
+    {
+     "act": "claude-17-turn-487-f-s2-0",
+     "quote": "(next step)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

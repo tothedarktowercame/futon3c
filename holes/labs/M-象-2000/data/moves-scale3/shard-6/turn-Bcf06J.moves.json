@@ -1,0 +1,105 @@
+{
+ "record": "turn-Bcf06J",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-91-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "you said \"chosen cascade\" but the cascade should be constructed not chosen",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-91-r-0",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(\"the cascade should be constructed not chosen\") You are right",
+   "answers": [
+    {
+     "act": "claude-2-turn-91-f-s1-0",
+     "quote": "(\"the cascade should be constructed not chosen\") You are right",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-91-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the click does today) I read the construction code",
+   "answers": [
+    {
+     "act": "claude-2-turn-91-f-s1-0",
+     "quote": "(what the click does today)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-91-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(where the giant cascade enters construction)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-91-r-3",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(wording fixed) The view's code and one test name said \"chosen\"",
+   "answers": [
+    {
+     "act": "claude-2-turn-91-f-s1-0",
+     "quote": "(wording fixed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-91-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/two-decisions",
+   "quote": "(two decisions)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

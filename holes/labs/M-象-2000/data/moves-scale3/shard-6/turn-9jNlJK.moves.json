@@ -1,0 +1,86 @@
+{
+ "record": "turn-9jNlJK",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-495-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "🈸:yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-495-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what I built) The probe is `holes/labs/M-diagramprover/flow_23519_probe.clj`",
+   "answers": [
+    {
+     "act": "claude-17-turn-495-f-s1-0",
+     "quote": "(what I built)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-495-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what it computes)",
+   "answers": [
+    {
+     "act": "claude-17-turn-495-f-s1-0",
+     "quote": "(what it computes)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-495-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what this says about operator intent and agent follow-up)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-495-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

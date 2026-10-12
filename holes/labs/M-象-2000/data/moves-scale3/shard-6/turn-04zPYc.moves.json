@@ -1,0 +1,92 @@
+{
+ "record": "turn-04zPYc",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-38-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "The deep research results are back in E-the-dark-tower-3.md",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-38-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the corrections) Applied in futon3c `aeaa47d3`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-38-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the report changes in the strategy) Three findings matter",
+   "answers": [
+    {
+     "act": "claude-17-turn-38-f-s1-0",
+     "quote": "(what the report changes in the strategy)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-38-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(order of work)",
+   "answers": [
+    {
+     "act": "claude-17-turn-38-f-s1-0",
+     "quote": "(order of work)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-38-r-3",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(Answer to §1) The report's headline answer",
+   "answers": [
+    {
+     "act": "claude-17-turn-38-f-s1-0",
+     "quote": "(Answer to §1) The report's headline answer",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

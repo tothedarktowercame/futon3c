@@ -1,0 +1,100 @@
+{
+ "record": "turn-QUKnek",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-52-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "Just to state one more really obvious thing,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-52-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "because it's written down right in the paper",
+   "answers": [],
+   "scope": {
+    "opens": "patterns as plain-language AI",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "standing reading rule for the pattern library"
+  },
+  {
+   "act": "claude-2-turn-52-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(\"if they don't do that, then they also need to be revised\") Agreed",
+   "answers": [
+    {
+     "act": "claude-2-turn-52-f-s1-1",
+     "quote": "Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-52-f-s1-1"
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-52-r-1",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(how I'll carry that) For each node I'll keep three things together",
+   "answers": [
+    {
+     "act": "claude-2-turn-52-f-s1-1",
+     "quote": "(how I'll carry that)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-52-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-52-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(where a pattern may have nothing to say)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-52-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-52-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status) codex-10 is still on the habit-prior module",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

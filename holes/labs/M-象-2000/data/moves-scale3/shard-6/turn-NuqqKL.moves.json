@@ -1,0 +1,74 @@
+{
+ "record": "turn-NuqqKL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-444-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "let's have each agent write to a unique file like R1-links.edn",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-444-f-s2-1",
+   "kind": "redirect",
+   "move": "propose/alternative",
+   "quote": "rather than going via Agency, we could just use the CLI codex",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-444-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what's in place) Everything is in `futon0/analysis/audits/rnode-bids/`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-444-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(R14 pilot) R14 (commitment temperature)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-444-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(tracking) The run is `bg-1790894795239-28`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

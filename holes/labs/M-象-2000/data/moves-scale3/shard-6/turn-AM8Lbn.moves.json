@@ -1,0 +1,92 @@
+{
+ "record": "turn-AM8Lbn",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-4-f-s1-0",
+   "kind": "explain",
+   "move": "ask-action/status-check",
+   "quote": "why were they stopping",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-4-r-0",
+   "kind": "reply-mark",
+   "move": "retract/correction",
+   "quote": "(my earlier explanation) I said the authors were stopping on an unwritten rule",
+   "answers": [
+    {
+     "act": "claude-14-turn-4-f-s1-0",
+     "quote": "(my earlier explanation)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-4-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why rows come out that size)",
+   "answers": [
+    {
+     "act": "claude-14-turn-4-f-s1-0",
+     "quote": "(why rows come out that size)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-4-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(since the reopen)",
+   "answers": [
+    {
+     "act": "claude-14-turn-4-f-s1-0",
+     "quote": "(since the reopen)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-4-r-3",
+   "kind": "reply-mark",
+   "move": "propose/design",
+   "quote": "(what would help) A STOP that names a missing prerequisite",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

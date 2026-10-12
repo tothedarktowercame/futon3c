@@ -1,0 +1,139 @@
+{
+ "record": "turn-To5NXY",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-62-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes, this sounds right",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-62-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "but probably not all of them,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-62-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-62-f-s1-2",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "that's okay if we can specify r20",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-62-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-62-r-0",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status) I read PROOF-2a's theorem",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-62-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what PROOF-2a already fixed)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-62-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what R20 adds)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-62-r-3",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(precision, reviewed)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-62-r-4",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(precision, limit)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-62-r-5",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(R20 job, running)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-62-r-6",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status) - **Job:** `invoke-1791174014053-32568-a25564cd`",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,80 @@
+{
+ "record": "turn-5nQZCO",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-493-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "🈸:yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-493-r-0",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(how I tested it)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-493-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(how much this shows)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-493-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(where it's recorded) The turns, method and table are in",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-493-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(next step) Shall I have 象 read C1–C3",
+   "answers": [
+    {
+     "act": "claude-17-turn-493-f-s1-0",
+     "quote": "(next step)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

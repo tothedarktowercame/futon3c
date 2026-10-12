@@ -1,0 +1,80 @@
+{
+ "record": "turn-I7n9AZ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-393-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-393-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Gist: Done. \"🈸:yes\" now counts as yes",
+   "answers": [
+    {
+     "act": "claude-17-turn-393-f-s1-0",
+     "quote": "Done. \"🈸:yes\" now counts as yes",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-393-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(change, commit d9d30ead)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-393-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-393-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what still connects the marks to Elephant-2000)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

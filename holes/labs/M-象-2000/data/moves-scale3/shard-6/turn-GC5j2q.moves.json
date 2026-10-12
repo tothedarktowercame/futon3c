@@ -1,0 +1,99 @@
+{
+ "record": "turn-GC5j2q",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-415-f-s1-0",
+   "kind": "collect",
+   "move": "ask-action/status-check",
+   "quote": "How much more backfill is missing?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-415-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "Gist: For 22 August to today, 21 turns are left",
+   "answers": [
+    {
+     "act": "claude-17-turn-415-f-s1-0",
+     "quote": "For 22 August to today, 21 turns are left",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-415-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(target window, from `xiang_coverage.py` just now)",
+   "answers": [
+    {
+     "act": "claude-17-turn-415-f-s1-0",
+     "quote": "(target window",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-415-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(older periods)",
+   "answers": [
+    {
+     "act": "claude-17-turn-415-f-s1-0",
+     "quote": "(older periods)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "low",
+   "note": "heading-only paragraph"
+  },
+  {
+   "act": "claude-17-turn-415-r-3",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(pace) Since the restart at 20:34",
+   "answers": [
+    {
+     "act": "claude-17-turn-415-f-s1-0",
+     "quote": "(pace)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

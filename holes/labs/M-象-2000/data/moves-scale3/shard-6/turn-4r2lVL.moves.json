@@ -1,0 +1,158 @@
+{
+ "record": "turn-4r2lVL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-380-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes please start the next hour with all of the improvements",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-380-f-s2-0",
+   "kind": "withdraw",
+   "move": "constrain/standing-rule",
+   "quote": "you don't need to get bellbacks for each turn",
+   "answers": [],
+   "scope": {
+    "opens": "no bellbacks per turn",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "withdraws the per-turn bellback expectation as a standing rule"
+  },
+  {
+   "act": "claude-17-turn-380-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what changed, commit 48296e5f)",
+   "answers": [
+    {
+     "act": "claude-17-turn-380-f-s1-0",
+     "quote": "(what changed, commit 48296e5f)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-1",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(not in this run) The check of hour 1's citations",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(check at the hour) The wake-up is park `park-92d9e4d5",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(throughput, 23:25–00:25 UTC)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-4",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(three records, each citation checked against its pattern)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-5",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(小象 edition 9) 3,493 turns, accuracy 0.357",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-6",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next)",
+   "answers": [
+    {
+     "act": "claude-17-turn-380-f-s1-0",
+     "quote": "(next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-380-r-7",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision) Shall I start the citation check on kimi-3",
+   "answers": [
+    {
+     "act": "claude-17-turn-380-f-s1-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

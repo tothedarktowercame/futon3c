@@ -1,0 +1,48 @@
+{
+ "record": "turn-GKJ9v7",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-468-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "㊭:yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-468-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the new cues catch in your 1,237 live turns)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-468-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what limits the test)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

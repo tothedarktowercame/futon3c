@@ -1,0 +1,111 @@
+{
+ "record": "turn-3F2XHs",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-458-f-s1-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "your table is good, but let's use the Max Neef terms not as a separate list",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-458-f-s1-1",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "let's use the Max Neef terms not as a separate list but as a discriminator",
+   "answers": [],
+   "scope": {
+    "opens": "max-neef discriminator tree",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-458-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(Max-Neef as the discriminator) Here's a draft tree.",
+   "answers": [
+    {
+     "act": "claude-17-turn-458-f-s1-1",
+     "quote": "(Max-Neef as the discriminator) Here's a draft tree.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-458-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-458-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(where the tree is weakest) Understanding does most of the work twice over",
+   "answers": [
+    {
+     "act": "claude-17-turn-458-f-s1-1",
+     "quote": "(where the tree is weakest)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-458-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-458-r-2",
+   "kind": "reply-mark",
+   "move": "propose/acceptance-plan",
+   "quote": "(testing it) The tree would go to the annotator as a short file",
+   "answers": [
+    {
+     "act": "claude-17-turn-458-f-s1-1",
+     "quote": "(testing it)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-458-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-458-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(go-ahead) Shall I write the tree to a file",
+   "answers": [
+    {
+     "act": "claude-17-turn-458-f-s1-1",
+     "quote": "(go-ahead)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-458-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

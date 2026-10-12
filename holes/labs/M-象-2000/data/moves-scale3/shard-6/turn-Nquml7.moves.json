@@ -1,0 +1,125 @@
+{
+ "record": "turn-Nquml7",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-48-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "can we start to bring features online i  this session?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-48-f-s2-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "the brief is a nice concept for new sessions,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-48-f-s2-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "but noisy as you say, and maybe not the coolest of cool memory demos",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-15-turn-48-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-48-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(\"bring features online\") It has three questions",
+   "answers": [
+    {
+     "act": "claude-15-turn-48-f-s1-0",
+     "quote": "(\"bring features online\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-48-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(a real result) Its first real query caught me out",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-15-turn-48-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what to discount)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-15-turn-48-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next, unless you'd rather something else) Recall at write time",
+   "answers": [
+    {
+     "act": "claude-15-turn-48-f-s1-0",
+     "quote": "(next, unless you'd rather something else)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-15-turn-48-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(the brief) I can leave the brief running",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

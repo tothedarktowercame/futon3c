@@ -1,0 +1,112 @@
+{
+ "record": "turn-76NiTi",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-467-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "any places where there *isn't* good alignment",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-467-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "There's a narrative from line 2979",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-467-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-467-r-0",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(where the narrative and the tree disagree)",
+   "answers": [
+    {
+     "act": "claude-17-turn-467-f-s1-0",
+     "quote": "(where the narrative and the tree disagree)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-467-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-467-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(the six misaligned nodes)",
+   "answers": [
+    {
+     "act": "claude-17-turn-467-f-s1-0",
+     "quote": "(the six misaligned nodes)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-467-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "heading-only paragraph over a table"
+  },
+  {
+   "act": "claude-17-turn-467-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(caveats) The run was defective, as you say.",
+   "answers": [
+    {
+     "act": "claude-17-turn-467-f-s2-0",
+     "quote": "(caveats) The run was defective, as you say.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-467-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-467-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next step) I'd add a third cue set",
+   "answers": [
+    {
+     "act": "claude-17-turn-467-f-s1-0",
+     "quote": "(next step)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-467-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

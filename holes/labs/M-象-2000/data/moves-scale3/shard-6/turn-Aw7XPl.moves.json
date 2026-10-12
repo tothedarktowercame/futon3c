@@ -1,0 +1,80 @@
+{
+ "record": "turn-Aw7XPl",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-50-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "happy to go with your direction on this one",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-50-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what happened, live) I acted on its first proposal",
+   "answers": [
+    {
+     "act": "claude-15-turn-50-f-s1-0",
+     "quote": "(what happened, live)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-15-turn-50-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(how far to trust it) The model's verdict is advice, not fact",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-15-turn-50-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/scope",
+   "quote": "(scope you should know about) The ingest hook is global",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-15-turn-50-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next) The row of the table still missing is **answers**",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

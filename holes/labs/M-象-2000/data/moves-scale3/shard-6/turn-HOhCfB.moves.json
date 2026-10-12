@@ -1,0 +1,159 @@
+{
+ "record": "turn-HOhCfB",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-47-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "I feel I've been asked a lot of questions here",
+   "answers": [],
+   "scope": {
+    "opens": "research the theory",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "redirects questions from the operator to source research"
+  },
+  {
+   "act": "claude-2-turn-47-f-s2-0",
+   "kind": "redirect",
+   "move": "approve/plain",
+   "quote": "All the questions are probably good questions they're just being directed in the wrong way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-47-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-47-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(\"doing some research on the theory\") Agreed, and done",
+   "answers": [
+    {
+     "act": "claude-2-turn-47-f-s1-0",
+     "quote": "(\"doing some research on the theory\") Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-47-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-47-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the sources say)",
+   "answers": [
+    {
+     "act": "claude-2-turn-47-f-s1-0",
+     "quote": "(what the sources say)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-47-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "heading-only paragraph"
+  },
+  {
+   "act": "claude-2-turn-47-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what follows for the three nodes",
+   "answers": [
+    {
+     "act": "claude-2-turn-47-f-s1-0",
+     "quote": "(what follows for the three nodes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-47-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-47-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(the R20 confidence module)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-47-r-4",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits of this research)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-47-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-47-r-5",
+   "kind": "reply-mark",
+   "move": "explain/decline",
+   "quote": "(the Campaign S question) That was a factual question, not one for you.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-47-r-6",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-2-turn-47-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-47-r-7",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status) Nothing is running.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

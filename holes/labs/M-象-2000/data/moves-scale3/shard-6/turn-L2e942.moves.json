@@ -1,0 +1,93 @@
+{
+ "record": "turn-L2e942",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-36-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "Details of the post-receive hook are below.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-36-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "That may need to change...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-36-f-s3-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "$ cat ls /home/git/hel.git/hooks/post-receive",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-36-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the push) `staging` is now on hel.git",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-36-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(whether the hook needs to change) It only matters in two cases",
+   "answers": [
+    {
+     "act": "claude-17-turn-36-f-s2-0",
+     "quote": "(whether the hook needs to change)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-36-r-2",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(records) I updated the site memory",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

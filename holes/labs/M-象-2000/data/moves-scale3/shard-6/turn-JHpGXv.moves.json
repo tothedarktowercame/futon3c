@@ -1,0 +1,55 @@
+{
+ "record": "turn-JHpGXv",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-49-f-s1-0",
+   "kind": "withdraw",
+   "move": "constrain/standing-rule",
+   "quote": "i am not interested in campaign S at all",
+   "answers": [],
+   "scope": {
+    "opens": "campaign S dropped",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "standing withdrawal: campaign S never returns"
+  },
+  {
+   "act": "claude-2-turn-49-r-0",
+   "kind": "reply-mark",
+   "move": "constrain/accept",
+   "quote": "(\"not interested in campaign S at all\") Dropped",
+   "answers": [
+    {
+     "act": "claude-2-turn-49-f-s1-0",
+     "quote": "(\"not interested in campaign S at all\") Dropped",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-2-turn-49-r-1",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(status) codex-10 is still on R15 part 1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

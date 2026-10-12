@@ -1,0 +1,87 @@
+{
+ "record": "turn-IY8vrs",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-482-f-s1-0",
+   "kind": "qualify",
+   "move": "constrain/standing-rule",
+   "quote": "I am not sure I like 象 to ask mulitple seats per turn??",
+   "answers": [],
+   "scope": {
+    "opens": "one seat per turn",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "standing constraint on 象's routing behaviour"
+  },
+  {
+   "act": "claude-17-turn-482-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(one seat per turn) It doesn't, and step 3 doesn't change that",
+   "answers": [
+    {
+     "act": "claude-17-turn-482-f-s1-0",
+     "quote": "(one seat per turn) It doesn't",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-482-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-482-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(the one cost) Promotion is slower",
+   "answers": [
+    {
+     "act": "claude-17-turn-482-f-s1-0",
+     "quote": "(the one cost)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-482-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-482-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(one fix in review)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-482-r-3",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(loaded and timed)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}
