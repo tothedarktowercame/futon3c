@@ -110,8 +110,16 @@
 ;; would spend that signal to buy nothing.
 (def ^:private substrate-page-size 100)
 (def default-request-budget 50)
-(def ^:private admission-retries 3)
+(def ^:private admission-retries 5)
 (def ^:private transient-timeout-retries 1)
+
+(defn- admission-retry-delay-ms
+  "Honor the substrate's admission backoff instead of immediately competing
+   for the same expensive-read permit again.  Keep the local exponential
+   backoff as a floor for older servers that omit retry-after-seconds."
+  [attempt body]
+  (max (* 100 (bit-shift-left 1 attempt))
+       (* 1000 (long (or (:retry-after-seconds body) 0)))))
 
 (defn partial-result?
   "True when a bounded substrate walk stopped before the server was exhausted."
@@ -134,7 +142,7 @@
                                  (or (ex-message error) ""))
                         (< attempt transient-timeout-retries)))
                (< (inc attempt) remaining-budget))
-        (do (Thread/sleep (* 100 (bit-shift-left 1 attempt)))
+        (do (Thread/sleep (admission-retry-delay-ms attempt body))
             (recur (inc attempt)))
         (if error
           (throw error)

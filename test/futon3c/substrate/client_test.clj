@@ -98,6 +98,32 @@
          (is (= 2 @calls))
          (is (false? (sut/partial-result? rows)))))))
 
+(deftest hyperedge-page-honors-expensive-read-retry-after
+  (let [calls (atom 0)
+        sleeps (atom [])
+        get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
+    (with-redefs-fn
+      {#'sut/configured-url (constantly "http://substrate.test")
+       get-edn-var
+       (fn [_url _timeout-ms]
+         (if (<= (swap! calls inc) 4)
+           (throw (ex-info "authoritative substrate read failed"
+                           {:status 503
+                            :body {:error :expensive-read-busy
+                                   :retry-after-seconds 1}}))
+           {:hyperedges [{:hx/id "edge-1"}]}))
+       #'sut/admission-retry-delay-ms
+       (fn [attempt body]
+         (let [delay (max (* 100 (bit-shift-left 1 attempt))
+                          (* 1000 (long (:retry-after-seconds body))))]
+           (swap! sleeps conj delay)
+           0))}
+      #(let [rows (sut/hyperedges-by-type :test/edge {:limit 10})]
+         (is (= ["edge-1"] (mapv :hx/id rows)))
+         (is (= 5 @calls))
+         (is (= [1000 1000 1000 1000] @sleeps))
+         (is (false? (sut/partial-result? rows)))))))
+
 (def projection-edge
   {:hx/id "attachment" :hx/type :memory/assert :hx/endpoints ["memory"]
    :hx/props {:state :current :attachment-status :reviewed}})
