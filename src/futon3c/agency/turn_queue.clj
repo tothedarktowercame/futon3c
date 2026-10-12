@@ -9,7 +9,9 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.dev.config :as config])
-  (:import [java.nio.file Files StandardCopyOption]
+  (:import [java.io BufferedWriter FileOutputStream OutputStreamWriter PushbackReader]
+           [java.nio.charset StandardCharsets]
+           [java.nio.file Files Path StandardCopyOption]
            [java.security MessageDigest]
            [java.time Instant]
            [java.util UUID]))
@@ -53,6 +55,13 @@
 (defonce ^:private !processors
   (atom {}))
 
+(def ^:dynamic *persist-stage-hook* nil)
+
+(defonce ^:private !journal-state
+  ;; Absolute store path -> state last made durable by this JVM. Path-keying
+  ;; isolates tests which redefine queue-store-path.
+  (atom {}))
+
 (def ^:private closed-intake-ticket (Object.))
 
 (declare run-finalizer!)
@@ -62,11 +71,62 @@
 (declare signal-drainer!)
 (declare !finalizers)
 
+(defn- journal-path [] (str (queue-store-path) ".journal"))
+
+(defn- apply-journal-record [state record]
+  (let [state (-> state
+                  (update :entries #(apply dissoc % (:entries-drop record)))
+                  (update :entries merge (:entries-upsert record))
+                  (merge (:put record)))
+        state (if (contains? record :history)
+                (assoc state :history (:history record))
+                (update state :history
+                        (fn [history]
+                          (into (subvec (vec history) (long (or (:history-drop-front record) 0)))
+                                (:history-append record)))))]
+    state))
+
+(defn- replay-journal [state snapshot-id]
+  (let [journal (io/file (journal-path))]
+    (if (and snapshot-id (.exists journal))
+      (let [content (slurp journal)
+            lines (str/split content #"\n" -1)
+            lines (if (empty? (peek lines)) (pop lines) lines)
+            last-index (dec (count lines))
+            records (keep-indexed
+                     (fn [index line]
+                       (try
+                         (let [record (edn/read-string line)]
+                           (when-not (map? record)
+                             (throw (ex-info "turn-queue journal record is not a map" {})))
+                           (when (= snapshot-id (:j/base record))
+                             (when-not (and (integer? (:j/seq record))
+                                            (not (neg? (:j/seq record))))
+                               (throw (ex-info "turn-queue journal sequence is invalid" {})))
+                             record))
+                         (catch Throwable t
+                           (if (= index last-index)
+                             (do (binding [*out* *err*]
+                                   (println (str "[turn-queue] ignoring torn journal tail: "
+                                                 (or (.getMessage t) t))))
+                                 nil)
+                             (throw (ex-info "turn-queue journal contains corrupt middle line"
+                                             {:line (inc index)} t))))))
+                     lines)]
+        (reduce apply-journal-record state (sort-by :j/seq records)))
+      state)))
+
 (defn- load-state []
   (let [f (io/file (queue-store-path))]
     (if (.exists f)
       (try
-        (let [parsed (edn/read-string (slurp f))]
+        (with-open [reader (PushbackReader. (io/reader f))]
+          (let [eof (Object.)
+                parsed (edn/read {:eof eof} reader)
+                trailing (edn/read {:eof eof} reader)]
+            (when (or (identical? parsed eof) (not (map? parsed))
+                      (not (identical? trailing eof)))
+              (throw (ex-info "turn-queue store is malformed" {})))
           ;; Clear :draining on load. It is an IN-FLIGHT drain lock, not durable
           ;; state: a fresh JVM has no drain in progress, so any persisted :draining
           ;; is stale. A crash mid-drain (e.g. OOM) otherwise restores every agent
@@ -74,9 +134,15 @@
           ;; agents permanently un-drainable (queued bells never run). Pending
           ;; queues/entries/frontier are kept; only the drain lock is reset.
           ;; (M-agency-hardening, OOM-restore self-recovery, 2026-06-12.)
-          (-> (merge (empty-state) (select-keys parsed (keys (empty-state))))
-              (assoc :draining #{})))
-        (catch Throwable _
+            (-> (replay-journal (dissoc parsed :journal/snapshot-id)
+                                (:journal/snapshot-id parsed))
+                (select-keys (keys (empty-state)))
+                (#(merge (empty-state) %))
+                (assoc :draining #{}))))
+        (catch Throwable t
+          (binding [*out* *err*]
+            (println (str "[turn-queue] load failed; using empty state: "
+                          (or (.getMessage t) t))))
           (empty-state)))
       (empty-state))))
 
@@ -85,29 +151,119 @@
     (reset! !queue (load-state)))
   @!queue)
 
+(defn- atomic-write! [^Path target value stage]
+  (let [parent (.getParent target)
+        _ (Files/createDirectories parent (make-array java.nio.file.attribute.FileAttribute 0))
+        tmp (Files/createTempFile parent ".turn-queue-" ".tmp"
+                                  (make-array java.nio.file.attribute.FileAttribute 0))]
+    (try
+      (spit (.toFile tmp) value)
+      (when *persist-stage-hook* (*persist-stage-hook* (keyword (str (name stage) "-temp"))))
+      (Files/move tmp target (into-array java.nio.file.CopyOption
+                                         [StandardCopyOption/ATOMIC_MOVE
+                                          StandardCopyOption/REPLACE_EXISTING]))
+      (when *persist-stage-hook* (*persist-stage-hook* (keyword (str (name stage) "-rename"))))
+      (finally (Files/deleteIfExists tmp)))))
+
+(defn- replace-journal! [snapshot-id]
+  (atomic-write! (.toAbsolutePath (Path/of (journal-path) (make-array String 0)))
+                 (str (pr-str {:j/seq 0 :j/at (str (Instant/now)) :j/base snapshot-id}) "\n")
+                 :journal))
+
+(defn- snapshot-write! [state]
+  (let [snapshot-id (str (UUID/randomUUID))
+        target (.toAbsolutePath (Path/of (queue-store-path) (make-array String 0)))]
+    (atomic-write! target (pr-str (assoc state :journal/snapshot-id snapshot-id)) :snapshot)
+    (let [coordinates {:state state :snapshot-id snapshot-id
+                       :snapshot-size (.length (.toFile target)) :journal-seq 0}]
+      (try
+        (replace-journal! snapshot-id)
+        coordinates
+        (catch Throwable t
+          (throw (ex-info "turn-queue snapshot committed; journal rotation failed"
+                          {:snapshot-state coordinates} t)))))))
+
+(defn- changed-entries [before after]
+  (into {} (keep (fn [[id entry]]
+                   (let [old (get before id ::absent)]
+                     (when (or (= old ::absent)
+                               (and (not (identical? old entry)) (not= old entry)))
+                       [id entry])))) after))
+
+(defn- history-delta [before after]
+  (let [before (vec before) after (vec after)
+        drop-n (first (filter (fn [n]
+                                (let [suffix (subvec before n)]
+                                  (and (<= (count suffix) (count after))
+                                       (= suffix (subvec after 0 (count suffix))))))
+                              (range (inc (count before)))))]
+    (if (some? drop-n)
+      (cond-> {}
+        (pos? drop-n) (assoc :history-drop-front drop-n)
+        (< (- (count before) drop-n) (count after))
+        (assoc :history-append (subvec after (- (count before) drop-n))))
+      {:history after})))
+
+(defn- state-delta [before after snapshot-id journal-seq]
+  (let [before-entries (:entries before) after-entries (:entries after)
+        upserts (changed-entries before-entries after-entries)
+        drops (into [] (remove #(contains? after-entries %)) (keys before-entries))
+        other-keys (remove #{:entries :history} (keys (empty-state)))
+        puts (into {} (keep (fn [k]
+                              (let [old (get before k) new (get after k)]
+                                (when (and (not (identical? old new)) (not= old new))
+                                  [k new])))) other-keys)]
+    (cond-> (merge {:j/seq (inc (long journal-seq)) :j/at (str (Instant/now))
+                    :j/base snapshot-id}
+                   (history-delta (:history before) (:history after)))
+      (seq upserts) (assoc :entries-upsert upserts)
+      (seq drops) (assoc :entries-drop drops)
+      (seq puts) (assoc :put puts))))
+
+(defn- append-journal! [record]
+  (with-open [stream (FileOutputStream. (io/file (journal-path)) true)
+              writer (BufferedWriter. (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+    (.write writer (pr-str record))
+    (.newLine writer)
+    (.flush writer)))
+
 (defn- persist! [state]
-  (try
-    (let [target (.toPath (io/file (queue-store-path)))
-          tmp (.resolveSibling target (str (.getFileName target) ".tmp"))]
-      (io/make-parents (.toFile target))
-      (spit (.toFile tmp) (pr-str state))
-      (Files/move tmp target
-                  (into-array java.nio.file.CopyOption
-                              [StandardCopyOption/ATOMIC_MOVE
-                               StandardCopyOption/REPLACE_EXISTING])))
-    (catch Throwable t
-      (println (str "[turn-queue] persist failed: " (.getMessage t)))))
-  state)
+  (locking !journal-state
+    (let [store (str (.toAbsolutePath (Path/of (queue-store-path) (make-array String 0))))]
+      (try
+        (let [coordinates (get @!journal-state store)
+              journal (io/file (journal-path))]
+          (if (or (nil? coordinates)
+                  (> (.length journal) (long (:snapshot-size coordinates))))
+            (try
+              (swap! !journal-state assoc store (snapshot-write! state))
+              (catch clojure.lang.ExceptionInfo e
+                (when-let [snapshot-state (:snapshot-state (ex-data e))]
+                  (swap! !journal-state assoc store snapshot-state))
+                (throw e)))
+            (let [record (state-delta (:state coordinates) state
+                                      (:snapshot-id coordinates) (:journal-seq coordinates))]
+              (try
+                (append-journal! record)
+                (swap! !journal-state assoc store
+                       (assoc coordinates :state state :journal-seq (:j/seq record)))
+                (catch Throwable t
+                  (swap! !journal-state dissoc store)
+                  (throw t))))))
+        (catch Throwable t
+          (println (str "[turn-queue] persist failed: " (.getMessage t)))))
+      state)))
 
 (def ^:private persist-coalesce-ms
-  "Minimum interval between durable-store writes. persist! pr-strs the WHOLE
-   state (~0.5MB); a single drain cycle mutates state 4-5 times per turn, and
-   writing synchronously on every mutation was the chronic half of the
+  "Minimum interval between durable-store writes. A single drain cycle mutates
+   state 4-5 times per turn, and writing synchronously on every mutation was the chronic half of the
    2026-07-18 CPU alert (five drainer threads averaging 15% CPU each over the
-   JVM's life). The flusher writes immediately on the first change after an
-   idle stretch, then coalesces further changes into at most one write per
-   this interval — so the crash-loss window under sustained churn equals this
-   interval, and a lone change still hits disk right away.
+   JVM's life). persist! now journals those coalesced state deltas and rotates
+   to an atomic full snapshot when the journal outgrows it. The flusher writes
+   immediately on the first change after an idle stretch, then coalesces
+   further changes into at most one write per this interval — so the crash-loss
+   window under sustained churn equals this interval, and a lone change still
+   hits disk right away.
    Override: FUTON3C_DURABLE_QUEUE_PERSIST_MS."
   (or (some-> (config/env "FUTON3C_DURABLE_QUEUE_PERSIST_MS") parse-long)
       2000))
