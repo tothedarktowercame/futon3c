@@ -104,8 +104,10 @@ class ResumeBriefTest(unittest.TestCase):
     def test_default_excursions_from_mission_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "mission.md"
-            path.write_text("Uses E-one, E-two and E-one again; ignore M-three.")
+            path.write_text("# M\n\n**Excursions:** E-one, E-two, E-one\n\nMentions E-three in passing; ignore M-three.")
             self.assertEqual(["E-one", "E-two"], brief.mission_excursions(path))
+            path.write_text("Mentions E-three only in passing, no declaration.")
+            self.assertEqual([], brief.mission_excursions(path))
 
 if __name__ == "__main__":
     unittest.main()

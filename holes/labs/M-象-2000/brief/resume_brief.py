@@ -17,9 +17,17 @@ def aid(x):
     return x if isinstance(x, str) else x.get("act", x.get("id", ""))
 
 def mission_excursions(path):
+    """Excursions the mission DECLARES as its own: a line in the mission file
+    `**Excursions:** E-a, E-b` (or `Excursions: …`). Mentions elsewhere in the
+    file are not a declaration: a mission names other teams' excursions in
+    passing, and joining on those pulled 57 sessions into one brief."""
     if not path.exists():
         return []
-    return list(dict.fromkeys(re.findall(r"\bE-[A-Za-z0-9-]+\b", path.read_text())))
+    for line in path.read_text().splitlines():
+        m = re.match(r"^\**Excursions:\**\s*(.*)$", line.strip())
+        if m:
+            return list(dict.fromkeys(re.findall(r"\bE-[A-Za-z0-9-]+\b", m.group(1))))
+    return []
 
 def load_records(directory, mission, seats, since=None, join="auto", excursions=()):
     rows = []
