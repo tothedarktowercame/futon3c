@@ -1,0 +1,35 @@
+{
+ "record": "turn-VwDCEt",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-130-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Can you copy into https://zone.hyperreal.enterprises/staging/index.html",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-130-f-s1-1",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "replacing the fuzzy sidebar picture of an earlier voxterm session",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-130-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

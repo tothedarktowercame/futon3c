@@ -1,0 +1,75 @@
+{
+ "record": "turn-YAODLQ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-79-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "oh, that looks very nice.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-79-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I haven't pressed enter to run it but it is a good demo",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-79-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-79-r-0",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(\"I haven't pressed enter\") The half you have seen is the reading",
+   "answers": [
+    {
+     "act": "claude-16-turn-79-f-s2-0",
+     "quote": "(\"I haven't pressed enter\") The half you have seen is the reading",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Frames the unpressed enter as the real test and how to run it."
+  },
+  {
+   "act": "claude-16-turn-79-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(state)",
+   "answers": [
+    {
+     "act": "claude-16-turn-79-f-s1-0",
+     "quote": "(state)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Nothing in flight; two decisions remain in the operator's hands."
+  }
+ ],
+ "unlabelled": []
+}

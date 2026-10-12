@@ -1,0 +1,112 @@
+{
+ "record": "turn-Xtdfoh",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-55-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "hi, is this still going well?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-55-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "it is around 2200 PT now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-55-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-55-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what landed since you said \"application led\")",
+   "answers": [
+    {
+     "act": "claude-16-turn-55-f-s1-0",
+     "quote": "(what landed since you said \"application led\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-55-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what the labelled data says about the kernel)",
+   "answers": [
+    {
+     "act": "claude-16-turn-55-f-s1-0",
+     "quote": "(what the labelled data says about the kernel)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "86% pair precision but 12% close reach; the candidate sole-kind rule covers a third more."
+  },
+  {
+   "act": "claude-16-turn-55-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one list still waiting on you, from the label consolidation)",
+   "answers": [
+    {
+     "act": "claude-16-turn-55-f-s1-0",
+     "quote": "(one list still waiting on you, from the label consolidation)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-55-r-3",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(nothing else needs you)",
+   "answers": [
+    {
+     "act": "claude-16-turn-55-f-s1-0",
+     "quote": "(nothing else needs you)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

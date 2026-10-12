@@ -1,0 +1,61 @@
+{
+ "record": "turn-QPcd7V",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-152-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/other",
+   "quote": "Really, the question is broader than this project.",
+   "answers": [],
+   "scope": {
+    "opens": "beyond-this-project: Claude vs Codex edge",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-152-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "the War Machine has exposed a very specific \"edge\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-152-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-152-f-s3-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "I think it's just too complex for you or something.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-152-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-152-f-s4-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Whereas for whatever reason Codex is fine with it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-152-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

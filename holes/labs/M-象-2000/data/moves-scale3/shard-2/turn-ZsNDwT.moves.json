@@ -1,0 +1,22 @@
+{
+ "record": "turn-ZsNDwT",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-131-f-s1-0",
+   "kind": "collect",
+   "move": "ask-action/status-check",
+   "quote": "How much progress has been made since my last query?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

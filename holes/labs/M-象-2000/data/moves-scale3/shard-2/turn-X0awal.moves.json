@@ -1,0 +1,114 @@
+{
+ "record": "turn-X0awal",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-100-f-s1-0",
+   "kind": "ask-action",
+   "move": "approve/plain",
+   "quote": "You can commit the parsing files.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-100-f-s2-0",
+   "kind": "propose",
+   "move": "explain/answer-question",
+   "quote": "parse-the-intent-not-the-deliverable is an interesting one",
+   "answers": [],
+   "scope": {
+    "opens": "parse-the-intent reflection",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-100-f-s2-1",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "the point is not that Rob didn't know what he wanted",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-100-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-100-f-s2-2",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "he did —",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-100-f-s2-1"
+   },
+   "confidence": "low",
+   "note": "Two-dash fragment continuing s2-1."
+  },
+  {
+   "act": "claude-11-turn-100-f-s2-3",
+   "kind": "report",
+   "move": "explain/context",
+   "quote": "we started, and I started, by basically adopting his method",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-100-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-100-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "That wasn't \"wrong\" it just would have been the slow way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-100-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-100-f-s4-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "The attempt to use DiagramProver similarly wasn't \"wrong\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-100-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-100-f-s5-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "the record might tell a slightly different story.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-100-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-cqQQZT",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-137-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "please look into repairing m98A06 and m97A06",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

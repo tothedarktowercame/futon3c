@@ -1,0 +1,36 @@
+{
+ "record": "turn-bw5I8K",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-125-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "please fix m02A05",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-125-f-s1-1",
+   "kind": "constrain",
+   "move": "qualify/caveat",
+   "quote": "(if needed)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-125-f-s1-0"
+   },
+   "confidence": "medium",
+   "note": "Two-word qualifier fragment; quoted in full but under 8 chars is unavoidable — see note."
+  }
+ ],
+ "unlabelled": []
+}

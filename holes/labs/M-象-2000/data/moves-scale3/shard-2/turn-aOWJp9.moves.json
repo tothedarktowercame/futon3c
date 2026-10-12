@@ -1,0 +1,37 @@
+{
+ "record": "turn-aOWJp9",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-132-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "i am assinging you codex-68 as a lab partner.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"assinging\" kept verbatim."
+  },
+  {
+   "act": "claude-12-turn-132-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "only run clicks when thry agree that all known defects",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-132-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Typo \"thry\" for \"they\" kept verbatim; the dual-signoff gate."
+  }
+ ],
+ "unlabelled": []
+}

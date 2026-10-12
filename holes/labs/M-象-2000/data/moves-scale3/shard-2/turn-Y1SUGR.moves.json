@@ -1,0 +1,62 @@
+{
+ "record": "turn-Y1SUGR",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-99-f-s1-0",
+   "kind": "continue",
+   "move": "propose/directive",
+   "quote": "Might as well change the lop.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"lop\" for \"loop\" kept verbatim."
+  },
+  {
+   "act": "claude-18-turn-99-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "topo2 is doing a \"repair\" again so there is some underlying problem.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-99-f-s3-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Topo1 similarly had to do a \"repair\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-99-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-99-f-s4-0",
+   "kind": "propose",
+   "move": "propose/ordered-plan",
+   "quote": "we should stop both, investigate, make your change, and restart.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-99-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

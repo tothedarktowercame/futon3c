@@ -1,0 +1,35 @@
+{
+ "record": "turn-ToK2Yu",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-43-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "what is going on with the excursions,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-43-f-s1-1",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "do you mean they are closed, or you don't know if they are closed?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-43-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,36 @@
+{
+ "record": "turn-auk3EL",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-60-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes to the classification.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-60-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "priority can be decided after we kniw status",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-60-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Typo \"kniw\" for \"know\" kept verbatim."
+  }
+ ],
+ "unlabelled": []
+}

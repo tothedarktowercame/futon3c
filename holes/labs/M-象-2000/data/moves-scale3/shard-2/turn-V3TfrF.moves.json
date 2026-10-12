@@ -1,0 +1,35 @@
+{
+ "record": "turn-V3TfrF",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-73-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "Still going?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-73-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "This is a slow demo.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

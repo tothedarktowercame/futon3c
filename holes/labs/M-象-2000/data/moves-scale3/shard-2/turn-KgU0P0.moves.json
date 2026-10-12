@@ -1,0 +1,35 @@
+{
+ "record": "turn-KgU0P0",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-133-f-s1-0",
+   "kind": "continue",
+   "move": "delegate/other",
+   "quote": "Please continue with the short list of analysis problems",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-133-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "repair the topology loop design so it doesn't cycle in that way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

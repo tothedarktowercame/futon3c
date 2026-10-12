@@ -1,0 +1,127 @@
+{
+ "record": "turn-VW7Fev",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-31-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Alinery and Mastra are probably the two projects",
+   "answers": [],
+   "scope": {
+    "opens": "Alinery+Mastra deep-dive comparison",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "Alinery is \"a little bit like\" what I'm doing with the design pattern cascades",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s3-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "kind of the same thing with a different terminological paint job",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s3-1",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "what's interesting about this is not just the similarity",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s3-2",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "much of SF Tech Week was samey-samey.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s3-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s4-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "As for Mastra, it is YC backed and very snazzy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s4-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "they are solving some of the same problems as the War Machine",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s5-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "I have been coming at similar problems to SF folks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-31-f-s5-1",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "with a much more theory-heavy approach",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-31-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Demonstrate-and-learn goal sits past the truncated acts span."
+  }
+ ],
+ "unlabelled": []
+}

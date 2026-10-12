@@ -1,0 +1,22 @@
+{
+ "record": "turn-M4cqxa",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-67-f-s1-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "call it VERDICT and date it so that it is clear this is provisional",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

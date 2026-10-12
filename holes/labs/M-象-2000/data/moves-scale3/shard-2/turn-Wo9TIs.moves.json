@@ -1,0 +1,22 @@
+{
+ "record": "turn-Wo9TIs",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-108-f-s1-0",
+   "kind": "ask-action",
+   "move": "propose/directive",
+   "quote": "Let's commit and push apm-lean",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

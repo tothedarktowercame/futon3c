@@ -1,0 +1,35 @@
+{
+ "record": "turn-SLqTW9",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-50-f-s1-0",
+   "kind": "propose",
+   "move": "constrain/other",
+   "quote": "we don't need to worry about the C, just the C++",
+   "answers": [],
+   "scope": {
+    "opens": "C++-only reading rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-50-f-s1-1",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "since the parser is defined in C++",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-50-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

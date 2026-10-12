@@ -1,0 +1,62 @@
+{
+ "record": "turn-TqXIvP",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-22-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "I think maybe there was a README-hardening.md in futon0",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-22-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "There's no `README-hardening.md` in futon0",
+   "answers": [
+    {
+     "act": "claude-13-turn-22-f-s1-0",
+     "quote": "There's no `README-hardening.md` in futon0",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Locates the real hardening material across four files."
+  },
+  {
+   "act": "claude-13-turn-22-r-1",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(if useful later)",
+   "answers": [
+    {
+     "act": "claude-13-turn-22-f-s1-0",
+     "quote": "(if useful later)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Offers a future index README when hardening becomes a priority."
+  }
+ ],
+ "unlabelled": []
+}

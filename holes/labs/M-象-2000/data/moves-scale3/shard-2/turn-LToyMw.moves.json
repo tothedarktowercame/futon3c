@@ -1,0 +1,88 @@
+{
+ "record": "turn-LToyMw",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-148-f-s1-0",
+   "kind": "extend",
+   "move": "qualify/scope",
+   "quote": "Not just time, but usage, since if I remember I had this running overnight.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-148-f-s2-0",
+   "kind": "challenge",
+   "move": "challenge/other",
+   "quote": "I don't understand why you were not able to jump into this project and run it properly.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-148-f-s3-0",
+   "kind": "explain",
+   "move": "explain/other",
+   "quote": "My instructions were very clear.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-148-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-148-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Run the machine in the debugger and fix errors live.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-148-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "Restates the standing instruction the challenge invokes."
+  },
+  {
+   "act": "claude-12-turn-148-f-s5-0",
+   "kind": "explain",
+   "move": "explain/evidence",
+   "quote": "You can see that in the *claude-repl:claude-12* buffer",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-148-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-148-f-s5-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "in fact, I did have to repeat myself",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-148-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

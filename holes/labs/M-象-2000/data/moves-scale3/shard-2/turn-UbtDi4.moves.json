@@ -1,0 +1,23 @@
+{
+ "record": "turn-UbtDi4",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-36-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "you can use thd claude credentials to test mastra",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"thd\" in source kept verbatim; answers the needs-you item on Mastra testing."
+  }
+ ],
+ "unlabelled": []
+}

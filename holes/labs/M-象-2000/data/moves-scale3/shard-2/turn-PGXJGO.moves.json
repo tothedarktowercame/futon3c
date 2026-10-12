@@ -1,0 +1,22 @@
+{
+ "record": "turn-PGXJGO",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-32-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "please try to be efficient",
+   "answers": [],
+   "scope": {
+    "opens": "efficiency standing constraint",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

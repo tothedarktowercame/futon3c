@@ -1,0 +1,130 @@
+{
+ "record": "turn-MAyWr0",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-16-f-s1-0",
+   "kind": "report",
+   "move": "explain/context",
+   "quote": "Saba is probably one of the inspiring examples",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-16-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "what's key here is the \"demand side\"",
+   "answers": [],
+   "scope": {
+    "opens": "demand-side focus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-16-f-s3-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "if what people want is liquor, beer, wine, video games and casinos",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-16-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed. A shop stocks what sells",
+   "answers": [
+    {
+     "act": "claude-13-turn-16-f-s2-0",
+     "quote": "Agreed. A shop stocks what sells",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-16-f-s3-0",
+     "quote": "Agreed. A shop stocks what sells",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-16-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "Tooling changes how an intent gets carried out",
+   "answers": [
+    {
+     "act": "claude-13-turn-16-f-s2-0",
+     "quote": "Tooling changes how an intent gets carried out",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-16-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "Connects the demand-side point to the earlier human-versus-tooling test."
+  },
+  {
+   "act": "claude-13-turn-16-r-2",
+   "kind": "reply-mark",
+   "move": "explain/context",
+   "quote": "The Oakland link makes sense",
+   "answers": [
+    {
+     "act": "claude-13-turn-16-f-s1-0",
+     "quote": "The Oakland link makes sense",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-16-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "shall I add a Saba-style outer-loop sketch to the mission",
+   "answers": [
+    {
+     "act": "claude-13-turn-16-f-s2-0",
+     "quote": "shall I add a Saba-style outer-loop sketch to the mission",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

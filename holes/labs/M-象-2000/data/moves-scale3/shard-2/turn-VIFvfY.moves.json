@@ -1,0 +1,36 @@
+{
+ "record": "turn-VIFvfY",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-68-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "let's wait for M2",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-68-f-s1-1",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "but yoi csn push to my fork",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-68-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Typos kept verbatim; the wait is bounded to merging, pushing allowed now."
+  }
+ ],
+ "unlabelled": []
+}

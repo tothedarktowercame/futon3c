@@ -1,0 +1,36 @@
+{
+ "record": "turn-QZw1Jq",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-102-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "low",
+   "note": "Interjection header; under-labeled for completeness."
+  },
+  {
+   "act": "claude-18-turn-102-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "the old APM loop allowed up to 50 turns!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

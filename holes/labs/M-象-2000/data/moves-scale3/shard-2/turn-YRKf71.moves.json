@@ -1,0 +1,126 @@
+{
+ "record": "turn-YRKf71",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-83-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "let's hold off on building this for now",
+   "answers": [],
+   "scope": {
+    "opens": "scheduling: 500 hours of practice",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "500 hours is 10 weeks of 50 hour weeks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s3-0",
+   "kind": "report",
+   "move": "explain/motive",
+   "quote": "focusing on business development not on learning mathematics",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "An obvious time to do that would be once I get the War Machine working",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s5-0",
+   "kind": "extend",
+   "move": "extend/other",
+   "quote": "If I could extend my \"3 month sabbatical\" to a \"6 month sabbatical\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s6-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "Another option would be to rescale to 20 weeks of 25 hour weeks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s7-0",
+   "kind": "prioritize",
+   "move": "prioritize/other",
+   "quote": "NOT be immersive but do a little bit of infrastructure at a time.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s8-0",
+   "kind": "redirect",
+   "move": "redirect/other",
+   "quote": "let's work in M-futonzero-prelim-practice on the *design* of the system",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-83-f-s9-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "If I can find 10 or 20 weeks to actually do this",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-83-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

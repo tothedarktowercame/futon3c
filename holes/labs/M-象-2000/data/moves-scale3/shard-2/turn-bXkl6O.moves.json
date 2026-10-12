@@ -1,0 +1,22 @@
+{
+ "record": "turn-bXkl6O",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-134-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "Are the solvers wrapped up?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

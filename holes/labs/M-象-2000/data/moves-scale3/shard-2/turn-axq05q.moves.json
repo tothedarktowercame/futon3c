@@ -1,0 +1,35 @@
+{
+ "record": "turn-axq05q",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-68-f-s1-0",
+   "kind": "ask-action",
+   "move": "propose/directive",
+   "quote": "let's hot load now.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-68-f-s2-0",
+   "kind": "verify",
+   "move": "verify/confirm",
+   "quote": "please tell me after that if the known defects are fixed or not",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-68-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

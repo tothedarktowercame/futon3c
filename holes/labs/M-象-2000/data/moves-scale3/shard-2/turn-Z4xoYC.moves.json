@@ -1,0 +1,23 @@
+{
+ "record": "turn-Z4xoYC",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-33-f-s1-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "We can test out the ~/code/algorithms/conduct-problem-intake-with-route-questions.md",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Deferred test of the intake algorithm once the writeups are ready."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,63 @@
+{
+ "record": "turn-NTgZ2T",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-14-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes, keep tge recovered method",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"tge\" in source kept verbatim."
+  },
+  {
+   "act": "claude-11-turn-14-r-0",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why a branch, not cand-1)",
+   "answers": [
+    {
+     "act": "claude-11-turn-14-f-s1-0",
+     "quote": "(why a branch, not cand-1)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Preamble-7 ownership rule is why the keep lands on a branch."
+  },
+  {
+   "act": "claude-11-turn-14-r-1",
+   "kind": "reply-mark",
+   "move": "report/next",
+   "quote": "(still to come)",
+   "answers": [
+    {
+     "act": "claude-11-turn-14-f-s1-0",
+     "quote": "(still to come)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Extends zai-1's rebuild to the remaining shell-written method files."
+  }
+ ],
+ "unlabelled": []
+}

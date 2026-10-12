@@ -1,0 +1,35 @@
+{
+ "record": "turn-VuKpTB",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-112-f-s1-0",
+   "kind": "continue",
+   "move": "propose/directive",
+   "quote": "lets run the next click",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-112-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": ", again with the debugger",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-112-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

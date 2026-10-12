@@ -1,0 +1,74 @@
+{
+ "record": "turn-XEPMFG",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-157-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "the War Machine's success criterion is to write code",
+   "answers": [],
+   "scope": {
+    "opens": "critical-and-creative requirement",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-157-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "The instructions are given in Missions and Design patterns.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-157-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-157-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/risk-assessment",
+   "quote": "we're having trouble reading and following those instructions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-157-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-157-f-s4-0",
+   "kind": "qualify",
+   "move": "qualify/risk-assessment",
+   "quote": "If the machine can only do rote tasks that's not great either.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-157-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-157-f-s5-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "It needs to be able to be both critical and creative.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-157-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-cl4K3r",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-8-turn-242-f-s3-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes I agree.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

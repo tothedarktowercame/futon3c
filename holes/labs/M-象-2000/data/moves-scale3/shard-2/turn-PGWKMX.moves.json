@@ -1,0 +1,61 @@
+{
+ "record": "turn-PGWKMX",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-35-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "I think you need to think ahead.",
+   "answers": [],
+   "scope": {
+    "opens": "plan for the 110-row regression cost",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-35-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "we have 110 rows and can't rerun them all as a regression suite",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-35-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-35-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "i am just a bit shocked that this has been so slow.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-35-f-s4-0",
+   "kind": "propose",
+   "move": "ask-action/one-decision",
+   "quote": "checks that we can run without compiling anything?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-35-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
