@@ -64,7 +64,12 @@
                           value))
                  (t value))))
     (setq data (json-value data nil)))
-  (let ((tmp (make-temp-file (file-name-nondirectory file) nil ".json")))
+  ;; The temp file lives beside FILE so the rename stays on one filesystem
+  ;; (a rename from `temporary-file-directory' is a copy when /tmp is a
+  ;; separate mount, and then a crash can leave a partial file).
+  (let ((tmp (make-temp-file (expand-file-name (concat "." (file-name-nondirectory file) ".")
+                                               (file-name-directory (expand-file-name file)))
+                             nil ".json")))
     (unwind-protect
         (progn
           (with-temp-file tmp
