@@ -16,7 +16,12 @@ def instant(s):
 def aid(x):
     return x if isinstance(x, str) else x.get("act", x.get("id", ""))
 
-def load_records(directory, mission, seats, since=None, join="auto"):
+def mission_excursions(path):
+    if not path.exists():
+        return []
+    return list(dict.fromkeys(re.findall(r"\bE-[A-Za-z0-9-]+\b", path.read_text())))
+
+def load_records(directory, mission, seats, since=None, join="auto", excursions=()):
     rows = []
     for path in sorted(directory.glob("turn-*.json")):
         try:
@@ -31,9 +36,13 @@ def load_records(directory, mission, seats, since=None, join="auto"):
             continue
         row["_record_id"] = path.name.split(".", 1)[0]
         rows.append(row)
-    matched = [r for r in rows if r.get("mission_id") == mission]
-    if join == "mission" or (join == "auto" and matched):
-        return matched, "mission"
+    mission_rows = [r for r in rows if r.get("mission_id") == mission]
+    if join == "mission":
+        return mission_rows, "mission"
+    matched = [r for r in rows
+               if r.get("mission_id") == mission or r.get("excursion_id") in excursions]
+    if join == "auto" and matched:
+        return matched, "mission-excursion"
     if not seats:
         raise SystemExit("no mission_id records found; provide --seats")
     return [r for r in rows if r.get("agent_id") in seats], "seat"
@@ -186,12 +195,15 @@ def port_section(rows, now):
         output.append("")
     return output
 
-def render(mission, join, seed_rows, data, now):
+def render(mission, join, seed_rows, data, now, excursions=()):
     lines = ["# Resume brief: " + mission, ""]
     if join == "seat":
         lines += ["_Join: explicit seats fallback; not a mission-id join._", ""]
-    else:
+    elif join == "mission":
         lines += ["_Join: mission_id {0}._".format(mission), ""]
+    else:
+        suffix = (" + excursions " + ", ".join(excursions)) if excursions else ""
+        lines += ["_Join: mission_id {0}{1}._".format(mission, suffix), ""]
     newest = data["newest"].date() if data["newest"] else "none"
     lines += ["_Read {0} records in {1} sessions, newest {2}._".format(
         data["record_count"], data["session_count"], newest), ""]
@@ -254,16 +266,20 @@ def main(argv=None):
     p.add_argument("--dir", type=Path, default=DEFAULT_DIR)
     p.add_argument("--out", type=Path)
     p.add_argument("--join", choices=["auto", "mission", "seats"], default="auto",
-                   help="auto: mission_id when any record has it, else seats; mission / seats force one")
+                   help="auto: mission or listed excursion when any matches, else seats")
+    p.add_argument("--excursions",
+                   help="comma-separated excursion ids; defaults to E-* tokens in the mission file")
     args = p.parse_args(argv)
+    mission_file = ROOT / "holes/missions" / (args.mission + ".md")
+    excursions = (list(filter(None, args.excursions.split(","))) if args.excursions
+                  else mission_excursions(mission_file))
     seat_text = args.seats or args.seat or ""
     records, join = load_records(args.dir, args.mission,
-                                 set(filter(None, seat_text.split(","))), args.since, args.join)
+                                 set(filter(None, seat_text.split(","))), args.since,
+                                 args.join, set(excursions))
     now = dt.datetime.now(dt.timezone.utc)
     data = prepare(records, now)
-    output = render(args.mission, join,
-                    seeds(ROOT / "holes/missions" / (args.mission + ".md")),
-                    data, now)
+    output = render(args.mission, join, seeds(mission_file), data, now, excursions)
     if args.out:
         args.out.write_text(output)
     print(output, end="")

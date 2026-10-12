@@ -76,5 +76,36 @@ class ResumeBriefTest(unittest.TestCase):
             )
             self.assertEqual(["new inline", "> older block"], brief.seeds(path))
 
+    def test_mission_or_excursion_join_and_header(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = {"agent_id": "claude-1", "created_at": "2026-10-12T00:00:00Z",
+                    "ports": {"still_open": [], "closed_this_turn": []},
+                    "standings": {}, "obligations": [], "acts": []}
+            self.write(root, "turn-mission.json",
+                       dict(base, turn_id="m", session_id="sm", mission_id="M-test"))
+            self.write(root, "turn-excursion.json",
+                       dict(base, turn_id="e", session_id="se", excursion_id="E-listed"))
+            self.write(root, "turn-other.json",
+                       dict(base, turn_id="x", session_id="sx", excursion_id="E-other"))
+            records, join = brief.load_records(
+                root, "M-test", set(), join="auto", excursions={"E-listed"})
+            self.assertEqual(["e", "m"], sorted(r["turn_id"] for r in records))
+            self.assertEqual("mission-excursion", join)
+            now = dt.datetime(2026, 10, 12, tzinfo=dt.timezone.utc)
+            text = brief.render("M-test", join, [], brief.prepare(records, now),
+                                now, ["E-listed"])
+            self.assertIn("_Join: mission_id M-test + excursions E-listed._", text)
+            strict, strict_join = brief.load_records(
+                root, "M-test", set(), join="mission", excursions={"E-listed"})
+            self.assertEqual(["m"], [r["turn_id"] for r in strict])
+            self.assertEqual("mission", strict_join)
+
+    def test_default_excursions_from_mission_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mission.md"
+            path.write_text("Uses E-one, E-two and E-one again; ignore M-three.")
+            self.assertEqual(["E-one", "E-two"], brief.mission_excursions(path))
+
 if __name__ == "__main__":
     unittest.main()
