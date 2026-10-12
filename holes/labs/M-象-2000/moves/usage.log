@@ -9,3 +9,4 @@
 2026-10-12T05:02:01Z 65.0% monthly, 5h window 43% (after batch 2 shards 1+2, 127 records; before shards 3-5, 73 records)
 2026-10-12T05:15:15Z 67.0% used monthly; 5h 56.0% (after batch 2 complete: 200 records, 5 shards)
 2026-10-12T20:06:00Z 5h window 0.0% (fresh window since 20:03Z), monthly 73.0% used (resets 2026-10-13 02:04Z); before batch 3 (futon-mission pool, 208 records, zai-1..3)
+2026-10-12T20:18:07Z 5h window 33% (shard 3 done, shards 1-2 running), monthly 79.0%; wave 2 dispatched (M-diagramprover, 114 records, zai-4/5)
