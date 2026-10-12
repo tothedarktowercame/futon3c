@@ -137,6 +137,28 @@ class OpenPortsAreAnswerTargets(unittest.TestCase):
             self.assertIn("turn-zzz-f-s1-0", errors[0])
 
 
+class FragmentsOutrankStoredActPrefix(unittest.TestCase):
+    def test_quote_past_the_120_char_prefix_is_valid(self):
+        full = "please " + "x" * 110 + " and then report the tail sentence"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = {"record": "turn-c",
+                      "fragments": [{"id": "turn-c-f-s1-0", "intent": "ask-action", "text": full}],
+                      "acts": [{"id": "turn-c-f-s1-0", "kind": "ask-action", "text": full[:120]}],
+                      "reply_acts": [], "previous_reply_acts": []}
+            (root / "turn-c.input.json").write_text(json.dumps(source))
+            sidecar = {"schema": "moves/1", "record": "turn-c", "at": "2026-10-12T21:00:00Z",
+                       "labeller": "test", "acts": [
+                           {"act": "turn-c-f-s1-0", "kind": "ask-action", "move": "ask-action/commission",
+                            "quote": "report the tail sentence", "answers": [],
+                            "scope": {"opens": None, "closes": None, "within": None},
+                            "confidence": "high"}], "unlabelled": []}
+            path = root / "turn-c.moves.json"
+            path.write_text(json.dumps(sidecar))
+            valid, void, errors = validate.validate(path)
+            self.assertEqual((1, 0, []), (valid, void, errors))
+
+
 class ReplyMarksFollowKernelNumbering(unittest.TestCase):
     def test_marked_only_zero_based_body_text(self):
         record = {"turn_id": "a-turn-1", "agent_id": "a",
