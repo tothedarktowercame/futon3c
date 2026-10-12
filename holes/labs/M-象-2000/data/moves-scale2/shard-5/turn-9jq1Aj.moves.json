@@ -1,0 +1,79 @@
+{
+ "record": "turn-9jq1Aj",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-9-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "are they making progress again?",
+   "answers": [],
+   "scope": {
+    "opens": "loop-progress-check",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-9-r-0",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "Yes, on lemmas, which is where the work now goes.",
+   "answers": [
+    {
+     "act": "claude-14-turn-9-f-s1-0",
+     "quote": "Yes, on lemmas, which is where the work now goes.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-9-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-9-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "topo1 has 22 lemmas banked and 12 in backlog",
+   "answers": [
+    {
+     "act": "claude-14-turn-9-f-s1-0",
+     "quote": "topo1 has 22 lemmas banked",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-9-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-9-r-2",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "two things I'm watching",
+   "answers": [
+    {
+     "act": "claude-14-turn-9-f-s1-0",
+     "quote": "two things I'm watching",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-9-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

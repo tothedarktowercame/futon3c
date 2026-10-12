@@ -1,0 +1,117 @@
+{
+ "record": "turn-OD2RDe",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-17-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you investigate the row that indicates closure while the problem has a sorry?",
+   "answers": [],
+   "scope": {
+    "opens": "closure-row-investigation",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-17-r-0",
+   "kind": "report",
+   "move": "report/diagnosis",
+   "quote": "t96A07 never closed, and nothing claimed it had.",
+   "answers": [
+    {
+     "act": "claude-14-turn-17-f-s1-0",
+     "quote": "t96A07 never closed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-17-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-17-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "was a probe at 03:41 on 10-10.",
+   "answers": [
+    {
+     "act": "claude-14-turn-17-f-s1-0",
+     "quote": "was a probe at 03:41 on 10-10.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-17-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-17-r-2",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "why the DAG called it complete",
+   "answers": [
+    {
+     "act": "claude-14-turn-17-f-s1-0",
+     "quote": "the three missing pieces never became lemma nodes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-17-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-17-r-3",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "the three pieces are now backlog lemmas",
+   "answers": [
+    {
+     "act": "claude-14-turn-17-f-s1-0",
+     "quote": "the three pieces are now backlog lemmas",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-17-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-17-r-4",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "A closure row that stopped still shows as `:done`",
+   "answers": [
+    {
+     "act": "claude-14-turn-17-f-s1-0",
+     "quote": "still shows as `:done` in the ledger",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-17-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

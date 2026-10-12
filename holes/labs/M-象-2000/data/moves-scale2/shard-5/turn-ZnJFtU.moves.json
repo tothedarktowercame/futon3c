@@ -1,0 +1,79 @@
+{
+ "record": "turn-ZnJFtU",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-10-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "what is the heavy raw scan?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-10-r-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "The scan reads the whole old drive",
+   "answers": [
+    {
+     "act": "claude-11-turn-10-f-s1-0",
+     "quote": "The scan reads the whole old drive",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-10-r-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "It's long rather than costly.",
+   "answers": [
+    {
+     "act": "claude-11-turn-10-f-s1-0",
+     "quote": "It's long rather than costly.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-10-r-2",
+   "kind": "report",
+   "move": "qualify/risk-assessment",
+   "quote": "The odds are modest.",
+   "answers": [
+    {
+     "act": "claude-11-turn-10-f-s1-0",
+     "quote": "The odds are modest.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,117 @@
+{
+ "record": "turn-BcboOg",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-14-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "any progress to report?",
+   "answers": [],
+   "scope": {
+    "opens": "progress-report",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-14-r-0",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "Lemma work is moving fast, but still no closed problems",
+   "answers": [
+    {
+     "act": "claude-14-turn-14-f-s1-0",
+     "quote": "Lemma work is moving fast",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-14-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-14-r-1",
+   "kind": "report",
+   "move": "report/diagnosis",
+   "quote": "closure rows waiting",
+   "answers": [
+    {
+     "act": "claude-14-turn-14-f-s1-0",
+     "quote": "closure rows waiting",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-14-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-14-r-2",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "where things stand, 01:02 UTC",
+   "answers": [
+    {
+     "act": "claude-14-turn-14-f-s1-0",
+     "quote": "where things stand, 01:02 UTC",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-14-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-14-r-3",
+   "kind": "report",
+   "move": "report-problem/suspected",
+   "quote": "That looks like the closure didn't actually remove the `sorry`.",
+   "answers": [
+    {
+     "act": "claude-14-turn-14-f-s1-0",
+     "quote": "the problem still has its placeholder",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-14-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-14-r-4",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Codex weekly use is at 73%",
+   "answers": [
+    {
+     "act": "claude-14-turn-14-f-s1-0",
+     "quote": "Codex weekly use is at 73%",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-14-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,124 @@
+{
+ "record": "turn-gYSDOf",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-8-f-s1-0",
+   "kind": "collect",
+   "move": "clarify/context",
+   "quote": "if we are going to get back to work, there were 2 main things",
+   "answers": [],
+   "scope": {
+    "opens": "back-to-work",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-8-f-s2-0",
+   "kind": "extend",
+   "move": "clarify/context",
+   "quote": "Also there was along running thread on Xiang.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-8-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-8-f-s3-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "whether the mfuton had started to make progress yet",
+   "answers": [],
+   "scope": {
+    "opens": "mfuton-progress-check",
+    "closes": null,
+    "within": "claude-11-turn-8-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-8-r-0",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "what the rise was made of",
+   "answers": [
+    {
+     "act": "claude-11-turn-8-f-s3-0",
+     "quote": "what the rise was made of",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-8-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-8-r-1",
+   "kind": "report",
+   "move": "report/diagnosis",
+   "quote": "(where it was stuck)",
+   "answers": [
+    {
+     "act": "claude-11-turn-8-f-s3-0",
+     "quote": "(where it was stuck)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-8-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-8-r-2",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "(two caveats)",
+   "answers": [
+    {
+     "act": "claude-11-turn-8-f-s3-0",
+     "quote": "(two caveats)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-8-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-8-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "(before jumping in) Before hostplane removes `/dev/sda`",
+   "answers": [
+    {
+     "act": "claude-11-turn-8-f-s1-0",
+     "quote": "Before hostplane removes `/dev/sda`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-8-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

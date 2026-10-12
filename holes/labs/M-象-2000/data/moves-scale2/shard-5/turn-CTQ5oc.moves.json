@@ -1,0 +1,79 @@
+{
+ "record": "turn-CTQ5oc",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-12-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "please dispatch to a zai agent",
+   "answers": [],
+   "scope": {
+    "opens": "progress-tooling-rebuild",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-12-r-0",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "I've sent the job to **zai-1** as a work bell.",
+   "answers": [
+    {
+     "act": "claude-11-turn-12-f-s1-0",
+     "quote": "I've sent the job to **zai-1** as a work bell.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-12-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-12-r-1",
+   "kind": "report",
+   "move": "report/acknowledge",
+   "quote": "(what zai-1 has been told)",
+   "answers": [
+    {
+     "act": "claude-11-turn-12-f-s1-0",
+     "quote": "(what zai-1 has been told)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-12-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-12-r-2",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "When zai-1 reports back, I'll review it myself:",
+   "answers": [
+    {
+     "act": "claude-11-turn-12-f-s1-0",
+     "quote": "When zai-1 reports back, I'll review it myself:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-12-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,117 @@
+{
+ "record": "turn-ip2Cs8",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-28-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "would it help for the loops to write out the maths behind their foundations",
+   "answers": [],
+   "scope": {
+    "opens": "foundations-blueprint",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-28-r-0",
+   "kind": "report",
+   "move": "approve/provisional",
+   "quote": "Yes, I think it would help",
+   "answers": [
+    {
+     "act": "claude-14-turn-28-f-s1-0",
+     "quote": "Yes, I think it would help",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-28-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "what a written path would have caught",
+   "answers": [
+    {
+     "act": "claude-14-turn-28-f-s1-0",
+     "quote": "what a written path would have caught",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-28-r-2",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "(limits)",
+   "answers": [
+    {
+     "act": "claude-14-turn-28-f-s1-0",
+     "quote": "(limits)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-28-r-3",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "(how I'd add it)",
+   "answers": [
+    {
+     "act": "claude-14-turn-28-f-s1-0",
+     "quote": "(how I'd add it)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-28-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I add this, starting with the two running programs?",
+   "answers": [
+    {
+     "act": "claude-14-turn-28-f-s1-0",
+     "quote": "Shall I add this, starting with the two running programs?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

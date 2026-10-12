@@ -1,0 +1,86 @@
+{
+ "record": "turn-RHQbI4",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-5-turn-1-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "This is a demo session for testing 象.",
+   "answers": [],
+   "scope": {
+    "opens": "elephant-demo",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-5-turn-1-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Please reply in the proforma with two questions for me and nothing else",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-1-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-5-turn-1-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "Don't do anything yet.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-1-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-5-turn-1-r-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Should the demo file be called elephant.txt?",
+   "answers": [
+    {
+     "act": "claude-5-turn-1-f-s2-0",
+     "quote": "Should the demo file be called elephant.txt?",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-1-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-5-turn-1-r-1",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Which line should I write in it?",
+   "answers": [
+    {
+     "act": "claude-5-turn-1-f-s2-0",
+     "quote": "Which line should I write in it?",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-1-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

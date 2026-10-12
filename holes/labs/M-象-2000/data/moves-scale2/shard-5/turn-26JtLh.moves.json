@@ -1,0 +1,98 @@
+{
+ "record": "turn-26JtLh",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-28-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "we should check and see whether we are ahead of Rob's upstream master or vice versa",
+   "answers": [],
+   "scope": {
+    "opens": "upstream-divergence-check",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-28-r-0",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "We're well ahead, and Rob hasn't pushed anything since our last push to him.",
+   "answers": [
+    {
+     "act": "claude-11-turn-28-f-s1-0",
+     "quote": "We're well ahead, and Rob hasn't pushed anything",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-28-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "They aren't new work from Rob:",
+   "answers": [
+    {
+     "act": "claude-11-turn-28-f-s1-0",
+     "quote": "They aren't new work from Rob:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-28-r-2",
+   "kind": "report",
+   "move": "report/diagnosis",
+   "quote": "Rob's main is from before the regression.",
+   "answers": [
+    {
+     "act": "claude-11-turn-28-f-s1-0",
+     "quote": "Rob's main is from before the regression.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-28-r-3",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "codex-36 is mapping atEnd",
+   "answers": [
+    {
+     "act": "claude-11-turn-28-f-s1-0",
+     "quote": "codex-36 is mapping atEnd",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-28-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

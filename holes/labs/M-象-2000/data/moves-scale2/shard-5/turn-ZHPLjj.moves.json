@@ -1,0 +1,134 @@
+{
+ "record": "turn-ZHPLjj",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "codex-21-turn-2-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "results are in *Evidence Landscape Search*",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-21-turn-2-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "There seems to be an encoding problem",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-21-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-21-turn-2-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "the results should be modelled on my/multi-repl-occur",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-21-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-21-turn-2-f-s4-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "see *Occur*",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-21-turn-2-f-s3-0"
+   },
+   "confidence": "medium",
+   "note": "two-word pointer; quote is the whole fragment"
+  },
+  {
+   "act": "codex-21-turn-2-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Fixed and reloaded.",
+   "answers": [
+    {
+     "act": "codex-21-turn-2-f-s2-0",
+     "quote": "Fixed and reloaded.",
+     "effect": "closes"
+    },
+    {
+     "act": "codex-21-turn-2-f-s3-0",
+     "quote": "The live `*Evidence Landscape Search*` buffer has already been regenerated.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-21-turn-2-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-21-turn-2-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "UTF-8 now renders correctly",
+   "answers": [
+    {
+     "act": "codex-21-turn-2-f-s2-0",
+     "quote": "UTF-8 now renders correctly",
+     "effect": "closes"
+    },
+    {
+     "act": "codex-21-turn-2-f-s3-0",
+     "quote": "Results now resemble Occur",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-21-turn-2-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-21-turn-2-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "All 5 tests pass",
+   "answers": [
+    {
+     "act": "codex-21-turn-2-f-s2-0",
+     "quote": "All 5 tests pass",
+     "effect": "closes"
+    },
+    {
+     "act": "codex-21-turn-2-f-s3-0",
+     "quote": "All 5 tests pass",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-21-turn-2-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

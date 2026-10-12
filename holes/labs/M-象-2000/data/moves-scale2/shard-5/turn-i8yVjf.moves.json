@@ -1,0 +1,79 @@
+{
+ "record": "turn-i8yVjf",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-13-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "let's spin up a third HEAVY loop",
+   "answers": [],
+   "scope": {
+    "opens": "third-heavy-loop",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-13-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(setup)",
+   "answers": [
+    {
+     "act": "claude-14-turn-13-f-s1-0",
+     "quote": "(setup)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-13-r-1",
+   "kind": "report",
+   "move": "qualify/risk-assessment",
+   "quote": "(quota) Codex weekly use is at 60%",
+   "answers": [
+    {
+     "act": "claude-14-turn-13-f-s1-0",
+     "quote": "(quota) Codex weekly use is at 60%",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-13-r-2",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Placeholders went from 153 to 151",
+   "answers": [
+    {
+     "act": "claude-14-turn-13-f-s1-0",
+     "quote": "Placeholders went from 153 to 151",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-13-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

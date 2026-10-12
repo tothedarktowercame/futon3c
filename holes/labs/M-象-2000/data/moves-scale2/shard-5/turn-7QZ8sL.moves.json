@@ -1,0 +1,111 @@
+{
+ "record": "turn-7QZ8sL",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-16-f-s1-0",
+   "kind": "retract",
+   "move": "retract/correction",
+   "quote": "no, i forgot about 7.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "we should review both 6 and 7 to find a best-of",
+   "answers": [],
+   "scope": {
+    "opens": "preamble-best-of",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-r-0",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "Preamble 7 is a rewrite of 6 based on what went wrong on 10-06",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "Preamble 7 is a rewrite of 6",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-r-1",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "two places I chose, which you may want to overrule",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "which you may want to overrule",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-r-2",
+   "kind": "report",
+   "move": "report/gap",
+   "quote": "Several things the preambles refer to were in `/tmp`",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "were in `/tmp`, so the draft marks them as needing new homes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-16-r-3",
+   "kind": "report",
+   "move": "propose/next-step",
+   "quote": "Read the draft when you're ready.",
+   "answers": [
+    {
+     "act": "claude-11-turn-16-f-s2-0",
+     "quote": "Read the draft when you're ready.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-16-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

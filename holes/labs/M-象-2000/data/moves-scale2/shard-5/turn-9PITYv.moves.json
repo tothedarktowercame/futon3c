@@ -1,0 +1,175 @@
+{
+ "record": "turn-9PITYv",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-101-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "pretty much \"case closed\" on the post part of the postmortem",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-f-s1-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "develop a \"problem intake\" algorithm in ~/code/algorithms/",
+   "answers": [],
+   "scope": {
+    "opens": "problem-intake-algorithm",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "This also relates back to the futon-2026 essay",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "I don't know that the Lean-to-Python port should become a case study",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-r-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "It has two modes:",
+   "answers": [
+    {
+     "act": "claude-11-turn-101-f-s1-1",
+     "quote": "It has two modes:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The essay's question opens the algorithm and becomes Q9.",
+   "answers": [
+    {
+     "act": "claude-11-turn-101-f-s2-0",
+     "quote": "The essay's question opens the algorithm and becomes Q9.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The Lean port appears only as an anonymous failure shape",
+   "answers": [
+    {
+     "act": "claude-11-turn-101-f-s3-0",
+     "quote": "appears only as an anonymous failure shape",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-r-3",
+   "kind": "report",
+   "move": "report-problem/observed",
+   "quote": "futon3 is public and mfuton-share is private.",
+   "answers": [
+    {
+     "act": "claude-11-turn-101-f-s3-0",
+     "quote": "futon3 is public and mfuton-share is private",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-r-4",
+   "kind": "report",
+   "move": "clarify/ask-decision",
+   "quote": "isn't a git repository, so the new file and the README line have no history",
+   "answers": [
+    {
+     "act": "claude-11-turn-101-f-s1-1",
+     "quote": "isn't a git repository",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-101-r-5",
+   "kind": "report",
+   "move": "ask-action/one-decision",
+   "quote": "Two decisions:",
+   "answers": [
+    {
+     "act": "claude-11-turn-101-f-s1-1",
+     "quote": "Shall I push `31f78e4` to futon3?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-101-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

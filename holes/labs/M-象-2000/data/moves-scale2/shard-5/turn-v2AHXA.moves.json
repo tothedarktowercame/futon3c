@@ -1,0 +1,98 @@
+{
+ "record": "turn-v2AHXA",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-5-turn-2-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "🈯: yes, call it elephant.txt.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "closes the elephant.txt question asked in previous_reply_acts r-0"
+  },
+  {
+   "act": "claude-5-turn-2-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "🈸: yes 1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "closes the which-line question asked in previous_reply_acts r-1"
+  },
+  {
+   "act": "claude-5-turn-2-f-s2-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "do it in a new git repo at /tmp/xiang-demo, with a commit.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-2-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-5-turn-2-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Done. I created a new repo at /tmp/xiang-demo",
+   "answers": [
+    {
+     "act": "claude-5-turn-2-f-s1-0",
+     "quote": "Done. I created a new repo",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-5-turn-2-f-s2-0",
+     "quote": "Done. I created a new repo",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-5-turn-2-f-s2-1",
+     "quote": "Done. I created a new repo",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-2-f-s2-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-5-turn-2-r-1",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "The commit has no Agent-Session or Agent-Id trailers.",
+   "answers": [
+    {
+     "act": "claude-5-turn-2-f-s2-1",
+     "quote": "no Agent-Session or Agent-Id trailers",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-5-turn-2-f-s2-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

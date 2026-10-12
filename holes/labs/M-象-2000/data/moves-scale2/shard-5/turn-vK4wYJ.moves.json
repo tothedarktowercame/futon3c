@@ -1,0 +1,143 @@
+{
+ "record": "turn-vK4wYJ",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-42-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe we can figure out some efficiency enhancements",
+   "answers": [],
+   "scope": {
+    "opens": "efficiency-enhancements",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "I don't see how we can justify leaving that work undone forever.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-42-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-f-s2-0",
+   "kind": "prioritize",
+   "move": "propose/directive",
+   "quote": "we should prioritise the materisl that can close quicker",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-42-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Done in `4a040a122`.",
+   "answers": [
+    {
+     "act": "claude-14-turn-42-f-s2-0",
+     "quote": "Done in `4a040a122`.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-42-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "(closure programs, in priority order)",
+   "answers": [
+    {
+     "act": "claude-14-turn-42-f-s2-0",
+     "quote": "(closure programs, in priority order)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-42-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-r-2",
+   "kind": "report",
+   "move": "qualify/impact",
+   "quote": "(what this costs)",
+   "answers": [
+    {
+     "act": "claude-14-turn-42-f-s2-0",
+     "quote": "(what this costs)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-42-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-r-3",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "For the months-long residuals",
+   "answers": [
+    {
+     "act": "claude-14-turn-42-f-s1-0",
+     "quote": "For the months-long residuals",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-42-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-42-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "(t98A02, from my last message) Still your call:",
+   "answers": [
+    {
+     "act": "claude-14-turn-42-f-s1-1",
+     "quote": "Still your call:",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,99 @@
+{
+ "record": "turn-OdFzQ8",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-46-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "add a suitable treatment of the dropped sentence to the lean framing then!",
+   "answers": [],
+   "scope": {
+    "opens": "dropped-sentence-framing",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-46-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(grader's points)",
+   "answers": [
+    {
+     "act": "claude-14-turn-46-f-s1-0",
+     "quote": "(grader's points)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-46-f-s1-0"
+   },
+   "confidence": "medium",
+   "note": "acts text truncated mid-sentence; quote is the visible prefix of the rewording report"
+  },
+  {
+   "act": "claude-14-turn-46-r-1",
+   "kind": "report",
+   "move": "retract/correction",
+   "quote": "Earlier I said the old wild-ball version needed",
+   "answers": [
+    {
+     "act": "claude-14-turn-46-f-s1-0",
+     "quote": "Earlier I said the old wild-ball version",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-46-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-46-r-2",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "(route) The Mayer–Vietoris sequence",
+   "answers": [
+    {
+     "act": "claude-14-turn-46-f-s1-0",
+     "quote": "(route) The Mayer–Vietoris sequence",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-46-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-46-r-3",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "It now uses `~/notes/closer/audits/`.",
+   "answers": [
+    {
+     "act": "claude-14-turn-46-f-s1-0",
+     "quote": "It now uses `~/notes/closer/audits/`.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-46-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

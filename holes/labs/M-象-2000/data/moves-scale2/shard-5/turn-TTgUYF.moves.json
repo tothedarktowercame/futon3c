@@ -1,0 +1,98 @@
+{
+ "record": "turn-TTgUYF",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-6-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "create a tothedarktowercame private remote for powerbi-tui",
+   "answers": [],
+   "scope": {
+    "opens": "powerbi-tui-remote",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-6-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "the others are to decide later",
+   "answers": [],
+   "scope": {
+    "opens": "decide-later-repos",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-6-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The scan already listed the 8 repos with no remote.",
+   "answers": [
+    {
+     "act": "claude-11-turn-6-f-s2-0",
+     "quote": "The scan already listed the 8 repos with no remote.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-6-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-6-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "18 checks: 9 pass, 9 fail.",
+   "answers": [
+    {
+     "act": "claude-11-turn-6-f-s2-0",
+     "quote": "18 checks: 9 pass, 9 fail.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-6-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-6-r-2",
+   "kind": "report",
+   "move": "ask-action/one-decision",
+   "quote": "That's everything outstanding from the outage on my side. What's next?",
+   "answers": [
+    {
+     "act": "claude-11-turn-6-f-s1-0",
+     "quote": "That's everything outstanding from the outage",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-11-turn-6-f-s2-0",
+     "quote": "That's everything outstanding from the outage",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": "claude-11-turn-6-f-s2-0",
+    "within": "claude-11-turn-6-f-s2-0"
+   },
+   "confidence": "high",
+   "note": "explicit scope close: outage-recovery deferred set discharged; opener f-s2-0 declared settled"
+  }
+ ],
+ "unlabelled": []
+}

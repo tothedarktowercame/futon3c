@@ -1,0 +1,129 @@
+{
+ "record": "turn-wDJkVr",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-102-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes, please push.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-102-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "a case for applying the algorithm right away",
+   "answers": [],
+   "scope": {
+    "opens": "intake-on-landscape",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-102-f-s3-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "This would be a near-exact analogue of the Mfuton situation",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-102-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-102-r-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "I found two ways to get led here, not one:",
+   "answers": [
+    {
+     "act": "claude-11-turn-102-f-s3-0",
+     "quote": "two ways to get led here",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-102-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-102-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "(first evidence) There's already evidence from outside their own framing:",
+   "answers": [
+    {
+     "act": "claude-11-turn-102-f-s2-0",
+     "quote": "evidence from outside their own framing",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-102-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-102-r-2",
+   "kind": "report",
+   "move": "qualify/caveat",
+   "quote": "One difference from mfuton: Mastra is open source",
+   "answers": [
+    {
+     "act": "claude-11-turn-102-f-s3-0",
+     "quote": "One difference from mfuton",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-102-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-102-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I push futon0?",
+   "answers": [
+    {
+     "act": "claude-11-turn-102-f-s1-0",
+     "quote": "Shall I push futon0?",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-11-turn-102-f-s2-0",
+     "quote": "Shall I push futon0?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-102-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

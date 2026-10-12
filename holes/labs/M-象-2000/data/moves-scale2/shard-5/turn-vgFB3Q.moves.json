@@ -1,0 +1,117 @@
+{
+ "record": "turn-vgFB3Q",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-18-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "OK how is progress coming along?",
+   "answers": [],
+   "scope": {
+    "opens": "progress-check",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-18-r-0",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "Slowly. The loops bank lemmas steadily",
+   "answers": [
+    {
+     "act": "claude-14-turn-18-f-s1-0",
+     "quote": "Slowly. The loops bank lemmas steadily",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-18-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "(what has been built)",
+   "answers": [
+    {
+     "act": "claude-14-turn-18-f-s1-0",
+     "quote": "(what has been built)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-18-r-2",
+   "kind": "report",
+   "move": "report-problem/observed",
+   "quote": "(closures) Every closure attempt so far has run into another missing theorem:",
+   "answers": [
+    {
+     "act": "claude-14-turn-18-f-s1-0",
+     "quote": "Every closure attempt so far has run into another missing theorem",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-18-r-3",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "The DAG ranks lemmas by how many problems they serve.",
+   "answers": [
+    {
+     "act": "claude-14-turn-18-f-s1-0",
+     "quote": "The DAG ranks lemmas by how many problems they serve.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-18-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "(next) I'd like to look into",
+   "answers": [
+    {
+     "act": "claude-14-turn-18-f-s1-0",
+     "quote": "(next) I'd like to look into",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

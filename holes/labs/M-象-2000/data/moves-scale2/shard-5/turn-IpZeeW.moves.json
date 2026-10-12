@@ -1,0 +1,79 @@
+{
+ "record": "turn-IpZeeW",
+ "labeller": "zai-5",
+ "schema": "moves/1",
+ "at": "2026-10-11T21:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-18-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "let's try to get it running on codex luna agents",
+   "answers": [],
+   "scope": {
+    "opens": "row-loop-on-luna",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-18-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "rebuilt at `~/.venvs/mfuton`",
+   "answers": [
+    {
+     "act": "claude-11-turn-18-f-s1-0",
+     "quote": "rebuilt at `~/.venvs/mfuton`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-18-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "what the preamble-7 lanes found on 10-06",
+   "answers": [
+    {
+     "act": "claude-11-turn-18-f-s1-0",
+     "quote": "what the preamble-7 lanes found on 10-06",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-18-r-2",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Who owns integration?",
+   "answers": [
+    {
+     "act": "claude-11-turn-18-f-s1-0",
+     "quote": "Who owns integration?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-18-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
