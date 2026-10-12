@@ -85,6 +85,49 @@ OK
 
 Awaiting explicit approval before `--apply`.
 
+## Applied from the clock store
+
+Claude-16 approved `--apply`; it ran successfully on 2026-10-12 UTC. The
+ledger was written before any record rewrite. The apply read 3,750 record
+files: 3,407 were atomically rewritten, 5 already carried the target key, 338
+had no exact clock row, and no matching clock row lacked both targets.
+
+| Clock mission | Actually written |
+|---|---:|
+| `M-G-over-cascades` | 248 |
+| `M-autoclock-in` | 1 |
+| `M-diagramprover` | 1,008 |
+| `M-futon-seams` | 3 |
+| `M-futonzero-prelim-practice` | 128 |
+| `M-landscape-positioning` | 132 |
+| `M-the-perfect-crime` | 19 |
+| `M-warrant-limit` | 113 |
+| `M-wm-wiring` | 180 |
+| `M-象-2000` | 368 |
+| **Mission total** | **2,200** |
+
+| Clock excursion | Actually written |
+|---|---:|
+| `E-agency-work-orders` | 322 |
+| `E-aif-cascade` | 85 |
+| `E-cascade-real` | 139 |
+| `E-convert-operator-turns-to-patterns` | 604 |
+| `E-kimi-task-103` | 12 |
+| `E-kimi-task-28` | 11 |
+| `E-xiang-turn-evidence-outage-2026-10-11` | 34 |
+| **Excursion total** | **1,207** |
+
+The TSV contains 3,407 unique record rows. A read-back checked every row and
+found the selected key equal to the ledger value in all 3,407 records, with
+zero errors. A post-apply dry run found zero remaining exact-clock candidates;
+the 338 records without a clock row remained outside the ledger and were not
+written by this operation.
+
+The turn recorder remained live during verification. One further already-
+stamped record arrived after the apply snapshot, so the later dry run saw
+3,751 files and 3,413 records with their selected target key; this does not
+change the 3,407-record applied ledger.
+
 ## Revised authoritative dry run: clock store per session
 
 The roster-proxy plan above is superseded and **must not be applied**. A new
@@ -146,3 +189,11 @@ OK
 ```
 
 Awaiting explicit approval before `--apply`.
+
+## Applied (2026-10-12, approved by claude-16; the Codex job died on "model at capacity" after writing, before committing)
+
+Counted on disk by claude-16 after the apply: 3,751 record files; `mission_id`
+on 2,207 (2,200 backfilled + the live-stamped ones), `excursion_id` on 1,207.
+Ledger: `data/mission-id-backfill-2026-10-12.tsv`. Spot-check: `turn-ZkXF30`
+keeps every prior key and gained `mission_id` M-象-2000 from its session's
+clock. The follower (minus40) re-mirrors rewritten files on mtime.
