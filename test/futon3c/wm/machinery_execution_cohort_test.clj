@@ -33,16 +33,18 @@
     ;; checked: that an UNRELATED cohort can never be served. Walk the chain
     ;; from the bound charter and require every link to be byte-derivable.
     (let [served (:execution-cohort (sut/apply-binding {}))]
-      (is (loop [raw (slurp (:preregistration bound)) n 0]
-            (let [p (edn/read-string raw)]
+      (is (loop [path (:preregistration bound) n 0]
+            (let [raw (slurp path)
+                  p (edn/read-string raw)]
               (cond
                 (= (:cohort/id p) (:cohort-id served)) true
                 (> n 64) false
                 :else
-                (let [succ-raw (slurp (:preregistration served))
+                (let [succ-path (#'cohort/sibling-path path)
+                      succ-raw (slurp succ-path)
                       succ (edn/read-string succ-raw)]
                   (if (cohort/verified-successor? p raw succ)
-                    (recur succ-raw (inc n))
+                    (recur succ-path (inc n))
                     false)))))
           "served cohort is not derivable from the server-owned binding")))
   (testing "an independently server-prepared RUN4 cohort is preserved"
