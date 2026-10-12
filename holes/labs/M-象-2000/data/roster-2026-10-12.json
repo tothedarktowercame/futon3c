@@ -1,0 +1,4825 @@
+{
+  "ok": true,
+  "count": 127,
+  "agents": {
+    "codex-8": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0f19d-767c-7843-bce4-dd428b65de9d",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-8",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.385344553Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.385314538Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-8",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.385256421Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-10": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "0cd9214b-27d2-4901-8d45-cc2304c1db87",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-street-sweeper",
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-10",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:59:28.746784733Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.137227545Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-10",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.136949603Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-57": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f33-c242-7b60-97ec-e941fecb92bf",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-57",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:50:44.967949657Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:47:20.711139092Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "zai-5": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "zai-72e43dfb-37ad-40a9-a3f0-3e6cc0a981da",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "zai",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "zai-5",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:12:12.829158786Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.435281558Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "memory-domain": "mathematics",
+        "session-file": "/tmp/futon-zai-session-id-zai-5",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.435226226Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-47": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1e-ea5b-74b3-a98e-627c9d549f1f",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-47",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:26:07.711161016Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:24:15.820134947Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-29": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120e8-7a37-7aa0-899b-982a123b81e1",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-29",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T03:53:24.351084627Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.373657352Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-29",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.373611207Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "wm-reviewer": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0c659-5b84-7411-bf4b-64b36735527a",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "wm-reviewer",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.432722147Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.432696230Z",
+      "ttl-ms": null,
+      "metadata": {
+        "role": "war-machine-dedicated",
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "cwd": "/home/joe/code",
+        "auto-registered?": true,
+        "restore/restored-at": "2026-10-08T23:30:53.432629557Z",
+        "restore/state": "restored/detached",
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-wm-reviewer",
+        "model": "gpt-5.6-sol"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "zai-4": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "zai-ab07af6b-0c40-4cd9-9504-6083477f0144",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "zai",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "zai-4",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:14:40.869449668Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.434893524Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/storage/futon7a/customer-sims/2026-09-29",
+        "memory-domain": "mathematics",
+        "session-file": "/tmp/futon-zai-session-id-zai-4",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.434833554Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-59": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f33-eefa-7770-9ce5-4b49aa2ea24e",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-59",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T06:27:07.400732827Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:47:30.053010507Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-12": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0f58d-cb02-7f13-b9fb-ee9f4d26d721",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-convert-operator-turns-to-patterns",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-12",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.367571259Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.367539982Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-12",
+        "cwd": "/home/joe/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.367494719Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-8": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "8f600dcc-05a6-4ce6-af20-7caf77b57cdf",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "claude-8",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.358237329Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.358178481Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/tmp/mfs-pool-3",
+        "model": "sonnet",
+        "session-file": "/tmp/futon-session-id-claude-8",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.358048021Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-30": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120e9-57b5-71f3-9907-9db45a26fefd",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-30",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T01:09:42.259792889Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.374334217Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "cwd": "/tmp/mfs-pool-3",
+        "model": "gpt-5.6-luna",
+        "session-file": "/tmp/futon-codex-session-id-codex-30",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.374285237Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-31": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120e9-558e-7732-8948-5a5c067514cb",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-31",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T18:33:13.885020886Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.381680910Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "cwd": "/tmp/mfs-quotB",
+        "model": "gpt-5.6-luna",
+        "session-file": "/tmp/futon-codex-session-id-codex-31",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.381561821Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "zai-2": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "zai-d19c3168-7064-4b54-8279-e1bf18d646de",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "zai",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "zai-2",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T04:59:27.269588606Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.434002374Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/storage/futon7a/customer-sims/2026-09-29",
+        "session-file": "/tmp/futon-zai-session-id-zai-2",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.433942604Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-7": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fe38-6bc7-7160-832e-66b6d0b3c58b",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-7",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.384927155Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.384896489Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-7",
+        "cwd": "/home/joe/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.384827452Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-5": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123d8-6fce-7ce3-9f8f-1aeb9e164c8a",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-5",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:38:41.272643255Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:25:03.134198661Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-5",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-1": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "045933e1-be8b-42a6-9403-b37c26e8f6ae",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.106528680Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.105246780Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/voxterm",
+        "model": "claude-fable-5-1",
+        "session-file": "/tmp/futon-session-id-claude-1",
+        "emacs-socket": "server",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.084836372Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-53": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f22-25ce-7920-bde7-8f07d2e58e0e",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-53",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:31:32.803927536Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:27:58.768565354Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-6": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "d710876a-82cc-4301-b628-3896ab13516b",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-6",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.326712334Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.326682208Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-6",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.326542121Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-17": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-convert-operator-turns-to-patterns",
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-17",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.200648338Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.200575985Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-17",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.200247881Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-54": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f22-3b6c-7022-8996-da0aa487a61c",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-54",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:31:36.463869905Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:28:04.230630638Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "chi-claude-1": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "79a4c522-7ab7-4d92-8383-61c86087cb0c",
+      "invoke-route": "local",
+      "completion-bell-required?": false,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "chi-claude-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-09-29T02:44:29.112505728Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T03:07:41.889247149Z",
+      "ttl-ms": null,
+      "metadata": {
+        "home-site": "chi",
+        "excursion-id": null,
+        "federation/last-error": null,
+        "federation/last-sync-at": "2026-10-12T06:41:34.686Z",
+        "federation/stale?": false,
+        "federation/reachable?": true,
+        "mission-id": null,
+        "federation/peer-url": "http://172.236.108.82:7070",
+        "proxy?": true,
+        "remote?": true,
+        "campaign-id": null,
+        "federation/last-sync-at-ms": 1791787294686,
+        "origin-url": "http://172.236.108.82:7070"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-42": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1d-8b15-7d73-9d60-d8453cdfbba6",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-42",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:33:39.449633671Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:23:05.477712436Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-3": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "49d366f7-dd42-4437-8b80-72ce9baf2e39",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "claude-3",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.297246569Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.297193130Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/tmp/pyreg/overnight",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-3",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.296946085Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-18": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "66c595ba-5098-4ba8-8ae4-def07343f76a",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-futonzero-prelim-practice",
+      "id": {
+        "id/value": "claude-18",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.227530658Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.227467843Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-session-id-claude-18",
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.227173371Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-9": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a127d7-33e2-74b0-bdd5-a34db1f8e5db",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futonzero-prelim-practice",
+      "id": {
+        "id/value": "topo-9",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:40:05.328106396Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T22:02:23.116390398Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-9",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-9": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "d9e4516f-e601-405f-a623-0dc31d6b7a73",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-9",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.365081847Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.365054006Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-9",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.364958400Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-5": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "b52510f9-275c-44e1-a74f-243df3750115",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-5",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.320028882Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.319990932Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-5",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.319816491Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-11": {
+      "running-jobs": 1,
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a127e2-1b88-7b72-b3db-b47b3518bb21",
+      "invoke-route": "local",
+      "nonterminal-jobs": 1,
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 7468,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "queued-jobs": 0,
+      "invoke-started-at": "2026-10-12T06:40:40.527544551Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": "M-futonzero-prelim-practice",
+      "id": {
+        "id/value": "topo-11",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:17:42.252028371Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: bell\nFrom: topology-build-loop\nTo: topo-11\nOrigin: harness\nEdge: invoke-1791787238563-6517",
+      "registered-at": "2026-10-10T22:02:23.133619047Z",
+      "invoke-activity-at": "2026-10-12T06:41:29.356656446Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-11",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "using bash"
+    },
+    "codex-20": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a103ce-30a5-7231-9cda-1a852a412036",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-outer-loop-improvement",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-20",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.370865904Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.370842591Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-20",
+        "cwd": "/tmp/mfs-blank/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.370793180Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "象-sonnet": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "35b33e1c-fbf2-458f-8ffc-81fcab62be6e",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futon-seams",
+      "id": {
+        "id/value": "象-sonnet",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:33:22.505589563Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.439064682Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-session-id-象-sonnet",
+        "cwd": "/home/joe/code/storage/operator-turns",
+        "model": "sonnet",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.438995955Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-27": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a108c4-5070-7260-b374-61ac7d9f5a7d",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-27",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.373052248Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.373033954Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-27",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.372990634Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-36": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11eb0-9bc4-7a51-9f6b-d8ab6f524485",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-36",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:30:24.263869666Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T03:20:19.179087150Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-10": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a127df-1331-7de2-818e-e96d97f4fb08",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futonzero-prelim-practice",
+      "id": {
+        "id/value": "topo-10",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:39:25.682385790Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T22:02:23.124595752Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-10",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "kimi-1": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-e545a8ea-412c-499e-b495-2a421d67bd2b",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "kimi-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.429570837Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.429491381Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "session-file": "/tmp/futon-kimi-session-id-kimi-1",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.429298716Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-4": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123dd-c559-7331-8ce7-aeff0b10a13f",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-4",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T09:31:17.301847638Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:25:03.128437178Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-4",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-66": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f3a-c730-7d91-91a5-a10e81250b93",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-66",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T08:30:37.252413931Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:55:02.993269596Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "象-1": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-aaca9b21-cb6d-4f4f-991a-530751988dab",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futon-seams",
+      "id": {
+        "id/value": "象-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:57:27.276224572Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.436332733Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-kimi-session-id-象-1",
+        "cwd": "/home/joe/code/futon3c",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.436268986Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-7": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123d8-7ff0-7cd3-bbf5-acd7b70457aa",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-7",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:37:47.166193194Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:25:03.146224112Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-7",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-2": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "40369bd2-11a6-47b9-a440-f319b68bbbf8",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-aif-cascade",
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-2",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.250473237Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.250414589Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/voxterm",
+        "model": "claude-fable-5-1",
+        "session-file": "/tmp/futon-session-id-claude-2",
+        "emacs-socket": "server",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.250178494Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-14": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "75b00893-43cc-4172-917a-06a591193b20",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-xiang-turn-evidence-outage-2026-10-11",
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-14",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:29:33.154565325Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:13:21.430105875Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe",
+        "emacs-socket": "server"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-1": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123d7-2d78-7d01-9beb-fc20b1eb23f2",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:40:55.898704513Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:24:22.389069006Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-1",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-24": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a107d3-b1ca-7890-9f7b-3f22f2e228fb",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-24",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.372127005Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.372109372Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-24",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.372063308Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-15": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "claude-15",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:14:24.847105383Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T19:36:24.155959544Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe",
+        "emacs-socket": "server"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-72": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a12a53-7e37-7cf3-95f1-1cf6b82b8338",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-72",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:18:16.002703364Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-11T09:37:05.519414796Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-72",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-3": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123d9-ceea-7793-a708-59f6ce5d1a72",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-3",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:39:32.990262145Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:25:03.121617575Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-3",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-15": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0f991-b404-7c23-9715-f1396e76d4db",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-15",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.368702091Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.368598300Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-15",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.368551363Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-44": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1e-69f9-76f3-b647-738da227753c",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-44",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:32:25.675438960Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:24:01.535743647Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-68": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123e4-5da0-7130-bcc2-d8be5a21d32c",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 29047,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "invoke-started-at": "2026-10-12T06:32:47.002586287Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-68",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:18:55.929747592Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: emacs-repl\nFrom: joe\nTo: codex-68\nOrigin: operator\nCaller: joe\n---\n\nWell the debugger is m",
+      "registered-at": "2026-10-10T03:36:46.880797702Z",
+      "invoke-activity-at": "2026-10-12T06:41:07.777732565Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-68",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "using bash"
+    },
+    "codex-13": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0ff73-66a0-7301-8a4e-ac3842da7427",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-convert-operator-turns-to-patterns",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-13",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.367904182Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.367881961Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-13",
+        "cwd": "/home/joe/code/mfuton-share/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.367828433Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-1": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fcec-2528-7953-bce5-37fedc767dee",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-wm-wiring",
+      "id": {
+        "id/value": "codex-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.785652978Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.366542105Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-1",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.366449094Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-25": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a1074e-16f0-7d82-ba2e-53c0859268b8",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-25",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.372426436Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.372408363Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-25",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.372363250Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-2": {
+      "running-jobs": 1,
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123e1-285f-71a3-8a9a-381d38b7573a",
+      "invoke-route": "local",
+      "nonterminal-jobs": 1,
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 365,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "queued-jobs": 0,
+      "invoke-started-at": "2026-10-12T06:40:51.127558867Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-2",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:34:54.100389231Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: bell\nFrom: topology-build-loop\nTo: topo-2\nOrigin: harness\nEdge: invoke-1791787243920-6518-",
+      "registered-at": "2026-10-10T03:24:22.410324951Z",
+      "invoke-activity-at": "2026-10-12T06:41:36.459095280Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-2",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "using bash"
+    },
+    "codex-73": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a12a7b-9e52-7460-8c43-f39ea3298903",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-73",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T12:10:26.871587234Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-11T10:19:46.132728999Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-73",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-18": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a10732-979d-77b2-be6e-e4cba26541cd",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-18",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.369923559Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.369907209Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-18",
+        "cwd": "/tmp/pyreg/overnight/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.369830177Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-58": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f33-ebd0-78e3-a9db-3c7109f22230",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-58",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T18:27:21.466457095Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:47:25.415260664Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-64": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f35-4934-7e43-8040-7aee331d6613",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-64",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T20:56:12.899400665Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:48:53.683894897Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-33": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120e8-826d-7441-8ed3-1b1d6d778de7",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-33",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T18:23:36.632401557Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.382617103Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-33",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.382558125Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "象-2": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-ac0d3eaa-5f6e-4eea-87bd-1d22596b2fdf",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futon-seams",
+      "id": {
+        "id/value": "象-2",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T16:40:44.531984804Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.436802938Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-kimi-session-id-象-2",
+        "cwd": "/home/joe/code/futon3c",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.436740484Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-51": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f21-df01-7b20-8a26-e3f4c97a7853",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-51",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:31:26.954463527Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:27:42.245939551Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-35": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a12124-6e1e-7e93-b7c6-2e08790a7d75",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-35",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T22:34:08.553221548Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.383397970Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-35",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.383338010Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-37": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11eb0-be5f-7010-8038-693f0eed7d24",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-37",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T03:25:37.782026621Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T03:24:13.978538931Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-71": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a1294b-dec3-78b0-9f4f-74dcc5f0c7d0",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-71",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:37:44.332794760Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-11T04:47:28.335575361Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-71",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-4": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a1082e-a906-7c73-a580-bb867a78b865",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-4",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.383811411Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.383782358Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-4",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.383729Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-62": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f35-1c23-7061-b0c6-7f4f51f1ba84",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-62",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T12:28:31.372695505Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:48:43.613428506Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-12": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a127d7-5093-7fd0-b0e8-8edee777bfdc",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-12",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:26:10.517411810Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T22:02:23.141953421Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-12",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-5": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fe0a-ecff-7b70-8f8e-ee9d8b329ebe",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-kimi-task-103",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-5",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.384163029Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.384128725Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-5",
+        "cwd": "/home/joe/",
+        "memory-domain": "mathematics",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.384077531Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-23": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a10771-aad6-7cb1-b417-c77aae5b92ae",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-23",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T14:00:15.825679301Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.371753988Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-23",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.371711781Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-55": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f29-93e8-74b2-b32d-495274542854",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-55",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:46:48.127796885Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:36:15.333231462Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-41": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1d-88f0-71b1-9425-743aade74ed7",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-41",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:30:20.559930975Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:23:05.058659684Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "war-machine": {
+      "capabilities": [],
+      "session-id": null,
+      "invoke-route": "none",
+      "completion-bell-required?": false,
+      "excursion-id": null,
+      "type": "wm",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": false,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "war-machine",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:17:34.367607489Z",
+      "invoke-diagnostic": "no local invoke-fn and no ws bridge",
+      "registered-at": "2026-10-08T23:30:53.431562493Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": false
+        },
+        "auto-registered?": true,
+        "apparatus?": true,
+        "cwd": "/home/joe/code/futon2",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.431527999Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": false
+    },
+    "claude-12": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "5a109aed-1c56-4c99-9876-b5c2d6aac003",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "claude-12",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T15:49:45.351717887Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T03:42:16.144056975Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe",
+        "emacs-socket": "server"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-3": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fd8b-af80-7b41-87e8-1560e5bb6732",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-3",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.374020851Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.374001024Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-3",
+        "cwd": "/home/joe/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.373942627Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-16": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fa88-af14-7b33-876f-17fcb488b1b7",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-outer-loop-improvement",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-16",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.369267972Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.369250921Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-16",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.368958964Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-proof2b": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0ea42-52eb-76a0-8ee6-05e66bea17a5",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-autonomous-pattern-lifecycle",
+      "id": {
+        "id/value": "codex-proof2b",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.387785706Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.387751914Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "lane": "PROOF-2a implementation packets (claude-1)",
+        "auto-registered?": true,
+        "fresh-session?": true,
+        "restore/restored-at": "2026-10-08T23:30:53.387694128Z",
+        "model-basis": "Joe 2026-09-19: sol-class, astra is expensive",
+        "effective-timeouts": {
+          "request-timeout-ms": "not-applicable",
+          "turn-timeout-ms": 3600000,
+          "request/source": "not-applicable",
+          "turn/source": "frame-seat/code-default"
+        },
+        "minting-authority": "Joe 2026-09-28: use Codex on sol, register a new agent so we do not interfere with other work",
+        "restore/state": "restored/detached",
+        "require-execution?": true,
+        "minted-by": "claude-1",
+        "session-file": "/tmp/futon-codex-session-id-codex-proof2b",
+        "model": "gpt-5.6-sol"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-39": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11ee9-15b4-73e1-90ec-7316de45a73e",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-39",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:15:27.284004836Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T04:25:47.964682951Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "ams-claude-1": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": null,
+      "invoke-route": "local",
+      "completion-bell-required?": false,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "ams-claude-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.773131802Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.769938414Z",
+      "ttl-ms": null,
+      "metadata": {},
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "kimi-2": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-739f76d7-f083-44be-a356-777aa117cc79",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "kimi-2",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.430589482Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.430550059Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "session-file": "/tmp/futon-kimi-session-id-kimi-2",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.430437122Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-48": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1f-06cd-7541-8588-5bb425b555f7",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-48",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:35:19.215470016Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:24:27.388367463Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-52": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f22-0aa2-7163-b302-86ca3eb56b89",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-52",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:31:31.196724677Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:27:46.965229522Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-9": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fee7-d1b6-7f01-b832-267d0af445b1",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-wm-wiring",
+      "id": {
+        "id/value": "codex-9",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.385761290Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.385731155Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-9",
+        "cwd": "/home/joe/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.385674571Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-14": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0ff7c-18cc-76d2-9a81-fe60ebec7088",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-14",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.368240491Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.368218561Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-14",
+        "cwd": "/home/joe/code/mfuton-share/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.368157498Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-56": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f33-ab55-70e3-b4cd-193e93ee48d8",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-56",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T19:53:49.319561166Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:47:16.130504079Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-11": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "a89c3e64-2a65-4a00-ac82-3ec1ddfd5ba3",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-landscape-positioning",
+      "id": {
+        "id/value": "claude-11",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T04:40:23.725745298Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T00:57:03.034677027Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe",
+        "emacs-socket": "server"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "wm-author": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0c5d0-6653-7463-a38c-0f0ff5974ed9",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "wm-author",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.432001230Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.431973159Z",
+      "ttl-ms": null,
+      "metadata": {
+        "role": "war-machine-dedicated",
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "cwd": "/home/joe/code",
+        "auto-registered?": true,
+        "restore/restored-at": "2026-10-08T23:30:53.431903821Z",
+        "restore/state": "restored/detached",
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-wm-author",
+        "model": "gpt-5.6-sol"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-45": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1e-9fb6-7eb2-8b33-7ac817ae7ee4",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-45",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:25:24.904499062Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:24:06.100194606Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "象-3": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-caf96621-73c9-4557-853b-9eeb56de7616",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futon-seams",
+      "id": {
+        "id/value": "象-3",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T03:41:02.413953386Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.437301256Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-kimi-session-id-象-3",
+        "cwd": "/home/joe/code/futon3c",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.437241225Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-70": {
+      "running-jobs": 1,
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a128ee-8003-7791-8af2-32028cb9e369",
+      "invoke-route": "local",
+      "nonterminal-jobs": 1,
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 16,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "queued-jobs": 0,
+      "invoke-started-at": "2026-10-12T06:39:04.535343797Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-70",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:37:12.271617621Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: bell\nFrom: claude-16\nTo: codex-70\nOrigin: agent\nEdge: invoke-1791787142970-6514-01c063de\nC",
+      "registered-at": "2026-10-11T03:05:40.130752149Z",
+      "invoke-activity-at": "2026-10-12T06:41:36.808657229Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-70",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "using bash"
+    },
+    "codex-40": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1a-f79c-76b2-8be1-74f7c68a0e9d",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-40",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:22:39.035997962Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:20:17.212786003Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-8": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123dc-7f27-7220-a66c-137f6efd4349",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-8",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:12:51.755976758Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-10T03:25:03.152764906Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-8",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-65": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f35-52b8-71c3-a75e-3604c32f293b",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-65",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T08:57:12.421261970Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:49:00.859260708Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-32": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120e8-8139-7641-b87f-d145eba5aff6",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-32",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T19:36:14.361963377Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.382139875Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "cwd": "/home/joe/code/",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-codex-session-id-codex-32",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.382074044Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-22": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a104e9-87c2-78e1-a9b4-fb57dc137476",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-convert-operator-turns-to-patterns",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-22",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.371469384Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.371452854Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-22",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.371410406Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-17": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fa8e-cb5c-7361-b267-4be544a002a6",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-17",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.369585667Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.369569177Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-17",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.369498246Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-69": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a126a8-c457-7660-bcf6-a5ffbb3c5460",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "invoke-started-at": "2026-10-11T10:11:56.676748334Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-69",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T10:11:56.676748334Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "[external invoke]",
+      "registered-at": "2026-10-10T15:50:07.338595760Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-69",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "codex exec running (external surface)"
+    },
+    "codex-61": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f34-fb26-79b0-bba3-2f67cd0d959e",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-61",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T17:18:41.341273046Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:48:39.036008591Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-13": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "ae883f3a-6164-4404-834e-e89a0381ce6a",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "claude-13",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T11:01:12.979171021Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T23:57:00.508139250Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe",
+        "emacs-socket": "server"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-6": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a10808-3eb7-7480-ad83-d8643b264856",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-6",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.384517080Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.384476315Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-6",
+        "cwd": "/home/joe/code/",
+        "memory-domain": "mathematics",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.384423127Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "wm-full-loop": {
+      "running-jobs": 0,
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": null,
+      "invoke-route": "inbox",
+      "oldest-unconsumed-age-ms": 235222517,
+      "nonterminal-jobs": 6,
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "unconsumed-count": 6,
+      "queued-jobs": 0,
+      "delivery-mode": "inbox",
+      "invoke-local?": false,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "wm-full-loop",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.432372904Z",
+      "invoke-diagnostic": "pull-only seat — bells are written to its inbox; invoke is refused",
+      "registered-at": "2026-10-08T23:30:53.432362846Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-session-id-wm-full-loop",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.432349Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-50": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f21-c873-78f0-bfac-9a764975f000",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-50",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:31:22.377227114Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:27:37.678768515Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-67": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120d9-303a-7fd0-bb1d-b983df65855b",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-67",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T10:36:02.111268146Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T13:27:39.316720839Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-67",
+        "cwd": "/home/joe/"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-49": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f21-a14e-7800-82ac-fa2a033e1165",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-49",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:28:50.847184929Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:27:33.155698301Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "chi-codex-1": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0a211-d2b5-7632-becb-fec16ed2b7ed",
+      "invoke-route": "local",
+      "completion-bell-required?": false,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "chi-codex-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-09-29T02:44:29.125735136Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T03:07:41.884852894Z",
+      "ttl-ms": null,
+      "metadata": {
+        "home-site": "chi",
+        "excursion-id": null,
+        "federation/last-error": null,
+        "federation/last-sync-at": "2026-10-12T06:41:34.686Z",
+        "federation/stale?": false,
+        "federation/reachable?": true,
+        "mission-id": null,
+        "federation/peer-url": "http://172.236.108.82:7070",
+        "proxy?": true,
+        "remote-agent-id": "codex-1",
+        "remote?": true,
+        "campaign-id": null,
+        "federation/last-sync-at-ms": 1791787294686,
+        "origin-url": "http://172.236.108.82:7070"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-34": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120f7-bee6-79a2-a8df-21eb5346af8a",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-34",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T04:51:27.476455484Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.383013793Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-34",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.382954915Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-19": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a10734-c514-7e73-9973-2d40a41855c0",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "codex-19",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-11T09:29:23.112100167Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.370210387Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-19",
+        "cwd": "/tmp/pyreg/overnight/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.370152911Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-10": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0f4ae-af56-7191-b610-291a1bcfaeed",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-convert-operator-turns-to-patterns",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-10",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.366931101Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.366910283Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-10",
+        "cwd": "/home/joe/code/futon3/library/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.366854480Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-43": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1d-c18d-7710-998b-55cdc139732d",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-43",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:52:29.677333Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:23:18.948681390Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-4": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "9ef8e479-e1b7-4755-894d-1264cacb6c3b",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "claude-4",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.310157382Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.310108262Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-4",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.309892906Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-26": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a107ff-2b55-73b0-a43d-2fef3f21b3d0",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-26",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.372742187Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.372724064Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-26",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.372680624Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-38": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11ee9-067c-7b43-95d5-6df5bbcac017",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-38",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:16:55.994492159Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T04:25:15.050689156Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "kimi-3": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-02c4fa81-5061-470b-933f-ca8f2d69e0f0",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "kimi-3",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.431353117Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.431323423Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/futon3c",
+        "session-file": "/tmp/futon-kimi-session-id-kimi-3",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.431147739Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "象-4": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-77ec1cb2-469c-4977-85b4-134f3a49ee71",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-futon-seams",
+      "id": {
+        "id/value": "象-4",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T02:09:14.567623602Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.437742107Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-kimi-session-id-象-4",
+        "cwd": "/home/joe/code/futon3c",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.437681716Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-21": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a10492-1dbe-72d3-9707-0d21e7419572",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-21",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.371178980Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.371160967Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-21",
+        "cwd": "/home/joe/code/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.371116094Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-proof2c": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0ea42-847d-7bc3-a0e7-68a669dfc1fe",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-proof2c",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T05:56:26.165067618Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.388170334Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "lane": "PROOF-2a implementation packets (claude-1)",
+        "auto-registered?": true,
+        "fresh-session?": true,
+        "restore/restored-at": "2026-10-08T23:30:53.388114882Z",
+        "model-basis": "Joe 2026-09-19: sol-class, astra is expensive",
+        "effective-timeouts": {
+          "request-timeout-ms": "not-applicable",
+          "turn-timeout-ms": 3600000,
+          "request/source": "not-applicable",
+          "turn/source": "frame-seat/code-default"
+        },
+        "minting-authority": "Joe 2026-09-28: use Codex on sol, register a new agent so we do not interfere with other work",
+        "restore/state": "restored/detached",
+        "require-execution?": true,
+        "minted-by": "claude-1",
+        "session-file": "/tmp/futon-codex-session-id-codex-proof2c",
+        "model": "gpt-5.6-sol"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-proof2a": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0e9fd-1e7f-7890-98cb-3ec9e7d37ffd",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-autonomous-pattern-lifecycle",
+      "id": {
+        "id/value": "codex-proof2a",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.387363850Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.387323446Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "lane": "PROOF-2a implementation packets (claude-1)",
+        "auto-registered?": true,
+        "fresh-session?": true,
+        "restore/restored-at": "2026-10-08T23:30:53.387238119Z",
+        "model-basis": "Joe 2026-09-19: sol-class, astra is expensive",
+        "effective-timeouts": {
+          "request-timeout-ms": "not-applicable",
+          "turn-timeout-ms": 3600000,
+          "request/source": "not-applicable",
+          "turn/source": "frame-seat/code-default"
+        },
+        "minting-authority": "Joe 2026-09-28: use Codex on sol, register a new agent so we do not interfere with other work",
+        "restore/state": "restored/detached",
+        "require-execution?": true,
+        "minted-by": "claude-1",
+        "session-file": "/tmp/futon-codex-session-id-codex-proof2a",
+        "model": "gpt-5.6-sol"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-28": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a120e8-7071-7083-8169-9a7b62617897",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-G-over-cascades",
+      "id": {
+        "id/value": "codex-28",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T22:51:29.775049823Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.373329388Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-sol",
+        "session-file": "/tmp/futon-codex-session-id-codex-28",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.373285507Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "topo-6": {
+      "running-jobs": 1,
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a123f6-ce04-7aa1-a7bc-dd20a244a775",
+      "invoke-route": "local",
+      "nonterminal-jobs": 1,
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 23779,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "queued-jobs": 0,
+      "invoke-started-at": "2026-10-12T06:38:45.758095248Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": null,
+      "id": {
+        "id/value": "topo-6",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:29:52.736561467Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: bell\nFrom: topology-build-loop\nTo: topo-6\nOrigin: harness\nEdge: invoke-1791787121492-6513-",
+      "registered-at": "2026-10-10T03:25:03.140184481Z",
+      "invoke-activity-at": "2026-10-12T06:41:13.046083570Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-topo-6",
+        "cwd": "/home/joe/code/",
+        "model": "gpt-5.6-sol",
+        "memory-domain": "mathematics"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "using bash (done)"
+    },
+    "claude-7": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "1b5d271d-f4b6-4c74-891a-55d34db56ffe",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "claude-7",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.336922497Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.336894355Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code",
+        "emacs-socket": "server",
+        "session-file": "/tmp/futon-session-id-claude-7",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.336767982Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-2": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0fd35-fff2-78e0-ade7-b57dad263dd9",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-diagramprover",
+      "id": {
+        "id/value": "codex-2",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-10T14:37:32.431710862Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.370540134Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-2",
+        "cwd": "/home/joe/code/",
+        "memory-domain": "mathematics",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.370491715Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "zai-3": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "zai-52828332-789d-4541-bed7-5e9bacb1f465",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "zai",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "zai-3",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:08:29.846541140Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.434480003Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/storage/futon7a/customer-sims/2026-09-29",
+        "session-file": "/tmp/futon-zai-session-id-zai-3",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.434421125Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "claude-16": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "00e653e3-28f7-4add-8304-47ca0475b5c2",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 14242,
+      "type": "claude",
+      "invoke-ws-available?": false,
+      "invoke-started-at": "2026-10-12T06:37:14.562382526Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "claude-16",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T06:32:56.552859378Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: emacs-repl\nFrom: parked-resume\nTo: claude-16\nOrigin: harness\nCaller: parked-resume\nPrompt:",
+      "registered-at": "2026-10-11T02:43:53.635705904Z",
+      "invoke-activity-at": "2026-10-12T06:41:22.583260143Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/voxterm/",
+        "model": "claude-fable-5-1",
+        "session-file": "/tmp/futon-session-id-claude-16",
+        "emacs-socket": "server"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "bash: Read how the roster store derives mission-id and whethe…"
+    },
+    "zai-1": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "zai-c02b13ca-b1db-4357-8f76-b6f9382b7a1f",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "zai",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "M-象-2000",
+      "id": {
+        "id/value": "zai-1",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-12T05:00:30.656568878Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.433517341Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "cwd": "/home/joe/code/storage/futon7a/customer-sims/2026-09-29",
+        "session-file": "/tmp/futon-zai-session-id-zai-1",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.433449476Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-46": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f1e-b57d-73c2-b997-05441444042f",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-46",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T05:33:14.287896519Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:24:10.807394158Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-60": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f34-dc89-70d2-90e5-ac6cc2df7570",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-60",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T19:51:55.256026757Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:48:34.476488071Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-11": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a0f574-8fc9-7981-a991-b4dd5e0f34da",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-convert-operator-turns-to-patterns",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-11",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.367235291Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.367215394Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-11",
+        "cwd": "/home/joe/",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.367169029Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "codex-63": {
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "01a11f35-23db-7ac1-9a7b-9ea5fad1be4d",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": "E-agency-work-orders",
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": null,
+      "id": {
+        "id/value": "codex-63",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-09T17:20:39.231293278Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-09T05:48:48.878683539Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "model": "gpt-5.6-luna"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    },
+    "象": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": "kimi-83bc989d-1671-4fc0-9085-a19ab2dd3b60",
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "kimi",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "restored",
+      "mission-id": "M-G-wm-wiring",
+      "id": {
+        "id/value": "象",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-10-08T23:30:53.435858380Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-10-08T23:30:53.435832252Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-kimi-session-id-象",
+        "cwd": "/home/joe/code/futon3c",
+        "restore/state": "restored/detached",
+        "restore/restored-at": "2026-10-08T23:30:53.435752455Z"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    }
+  },
+  "_snapshot": {
+    "fetched_at": "2026-10-12T06:41:36.827064+00:00",
+    "source": "http://localhost:7070/api/alpha/agents",
+    "warning": "The current roster mission is a proxy for the mission at the time of the turn; seats can move between missions."
+  }
+}
