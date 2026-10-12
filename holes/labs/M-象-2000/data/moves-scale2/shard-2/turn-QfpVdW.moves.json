@@ -1,0 +1,42 @@
+{
+ "record": "turn-QfpVdW",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-401-f-s1-0",
+   "kind": "propose",
+   "move": "approve/plain",
+   "quote": "if it needs another pass so be it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-401-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed. If a row breaks later, its comparator run points to",
+   "answers": [
+    {
+     "act": "claude-4-turn-401-f-s1-0",
+     "quote": "Agreed. If a row breaks later, its comparator run points to",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Acceptance rule saved to memory alongside the wake checklist."
+  }
+ ],
+ "unlabelled": []
+}

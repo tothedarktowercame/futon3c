@@ -1,0 +1,80 @@
+{
+ "record": "turn-jYQHSw",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-27-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Let's let codex-18 finish its current turn",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-27-f-s1-1",
+   "kind": "delegate",
+   "move": "clarify/ask-decision",
+   "quote": "you can decide a course of action from there",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-27-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(plan) Agreed",
+   "answers": [
+    {
+     "act": "claude-4-turn-27-f-s1-0",
+     "quote": "(plan) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-27-f-s1-1",
+     "quote": "(plan) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Also states what stays in flight so the wait is bounded."
+  },
+  {
+   "act": "claude-4-turn-27-r-1",
+   "kind": "reply-mark",
+   "move": "report/job-spec",
+   "quote": "(for codex-18's summary)",
+   "answers": [
+    {
+     "act": "claude-4-turn-27-f-s1-1",
+     "quote": "(for codex-18's summary)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Four questions the summary must answer to make the decision well."
+  }
+ ],
+ "unlabelled": []
+}

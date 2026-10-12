@@ -1,0 +1,138 @@
+{
+ "record": "turn-drztA5",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-140-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "ask 2 codex agents to help, one with each of these issues",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-140-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/teach-helpers",
+   "quote": "one with each of these issues",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-140-f-s2-0",
+   "kind": "explain",
+   "move": "explore/hypothesis",
+   "quote": "This is because",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "low",
+   "note": "Fragment is a truncated causal header; the reason itself is past the span."
+  },
+  {
+   "act": "claude-4-turn-140-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "it would be good if it was both efficient and effective",
+   "answers": [],
+   "scope": {
+    "opens": "overnight efficiency bar",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-140-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "I read \"these issues\" as the two I'd held back",
+   "answers": [
+    {
+     "act": "claude-4-turn-140-f-s1-0",
+     "quote": "I read \"these issues\" as the two I'd held back",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-140-f-s1-1",
+     "quote": "I read \"these issues\" as the two I'd held back",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Interprets the referent explicitly before acting: codex-4 on rebuild cost, codex-6 on primitives."
+  },
+  {
+   "act": "claude-4-turn-140-r-1",
+   "kind": "reply-mark",
+   "move": "report/job-spec",
+   "quote": "(codex-4, speed)",
+   "answers": [
+    {
+     "act": "claude-4-turn-140-f-s1-0",
+     "quote": "(codex-4, speed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "overnight efficiency bar"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-140-r-2",
+   "kind": "reply-mark",
+   "move": "report/job-spec",
+   "quote": "(codex-6, `primitives`)",
+   "answers": [
+    {
+     "act": "claude-4-turn-140-f-s1-0",
+     "quote": "(codex-6, `primitives`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "overnight efficiency bar"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-140-r-3",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(kind comparison)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

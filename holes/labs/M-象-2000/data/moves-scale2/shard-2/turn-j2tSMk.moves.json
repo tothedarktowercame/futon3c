@@ -1,0 +1,79 @@
+{
+ "record": "turn-j2tSMk",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-39-f-s1-0",
+   "kind": "explain",
+   "move": "qualify/caveat",
+   "quote": "we'll be able to make mistakes faster",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-39-f-s1-1",
+   "kind": "ask-action",
+   "move": "constrain/standing-rule",
+   "quote": "it is important to introduce the prereg feature to keep quality high",
+   "answers": [],
+   "scope": {
+    "opens": "prereg drift rules",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-39-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(faster mistakes) Agreed",
+   "answers": [
+    {
+     "act": "claude-4-turn-39-f-s1-1",
+     "quote": "(faster mistakes) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-39-f-s1-0",
+     "quote": "(faster mistakes) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "prereg drift rules"
+   },
+   "confidence": "high",
+   "note": "Four anti-drift rules: different author, recorded hashes, no repairer edits, check-is-the-measure."
+  },
+  {
+   "act": "claude-4-turn-39-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/impact",
+   "quote": "(what this does to speed)",
+   "answers": [
+    {
+     "act": "claude-4-turn-39-f-s1-0",
+     "quote": "(what this does to speed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "prereg drift rules"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

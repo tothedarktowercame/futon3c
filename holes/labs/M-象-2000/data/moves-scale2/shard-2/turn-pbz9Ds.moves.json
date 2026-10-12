@@ -1,0 +1,98 @@
+{
+ "record": "turn-pbz9Ds",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-239-f-s1-0",
+   "kind": "ask-action",
+   "move": "approve/plain",
+   "quote": "🈖:got it, OK, let's implement these",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-239-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(implementing the two speed-ups) I've sent both out",
+   "answers": [
+    {
+     "act": "claude-4-turn-239-f-s1-0",
+     "quote": "(implementing the two speed-ups) I've sent both out",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "two speed-up jobs",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-239-r-1",
+   "kind": "reply-mark",
+   "move": "report/job-spec",
+   "quote": "(jobs and ids)",
+   "answers": [
+    {
+     "act": "claude-4-turn-239-f-s1-0",
+     "quote": "(jobs and ids)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "two speed-up jobs"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-239-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "(keeping the jobs apart)",
+   "answers": [
+    {
+     "act": "claude-4-turn-239-f-s1-0",
+     "quote": "(keeping the jobs apart)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "two speed-up jobs"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-239-r-3",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(how it fits together)",
+   "answers": [
+    {
+     "act": "claude-4-turn-239-f-s1-0",
+     "quote": "(how it fits together)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "two speed-up jobs"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

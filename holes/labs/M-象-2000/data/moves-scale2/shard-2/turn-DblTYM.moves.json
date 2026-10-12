@@ -1,0 +1,92 @@
+{
+ "record": "turn-DblTYM",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-380-f-s1-0",
+   "kind": "clarify",
+   "move": "constrain/standing-rule",
+   "quote": "the aim is not to preserve the bad behavior",
+   "answers": [],
+   "scope": {
+    "opens": "match-Lean-no-questions rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-380-f-s1-1",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes, you can do that",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-380-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Understood, and agreed: no question was needed",
+   "answers": [
+    {
+     "act": "claude-4-turn-380-f-s1-0",
+     "quote": "Understood, and agreed: no question was needed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-380-f-s1-1",
+     "quote": "Understood, and agreed: no question was needed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "match-Lean-no-questions rule"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-380-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(applied now)",
+   "answers": [
+    {
+     "act": "claude-4-turn-380-f-s1-1",
+     "quote": "(applied now)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "match-Lean-no-questions rule"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-380-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "(memory)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "match-Lean-no-questions rule"
+   },
+   "confidence": "high",
+   "note": "Saves the rule to memory: discovery never needs approval; Lean-alignment changes never need a question."
+  }
+ ],
+ "unlabelled": []
+}

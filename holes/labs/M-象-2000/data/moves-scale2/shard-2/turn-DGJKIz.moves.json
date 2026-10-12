@@ -1,0 +1,117 @@
+{
+ "record": "turn-DGJKIz",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-209-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "flatlining at 90 whereas I was expecting we would now be making rapid progress",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-209-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "every remaining row is stuck behind the same one or two shared defects",
+   "answers": [
+    {
+     "act": "claude-4-turn-209-f-s1-0",
+     "quote": "every remaining row is stuck behind the same one or two shared defects",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-209-r-1",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why it isn't rapid)",
+   "answers": [
+    {
+     "act": "claude-4-turn-209-f-s1-0",
+     "quote": "(why it isn't rapid)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-209-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(where it stands)",
+   "answers": [
+    {
+     "act": "claude-4-turn-209-f-s1-0",
+     "quote": "(where it stands)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-209-r-3",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(what I'd change)",
+   "answers": [
+    {
+     "act": "claude-4-turn-209-f-s1-0",
+     "quote": "(what I'd change)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-209-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision)",
+   "answers": [
+    {
+     "act": "claude-4-turn-209-f-s1-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

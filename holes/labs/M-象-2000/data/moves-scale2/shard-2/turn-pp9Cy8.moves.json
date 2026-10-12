@@ -1,0 +1,118 @@
+{
+ "record": "turn-pp9Cy8",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-319-f-s1-0",
+   "kind": "report-problem",
+   "move": "ask-action/status-check",
+   "quote": "progress.py says that there are *less* nodes compiled",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-319-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(19 instead of 20) The constant that dropped out",
+   "answers": [
+    {
+     "act": "claude-4-turn-319-f-s1-0",
+     "quote": "(19 instead of 20) The constant that dropped out",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "ParserFn.run regression analysis",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-319-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence-chain",
+   "quote": "(sequence, from PARSE-PROBES.tsv and git ancestry)",
+   "answers": [
+    {
+     "act": "claude-4-turn-319-f-s1-0",
+     "quote": "(sequence, from PARSE-PROBES.tsv and git ancestry)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "ParserFn.run regression analysis"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-319-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(current head)",
+   "answers": [
+    {
+     "act": "claude-4-turn-319-f-s1-0",
+     "quote": "(current head)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "ParserFn.run regression analysis"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-319-r-3",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(process gaps)",
+   "answers": [
+    {
+     "act": "claude-4-turn-319-f-s1-0",
+     "quote": "(process gaps)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "ParserFn.run regression analysis"
+   },
+   "confidence": "high",
+   "note": "Two rules that would have caught it: probe the merge, and separate branch rows from integration rows."
+  },
+  {
+   "act": "claude-4-turn-319-r-4",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision)",
+   "answers": [
+    {
+     "act": "claude-4-turn-319-f-s1-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "ParserFn.run regression analysis"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

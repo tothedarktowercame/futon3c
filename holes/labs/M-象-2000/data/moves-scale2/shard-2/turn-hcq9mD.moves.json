@@ -1,0 +1,119 @@
+{
+ "record": "turn-hcq9mD",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-82-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "was the overnight work successful?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-82-r-0",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(was the overnight work successful?) Partly",
+   "answers": [
+    {
+     "act": "claude-4-turn-82-f-s1-0",
+     "quote": "(was the overnight work successful?) Partly",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Ten rows now behave like Lean; no speed idea held; atEnd caught as false ok."
+  },
+  {
+   "act": "claude-4-turn-82-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-82-f-s1-0",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-82-r-2",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(speed: three ideas failed)",
+   "answers": [
+    {
+     "act": "claude-4-turn-82-f-s1-0",
+     "quote": "(speed: three ideas failed)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-82-r-3",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(a repeated failure)",
+   "answers": [
+    {
+     "act": "claude-4-turn-82-f-s1-0",
+     "quote": "(a repeated failure)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The real-path test failure mode, caught by the cold probe every time."
+  },
+  {
+   "act": "claude-4-turn-82-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(still running, each parked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-82-f-s1-0",
+     "quote": "(still running, each parked)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

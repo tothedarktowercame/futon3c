@@ -1,0 +1,80 @@
+{
+ "record": "turn-OVLgZb",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-325-f-s1-0",
+   "kind": "report-problem",
+   "move": "ask-action/status-check",
+   "quote": "Well it's been 5 minutes, no wake?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-325-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(no wake) Nothing has been set up to wake me",
+   "answers": [
+    {
+     "act": "claude-4-turn-325-f-s1-0",
+     "quote": "(no wake) Nothing has been set up to wake me",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "No park by the earlier no-bellback rule; replies route to codex-17."
+  },
+  {
+   "act": "claude-4-turn-325-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(job states, checked just now)",
+   "answers": [
+    {
+     "act": "claude-4-turn-325-f-s1-0",
+     "quote": "(job states, checked just now)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-325-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(the open question)",
+   "answers": [
+    {
+     "act": "claude-4-turn-325-f-s1-0",
+     "quote": "(the open question)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

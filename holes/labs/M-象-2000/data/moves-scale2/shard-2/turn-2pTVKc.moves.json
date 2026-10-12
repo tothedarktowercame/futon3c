@@ -1,0 +1,80 @@
+{
+ "record": "turn-2pTVKc",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-344-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "we still have 2 compiles incorrect rows",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-344-r-0",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(what each packet asks)",
+   "answers": [
+    {
+     "act": "claude-4-turn-344-f-s1-0",
+     "quote": "(what each packet asks)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "two incorrect-rows packets",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "epsilonInfo and atEnd packets with done-conditions and fixed hash seed; keeps the opener owed until the rows match."
+  },
+  {
+   "act": "claude-4-turn-344-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(Lean dump)",
+   "answers": [
+    {
+     "act": "claude-4-turn-344-f-s1-0",
+     "quote": "(Lean dump)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "two incorrect-rows packets"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-344-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(also running)",
+   "answers": [
+    {
+     "act": "claude-4-turn-344-f-s1-0",
+     "quote": "(also running)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,80 @@
+{
+ "record": "turn-AmU8bF",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-328-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you bell codex-17 the diagnosis of their second regression?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-328-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(bell sent)",
+   "answers": [
+    {
+     "act": "claude-4-turn-328-f-s1-0",
+     "quote": "(bell sent)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-328-r-1",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(what it asked for)",
+   "answers": [
+    {
+     "act": "claude-4-turn-328-f-s1-0",
+     "quote": "(what it asked for)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Separate cause/fix jobs, real failing match, acceptance gates; repair over revert."
+  },
+  {
+   "act": "claude-4-turn-328-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "(no park)",
+   "answers": [
+    {
+     "act": "claude-4-turn-328-f-s1-0",
+     "quote": "(no park)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

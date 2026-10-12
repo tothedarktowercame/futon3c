@@ -1,0 +1,117 @@
+{
+ "record": "turn-hbdgh1",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-38-f-s1-0",
+   "kind": "ask-action",
+   "move": "delegate/to-agent",
+   "quote": "I'd like you to restart the porting process on Python",
+   "answers": [],
+   "scope": {
+    "opens": "overnight Python-port restart",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-38-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "we'll see what the progress looks like in the morning",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-38-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(restart the Python port overnight) Will do",
+   "answers": [
+    {
+     "act": "claude-4-turn-38-f-s1-0",
+     "quote": "(restart the Python port overnight) Will do",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-38-f-s1-1",
+     "quote": "(restart the Python port overnight) Will do",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "overnight Python-port restart"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-38-r-1",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "(written down so it survives the night)",
+   "answers": [
+    {
+     "act": "claude-4-turn-38-f-s1-0",
+     "quote": "(written down so it survives the night)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "overnight Python-port restart"
+   },
+   "confidence": "high",
+   "note": "Queue file plus a memory pointer so any continuing session runs the same plan."
+  },
+  {
+   "act": "claude-4-turn-38-r-2",
+   "kind": "reply-mark",
+   "move": "report/planned",
+   "quote": "(the queue after the three running jobs)",
+   "answers": [
+    {
+     "act": "claude-4-turn-38-f-s1-0",
+     "quote": "(the queue after the three running jobs)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "overnight Python-port restart"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-38-r-3",
+   "kind": "reply-mark",
+   "move": "promise/commitment",
+   "quote": "(the morning report)",
+   "answers": [
+    {
+     "act": "claude-4-turn-38-f-s1-1",
+     "quote": "(the morning report)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "overnight Python-port restart"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

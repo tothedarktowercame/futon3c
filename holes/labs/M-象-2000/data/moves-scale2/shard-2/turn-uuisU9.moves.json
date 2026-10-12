@@ -1,0 +1,209 @@
+{
+ "record": "turn-uuisU9",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-343-f-s1-0",
+   "kind": "report",
+   "move": "report/ack",
+   "quote": "Codex-19 (line 2828) has a working image!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-f-s2-0",
+   "kind": "delegate",
+   "move": "defer/until",
+   "quote": "When their turn completes I'll ask them to bell you",
+   "answers": [],
+   "scope": {
+    "opens": "image-workflow collaboration",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(codex-19's image) Agreed",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(codex-19's image) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "image-workflow collaboration"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what it doesn't do yet)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(what it doesn't do yet)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "image-workflow collaboration"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-r-2",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(what I'll propose when codex-19 bells)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s2-0",
+     "quote": "(what I'll propose when codex-19 bells)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "image-workflow collaboration"
+   },
+   "confidence": "high",
+   "note": "Gate, snapshot, stop-and-restart, each checked before the next."
+  },
+  {
+   "act": "claude-4-turn-343-r-3",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(sweep) The sweep has finished 76 of 110",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(sweep)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-r-4",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(the three lost rows)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(the three lost rows)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Two unproven passes, one untracked receiver, seven timeouts counted as unmeasured."
+  },
+  {
+   "act": "claude-4-turn-343-r-5",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(the 63-row `null` group)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(the 63-row `null` group)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Root cause at reference_analysis_catamorphism_fold.py:202-211, not the reverted change."
+  },
+  {
+   "act": "claude-4-turn-343-r-6",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(jobs, ≤6)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(jobs, ≤6)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "null-repair job set",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-r-7",
+   "kind": "reply-mark",
+   "move": "report/ack",
+   "quote": "(codex-19)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s2-0",
+     "quote": "(codex-19)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "image-workflow collaboration"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343-r-8",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(dispatch)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343-f-s1-0",
+     "quote": "(dispatch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "null-repair job set"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

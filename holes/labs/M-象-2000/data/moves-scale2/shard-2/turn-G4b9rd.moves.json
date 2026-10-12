@@ -1,0 +1,79 @@
+{
+ "record": "turn-G4b9rd",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-98-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "is it on Sol or Astra?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-98-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "(codex-18's model) It's on Sol",
+   "answers": [
+    {
+     "act": "claude-4-turn-98-f-s1-0",
+     "quote": "(codex-18's model) It's on Sol",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-98-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(how I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-98-f-s1-0",
+     "quote": "(how I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-98-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(why it can't say)",
+   "answers": [
+    {
+     "act": "claude-4-turn-98-f-s1-0",
+     "quote": "(why it can't say)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

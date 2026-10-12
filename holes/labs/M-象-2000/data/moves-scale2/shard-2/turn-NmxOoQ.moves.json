@@ -1,0 +1,98 @@
+{
+ "record": "turn-NmxOoQ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-87@turn-NmxOoQ-f-s1-0",
+   "kind": "propose",
+   "move": "ask-action/commission",
+   "quote": "list it in priority order, or, if it's not actually a linear plot",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-87@turn-NmxOoQ-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(priority order and tree)",
+   "answers": [
+    {
+     "act": "claude-4-turn-87@turn-NmxOoQ-f-s1-0",
+     "quote": "(priority order and tree)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-87@turn-NmxOoQ-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what the tree shows that the flat map hid)",
+   "answers": [
+    {
+     "act": "claude-4-turn-87@turn-NmxOoQ-f-s1-0",
+     "quote": "(what the tree shows that the flat map hid)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-87@turn-NmxOoQ-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(limits)",
+   "answers": [
+    {
+     "act": "claude-4-turn-87@turn-NmxOoQ-f-s1-0",
+     "quote": "(limits)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-87@turn-NmxOoQ-r-3",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(proposal)",
+   "answers": [
+    {
+     "act": "claude-4-turn-87@turn-NmxOoQ-f-s1-0",
+     "quote": "(proposal)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

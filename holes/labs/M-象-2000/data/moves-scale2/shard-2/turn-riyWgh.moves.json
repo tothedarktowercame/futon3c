@@ -1,0 +1,82 @@
+{
+ "record": "turn-riyWgh",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-281-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "it says (only) 6 not probed yet",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-281-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(the 6 not-probed rows) Yes, the chart is current",
+   "answers": [
+    {
+     "act": "claude-4-turn-281-f-s1-0",
+     "quote": "(the 6 not-probed rows) Yes, the chart is current",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Sweep nearly done; the 87 blocked rows reduce to two causes."
+  },
+  {
+   "act": "claude-4-turn-281-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(how current those 29 rows are)",
+   "answers": [
+    {
+     "act": "claude-4-turn-281-f-s1-0",
+     "quote": "(how current those 29 rows are)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Those rows record a stop that is already fixed; each will show its next stop on re-probe."
+  },
+  {
+   "act": "claude-4-turn-281-r-2",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(next step)",
+   "answers": [
+    {
+     "act": "claude-4-turn-281-f-s1-0",
+     "quote": "(next step)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Re-probe the 29 at the current HEAD; hold the 34 Decidable rows until the fix lands."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,97 @@
+{
+ "record": "turn-i0Od3q",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-564-f-s1-0",
+   "kind": "explain",
+   "move": "challenge/analogy",
+   "quote": "imagine that I was working with your namesake Claude Shannon",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-564-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "We would be way more efficient than we are being.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-564-r-0",
+   "kind": "reply-mark",
+   "move": "agree/with-reasoning",
+   "quote": "Yes, I agree. With punch cards",
+   "answers": [
+    {
+     "act": "claude-4-turn-564-f-s1-0",
+     "quote": "Yes, I agree. With punch cards",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-564-f-s2-0",
+     "quote": "Yes, I agree. With punch cards",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-564-r-1",
+   "kind": "reply-mark",
+   "move": "propose/ordered-plan",
+   "quote": "(what I'd change)",
+   "answers": [
+    {
+     "act": "claude-4-turn-564-f-s2-0",
+     "quote": "(what I'd change)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "predict-before-running rules",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-564-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(do you want this as a rule?)",
+   "answers": [
+    {
+     "act": "claude-4-turn-564-f-s2-0",
+     "quote": "(do you want this as a rule?)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

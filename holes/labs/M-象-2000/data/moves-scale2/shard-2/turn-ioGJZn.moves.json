@@ -1,0 +1,116 @@
+{
+ "record": "turn-ioGJZn",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-94@turn-ioGJZn-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the work in progress section of your breakdown is confusing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94@turn-ioGJZn-f-s2-0",
+   "kind": "explain",
+   "move": "report-problem/observed",
+   "quote": "It includes a mix of READY and WAITING",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94@turn-ioGJZn-f-s3-0",
+   "kind": "explain",
+   "move": "clarify/check-understanding",
+   "quote": "Neither of those statuses make immediate sense",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94@turn-ioGJZn-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(work in progress) Agreed",
+   "answers": [
+    {
+     "act": "claude-4-turn-94@turn-ioGJZn-f-s1-0",
+     "quote": "(work in progress) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-94@turn-ioGJZn-f-s2-0",
+     "quote": "(work in progress) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-94@turn-ioGJZn-f-s3-0",
+     "quote": "(work in progress) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Sections now disjoint: WIP shows only worked rows with who and what."
+  },
+  {
+   "act": "claude-4-turn-94@turn-ioGJZn-r-1",
+   "kind": "reply-mark",
+   "move": "report/mapping",
+   "quote": "(what \"will also need\" shows)",
+   "answers": [
+    {
+     "act": "claude-4-turn-94@turn-ioGJZn-f-s3-0",
+     "quote": "(what \"will also need\" shows)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-94@turn-ioGJZn-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(where the status comes from)",
+   "answers": [
+    {
+     "act": "claude-4-turn-94@turn-ioGJZn-f-s1-0",
+     "quote": "(where the status comes from)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

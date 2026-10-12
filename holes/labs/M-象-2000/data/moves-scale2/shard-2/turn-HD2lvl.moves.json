@@ -1,0 +1,87 @@
+{
+ "record": "turn-HD2lvl",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-310-f-s1-0",
+   "kind": "clarify",
+   "move": "approve/plain",
+   "quote": "this has been an amazing session",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-310-f-s2-0",
+   "kind": "explain",
+   "move": "qualify/caveat",
+   "quote": "(That can't be said for all handoffs that have taken place in the past.)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-310-f-s3-0",
+   "kind": "continue",
+   "move": "propose/next-step",
+   "quote": "I will mention this to codex-17",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-310-r-0",
+   "kind": "reply-mark",
+   "move": "report/ack",
+   "quote": "Thank you, I appreciate it.",
+   "answers": [
+    {
+     "act": "claude-4-turn-310-f-s1-0",
+     "quote": "Thank you, I appreciate it.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Passes on the checking habit as the durable content of the praise."
+  },
+  {
+   "act": "claude-4-turn-310-r-1",
+   "kind": "reply-mark",
+   "move": "promise/commitment",
+   "quote": "(until then)",
+   "answers": [
+    {
+     "act": "claude-4-turn-310-f-s3-0",
+     "quote": "(until then)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,112 @@
+{
+ "record": "turn-Je7KEp",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-356-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "codex-18 looks stuck",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-356-f-s1-1",
+   "kind": "explore",
+   "move": "explore/hypothesis",
+   "quote": "I wonder if that's a context-exhausted bug",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-356-f-s2-0",
+   "kind": "report",
+   "move": "report-problem/observed",
+   "quote": "the REPL says \"starting\" for around 80s",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-356-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "codex-18 isn't stuck",
+   "answers": [
+    {
+     "act": "claude-4-turn-356-f-s1-0",
+     "quote": "codex-18 isn't stuck",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Working, not hung; also explains the late turns via a 19-job queue."
+  },
+  {
+   "act": "claude-4-turn-356-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-356-f-s1-0",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-356-f-s2-0",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-356-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(context exhaustion)",
+   "answers": [
+    {
+     "act": "claude-4-turn-356-f-s1-1",
+     "quote": "(context exhaustion)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Rules the hypothesis out for this symptom: full context shows as an error, not a stuck start."
+  }
+ ],
+ "unlabelled": []
+}

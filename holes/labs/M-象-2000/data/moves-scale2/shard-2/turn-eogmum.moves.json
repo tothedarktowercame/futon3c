@@ -1,0 +1,130 @@
+{
+ "record": "turn-eogmum",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-139-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "losing track of the plot here",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-139-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Possibly because I am tired",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-139-f-s2-0",
+   "kind": "explore",
+   "move": "ask-action/one-decision",
+   "quote": "is there anything else we do explore in the meantime?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-139-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(the plot, and one thing to run meanwhile)",
+   "answers": [
+    {
+     "act": "claude-4-turn-139-f-s1-0",
+     "quote": "(the plot, and one thing to run meanwhile)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-139-f-s2-0",
+     "quote": "(the plot, and one thing to run meanwhile)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "One-paragraph plot recap plus the kind-comparison suggestion awaiting a yes."
+  },
+  {
+   "act": "claude-4-turn-139-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(where things stand)",
+   "answers": [
+    {
+     "act": "claude-4-turn-139-f-s1-0",
+     "quote": "(where things stand)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-139-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why that job)",
+   "answers": [
+    {
+     "act": "claude-4-turn-139-f-s2-0",
+     "quote": "(why that job)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-139-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(other options, which I'd hold)",
+   "answers": [
+    {
+     "act": "claude-4-turn-139-f-s2-0",
+     "quote": "(other options, which I'd hold)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

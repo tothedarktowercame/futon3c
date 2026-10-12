@@ -1,0 +1,69 @@
+{
+ "record": "turn-4f0Exc",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-318-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you please bell it with your tips and correction",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-318-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(bell sent)",
+   "answers": [
+    {
+     "act": "claude-4-turn-318-f-s1-0",
+     "quote": "(bell sent)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-317-r-4",
+     "quote": "(bell sent)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "All four points belled to codex-17, closing the previous turn's decision ask."
+  },
+  {
+   "act": "claude-4-turn-318-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(delivery)",
+   "answers": [
+    {
+     "act": "claude-4-turn-318-f-s1-0",
+     "quote": "(delivery)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Queued delivery; no park, so the reply lands in codex-17's buffer."
+  }
+ ],
+ "unlabelled": [
+  "claude-4-turn-318-f-s1-1"
+ ]
+}

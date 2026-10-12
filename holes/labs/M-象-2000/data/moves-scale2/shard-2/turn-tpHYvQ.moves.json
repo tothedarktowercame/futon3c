@@ -1,0 +1,79 @@
+{
+ "record": "turn-tpHYvQ",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-343@turn-tpHYvQ-f-s1-0",
+   "kind": "explain",
+   "move": "report/ack",
+   "quote": "you created a method note and pushed it to mfuton",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343@turn-tpHYvQ-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you update it with our corrected method, ie, using the comparator?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343@turn-tpHYvQ-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what changed)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343@turn-tpHYvQ-f-s2-0",
+     "quote": "(what changed)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "comparator method note revision",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-343@turn-tpHYvQ-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(which note)",
+   "answers": [
+    {
+     "act": "claude-4-turn-343@turn-tpHYvQ-f-s1-0",
+     "quote": "(which note)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-343@turn-tpHYvQ-f-s2-0",
+     "quote": "(which note)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "comparator method note revision"
+   },
+   "confidence": "high",
+   "note": "Identifies the note from git history; asks for correction if a different note was meant."
+  }
+ ],
+ "unlabelled": []
+}

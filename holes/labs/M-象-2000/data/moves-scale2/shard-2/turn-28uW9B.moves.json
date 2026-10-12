@@ -1,0 +1,100 @@
+{
+ "record": "turn-28uW9B",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-321-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "codex-17 did overnight  manage to get 2 things to compile, or even 1?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-321-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "(did codex-17 get anything to compile overnight)",
+   "answers": [
+    {
+     "act": "claude-4-turn-321-f-s1-0",
+     "quote": "(did codex-17 get anything to compile overnight)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "No constants gained and one lost; the one new ok row is off-target and pre-existing."
+  },
+  {
+   "act": "claude-4-turn-321-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(how I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-321-f-s1-0",
+     "quote": "(how I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-321-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what did happen)",
+   "answers": [
+    {
+     "act": "claude-4-turn-321-f-s1-0",
+     "quote": "(what did happen)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Intermediate movement only: failures moved, one leak cleared."
+  },
+  {
+   "act": "claude-4-turn-321-r-3",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(my branch)",
+   "answers": [
+    {
+     "act": "claude-4-turn-321-f-s1-0",
+     "quote": "(my branch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

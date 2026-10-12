@@ -1,0 +1,121 @@
+{
+ "record": "turn-typEDG",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-301-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "due to earlier mfuton agents' work?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-301-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "Mostly no. I checked authorship",
+   "answers": [
+    {
+     "act": "claude-4-turn-301-f-s1-0",
+     "quote": "Mostly no. I checked authorship",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Blamed the replaced lines: mostly export gaps, two from our own commits this week."
+  },
+  {
+   "act": "claude-4-turn-301-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(gaps in the export)",
+   "answers": [
+    {
+     "act": "claude-4-turn-301-f-s1-0",
+     "quote": "(gaps in the export)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-301-r-2",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(lines our agents wrote)",
+   "answers": [
+    {
+     "act": "claude-4-turn-301-f-s1-0",
+     "quote": "(lines our agents wrote)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Names both commits honestly, and what blame does and does not prove."
+  },
+  {
+   "act": "claude-4-turn-301-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(problems caught tonight)",
+   "answers": [
+    {
+     "act": "claude-4-turn-301-f-s1-0",
+     "quote": "(problems caught tonight)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Tonight's problems were in under-review fixes, caught before merge."
+  },
+  {
+   "act": "claude-4-turn-301-r-4",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(going forward)",
+   "answers": [
+    {
+     "act": "claude-4-turn-301-f-s1-0",
+     "quote": "(going forward)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Cheap blame-and-note convention for every future merge."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,120 @@
+{
+ "record": "turn-4lAQIw",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-415-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "one of your agents ran a repro that crashed agency",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-415-r-0",
+   "kind": "reply-mark",
+   "move": "explain/apology",
+   "quote": "(apology) I'm sorry.",
+   "answers": [
+    {
+     "act": "claude-4-turn-415-f-s1-0",
+     "quote": "(apology) I'm sorry.",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Owns the likely cause and states the standing-rule response before the evidence is in."
+  },
+  {
+   "act": "claude-4-turn-415-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "claude-8 ran three small reproduction scripts",
+   "answers": [
+    {
+     "act": "claude-4-turn-415-f-s1-0",
+     "quote": "claude-8 ran three small reproduction scripts",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Names the suspect runs and the unconfirmed cap; honest about what is not yet confirmed."
+  },
+  {
+   "act": "claude-4-turn-415-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(state after the restart)",
+   "answers": [
+    {
+     "act": "claude-4-turn-415-f-s1-0",
+     "quote": "(state after the restart)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-415-r-3",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "(rule from now on)",
+   "answers": [
+    {
+     "act": "claude-4-turn-415-f-s1-0",
+     "quote": "(rule from now on)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "memory cap on every port process",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-415-r-4",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(what claude-8 found)",
+   "answers": [
+    {
+     "act": "claude-4-turn-415-f-s1-0",
+     "quote": "(what claude-8 found)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Salvages the finding: one stale lookup reproduced 3/3, own fix packet to come."
+  }
+ ],
+ "unlabelled": []
+}

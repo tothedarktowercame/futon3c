@@ -1,0 +1,81 @@
+{
+ "record": "turn-71JPGN",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-594-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "This looks like a turn that never work, hopefully the result came back though",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-594-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I ran the comparator: 4/1/0/0/0",
+   "answers": [
+    {
+     "act": "claude-4-turn-594-f-s1-0",
+     "quote": "I ran the comparator: 4/1/0/0/0",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-594-r-1",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(mkListNode, `bg-1094`)",
+   "answers": [
+    {
+     "act": "claude-4-turn-594-f-s1-0",
+     "quote": "(mkListNode, `bg-1094`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Result back: stop moved, prediction wrong, codex-32 resumed on the new stop."
+  },
+  {
+   "act": "claude-4-turn-594-r-2",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(the missed wake)",
+   "answers": [
+    {
+     "act": "claude-4-turn-594-f-s1-0",
+     "quote": "(the missed wake)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Confirms the stall cost (~5 h) and the new watcher; cause still unexplained."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,80 @@
+{
+ "record": "turn-dg3QZG",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-331-f-s1-0",
+   "kind": "propose",
+   "move": "ask-action/commission",
+   "quote": "We can write down findings in a TN-lean-continued-port-review.md",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-331-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the note) The findings are in",
+   "answers": [
+    {
+     "act": "claude-4-turn-331-f-s1-0",
+     "quote": "(the note) The findings are in",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "continued-port review note",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-331-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what it covers)",
+   "answers": [
+    {
+     "act": "claude-4-turn-331-f-s1-0",
+     "quote": "(what it covers)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "continued-port review note"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-331-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(how the review was done)",
+   "answers": [
+    {
+     "act": "claude-4-turn-331-f-s1-0",
+     "quote": "(how the review was done)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "continued-port review note"
+   },
+   "confidence": "high",
+   "note": "Claims checked personally are marked in the note (truncated span)."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,138 @@
+{
+ "record": "turn-ll79bR",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-512-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "summary of progress please",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-512-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "No row matches Lean exactly yet, but two are close",
+   "answers": [
+    {
+     "act": "claude-4-turn-512-f-s1-0",
+     "quote": "No row matches Lean exactly yet, but two are close",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Headline first: zero exact, two near, one decision owed."
+  },
+  {
+   "act": "claude-4-turn-512-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(merged into cand-1 since 16:30 UTC, now `2ddd5766`)",
+   "answers": [
+    {
+     "act": "claude-4-turn-512-f-s1-0",
+     "quote": "(merged into cand-1 since 16:30 UTC, now `2ddd5766`)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-512-r-2",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(in flight)",
+   "answers": [
+    {
+     "act": "claude-4-turn-512-f-s1-0",
+     "quote": "(in flight)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-512-r-3",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(paused, not merged)",
+   "answers": [
+    {
+     "act": "claude-4-turn-512-f-s1-0",
+     "quote": "(paused, not merged)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-512-r-4",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(process notes)",
+   "answers": [
+    {
+     "act": "claude-4-turn-512-f-s1-0",
+     "quote": "(process notes)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Caught vacuous tests and had them rebuilt from real paths."
+  },
+  {
+   "act": "claude-4-turn-512-r-5",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(one decision)",
+   "answers": [
+    {
+     "act": "claude-4-turn-512-f-s1-0",
+     "quote": "(one decision)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

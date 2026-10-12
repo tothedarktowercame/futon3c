@@ -1,0 +1,61 @@
+{
+ "record": "turn-u0b1E2",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-326-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "OK, so your probe completed?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-326-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(my probe) Yes, it completed and passed",
+   "answers": [
+    {
+     "act": "claude-4-turn-326-f-s1-0",
+     "quote": "(my probe) Yes, it completed and passed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-326-r-1",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(what happened next)",
+   "answers": [
+    {
+     "act": "claude-4-turn-326-f-s1-0",
+     "quote": "(what happened next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Rules sent, hold lifted, both follow-up jobs out, nothing running."
+  }
+ ],
+ "unlabelled": []
+}

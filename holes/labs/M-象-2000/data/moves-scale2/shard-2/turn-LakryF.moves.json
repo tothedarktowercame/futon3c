@@ -1,0 +1,42 @@
+{
+ "record": "turn-LakryF",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-320-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "work in a branch to get Lean.Parser.ParserFn.run to compile",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-320-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(starting)",
+   "answers": [
+    {
+     "act": "claude-4-turn-320-f-s1-0",
+     "quote": "(starting)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Branch started, probe running; the compile and ship remain owed. One paragraph, three glued marks."
+  }
+ ],
+ "unlabelled": []
+}

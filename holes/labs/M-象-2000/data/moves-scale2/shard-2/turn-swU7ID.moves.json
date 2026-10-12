@@ -1,0 +1,154 @@
+{
+ "record": "turn-swU7ID",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-323-f-s1-0",
+   "kind": "report",
+   "move": "delegate/relay-question",
+   "quote": "I've asked codex-17 how it could have caught the regression",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-323-f-s2-0",
+   "kind": "ask-action",
+   "move": "clarify/ask-decision",
+   "quote": "Is that answer adequate?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-323-r-0",
+   "kind": "reply-mark",
+   "move": "report/partial",
+   "quote": "(is codex-17's answer adequate) Only partly",
+   "answers": [
+    {
+     "act": "claude-4-turn-323-f-s2-0",
+     "quote": "(is codex-17's answer adequate) Only partly",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Diagnosis right, but the two checks that would have caught it are missing."
+  },
+  {
+   "act": "claude-4-turn-323-r-1",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(what it gets right)",
+   "answers": [
+    {
+     "act": "claude-4-turn-323-f-s2-0",
+     "quote": "(what it gets right)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-323-r-2",
+   "kind": "reply-mark",
+   "move": "disagree/correction",
+   "quote": "(first gap: the byte check)",
+   "answers": [
+    {
+     "act": "claude-4-turn-323-f-s2-0",
+     "quote": "(first gap: the byte check)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The simple fix is the merge-commit sentinel run; codex-17 proposed heavier procedure instead."
+  },
+  {
+   "act": "claude-4-turn-323-r-3",
+   "kind": "reply-mark",
+   "move": "disagree/correction",
+   "quote": "(second gap: after the fact)",
+   "answers": [
+    {
+     "act": "claude-4-turn-323-f-s2-0",
+     "quote": "(second gap: after the fact)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Treating a regression as progress is what turned one bad merge into a morning of symptoms."
+  },
+  {
+   "act": "claude-4-turn-323-r-4",
+   "kind": "reply-mark",
+   "move": "challenge/proposal",
+   "quote": "(its proposed test)",
+   "answers": [
+    {
+     "act": "claude-4-turn-323-f-s2-0",
+     "quote": "(its proposed test)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The test would lock in the compensating fix rather than question the original merge."
+  },
+  {
+   "act": "claude-4-turn-323-r-5",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(my branch)",
+   "answers": [
+    {
+     "act": "claude-4-turn-323-f-s2-0",
+     "quote": "(my branch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Revert branch probing now; three rules to send codex-17 if it verifies."
+  }
+ ],
+ "unlabelled": []
+}

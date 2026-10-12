@@ -1,0 +1,98 @@
+{
+ "record": "turn-Loymgi",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-338-f-s1-0",
+   "kind": "report",
+   "move": "report-problem/observed",
+   "quote": "one agency JVM child \"python 3 -u up 43h35m\" but idle",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-338-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "find it and likely remove it if it isn't doing anything useful",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-338-r-0",
+   "kind": "reply-mark",
+   "move": "explain/decline",
+   "quote": "I found it, but I'd leave it running",
+   "answers": [
+    {
+     "act": "claude-4-turn-338-f-s2-0",
+     "quote": "I found it, but I'd leave it running",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-338-f-s1-0",
+     "quote": "I found it, but I'd leave it running",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Identifies the process and declines the removal half with a reason."
+  },
+  {
+   "act": "claude-4-turn-338-r-1",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(whether it's doing anything)",
+   "answers": [
+    {
+     "act": "claude-4-turn-338-f-s1-0",
+     "quote": "(whether it's doing anything)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-338-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/risk-assessment",
+   "quote": "(what removing it would do)",
+   "answers": [
+    {
+     "act": "claude-4-turn-338-f-s2-0",
+     "quote": "(what removing it would do)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

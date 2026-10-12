@@ -1,0 +1,135 @@
+{
+ "record": "turn-C42bzz",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-113-f-s1-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "using our improved methods",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-113-f-s2-0",
+   "kind": "explain",
+   "move": "constrain/for-now",
+   "quote": "Rob says he'd rather sus merg than get PRs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-113-f-s3-0",
+   "kind": "prioritize",
+   "move": "prioritize/urgent-fix",
+   "quote": "If we can fix those we can fix the rest",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-113-f-s3-1",
+   "kind": "explain",
+   "move": "qualify/impact",
+   "quote": "so that's a proof of concept",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-113-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(proof of concept) Agreed",
+   "answers": [
+    {
+     "act": "claude-4-turn-113-f-s1-0",
+     "quote": "(proof of concept) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-113-f-s3-0",
+     "quote": "(proof of concept) Agreed",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-113-f-s3-1",
+     "quote": "(proof of concept) Agreed",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "five-row proof of concept",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Adopts the PoC as the queue goal with a seat per row."
+  },
+  {
+   "act": "claude-4-turn-113-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(dispatched)",
+   "answers": [
+    {
+     "act": "claude-4-turn-113-f-s3-0",
+     "quote": "(dispatched)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "five-row proof of concept"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-113-r-2",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "(the merge)",
+   "answers": [
+    {
+     "act": "claude-4-turn-113-f-s1-0",
+     "quote": "(the merge)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-113-f-s2-0",
+     "quote": "(the merge)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "five-row proof of concept"
+   },
+   "confidence": "high",
+   "note": "One-merge permission reading, acceptance gates per fix, clean-merge plan onto Rob main."
+  }
+ ],
+ "unlabelled": []
+}

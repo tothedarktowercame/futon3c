@@ -1,0 +1,79 @@
+{
+ "record": "turn-oPHLtM",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-110@turn-oPHLtM-f-s1-0",
+   "kind": "propose",
+   "move": "ask-action/commission",
+   "quote": "worth checking in and pushing to mfuton-share origin as a note",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-110@turn-oPHLtM-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(the note is on origin) Done",
+   "answers": [
+    {
+     "act": "claude-4-turn-110@turn-oPHLtM-f-s1-0",
+     "quote": "(the note is on origin) Done",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "elaborator-census note branch",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-110@turn-oPHLtM-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what's in it)",
+   "answers": [
+    {
+     "act": "claude-4-turn-110@turn-oPHLtM-f-s1-0",
+     "quote": "(what's in it)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "elaborator-census note branch"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-110@turn-oPHLtM-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(two things to know)",
+   "answers": [
+    {
+     "act": "claude-4-turn-110@turn-oPHLtM-f-s1-0",
+     "quote": "(two things to know)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "elaborator-census note branch"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

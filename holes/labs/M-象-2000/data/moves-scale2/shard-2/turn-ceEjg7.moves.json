@@ -1,0 +1,80 @@
+{
+ "record": "turn-ceEjg7",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-131-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can I tail the callgrind log?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-131-r-0",
+   "kind": "reply-mark",
+   "move": "report/fact-check",
+   "quote": "(tailing callgrind) There's nothing running to tail",
+   "answers": [
+    {
+     "act": "claude-4-turn-131-f-s1-0",
+     "quote": "(tailing callgrind) There's nothing running to tail",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-131-r-1",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(what codex-5 is doing now)",
+   "answers": [
+    {
+     "act": "claude-4-turn-131-f-s1-0",
+     "quote": "(what codex-5 is doing now)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-131-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(draft numbers)",
+   "answers": [
+    {
+     "act": "claude-4-turn-131-f-s1-0",
+     "quote": "(draft numbers)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Withholds numbers whose rows do not add up yet."
+  }
+ ],
+ "unlabelled": []
+}

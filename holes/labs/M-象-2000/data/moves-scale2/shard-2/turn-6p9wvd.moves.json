@@ -1,0 +1,61 @@
+{
+ "record": "turn-6p9wvd",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-377-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "seems out of date regarding the in flight",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-377-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've rewritten the in-flight table and re-rendered the page",
+   "answers": [
+    {
+     "act": "claude-4-turn-377-f-s1-0",
+     "quote": "I've rewritten the in-flight table and re-rendered the page",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-377-r-1",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(why it went stale)",
+   "answers": [
+    {
+     "act": "claude-4-turn-377-f-s1-0",
+     "quote": "(why it went stale)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Owns the staleness and commits to updating with each report."
+  }
+ ],
+ "unlabelled": []
+}

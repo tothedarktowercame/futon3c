@@ -1,0 +1,118 @@
+{
+ "record": "turn-pWxrM6",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-246-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the loss flatlined but it looks as though meaningful measurements have stopped being taken",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-246-f-s2-0",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "https://zone.hyperreal.enterprises/wip/mfuton-progress.html",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-246-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(why the page looks stalled)",
+   "answers": [
+    {
+     "act": "claude-4-turn-246-f-s1-0",
+     "quote": "(why the page looks stalled)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-246-f-s2-0",
+     "quote": "(why the page looks stalled)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Owns the cause: three hours without a merge, so the merged-only charts froze."
+  },
+  {
+   "act": "claude-4-turn-246-r-1",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what I changed on the page)",
+   "answers": [
+    {
+     "act": "claude-4-turn-246-f-s1-0",
+     "quote": "(what I changed on the page)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "in-flight table",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-246-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(why nothing merged)",
+   "answers": [
+    {
+     "act": "claude-4-turn-246-f-s1-0",
+     "quote": "(why nothing merged)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "in-flight table"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-246-r-3",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(what to expect)",
+   "answers": [
+    {
+     "act": "claude-4-turn-246-f-s1-0",
+     "quote": "(what to expect)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "in-flight table"
+   },
+   "confidence": "high",
+   "note": "Sets expectations for the loss after merges and promises merge-as-ready."
+  }
+ ],
+ "unlabelled": []
+}

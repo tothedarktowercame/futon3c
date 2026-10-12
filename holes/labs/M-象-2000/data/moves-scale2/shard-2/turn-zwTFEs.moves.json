@@ -1,0 +1,62 @@
+{
+ "record": "turn-zwTFEs",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-345@turn-zwTFEs-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "you could try a gpt-luna model and a claude-sonnet....?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-345@turn-zwTFEs-r-0",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(claude-8) claude-8 is idle for now",
+   "answers": [
+    {
+     "act": "claude-4-turn-345@turn-zwTFEs-f-s1-0",
+     "quote": "(claude-8) claude-8 is idle for now",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Adopts the spirit as an overflow rule recorded in the park reminder; running jobs not moved."
+  },
+  {
+   "act": "claude-4-turn-345@turn-zwTFEs-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(packet header)",
+   "answers": [
+    {
+     "act": "claude-4-turn-345@turn-zwTFEs-f-s1-0",
+     "quote": "(packet header)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The stale packet header does not block reassignment."
+  }
+ ],
+ "unlabelled": []
+}

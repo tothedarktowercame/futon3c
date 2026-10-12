@@ -1,0 +1,137 @@
+{
+ "record": "turn-NLfNvL",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-299-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "can you comment on progress?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(progress)",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "(progress)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what moved)",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "(what moved)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(the chart)",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "(the chart)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-3",
+   "kind": "reply-mark",
+   "move": "report/post-mortem",
+   "quote": "(what went wrong)",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "(what went wrong)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Failures, reworks and its own two mistakes, each with its catch mechanism."
+  },
+  {
+   "act": "claude-4-turn-299-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(in flight)",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "(in flight)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-299-r-5",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(speed) The machine has been running at a load average around 24",
+   "answers": [
+    {
+     "act": "claude-4-turn-299-f-s1-0",
+     "quote": "(speed)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

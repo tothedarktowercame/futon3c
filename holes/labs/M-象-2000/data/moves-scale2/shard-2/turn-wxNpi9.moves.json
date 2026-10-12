@@ -1,0 +1,253 @@
+{
+ "record": "turn-wxNpi9",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-312-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Something else to do in case codex-17 does NOT",
+   "answers": [],
+   "scope": {
+    "opens": "claude-4-pin fallback",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Pin ask sits past the truncated authority span; the fragment full text names the four jobs."
+  },
+  {
+   "act": "claude-4-turn-312-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "(pinning) Yes",
+   "answers": [
+    {
+     "act": "claude-4-turn-312-f-s1-0",
+     "quote": "(pinning) Yes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-pin fallback"
+   },
+   "confidence": "high",
+   "note": "Interim pin now so a fallback exists even if a job never returns."
+  },
+  {
+   "act": "claude-4-turn-312-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(how to fall back)",
+   "answers": [
+    {
+     "act": "claude-4-turn-312-f-s1-0",
+     "quote": "(how to fall back)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-pin fallback"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-312-f-s1-0",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "zai-2 where-binder merge: base-failing tests, Lean citation, exemptions, clean merge; two checks taken from the report."
+  },
+  {
+   "act": "claude-4-turn-312-r-3",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(next steps for codex-17)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(still with me)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-5",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(termexpr)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Duplicate wake; the missing revert commit found and fixed."
+  },
+  {
+   "act": "claude-4-turn-312-r-6",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(remaining)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-7",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(linki2)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-8",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(what I checked)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "zai-1 quotation-splice merge: base tests, negative case, two-file diff."
+  },
+  {
+   "act": "claude-4-turn-312-r-9",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(byte check)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "No compiled row exercises a local splice; ParserFn.run check not rerun."
+  },
+  {
+   "act": "claude-4-turn-312-r-10",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(next for codex-17)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-11",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(pinned)",
+   "answers": [
+    {
+     "act": "claude-4-turn-312-f-s1-0",
+     "quote": "(pinned)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-pin fallback"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-12",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what the pin contains)",
+   "answers": [
+    {
+     "act": "claude-4-turn-312-f-s1-0",
+     "quote": "(what the pin contains)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-4-pin fallback"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-13",
+   "kind": "reply-mark",
+   "move": "delegate/handoff-spec",
+   "quote": "(`σ` discovery, passed to codex-17)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-312-r-14",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(state at handoff)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

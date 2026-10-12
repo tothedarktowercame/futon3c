@@ -1,0 +1,99 @@
+{
+ "record": "turn-sE1Q8C",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-303-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "i see no affiliated codex workers active via voxterm",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-303-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(what happened)",
+   "answers": [
+    {
+     "act": "claude-4-turn-303-f-s1-0",
+     "quote": "(what happened)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Explains the end-turn-and-watch pattern and the missed wake that stalled it."
+  },
+  {
+   "act": "claude-4-turn-303-r-1",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(resumed now)",
+   "answers": [
+    {
+     "act": "claude-4-turn-303-f-s1-0",
+     "quote": "(resumed now)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "watcher wake-resume rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-303-r-2",
+   "kind": "reply-mark",
+   "move": "verify/checked-live",
+   "quote": "(integration check)",
+   "answers": [
+    {
+     "act": "claude-4-turn-303-f-s1-0",
+     "quote": "(integration check)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-303-r-3",
+   "kind": "reply-mark",
+   "move": "constrain/standing-rule",
+   "quote": "(keeping it from recurring)",
+   "answers": [
+    {
+     "act": "claude-4-turn-303-f-s1-0",
+     "quote": "(keeping it from recurring)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "watcher wake-resume rule"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

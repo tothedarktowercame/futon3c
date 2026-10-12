@@ -1,0 +1,99 @@
+{
+ "record": "turn-RFGqGD",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-88-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK, that's useful",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-88-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "it presents the tree in a bottom-up fashion",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-88-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(completed nodes) Fair",
+   "answers": [
+    {
+     "act": "claude-4-turn-88-f-s1-1",
+     "quote": "(completed nodes) Fair",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-88-f-s1-0",
+     "quote": "(completed nodes) Fair",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "New COMPLETE section: 22 finished rows, 10 Lean-checked."
+  },
+  {
+   "act": "claude-4-turn-88-r-1",
+   "kind": "reply-mark",
+   "move": "report/mapping",
+   "quote": "(what the section shows)",
+   "answers": [
+    {
+     "act": "claude-4-turn-88-f-s1-1",
+     "quote": "(what the section shows)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-88-r-2",
+   "kind": "reply-mark",
+   "move": "ask-action/one-decision",
+   "quote": "(follow-up)",
+   "answers": [
+    {
+     "act": "claude-4-turn-88-f-s1-1",
+     "quote": "(follow-up)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Cheap Lean checks for the 11 unchecked rows plus the repair-order switch, as one decision."
+  }
+ ],
+ "unlabelled": []
+}

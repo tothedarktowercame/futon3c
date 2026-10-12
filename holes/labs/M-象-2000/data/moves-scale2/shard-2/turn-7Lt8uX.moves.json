@@ -1,0 +1,74 @@
+{
+ "record": "turn-7Lt8uX",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-99-f-s1-0",
+   "kind": "report",
+   "move": "report/ack",
+   "quote": "OK I also recreated codex-19.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-99-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "take over on the old -18 and -19 jobs",
+   "answers": [],
+   "scope": {
+    "opens": "recreated-seat handover",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-99-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "Both new seats have their predecessors' jobs",
+   "answers": [
+    {
+     "act": "claude-4-turn-99-f-s2-0",
+     "quote": "Both new seats have their predecessors' jobs",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "recreated-seat handover"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-99-r-1",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "(seat setup)",
+   "answers": [
+    {
+     "act": "claude-4-turn-99-f-s2-0",
+     "quote": "(seat setup)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "recreated-seat handover"
+   },
+   "confidence": "high",
+   "note": "No-polling rule in both packets; model check on codex-19 pending its first turn."
+  }
+ ],
+ "unlabelled": []
+}

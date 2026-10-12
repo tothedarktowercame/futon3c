@@ -1,0 +1,41 @@
+{
+ "record": "turn-Ca1PUp",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-324-f-s1-0",
+   "kind": "clarify",
+   "move": "ask-action/status-check",
+   "quote": "Is your probe still running?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-324-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(probe status) Yes, it's still running",
+   "answers": [
+    {
+     "act": "claude-4-turn-324-f-s1-0",
+     "quote": "(probe status) Yes, it's still running",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

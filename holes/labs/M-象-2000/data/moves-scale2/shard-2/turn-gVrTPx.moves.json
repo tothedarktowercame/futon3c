@@ -1,0 +1,120 @@
+{
+ "record": "turn-gVrTPx",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-96-f-s1-0",
+   "kind": "withdraw",
+   "move": "delegate/retire-seats",
+   "quote": "Let's just retire codex-18 and codex-19",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-96-f-s2-0",
+   "kind": "ask-action",
+   "move": "approve/plain",
+   "quote": "You can delete them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-96-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(codex-18 and codex-19 retired)",
+   "answers": [
+    {
+     "act": "claude-4-turn-96-f-s1-0",
+     "quote": "(codex-18 and codex-19 retired)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-96-f-s2-0",
+     "quote": "(codex-18 and codex-19 retired)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Cancelled, stopped, deregistered, both absent from the agents list."
+  },
+  {
+   "act": "claude-4-turn-96-r-1",
+   "kind": "reply-mark",
+   "move": "report/inventory",
+   "quote": "(what was in flight, and where it stands)",
+   "answers": [
+    {
+     "act": "claude-4-turn-96-f-s1-0",
+     "quote": "(what was in flight, and where it stands)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Branch states recorded so nothing is lost; header-only in the truncated span."
+  },
+  {
+   "act": "claude-4-turn-96-r-2",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(a slip)",
+   "answers": [
+    {
+     "act": "claude-4-turn-96-f-s1-0",
+     "quote": "(a slip)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Owns the too-broad process match that killed its own tool shell; nothing else affected."
+  },
+  {
+   "act": "claude-4-turn-96-r-3",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(records updated)",
+   "answers": [
+    {
+     "act": "claude-4-turn-96-f-s2-0",
+     "quote": "(records updated)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Header-only in the truncated span; rowstatus and queue updated per the acts summary."
+  }
+ ],
+ "unlabelled": []
+}

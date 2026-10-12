@@ -1,0 +1,136 @@
+{
+ "record": "turn-GhUafn",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-234-f-s1-0",
+   "kind": "collect",
+   "move": "ask-action/status-check",
+   "quote": "sum up the overall state of play at the moment",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-234-f-s2-0",
+   "kind": "verify",
+   "move": "clarify/check-understanding",
+   "quote": "I'm not sure from the recent notes if that has already been achieved",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-234-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(where blank startup stands)",
+   "answers": [
+    {
+     "act": "claude-4-turn-234-f-s1-0",
+     "quote": "(where blank startup stands)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-234-f-s2-0",
+     "quote": "(where blank startup stands)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Neither achieved nor blocked: the deciding run is in flight, past the term[_] demand."
+  },
+  {
+   "act": "claude-4-turn-234-r-1",
+   "kind": "reply-mark",
+   "move": "report/mapping",
+   "quote": "(the curriculum vs. what happened)",
+   "answers": [
+    {
+     "act": "claude-4-turn-234-f-s1-0",
+     "quote": "(the curriculum vs. what happened)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "blank-startup curriculum",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-234-r-2",
+   "kind": "reply-mark",
+   "move": "qualify/impact",
+   "quote": "(why that matters)",
+   "answers": [
+    {
+     "act": "claude-4-turn-234-f-s1-0",
+     "quote": "(why that matters)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "blank-startup curriculum"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-234-r-3",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(state of the branch)",
+   "answers": [
+    {
+     "act": "claude-4-turn-234-f-s1-0",
+     "quote": "(state of the branch)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-234-r-4",
+   "kind": "reply-mark",
+   "move": "propose/next-step",
+   "quote": "(what comes next)",
+   "answers": [
+    {
+     "act": "claude-4-turn-234-f-s2-0",
+     "quote": "(what comes next)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "blank-startup curriculum"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

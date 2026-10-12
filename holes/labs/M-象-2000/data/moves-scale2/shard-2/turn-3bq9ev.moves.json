@@ -1,0 +1,60 @@
+{
+ "record": "turn-3bq9ev",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-339-f-s1-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "better if Voxterm showed these with attribution rather than \"unattributed seat\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-339-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Commit `1a98806` in `voxterm`",
+   "answers": [
+    {
+     "act": "claude-4-turn-339-f-s1-0",
+     "quote": "Commit `1a98806` in `voxterm`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "voxterm helper attribution",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-339-r-1",
+   "kind": "reply-mark",
+   "move": "qualify/caveat",
+   "quote": "(still unattributed)",
+   "answers": [
+    {
+     "act": "claude-4-turn-339-f-s1-0",
+     "quote": "(still unattributed)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "voxterm helper attribution"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

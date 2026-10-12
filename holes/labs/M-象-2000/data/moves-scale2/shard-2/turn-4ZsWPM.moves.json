@@ -1,0 +1,73 @@
+{
+ "record": "turn-4ZsWPM",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-104-f-s1-0",
+   "kind": "report",
+   "move": "delegate/to-agent",
+   "quote": "I have created a claude helper for you as well, claude-3",
+   "answers": [],
+   "scope": {
+    "opens": "claude-3 pairing",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-104-f-s1-1",
+   "kind": "propose",
+   "move": "delegate/to-agent",
+   "quote": "you can pair with them on responding to any of the strategic points",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3 pairing"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-104-r-0",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(claude-3 is on the strategic items)",
+   "answers": [
+    {
+     "act": "claude-4-turn-104-f-s1-1",
+     "quote": "(claude-3 is on the strategic items)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-104-f-s1-0",
+     "quote": "(claude-3 is on the strategic items)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3 pairing"
+   },
+   "confidence": "high",
+   "note": "Briefs claude-3 on the three will-do items: S2a, S2b, S3+S4."
+  },
+  {
+   "act": "claude-4-turn-104-r-1",
+   "kind": "reply-mark",
+   "move": "constrain/for-now",
+   "quote": "(how the work is divided)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-3 pairing"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

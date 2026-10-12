@@ -1,0 +1,117 @@
+{
+ "record": "turn-UstRGe",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-302-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/efficiency",
+   "quote": "less important than git blame is working efficiently",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-302-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "switch to working ond of the high priority rows and its dependencies at a time",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-302-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "Agreed, and I've started",
+   "answers": [
+    {
+     "act": "claude-4-turn-302-f-s2-0",
+     "quote": "Agreed, and I've started",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "row-1 focus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Row 1 is mkInputContext; the switch means holding off-path work and one cold acceptance per row."
+  },
+  {
+   "act": "claude-4-turn-302-r-1",
+   "kind": "reply-mark",
+   "move": "report/mapping",
+   "quote": "(row 1 and its dependencies)",
+   "answers": [
+    {
+     "act": "claude-4-turn-302-f-s2-0",
+     "quote": "(row 1 and its dependencies)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "row-1 focus"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-302-r-2",
+   "kind": "reply-mark",
+   "move": "report/redirect-issued",
+   "quote": "(redirected)",
+   "answers": [
+    {
+     "act": "claude-4-turn-302-f-s2-0",
+     "quote": "(redirected)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "row-1 focus"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-302-r-3",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how it should speed up)",
+   "answers": [
+    {
+     "act": "claude-4-turn-302-f-s2-0",
+     "quote": "(how it should speed up)",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-4-turn-302-f-s1-0",
+     "quote": "(how it should speed up)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "row-1 focus"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

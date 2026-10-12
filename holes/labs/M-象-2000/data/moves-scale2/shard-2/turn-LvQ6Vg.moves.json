@@ -1,0 +1,94 @@
+{
+ "record": "turn-LvQ6Vg",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-91@turn-LvQ6Vg-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The real problem here I think is that",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-91@turn-LvQ6Vg-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(readiness now requires correct dependencies)",
+   "answers": [
+    {
+     "act": "claude-4-turn-91@turn-LvQ6Vg-f-s1-0",
+     "quote": "(readiness now requires correct dependencies)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "READY now requires CORRECT dependencies; new 4b WAITING section."
+  },
+  {
+   "act": "claude-4-turn-91@turn-LvQ6Vg-r-1",
+   "kind": "reply-mark",
+   "move": "report/gap",
+   "quote": "(what I checked)",
+   "answers": [
+    {
+     "act": "claude-4-turn-91@turn-LvQ6Vg-f-s1-0",
+     "quote": "(what I checked)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "The closure file missed 16 parser-module rows behind the bad READY labels."
+  },
+  {
+   "act": "claude-4-turn-91@turn-LvQ6Vg-r-2",
+   "kind": "reply-mark",
+   "move": "report/re-baseline",
+   "quote": "(what changed in the order)",
+   "answers": [
+    {
+     "act": "claude-4-turn-91@turn-LvQ6Vg-f-s1-0",
+     "quote": "(what changed in the order)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-91@turn-LvQ6Vg-r-3",
+   "kind": "reply-mark",
+   "move": "clarify/check-understanding",
+   "quote": "(to see it)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

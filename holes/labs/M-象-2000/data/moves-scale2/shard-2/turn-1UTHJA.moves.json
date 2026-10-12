@@ -1,0 +1,74 @@
+{
+ "record": "turn-1UTHJA",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-4-turn-608-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "update the instructions you give out accordingly and mint new seats to avoid confusion",
+   "answers": [],
+   "scope": {
+    "opens": "post-audit instructions revision",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-608-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "(what the new instructions say)",
+   "answers": [
+    {
+     "act": "claude-4-turn-608-f-s1-0",
+     "quote": "(what the new instructions say)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "post-audit instructions revision"
+   },
+   "confidence": "high",
+   "note": "Nine audit-derived rules folded into the kept practical rules."
+  },
+  {
+   "act": "claude-4-turn-608-r-1",
+   "kind": "reply-mark",
+   "move": "report/dispatched",
+   "quote": "(the new seats)",
+   "answers": [
+    {
+     "act": "claude-4-turn-608-f-s1-0",
+     "quote": "(the new seats)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "post-audit instructions revision"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-4-turn-608-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(housekeeping)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
