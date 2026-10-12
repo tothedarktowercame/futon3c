@@ -1,0 +1,35 @@
+{
+ "record": "turn-xjQUrG",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-158-f-s1-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "But this is what the War Machine does, \"an unattended agent had to name the clause that licenses each step\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-158-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "cascades may be calculated and then discarded for example",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-158-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

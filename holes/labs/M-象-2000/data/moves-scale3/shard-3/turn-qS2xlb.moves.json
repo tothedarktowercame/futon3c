@@ -1,0 +1,61 @@
+{
+ "record": "turn-qS2xlb",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-150-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "Just logically, I can only imagine it is a huge waste of time and energy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-150-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "It doesn't make sense.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-150-f-s3-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "The JVM is the only place where the machine can run with its known standard behaviour",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-150-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "When I said to repair the machine live in the debugger or to \"fix it from outside when it was stopped\" none of",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-ghnIeZ",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-155-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "But ultimately what you did has nothing to do with quality.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-155-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "You reran the machine and selected the same excluded task mulitple times.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-155-f-s3-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "That's just bizarre.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

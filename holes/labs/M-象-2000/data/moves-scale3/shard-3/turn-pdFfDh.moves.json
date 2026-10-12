@@ -1,0 +1,35 @@
+{
+ "record": "turn-pdFfDh",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-133-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "i suggest you take turns with codex-68 actually doing work and reporting yo each other",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-133-f-s1-1",
+   "kind": "verify",
+   "move": "verify/status-check",
+   "quote": "do the bells wake you both",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-133-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

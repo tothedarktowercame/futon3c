@@ -1,0 +1,61 @@
+{
+ "record": "turn-xfBrMT",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-15-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "before you run another click,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-15-f-s1-1",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "lean gives you a long list of defects to fix.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-15-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "these could be put out in parallel to codex seats or zai seats,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-15-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "use fresh ones",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-15-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

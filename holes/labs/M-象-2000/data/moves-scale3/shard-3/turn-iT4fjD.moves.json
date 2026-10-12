@@ -1,0 +1,61 @@
+{
+ "record": "turn-iT4fjD",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-96-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "another issue here is that we've pinned a quite old mathlib",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-96-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "in itself fine",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-96-f-s1-2",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "it could be worth cloning a separate copy of a recent one",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-96-f-s1-3",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "they might have been built already!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

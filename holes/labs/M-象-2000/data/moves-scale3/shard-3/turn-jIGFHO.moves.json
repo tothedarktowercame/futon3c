@@ -1,0 +1,35 @@
+{
+ "record": "turn-jIGFHO",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-78-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you now wake when it is ready and continue work on loading the pythagoras theorem?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-78-f-s2-0",
+   "kind": "extend",
+   "move": "extend/possibility",
+   "quote": "then tgat coukd loop as needed overnight",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-78-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

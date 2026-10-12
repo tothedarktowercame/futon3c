@@ -1,0 +1,48 @@
+{
+ "record": "turn-iWROIs",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-72-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "it's interesting that it all goes via the .olean files at present",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-72-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "generating the Python types to match would be a good step towards reading Python as a later demo.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-72-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we could see if we could round-trip some expressions.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

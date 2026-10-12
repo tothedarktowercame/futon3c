@@ -1,0 +1,22 @@
+{
+ "record": "turn-wx2cqD",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-11-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/method",
+   "quote": "you can probably reconstuct it faster by reading the Evidence Landscape",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

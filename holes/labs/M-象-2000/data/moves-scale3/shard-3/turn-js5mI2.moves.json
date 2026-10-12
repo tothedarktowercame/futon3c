@@ -1,0 +1,22 @@
+{
+ "record": "turn-js5mI2",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-56-f-s1-0",
+   "kind": "verify",
+   "move": "verify/status-check",
+   "quote": "ok, so you said we can parse a blank file now?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

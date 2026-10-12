@@ -1,0 +1,35 @@
+{
+ "record": "turn-th0uOo",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-88-f-s1-0",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "when I just ran stack-hud-apm-report I didn't see any increase since the previous time",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-88-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "so either the loops are stuck or slow",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

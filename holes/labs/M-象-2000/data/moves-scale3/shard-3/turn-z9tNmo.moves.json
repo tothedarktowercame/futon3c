@@ -1,0 +1,35 @@
+{
+ "record": "turn-z9tNmo",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-151-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "The fact is, you blame compaction, but we have been working on this system for months,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-151-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "so if you had gaps in your understanding of the project you should have researched them not filled them with",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-xLg1HX",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-69-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/focus",
+   "quote": "please focus on Q7 Q8 and Q9...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-69-f-s2-0",
+   "kind": "challenge",
+   "move": "challenge/term",
+   "quote": "I am not pleased aboit the concept of an \"honest gap\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-69-f-s3-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "it is either a gap or not, I don't see how \"honest\" comes into it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-69-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

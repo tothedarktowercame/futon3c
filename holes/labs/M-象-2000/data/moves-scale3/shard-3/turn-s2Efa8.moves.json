@@ -1,0 +1,99 @@
+{
+ "record": "turn-s2Efa8",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-77-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I am not sure how far off we are from a demo,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-77-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "but I don't want to bske in inefficient loops",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-77-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Not far: the artifact exists and runs now.",
+   "answers": [
+    {
+     "act": "claude-16-turn-77-f-s1-0",
+     "quote": "Not far: the artifact exists and runs now",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-77-r-1",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Agreed, and the last several hours were that.",
+   "answers": [
+    {
+     "act": "claude-16-turn-77-f-s1-1",
+     "quote": "Agreed, and the last several hours were that",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-77-r-2",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "what the first screen already tells us, which the loop did not",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-77-r-3",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "nothing dispatched until you say",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-teO5Ga",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-44-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/premise",
+   "quote": "hold on, 25 days for 15000 lines of code?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-44-f-s2-0",
+   "kind": "verify",
+   "move": "verify/status-check",
+   "quote": "and thatvis the estimate for the sped-up version?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-44-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-44-f-s2-1",
+   "kind": "challenge",
+   "move": "challenge/premise",
+   "quote": "and thatvis the estimate for the sped-up version?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

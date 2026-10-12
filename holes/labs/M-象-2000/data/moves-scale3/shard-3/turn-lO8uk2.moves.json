@@ -1,0 +1,41 @@
+{
+ "record": "turn-lO8uk2",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-38-f-s1-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "yes, though it is worth noting typed-bells already exist",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-38-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "checked first",
+   "answers": [
+    {
+     "act": "claude-13-turn-38-f-s1-0",
+     "quote": "**#1 is already in place**",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

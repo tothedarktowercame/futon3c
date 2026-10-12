@@ -1,0 +1,35 @@
+{
+ "record": "turn-qNwyRu",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-122-f-s1-0",
+   "kind": "withdraw",
+   "move": "withdraw/stop-work",
+   "quote": "Can you please stop the loop",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-122-f-s1-1",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "report back how it went so far?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-18-turn-122-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

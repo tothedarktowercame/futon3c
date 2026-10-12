@@ -1,0 +1,35 @@
+{
+ "record": "turn-eSNh0d",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-143-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "You have been destroying my work rather than improving it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-143-f-s1-1",
+   "kind": "withdraw",
+   "move": "withdraw/stop-work",
+   "quote": "and I am pulling you off of this project",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

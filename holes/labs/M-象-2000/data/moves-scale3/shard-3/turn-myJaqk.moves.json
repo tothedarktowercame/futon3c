@@ -1,0 +1,35 @@
+{
+ "record": "turn-myJaqk",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-64-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "let's work toward a demo and then",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-64-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "then push when we have that together with your next steps",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-64-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

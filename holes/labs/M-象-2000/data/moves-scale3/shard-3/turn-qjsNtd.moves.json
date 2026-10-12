@@ -1,0 +1,48 @@
+{
+ "record": "turn-qjsNtd",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-146-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/read-record",
+   "quote": "What commits were we on before you started working on this, because I may have to rewind to that.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-146-f-s2-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "You have literally taken a reasonably well workin machine and rewired it to suit your taste",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-146-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "without any care to the fact that I have to present it at a conference, the specification is fixed, and the",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

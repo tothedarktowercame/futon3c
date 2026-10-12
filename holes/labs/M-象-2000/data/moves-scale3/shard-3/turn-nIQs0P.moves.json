@@ -1,0 +1,22 @@
+{
+ "record": "turn-nIQs0P",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-110-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/trade-off",
+   "quote": "slow tests are annoying but non-completing is worse",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

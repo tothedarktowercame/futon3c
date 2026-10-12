@@ -1,0 +1,22 @@
+{
+ "record": "turn-y28j7o",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-140-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "this change is really tiny we don't need a full test suite run",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

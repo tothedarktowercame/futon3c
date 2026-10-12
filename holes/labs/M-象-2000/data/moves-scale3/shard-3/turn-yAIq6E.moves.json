@@ -1,0 +1,48 @@
+{
+ "record": "turn-yAIq6E",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-95-f-s1-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Let's not worry about the PR right now, if they don't fix the issue in a week or so we can come back to this.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-95-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/focus",
+   "quote": "I think we should focus on wrapping up the mfuton-share material.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-95-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we maybe should comment/update an issue there talking about the latest work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

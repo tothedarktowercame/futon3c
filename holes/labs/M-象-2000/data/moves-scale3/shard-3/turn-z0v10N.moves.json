@@ -1,0 +1,22 @@
+{
+ "record": "turn-z0v10N",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-20-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes i want you to run one round with the best-of preamble",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

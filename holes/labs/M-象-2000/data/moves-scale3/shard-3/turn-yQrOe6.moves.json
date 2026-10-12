@@ -1,0 +1,99 @@
+{
+ "record": "turn-yQrOe6",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-4-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/method",
+   "quote": "repos-pushed should be covered by inbox zero assuming it is configured properly.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-4-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "the evifence backup just ran today so I don't think that is overdue",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-4-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "repos-pushed has become two checks",
+   "answers": [
+    {
+     "act": "claude-11-turn-4-f-s1-0",
+     "quote": "repos-pushed has become two checks",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-4-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "It now passes.",
+   "answers": [
+    {
+     "act": "claude-11-turn-4-f-s2-0",
+     "quote": "It now passes.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-4-r-2",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "The 5 tests still pass.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-4-r-3",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "still red",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

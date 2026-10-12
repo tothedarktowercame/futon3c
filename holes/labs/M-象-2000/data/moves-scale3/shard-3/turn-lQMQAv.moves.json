@@ -1,0 +1,48 @@
+{
+ "record": "turn-lQMQAv",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-48-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "ok please make the memory fix.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-48-f-s2-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "i don't understand why this was one night of work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-48-f-s2-1",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "but before we had nights and days of porting Init etc",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,86 @@
+{
+ "record": "turn-uaXTGA",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-5-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "ok, at this point we are almost ready to get back to work.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-5-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/focus",
+   "quote": "the ones I am concerned about are \"branches with no remote\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-11-turn-2-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-5-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "what was pushed, all as fast-forwards or new branches, nothing forced",
+   "answers": [
+    {
+     "act": "claude-11-turn-2-f-s2-0",
+     "quote": "(what was pushed, all as fast-forwards or new branches, nothing forced) - **mmca-clj:** pushed `main`, which",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-5-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "(powerbi-tui) Its remote is `https://github.com/holtzermann17/powerbi-tui.git`. The only GitHub login on zone",
+   "answers": [
+    {
+     "act": "claude-11-turn-2-f-s2-0",
+     "quote": "powerbi-tui",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-5-r-2",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "side branches inbox zero doesn't look at",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

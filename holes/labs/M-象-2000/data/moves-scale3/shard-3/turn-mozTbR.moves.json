@@ -1,0 +1,48 @@
+{
+ "record": "turn-mozTbR",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-120-f-s1-0",
+   "kind": "extend",
+   "move": "extend/possibility",
+   "quote": "Warrants are typically for multi-agent handoffs but could be used to avoid rerunning tests in general",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-120-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "The \"on hold\" items can proceed.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-120-f-s3-0",
+   "kind": "redirect",
+   "move": "redirect/back-to-plan",
+   "quote": "However I'd then like to get back to running the War Machine with report card",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-12-turn-120-f-s2-0",
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

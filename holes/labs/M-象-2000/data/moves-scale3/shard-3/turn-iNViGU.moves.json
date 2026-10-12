@@ -1,0 +1,54 @@
+{
+ "record": "turn-iNViGU",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-6-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "yeah, I mean, if we wanted to apply the \"Cognisee\" ideas here we could just make a small ontology of \"what",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-6-r-2"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-6-r-0",
+   "kind": "explain",
+   "move": "explain/answer-question",
+   "quote": "Yes. The 13 verb groups in GLOSS are already most of a first draft",
+   "answers": [
+    {
+     "act": "claude-13-turn-6-f-s2-0",
+     "quote": "The 13 verb groups in GLOSS are already most of a first draft",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-6-r-1",
+   "kind": "explain",
+   "move": "explain/map",
+   "quote": "FUTON already has two vocabularies that border on this",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

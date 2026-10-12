@@ -1,0 +1,35 @@
+{
+ "record": "turn-lYZVem",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-76-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/trust",
+   "quote": "I'm not necessarily trusting the monitor",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-76-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "if you aren't using bg.py for background jobs they will probably fail",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

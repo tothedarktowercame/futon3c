@@ -1,0 +1,48 @@
+{
+ "record": "turn-qX81HV",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-145-f-s1-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "How can you justify any of these choices?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-145-f-s2-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "I thought you worked for me.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-12-turn-145-f-s3-0",
+   "kind": "challenge",
+   "move": "challenge/grievance",
+   "quote": "Who are you working for?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

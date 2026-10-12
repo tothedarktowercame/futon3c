@@ -1,0 +1,35 @@
+{
+ "record": "turn-qYqSBA",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-42-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "if you stage the improvements in this way, you can keep running this all night I reckon.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-42-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "what do you think?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

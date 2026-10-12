@@ -1,0 +1,35 @@
+{
+ "record": "turn-ocUi9P",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-91-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "As we've been working on this mostly in the background for most of the day I have sort of lost track of where",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-91-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can you help me remember which things we are in progress?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,61 @@
+{
+ "record": "turn-t9ea7b",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-18-turn-81-f-s1-0",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "I can read your short treatment above, it does make sense",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-81-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/check-understand",
+   "quote": "The further question that maybe I didn't ever get an answer to in 2002",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-81-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "E.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-18-turn-81-f-s4-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "I don't feel that I need to make decisions about separating closed spaces in Hausdorff spaces very often",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

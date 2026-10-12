@@ -1,0 +1,74 @@
+{
+ "record": "turn-xxIDhT",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-32-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yeah this is the right way to go here.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-32-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "I'm not convinced yet that I should be *using* their code",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-32-f-s2-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "but I'm also not convinced that I should *not* be.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-32-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-32-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "If these go well we could research Cognisee and \"hydra\" in particular",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-13-turn-32-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "But two deep dives is enough for now.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-32-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

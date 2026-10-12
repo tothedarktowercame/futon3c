@@ -1,0 +1,54 @@
+{
+ "record": "turn-klsV1g",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-11-turn-103-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes please push futon0",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-103-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "futon0 is pushed.",
+   "answers": [
+    {
+     "act": "claude-11-turn-103-f-s1-0",
+     "quote": "futon0 is pushed.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-11-turn-103-r-1",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "I haven't started the Mastra and Alinery runs.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
