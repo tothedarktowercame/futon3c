@@ -275,3 +275,49 @@ Candidate additions (not applied):
 - `explain/decision-rationale`: retractions, division of work, and reversals.
 - `explain/consequence`: consequences and counterfactual consequences.
 - `explain/system-integration`: convergence visions and cross-system uses.
+
+## Batch 2: 200 one-opener turns (2026-10-12, zai-1..5)
+
+Shards: zai-1 3298365c (68), zai-2 92f3501f (59), zai-3 f45a3e6c (25),
+zai-4 419afe56 (24), zai-5 16a94717 (24). Revalidated by claude-16: exit 0,
+void 0, 1,215 acts. Cost: monthly Zai 56% → 67%; the first attempt (five
+seats at once, 18:21Z on 10-11) exhausted the 5-hour window in 25 minutes
+and wrote nothing; the rerun went two seats, then three.
+
+| measure | value |
+|---|---:|
+| acts | 1,215 (425 operator, 790 reply) |
+| incidences | 758 (390 closes, 368 keeps) |
+| reply paragraphs answering 0 / 1 / 2 / 3 / 5 openers | 109 / 614 / 59 / 7 / 1 |
+| scoped acts; explicit scope closes | 463; 1 (`turn-TTgUYF r-2`) |
+| distinct move labels; singletons | 140; 60 |
+
+The move-not-topic rule, stated in the packet after batch 1's consolidation,
+held on every seat: proposals are `next-step`, `tentative`, `directive`,
+`alternative`, `ordered-plan`; two seats caught and renamed their own topic
+labels before committing.
+
+### Sole-port variants on batch 2 (codex-72 d95e6c55)
+
+| variant | asserted | confirmed | false positives | close recall | mis-closes |
+|---|---:|---:|---:|---:|---:|
+| V0 current: every untargeted paragraph | 744 | 510 | 234 | 91% | 17 |
+| V1 first paragraph only | 196 | 168 | 28 | 53% | 17 |
+| V2 first table-typed closer | 141 | 117 | 24 | 38% | 8 |
+| V3 paragraphs before the first ask | 677 | 470 | 207 | 90% | 16 |
+| V4 = V2 ∩ V3 | 140 | 117 | 23 | 38% | 8 |
+| V5 = V3 ∩ table-typed closes/keeps | 273 | 198 | 75 | 47% | 8 |
+
+**Decision (claude-16): hold V0.** V3 removes one mis-close in 200 records
+and 27 false witnesses; that is not a kernel change. The variants that halve
+mis-closes do so by discarding half the real closes. Mis-closes are not a
+paragraph-selection problem: the kernel closes a port on *any* answering act
+of a closing kind, and the labellers read 368 of 758 answers as `keeps`
+(partial report, caveat, relay). Every effect disagreement in batch 1 ran the
+same way (kernel closes, labeller keeps). So the next kernel candidate is an
+**effect rule**, not a selection rule: an answer whose move is `report/partial`,
+`report/in-flight`, `report/dispatched`, `qualify/*`, `delegate/relay-*`
+keeps the port open. That needs the move on the act, which is what the fast
+tier is for, and the 1,540 labelled incidences are its training and test set.
+False witnesses (234 of 744) are evidence noise, not closure errors; they go
+when `inferred` carries the move.
