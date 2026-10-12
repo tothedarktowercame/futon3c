@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import importlib.util
 import json
 import pathlib
@@ -16,17 +15,29 @@ class BackfillMissionIdTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.directory = pathlib.Path(self.temp.name)
-        self.write("turn-stamp.json", {"agent_id": "seat-1", "value": [1, 2]})
-        self.write("turn-existing.json", {"agent_id": "seat-1", "mission_id": "old"})
-        self.write("turn-absent.json", {"agent_id": "gone"})
-        self.write("turn-blank.json", {"agent_id": "blank"})
-        self.write("turn-ignore.json.analysis.json", {"agent_id": "seat-1"})
-        self.write("turn-ignore.candidates.json", {"not": "a record"})
-        self.roster = {"seat-1": {"mission-id": " M-one "},
-                       "blank": {"mission-id": "  "}}
+        self.write("turn-mission.json", self.record("seat-1", "session-1"))
+        self.write("turn-excursion.json", self.record("seat-2", "session-2"))
+        self.write("turn-existing.json",
+                   dict(self.record("seat-1", "session-1"), mission_id="old"))
+        self.write("turn-absent.json", self.record("gone", "session-x"))
+        self.write("turn-wrong-session.json", self.record("seat-1", "session-other"))
+        self.write("turn-blank.json", self.record("blank", "session-blank"))
+        self.write("turn-ignore.json.analysis.json", self.record("seat-1", "session-1"))
+        self.clock_file = self.directory / "clocks.json"
+        self.clock_file.write_text(json.dumps({"rows": [
+            {"agent": "seat-1", "session": "session-1", "mission_id": " M-one ",
+             "excursion_id": None, "decided_at": "2026-10-01T00:00:00Z"},
+            {"agent": "seat-2", "session": "session-2", "mission_id": None,
+             "excursion_id": " E-two ", "decided_at": "2026-10-02T00:00:00Z"},
+            {"agent": "blank", "session": "session-blank", "mission_id": " ",
+             "excursion_id": None}],}), encoding="utf-8")
 
     def tearDown(self):
         self.temp.cleanup()
+
+    @staticmethod
+    def record(agent, session):
+        return {"agent_id": agent, "session_id": session, "value": [1, 2]}
 
     def write(self, name, value):
         path = self.directory / name
@@ -34,27 +45,32 @@ class BackfillMissionIdTest(unittest.TestCase):
                                    separators=(",", " : ")) + "\n", encoding="utf-8")
         return path
 
-    def test_plan_stamps_and_counts_skips(self):
-        result = BACKFILL.plan(self.directory, self.roster)
-        self.assertEqual(["turn-stamp"], [row["record"] for row in result["rows"]])
-        self.assertEqual({"gone": 1}, dict(result["off_roster"]))
-        self.assertEqual({"blank": 1}, dict(result["no_mission"]))
-        self.assertEqual(1, result["existing"])
-        self.assertEqual(4, result["total"])
+    def result(self):
+        return BACKFILL.plan(self.directory, BACKFILL.load_clocks(self.clock_file))
 
-    def test_apply_preserves_existing_bytes_and_adds_only_key(self):
+    def test_plan_joins_session_and_includes_excursion_only(self):
+        result = self.result()
+        planned = {(r["record"], r["key"], r["value"]) for r in result["rows"]}
+        self.assertEqual({("turn-mission", "mission_id", "M-one"),
+                          ("turn-excursion", "excursion_id", "E-two")}, planned)
+        self.assertEqual(2, sum(result["no_clock"].values()))
+        self.assertEqual(1, sum(result["no_target"].values()))
+        self.assertEqual({"mission_id": 1}, dict(result["existing"]))
+        self.assertEqual(6, result["total"])
+
+    def test_apply_preserves_existing_and_adds_only_selected_key(self):
         existing = self.directory / "turn-existing.json"
         existing_before = existing.read_bytes()
-        stamp = self.directory / "turn-stamp.json"
-        stamp_before = json.loads(stamp.read_text(encoding="utf-8"))
-        result = BACKFILL.plan(self.directory, self.roster)
+        mission_before = json.loads((self.directory / "turn-mission.json").read_text())
+        excursion_before = json.loads((self.directory / "turn-excursion.json").read_text())
         ledger = self.directory / "ledger.tsv"
-        self.assertEqual(1, BACKFILL.apply_plan(result, ledger))
+        self.assertEqual(2, BACKFILL.apply_plan(self.result(), ledger))
         self.assertEqual(existing_before, existing.read_bytes())
-        expected = dict(stamp_before, mission_id="M-one")
-        self.assertEqual(expected, json.loads(stamp.read_text(encoding="utf-8")))
-        self.assertTrue(stamp.read_text(encoding="utf-8").endswith("\n"))
-        self.assertIn(BACKFILL.PROXY_WARNING, ledger.read_text(encoding="utf-8"))
+        self.assertEqual(dict(mission_before, mission_id="M-one"),
+                         json.loads((self.directory / "turn-mission.json").read_text()))
+        self.assertEqual(dict(excursion_before, excursion_id="E-two"),
+                         json.loads((self.directory / "turn-excursion.json").read_text()))
+        self.assertIn(BACKFILL.LEDGER_NOTE, ledger.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

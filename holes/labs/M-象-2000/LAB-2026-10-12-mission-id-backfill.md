@@ -84,3 +84,65 @@ OK
 ```
 
 Awaiting explicit approval before `--apply`.
+
+## Revised authoritative dry run: clock store per session
+
+The roster-proxy plan above is superseded and **must not be applied**. A new
+dry run at 2026-10-12 UTC joined records exactly on `(agent_id, session_id)`
+to `data/clock-sessions-2026-10-12.json`. The export contains 462 unique
+pairs; the tool rejects duplicate pairs and has no roster fallback.
+
+There were 3,749 record files at read time. Four already contained the key
+selected by their clock row and were left alone.
+
+| Clock mission | Would stamp |
+|---|---:|
+| `M-G-over-cascades` | 248 |
+| `M-autoclock-in` | 1 |
+| `M-diagramprover` | 1,008 |
+| `M-futon-seams` | 3 |
+| `M-futonzero-prelim-practice` | 128 |
+| `M-landscape-positioning` | 132 |
+| `M-the-perfect-crime` | 19 |
+| `M-warrant-limit` | 113 |
+| `M-wm-wiring` | 180 |
+| `M-象-2000` | 368 |
+| **Mission total** | **2,200** |
+
+| Clock excursion (when no mission is set) | Would stamp |
+|---|---:|
+| `E-agency-work-orders` | 322 |
+| `E-aif-cascade` | 85 |
+| `E-cascade-real` | 139 |
+| `E-convert-operator-turns-to-patterns` | 604 |
+| `E-kimi-task-103` | 12 |
+| `E-kimi-task-28` | 11 |
+| `E-xiang-turn-evidence-outage-2026-10-11` | 34 |
+| **Excursion total** | **1,207** |
+
+| Outcome | Records |
+|---|---:|
+| Would stamp from an exact clock row | 3,407 |
+| Already has the clock-selected target key | 4 |
+| No `(agent_id, session_id)` clock row | 338 |
+| Matching clock row but no mission or excursion target | 0 |
+| **Record files** | **3,749** |
+
+The totals reconcile: 3,407 planned + 4 already stamped + 338 without a
+clock row = 3,749. Absence remains absence for the 338 records.
+
+The revised stdlib-only script reads only the committed clock export. On
+`--apply` it would first write a ledger containing record, agent, session,
+selected key, value, and clock `decided_at`, then use the same same-directory
+temporary-file, `fsync`, and `os.replace` protocol. `--apply` was not run and
+the ledger does not exist. Tests cover the exact session join, mission and
+excursion-only targets, a missing clock row, a blank clock target, sidecar
+exclusion, byte-for-byte preservation of an existing target, and semantic
+preservation of all other fields.
+
+```text
+Ran 2 tests in 0.007s
+OK
+```
+
+Awaiting explicit approval before `--apply`.
