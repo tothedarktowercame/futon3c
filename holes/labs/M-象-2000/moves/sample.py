@@ -79,7 +79,33 @@ def reply_marks(record):
     return result
 
 
-OPEN_PORTS_CAP = 12
+OPEN_PORTS_CAP = 24
+IN_FORCE_CAP = 16
+
+
+def act_index(rows):
+    """act id -> {kind, text} over every record's stored acts, for resolving
+    ids that standings carry without text."""
+    index = {}
+    for _, record, _ in rows:
+        for act in record.get("acts") or []:
+            if act.get("id"):
+                index.setdefault(act["id"], {"kind": act.get("kind"), "text": act.get("text") or ""})
+    return index
+
+
+def in_force(record, index, cap=IN_FORCE_CAP):
+    """The kernel's standings in force at this record (standings.in_force:
+    constraints, rules, plans that still govern), resolved to text through
+    INDEX, in the record's order, newest last; unresolved ids are listed
+    with empty text so the labeller can still cite them."""
+    ids = (record.get("standings") or {}).get("in_force") or []
+    rows = []
+    for aid in ids:
+        found = index.get(aid, {})
+        rows.append({"act": aid, "kind": found.get("kind"),
+                     "text": (found.get("text") or "")[:240]})
+    return rows[-cap:]
 
 
 def open_ports(record, cap=OPEN_PORTS_CAP):
@@ -164,6 +190,7 @@ def write_inputs(chosen, out):
     for session_rows in by_session.values():
         session_rows.sort(key=lambda row: (row[1].get("created_at", ""), row[0].name))
     written = []
+    index = act_index(row for rows in by_session.values() for row in rows)
     for path, record, fs in chosen:
         session_rows = by_session.get(record.get("session_id"), [])
         position = next((i for i, row in enumerate(session_rows) if row[0] == path), -1)
@@ -184,6 +211,9 @@ def write_inputs(chosen, out):
         ports = open_ports(record)
         if ports:
             payload["open_ports"] = ports
+        standings = in_force(record, index)
+        if standings:
+            payload["in_force"] = standings
         target = out / f"{record_id}.input.json"
         target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
                           encoding="utf-8")

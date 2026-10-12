@@ -50,7 +50,7 @@ def validate(path):
     previous = {act["id"]: act for act in source.get("previous_reply_acts", [])}
     # Open ports (sample.py:open_ports) are earlier turns' openers the kernel
     # still holds open at this record; a reply may answer or sit within them.
-    for port in source.get("open_ports", []):
+    for port in source.get("open_ports", []) + source.get("in_force", []):
         if port.get("act"):
             previous.setdefault(port["act"], port)
     operator = {aid for aid, act in current.items()

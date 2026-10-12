@@ -105,8 +105,8 @@ class OpenPortsAreAnswerTargets(unittest.TestCase):
         record = {"ports": {"still_open": [
             {"act": f"a{i}", "kind": "ask-action", "text": "t" * 300,
              "since": f"2026-10-{20 - i:02d}T00:00:00Z"} for i in range(15)]}}
-        ports = sample.open_ports(record)
-        self.assertEqual(12, len(ports))
+        ports = sample.open_ports(record, cap=12)
+        self.assertEqual(12, len(ports))  # cap passed explicitly below
         self.assertEqual("a14", ports[0]["act"])
         self.assertEqual(240, len(ports[0]["text"]))
 
@@ -157,6 +157,22 @@ class FragmentsOutrankStoredActPrefix(unittest.TestCase):
             path.write_text(json.dumps(sidecar))
             valid, void, errors = validate.validate(path)
             self.assertEqual((1, 0, []), (valid, void, errors))
+
+
+class StandingsInForceAreShipped(unittest.TestCase):
+    def test_in_force_resolves_text_and_keeps_unresolved_ids(self):
+        other = {"acts": [{"id": "t-88-f-s8-0", "kind": "constrain",
+                           "text": "you need to use the debugger and watch it"}]}
+        record = {"standings": {"in_force": ["t-88-f-s8-0", "t-99-f-s1-0"]}}
+        index = sample.act_index([(None, other, []), (None, record, [])])
+        rows = sample.in_force(record, index)
+        self.assertEqual(["t-88-f-s8-0", "t-99-f-s1-0"], [r["act"] for r in rows])
+        self.assertEqual("constrain", rows[0]["kind"])
+        self.assertIn("debugger", rows[0]["text"])
+        self.assertEqual("", rows[1]["text"])
+
+    def test_open_ports_cap_is_24(self):
+        self.assertEqual(24, sample.OPEN_PORTS_CAP)
 
 
 class ReplyMarksFollowKernelNumbering(unittest.TestCase):
