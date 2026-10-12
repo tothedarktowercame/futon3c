@@ -27,12 +27,13 @@
   (:import (java.util.concurrent Callable Executors TimeUnit TimeoutException)))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
-;; Re-measured 2026-10-03 against the serving store: a 50-row pattern page took
-;; 18.4 s while the complete 971-row relation in one supported 1,000-row page
-;; took 21.8 s. The fixed query cost now dominates hydration, so the old
-;; 100-row/5-second tuning multiplied latency and failed healthy reads.
+;; Keep each request below Futon1b's five-second query deadline.  A 1,000-row
+;; request used to work when the server deadline was looser, but now receives a
+;; typed :query-deadline-exceeded before this client's 30-second transport
+;; timeout.  Pagination is slower overall, but it preserves the authoritative
+;; complete walk instead of making the outer selector lose an entire channel.
 (def ^:private fetch-timeout-ms 30000)
-(def ^:private fetch-page-size 1000)
+(def ^:private fetch-page-size 100)
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)

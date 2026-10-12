@@ -97,7 +97,9 @@
                 (fn [type opts]
                   (is (= "clock/clocked-on" type))
                   (is (= 30000 (:timeout-ms opts)))
-                  (is (= 1000 (:page-size opts)))
+                  ;; Must stay below Futon1b's five-second query deadline;
+                  ;; completeness comes from the cursor walk, not one giant page.
+                  (is (= 100 (:page-size opts)))
                   sample-clock-edges)]
     (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
 
