@@ -62,8 +62,9 @@
   the debugger`), plus one successor click granted directly by Joe to
   codex-68 on 2026-10-12 to verify selection through actual work and a valid
   runtime trace. All grants are recorded in the operator thread or the
-  authorization document named above."
-  55)
+  authorization document named above, plus one further successor click granted
+  directly by Joe on 2026-10-12 after the reviewed-mission pin repair."
+  56)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
