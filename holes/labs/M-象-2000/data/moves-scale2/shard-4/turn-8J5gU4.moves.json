@@ -1,0 +1,196 @@
+{
+ "record": "turn-8J5gU4",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-17-f-s1-0",
+   "kind": "agree",
+   "move": "approve/plain",
+   "quote": "where \"the Co-op\" is a known national brand",
+   "answers": [],
+   "scope": {
+    "opens": "coop-vs-futonic",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s2-0",
+   "kind": "extend",
+   "move": "report/observation",
+   "quote": "A Saba in every city would be the same kind of thing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "And if it makes money, great",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s4-0",
+   "kind": "propose",
+   "move": "propose/positioning",
+   "quote": "the \"futonic\" ideas would indeed be a bit about helping people realise some of their own potential",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s5-0",
+   "kind": "explore",
+   "move": "clarify/ask-decision",
+   "quote": "it remains a good question about which aspects of that technology can really help with",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-f-s4-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s6-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "technology could help me learn mathematics \"faster\" or at least \"better\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-f-s5-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s7-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "learning mathematics seems like something of a niche interest",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-f-s6-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-f-s8-0",
+   "kind": "challenge",
+   "move": "challenge/claim",
+   "quote": "most people don't like learning at all",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "That gives a useful line between the two",
+   "answers": [
+    {
+     "act": "claude-13-turn-17-f-s1-0",
+     "quote": "A Saba in every city is the co-op layer",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-17-f-s4-0",
+     "quote": "The futonic layer is helping people realise their own potential",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-17-f-s5-0",
+     "quote": "which parts of that tech can actually help",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "s310-record",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "the Learning and Work Institute's annual Adult Participation",
+   "answers": [
+    {
+     "act": "claude-13-turn-17-f-s8-0",
+     "quote": "the Learning and Work Institute's annual Adult Participation",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-17-r-2",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "It's the same point as the corner store",
+   "answers": [
+    {
+     "act": "claude-13-turn-17-f-s5-0",
+     "quote": "It's the same point as the corner store",
+     "effect": "keeps"
+    },
+    {
+     "act": "claude-13-turn-17-f-s7-0",
+     "quote": "It's the same point as the corner store",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-17-r-0"
+   },
+   "confidence": "high",
+   "note": "the mathematics-niche point sits at the acts truncation"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,116 @@
+{
+ "record": "turn-ngC1Zc",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-26-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "we don't necessarily need to mint new stars right away, but the list is a good one",
+   "answers": [],
+   "scope": {
+    "opens": "nebula-list",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-26-f-s3-0",
+   "kind": "explain",
+   "move": "report/observation",
+   "quote": "ChipWits wasn't just fun",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-26-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-26-f-s4-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "but maybe right now they are more like fodder for",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-26-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the nebula-file name sits past the acts truncation"
+  },
+  {
+   "act": "claude-13-turn-26-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've created `futon0/README-nebula.md`",
+   "answers": [
+    {
+     "act": "claude-13-turn-26-f-s4-0",
+     "quote": "I've created `futon0/README-nebula.md`",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-26-f-s1-0",
+     "quote": "I've created `futon0/README-nebula.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "nebula-file",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "the no-star-yet clause sits past the acts truncation"
+  },
+  {
+   "act": "claude-13-turn-26-r-1",
+   "kind": "report",
+   "move": "report/correction",
+   "quote": "ChipWits now has its own entry",
+   "answers": [
+    {
+     "act": "claude-13-turn-26-f-s3-0",
+     "quote": "ChipWits now has its own entry",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-26-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-26-r-2",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "It gets around the selection effect we found",
+   "answers": [
+    {
+     "act": "claude-13-turn-26-f-s1-0",
+     "quote": "It gets around the selection effect we found",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-26-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

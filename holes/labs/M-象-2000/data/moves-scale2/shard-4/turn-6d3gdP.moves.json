@@ -1,0 +1,131 @@
+{
+ "record": "turn-6d3gdP",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-5-f-s1-0",
+   "kind": "report",
+   "move": "report/negative",
+   "quote": "no, I'm afraid I can't find them",
+   "answers": [],
+   "scope": {
+    "opens": "verb-glossary",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-5-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/impact",
+   "quote": "But it isn't hugely important.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-5-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-5-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "characterise the various things we've found with a few verbs each",
+   "answers": [],
+   "scope": {
+    "opens": "verb-glossary",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-5-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've written the glossary you asked for",
+   "answers": [
+    {
+     "act": "claude-13-turn-5-f-s3-0",
+     "quote": "I've written the glossary you asked for",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "glossary-delivered",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-5-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "There are 13 groups",
+   "answers": [
+    {
+     "act": "claude-13-turn-5-f-s3-0",
+     "quote": "There are 13 groups",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-5-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-5-r-2",
+   "kind": "explain",
+   "move": "explain/implication",
+   "quote": "the SF crowd is dense under *coordinate*, *orchestrate* and *check*",
+   "answers": [
+    {
+     "act": "claude-13-turn-5-f-s3-0",
+     "quote": "the SF crowd is dense under *coordinate*, *orchestrate* and *check*",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-5-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-5-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Since the slide is gone, this list stands in for it",
+   "answers": [
+    {
+     "act": "claude-13-turn-5-f-s1-0",
+     "quote": "Since the slide is gone, this list stands in for it",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-5-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

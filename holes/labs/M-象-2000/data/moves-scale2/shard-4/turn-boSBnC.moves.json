@@ -1,0 +1,117 @@
+{
+ "record": "turn-boSBnC",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-29-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe I should create a variant of report-emacs-bug",
+   "answers": [],
+   "scope": {
+    "opens": "report-futon-bug",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-29-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "so the bug report would have to be relatively self contained",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-29-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-29-r-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Good idea",
+   "answers": [
+    {
+     "act": "claude-13-turn-29-f-s1-0",
+     "quote": "Good idea",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "bug-report-plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-29-r-1",
+   "kind": "explain",
+   "move": "explain/design",
+   "quote": "(the sketch) `M-x report-futon-bug` asks for one line",
+   "answers": [
+    {
+     "act": "claude-13-turn-29-f-s1-0",
+     "quote": "(the sketch) `M-x report-futon-bug` asks for one line",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-29-r-2",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "zone-health shows the federation peers",
+   "answers": [
+    {
+     "act": "claude-13-turn-29-f-s2-0",
+     "quote": "zone-health shows the federation peers",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-29-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I build it?",
+   "answers": [
+    {
+     "act": "claude-13-turn-29-f-s1-0",
+     "quote": "Shall I build it?",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-29-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

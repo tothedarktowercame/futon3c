@@ -1,0 +1,165 @@
+{
+ "record": "turn-IIhehS",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-25-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/check-understanding",
+   "quote": "what I was thinking in connection with the co-op question is really what the customer benefits are",
+   "answers": [],
+   "scope": {
+    "opens": "customer-benefits",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "if I set out to maintain a free/open clone of whatever is coming out of SF these days",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-25-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-f-s3-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "maybe rather than trying to discover the problems that Oakland residents might be trying to solve",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-f-s4-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "a good time to do some introspection and think about whether I have a full list of problems-to-solve",
+   "answers": [],
+   "scope": {
+    "opens": "introspection",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Turning the survey on your own problems gives a clear answer",
+   "answers": [
+    {
+     "act": "claude-13-turn-25-f-s4-0",
+     "quote": "the technology helps most with **`wm-overnight-unsupervised`**",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "s4-record",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "I matched the 13 held stars and 1 active star in the st",
+   "answers": [
+    {
+     "act": "claude-13-turn-25-f-s4-0",
+     "quote": "I matched the 13 held stars and 1 active star in the st",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-25-r-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-13-turn-25-r-2",
+   "kind": "qualify",
+   "move": "qualify/gap",
+   "quote": "The revenue chain is stuck at its first link",
+   "answers": [
+    {
+     "act": "claude-13-turn-25-f-s1-0",
+     "quote": "The revenue chain is stuck at its first link",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-25-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-r-3",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "Missions *mint* capabilities",
+   "answers": [
+    {
+     "act": "claude-13-turn-25-f-s4-0",
+     "quote": "Missions *mint* capabilities",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-25-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-25-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Which of these are real goals, and which are maintenance or pastimes",
+   "answers": [
+    {
+     "act": "claude-13-turn-25-f-s4-0",
+     "quote": "Which of these are real goals",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-25-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

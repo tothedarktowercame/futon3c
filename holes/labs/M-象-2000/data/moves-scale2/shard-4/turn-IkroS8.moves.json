@@ -1,0 +1,83 @@
+{
+ "record": "turn-IkroS8",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "codex-18-turn-37-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe we should find a new \"live\" gap by using the original callgrind route",
+   "answers": [],
+   "scope": {
+    "opens": "live-gap-hunt",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-18-turn-37-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Committed `1372973`: replayed the retained startup slice",
+   "answers": [
+    {
+     "act": "codex-18-turn-37-f-s2-0",
+     "quote": "Committed `1372973`: replayed the retained startup slice",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "live-gap-report",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-18-turn-37-r-1",
+   "kind": "verify",
+   "move": "report/evidence",
+   "quote": "Reduced the reached constructor-map comprehension to an",
+   "answers": [
+    {
+     "act": "codex-18-turn-37-f-s2-0",
+     "quote": "Reduced the reached constructor-map comprehension to an",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-37-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "codex-18-turn-37-r-2",
+   "kind": "qualify",
+   "move": "qualify/scope",
+   "quote": "This was a fresh replay of the retained startup slice, not a new full callgrind capture",
+   "answers": [
+    {
+     "act": "codex-18-turn-37-f-s2-0",
+     "quote": "This was a fresh replay of the retained startup slice, not a new full callgrind capture",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-18-turn-37-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

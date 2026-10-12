@@ -1,0 +1,123 @@
+{
+ "record": "turn-VYc3Gb",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-35-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Please do the problem-intake test",
+   "answers": [],
+   "scope": {
+    "opens": "intake-test",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-35-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I wrote my cost guesses down before running anything",
+   "answers": [
+    {
+     "act": "claude-13-turn-35-f-s1-0",
+     "quote": "I wrote my cost guesses down before running anything",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": "intake-results",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-35-r-1",
+   "kind": "explain",
+   "move": "explain/difference",
+   "quote": "The earlier Alinery finding said, fairly, that",
+   "answers": [
+    {
+     "act": "claude-13-turn-35-f-s1-0",
+     "quote": "The earlier Alinery finding said, fairly, that",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-35-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-35-r-2",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "(route) Provisionally, run each demonstration against their real code",
+   "answers": [
+    {
+     "act": "claude-13-turn-35-f-s1-0",
+     "quote": "(route) Provisionally, run each demonstration against their real code",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-35-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-35-r-3",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "(needs you) Three things",
+   "answers": [
+    {
+     "act": "claude-13-turn-35-f-s1-0",
+     "quote": "(needs you) Three things",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-35-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-35-r-4",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "(on the algorithm) It carried over well",
+   "answers": [
+    {
+     "act": "claude-13-turn-35-f-s1-0",
+     "quote": "(on the algorithm) It carried over well",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-35-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

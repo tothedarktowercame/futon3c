@@ -1,0 +1,137 @@
+{
+ "record": "turn-kNLxcE",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-6-turn-6-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "No you are mistaken about what I meant.",
+   "answers": [],
+   "scope": {
+    "opens": "correction",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-6-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/check-understanding",
+   "quote": "I meant what I said which is to use the elaborator as a curriculum",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-6-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-6-r-0",
+   "kind": "retract",
+   "move": "retract/correction",
+   "quote": "I got that wrong, and I'm sorry",
+   "answers": [
+    {
+     "act": "claude-6-turn-6-f-s1-0",
+     "quote": "I got that wrong, and I'm sorry",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "curriculum-account",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-6-r-1",
+   "kind": "reply-mark",
+   "move": "explain/diagnosis",
+   "quote": "(\"use the elaborator as a curriculum\")",
+   "answers": [
+    {
+     "act": "claude-6-turn-6-f-s2-0",
+     "quote": "(\"use the elaborator as a curriculum\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-6-r-0"
+   },
+   "confidence": "low",
+   "note": "acts text is only the section header; the wrong-level-of-detail diagnosis sits in unmarked paragraphs"
+  },
+  {
+   "act": "claude-6-turn-6-r-2",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "(what exists and what doesn't)",
+   "answers": [
+    {
+     "act": "claude-6-turn-6-f-s2-0",
+     "quote": "(what exists and what doesn't)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-6-r-0"
+   },
+   "confidence": "low",
+   "note": "section header only in the acts text"
+  },
+  {
+   "act": "claude-6-turn-6-r-3",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "(what would make it procedural)",
+   "answers": [
+    {
+     "act": "claude-6-turn-6-f-s2-0",
+     "quote": "(what would make it procedural)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-6-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-6-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I propose these two packets to claude-4",
+   "answers": [
+    {
+     "act": "claude-6-turn-6-f-s2-0",
+     "quote": "Shall I propose these two packets to claude-4",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-6-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,103 @@
+{
+ "record": "turn-a3V7wF",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-6-turn-5-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "I am feeling angry because",
+   "answers": [],
+   "scope": {
+    "opens": "grievance",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-5-r-0",
+   "kind": "reply-mark",
+   "move": "report/correction",
+   "quote": "it went differently: claude-4 never received the route",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "it went differently: claude-4 never received the route",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "sequence-account",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-5-r-1",
+   "kind": "report",
+   "move": "report/evidence-chain",
+   "quote": "the sequence, from claude-2's buffer and the job record",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "the sequence, from claude-2's buffer and the job record",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-5-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-5-r-2",
+   "kind": "explain",
+   "move": "explain/distinction",
+   "quote": "\"Use the Lean elaborator\" can mean two things",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "\"Use the Lean elaborator\" can mean two things",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-5-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-5-r-3",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I dispatch the test now",
+   "answers": [
+    {
+     "act": "claude-6-turn-5-f-s1-0",
+     "quote": "Shall I dispatch the test now",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-5-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

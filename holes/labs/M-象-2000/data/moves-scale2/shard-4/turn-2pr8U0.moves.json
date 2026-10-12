@@ -1,0 +1,123 @@
+{
+ "record": "turn-2pr8U0",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-98-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "it would be good to show run reports under Caddy as part of the WIP site",
+   "answers": [],
+   "scope": {
+    "opens": "run-reports-on-wip",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-98-r-0",
+   "kind": "reply-mark",
+   "move": "report/answer",
+   "quote": "each run's report card can be published as its own section of the WIP site",
+   "answers": [
+    {
+     "act": "claude-12-turn-98-f-s1-0",
+     "quote": "each run's report card can be published as its own section of the WIP site",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "wip-report-cards",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-98-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "The WIP site is p4ng's collection in `/var/www/zone.hyperreal.enterprises/wip`",
+   "answers": [
+    {
+     "act": "claude-12-turn-98-f-s1-0",
+     "quote": "The WIP site is p4ng's collection in `/var/www/zone.hyperreal.enterprises/wip`",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-98-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-98-r-2",
+   "kind": "delegate",
+   "move": "report/dispatched",
+   "quote": "(dispatched: codex-28, job `invoke-1791575411545-826-727ba38c`)",
+   "answers": [
+    {
+     "act": "claude-12-turn-98-f-s1-0",
+     "quote": "The generator reads one run record and writes",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-98-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-98-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The cards will show seat names, ticket text and commit IDs",
+   "answers": [
+    {
+     "act": "claude-12-turn-98-f-s1-0",
+     "quote": "The cards will show seat names, ticket text and commit IDs",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-98-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-98-r-4",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "Once I've reviewed the two backfilled cards for anything invented",
+   "answers": [
+    {
+     "act": "claude-12-turn-98-f-s1-0",
+     "quote": "Once I've reviewed the two backfilled cards for anything invented",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-98-r-0"
+   },
+   "confidence": "high",
+   "note": "the section/publisher steps sit past the acts truncation"
+  }
+ ],
+ "unlabelled": []
+}

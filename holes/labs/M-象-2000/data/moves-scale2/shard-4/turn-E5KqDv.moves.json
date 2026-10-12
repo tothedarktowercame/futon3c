@@ -1,0 +1,145 @@
+{
+ "record": "turn-E5KqDv",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-20-f-s1-0",
+   "kind": "explore",
+   "move": "approve/provisional",
+   "quote": "Yeah, this analogy could be interesting.",
+   "answers": [],
+   "scope": {
+    "opens": "memory-store-analogy",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-20-f-s2-0",
+   "kind": "extend",
+   "move": "report/observation",
+   "quote": "So, e.g., War Machine would be our \"software factory\" with Futon1b as the \"memory store\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-20-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-20-f-s2-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "one thing I noticed is that",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-20-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the learn-from-SF clause sits past the acts truncation; quote clipped"
+  },
+  {
+   "act": "claude-13-turn-20-f-s2-2",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "with Futon1b as the",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-20-f-s2-1"
+   },
+   "confidence": "low",
+   "note": "deferral reading is weak; the fragment repeats the same sentence as s2-0/s2-1 with different intent tags"
+  },
+  {
+   "act": "claude-13-turn-20-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "Today gives a concrete answer to \"what would it solve for me\"",
+   "answers": [
+    {
+     "act": "claude-13-turn-20-f-s1-0",
+     "quote": "Today gives a concrete answer to \"what would it solve for me\"",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "s312-record",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-20-r-1",
+   "kind": "report",
+   "move": "report/evidence",
+   "quote": "In SVO form, from things that actually happened",
+   "answers": [
+    {
+     "act": "claude-13-turn-20-f-s2-1",
+     "quote": "In SVO form, from things that actually happened",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-20-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-20-r-2",
+   "kind": "explain",
+   "move": "explain/reading",
+   "quote": "(reading) For you, rows 1 and 2 carry most of the weight",
+   "answers": [
+    {
+     "act": "claude-13-turn-20-f-s2-1",
+     "quote": "rows 1 and 2 carry most of the weight",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-20-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-20-r-3",
+   "kind": "qualify",
+   "move": "ask-action/one-decision",
+   "quote": "I haven't checked whether metameso transcripts are ingested into futon1b at all",
+   "answers": [
+    {
+     "act": "claude-13-turn-20-f-s2-1",
+     "quote": "I haven't checked whether metameso transcripts are ingested into futon1b at all",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-20-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

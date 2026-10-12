@@ -1,0 +1,203 @@
+{
+ "record": "turn-OIhzli",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-2-f-s1-0",
+   "kind": "collect",
+   "move": "collect/offer-example",
+   "quote": "A nice example that we could use as a Brownian partical is cotal.ai",
+   "answers": [],
+   "scope": {
+    "opens": "landscape-examples",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "It strikes me as a bit like Agency",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-f-s3-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "somehow like Agency but with Lean-backed dispatches",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-f-s4-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "we certainly don't need to \"replicate\" what others are doing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-f-s5-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "it would be good for me to at least be acquainted with the problems that different folks are solving",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-f-s6-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "the ones that happened to be here in SF at a given point",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-f-s5-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-13-turn-2-r-0",
+   "kind": "reply-mark",
+   "move": "report/done",
+   "quote": "I've rewritten the mission's purpose around your correction",
+   "answers": [
+    {
+     "act": "claude-13-turn-2-f-s4-0",
+     "quote": "The goal is now to learn what problem each company is solving, not to replicate anything",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-2-f-s5-0",
+     "quote": "Each company is treated as a starting point for a keyword search",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "mission-rewrite",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "your words are now the first entry in the o",
+   "answers": [
+    {
+     "act": "claude-13-turn-2-f-s4-0",
+     "quote": "your words are now the first entry in the o",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-r-0"
+   },
+   "confidence": "high",
+   "note": "quote clipped at the acts truncation boundary"
+  },
+  {
+   "act": "claude-13-turn-2-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Here's the cotal.ai entry, phrased the new way",
+   "answers": [
+    {
+     "act": "claude-13-turn-2-f-s1-0",
+     "quote": "Here's the cotal.ai entry, phrased the new way",
+     "effect": "closes"
+    },
+    {
+     "act": "claude-13-turn-2-f-s2-0",
+     "quote": "Here's the cotal.ai entry, phrased the new way",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-r-0"
+   },
+   "confidence": "high",
+   "note": "the roster-plus-bells comparison sits past the acts truncation"
+  },
+  {
+   "act": "claude-13-turn-2-r-3",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "One quick search didn't turn up the Lean-backed one",
+   "answers": [
+    {
+     "act": "claude-13-turn-2-f-s3-0",
+     "quote": "One quick search didn't turn up the Lean-backed one",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-2-r-4",
+   "kind": "propose",
+   "move": "propose/ordered-plan",
+   "quote": "I suggest running MAP in this order",
+   "answers": [
+    {
+     "act": "claude-13-turn-2-f-s5-0",
+     "quote": "I suggest running MAP in this order",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-2-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,123 @@
+{
+ "record": "turn-q0fjvy",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-6-turn-4-f-s1-0",
+   "kind": "verify",
+   "move": "clarify/check-understanding",
+   "quote": "let's just get the  story straight here",
+   "answers": [],
+   "scope": {
+    "opens": "story-straight",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-4-r-0",
+   "kind": "reply-mark",
+   "move": "report/answer",
+   "quote": "Mostly yes, with one correction",
+   "answers": [
+    {
+     "act": "claude-6-turn-4-f-s1-0",
+     "quote": "Mostly yes, with one correction",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "waste-account",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-4-r-1",
+   "kind": "explain",
+   "move": "report/evidence",
+   "quote": "As of claude-3's census, 17 of 110 rows matched native Lean",
+   "answers": [
+    {
+     "act": "claude-6-turn-4-f-s1-0",
+     "quote": "As of claude-3's census, 17 of 110 rows matched native Lean",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-4-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-4-r-2",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "what isn't established",
+   "answers": [
+    {
+     "act": "claude-6-turn-4-f-s1-0",
+     "quote": "what isn't established",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-4-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-4-r-3",
+   "kind": "qualify",
+   "move": "report/assessment",
+   "quote": "The agents followed the rules as written",
+   "answers": [
+    {
+     "act": "claude-6-turn-4-f-s1-0",
+     "quote": "The agents followed the rules as written",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-4-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-6-turn-4-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I dis",
+   "answers": [
+    {
+     "act": "claude-6-turn-4-f-s1-0",
+     "quote": "Shall I dis",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-6-turn-4-r-0"
+   },
+   "confidence": "high",
+   "note": "acts text truncates mid-word"
+  }
+ ],
+ "unlabelled": []
+}

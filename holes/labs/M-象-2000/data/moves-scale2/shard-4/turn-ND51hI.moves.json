@@ -1,0 +1,77 @@
+{
+ "record": "turn-ND51hI",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-24-f-s1-0",
+   "kind": "delegate",
+   "move": "ask-action/commission",
+   "quote": "let's create a futon0/README-hardening.md now that collects the ideas",
+   "answers": [],
+   "scope": {
+    "opens": "hardening-readme",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-24-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "we can come back to them later",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-24-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-24-r-0",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "11 of 19 checks pass",
+   "answers": [
+    {
+     "act": "claude-13-turn-24-f-s1-0",
+     "quote": "11 of 19 checks pass",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-24-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "the reply answers with a health status feeding the hardening list; the README itself is not yet written here"
+  },
+  {
+   "act": "claude-13-turn-24-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "two things the checks hide",
+   "answers": [
+    {
+     "act": "claude-13-turn-24-f-s1-0",
+     "quote": "two things the checks hide",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-24-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,137 @@
+{
+ "record": "turn-Cu0AN8",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-12-turn-104-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "be able to preregister any needed improvements against tge latest report card",
+   "answers": [],
+   "scope": {
+    "opens": "card-preregistration",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-104-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "After we have records we should also",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-104-f-s1-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-104-r-0",
+   "kind": "reply-mark",
+   "move": "approve/plain",
+   "quote": "That fits the report card well",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "each fix states, before it lands, what it should change on the next card",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "prereg-plan",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-104-r-1",
+   "kind": "report",
+   "move": "report/inventory",
+   "quote": "futon2 already uses preregistration, but at cohort level",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "futon2 already uses preregistration, but at cohort level",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-104-r-0"
+   },
+   "confidence": "high",
+   "note": "the nothing-yet-at-fix-level point sits past the acts truncation"
+  },
+  {
+   "act": "claude-12-turn-104-r-2",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "(design)",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "(design)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-104-r-0"
+   },
+   "confidence": "low",
+   "note": "acts text is only the section header; the file-format design sits in unmarked paragraphs"
+  },
+  {
+   "act": "claude-12-turn-104-r-3",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "(dispatching) The format and evaluator go to codex-28",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "(dispatching) The format and evaluator go to codex-28",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-104-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-12-turn-104-r-4",
+   "kind": "propose",
+   "move": "propose/ordered-plan",
+   "quote": "(order before the next click)",
+   "answers": [
+    {
+     "act": "claude-12-turn-104-f-s1-0",
+     "quote": "(order before the next click)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-12-turn-104-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}

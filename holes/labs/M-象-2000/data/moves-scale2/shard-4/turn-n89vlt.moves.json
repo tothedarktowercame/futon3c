@@ -1,0 +1,77 @@
+{
+ "record": "turn-n89vlt",
+ "labeller": "zai-4",
+ "schema": "moves/1",
+ "at": "2026-10-11T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-13-turn-23-f-s1-0",
+   "kind": "verify",
+   "move": "clarify/ask-decision",
+   "quote": "How about on metameso?",
+   "answers": [],
+   "scope": {
+    "opens": "where-is-the-list",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-23-r-0",
+   "kind": "reply-mark",
+   "move": "report/answer",
+   "quote": "Yes, that's where it is",
+   "answers": [
+    {
+     "act": "claude-13-turn-23-f-s1-0",
+     "quote": "Yes, that's where it is",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": "hardening-pointer",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-23-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "I've updated the landscape mission's pointer",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-23-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  },
+  {
+   "act": "claude-13-turn-23-r-2",
+   "kind": "qualify",
+   "move": "report/gap",
+   "quote": "This is another small instance of §3.12 row 1",
+   "answers": [
+    {
+     "act": "claude-13-turn-23-f-s1-0",
+     "quote": "This is another small instance of §3.12 row 1",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-13-turn-23-r-0"
+   },
+   "confidence": "high",
+   "note": null
+  }
+ ],
+ "unlabelled": []
+}
