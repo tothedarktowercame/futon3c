@@ -7,3 +7,4 @@
 2026-10-12T04:39:30Z 56.0% used, 5h window clear (before batch 2 re-dispatch, shards 1-2)
 2026-10-12T05:00:22Z 65.0% monthly, 5h window 43% (after batch 2 shard 2, 59 records; shard 1 still running)
 2026-10-12T05:02:01Z 65.0% monthly, 5h window 43% (after batch 2 shards 1+2, 127 records; before shards 3-5, 73 records)
+2026-10-12T05:15:15Z 67.0% used monthly; 5h 56.0% (after batch 2 complete: 200 records, 5 shards)
