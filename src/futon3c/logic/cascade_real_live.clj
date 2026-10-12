@@ -34,6 +34,12 @@
 ;; complete walk instead of making the outer selector lose an entire channel.
 (def ^:private fetch-timeout-ms 30000)
 (def ^:private fetch-page-size 100)
+(def ^:private fetch-page-size-by-type
+  ;; The mission-pattern binder is now the only multi-thousand-row section.
+  ;; At 100 rows its complete cursor walk repeatedly exceeds the graph's
+  ;; 90-second deadline under live load; 200 remains below Futon1b's per-query
+  ;; deadline and measured a complete 1,878-row walk in about 30 seconds.
+  {"mission-scope/pattern" 200})
 
 (def ^:private fetch-fields-by-type
   {"mission-scope/pattern"
@@ -48,8 +54,9 @@
   transport or incomplete pagination failure is loud; [] means the
   authoritative query was exhausted and empty."
   [hx-type]
-  (let [rows (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms
-                                                     :page-size fetch-page-size
+  (let [page-size (get fetch-page-size-by-type hx-type fetch-page-size)
+        rows (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms
+                                                     :page-size page-size
                                                      :fields (get fetch-fields-by-type
                                                                   hx-type)})]
     (when (substrate/partial-result? rows)
