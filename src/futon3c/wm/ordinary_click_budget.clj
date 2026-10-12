@@ -59,9 +59,11 @@
   by Joe to codex-68 on 2026-10-12 for a debugger-attached click after the
   giant-checkpoint repair, plus one granted directly by Joe to codex-68 on
   2026-10-12 after the live outer-selector repair (`please run 1 click and use
-  the debugger`). All grants are recorded in the operator thread or the
+  the debugger`), plus one successor click granted directly by Joe to
+  codex-68 on 2026-10-12 to verify selection through actual work and a valid
+  runtime trace. All grants are recorded in the operator thread or the
   authorization document named above."
-  54)
+  55)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
