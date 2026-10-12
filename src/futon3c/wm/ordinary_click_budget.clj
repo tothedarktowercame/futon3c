@@ -57,9 +57,11 @@
    2026-10-10 after the close-overflow fix, and one more on 2026-10-10 for the
   click codex-68 signed off (PRELAUNCH-DEFECTS.md), plus one granted directly
   by Joe to codex-68 on 2026-10-12 for a debugger-attached click after the
-  giant-checkpoint repair. All grants are recorded in the operator thread or
-  the authorization document named above."
-  53)
+  giant-checkpoint repair, plus one granted directly by Joe to codex-68 on
+  2026-10-12 after the live outer-selector repair (`please run 1 click and use
+  the debugger`). All grants are recorded in the operator thread or the
+  authorization document named above."
+  54)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
