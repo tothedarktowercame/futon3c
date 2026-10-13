@@ -401,6 +401,33 @@ batch 3, M-象-2000 (seats join) 648 records, 524 edges (closes 151, keeps
 positioning 147 records, 264 edges; M-diagramprover 1,008 records, 1,061
 edges (43 kernel closes all agreed with a labelled close). No cycles.
 
+### Wave 4 (2026-10-13, 01:13Z–01:30Z): the last 8% of the meter
+
+Joe (01:1xZ): "we still have 8% of zai to use so please dispatch work
+accordingly". The 180 newest of the 274 remaining eligible records (all
+pre-stamping, fragments-only but for two records), three shards of 60 on
+zai-1..3. Shard 9 died at 01:16Z on a Zai-side HTTP 500 after 7 sidecars;
+the remainder ran as shard 11 with mid-run commits. All in by 01:30Z, meter
+92% → 98%, no 429. Revalidated: 180 files, 530 acts, void 0.
+
+Scopes: 41 opens, 194 within, 2 closes; 6 answers. Cross-turn targets: 6 in
+180 records. Two labellers declined the kernel's targets on purpose: the
+ports in these sessions are months stale (claude-17's turn-2 ports still
+open past turn 350), and 286 of 489 `in_force` entries arrived with empty
+text because `sample.py:act_index` covered only sampled operator records
+(fix: index every `turn-*.json`). Shard 8 carried 19 standing rules
+("failures as critical incidents", "debugger, not thin path", "formal
+requirements in Lean", "run end to end, no side quests"). One record,
+turn-GbsFoA, is the literal token `QUOTE`: the stub of a turn that was all
+quoted material; such a turn should leave no record.
+
+**Batch 3 totals, all four waves:** 585 records, 2,004 acts (1,410 operator
+fragments, 594 reply paragraphs); 483 answers (220 closes, 263 keeps);
+scopes 152 opens, 876 within, 14 closes; 208 of 1,373 targets cross-turn.
+Campaign total: 943 sidecars, 4,659 acts, 25 kinds, 139 labels
+(`moves/vocabulary.json`, consolidated 01:30Z). Zai monthly meter spent
+to 98% before the 02:04Z reset.
+
 **Next.** (a) The approvals rule in the brief; (b) stale-port retirement
 and the effect rule by move in the kernel; (c) the hyperedge carrier from
 these 763 sidecars; (d) Joe's verdicts through the graph's review table as

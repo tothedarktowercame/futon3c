@@ -38,8 +38,8 @@
       "reason": "folded:gotten,started"
     },
     "ask-action/example-request": {
-      "label": "ask-action/other",
-      "reason": "other"
+      "label": "ask-action/status-check",
+      "reason": "folded:give,testing"
     },
     "ask-action/explain-failure": {
       "label": "ask-action/other",
@@ -68,6 +68,10 @@
     "ask-action/operator-step": {
       "label": "ask-action/one-decision",
       "reason": "folded:origin,page,push"
+    },
+    "ask-action/other": {
+      "label": "ask-action/other",
+      "reason": "other"
     },
     "ask-action/read-record": {
       "label": "ask-action/read-record",
@@ -146,8 +150,8 @@
       "reason": "kept"
     },
     "clarify/ask-fact": {
-      "label": "clarify/ask-decision",
-      "reason": "label:ask"
+      "label": "clarify/ask-fact",
+      "reason": "kept"
     },
     "clarify/ask-recap": {
       "label": "clarify/ask-decision",
@@ -222,16 +226,16 @@
       "reason": "other"
     },
     "clarify/scope": {
-      "label": "clarify/context",
-      "reason": "folded:blank,file"
+      "label": "clarify/scope",
+      "reason": "kept"
     },
     "clarify/status": {
-      "label": "clarify/other",
-      "reason": "other"
+      "label": "clarify/ask-decision",
+      "reason": "folded:that's,writing"
     },
     "clarify/weigh-deferral": {
       "label": "clarify/check-understand",
-      "reason": "folded:until,wait"
+      "reason": "folded:issue,until,wait"
     },
     "collect/ask-option": {
       "label": "collect/ask-option",
@@ -250,6 +254,10 @@
       "reason": "other"
     },
     "collect/offer-example": {
+      "label": "collect/other",
+      "reason": "other"
+    },
+    "collect/quote-back": {
       "label": "collect/other",
       "reason": "other"
     },
@@ -302,8 +310,8 @@
       "reason": "other"
     },
     "continue/resume-work": {
-      "label": "continue/other",
-      "reason": "other"
+      "label": "continue/resume-work",
+      "reason": "kept"
     },
     "continue/waiting-on-decision": {
       "label": "continue/other",
@@ -385,6 +393,10 @@
       "label": "disagree/other",
       "reason": "other"
     },
+    "disagree/premise": {
+      "label": "disagree/correction",
+      "reason": "folded:months,space"
+    },
     "explain/accept-retraction": {
       "label": "explain/reason",
       "reason": "folded:machine,until"
@@ -402,8 +414,8 @@
       "reason": "other"
     },
     "explain/adopt-division": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/reason",
+      "reason": "folded:only,tasks"
     },
     "explain/alternative": {
       "label": "explain/other",
@@ -494,8 +506,8 @@
       "reason": "other"
     },
     "explain/diagnosis": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:elaborator,mission,scan"
     },
     "explain/difference": {
       "label": "explain/mechanism",
@@ -803,7 +815,7 @@
     },
     "explore/historical-count": {
       "label": "explore/open-question",
-      "reason": "folded:look,many"
+      "reason": "folded:interesting,look,many"
     },
     "explore/hypothesis": {
       "label": "explore/hypothesis",
@@ -815,7 +827,7 @@
     },
     "explore/multiplicity": {
       "label": "explore/open-question",
-      "reason": "folded:different,slice"
+      "reason": "folded:different,interesting,slice"
     },
     "explore/open-question": {
       "label": "explore/open-question",
@@ -922,8 +934,8 @@
       "reason": "other"
     },
     "prioritize/sequencing": {
-      "label": "prioritize/other",
-      "reason": "other"
+      "label": "prioritize/sequenc",
+      "reason": "normalised"
     },
     "prioritize/trade-off": {
       "label": "prioritize/other",
@@ -966,7 +978,7 @@
       "reason": "other"
     },
     "propose/build-cascade": {
-      "label": "propose/directive",
+      "label": "propose/alternative",
       "reason": "folded:cascade,develop"
     },
     "propose/cheat-sheet": {
@@ -994,7 +1006,7 @@
       "reason": "folded:both,potentially"
     },
     "propose/complexify": {
-      "label": "propose/design",
+      "label": "propose/tentative",
       "reason": "folded:cascade,loop"
     },
     "propose/conditional": {
@@ -1026,11 +1038,11 @@
       "reason": "folded:code,rather"
     },
     "propose/debugger-vision": {
-      "label": "propose/tentative",
-      "reason": "folded:another,start,thought"
+      "label": "propose/next-step",
+      "reason": "folded:another,start"
     },
     "propose/demo-session": {
-      "label": "propose/alternative",
+      "label": "propose/next-step",
       "reason": "folded:behaviour,verify"
     },
     "propose/design": {
@@ -1055,7 +1067,7 @@
     },
     "propose/document": {
       "label": "propose/redirect-scope",
-      "reason": "folded:material,training"
+      "reason": "folded:material,process,training"
     },
     "propose/document-key": {
       "label": "propose/other",
@@ -1083,7 +1095,7 @@
     },
     "propose/evidence": {
       "label": "propose/next-step",
-      "reason": "folded:emacs,live"
+      "reason": "folded:emacs,example,live"
     },
     "propose/example": {
       "label": "propose/alternative",
@@ -1122,12 +1134,12 @@
       "reason": "folded:agency,become"
     },
     "propose/first-cut": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:hard,shouldn't"
     },
     "propose/floats-idea": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/alternative",
+      "reason": "folded:standard,time"
     },
     "propose/forward-model": {
       "label": "propose/next-step",
@@ -1146,8 +1158,8 @@
       "reason": "label:plan"
     },
     "propose/health-scan": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/extend",
+      "reason": "folded:beyond,scan"
     },
     "propose/hook-it-all-up": {
       "label": "propose/other",
@@ -1159,15 +1171,15 @@
     },
     "propose/hydra-as-tools": {
       "label": "propose/tentative",
-      "reason": "folded:hydra,verbs"
+      "reason": "folded:available,hydra,verbs"
     },
     "propose/icon-choice": {
       "label": "propose/icon-choice",
       "reason": "kept"
     },
     "propose/idea": {
-      "label": "propose/tentative",
-      "reason": "folded:another,good,interesting,while"
+      "label": "propose/next-step",
+      "reason": "folded:another,i've"
     },
     "propose/include-faults": {
       "label": "propose/other",
@@ -1198,12 +1210,12 @@
       "reason": "folded:changes,time"
     },
     "propose/mark-correction": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:form,same"
     },
     "propose/merge-staging": {
       "label": "propose/directive",
-      "reason": "folded:branch,bring,site"
+      "reason": "folded:branch,bring,site,staging"
     },
     "propose/merge-workstream": {
       "label": "propose/next-step",
@@ -1214,8 +1226,8 @@
       "reason": "label:plan"
     },
     "propose/mixed-readers": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:enough,kimi"
     },
     "propose/new-variant": {
       "label": "propose/tentative",
@@ -1226,8 +1238,8 @@
       "reason": "kept"
     },
     "propose/one-cascade": {
-      "label": "propose/directive",
-      "reason": "folded:cascade,items"
+      "label": "propose/tentative",
+      "reason": "folded:cascade,loop"
     },
     "propose/operator-availability": {
       "label": "propose/other",
@@ -1270,8 +1282,8 @@
       "reason": "kept"
     },
     "propose/positioning": {
-      "label": "propose/alternative",
-      "reason": "folded:idea,inference"
+      "label": "propose/tentative",
+      "reason": "folded:active,ideas,inference"
     },
     "propose/practical-improvements": {
       "label": "propose/tentative",
@@ -1290,8 +1302,8 @@
       "reason": "folded:cascade,r-nodes"
     },
     "propose/reading-claim": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:even,pattern"
     },
     "propose/redirect-scope": {
       "label": "propose/redirect-scope",
@@ -1330,8 +1342,8 @@
       "reason": "folded:machine,send"
     },
     "propose/research-question": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:cascade,worth"
     },
     "propose/resize": {
       "label": "propose/other",
@@ -1366,24 +1378,24 @@
       "reason": "folded:already,dependencies,time"
     },
     "propose/session-backlog": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/alternative",
+      "reason": "folded:backlog,saved,session"
     },
     "propose/shape-claim": {
       "label": "propose/next-step",
       "reason": "folded:cascade,look"
     },
     "propose/side-benefit": {
-      "label": "propose/alternative",
+      "label": "propose/next-step",
       "reason": "folded:code,question"
     },
     "propose/simplification": {
-      "label": "propose/design",
-      "reason": "folded:cascade,elaborated"
+      "label": "propose/tentative",
+      "reason": "folded:cascade,wiring"
     },
     "propose/smart-repl": {
-      "label": "propose/alternative",
-      "reason": "folded:frame,itself"
+      "label": "propose/tentative",
+      "reason": "folded:enough,frame,itself"
     },
     "propose/spare-instance": {
       "label": "propose/other",
@@ -1555,7 +1567,7 @@
     },
     "qualify/least-change": {
       "label": "qualify/caveat",
-      "reason": "folded:change,xtdb"
+      "reason": "folded:change,least,xtdb"
     },
     "qualify/left-unassigned": {
       "label": "qualify/other",
@@ -1574,8 +1586,8 @@
       "reason": "folded:change,questions"
     },
     "qualify/other": {
-      "label": "qualify/caveat",
-      "reason": "folded:it's,maybe"
+      "label": "qualify/other",
+      "reason": "other"
     },
     "qualify/out-of-scope": {
       "label": "qualify/scope",
@@ -1622,18 +1634,22 @@
       "reason": "kept"
     },
     "redirect/back-to-plan": {
-      "label": "redirect/other",
-      "reason": "other"
+      "label": "redirect/back-to-plan",
+      "reason": "kept"
     },
     "redirect/change-of-plan": {
-      "label": "redirect/other",
-      "reason": "other"
+      "label": "redirect/change-of-plan",
+      "reason": "kept"
     },
     "redirect/method": {
+      "label": "redirect/method",
+      "reason": "kept"
+    },
+    "redirect/other": {
       "label": "redirect/other",
       "reason": "other"
     },
-    "redirect/other": {
+    "redirect/refocus": {
       "label": "redirect/other",
       "reason": "other"
     },
@@ -1642,8 +1658,8 @@
       "reason": "other"
     },
     "redirect/to-technical": {
-      "label": "redirect/other",
-      "reason": "other"
+      "label": "redirect/back-to-plan",
+      "reason": "folded:focus,let's"
     },
     "redirect/topic": {
       "label": "redirect/other",
@@ -2010,16 +2026,16 @@
       "reason": "other"
     },
     "retract/other": {
-      "label": "retract/other",
-      "reason": "other"
+      "label": "retract/correction",
+      "reason": "folded:forgot,sorry"
     },
     "verify/check-live": {
       "label": "verify/check-live",
       "reason": "kept"
     },
     "verify/check-understand": {
-      "label": "verify/check-live",
-      "reason": "label:check"
+      "label": "verify/check-understand",
+      "reason": "kept"
     },
     "verify/checked-live": {
       "label": "verify/check-live",
@@ -2080,6 +2096,10 @@
     "verify/test-turn": {
       "label": "verify/check-live",
       "reason": "folded:test,testing,turn"
+    },
+    "withdraw/correction": {
+      "label": "withdraw/other",
+      "reason": "other"
     },
     "withdraw/stop-work": {
       "label": "withdraw/other",
