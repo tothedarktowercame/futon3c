@@ -66,7 +66,8 @@ PROOF_DIALOGUE_BRIEFS = {
         "stalled after criticism or when Lean-specific machinery needs translation into mathematics. "
         "Give one bounded hint, clarification, or consolidation of a completed phase, phrased without "
         "the next proof step. Do not quote Lean declaration names unless the discussion explicitly "
-        "reaches library search. Label the move lemma, discharge, or standing. Hand "
+        "reaches library search. Begin with exactly `[kind | mNNNN]`, using the next move ID and one "
+        "of lemma, discharge, or standing. Hand "
         "control back to @proof-student; the final line must contain that literal mention."
     ),
     "proof-student": (
@@ -74,7 +75,8 @@ PROOF_DIALOGUE_BRIEFS = {
         "read informal-solution.md, proof-outline.md, or lean/Main.lean. Reconstruct only from the "
         "problem and disclosed room messages. Drive the proof step by step: state one inference and "
         "its warrant, or repair the Critic's latest objection. Never skip an unresolved objection. "
-        "Label the move question, conjecture, lemma, proof, or repair. Submit every proposed step to "
+        "Begin with exactly `[kind | mNNNN]`, using the next move ID and one of question, conjecture, "
+        "lemma, proof, or repair. Submit every proposed step to "
         "@proof-critic; the final line must contain that literal mention."
     ),
     "proof-critic": (
@@ -84,7 +86,8 @@ PROOF_DIALOGUE_BRIEFS = {
         "warrant and ask @proof-student for a repair; do not supply the repair. If it is sound, discharge "
         "it explicitly and ask @proof-student for the next step. Ask @proof-teacher only when the same "
         "obstacle survives a repair attempt and is specifically about translating Lean machinery. "
-        "Label the move objection, counterexample, question, or discharge. End with exactly one literal "
+        "Begin with exactly `[kind | mNNNN]`, using the next move ID and one of objection, "
+        "counterexample, question, or discharge. End with exactly one literal "
         "role mention."
     ),
     "proof-scribe": (
@@ -98,7 +101,8 @@ PROOF_DIALOGUE_BRIEFS = {
         "`proof` node/edge graphs; open obligations; and `patterns`. Each pattern is a provisional "
         "flexiarg with context, problem, response, consequence, status (noticed, recurred, candidate, or "
         "validated), and exact move/span evidence. Never call a noticed pattern a proof rule or Lean "
-        "lemma. Label the move summary or standing. At a live checkpoint, "
+        "lemma. Begin with exactly `[kind | mNNNN]`, using the next move ID and either summary or "
+        "standing. At a live checkpoint, "
         "hand control to @proof-student with that literal final mention; a final frozen summary needs no "
         "mention."
     ),

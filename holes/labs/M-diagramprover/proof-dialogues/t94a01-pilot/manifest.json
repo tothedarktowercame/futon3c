@@ -1,7 +1,7 @@
 {
   "schema": "futon3c.proof-dialogue/v1",
   "run_id": "t94a01-pilot-1",
-  "status": "dialogue-active",
+  "status": "dialogue-active; prover-critic loop reached first discharge at m0005",
   "transport": {
     "kind": "matrix",
     "homeserver": "https://matrix.paragogy.net",

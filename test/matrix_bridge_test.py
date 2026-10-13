@@ -183,6 +183,7 @@ class MatrixTest(unittest.TestCase):
             context = bot._surface_context(SENDER, '', False, channel=ROOM)
             self.assertIn('t94A01', context)
             self.assertIn('proof dialogue', context)
+            self.assertIn('Begin with exactly `[kind | mNNNN]`', context)
             if nick == 'proof-teacher':
                 self.assertIn('may inspect the frozen', context)
                 self.assertNotIn('MUST NOT', context)
