@@ -1,7 +1,7 @@
 # E-cool-memories: from temporal memory laws to proofs as diagrams
 
-**Status:** COMPLETE — P0–P7 landed 2026-10-13, with the general-path and
-scope-evaluation limitations recorded below.
+**Status:** COMPLETE — P0–P7 and the general normalization path landed
+2026-10-13, with the scope-evaluation limitations recorded below.
 
 **Repos:** `minus40` (the system and first laws), `futon3c`
 (`M-diagramprover`, later scope comparison), and a Lean workspace to be chosen
@@ -29,9 +29,8 @@ The prospective artifact for Aleks Kissinger is deliberately small:
 > against the proof's formal structure.
 
 This excursion records the route and its receipts. The artifact exists at the
-bounded level stated here: one concrete M40° cancellation is a checked proof
-diagram; the general composition law is a Lean theorem but not yet a general
-rewrite path.
+bounded level stated here: M40° delta composition has a general checked proof
+diagram, with a concrete transient cancellation as its smallest witness.
 
 ## The three objects that must not be conflated
 
@@ -389,9 +388,9 @@ Claude-16 compared the frozen conversation available to it with mathlib4
 `de5a2a58ec` in futon3c commit `3610a2225`. The report is
 `holes/labs/M-diagramprover/REPORT-P6-cool-memories-scope-comparison-2026-10-13.md`.
 It found that the principal governing constraints are realised in the formal
-artifact, but also isolated the decisive limitation: the general endpoint
-composition theorem is an extensional proof, while only the concrete
-transient-fact instance is a checked `Path` of named rewrites. Interchange is
+artifact, but also isolated a limitation in the frozen commit: the general
+endpoint composition theorem was an extensional proof, while only the concrete
+transient-fact instance was a checked `Path` of named rewrites. Interchange is
 semantic rather than a diagram rewrite because the syntax has no parallel
 constructor. A misleading renderer label mentioning reassociation was removed
 in mathlib4 commit `74e3e35a51`.
@@ -407,21 +406,29 @@ P7 is the deliberately short external artifact
 `holes/labs/M-diagramprover/NOTE-cool-memories-prototype-2026-10-13.md`. It leads
 with the bounded positive result, supplies reproduction commands, and states
 the negative claims explicitly: no Elephant implementation, accomplishment
-judge, Markov-category model, War Machine reformalisation, general rewrite
-normaliser, or open-theory composition theorem.
+judge, Markov-category model, War Machine reformalisation, parallel proof
+constructor, or open-theory composition theorem.
 
-The next technically meaningful theorem is a general checked normalisation
-path from any sequential pair `Δ(A,B) ; Δ(B,C)` to `Δ(A,C)`, followed by a
-parallel constructor making interchange diagrammatic. Those are follow-on
-work, not missing evidence for the narrower completed excursion.
+The next technically meaningful extension is a parallel constructor making
+interchange diagrammatic.
 
 Follow-up mathlib4 commit `48abaaa949` makes the first of those tasks precise:
 `mem_comp_between_remove_iff` and `mem_comp_between_add_iff` prove for arbitrary
 `A`, `B`, `C` that a fused delta differs from the canonical endpoint delta only
 by facts absent at the source which appear then disappear, and facts present at
 the source which disappear then reappear. These are exactly the two
-source-licensed edit classes the future general rewrite path must cancel. The
+source-licensed edit classes the general rewrite path must cancel. The
 four Cool Memories targets rebuilt successfully (681 jobs).
+
+Mathlib4 commit `9343186e70` closes that path gap. It adds checked bulk
+cancellation steps for all removals absent at the typed source and all
+additions already present there; proves that applying those steps to any
+certified delta yields its canonical endpoint delta; and constructs
+`betweenSeqNormalizationPath A B C` as `fuse → dropAbsentRemoves →
+dropPresentAdds → identify`. Its soundness is inherited row-by-row from
+`Path.sound`, not from the older extensional theorem. All five Cool Memories
+targets, including the negative boundary target, rebuilt successfully (682
+jobs).
 
 The P6 audit also correctly observed that the wrong-source rejection was only
 described, unlike the three executable semantic corruptions. Mathlib4 commit
@@ -431,7 +438,8 @@ rejects composition of a `{1} → {2}` box with a `{3} → {4}` box at
 elaboration. `lake build DarkTower.CoolMemoriesBoundaryNegative` passed (593
 jobs), meaning the expected rejection occurred. The audit's X2 was separately
 closed by `74e3e35a51`; X4 described its frozen pre-adapter commit and is closed
-by the P0/P4 receipts above. X1 remains the substantive open limitation.
+by the P0/P4 receipts above. X1 is closed by `9343186e70`; the absence of a
+parallel proof constructor remains open.
 
 ## Stop conditions
 

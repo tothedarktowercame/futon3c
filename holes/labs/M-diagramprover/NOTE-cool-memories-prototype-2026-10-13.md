@@ -14,10 +14,12 @@ The surrounding general law is also proved:
 apply (Δ(A,B) ; Δ(B,C)) A = apply Δ(A,C) A
 ```
 
-That general theorem is currently an extensional Lean proof, not yet a rewrite
-path for arbitrary `A`, `B`, and `C`.  So the precise claim is: **one instance
-of the first M40° law is a checked proof diagram; the general law is a Lean
-theorem.**
+The general theorem now also has a checked rewrite path for arbitrary `A`,
+`B`, and `C`: fuse the edits; cancel every removal licensed by absence at the
+typed source; cancel every addition licensed by presence there; then identify
+the result with the canonical endpoint delta.  Lean separately proves that
+these cancellations always reach `Δ(A,C)`, so the normal form is not selected
+by definition.
 
 ## What is operational rather than illustrative
 
@@ -41,8 +43,9 @@ artifact found that the governing constraints were mostly visible in the
 definitions and soundness arguments: separation of syntax, interpretation and
 proof; structural rather than endpoint-by-definition composition; source-
 licensed cancellation; and a pure trusted core.  It also found the important
-counterexample above: only the transient instance, not the general law, is a
-rewrite path.  The comparison cannot support precision or recall claims.  It
+counterexample that was true of the frozen commit: only the transient instance,
+not the general law, was then a rewrite path. That gap was subsequently closed
+by mathlib4 `9343186e70`. The comparison cannot support precision or recall claims. It
 used a retrospective consolidation rather than the original turn records,
 and its sole labeller had also supplied part of the design.  Its method may be
 reused; its numbers should not be.
@@ -57,7 +60,8 @@ Pinned commits:
 
 - minus40 `3b246c430fbabc476c3d1db5f7ad11ecb0e72165`
 - mathlib4 `de5a2a58ec` (core and diagram), `1333ca5a8d`
-  (open-theory checker), and `74e3e35a51` (claim-label correction)
+  (open-theory checker), `74e3e35a51` (claim-label correction), and
+  `9343186e70` (general checked normalization path)
 - futon3c `606aa86bf` (open-theory fixture) and `3610a2225` (scope report)
 
 Focused commands:
