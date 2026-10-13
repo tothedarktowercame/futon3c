@@ -24,29 +24,13 @@ interface described in your project, so I would be especially interested in
 whether our corpus, failure records, or review workflow could provide a useful
 external test case as your implementation develops.
 
-One further piece bears on your fourth aim, co-developing proofs with
-machines. We keep every exchange between the human operator and the agents
-as a record of speech acts and the obligations they create, and we model
-the recurring working arrangements (our design patterns) as small open
-causal models. Each pattern's DAG presents a causal theory in the sense of
-Fong's 2012 thesis, the free copy-discard category on its variables and
-mechanisms, and the pattern's Boolean structural equations are an open
-model of it in Set, open as in Lorenz and Tull's open causal models, with
-some variables left as inputs without a mechanism. An incident is the
-gluing of the patterns that bear on it. The gluing identifies variables by
-shared name and refuses on a missing interface declaration, a doubly owned
-variable, or a cycle. A reading pass this month corrected our first
-description of it: it is not decorated-cospan composition but gluing in the
-cospan operad restricted to copy-discard diagrams, with the two refusals
-being Fritz and Liang's left-monogamy and acyclicity conditions. On one
-recorded incident the glued model returned a causal cone, an interventional
-counterfactual, and 103 conditional independencies implied jointly by the
-patterns, which have not yet been tested against the record. The fragment
-is finite and Boolean; the extensions we want are mechanisms in a Markov
-category and promises as processes with a hole. I mention it because it is
-the part of our work where diagrammatic causal reasoning is already doing
-something, and because your tactics, if they reach Markov-categorical
-string diagrams, are the natural next step for it.
+Separately, we have built a small Boolean prototype that composes causal
+models of recurring collaboration patterns. On one hand-authored incident
+model it computes causal ancestry, intervention and counterfactual queries,
+and conditional-independence predictions. Those predictions have not yet
+been tested against the underlying record, and this is not yet a
+Markov-category formalisation. It may nevertheless offer a second, small
+test case for diagrammatic tactics.
 
 If that sounds relevant, I would be glad to send a short technical note or
 show you the current pipeline and data. I would also be interested to hear
@@ -83,19 +67,13 @@ Checked 2026-10-13. These references support only the claims retained above.
   `futon6/src/futon6/paper_dependency.py`. The letter makes no corpus-size or
   accuracy claim.
 
-- **Patterns as open causal models; gluing and its refusals.**
-  `notebooks/daxiang_live.clj` §5 and references [2]–[6] (Fong
-  arXiv:1301.6201 §4.1–4.2; Lorenz–Tull arXiv:2304.07638 §5, Rem. 59;
-  Fong arXiv:1502.00872; Baez–Courser arXiv:1911.04630; Fritz–Liang
-  arXiv:2204.02284 Defs 3.5–3.6); code
-  `src/futon3c/diagramprover/causal/open_theory.clj`.
-- **Attribution correction (not decorated cospans; cospan-operad gluing on
-  copy-discard diagrams).** `futon5a/holes/excursions/E-the-dark-tower-3.md`,
-  REPORT Q1, verdicts 1b (REFUTED as worded) and 1c.
-- **Causal cone, counterfactual, 103 independencies on one incident.**
-  `holes/missions/M-diagramprover.md`, "Skeleton use case 2" (2026-10-02),
-  including the stated limits: mechanisms authored from mission text, Boolean
-  values, predictions untested.
+- **Boolean causal-model prototype.** The implementation is
+  `src/futon3c/diagramprover/causal/open_theory.clj`; the worked incident and
+  its tests and limitations are recorded in `holes/missions/M-diagramprover.md`,
+  section "Skeleton use case 2" (2026-10-02). Its mechanisms were authored
+  from mission text, its values are Boolean, and its predictions remain
+  untested. The Markov-category extension is explicitly listed there as not
+  built.
 
 Omitted deliberately: mutable file counts; the three-day dialogue-lab totals;
 claims that the system already covers three of the project's four parts; and
