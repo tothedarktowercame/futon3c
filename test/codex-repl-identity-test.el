@@ -93,6 +93,19 @@
     (should-not codex-repl--last-evidence-id)
     (should-not codex-repl--last-emitted-session-id)))
 
+(ert-deftest codex-repl-registry-status-uses-clojure-keyword-literal ()
+  (with-temp-buffer
+    (codex-repl-mode)
+    (setq-local codex-repl-agency-agent-id "codex-test")
+    (let (evaluated)
+      (cl-letf (((symbol-function 'codex-repl--drawbridge-eval)
+                 (lambda (code _timeout)
+                   (setq evaluated code)
+                   '(:ok t))))
+        (codex-repl--report-registry-invoke-state! :idle nil))
+      (should (string-match-p "{:status :idle " evaluated))
+      (should-not (string-match-p "{:status ::idle " evaluated)))))
+
 (ert-deftest codex-repl-backfills-first-user-turn-when-session-is-minted ()
   (with-temp-buffer
     (codex-repl-mode)

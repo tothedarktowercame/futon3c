@@ -1893,7 +1893,7 @@ short human-readable progress string to surface in *agents*."
   (when (and (stringp codex-repl-agency-agent-id)
              (not (string-empty-p codex-repl-agency-agent-id)))
     (let* ((status-form (if (keywordp status)
-                            (format ":%s" (symbol-name status))
+                            (symbol-name status)
                           (format "%S" (format "%s" status))))
            (clj-code
            (format
