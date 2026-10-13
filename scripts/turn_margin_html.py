@@ -432,6 +432,17 @@ def agent_of(path):
         return None
 
 
+def operator_turn(path):
+    """True when the record is an operator turn. Records carry `origin`
+    (operator | agent | system) since 2026-10; bells between agents are
+    `agent` and do not belong in a feed of what Joe said. Records older than
+    the field have no origin and are operator turns."""
+    try:
+        return json.load(open(path, encoding="utf-8")).get("origin", "operator") == "operator"
+    except (OSError, ValueError):
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("records", nargs="*")
@@ -450,6 +461,7 @@ def main():
     if a.latest:
         every = [p for p in glob.glob(f"{a.records_dir}/turn-*.json")
                  if re.fullmatch(r"turn-[^.]+\.json", os.path.basename(p))]
+        every = [p for p in every if operator_turn(p)]
         if a.agent:
             # The latest N of THIS agent's turns: counted across all agents,
             # one busy agent's turns push another's out of its own feed.
