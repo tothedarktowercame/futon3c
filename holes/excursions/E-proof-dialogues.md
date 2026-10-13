@@ -87,3 +87,16 @@ The existing Matrix-backed FUTON room client now renders explicit `$…$`,
 continues to read the original Matrix event bodies; KaTeX's MathML annotation
 retains the source TeX.  No alternate transcript or server-side formatted
 body is introduced.
+
+The built client was deployed to `https://zone.hyperreal.enterprises/xiang-widget/`.
+The live JavaScript and KaTeX CSS were fetched through Caddy and matched the
+tested build byte-for-byte (SHA-256 `3a8e5a17…54be` and
+`19095127…2e75`, respectively).
+
+`scripts/lean_formal_capture.py` adds the semantic layer without replacing the
+source manifest.  It opens the frozen proof in Lean's language server and asks
+for the elaborated goal at each of the 24 recorded region positions.  It also
+runs apm-lean's `#declaration_reachability` against the compiled theorem
+module.  The frozen `lean-formal-capture.json` has no diagnostics, 24 goal
+captures, a 15,444-constant transitive closure, all 9 local declarations
+reachable, and no local orphan declarations.

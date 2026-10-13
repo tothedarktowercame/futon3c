@@ -1,0 +1,220 @@
+{
+  "diagnostics": [],
+  "goal_captures": [
+    {
+      "character": 2,
+      "goals": [
+        "f g : APMT94A01.Cube\ni : ℕ\n⊢ |↑(f i) - ↑(g i)| ≤ 1"
+      ],
+      "line": 23,
+      "region_id": "decl:abs_sub_le_one:step:23"
+    },
+    {
+      "character": 2,
+      "goals": [
+        "f g : APMT94A01.Cube\ni : ℕ\na1 : 0 ≤ ↑(f i)\na2 : ↑(f i) ≤ 1\n⊢ |↑(f i) - ↑(g i)| ≤ 1"
+      ],
+      "line": 24,
+      "region_id": "decl:abs_sub_le_one:step:24"
+    },
+    {
+      "character": 2,
+      "goals": [
+        "⊢ Summable fun i ↦ (1 / 2) ^ (i + 1)"
+      ],
+      "line": 33,
+      "region_id": "decl:summable_geom':step:33"
+    },
+    {
+      "character": 2,
+      "goals": [
+        "h : Summable fun i ↦ 1 / 2 * (1 / 2) ^ i\n⊢ Summable fun i ↦ (1 / 2) ^ (i + 1)"
+      ],
+      "line": 34,
+      "region_id": "decl:summable_geom':step:34"
+    },
+    {
+      "character": 2,
+      "goals": [
+        "f : APMT94A01.Cube\n⊢ Continuous fun g ↦ ∑' (i : ℕ), (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)|"
+      ],
+      "line": 47,
+      "region_id": "decl:continuous_rho:step:47"
+    },
+    {
+      "character": 2,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\n⊢ IsOpen U → ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+        "case mpr\nU : Set APMT94A01.Cube\n⊢ (∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U) → IsOpen U"
+      ],
+      "line": 55,
+      "region_id": "decl:apm_t94a01:branch:1"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 56,
+      "region_id": "decl:apm_t94a01:step:56"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nhn : ∃ I, I.Finite ∧ ∃ t, (∀ (i : ℕ), t i ∈ nhds (f i)) ∧ I.pi t ⊆ U\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 58,
+      "region_id": "decl:apm_t94a01:step:58"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 59,
+      "region_id": "decl:apm_t94a01:step:59"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nhδ : ∀ (i : ℕ), ∃ δ > 0, Metric.ball (f i) δ ⊆ t i\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 60,
+      "region_id": "decl:apm_t94a01:step:60"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 61,
+      "region_id": "decl:apm_t94a01:step:61"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 64,
+      "region_id": "decl:apm_t94a01:step:64"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nε : ℝ\nhε : ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nhεpos : 0 < ε\n⊢ ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+      ],
+      "line": 65,
+      "region_id": "decl:apm_t94a01:step:65"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nε : ℝ\nhε : ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nhεpos : 0 < ε\ng : APMT94A01.Cube\nhg : g ∈ {g | APMT94A01.rho f g < ε}\ni : ℕ\nhi : i ∈ I\n⊢ g i ∈ Metric.ball (f i) (δ i)"
+      ],
+      "line": 66,
+      "region_id": "decl:apm_t94a01:step:66"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nε : ℝ\nhε : ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nhεpos : 0 < ε\ng : APMT94A01.Cube\nhg : g ∈ {g | APMT94A01.rho f g < ε}\ni : ℕ\nhi : i ∈ I\nh1 : (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g\n⊢ g i ∈ Metric.ball (f i) (δ i)"
+      ],
+      "line": 67,
+      "region_id": "decl:apm_t94a01:step:67"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nε : ℝ\nhε : ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nhεpos : 0 < ε\ng : APMT94A01.Cube\nhg : g ∈ {g | APMT94A01.rho f g < ε}\ni : ℕ\nhi : i ∈ I\nh1 : (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g\nh2 : ε < (1 / 2) ^ (i + 1) * δ i\n⊢ g i ∈ Metric.ball (f i) (δ i)"
+      ],
+      "line": 68,
+      "region_id": "decl:apm_t94a01:step:68"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nε : ℝ\nhε : ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nhεpos : 0 < ε\ng : APMT94A01.Cube\nhg : g ∈ {g | APMT94A01.rho f g < ε}\ni : ℕ\nhi : i ∈ I\nh1 : (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g\nh2 : ε < (1 / 2) ^ (i + 1) * δ i\nhp : 0 < (1 / 2) ^ (i + 1)\n⊢ |↑(f i) - ↑(g i)| < δ i"
+      ],
+      "line": 70,
+      "region_id": "decl:apm_t94a01:step:70"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mp\nU : Set APMT94A01.Cube\nhU : IsOpen U\nf : APMT94A01.Cube\nhf : f ∈ U\nI : Set ℕ\nhI : I.Finite\nt : ℕ → Set ↑(Set.Icc 0 1)\nht : ∀ (i : ℕ), t i ∈ nhds (f i)\nhsub : I.pi t ⊆ U\nδ : ℕ → ℝ\nhδpos : ∀ (i : ℕ), δ i > 0\nhδsub : ∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i\nhev : ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nε : ℝ\nhε : ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i\nhεpos : 0 < ε\ng : APMT94A01.Cube\nhg : g ∈ {g | APMT94A01.rho f g < ε}\ni : ℕ\nhi : i ∈ I\nh1 : (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g\nh2 : ε < (1 / 2) ^ (i + 1) * δ i\nhp : 0 < (1 / 2) ^ (i + 1)\nthis : (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| < (1 / 2) ^ (i + 1) * δ i\n⊢ |↑(f i) - ↑(g i)| < δ i"
+      ],
+      "line": 72,
+      "region_id": "decl:apm_t94a01:step:72"
+    },
+    {
+      "character": 2,
+      "goals": [
+        "case mpr\nU : Set APMT94A01.Cube\n⊢ (∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U) → IsOpen U"
+      ],
+      "line": 73,
+      "region_id": "decl:apm_t94a01:branch:2"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mpr\nU : Set APMT94A01.Cube\nh : ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U\n⊢ ∀ x ∈ U, U ∈ nhds x"
+      ],
+      "line": 75,
+      "region_id": "decl:apm_t94a01:step:75"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mpr\nU : Set APMT94A01.Cube\nh : ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U\nf : APMT94A01.Cube\nhf : f ∈ U\n⊢ U ∈ nhds f"
+      ],
+      "line": 76,
+      "region_id": "decl:apm_t94a01:step:76"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mpr\nU : Set APMT94A01.Cube\nh : ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U\nf : APMT94A01.Cube\nhf : f ∈ U\nε : ℝ\nhε : ε > 0\nhsub : {g | APMT94A01.rho f g < ε} ⊆ U\n⊢ U ∈ nhds f"
+      ],
+      "line": 77,
+      "region_id": "decl:apm_t94a01:step:77"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mpr\nU : Set APMT94A01.Cube\nh : ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U\nf : APMT94A01.Cube\nhf : f ∈ U\nε : ℝ\nhε : ε > 0\nhsub : {g | APMT94A01.rho f g < ε} ⊆ U\n⊢ {g | APMT94A01.rho f g < ε} ∈ nhds f"
+      ],
+      "line": 78,
+      "region_id": "decl:apm_t94a01:step:78"
+    },
+    {
+      "character": 4,
+      "goals": [
+        "case mpr\nU : Set APMT94A01.Cube\nh : ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U\nf : APMT94A01.Cube\nhf : f ∈ U\nε : ℝ\nhε : ε > 0\nhsub : {g | APMT94A01.rho f g < ε} ⊆ U\nhf0 : APMT94A01.rho f f = 0\n⊢ {g | APMT94A01.rho f g < ε} ∈ nhds f"
+      ],
+      "line": 79,
+      "region_id": "decl:apm_t94a01:step:79"
+    }
+  ],
+  "lean_version": "Lean (version 4.29.0-rc8, x86_64-unknown-linux-gnu, commit 513160ea59dfd60defec325636bbc5215a8a6e7e, Release)",
+  "reachability": {
+    "module": "problems.t94A01.lean.Main",
+    "module_declaration_count": 9,
+    "orphans": [],
+    "reachable": [
+      "APMT94A01.Cube",
+      "APMT94A01.rho",
+      "abs_sub_le_one",
+      "apm_t94a01",
+      "continuous_rho",
+      "single_le",
+      "summable_geom'",
+      "summable_terms",
+      "term_le"
+    ],
+    "target": "apm_t94a01",
+    "transitive_closure_size": 15444
+  },
+  "schema": "futon3c.lean-formal-capture/v1",
+  "source": "problems/t94A01/lean/Main.lean",
+  "source_sha256": "c380fee01c8944ee03384a11b692547653df3bad6674f1e99853d1b19c1dcc6b"
+}

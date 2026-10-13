@@ -27,8 +27,10 @@
   },
   "formal_analysis": {
     "proof_regions": "lean-proof-regions.json",
+    "formal_capture": "lean-formal-capture.json",
     "schema": "futon3c.lean-proof-regions/v1",
-    "status": "syntactic-source-regions; semantic reachability and tactic states pending"
+    "capture_schema": "futon3c.lean-formal-capture/v1",
+    "status": "source regions plus Lean-server goals and declaration reachability captured"
   },
   "roles": {
     "teacher": {"may_read": ["problem", "informal_solution", "lean_proof"]},
