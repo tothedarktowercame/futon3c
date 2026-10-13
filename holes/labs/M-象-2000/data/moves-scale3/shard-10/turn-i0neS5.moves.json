@@ -1,0 +1,48 @@
+{
+ "record": "turn-i0neS5",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-169-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "whoever fed cascadePolicySet with the degenerate badly designed system certainly did not get it from me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-169-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "this machine should not be based on facades",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-169-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "you tell me that there was 1 item in the policy space",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

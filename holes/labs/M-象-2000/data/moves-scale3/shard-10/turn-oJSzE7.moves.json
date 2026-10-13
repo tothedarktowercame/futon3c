@@ -1,0 +1,35 @@
+{
+ "record": "turn-oJSzE7",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-113-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "Another agent is doing a heavy backfill job that adds another index",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-113-f-s1-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "so we will restart after that finishes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-113-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

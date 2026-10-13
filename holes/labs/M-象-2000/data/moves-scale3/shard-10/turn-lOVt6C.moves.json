@@ -1,0 +1,48 @@
+{
+ "record": "turn-lOVt6C",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-138-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/handoff-spec",
+   "quote": "Let's agree the plan with codex-6.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-138-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "a plan that does not involve running \"clicks\" because you have wasted time and usage that way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-138-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-138-f-s3-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "You will need to agree another plan for verifying that the behaviour will work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-138-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

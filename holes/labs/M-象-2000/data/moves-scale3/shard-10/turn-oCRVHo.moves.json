@@ -1,0 +1,100 @@
+{
+ "record": "turn-oCRVHo",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-168-f-s1-0",
+   "kind": "verify",
+   "move": "verify/check-understand",
+   "quote": "Surel the system specified in Lean cannot have failed to have recorded this core design principle",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-168-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "There is an order of operation problem.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-168-f-s3-0",
+   "kind": "redirect",
+   "move": "redirect/method",
+   "quote": "Go ahead and interpret a pattern, after you select it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-168-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "Don't gate selection on there already being an interpretation.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-168-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-168-f-s5-0",
+   "kind": "direct",
+   "move": "ask-action/read-record",
+   "quote": "Look at how M-象-cascade works.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-168-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-168-f-s6-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I have been told that the machine was ready to run, that it met the specification.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-168-f-s7-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "the specification either did not write down what I said should be in there, or it was changed after the fact.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-168-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

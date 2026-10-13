@@ -1,0 +1,74 @@
+{
+ "record": "turn-iNKHir",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-280-f-s1-0",
+   "kind": "continue",
+   "move": "continue/resume-work",
+   "quote": "OK so...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-280-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "if it is really a stepper with Elephant-2000 semantics we should be able to demonstrate things like rewinding.",
+   "answers": [],
+   "scope": {
+    "opens": "rewind-demos",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-280-f-s3-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "One way to do this would be via git pins.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "rewind-demos"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-280-f-s4-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "I have made various attempts at having the inbox-zero service actually work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-280-f-s5-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "If we instead wanted to unwind aspects of an interpretation",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "rewind-demos"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

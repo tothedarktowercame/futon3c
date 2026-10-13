@@ -1,0 +1,48 @@
+{
+ "record": "turn-x92YqA",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-192-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "They won't always have tagged/analysed turns because that's a new feature",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-192-f-s1-1",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "we could find a few examples and do the analysis on them",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-192-f-s1-2",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "surely some missions will have been worked on since the time when the Evidence Landscape was turned on",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

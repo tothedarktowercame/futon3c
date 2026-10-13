@@ -1,0 +1,126 @@
+{
+ "record": "turn-pBW6st",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-341-f-s1-0",
+   "kind": "continue",
+   "move": "continue/resume-work",
+   "quote": "Hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s2-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "the live-gap feature could be interesting",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/check-understand",
+   "quote": "I was thinking that you were talking about gaps like the time between turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s4-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Maybe we can look into both.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the 象 annotations are only on the operator turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s6-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "we'd have to model it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s7-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Your remark about \"parks on a deadline\" is something we already model.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s8-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "We don't need a special \"promise\" agent tool for that.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-341-f-s9-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe we would *benefit* from interfacing with the custom harness used by Zai and Kimi",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

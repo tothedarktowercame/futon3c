@@ -1,0 +1,35 @@
+{
+ "record": "turn-nsNSf2",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-333-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "\"cascade file\" isn't quite my concept of how this should work",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-333-f-s1-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "I want a giant connected cascade of which individual cascades are just \"retractions\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

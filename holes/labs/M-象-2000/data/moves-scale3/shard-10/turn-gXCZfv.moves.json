@@ -1,0 +1,22 @@
+{
+ "record": "turn-gXCZfv",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-35-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "we should make the \"staging\" site a git checkout like futon7a",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

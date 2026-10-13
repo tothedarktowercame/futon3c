@@ -1,0 +1,35 @@
+{
+ "record": "turn-zjvQRQ",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-346-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Sure, this is a good level of pilot/follow-up on the idea we were discussing, please do",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-346-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "we could write it up as a TN-G-over-cascades-revisited.md",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-346-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

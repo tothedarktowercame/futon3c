@@ -1,0 +1,74 @@
+{
+ "record": "turn-on8hJV",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-93-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "this business of \"five targets\" is reminiscent of the earlier white list facade",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-93-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "The machine should have all unfinished Missions, Excursions, and Tickets to choose from.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-93-f-s3-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "The \"five targets\" is at best a placeholder for a complete target",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-93-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-93-f-s3-1",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "we can't have a \"War Machine ranging over all available tasks in FUTON",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-93-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-93-f-s4-0",
+   "kind": "extend",
+   "move": "extend/possibility",
+   "quote": "Especially if, as a kind of picky eater, it won't even work on the five",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-93-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

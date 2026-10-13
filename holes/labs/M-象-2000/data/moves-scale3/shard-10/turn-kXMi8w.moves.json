@@ -1,0 +1,74 @@
+{
+ "record": "turn-kXMi8w",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-283-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Ah, I had forgotten about park.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-283-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "That complexifies it a bit b/c in a highly orchestrated mode there may be one operator turn and 100 or 1000",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-283-f-s3-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "for now, let's keep it simple and NOT do the part about continuations.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": "claude-17-turn-283-f-s2-0",
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-283-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "We'll know what the agent did in its turn, and that's it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-283-f-s5-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "Obviously if there are 1000 continuations we won't be able to rewind them all individually but we should at",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

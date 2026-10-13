@@ -1,0 +1,48 @@
+{
+ "record": "turn-l92VRh",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "codex-10-turn-12@turn-l92VRh-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "OK shall we run another click?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-10-turn-12@turn-l92VRh-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "Things to look for would be: it selects a different mission",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-10-turn-12@turn-l92VRh-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-10-turn-12@turn-l92VRh-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we could make it a new walk-through running example in the PLoP-2026 paper.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

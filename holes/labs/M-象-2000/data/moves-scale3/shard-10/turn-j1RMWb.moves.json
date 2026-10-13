@@ -1,0 +1,35 @@
+{
+ "record": "turn-j1RMWb",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-164-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "You can be granted 1 click under the new system",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-164-f-s1-1",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "it needs to be pushed through end to end",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-164-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

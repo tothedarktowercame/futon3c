@@ -1,0 +1,48 @@
+{
+ "record": "turn-lKnuWk",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-270-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/back-to-plan",
+   "quote": "Let's try to focus on the M-象-2000 issues.",
+   "answers": [],
+   "scope": {
+    "opens": "M-象-2000-focus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-270-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the underlining of old joe: turns goes away",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-270-f-s2-1",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "e.g., line 907 in *claude-repl:claude-4* had other qualities I wanted to talk about but the underlining is",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-270-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-yVubZK",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-60-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/premise",
+   "quote": "well, the weeks to months stuff seems a bit crazy to me.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-60-f-s2-0",
+   "kind": "verify",
+   "move": "verify/check-understand",
+   "quote": "are we not formally checking known results?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-60-f-s3-0",
+   "kind": "verify",
+   "move": "verify/status-check",
+   "quote": "anyway is apm-lean and the current topo loop running material xhecked in and pushed?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

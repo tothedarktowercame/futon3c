@@ -1,0 +1,35 @@
+{
+ "record": "turn-wkDFj5",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-279-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I don't know what the right solution is",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-279-f-s1-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "presumably it just shouldn't display anything until the results are ready",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-279-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,113 @@
+{
+ "record": "turn-jNu4PX",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-237-f-s1-0",
+   "kind": "redirect",
+   "move": "redirect/change-of-plan",
+   "quote": "I have a better idea than summarising.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Let's use the Evidence Landscape.",
+   "answers": [],
+   "scope": {
+    "opens": "evidence-landscape-heads",
+    "closes": null,
+    "within": "claude-1-turn-237-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "HEADs are supposed to be in my words.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-237-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s4-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "go find when they were recorded and see what words of mine were associated",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-237-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s5-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Two limitations are worth considering",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s6-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "we wouldn't expect to get complete coverage using this technique.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-237-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s7-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "if we got, say, 70 missions with real HEADs this way, then we could run the system without it being a facade",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-237-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-237-f-s8-0",
+   "kind": "extend",
+   "move": "extend/possibility",
+   "quote": "NB similar concepts apply to Excursions and Tickets.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

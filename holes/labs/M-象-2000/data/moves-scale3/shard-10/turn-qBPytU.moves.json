@@ -1,0 +1,126 @@
+{
+ "record": "turn-qBPytU",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-264-f-s1-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "So...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "the first demo would be for me, not for the website",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s2-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "can we walk through some of the Elephant-2000 interactions with this system?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-264-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "we might need to build the alignment of what the agent actually did",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s4-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "I'm pretty sure we could build a 2-up mode",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s5-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "it's a little bit like building GDB but for operator turns.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s6-0",
+   "kind": "clarify",
+   "move": "clarify/ask-fact",
+   "quote": "What did I say?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s7-0",
+   "kind": "clarify",
+   "move": "clarify/ask-fact",
+   "quote": "What was the parse?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-264-f-s8-0",
+   "kind": "clarify",
+   "move": "clarify/ask-fact",
+   "quote": "Then, what happened?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

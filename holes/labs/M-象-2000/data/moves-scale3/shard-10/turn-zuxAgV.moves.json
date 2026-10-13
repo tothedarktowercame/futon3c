@@ -1,0 +1,87 @@
+{
+ "record": "turn-zuxAgV",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-345-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "So, yes, we're on the same page.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-345-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Let's assume that Claude-1 manages to get the War Machine build itself under control.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-345-f-s3-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "So, we will specify \"critical parameters\" for example.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-345-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-345-f-s4-0",
+   "kind": "prioritize",
+   "move": "prioritize/focus",
+   "quote": "I think what we can do that is most valuable is to try and understand the *build process*",
+   "answers": [],
+   "scope": {
+    "opens": "build-process-understanding",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-345-f-s5-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "E.g., let's consider that the deficiences of the War Machine are *mirrored* by the deficiencies of the overall",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-345-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-345-f-s6-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "Just as the War Machine could not see most of its niche and had reduced its \"brain\" to 2 neurons",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-345-f-s5-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

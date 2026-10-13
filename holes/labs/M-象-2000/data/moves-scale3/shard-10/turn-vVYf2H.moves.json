@@ -1,0 +1,35 @@
+{
+ "record": "turn-vVYf2H",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-117-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "before several diversions we were working through PROOF-2b on a \"one demonstrated capability per dispatch\" basis",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-117-f-s1-1",
+   "kind": "continue",
+   "move": "continue/resume-work",
+   "quote": "can we get back to that?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-117-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

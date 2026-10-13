@@ -1,0 +1,152 @@
+{
+ "record": "turn-q7JPOG",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-343-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "So, I like the direct way you put it, assuming I understand correctly.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s2-0",
+   "kind": "collect",
+   "move": "collect/quote-back",
+   "quote": "The commitments that were broken are yours to the program, not the agent's to you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/check-understand",
+   "quote": "Here I don't think you're saying I was not living up to my own standard.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-343-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/definition",
+   "quote": "I think what you're saying is that I had specified certain things",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-343-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s5-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "this wasn't a case of agent malfeasance either",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s6-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "So it's not that they or I transgressed a rule, it's more like, the rule was never really written down in a",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s7-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I ended up feeling upset because I thought I'd be getting something else out of this process",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s8-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "the \"commitment to the program\" was broken not at the point of delivery, but really at the point of specification.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s9-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "I *thought* I was requisitioning something that was clearly specified",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s10-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "with a model written down in Lean) but what I learned is that the Lean model contained backdoors where it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-343-f-s11-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "NOTE-lean-backdoor-audit-2026-09-30.md",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-jaTrCG",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-61-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/read-record",
+   "quote": "but what code regulates the loops so I can point Rob to that?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

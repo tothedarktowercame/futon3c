@@ -1,0 +1,35 @@
+{
+ "record": "turn-vA4xCY",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-303-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "OK, let's set up another practice turn.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-303-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "@claude-17 please make a signed commit in futon7a which I will subsequently rewind.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-303-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-jydyGP",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-347-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Sure we could do a \"TN-facade-considered-harmful.md\" if you just search on \"facade\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-347-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/definition",
+   "quote": "I'm thinking that facade is a correct usage for the Facade design pattern",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-347-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

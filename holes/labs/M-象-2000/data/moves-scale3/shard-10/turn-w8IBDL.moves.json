@@ -1,0 +1,74 @@
+{
+ "record": "turn-w8IBDL",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-172-f-s1-0",
+   "kind": "define",
+   "move": "clarify/definition",
+   "quote": "Well, there are certain critical parameters.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-172-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The number of missions being chosen from is one, that was the first facade that I noticed.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-172-f-s3-0",
+   "kind": "verify",
+   "move": "verify/check-understand",
+   "quote": "If I understand correctly, there were 3 missions on a whitelist.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-172-f-s4-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "Since then, there has been at least one other one.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-172-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Now the policy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

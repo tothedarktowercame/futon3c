@@ -1,0 +1,22 @@
+{
+ "record": "turn-o4sSH6",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-154-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understand",
+   "quote": "I have no idea what you mean by \"project\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
