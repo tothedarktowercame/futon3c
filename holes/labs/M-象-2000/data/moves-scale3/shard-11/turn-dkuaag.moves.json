@@ -1,0 +1,48 @@
+{
+ "record": "turn-dkuaag",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-91-f-s1-0",
+   "kind": "report",
+   "move": "retract/other",
+   "quote": "Ah, sorry I didn't answer that question, I forgot.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-91-f-s2-0",
+   "kind": "redirect",
+   "move": "clarify/assertion",
+   "quote": "I would view \"abstained clicks\" as a problem to be fixed",
+   "answers": [],
+   "scope": {
+    "opens": "abstention-as-bug ruling",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-91-f-s2-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "write the trace into something like a *Debugger* and then debug it live",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-91-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

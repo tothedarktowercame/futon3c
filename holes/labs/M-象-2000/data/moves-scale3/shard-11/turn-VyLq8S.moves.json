@@ -1,0 +1,48 @@
+{
+ "record": "turn-VyLq8S",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-144-f-s1-0",
+   "kind": "extend",
+   "move": "constrain/other",
+   "quote": "any failure should become a \"negative test\" but at the right level of abstraction",
+   "answers": [],
+   "scope": {
+    "opens": "failure-as-critical-incident rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-144-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "A failure at this point is not *just* a negative test but a critical incident.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-144-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-144-f-s3-0",
+   "kind": "report-problem",
+   "move": "disagree/correction",
+   "quote": "you treated a failure as a non-event",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-144-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

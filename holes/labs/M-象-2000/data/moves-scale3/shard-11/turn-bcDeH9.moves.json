@@ -1,0 +1,48 @@
+{
+ "record": "turn-bcDeH9",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-275-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I approve this strategy",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-275-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "we could put the details into the *象 stepper* after",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-275-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-275-f-s3-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "They could go into the block above PARSE",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-275-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

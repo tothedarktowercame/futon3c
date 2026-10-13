@@ -1,0 +1,74 @@
+{
+ "record": "turn-W4rIHp",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-282-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "there are currently too many places for this to go wrong",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-282-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "What if 象 gets both the turn & the commit + HAPPENED stuff",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-282-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-282-f-s3-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "it's both parsing the user turn & the agent's action in one go",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-282-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-282-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "We don't need to have it read the whole commit",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-282-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-282-f-s5-0",
+   "kind": "approve",
+   "move": "approve/with-amendment",
+   "quote": "the frame won't be registered until after everything lands",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-282-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

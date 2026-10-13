@@ -1,0 +1,61 @@
+{
+ "record": "turn-coYbvP",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-351-f-s1-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "could collaborate with claude-1 who is asking a question",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-351-f-s1-1",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "sounds an awful lot like \"identifying a fixed point\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-351-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-351-f-s2-0",
+   "kind": "propose",
+   "move": "approve/plain",
+   "quote": "I'd be happy to do the hand-drawn cascadePolicySet",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-351-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "ideally would like it to include live data that claude-1 could supply",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-351-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

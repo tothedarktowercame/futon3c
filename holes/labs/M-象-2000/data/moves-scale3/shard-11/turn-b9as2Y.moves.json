@@ -1,0 +1,74 @@
+{
+ "record": "turn-b9as2Y",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-178-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "G is defined over policies, and policies are cascades.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-178-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "asking me to define G over a cascade \"whose pattern\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-178-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-178-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "G should be defined over cascades full stop.",
+   "answers": [],
+   "scope": {
+    "opens": "G-over-cascades definition rule",
+    "closes": null,
+    "within": "claude-1-turn-178-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-178-f-s4-0",
+   "kind": "delegate",
+   "move": "delegate/other",
+   "quote": "that is an implementation detail which I prefer to leave to you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-178-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-178-f-s5-0",
+   "kind": "extend",
+   "move": "clarify/assertion",
+   "quote": "the domain of definition is pattern cascades",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-178-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

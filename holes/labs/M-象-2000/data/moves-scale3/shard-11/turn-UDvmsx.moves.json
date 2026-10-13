@@ -1,0 +1,75 @@
+{
+ "record": "turn-UDvmsx",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-165-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "I don't think we have quite done enough work here.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-165-f-s2-0",
+   "kind": "clarify",
+   "move": "challenge/other",
+   "quote": "Why would M-descriptive-essay-of-the-stack be selected?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-165-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-165-f-s3-0",
+   "kind": "clarify",
+   "move": "challenge/other",
+   "quote": "Why would the author refuse?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-165-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-165-f-s4-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "None of this makes any sense to me.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-165-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-165-f-s5-0",
+   "kind": "ask-action",
+   "move": "ask-action/other",
+   "quote": "Explain it tome in Active Inference terms.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-165-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Typo \"tome\" for \"to me\" kept verbatim."
+  }
+ ],
+ "unlabelled": []
+}

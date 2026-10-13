@@ -1,0 +1,36 @@
+{
+ "record": "turn-a6Al4j",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-120-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "not seeing any activity from zai-1 in agent-follow-mode",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-120-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "Weirdly I' not seeing any activity from zai-1",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-120-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Restates the observation with its reliability context; typo \"I'\" kept."
+  }
+ ],
+ "unlabelled": []
+}

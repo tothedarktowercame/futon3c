@@ -1,0 +1,48 @@
+{
+ "record": "turn-YTU5uF",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-281-f-s1-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "how about this idea: rather than asking the agent to manage",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-281-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "I'm not sure how this would work.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-281-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-281-f-s3-0",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "I'd like to shield agents from extra bookkeeping hassle",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-281-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-USPBh6",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-385-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "I think we should drop them now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-385-f-s1-1",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "so we don't forget later",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-385-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

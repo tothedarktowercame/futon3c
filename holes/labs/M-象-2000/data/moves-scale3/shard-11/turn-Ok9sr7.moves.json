@@ -1,0 +1,35 @@
+{
+ "record": "turn-Ok9sr7",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "codex-10-turn-8@turn-Ok9sr7-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Please pass your timing work packet to codex-20",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-10-turn-8@turn-Ok9sr7-f-s1-1",
+   "kind": "redirect",
+   "move": "redirect/other",
+   "quote": "start working yourself on claude-17's evaluation brief",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

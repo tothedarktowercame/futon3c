@@ -1,0 +1,22 @@
+{
+ "record": "turn-ZSG0LK",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-49-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "can you bell this to claude-15 as a live problem to solve with -40º",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

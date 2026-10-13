@@ -1,0 +1,231 @@
+{
+ "record": "turn-QKVqQp",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-148-f-s1-0",
+   "kind": "explain",
+   "move": "challenge/other",
+   "quote": "the difficulty is quite literally self-constructed",
+   "answers": [],
+   "scope": {
+    "opens": "open-task selection challenge",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "600 tasks are all open.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "You spend your time trying to figure out how to choose between them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "Any one of them would presumably be fine.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "Then you give up, apparently, and complete nothing.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s6-0",
+   "kind": "ask-action",
+   "move": "ask-action/other",
+   "quote": "What would the theory of Active Inference say about this behaviour?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s7-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "you're making your decisions based on \"formal wants\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s8-0",
+   "kind": "ask-action",
+   "move": "challenge/other",
+   "quote": "why shouldn't an agent choose among the open tasks?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s9-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "why shouldn't an active inference model of the open tasks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s8-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s10-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "whatever has been built is making it impossible!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s9-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s11-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "If you ask me \"how do you choose what to do\"",
+   "answers": [],
+   "scope": {
+    "opens": "how-Joe-chooses account",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s12-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "I have four or five REPLs going right now",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s13-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "I have a few priorities like finishing this War Machine",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s14-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "I have the aim to make money in a consulting business.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s15-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "I have the biological need to sleep and eat",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s16-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "I chose by using my familiar patterns worked out over a half a human lifetime",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s11-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-148-f-s17-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "A lot of those same patterns are available to you in written form.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-148-f-s16-0"
+   },
+   "confidence": "high",
+   "note": "Closes the loop: the human account grounds the machine-side proposal."
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-Zj89sM",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-353-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "with regard to the 象 -to- diagram prover connection",
+   "answers": [],
+   "scope": {
+    "opens": "diagram-prover connection focus",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-353-f-s2-0",
+   "kind": "delegate",
+   "move": "approve/plain",
+   "quote": "You proposed: \"I will write it up as an excursion under M-象-2000",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-353-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

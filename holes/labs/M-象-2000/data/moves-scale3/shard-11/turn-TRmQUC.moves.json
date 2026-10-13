@@ -1,0 +1,61 @@
+{
+ "record": "turn-TRmQUC",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-297-f-s1-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "the stepper should retry after a wait",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-297-f-s2-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "we should develop an \"r r\" pattern or \"r R\" pattern",
+   "answers": [],
+   "scope": {
+    "opens": "rewind interaction design",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-297-f-s3-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "we might need to be *storing* the 象 data in futon1b",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-297-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-297-f-s4-0",
+   "kind": "extend",
+   "move": "extend/other",
+   "quote": "Another fun feature would be to rewind the REPL buffer",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-297-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

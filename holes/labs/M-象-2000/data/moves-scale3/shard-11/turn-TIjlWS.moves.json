@@ -1,0 +1,87 @@
+{
+ "record": "turn-TIjlWS",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-146-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "Regarding \"It is not acceptable for a tick to stop",
+   "answers": [],
+   "scope": {
+    "opens": "text-is-enough challenge",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-146-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "I have seen time and time again that agents can not only complete missions based on my text",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-146-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-146-f-s3-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "we have M-象-cascade available to mine all of my saved chats",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-146-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-146-f-s4-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "we can just read the design patterns directly",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-146-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-146-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "you haven't been giving me meaningful logs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-146-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-146-f-s6-0",
+   "kind": "ask-action",
+   "move": "challenge/other",
+   "quote": "I hear about \"clicks\" and \"ticks\" and \"refusals\" but no evidence",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-146-f-s5-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

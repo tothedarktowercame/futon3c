@@ -1,0 +1,35 @@
+{
+ "record": "turn-co177a",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-306-f-s1-0",
+   "kind": "report",
+   "move": "report/other",
+   "quote": "I reverted the second practice commit",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-306-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "we didn't rewind the *claude-repl:claude-17* buffer",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-306-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

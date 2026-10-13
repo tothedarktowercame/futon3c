@@ -1,0 +1,74 @@
+{
+ "record": "turn-cPkkyt",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-331-f-s1-0",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "I may just report a live-gap and then *not* comment",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-331-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/uncertainty",
+   "quote": "Or I might!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-331-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-331-f-s3-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "the term \"it works now\" is recognised with underlining",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-331-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-331-f-s4-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "this is why we need cascades.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-331-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-331-f-s5-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "the 2-pattern cascade that links live-gap with \"it works now\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-331-f-s4-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,87 @@
+{
+ "record": "turn-YM7slx",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-337-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "\"both rejected for the same fragment\" that seems like a very weak association",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-337-f-s1-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "one signal could be if patterns are *retrieved* by the War machine but not *used*",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-337-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-337-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "I don't know what you mean by \"hand authored\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-337-f-s3-0",
+   "kind": "redirect",
+   "move": "clarify/assertion",
+   "quote": "\"attestation\" comes from *use*, which happens inside missions",
+   "answers": [],
+   "scope": {
+    "opens": "attestation-from-use reading",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-337-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I might be able to do a quick \"voting\" action",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-337-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-337-f-s5-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "(Which has been stuck on war-room/wr-26",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-337-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-SNZLGB",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-59-f-s1-0",
+   "kind": "ask-action",
+   "move": "propose/directive",
+   "quote": "please pull them off of t02A03 and restart on the shared foundations",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-UjwLu8",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-316-f-s1-0",
+   "kind": "propose",
+   "move": "constrain/stand-rule",
+   "quote": "I think all agents should sign their commits henceforth",
+   "answers": [],
+   "scope": {
+    "opens": "commit-signing standing rule",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-316-f-s1-1",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "or we won't be able to use this system on non-claude sessions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-316-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

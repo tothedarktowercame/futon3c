@@ -1,0 +1,48 @@
+{
+ "record": "turn-aBpChD",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-31-f-s1-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "we should also add something about \"memory as a service\" to index.html",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-31-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "granted she hates Philip K.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-31-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-31-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "I can tell her \"we can remember it for you wholesale\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-31-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

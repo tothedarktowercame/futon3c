@@ -1,0 +1,35 @@
+{
+ "record": "turn-Vl0yQn",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-184-f-s1-0",
+   "kind": "redirect",
+   "move": "ask-action/read-record",
+   "quote": "Look at how my turns are interpreted by \"象\"",
+   "answers": [],
+   "scope": {
+    "opens": "inspect 象 interpretation",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-184-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "It doesn't rely on pre-supplied edges",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-184-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,36 @@
+{
+ "record": "turn-UvGB9a",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-356-f-s1-0",
+   "kind": "continue",
+   "move": "propose/directive",
+   "quote": "let's continue to build these features into xiaoxiang",
+   "answers": [],
+   "scope": {
+    "opens": "xiaoxiang open-source build-out",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-356-f-s1-1",
+   "kind": "continue",
+   "move": "redirect/other",
+   "quote": "let's get back to the programme of running the 象 backfill on old operator turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-356-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Redirect back to the backfill programme as the training-set path."
+  }
+ ],
+ "unlabelled": []
+}

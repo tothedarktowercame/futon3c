@@ -1,0 +1,48 @@
+{
+ "record": "turn-PtMmVy",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-188-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "it should be straightforward to read the HEAD and interpret it the way that 象-2000 does",
+   "answers": [],
+   "scope": {
+    "opens": "mission-HEAD→cascade reading",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-188-f-s1-1",
+   "kind": "extend",
+   "move": "extend/other",
+   "quote": "that could then be enriched or refined with more/fewer patterns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-188-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-188-f-s1-2",
+   "kind": "explain",
+   "move": "explain/observation",
+   "quote": "G over policies allows and indeed requires the policy to be adjusted",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-188-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

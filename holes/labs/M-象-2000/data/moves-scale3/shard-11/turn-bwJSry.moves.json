@@ -1,0 +1,49 @@
+{
+ "record": "turn-bwJSry",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-299-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "I'd not mark them in the buffer but only in the XTDB",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-299-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "The REPL buffer itself could just be cleanly rewound",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-299-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-299-f-s3-0",
+   "kind": "redirect",
+   "move": "redirect/other",
+   "quote": "we should go back to your *earlier* point about signing",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-299-f-s1-0"
+   },
+   "confidence": "high",
+   "note": "Back to the plan: signing and the commit service, with buffer line cites."
+  }
+ ],
+ "unlabelled": []
+}

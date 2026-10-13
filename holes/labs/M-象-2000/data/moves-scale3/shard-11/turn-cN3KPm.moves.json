@@ -1,0 +1,22 @@
+{
+ "record": "turn-cN3KPm",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-112-f-s1-0",
+   "kind": "explain",
+   "move": "explain/diagnosis",
+   "quote": "the store saturation is due to the mission scan",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

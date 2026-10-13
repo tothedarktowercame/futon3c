@@ -1,0 +1,35 @@
+{
+ "record": "turn-aIGRvz",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-171-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "the lean model should certainly be made robust against any and all such bad choinces",
+   "answers": [],
+   "scope": {
+    "opens": "robust-against-bad-choices requirement",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-171-f-s2-0",
+   "kind": "explain",
+   "move": "explain/motive",
+   "quote": "cascadePolicySet was effectively a \"backdoor\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-171-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

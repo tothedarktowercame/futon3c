@@ -1,0 +1,22 @@
+{
+ "record": "turn-dqrhT8",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-32-f-s1-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "visibly strike out wholesale and put \"bespoke\" or suchlike",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,61 @@
+{
+ "record": "turn-brsHd5",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-95-f-s1-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "Algorithm b/c it could give the machine another way to get unstuck",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-95-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "a \"write-algorithm\" algorithm to write itself a new algorithm",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-95-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-95-f-s3-0",
+   "kind": "report",
+   "move": "report-problem/grievance",
+   "quote": "I really don't want to hear any more about \"abstentions\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-95-f-s4-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "there must be a flaw in the design and we need to figure out what it is",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-95-f-s3-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

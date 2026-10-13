@@ -1,0 +1,49 @@
+{
+ "record": "turn-RbSrEv",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-58-f-s1-0",
+   "kind": "propose",
+   "move": "report/context",
+   "quote": "I have 2 resets available so we cwn keep working as is.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Typo \"cwn\" kept verbatim; quota status, not a proposal."
+  },
+  {
+   "act": "claude-14-turn-58-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "the offer to redirect the loops might be good,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-58-f-s2-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "before we do that I want to understand whst they are working on",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-58-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

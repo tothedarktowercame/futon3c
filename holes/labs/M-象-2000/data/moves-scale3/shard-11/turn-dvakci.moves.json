@@ -1,0 +1,61 @@
+{
+ "record": "turn-dvakci",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-323-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "If turns wait on 象",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-323-f-s1-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "maybe we should allow a pool of up to 4 \"象\" informed agents",
+   "answers": [],
+   "scope": {
+    "opens": "four-象 pool proposal",
+    "closes": null,
+    "within": "claude-17-turn-323-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-323-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "象-1, 象-2, -3, and -4 —",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-323-f-s1-1"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-323-f-s2-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "We could cycle between them for example",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-323-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,23 @@
+{
+ "record": "turn-YDvroy",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "codex-10-turn-2@turn-YDvroy-f-s1-0",
+   "kind": "report",
+   "move": "delegate/other",
+   "quote": "I asked Claude Fable for some strategic advice for you",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high",
+   "note": "Relays external advice into the dialogue."
+  }
+ ],
+ "unlabelled": []
+}
