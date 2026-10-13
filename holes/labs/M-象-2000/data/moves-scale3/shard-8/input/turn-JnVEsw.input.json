@@ -1,0 +1,316 @@
+{
+  "record": "turn-JnVEsw",
+  "turn_id": "claude-17-turn-324",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-09-30T04:14:57Z",
+  "agent_id": "claude-17",
+  "source_text": "Well, different names aren't really a problem, like I've said, we should coalesce the different names into our core set, but multiplicity is still interesting for colour or for a 2nd more high-fidelity scan",
+  "fragments": [
+    {
+      "id": "claude-17-turn-324-f-s1-0",
+      "intent": "qualify",
+      "text": "Well, different names aren't really a problem, like I've said"
+    },
+    {
+      "id": "claude-17-turn-324-f-s1-1",
+      "intent": "propose",
+      "text": "we should coalesce the different names into our core set"
+    },
+    {
+      "id": "claude-17-turn-324-f-s1-2",
+      "intent": "extend",
+      "text": "but multiplicity is still interesting for colour or for a 2nd more high-fidelity scan"
+    }
+  ],
+  "reply_text": "The auto endpoint ignored the name and minted `kimi-5` instead. Removing that stray seat, then finding how 象 itself got its name.Registering the four 象 seats through Agency's restore endpoint, which takes an exact name.Seats are registered. Now the Emacs side: choosing the least-busy seat.Rerunning the tests; the one failure didn't reproduce on the second run, so checking whether it's flaky.Gist: The pool is live. There are four Kimi seats, 象-1 to 象-4, and each turn now goes to whichever has the fewest readings outstanding. This reply will be the first one sent to the pool, to 象-1. I've kept your framing: differing pattern names across seats are left for M-象-cascade to merge, and the variety is kept as information rather than treated as an error.\n\n**How it works** (futon3c 81a90a8e, loaded in your Emacs):\n- **Load:** a seat's load is the readings sent to it in the last hour that haven't landed or failed. A landing or failure frees the seat.\n- **Ties:** go to the first seat in order, 象-1.\n- **Out of usage:** all four share Kimi's usage limit, so when one runs out, all four are set aside together and 象-sonnet takes over. That skips failing through each seat in turn.\n- **The old 象 seat:** it stays registered but no longer gets new turns.\n\n**Tests:** 11 dispatch tests pass. The two new ones cover:\n- choosing the least-loaded seat, freeing a seat when its reading lands, and dropping dispatches older than an hour;\n- setting the whole pool aside with a handover to 象-sonnet.\n\nOne run right after I rebuilt the file showed one failure I couldn't reproduce; 14 runs since have been clean.\n\n**Setup notes:**\n- **Registration:** I registered the seats through Agency's restore endpoint, which takes an exact name.\n- **A stray seat:** my first attempt used the auto endpoint, which ignored the name and made a spare seat, `kimi-5`. It's idle, and Agency will hand it out next time someone asks for a new Kimi seat. I left it rather than remove it by hand.\n\n**Still to show:** the fix only counts once turns actually wait less. I'll check the next few readings' queue times against tonight's median of 5½ minutes.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-324",
+      "id": "claude-17-turn-324-f-s1-0",
+      "kind": "qualify",
+      "at": "2026-09-30T04:14:57Z",
+      "record": "turn-JnVEsw",
+      "end": 61,
+      "standing?": false,
+      "about": "the concern that divergent pattern names across seats are a defect",
+      "text": "Well, different names aren't really a problem, like I've said",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 63,
+      "author": "operator",
+      "turn": "claude-17-turn-324",
+      "id": "claude-17-turn-324-f-s1-1",
+      "kind": "propose",
+      "at": "2026-09-30T04:14:57Z",
+      "record": "turn-JnVEsw",
+      "end": 119,
+      "standing?": true,
+      "about": "the merge policy for divergent pattern names produced by the 象 seat pool (deferred to M-象-cascade)",
+      "text": "we should coalesce the different names into our core set",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "start": 121,
+      "author": "operator",
+      "turn": "claude-17-turn-324",
+      "id": "claude-17-turn-324-f-s1-2",
+      "kind": "extend",
+      "at": "2026-09-30T04:14:57Z",
+      "record": "turn-JnVEsw",
+      "end": 206,
+      "standing?": false,
+      "about": "the coalescence policy of the previous clause",
+      "text": "but multiplicity is still interesting for colour or for a 2nd more high-fidelity scan",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-324",
+      "id": "claude-17-turn-324-c-81a90a8e",
+      "kind": "commit",
+      "at": "2026-09-30T04:14:57Z",
+      "record": "turn-JnVEsw",
+      "repo": "futon3c",
+      "subject": "象: a pool of four analysis seats (象-1..4), each turn to the least-loaded",
+      "sha": "81a90a8e",
+      "standing?": false
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-17-turn-2-f-s1-0",
+      "kind": "ask-action",
+      "text": "Is there an update to markdown-overlays",
+      "since": "2026-09-27T14:50:07Z"
+    },
+    {
+      "act": "claude-17-turn-2-f-s1-1",
+      "kind": "propose",
+      "text": "can we modify it and load a fork?",
+      "since": "2026-09-27T14:50:07Z"
+    },
+    {
+      "act": "claude-17-turn-3-f-s2-0",
+      "kind": "clarify",
+      "text": "I'm a little unclear why markdown-overlays needs to know about org-format-latex at all",
+      "since": "2026-09-27T14:52:48Z"
+    },
+    {
+      "act": "claude-17-turn-4-f-s1-0",
+      "kind": "propose",
+      "text": "I think we can make a well thought-through upstream PR explanation",
+      "since": "2026-09-27T14:54:25Z"
+    },
+    {
+      "act": "claude-17-turn-6-f-s2-1",
+      "kind": "propose",
+      "text": "so we don't need to include that (Grice)",
+      "since": "2026-09-27T14:56:27Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s1-1",
+      "kind": "propose",
+      "text": "have the \"象\" lighter show a somewhat clearer status",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s2-0",
+      "kind": "propose",
+      "text": "turn it pink when it is not actually working.",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s3-0",
+      "kind": "report-problem",
+      "text": "The lighter was staying red regardless of whether the feature was actually working or not.",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-8-f-s1-0",
+      "kind": "report-problem",
+      "text": "Now I see another warning I think...",
+      "since": "2026-09-27T15:06:10Z"
+    },
+    {
+      "act": "claude-17-turn-9-f-s2-0",
+      "kind": "ask-action",
+      "text": "I don't remember where I left it off",
+      "since": "2026-09-27T15:07:23Z"
+    },
+    {
+      "act": "claude-17-turn-11-f-s5-0",
+      "kind": "propose",
+      "text": "*I* can act as the verifier",
+      "since": "2026-09-27T15:20:54Z"
+    },
+    {
+      "act": "claude-17-turn-11-f-s6-0",
+      "kind": "propose",
+      "text": "a web page with SVG graphics inside",
+      "since": "2026-09-27T15:20:54Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s2-0",
+      "kind": "verify",
+      "text": "VERIFY-1 by visual inspection is that this looks great and very complete.",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s3-0",
+      "kind": "delegate",
+      "text": "But let's do a VERIFY-2 and ask for a review from claude-8.",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s5-0",
+      "kind": "delegate",
+      "text": "two questions for them: does this look like a buildable design?",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s6-0",
+      "kind": "delegate",
+      "text": "and, secondly, is the war machine capable of working in this way?",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-14-f-s2-1",
+      "kind": "verify",
+      "text": "so I hope I am remembering correctly that that's a side-effect of the way of working we're developing here (I'm pretty …",
+      "since": "2026-09-27T15:44:07Z"
+    },
+    {
+      "act": "claude-17-turn-16-f-s1-0",
+      "kind": "verify",
+      "text": "your cascade does imply a @how decomposition which is great",
+      "since": "2026-09-27T15:56:45Z"
+    },
+    {
+      "act": "claude-17-turn-18-f-s1-0",
+      "kind": "propose",
+      "text": "Another relevant Excursion would be to build a purely classical (no LLM, no network) scanner that can read people's .js…",
+      "since": "2026-09-27T16:05:01Z"
+    },
+    {
+      "act": "claude-17-turn-20-f-s1-0",
+      "kind": "clarify",
+      "text": "So, regarding the classical system (小象?)",
+      "since": "2026-09-27T16:10:53Z"
+    },
+    {
+      "act": "claude-17-turn-21-f-s2-0",
+      "kind": "propose",
+      "text": "Obivously if I could find anyone else who wants to work together on non-private data in the 大象 pilot, that would be gre…",
+      "since": "2026-09-27T16:13:59Z"
+    },
+    {
+      "act": "claude-17-turn-23-f-s1-0",
+      "kind": "delegate",
+      "text": "please run through the ones that can be automated using parks",
+      "since": "2026-09-27T16:43:32Z"
+    },
+    {
+      "act": "claude-17-turn-23-f-s1-1",
+      "kind": "delegate",
+      "text": "come back to me when that's ready",
+      "since": "2026-09-27T16:43:32Z"
+    },
+    {
+      "act": "claude-17-turn-37-f-s1-1",
+      "kind": "propose",
+      "text": "for other issues, I wonder if we could fix the Voxterm audio layer so you could run me through them verbally rather tha…",
+      "since": "2026-09-27T18:25:15Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-17-turn-283-f-s5-0",
+      "kind": "constrain",
+      "text": "Obviously if there are 1000 continuations we won't be able to rewind them all individually but we should at least be ab…"
+    },
+    {
+      "act": "claude-17-turn-285-f-s1-0",
+      "kind": "constrain",
+      "text": "If it works,"
+    },
+    {
+      "act": "claude-17-turn-292-f-s2-0",
+      "kind": "constrain",
+      "text": "Note by the way that we only want one copy of the side window and it needs to be attached to the REPL it is associated …"
+    },
+    {
+      "act": "claude-17-turn-309-f-s7-1",
+      "kind": "delegate",
+      "text": "and then we could set about getting a kimi agent to build and test them."
+    },
+    {
+      "act": "claude-17-turn-310-f-s2-0",
+      "kind": "delegate",
+      "text": "Can you send the task list to Kimi?"
+    },
+    {
+      "act": "claude-17-turn-312-f-s1-0",
+      "kind": "delegate",
+      "text": "I'd like you to work on the seam with a codex agent"
+    },
+    {
+      "act": "claude-17-turn-314-f-s2-1",
+      "kind": "constrain",
+      "text": "the *象 stepper* side window should disappear"
+    },
+    {
+      "act": "claude-17-turn-45-f-s1-2",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-47-f-s1-0",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-62-f-s1-3",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-63-f-s3-0",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-64-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-64-f-s2-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-78-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-81-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-83-f-s1-0",
+      "kind": null,
+      "text": ""
+    }
+  ]
+}

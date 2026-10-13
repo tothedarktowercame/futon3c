@@ -1,0 +1,174 @@
+{
+  "record": "turn-vUUqAY",
+  "turn_id": "claude-1-turn-166",
+  "session_id": "b24467ae-519b-4310-b7c2-201cd5d78938",
+  "created_at": "2026-09-30T07:48:23Z",
+  "agent_id": "claude-1",
+  "source_text": "OK, let's write this up as a critical incident so that it doesn't get lost in chat.  \"The policy space had one member\"? How is that possible when \"policies\" are cascades which are formed on the fly?",
+  "fragments": [
+    {
+      "id": "claude-1-turn-166-f-s1-0",
+      "intent": "ask-action",
+      "text": "let's write this up as a critical incident so that it doesn't get lost in chat"
+    },
+    {
+      "id": "claude-1-turn-166-f-s2-0",
+      "intent": "disagree",
+      "text": "\"The policy space had one member\"?"
+    },
+    {
+      "id": "claude-1-turn-166-f-s3-0",
+      "intent": "clarify",
+      "text": "How is that possible when \"policies\" are cascades which are formed on the fly?"
+    }
+  ],
+  "reply_text": "The incident is written up and committed: `futon2/holes/labs/wm-contract/incidents/INCIDENT-2026-09-30-one-policy-selection-repeated-refusal.md` (commit `6fe08384a`). Its status is open, and no click is proposed while it stays open.\n\n**How the policy space came to have one member.** Cascades are formed on the fly, but from a pool, and the pool is not the pattern library. For a given target, the constructor may only use patterns that have a published, validated interpretation for that target. Interpretations are produced one per want, by one agent answering one request. I checked the store for this mission: it holds exactly two patterns, the two in the cascade. So the constructor had two patterns to work with, of about 1,415 in the library, and formed one cascade. Across targets, only this one had any pool at all. One admitted target with a pool of two gave one policy.\n\nI haven't checked how many cascades the constructor could enumerate from a given pool; the record shows one.\n\nThat means the interpretation step I spent today repairing is what shrinks the policy space. It was standing between the pattern library and the constructor, letting through one pattern per answered request.\n\n**What the incident record contains:**\n\n- **The facts, with record paths.** Both runs, the one candidate, the score of −ln(7/20), the blank preference at steps 1–3, the two-pattern store, the mission line the want came from, and the author's reply card.\n- **The table** setting what the theory has against what the record shows.\n- **Seven findings.** Each is stated as a class of failure with a level, an owner from the team, and a negative test:\n  1. A cascade is built from a pool of two patterns, not the library (selection).\n  2. Admission decides the policy set before any score is computed: 195 targets in, 1 policy out (selection).\n  3. C has no preference for completed work, and Cτ is blank before the last step (selection).\n  4. A mission's end-state criterion is handed to one author job as a single step (seats, with selection).\n  5. The author can only say DONE or REFUSE (seats).\n  6. A refusal updates no belief, so the same policy is chosen again (controller).\n  7. Click 20 was fired although its result was predicted (mine).\n- **Why testing missed it.** Every selection test supplied its candidates, and none asserted how many a real field yields. Every author test stubbed a DONE reply. The Lean proves properties of G for given policies and says nothing about how many policies exist.\n- **What closes it.** Each finding's negative test is written and failing on current code, then a reviewed repair, then the test passing, and then you see the file.\n\nTwo statements in it are marked as unverified: I read only the summary of the author's reply, and I inferred that no belief was updated from the unchanged score without checking the learning ledger.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-1-turn-1-f-s1-0",
+      "kind": "delegate",
+      "text": "Hi Opus, I ran out of Fable usage in my claude-8 session, can you pick up where they left off?",
+      "since": "2026-09-28T20:32:17Z"
+    },
+    {
+      "act": "claude-1-turn-9-f-s2-0",
+      "kind": "delegate",
+      "text": "Let's use the Kimi seats, you can register new ones.",
+      "since": "2026-09-28T20:42:23Z"
+    },
+    {
+      "act": "claude-1-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we burn through all of the five hour limit, then we will pick up with Zai shortly after.",
+      "since": "2026-09-28T20:42:23Z"
+    },
+    {
+      "act": "claude-1-turn-10-f-s3-0",
+      "kind": "report-problem",
+      "text": "Please note that I had previously gotten most of the sections to be \"complete\" so there was a clear case of mission cre…",
+      "since": "2026-09-28T20:43:55Z"
+    },
+    {
+      "act": "claude-1-turn-14-f-s1-0",
+      "kind": "delegate",
+      "text": "You can communicate with claude-17 about H-interp as needed",
+      "since": "2026-09-28T21:06:15Z"
+    },
+    {
+      "act": "claude-1-turn-30-f-s6-0",
+      "kind": "propose",
+      "text": "I think we should scope the alternatives.",
+      "since": "2026-09-28T22:33:24Z"
+    },
+    {
+      "act": "claude-1-turn-30-f-s7-0",
+      "kind": "report-problem",
+      "text": "If we are building AIF without a generative model I'm not sure what we're doing exactly!",
+      "since": "2026-09-28T22:33:24Z"
+    },
+    {
+      "act": "claude-1-turn-33-f-s1-0",
+      "kind": "propose",
+      "text": "OK, I think we should build (c) and then tackle (b).",
+      "since": "2026-09-28T22:56:55Z"
+    },
+    {
+      "act": "claude-1-turn-33-f-s3-0",
+      "kind": "clarify",
+      "text": "This is different from a facade b/c no one is claiming we've done something we haven't..",
+      "since": "2026-09-28T22:56:55Z"
+    },
+    {
+      "act": "claude-1-turn-45-f-s1-0",
+      "kind": "clarify",
+      "text": "You said \"no PROOF-2a clause uses the mean-field state-prediction error\"...",
+      "since": "2026-09-28T23:12:41Z"
+    },
+    {
+      "act": "claude-1-turn-45-f-s3-0",
+      "kind": "verify",
+      "text": "Why would we compute a value that is not used?",
+      "since": "2026-09-28T23:12:41Z"
+    },
+    {
+      "act": "claude-1-turn-45-f-s4-0",
+      "kind": "verify",
+      "text": "Why would we define a value that we can't compute?",
+      "since": "2026-09-28T23:12:41Z"
+    },
+    {
+      "act": "claude-1-turn-50-f-s1-0",
+      "kind": "ask-action",
+      "text": "OK, so walk me through the 3 questions please",
+      "since": "2026-09-28T23:22:31Z"
+    },
+    {
+      "act": "claude-1-turn-51-f-s4-0",
+      "kind": "report-problem",
+      "text": "This is very convoluted.",
+      "since": "2026-09-28T23:28:03Z"
+    },
+    {
+      "act": "claude-1-turn-51-f-s5-0",
+      "kind": "clarify",
+      "text": "My understanding is \"The machine can't start without being seeded with fake data, but we can't allow the fake data to p…",
+      "since": "2026-09-28T23:28:03Z"
+    },
+    {
+      "act": "claude-1-turn-51-f-s6-0",
+      "kind": "report-problem",
+      "text": "or something like that, I'm just confused b/c the setup here seems to involve some double-negatives.",
+      "since": "2026-09-28T23:28:03Z"
+    },
+    {
+      "act": "claude-1-turn-56-f-s1-0",
+      "kind": "delegate",
+      "text": "Do the investigation directly, since you're aware of the context",
+      "since": "2026-09-28T23:37:19Z"
+    },
+    {
+      "act": "claude-1-turn-59-f-s1-1",
+      "kind": "ask-action",
+      "text": "please continue",
+      "since": "2026-09-29T00:27:42Z"
+    },
+    {
+      "act": "claude-1-turn-60-f-s1-1",
+      "kind": "propose",
+      "text": "and we now need to move to the runtime evindence gathering?",
+      "since": "2026-09-29T00:55:46Z"
+    },
+    {
+      "act": "claude-1-turn-64-f-s1-0",
+      "kind": "ask-action",
+      "text": "Please start Item 6(b)",
+      "since": "2026-09-29T01:04:07Z"
+    },
+    {
+      "act": "claude-1-turn-67-f-s1-1",
+      "kind": "delegate",
+      "text": "and if your recommendations are in line with the proof plan and don't void any of our requirements, I will follow your …",
+      "since": "2026-09-29T01:17:51Z"
+    },
+    {
+      "act": "claude-1-turn-75-f-s1-0",
+      "kind": "ask-action",
+      "text": "Yes please carry on with item 6",
+      "since": "2026-09-29T02:01:29Z"
+    },
+    {
+      "act": "claude-1-turn-87-f-s2-0",
+      "kind": "report-problem",
+      "text": "\"built but read by nothing\" is a little concerning...",
+      "since": "2026-09-29T03:31:20Z"
+    },
+    {
+      "act": "claude-1-turn-88-f-s1-0",
+      "kind": "ask-action",
+      "text": "OK let's run 20 ticks, you can do repairs between them",
+      "since": "2026-09-29T03:55:30Z"
+    }
+  ]
+}

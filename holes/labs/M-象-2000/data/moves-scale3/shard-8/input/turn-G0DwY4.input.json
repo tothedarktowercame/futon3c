@@ -1,0 +1,179 @@
+{
+  "record": "turn-G0DwY4",
+  "turn_id": "claude-1-turn-96",
+  "session_id": "b24467ae-519b-4310-b7c2-201cd5d78938",
+  "created_at": "2026-09-29T19:38:53Z",
+  "agent_id": "claude-1",
+  "source_text": "That sounds like a good rectification.   The machine should represent a standing curiosity about the world, about its own behaviour, about the FUTON stack, etc. ; on a technical basis I am also wondering if this is where our choice to use BMR rather than a generative model might already be coming to bite us.  The machine should have a generative model of itself (this is standard AIF stuff) that includes its curiosity.",
+  "fragments": [
+    {
+      "id": "claude-1-turn-96-f-s1-0",
+      "intent": "approve",
+      "text": "That sounds like a good rectification."
+    },
+    {
+      "id": "claude-1-turn-96-f-s2-0",
+      "intent": "propose",
+      "text": "The machine should represent a standing curiosity about the world, about its own behaviour, about the FUTON stack, etc."
+    },
+    {
+      "id": "claude-1-turn-96-f-s3-0",
+      "intent": "explore",
+      "text": "on a technical basis I am also wondering if this is where our choice to use BMR rather than a generative model might already be coming to bite us."
+    },
+    {
+      "id": "claude-1-turn-96-f-s4-0",
+      "intent": "extend",
+      "text": "The machine should have a generative model of itself (this is standard AIF stuff) that includes its curiosity."
+    }
+  ],
+  "reply_text": "I think you're right that it's the generative model, though BMR isn't the part at fault by itself. Bayesian model reduction only ever works inside an existing generative model: it asks whether a simpler version of that model explains the data as well. It can prune states and parameters, but it can never add a state or factor the model didn't already have. In active inference, structure learning pairs reduction with expansion, which adds new states when observations aren't explained. We built the reduction half and not the expansion half. So the machine's model can only get smaller or stay the same, and it has no way to take in the missions it's supposed to be choosing among.\n\n**What its belief actually covers.** I checked the carried belief (`:mu-post`) in today's trace:\n- **What's in it:** 417 arxana stack entities (devmap and leaf claims), each over seven claim statuses, strengthened, addressed, falsified and so on.\n- **What isn't:** no Mission, Excursion or Ticket, and nothing about the machine itself.\n\nSo the model believes things about the stack's claims, but chooses among missions it has no beliefs about. It can't be curious about something that isn't a hidden state in its model. Epistemic value needs a prior over the unknown and a prediction of what an action would reveal. That also explains why admission demands ready-made facts: the missing model is being supplied by hand, one target at a time, and five targets is as far as that got.\n\n**What a generative model of itself would add.** These parts are what the machine currently lacks:\n- **Hidden states for its tasks:** each unfinished M/E/T gets a state, such as its status, what's blocking it, and whether its facts are known. The same goes for the stack and for the machine's own behaviour, e.g. whether its last actions worked and whether its repairs held.\n- **Curiosity as a prior:** a standing preference for resolving uncertainty in those states. A little-known mission then scores well for being little known.\n- **Actions that gather information:** read a mission and write its facts, or run Tornhill on a repo. Their predicted outcomes make the information-gain term computable.\n- **Expansion:** when an observation fits nothing in the model (a new mission, a new failure kind), a state is added. BMR can prune it later if it earns nothing.\n\nWith these, algorithm targets and `write-algorithm` become actions the machine can predict and score, not a fallback bolted onto the list of targets.\n\nI've logged this in the PROOF-2a plan (futon2 `10503455d`, published). zai-1's coverage report is still due. I'll write the correction as a design note on top of its findings, starting with the self-model's state space, since the other parts depend on it.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-1-turn-1-f-s1-0",
+      "kind": "delegate",
+      "text": "Hi Opus, I ran out of Fable usage in my claude-8 session, can you pick up where they left off?",
+      "since": "2026-09-28T20:32:17Z"
+    },
+    {
+      "act": "claude-1-turn-9-f-s2-0",
+      "kind": "delegate",
+      "text": "Let's use the Kimi seats, you can register new ones.",
+      "since": "2026-09-28T20:42:23Z"
+    },
+    {
+      "act": "claude-1-turn-9-f-s3-0",
+      "kind": "propose",
+      "text": "If we burn through all of the five hour limit, then we will pick up with Zai shortly after.",
+      "since": "2026-09-28T20:42:23Z"
+    },
+    {
+      "act": "claude-1-turn-10-f-s3-0",
+      "kind": "report-problem",
+      "text": "Please note that I had previously gotten most of the sections to be \"complete\" so there was a clear case of mission cre…",
+      "since": "2026-09-28T20:43:55Z"
+    },
+    {
+      "act": "claude-1-turn-14-f-s1-0",
+      "kind": "delegate",
+      "text": "You can communicate with claude-17 about H-interp as needed",
+      "since": "2026-09-28T21:06:15Z"
+    },
+    {
+      "act": "claude-1-turn-30-f-s6-0",
+      "kind": "propose",
+      "text": "I think we should scope the alternatives.",
+      "since": "2026-09-28T22:33:24Z"
+    },
+    {
+      "act": "claude-1-turn-30-f-s7-0",
+      "kind": "report-problem",
+      "text": "If we are building AIF without a generative model I'm not sure what we're doing exactly!",
+      "since": "2026-09-28T22:33:24Z"
+    },
+    {
+      "act": "claude-1-turn-33-f-s1-0",
+      "kind": "propose",
+      "text": "OK, I think we should build (c) and then tackle (b).",
+      "since": "2026-09-28T22:56:55Z"
+    },
+    {
+      "act": "claude-1-turn-33-f-s3-0",
+      "kind": "clarify",
+      "text": "This is different from a facade b/c no one is claiming we've done something we haven't..",
+      "since": "2026-09-28T22:56:55Z"
+    },
+    {
+      "act": "claude-1-turn-45-f-s1-0",
+      "kind": "clarify",
+      "text": "You said \"no PROOF-2a clause uses the mean-field state-prediction error\"...",
+      "since": "2026-09-28T23:12:41Z"
+    },
+    {
+      "act": "claude-1-turn-45-f-s3-0",
+      "kind": "verify",
+      "text": "Why would we compute a value that is not used?",
+      "since": "2026-09-28T23:12:41Z"
+    },
+    {
+      "act": "claude-1-turn-45-f-s4-0",
+      "kind": "verify",
+      "text": "Why would we define a value that we can't compute?",
+      "since": "2026-09-28T23:12:41Z"
+    },
+    {
+      "act": "claude-1-turn-50-f-s1-0",
+      "kind": "ask-action",
+      "text": "OK, so walk me through the 3 questions please",
+      "since": "2026-09-28T23:22:31Z"
+    },
+    {
+      "act": "claude-1-turn-51-f-s4-0",
+      "kind": "report-problem",
+      "text": "This is very convoluted.",
+      "since": "2026-09-28T23:28:03Z"
+    },
+    {
+      "act": "claude-1-turn-51-f-s5-0",
+      "kind": "clarify",
+      "text": "My understanding is \"The machine can't start without being seeded with fake data, but we can't allow the fake data to p…",
+      "since": "2026-09-28T23:28:03Z"
+    },
+    {
+      "act": "claude-1-turn-51-f-s6-0",
+      "kind": "report-problem",
+      "text": "or something like that, I'm just confused b/c the setup here seems to involve some double-negatives.",
+      "since": "2026-09-28T23:28:03Z"
+    },
+    {
+      "act": "claude-1-turn-56-f-s1-0",
+      "kind": "delegate",
+      "text": "Do the investigation directly, since you're aware of the context",
+      "since": "2026-09-28T23:37:19Z"
+    },
+    {
+      "act": "claude-1-turn-59-f-s1-1",
+      "kind": "ask-action",
+      "text": "please continue",
+      "since": "2026-09-29T00:27:42Z"
+    },
+    {
+      "act": "claude-1-turn-60-f-s1-1",
+      "kind": "propose",
+      "text": "and we now need to move to the runtime evindence gathering?",
+      "since": "2026-09-29T00:55:46Z"
+    },
+    {
+      "act": "claude-1-turn-64-f-s1-0",
+      "kind": "ask-action",
+      "text": "Please start Item 6(b)",
+      "since": "2026-09-29T01:04:07Z"
+    },
+    {
+      "act": "claude-1-turn-67-f-s1-1",
+      "kind": "delegate",
+      "text": "and if your recommendations are in line with the proof plan and don't void any of our requirements, I will follow your …",
+      "since": "2026-09-29T01:17:51Z"
+    },
+    {
+      "act": "claude-1-turn-75-f-s1-0",
+      "kind": "ask-action",
+      "text": "Yes please carry on with item 6",
+      "since": "2026-09-29T02:01:29Z"
+    },
+    {
+      "act": "claude-1-turn-87-f-s2-0",
+      "kind": "report-problem",
+      "text": "\"built but read by nothing\" is a little concerning...",
+      "since": "2026-09-29T03:31:20Z"
+    },
+    {
+      "act": "claude-1-turn-88-f-s1-0",
+      "kind": "ask-action",
+      "text": "OK let's run 20 ticks, you can do repairs between them",
+      "since": "2026-09-29T03:55:30Z"
+    }
+  ]
+}

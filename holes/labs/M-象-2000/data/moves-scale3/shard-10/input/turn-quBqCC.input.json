@@ -1,0 +1,309 @@
+{
+  "record": "turn-quBqCC",
+  "turn_id": "claude-17-turn-286",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-09-30T00:48:12Z",
+  "agent_id": "claude-17",
+  "source_text": "I still see the 象 stepper window on frame 91 with \"no operator words\" and an earlier frame 89 listed as the SAID",
+  "fragments": [
+    {
+      "id": "claude-17-turn-286-f-s1-0",
+      "intent": "verify",
+      "text": "I still see"
+    },
+    {
+      "id": "claude-17-turn-286-f-s1-1",
+      "intent": "report-problem",
+      "text": "the 象 stepper window on frame 91 with \"no operator words\" and an earlier frame 89 listed as the SAID"
+    }
+  ],
+  "reply_text": "Since the reload, no typed turn in any buffer has gone to 象, so this has broken analysis everywhere, not just the demo. Finding why.The new code is live and the advice is attached, but no 象 job has been created since the reload at 20:17. I'll run the after-reply step directly on the demo turn and see where it stops.The step works when called by hand: the summary was built (the demo turn has now been sent to 象). So the reply callback never reaches it. Reading the wrapper.Now a test shaped like a streamed reply: the callback is never called, and the turn ends through the segment, commits and finish steps in the order `claude-repl.el` runs them.Fails without the fix, passes with it. Gates, commit, reload.All three hooks are attached. This turn was sent before the reload, so nothing is waiting to dispatch it. I'll mark it pending now, so its end is the live test.Gist: The demo failed, and the failure was broader than this buffer: since I loaded kimi-4's change at 20:17, none of your typed turns, in any REPL buffer, went to 象. When a Claude seat streams its reply, `claude-repl.el` ends the turn itself and never calls the callback the new dispatch was attached to. I've fixed that and loaded the fix, and this turn is set up as the new demo. About a dozen of your turns to claude-1, claude-4, claude-18 and me are stuck as unread. Shall I send them to 象 now, without a what-happened summary?\n\n**What you're seeing in the stepper:** it's working correctly, but it's out of date.\n- **\"frame 89\" in SAID:** frame 91 is your 18:47 turn, and \"frame 89 / 89 is still pretty much empty\" is your own text from that turn. It isn't a mix-up between frames.\n- **\"no operator words\":** right for that sentence, since none of its words are in the verb table.\n- **Why it stops at 91:** it hasn't been reloaded since about 18:49. Every turn of yours after that is unread by 象, so even `g` wouldn't show them. The stepper leaves unread turns out.\n\n**The fix (a7fce180):**\n- **When it dispatches:** each typed turn now waits in its buffer and goes to 象 when the turn ends, whether or not the reply streamed. It goes once only.\n- **What the summary holds:** the reply text and the turn's commits, captured as the stream writes them. The commit list has to be captured this way because it's cleared before the turn ends.\n- **The planted test:** it follows the exact streamed order in `claude-repl.el`. It fails on the previous version and passes now, and all 7 tests pass. The byte-compile warnings are the ones that were there before.\n\n**The demo turn:** I ran the dispatch step by hand on `turn-6VOQjn` and it worked. It sent the turn to 象 with its summary, but no reading has come back yet.\n- That summary shows a flaw: it listed a futon2 commit, `d64a9117` (a repair ticket), which another seat made during the turn. The summary labels commit lines \"not necessarily the agent's own\", so 象 is told this, but it will see other seats' commits regularly.\n- This turn was sent before the fix, so I marked it pending by hand. When this reply ends it should go to 象 with no help from me. That's the live check I can't watch from inside the turn. At the start of my next turn I'll check whether `turn-quBqCC.json` has a `happened_summary`.\n\n**Review lesson:** kimi-4's tests drove a fake call that always invokes the callback. So they tested the fake, not how `claude-repl.el` actually delivers a streamed reply. I should have caught that in review, and didn't.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-286",
+      "id": "claude-17-turn-286-f-s1-0",
+      "kind": "verify",
+      "at": "2026-09-30T00:48:12Z",
+      "record": "turn-quBqCC",
+      "end": 11,
+      "standing?": false,
+      "about": "the 象 stepper window state after the fix and reload",
+      "text": "I still see",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 12,
+      "author": "operator",
+      "turn": "claude-17-turn-286",
+      "id": "claude-17-turn-286-f-s1-1",
+      "kind": "report-problem",
+      "at": "2026-09-30T00:48:12Z",
+      "record": "turn-quBqCC",
+      "end": 112,
+      "standing?": false,
+      "about": "the 象 stepper window display (frame 91 content label, frame 89 SAID attribution)",
+      "text": "the 象 stepper window on frame 91 with \"no operator words\" and an earlier frame 89 listed as the SAID",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-286",
+      "id": "claude-17-turn-286-c-d64a9117",
+      "kind": "commit",
+      "at": "2026-09-30T00:48:12Z",
+      "record": "turn-quBqCC",
+      "repo": "futon2",
+      "subject": "Publish repair ticket T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd (finding repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd)",
+      "sha": "d64a9117",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-286",
+      "id": "claude-17-turn-286-c-a7fce180",
+      "kind": "commit",
+      "at": "2026-09-30T00:48:12Z",
+      "record": "turn-quBqCC",
+      "repo": "futon3c",
+      "subject": "象 turn-end dispatch: streamed replies never called the callback",
+      "sha": "a7fce180",
+      "standing?": false
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-17-turn-2-f-s1-0",
+      "kind": "ask-action",
+      "text": "Is there an update to markdown-overlays",
+      "since": "2026-09-27T14:50:07Z"
+    },
+    {
+      "act": "claude-17-turn-2-f-s1-1",
+      "kind": "propose",
+      "text": "can we modify it and load a fork?",
+      "since": "2026-09-27T14:50:07Z"
+    },
+    {
+      "act": "claude-17-turn-3-f-s2-0",
+      "kind": "clarify",
+      "text": "I'm a little unclear why markdown-overlays needs to know about org-format-latex at all",
+      "since": "2026-09-27T14:52:48Z"
+    },
+    {
+      "act": "claude-17-turn-4-f-s1-0",
+      "kind": "propose",
+      "text": "I think we can make a well thought-through upstream PR explanation",
+      "since": "2026-09-27T14:54:25Z"
+    },
+    {
+      "act": "claude-17-turn-6-f-s2-1",
+      "kind": "propose",
+      "text": "so we don't need to include that (Grice)",
+      "since": "2026-09-27T14:56:27Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s1-1",
+      "kind": "propose",
+      "text": "have the \"象\" lighter show a somewhat clearer status",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s2-0",
+      "kind": "propose",
+      "text": "turn it pink when it is not actually working.",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s3-0",
+      "kind": "report-problem",
+      "text": "The lighter was staying red regardless of whether the feature was actually working or not.",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-8-f-s1-0",
+      "kind": "report-problem",
+      "text": "Now I see another warning I think...",
+      "since": "2026-09-27T15:06:10Z"
+    },
+    {
+      "act": "claude-17-turn-9-f-s2-0",
+      "kind": "ask-action",
+      "text": "I don't remember where I left it off",
+      "since": "2026-09-27T15:07:23Z"
+    },
+    {
+      "act": "claude-17-turn-11-f-s5-0",
+      "kind": "propose",
+      "text": "*I* can act as the verifier",
+      "since": "2026-09-27T15:20:54Z"
+    },
+    {
+      "act": "claude-17-turn-11-f-s6-0",
+      "kind": "propose",
+      "text": "a web page with SVG graphics inside",
+      "since": "2026-09-27T15:20:54Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s2-0",
+      "kind": "verify",
+      "text": "VERIFY-1 by visual inspection is that this looks great and very complete.",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s3-0",
+      "kind": "delegate",
+      "text": "But let's do a VERIFY-2 and ask for a review from claude-8.",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s5-0",
+      "kind": "delegate",
+      "text": "two questions for them: does this look like a buildable design?",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s6-0",
+      "kind": "delegate",
+      "text": "and, secondly, is the war machine capable of working in this way?",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-14-f-s2-1",
+      "kind": "verify",
+      "text": "so I hope I am remembering correctly that that's a side-effect of the way of working we're developing here (I'm pretty …",
+      "since": "2026-09-27T15:44:07Z"
+    },
+    {
+      "act": "claude-17-turn-16-f-s1-0",
+      "kind": "verify",
+      "text": "your cascade does imply a @how decomposition which is great",
+      "since": "2026-09-27T15:56:45Z"
+    },
+    {
+      "act": "claude-17-turn-18-f-s1-0",
+      "kind": "propose",
+      "text": "Another relevant Excursion would be to build a purely classical (no LLM, no network) scanner that can read people's .js…",
+      "since": "2026-09-27T16:05:01Z"
+    },
+    {
+      "act": "claude-17-turn-20-f-s1-0",
+      "kind": "clarify",
+      "text": "So, regarding the classical system (小象?)",
+      "since": "2026-09-27T16:10:53Z"
+    },
+    {
+      "act": "claude-17-turn-21-f-s2-0",
+      "kind": "propose",
+      "text": "Obivously if I could find anyone else who wants to work together on non-private data in the 大象 pilot, that would be gre…",
+      "since": "2026-09-27T16:13:59Z"
+    },
+    {
+      "act": "claude-17-turn-23-f-s1-0",
+      "kind": "delegate",
+      "text": "please run through the ones that can be automated using parks",
+      "since": "2026-09-27T16:43:32Z"
+    },
+    {
+      "act": "claude-17-turn-23-f-s1-1",
+      "kind": "delegate",
+      "text": "come back to me when that's ready",
+      "since": "2026-09-27T16:43:32Z"
+    },
+    {
+      "act": "claude-17-turn-37-f-s1-1",
+      "kind": "propose",
+      "text": "for other issues, I wonder if we could fix the Voxterm audio layer so you could run me through them verbally rather tha…",
+      "since": "2026-09-27T18:25:15Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-17-turn-262-f-s1-1",
+      "kind": "constrain",
+      "text": "so that a reader quickly sees them"
+    },
+    {
+      "act": "claude-17-turn-264-f-s2-0",
+      "kind": "constrain",
+      "text": "the first demo would be for me, not for the website, i.e.,"
+    },
+    {
+      "act": "claude-17-turn-280-f-s2-0",
+      "kind": "constrain",
+      "text": "if it is really a stepper with Elephant-2000 semantics we should be able to demonstrate things like rewinding."
+    },
+    {
+      "act": "claude-17-turn-282-f-s4-0",
+      "kind": "constrain",
+      "text": "We don't need to have it read the whole commit which could be a massive token sink, just the abstract details."
+    },
+    {
+      "act": "claude-17-turn-283-f-s4-0",
+      "kind": "constrain",
+      "text": "We'll know what the agent did in its turn, and that's it."
+    },
+    {
+      "act": "claude-17-turn-283-f-s5-0",
+      "kind": "constrain",
+      "text": "Obviously if there are 1000 continuations we won't be able to rewind them all individually but we should at least be ab…"
+    },
+    {
+      "act": "claude-17-turn-285-f-s1-0",
+      "kind": "constrain",
+      "text": "If it works,"
+    },
+    {
+      "act": "claude-17-turn-45-f-s1-2",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-47-f-s1-0",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-62-f-s1-3",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-63-f-s3-0",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-64-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-64-f-s2-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-78-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-81-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-83-f-s1-0",
+      "kind": null,
+      "text": ""
+    }
+  ]
+}

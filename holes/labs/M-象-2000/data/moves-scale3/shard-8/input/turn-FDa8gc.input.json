@@ -1,0 +1,262 @@
+{
+  "record": "turn-FDa8gc",
+  "turn_id": "claude-15-turn-44",
+  "session_id": "ec3a9b31-6656-4530-90db-53a22762c17f",
+  "created_at": "2026-10-12T15:28:56Z",
+  "agent_id": "claude-15",
+  "source_text": "so, we have a demo, i want to know whether this is something we are really ready to use, possibly moving towards switch over from the standard claude memory system for example",
+  "fragments": [
+    {
+      "id": "claude-15-turn-44-f-s1-0",
+      "intent": "verify",
+      "text": "so, we have a demo, i want to know whether this is something we are really ready to use, possibly moving towards switch over from the standard claude memory system for example"
+    }
+  ],
+  "reply_text": "Before answering, a few quick facts, so the answer reflects how it's actually running rather than how it was designed:**Short answer: not ready to replace the standard memory yet. It is ready to run alongside it, and it already does.**\n\n**What works today**\n- **It already holds every memory.** The ingest hook mirrors every memory write into the store (most recently 05:29 today). All ~305 memory files are there with full version history.\n- **Things the standard system can't do:**\n  - read any memory as of a past date;\n  - spot contradictions between memories when they're written (\"sorries\");\n  - spot duplicates and aliases;\n  - give dated facts for everything written since 10-11;\n  - run the inbox of open asks and faults.\n- **Getting out is proven.** Exporting, re-importing and exporting again gives byte-identical files (milestone 1). Switching over and back wouldn't lose anything.\n\n**What stops a switch-over**\n1. **Nothing reads from it.** This is the blocker. Claude Code loads `MEMORY.md` at the start of each session; minus40 has no way into an agent's context. There's no MCP server (milestone 6) and no session-start brief. Today it's a better archive that no agent consults.\n2. **Retrieval isn't built** (milestone 5). On the corner-store benchmark it scores 7/8 against Mastra's 8/8. The miss is \"what was true on date D\", which needs supersession (HOLES 3 and 13).\n3. **Operations aren't at production level.**\n   - The store is still the scratch instance on :7093.\n   - Last night the follower crash-looped for 13 hours and nothing noticed. The check that would catch that is next on my list.\n   - On 10-11 I took the store down myself by mistake.\n4. **Older memories have no dated facts.** Facts only exist for memories written since 10-11, because the backfill is still your call (HOLE 2). For your \"seeds from months ago\" goal, that's most of what matters.\n\n**A path that keeps the files authoritative until each step proves itself**\n1. **Add the read path in shadow.** At session start, give agents a short brief built from minus40, next to `MEMORY.md` rather than replacing it. Measure your own criterion: does the agent re-ask anything already settled?\n2. **Harden it.** Add the freshness fault, move the store off scratch to a durable location, and run the facts backfill.\n3. **Flip.** minus40 becomes the source, and memory files become an export of it, regenerated so Claude Code keeps working unchanged. Because the round trip is exact, you could flip back.\n\nStep 1 is the real test, and it's small. Shall I start on it?",
+  "reply_acts": [],
+  "previous_reply_acts": [
+    {
+      "id": "claude-15-turn-39-r-0",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊢",
+      "text": "(what the spec covers) It's written from what is built and what's been ruled today, with every gap marked as one of 13 numbered holes rather than described as done.\n- **Scope:** three inputs (memory writes, 象 turns, faults) and one notion of an open item. It names what's out of scope, including your two rules from today: no second model reading turns, and no old inbox.\n- **Objects and time:** each object, its id, who produces it, and its two times (said and referred to). An unknown referent is stored as `unknown`, not defaulted.\n- **Seams:** nine producer → record → consumer rows, under your \"no recomputation across a seam\" rule.\n- **Lifecycle:** open, answered, in force, discharged, lapsed, orphaned, unread, unknown, each tied to the predicate or action that decides it.\n- **Inbox, reads, and invariants:** 11 invariants, each marked tested, checked live once, or not yet. The corner-store benchmark is one of them, currently failing at 7/8."
+    },
+    {
+      "id": "claude-15-turn-39-r-1",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "🈖",
+      "text": "(\"Lean backed concept blending theory\") I found it: the 3/2-blend carrier in `futon2/holes/labs/wm-contract/NOTE-three-halves-blend-carrier-2026-10-06.md` and `DarkTower/WarMachine/ThreeHalvesBlend.lean`. §6 proposes a reading of minus40 in its terms:\n- a memory is a finite theory (entities as elements, facts as triples);\n- an alias is an identification;\n- a sorry is a span with no consistent cone except the degenerate one;\n- a sorry you tolerate is a cone with one auxiliary triangle, as with Goguen's boathouse."
+    },
+    {
+      "id": "claude-15-turn-39-r-2",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "㊢",
+      "text": "(review status) claude-16 has the review as job `invoke-1791736934784-5621-a4ed2943`, read-only, replying with numbered comments on the 象 seams and lifecycle. I'm parked on it (`park-ce47dd1a…`, 60-minute deadline)."
+    },
+    {
+      "id": "claude-15-turn-39-r-3",
+      "kind": "reply-mark",
+      "author": "claude-15",
+      "mark": "🈳",
+      "text": "(four questions for you, in §9, no rush) Whether the inbox should be one list or the three inputs side by side; whether to backfill facts for the existing memories; whether to adopt the blend reading as the definition of conflict; and when the scratch store becomes the real one."
+    }
+  ],
+  "acts": [
+    {
+      "port?": true,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-15-turn-44",
+      "id": "claude-15-turn-44-f-s1-0",
+      "kind": "verify",
+      "at": "2026-10-12T15:28:56Z",
+      "record": "turn-FDa8gc",
+      "end": 175,
+      "standing?": false,
+      "about": "readiness of the demo to be used, possibly replacing the standard claude memory system",
+      "text": "so, we have a demo, i want to know whether this is something we are really ready to use, possibly moving towards switch…",
+      "to": "claude-15"
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-15-turn-2-f-s1-1",
+      "kind": "ask-action",
+      "text": "can you grab a 40ºbelowdb spec from downloads",
+      "since": "2026-10-10T19:39:39Z"
+    },
+    {
+      "act": "claude-15-turn-3-f-s1-1",
+      "kind": "propose",
+      "text": "We should explore the other options.",
+      "since": "2026-10-10T19:45:53Z"
+    },
+    {
+      "act": "claude-15-turn-4-f-s1-0",
+      "kind": "ask-action",
+      "text": "did you get any results back?",
+      "since": "2026-10-10T22:13:18Z"
+    },
+    {
+      "act": "claude-15-turn-5-f-s2-0",
+      "kind": "propose",
+      "text": "We could reade claude code memories rather than claude.ai memories for a data source.",
+      "since": "2026-10-10T22:22:58Z"
+    },
+    {
+      "act": "claude-15-turn-7-f-s2-0",
+      "kind": "propose",
+      "text": "I am not sure what the standard practice is for XTDB, but I think insertion time vs record time can differ without any …",
+      "since": "2026-10-10T23:24:47Z"
+    },
+    {
+      "act": "claude-15-turn-7-r-1",
+      "kind": "propose",
+      "text": "(milestone 2 plan)\n- Each memory gets one stable `:memory/version` hyperedge.\n- That hyperedge is written once per vers…",
+      "since": "2026-10-10T23:24:47Z"
+    },
+    {
+      "act": "claude-15-turn-9-r-1",
+      "kind": "report-problem",
+      "text": "(precision bug, caught) The first run reported 7 contradictions and 271 markers. Both were caused by `stat %W` cutting …",
+      "since": "2026-10-10T23:45:12Z"
+    },
+    {
+      "act": "claude-15-turn-9-r-4",
+      "kind": "propose",
+      "text": "(one more source, if wanted) The spot-check turned up a better source: `ls -l` output in transcripts. It records each l…",
+      "since": "2026-10-10T23:45:12Z"
+    },
+    {
+      "act": "claude-15-turn-12-f-s1-0",
+      "kind": "ask-action",
+      "text": "are they still going?",
+      "since": "2026-10-11T01:15:22Z"
+    },
+    {
+      "act": "claude-15-turn-13-f-s1-0",
+      "kind": "clarify",
+      "text": "what is milestone 4?",
+      "since": "2026-10-11T01:16:42Z"
+    },
+    {
+      "act": "claude-15-turn-14-r-1",
+      "kind": "report-problem",
+      "text": "(two problems, both fixed)\n- **Which memory to keep.** My first rule kept the memory with the most inbound links. In th…",
+      "since": "2026-10-11T01:17:46Z"
+    },
+    {
+      "act": "claude-15-turn-14-r-4",
+      "kind": "ask-action",
+      "text": "(one decision) Applying merges is your call, either all of them or some. Exporting a merged set back to Claude's flat f…",
+      "since": "2026-10-11T01:17:46Z"
+    },
+    {
+      "act": "claude-15-turn-15-r-2",
+      "kind": "propose",
+      "text": "(what I'd build instead)\n1. **Ingest on write.** A Claude Code hook that runs after any Write or Edit to a memory file …",
+      "since": "2026-10-11T01:41:19Z"
+    },
+    {
+      "act": "claude-15-turn-15-r-4",
+      "kind": "ask-action",
+      "text": "(which first) Do you want the experiment first, or should I start on the ingest hook (step 1)? The hook is small, and e…",
+      "since": "2026-10-11T01:41:19Z"
+    },
+    {
+      "act": "claude-15-turn-16-f-s5-0",
+      "kind": "clarify",
+      "text": "I hope this makes sense.",
+      "since": "2026-10-11T01:45:49Z"
+    },
+    {
+      "act": "claude-15-turn-16-r-5",
+      "kind": "ask-action",
+      "text": "(next) Part 2 (entities), the MCP tool, or a design note on the FUTON debugger?",
+      "since": "2026-10-11T01:45:49Z"
+    },
+    {
+      "act": "claude-15-turn-17-f-s3-0",
+      "kind": "propose",
+      "text": "On the other hand, simply turning off the standard memory system and instructing Claude via CLAUDE.md to use our altern…",
+      "since": "2026-10-11T02:10:36Z"
+    },
+    {
+      "act": "claude-15-turn-18-f-s2-0",
+      "kind": "propose",
+      "text": "But we may be at a point where could start to merge this workstream with M-象-2000, so that we \"remember\" a lot more.",
+      "since": "2026-10-11T02:22:29Z"
+    },
+    {
+      "act": "claude-15-turn-18-f-s7-0",
+      "kind": "clarify",
+      "text": "That's NOT a directory based search but much more like the 3/2 category elaboration that codex-68 is working on.",
+      "since": "2026-10-11T02:22:29Z"
+    },
+    {
+      "act": "claude-15-turn-18-r-2",
+      "kind": "clarify",
+      "text": "(use cases decide the design) The math-problem example suggests the first test case is \"given a new problem, surface th…",
+      "since": "2026-10-11T02:22:29Z"
+    },
+    {
+      "act": "invoke-1791685544088-3800-6401269c-b-0",
+      "kind": "ask-action",
+      "text": "Joe asked me to create and send you the 3/2-category orientation document.\n\nPath: /home/joe/code/futon2/holes/labs/wm-c…",
+      "since": "2026-10-11T02:25:44Z"
+    },
+    {
+      "act": "claude-15-turn-20-f-s2-0",
+      "kind": "propose",
+      "text": "That could be a useful guiding principle for our DB.",
+      "since": "2026-10-11T02:33:22Z"
+    },
+    {
+      "act": "claude-15-turn-20-r-3",
+      "kind": "propose",
+      "text": "(making the hook live up to it)\n1. **Synchronous, cheap:** rule-based entity extraction (seed aliases, repos, seats, po…",
+      "since": "2026-10-11T02:33:22Z"
+    },
+    {
+      "act": "claude-15-turn-20-r-4",
+      "kind": "ask-action",
+      "text": "(go?) Shall I build 1 and 2? I'd also fix the `about` date-ordering issue on the way, since a new memory's place in the…",
+      "since": "2026-10-11T02:33:22Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-15-turn-10-r-2",
+      "kind": "offer",
+      "text": "(one decision: which model judges the full 631 pairs)\n1. **Haiku via `claude -p`.** About 75 minutes run one at a time,…"
+    },
+    {
+      "act": "claude-15-turn-11-f-s1-0",
+      "kind": "accept",
+      "text": "let's go with haiku"
+    },
+    {
+      "act": "claude-15-turn-21-f-s3-0",
+      "kind": "constrain",
+      "text": "Let's not reinvent the wheel."
+    },
+    {
+      "act": "claude-15-turn-22-f-s1-0",
+      "kind": "constrain",
+      "text": "The reason we need to be careful is that I don't really want all of the agents' turns to be read by a second agent, tha…"
+    },
+    {
+      "act": "claude-15-turn-23-f-s1-1",
+      "kind": "delegate",
+      "text": "let's bell a description of the work so far and the plan to claude-16 (Fable) and ask for comments"
+    },
+    {
+      "act": "claude-15-turn-27-r-1",
+      "kind": "delegate",
+      "text": "(backfill → codex-70) I sent it to codex-70 rather than 象-sonnet. 象-sonnet is the seat that *reads* operator turns, whi…"
+    },
+    {
+      "act": "claude-15-turn-29-f-s1-0",
+      "kind": "constrain",
+      "text": "Sure, let's take it one step at a time."
+    },
+    {
+      "act": "claude-15-turn-32-f-s1-0",
+      "kind": "delegate",
+      "text": "Yes please, bell claude-16."
+    },
+    {
+      "act": "claude-15-turn-32-f-s2-0",
+      "kind": "accept",
+      "text": "And yes, we can start the explicit-signal inbox."
+    },
+    {
+      "act": "claude-15-turn-35-f-s2-0",
+      "kind": "constrain",
+      "text": "the historical data won't go away, and I don't want to read an old inbox."
+    }
+  ]
+}

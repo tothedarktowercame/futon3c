@@ -1,0 +1,296 @@
+{
+  "record": "turn-zjvQRQ",
+  "turn_id": "claude-17-turn-346",
+  "session_id": "564c8e50-c240-46fc-81ad-55afafbc63ee",
+  "created_at": "2026-09-30T13:48:58Z",
+  "agent_id": "claude-17",
+  "source_text": "Sure, this is a good level of pilot/follow-up on the idea we were discussing, please do, we could write it up as a TN-G-over-cascades-revisited.md",
+  "fragments": [
+    {
+      "id": "claude-17-turn-346-f-s1-0",
+      "intent": "approve",
+      "text": "Sure, this is a good level of pilot/follow-up on the idea we were discussing, please do"
+    },
+    {
+      "id": "claude-17-turn-346-f-s1-1",
+      "intent": "ask-action",
+      "text": "we could write it up as a TN-G-over-cascades-revisited.md"
+    }
+  ],
+  "reply_text": "Gist: The note is written: in all six cases the requirement was accepted, usually by recording it as a ruling, and no reply asked where the cascades that G compares would come from.\n\nIt is at `futon3c/TN-G-over-cascades-revisited.md` (commit e7fe9142).\n\n**The six cases**\n\n| Date | Seat | What the reply did | Asked where the cascades come from? |\n|---|---|---|---|\n| 30 Aug | claude-15 | Typed the idea and wrote five questions about what a policy and the preference are | No |\n| 2 Sep | claude-1 | Recorded the ruling, reopened nine worklist rows, restarted the loop | No; no questions at all |\n| 12 Sep | claude-15 | Recorded a ruling and dispatched an audit of Lean attestations | Partly: mentions \"candidate cascades\", not how they are generated |\n| 15 Sep | codex-26 | Said G must not be \"supplied as an arbitrary scoring function\" | No; says nothing of the policy set |\n| 17 Sep | claude-4 | Noted \"an action can be dressed up as a one-step cascade\" | Closest; but checks where the number came from, not the cascade set |\n| 18 Sep | claude-12 | Surveyed the Lean against your three purposes | No; names the preference as \"the one free preference constant in the census\" |\n\n**What I take from them**\n- **Acceptance meant recording.** Four of six replies contain no question. Writing a ruling into a record showed it was heard, not that it could be carried out.\n- **Free inputs were found one at a time.** Three different seats each found one: the scoring function, the action dressed as a cascade, the preference. Nobody went on to list them all.\n- **A census of free constants already existed on 18 September** and the policy set was not in it. Its scope was constants, not collections the runtime supplies. I think this is the most specific finding.\n- **Each seat met the requirement as new.** Six statements went to five seats; no reply refers to an earlier statement made to another seat.\n- **No reply said it was hard or underspecified.**\n\n**Limits**\n- One search pattern, so six is a lower bound.\n- I read only the immediate reply, not later turns of those sessions.\n- The corpus starts on 22 August.\n- Six cases give no rate.\n- The \"one design, no alternatives\" row of the mirror is not tested.\n\nThe note ends with four things that would have changed the outcome, none built, and three follow-ups. The cheapest follow-up is repeating this for a second requirement, such as \"no facades\", to see whether the pattern is particular to this one.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-17-turn-346",
+      "id": "claude-17-turn-346-f-s1-0",
+      "kind": "approve",
+      "at": "2026-09-30T13:48:58Z",
+      "record": "turn-zjvQRQ",
+      "end": 87,
+      "standing?": false,
+      "about": "the proposed pilot/follow-up on the G-over-cascades discussion",
+      "text": "Sure, this is a good level of pilot/follow-up on the idea we were discussing, please do",
+      "to": "claude-17"
+    },
+    {
+      "port?": true,
+      "start": 89,
+      "author": "operator",
+      "turn": "claude-17-turn-346",
+      "id": "claude-17-turn-346-f-s1-1",
+      "kind": "ask-action",
+      "at": "2026-09-30T13:48:58Z",
+      "record": "turn-zjvQRQ",
+      "end": 146,
+      "standing?": false,
+      "about": "the deliverable: a single named TN write-up",
+      "text": "we could write it up as a TN-G-over-cascades-revisited.md",
+      "to": "claude-17"
+    },
+    {
+      "port?": false,
+      "author": "claude-17",
+      "turn": "claude-17-turn-346",
+      "id": "claude-17-turn-346-c-e7fe9142",
+      "kind": "commit",
+      "at": "2026-09-30T13:48:58Z",
+      "record": "turn-zjvQRQ",
+      "repo": "futon3c",
+      "subject": "TN-G-over-cascades-revisited: six acceptances of the requirement, read for what was asked (Joe 2026-09-30)",
+      "sha": "e7fe9142",
+      "standing?": false
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "claude-17-turn-2-f-s1-0",
+      "kind": "ask-action",
+      "text": "Is there an update to markdown-overlays",
+      "since": "2026-09-27T14:50:07Z"
+    },
+    {
+      "act": "claude-17-turn-2-f-s1-1",
+      "kind": "propose",
+      "text": "can we modify it and load a fork?",
+      "since": "2026-09-27T14:50:07Z"
+    },
+    {
+      "act": "claude-17-turn-3-f-s2-0",
+      "kind": "clarify",
+      "text": "I'm a little unclear why markdown-overlays needs to know about org-format-latex at all",
+      "since": "2026-09-27T14:52:48Z"
+    },
+    {
+      "act": "claude-17-turn-4-f-s1-0",
+      "kind": "propose",
+      "text": "I think we can make a well thought-through upstream PR explanation",
+      "since": "2026-09-27T14:54:25Z"
+    },
+    {
+      "act": "claude-17-turn-6-f-s2-1",
+      "kind": "propose",
+      "text": "so we don't need to include that (Grice)",
+      "since": "2026-09-27T14:56:27Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s1-1",
+      "kind": "propose",
+      "text": "have the \"象\" lighter show a somewhat clearer status",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s2-0",
+      "kind": "propose",
+      "text": "turn it pink when it is not actually working.",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-7-f-s3-0",
+      "kind": "report-problem",
+      "text": "The lighter was staying red regardless of whether the feature was actually working or not.",
+      "since": "2026-09-27T14:59:09Z"
+    },
+    {
+      "act": "claude-17-turn-8-f-s1-0",
+      "kind": "report-problem",
+      "text": "Now I see another warning I think...",
+      "since": "2026-09-27T15:06:10Z"
+    },
+    {
+      "act": "claude-17-turn-9-f-s2-0",
+      "kind": "ask-action",
+      "text": "I don't remember where I left it off",
+      "since": "2026-09-27T15:07:23Z"
+    },
+    {
+      "act": "claude-17-turn-11-f-s5-0",
+      "kind": "propose",
+      "text": "*I* can act as the verifier",
+      "since": "2026-09-27T15:20:54Z"
+    },
+    {
+      "act": "claude-17-turn-11-f-s6-0",
+      "kind": "propose",
+      "text": "a web page with SVG graphics inside",
+      "since": "2026-09-27T15:20:54Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s2-0",
+      "kind": "verify",
+      "text": "VERIFY-1 by visual inspection is that this looks great and very complete.",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s3-0",
+      "kind": "delegate",
+      "text": "But let's do a VERIFY-2 and ask for a review from claude-8.",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s5-0",
+      "kind": "delegate",
+      "text": "two questions for them: does this look like a buildable design?",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-12-f-s6-0",
+      "kind": "delegate",
+      "text": "and, secondly, is the war machine capable of working in this way?",
+      "since": "2026-09-27T15:38:38Z"
+    },
+    {
+      "act": "claude-17-turn-14-f-s2-1",
+      "kind": "verify",
+      "text": "so I hope I am remembering correctly that that's a side-effect of the way of working we're developing here (I'm pretty …",
+      "since": "2026-09-27T15:44:07Z"
+    },
+    {
+      "act": "claude-17-turn-16-f-s1-0",
+      "kind": "verify",
+      "text": "your cascade does imply a @how decomposition which is great",
+      "since": "2026-09-27T15:56:45Z"
+    },
+    {
+      "act": "claude-17-turn-18-f-s1-0",
+      "kind": "propose",
+      "text": "Another relevant Excursion would be to build a purely classical (no LLM, no network) scanner that can read people's .js…",
+      "since": "2026-09-27T16:05:01Z"
+    },
+    {
+      "act": "claude-17-turn-20-f-s1-0",
+      "kind": "clarify",
+      "text": "So, regarding the classical system (小象?)",
+      "since": "2026-09-27T16:10:53Z"
+    },
+    {
+      "act": "claude-17-turn-21-f-s2-0",
+      "kind": "propose",
+      "text": "Obivously if I could find anyone else who wants to work together on non-private data in the 大象 pilot, that would be gre…",
+      "since": "2026-09-27T16:13:59Z"
+    },
+    {
+      "act": "claude-17-turn-23-f-s1-0",
+      "kind": "delegate",
+      "text": "please run through the ones that can be automated using parks",
+      "since": "2026-09-27T16:43:32Z"
+    },
+    {
+      "act": "claude-17-turn-23-f-s1-1",
+      "kind": "delegate",
+      "text": "come back to me when that's ready",
+      "since": "2026-09-27T16:43:32Z"
+    },
+    {
+      "act": "claude-17-turn-37-f-s1-1",
+      "kind": "propose",
+      "text": "for other issues, I wonder if we could fix the Voxterm audio layer so you could run me through them verbally rather tha…",
+      "since": "2026-09-27T18:25:15Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-17-turn-309-f-s7-1",
+      "kind": "delegate",
+      "text": "and then we could set about getting a kimi agent to build and test them."
+    },
+    {
+      "act": "claude-17-turn-310-f-s2-0",
+      "kind": "delegate",
+      "text": "Can you send the task list to Kimi?"
+    },
+    {
+      "act": "claude-17-turn-312-f-s1-0",
+      "kind": "delegate",
+      "text": "I'd like you to work on the seam with a codex agent"
+    },
+    {
+      "act": "claude-17-turn-314-f-s2-1",
+      "kind": "constrain",
+      "text": "the *象 stepper* side window should disappear"
+    },
+    {
+      "act": "claude-17-turn-334-f-s1-0",
+      "kind": "delegate",
+      "text": "Can you please bell claude-1 with a summary of this example?"
+    },
+    {
+      "act": "claude-17-turn-341-f-s6-0",
+      "kind": "constrain",
+      "text": "If we want to get all the agent-side stuff from Elephant-2000, we'd have to model it."
+    },
+    {
+      "act": "claude-17-turn-341-f-s8-0",
+      "kind": "constrain",
+      "text": "We don't need a special \"promise\" agent tool for that."
+    },
+    {
+      "act": "claude-17-turn-45-f-s1-2",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-47-f-s1-0",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-62-f-s1-3",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-63-f-s3-0",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-64-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-64-f-s2-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-78-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-81-f-s1-1",
+      "kind": null,
+      "text": ""
+    },
+    {
+      "act": "claude-17-turn-83-f-s1-0",
+      "kind": null,
+      "text": ""
+    }
+  ]
+}
