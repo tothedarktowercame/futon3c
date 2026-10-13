@@ -93,6 +93,14 @@ The live JavaScript and KaTeX CSS were fetched through Caddy and matched the
 tested build byte-for-byte (SHA-256 `3a8e5a17…54be` and
 `19095127…2e75`, respectively).
 
+`@fucodex` registered that deployment in `FUTON 象 Demo` as the Matrix widget
+`futon-proof-dialogue-tex`, named “Proof dialogue · TeX”; the state write event
+is `$HYfNbs_Q0M27L5mubj2wbtwov0hnvjKvku5Fz0zcu1Y`.  A power-0 proof-role
+account independently read the resulting `im.vector.modular.widgets` state,
+and an unauthenticated HTTP probe found both the expected page title and local
+KaTeX stylesheet.  This verifies registration and serving, not interactive
+browser rendering inside Element.
+
 `scripts/lean_formal_capture.py` adds the semantic layer without replacing the
 source manifest.  It opens the frozen proof in Lean's language server and asks
 for the elaborated goal at each of the 24 recorded region positions.  It also
