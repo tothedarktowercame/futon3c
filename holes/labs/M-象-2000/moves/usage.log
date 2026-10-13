@@ -14,3 +14,4 @@
 2026-10-12T20:29:45Z 5h window 73.0%, monthly 87.0% used; waves 1+2 in (322 records), wave 3 running
 2026-10-12T20:30:36Z 5h window 76.0%, monthly 88.0% used; shard-4 wake (already accepted), wave 3 running
 2026-10-12T20:37:49Z 5h window 96.0%, monthly 92.0% used; batch 3 complete: 7 shards, 405 records (waves 1-3)
+2026-10-13T01:21:08Z 5h window 12.0%, monthly 94.0% used; wave 4: shard 10 done, shard 8 running, shard 9 failed on Zai HTTP 500 at 01:16Z (7 sidecars kept), remainder re-dispatched as shard 11
