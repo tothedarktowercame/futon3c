@@ -189,6 +189,18 @@ class MatrixTest(unittest.TestCase):
             else:
                 self.assertIn('MUST NOT', context)
                 self.assertIn('lean/Main.lean', context)
+            if nick == 'proof-student':
+                self.assertIn('You are the Prover', context)
+                self.assertIn('Submit every proposed step to @proof-critic', context)
+            elif nick == 'proof-critic':
+                self.assertIn('do not supply the repair', context)
+                self.assertIn('same obstacle survives a repair attempt', context)
+            elif nick == 'proof-teacher':
+                self.assertIn('Do not drive the proof', context)
+                self.assertIn('Hand control back to @proof-student', context)
+            elif nick == 'proof-scribe':
+                self.assertIn('observer, not part of ordinary turn-taking', context)
+                self.assertIn('explicit checkpoint request', context)
 
     def test_fumarimo_reply_posts_a_typed_python_cell(self):
         (self.root / 'fumarimo.token').write_text('offline-token\n')

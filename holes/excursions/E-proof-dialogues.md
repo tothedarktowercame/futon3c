@@ -13,10 +13,15 @@ The pilot freezes apm-lean commit `9e8b8ec4580ff1fa85e763d3834ca8adeaeee84e`:
 - informal solution: `problems/t94A01/informal-solution.md`, SHA-256 `8beca552…6dee0d9`;
 - Lean proof: `problems/t94A01/lean/Main.lean`, SHA-256 `c380fee0…dcc6b`.
 
-Teacher, student, critic and scribe will conduct a linear dialogue. The teacher
-may consult all three frozen objects. The other roles receive the problem and
-progressively disclosed mathematical claims, not the reference Lean proof.
-Scope mining happens only after the transcript is frozen.
+The Prover drives a stepwise dialogue and submits every inference to the
+Critic, who either discharges it or returns one localized objection for repair.
+The Teacher may consult all three frozen objects, but intervenes only with a
+bounded mathematical clarification when a repeated obstacle concerns Lean
+machinery. The Scribe is outside ordinary turn-taking and writes only at an
+explicit phase checkpoint or after the transcript is frozen. The other roles
+receive the problem and progressively disclosed mathematical claims, not the
+reference Lean proof. Scope mining happens only after the transcript is
+frozen.
 
 ## Trace contract
 
