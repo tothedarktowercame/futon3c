@@ -415,6 +415,14 @@ path from any sequential pair `Δ(A,B) ; Δ(B,C)` to `Δ(A,C)`, followed by a
 parallel constructor making interchange diagrammatic. Those are follow-on
 work, not missing evidence for the narrower completed excursion.
 
+Follow-up mathlib4 commit `48abaaa949` makes the first of those tasks precise:
+`mem_comp_between_remove_iff` and `mem_comp_between_add_iff` prove for arbitrary
+`A`, `B`, `C` that a fused delta differs from the canonical endpoint delta only
+by facts absent at the source which appear then disappear, and facts present at
+the source which disappear then reappear. These are exactly the two
+source-licensed edit classes the future general rewrite path must cancel. The
+four Cool Memories targets rebuilt successfully (681 jobs).
+
 ## Stop conditions
 
 Stop and reassess rather than enlarging the theory if:
