@@ -422,6 +422,17 @@ rebuilt successfully (682 jobs). This validates the tagged-boundary design;
 recursive `par` syntax and an interchange `Step` remain the next unit rather
 than being claimed by the atomic constructor.
 
+Mathlib4 commit `a9a7a03608` completes that next unit. `liftLeft` and
+`liftRight` recursively preserve sequential diagram structure in either tagged
+lane; `Derivation.par` and `parRightFirst` retain the two possible schedules;
+and `ParallelStep.interchange` is a checked rewrite between them. Its soundness
+uses the component interpretation lemmas `run_liftLeft` and `run_liftRight`,
+not endpoint typing alone. A concrete two-lane certificate and soundness check
+compile with the core. All five Cool Memories targets rebuilt successfully
+(682 jobs). The remaining presentation task is a two-lane renderer and a
+decision about whether the resulting structure now warrants adapting
+Mathlib's monoidal string-diagram widget.
+
 Follow-up mathlib4 commit `48abaaa949` makes the first of those tasks precise:
 `mem_comp_between_remove_iff` and `mem_comp_between_add_iff` prove for arbitrary
 `A`, `B`, `C` that a fused delta differs from the canonical endpoint delta only

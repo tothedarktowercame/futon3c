@@ -91,7 +91,7 @@ receipts, limitations and next theorem are in
 ## Claim boundary
 
 This prototype does not implement Elephant 2000, an accomplishment judge,
-Markov categories, or a War Machine reformalisation.  It does not yet have a
-parallel constructor in the proof-diagram syntax, and its renderer is a small
+Markov categories, or a War Machine reformalisation. It now has recursive
+parallel composition over disjoint tagged namespaces and a checked interchange
+rewrite, but no two-lane renderer yet. Its existing renderer remains a small
 certificate consumer rather than Mathlib's monoidal string-diagram widget.
-Those are possible next steps, not descriptions of the present artifact.
