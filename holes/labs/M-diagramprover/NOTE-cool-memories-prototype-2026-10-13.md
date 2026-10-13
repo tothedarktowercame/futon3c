@@ -92,6 +92,8 @@ receipts, limitations and next theorem are in
 
 This prototype does not implement Elephant 2000, an accomplishment judge,
 Markov categories, or a War Machine reformalisation. It now has recursive
-parallel composition over disjoint tagged namespaces and a checked interchange
-rewrite, but no two-lane renderer yet. Its existing renderer remains a small
-certificate consumer rather than Mathlib's monoidal string-diagram widget.
+parallel composition over disjoint tagged namespaces, a checked interchange
+rewrite, and a two-lane certificate-driven renderer. It does not use Mathlib's
+monoidal string-diagram widget: the current tensor changes the fact type to a
+`Sum`-tagged type, so presenting it as morphisms in one monoidal category would
+require a separate categorical packaging theorem.

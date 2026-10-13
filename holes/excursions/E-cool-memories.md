@@ -433,6 +433,18 @@ compile with the core. All five Cool Memories targets rebuilt successfully
 decision about whether the resulting structure now warrants adapting
 Mathlib's monoidal string-diagram widget.
 
+Mathlib4 commit `7a2d350f36` adds the two-lane renderer. Its input is the exact
+indexed `ParallelStep.interchange` certificate, so changing a boundary or a
+schedule prevents elaboration rather than merely changing a caption. Running
+`CoolMemoriesDiagram.lean` emits both schedules and the checked interchange
+edge. The existing single-lane witness was also strengthened to carry the
+general `betweenSeqNormalizationPath` rather than only an endpoint equation.
+The stock Mathlib widget remains deferred for a now-tested reason: the tensor
+maps diagrams over different fact types into a `Sum`-tagged fact type, while
+the widget expects morphisms in one monoidal category. Packaging the
+heterogeneous boundaries as such a category is a separate formalisation, not
+a renderer substitution. All five targets rebuilt successfully (682 jobs).
+
 Follow-up mathlib4 commit `48abaaa949` makes the first of those tasks precise:
 `mem_comp_between_remove_iff` and `mem_comp_between_add_iff` prove for arbitrary
 `A`, `B`, `C` that a fused delta differs from the canonical endpoint delta only
