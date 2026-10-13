@@ -1,0 +1,35 @@
+{
+ "record": "turn-MCErMC",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-92-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "It seems a bit strange to me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-92-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "we validated a lean model and ran many tests and still find the system abstains from running",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-92-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

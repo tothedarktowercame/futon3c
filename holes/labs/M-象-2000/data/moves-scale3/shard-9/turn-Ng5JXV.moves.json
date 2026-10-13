@@ -1,0 +1,48 @@
+{
+ "record": "turn-Ng5JXV",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-52-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "is it worth doing another check-up on the topo loops?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-52-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "I see 106 problems left, which is down from 111",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-52-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-52-f-s3-0",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "I wonder if any of them need another round with the closer?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-52-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

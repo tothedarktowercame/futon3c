@@ -1,0 +1,48 @@
+{
+ "record": "turn-MO6QNN",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-142-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "The XXXX requirement might not actually work",
+   "answers": [],
+   "scope": {
+    "opens": "XXXX-requirement doubt",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-142-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "Probably XXXX would not work.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-142-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-142-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/grievance",
+   "quote": "driving this project into the ground without any effort",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-142-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

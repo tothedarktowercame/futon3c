@@ -1,0 +1,48 @@
+{
+ "record": "turn-N1NzTV",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-115-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "A legacy-CLI agent said that alias-warrants have never been used",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-115-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/other",
+   "quote": "a feature that we commissioned during work on the war machine",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-115-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-115-f-s1-2",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "can you confirm its status",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-115-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

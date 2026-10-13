@@ -1,0 +1,35 @@
+{
+ "record": "turn-Nf46jv",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-325-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observ",
+   "quote": "I have not seen any updates in *象 stepper* recently",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-325-f-s1-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Whatever the status of these agents",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-325-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
