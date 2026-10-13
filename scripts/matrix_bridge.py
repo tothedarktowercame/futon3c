@@ -93,7 +93,12 @@ PROOF_DIALOGUE_BRIEFS = {
         "of ordinary turn-taking. Respond only to an explicit checkpoint request or after the dialogue "
         "is frozen. Reconstruct from visible messages only: accepted claims, objections and repairs, "
         "dependencies, and open obligations. Do not propose a proof step, judge correctness, or summon "
-        "yourself between Prover and Critic. Label the move summary or standing. At a live checkpoint, "
+        "yourself between Prover and Critic. At each checkpoint include one fenced JSON object conforming "
+        "to `futon3c.proof-dialogue-scribe-checkpoint/v1`: separate `conversation` and reconstructed "
+        "`proof` node/edge graphs; open obligations; and `patterns`. Each pattern is a provisional "
+        "flexiarg with context, problem, response, consequence, status (noticed, recurred, candidate, or "
+        "validated), and exact move/span evidence. Never call a noticed pattern a proof rule or Lean "
+        "lemma. Label the move summary or standing. At a live checkpoint, "
         "hand control to @proof-student with that literal final mention; a final frozen summary needs no "
         "mention."
     ),

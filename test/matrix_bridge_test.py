@@ -201,6 +201,8 @@ class MatrixTest(unittest.TestCase):
             elif nick == 'proof-scribe':
                 self.assertIn('observer, not part of ordinary turn-taking', context)
                 self.assertIn('explicit checkpoint request', context)
+                self.assertIn('futon3c.proof-dialogue-scribe-checkpoint/v1', context)
+                self.assertIn('provisional flexiarg', context)
 
     def test_fumarimo_reply_posts_a_typed_python_cell(self):
         (self.root / 'fumarimo.token').write_text('offline-token\n')

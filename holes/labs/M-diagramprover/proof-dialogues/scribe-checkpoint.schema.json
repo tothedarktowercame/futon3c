@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "futon3c.proof-dialogue-scribe-checkpoint/v1",
+  "type": "object",
+  "required": ["schema", "through_move_id", "conversation", "proof", "patterns", "open_obligations"],
+  "properties": {
+    "schema": {"const": "futon3c.proof-dialogue-scribe-checkpoint/v1"},
+    "through_move_id": {"type": "string"},
+    "conversation": {"type": "object", "required": ["nodes", "edges"]},
+    "proof": {"type": "object", "required": ["nodes", "edges"]},
+    "patterns": {"type": "array"},
+    "open_obligations": {"type": "array", "items": {"type": "string"}}
+  }
+}

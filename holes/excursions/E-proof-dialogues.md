@@ -130,3 +130,19 @@ and Matrix event IDs.  The pilot packet is bound to trace head
 `3e29e5cf…3a97b` and has packet hash `78f68d92…0653`.  Its two messages validate
 the ingest contract, but are not enough dialogue to justify commissioning or
 interpreting a scope comparison yet.
+
+## Scribe checkpoint contract
+
+The Scribe remains outside the Prover–Critic loop.  When explicitly summoned
+at a resolved phase boundary, or after the run is frozen, it emits three
+separate projections: the observed conversation graph, its reconstructed proof
+graph, and provisional conversational patterns.  The machine-readable shape is
+`proof-dialogues/scribe-checkpoint.schema.json`, and
+`scripts/proof_dialogue_scribe.py` checks every graph node and pattern citation
+against canonical move IDs and exact codepoint spans in `trace.jsonl`.
+
+Pattern entries are flexiargs—context, problem, response and consequence—with
+status `noticed`, `recurred`, `candidate` or `validated`.  They are explicitly
+scribe observations, not Lean lemmas or established proof rules.  This leaves
+their later comparison with independently mined 象 patterns as an empirical
+question.
