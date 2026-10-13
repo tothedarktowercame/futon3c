@@ -423,6 +423,16 @@ the source which disappear then reappear. These are exactly the two
 source-licensed edit classes the future general rewrite path must cancel. The
 four Cool Memories targets rebuilt successfully (681 jobs).
 
+The P6 audit also correctly observed that the wrong-source rejection was only
+described, unlike the three executable semantic corruptions. Mathlib4 commit
+`f02ecf84e7` closes that evidence gap with
+`CoolMemoriesBoundaryNegative.lean`: a `#guard_msgs` test checks that Lean
+rejects composition of a `{1} → {2}` box with a `{3} → {4}` box at
+elaboration. `lake build DarkTower.CoolMemoriesBoundaryNegative` passed (593
+jobs), meaning the expected rejection occurred. The audit's X2 was separately
+closed by `74e3e35a51`; X4 described its frozen pre-adapter commit and is closed
+by the P0/P4 receipts above. X1 remains the substantive open limitation.
+
 ## Stop conditions
 
 Stop and reassess rather than enlarging the theory if:
