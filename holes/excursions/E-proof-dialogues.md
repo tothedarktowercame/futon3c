@@ -1,7 +1,7 @@
 # E-proof-dialogues: Lakatos-style traces for held-out Lean proofs
 
-**Status:** ACTIVE — transport and canonical-ledger slice implemented; agent
-accounts and the first dialogue remain pending.
+**Status:** ACTIVE — four Matrix roles are live and the first dialogue has
+started in `FUTON 象 Demo`.
 
 ## Pilot
 
@@ -32,10 +32,18 @@ Matrix is a view, not the record of truth. The configured account
 It is a notebook agent, not one of the four proof roles, and will not be used to
 impersonate them.
 
-## Next gate
+## Live receipt (2026-10-13)
 
-Provision and invite four unencrypted Matrix bot accounts, with token files
-named for their localparts. Until those credentials exist, run the dialogue
-locally and validate the canonical trace; do not claim a four-identity Element
-demonstration. After provisioning, each posted event gets an append-only
-delivery receipt containing its Matrix event ID.
+Public registration is disabled on `matrix.paragogy.net`. The four non-admin
+accounts were therefore provisioned with Synapse's registration tool on the
+homeserver, invited by the existing room admin `@fucodex`, and joined to the
+unencrypted invite-only room. Tokens remain in mode-600 files and are not part
+of this repository.
+
+The live bridge maps Teacher→claude-15, Student→codex-76,
+Critic→claude-16, and Scribe→zai-5. Transport tests pass 23/23; trace tests pass
+2/2. Teacher move `m0001` and Student reply `m0002` are visible in Element.
+The canonical `trace.jsonl` stores the turn bytes, their parent relation and
+Matrix event IDs. The first reply exposed a protocol defect—“Next role:
+Teacher” is not a routable mention—so briefs now require a literal final
+`@proof-…` mention before continuing the chain.

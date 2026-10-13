@@ -174,6 +174,22 @@ class MatrixTest(unittest.TestCase):
         self.assertIn('do not say the cell ran', context)
         self.assertIn('annotation sidebar', context)
 
+    def test_proof_dialogue_roles_receive_distinct_visibility_briefs(self):
+        for nick in ('proof-teacher', 'proof-student', 'proof-critic', 'proof-scribe'):
+            (self.root / (nick + '.token')).write_text('offline-token\n')
+            bot = m.MatrixBot(nick, 'codex-1', [ROOM], 'https://offline.invalid',
+                              self.root, self.root / (nick + '-state'))
+            self.bots.append(bot)
+            context = bot._surface_context(SENDER, '', False, channel=ROOM)
+            self.assertIn('t94A01', context)
+            self.assertIn('proof dialogue', context)
+            if nick == 'proof-teacher':
+                self.assertIn('may inspect the frozen', context)
+                self.assertNotIn('MUST NOT', context)
+            else:
+                self.assertIn('MUST NOT', context)
+                self.assertIn('lean/Main.lean', context)
+
     def test_fumarimo_reply_posts_a_typed_python_cell(self):
         (self.root / 'fumarimo.token').write_text('offline-token\n')
         bot = m.MatrixBot('fumarimo', 'codex-9', [ROOM], 'https://offline.invalid',

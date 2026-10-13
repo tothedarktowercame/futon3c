@@ -1,7 +1,7 @@
 {
   "schema": "futon3c.proof-dialogue/v1",
   "run_id": "t94a01-pilot-1",
-  "status": "awaiting-role-accounts",
+  "status": "dialogue-active",
   "transport": {
     "kind": "matrix",
     "homeserver": "https://matrix.paragogy.net",
