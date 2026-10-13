@@ -1,0 +1,22 @@
+{
+ "record": "turn-eokgeT",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-123-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "4 minutes of waiting isn't really acceptable",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

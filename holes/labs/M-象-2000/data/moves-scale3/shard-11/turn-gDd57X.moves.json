@@ -1,0 +1,62 @@
+{
+ "record": "turn-gDd57X",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-273-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "The underlining is really supposed to look for operational words.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-273-f-s2-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "E.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-273-f-s1-0"
+   },
+   "confidence": "low",
+   "note": "Header fragment; the example follows in s3."
+  },
+  {
+   "act": "claude-17-turn-273-f-s3-0",
+   "kind": "explain",
+   "move": "explain/example",
+   "quote": "\"look for\" in the previous sentence is operational",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-273-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-273-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "what we should do is take the intersection of them",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-273-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

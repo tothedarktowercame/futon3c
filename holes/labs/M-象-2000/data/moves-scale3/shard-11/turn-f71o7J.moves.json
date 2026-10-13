@@ -1,0 +1,35 @@
+{
+ "record": "turn-f71o7J",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-137-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/other",
+   "quote": "No, this won't do at all.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-137-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/other",
+   "quote": "The PROOF-2b needs to be authored and agreed as a set of actions",
+   "answers": [],
+   "scope": {
+    "opens": "authored-actions-not-random-search rule",
+    "closes": null,
+    "within": "claude-1-turn-137-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

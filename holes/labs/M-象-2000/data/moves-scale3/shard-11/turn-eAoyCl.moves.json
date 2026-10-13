@@ -1,0 +1,48 @@
+{
+ "record": "turn-eAoyCl",
+ "labeller": "zai-2",
+ "schema": "moves/1",
+ "at": "2026-10-12T23:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-235-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "the concrete cascade diagrams look good",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-235-f-s2-0",
+   "kind": "verify",
+   "move": "clarify/check-understand",
+   "quote": "If the data availability issue is just \"we need more HEADs\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-235-f-s2-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "we can hand the open missions to an agent to summarise",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-235-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
