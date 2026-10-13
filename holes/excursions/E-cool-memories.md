@@ -412,6 +412,16 @@ constructor, or open-theory composition theorem.
 The next technically meaningful extension is a parallel constructor making
 interchange diagrammatic.
 
+Mathlib4 commit `d18f441b66` establishes the first bounded parallel layer:
+`snapshotTensor` forms disjoint `Sum`-tagged boundaries, `Delta.tensor` and
+`CertifiedDelta.tensor` compose independent edits, `Delta.apply_tensor` proves
+componentwise interpretation, and `Derivation.parAtom` constructs a typed
+parallel diagram for two atomic boxes. A concrete `{1}→{2}` alongside
+`{10}→{20}` example is checked by `run_source`. All five Cool Memories targets
+rebuilt successfully (682 jobs). This validates the tagged-boundary design;
+recursive `par` syntax and an interchange `Step` remain the next unit rather
+than being claimed by the atomic constructor.
+
 Follow-up mathlib4 commit `48abaaa949` makes the first of those tasks precise:
 `mem_comp_between_remove_iff` and `mem_comp_between_add_iff` prove for arbitrary
 `A`, `B`, `C` that a fused delta differs from the canonical endpoint delta only
