@@ -1,0 +1,35 @@
+{
+  "schema": "futon3c.proof-dialogue/v1",
+  "run_id": "t94a01-pilot-1",
+  "status": "awaiting-role-accounts",
+  "transport": {
+    "kind": "matrix",
+    "homeserver": "https://matrix.paragogy.net",
+    "room_id": "!WXULllaFhTOchbIrmo:matrix.paragogy.net",
+    "room_name_observed": "FUTON 象 Demo",
+    "canonical_trace": "trace.jsonl"
+  },
+  "source": {
+    "repository": "/home/joe/code/apm-lean",
+    "commit": "9e8b8ec4580ff1fa85e763d3834ca8adeaeee84e",
+    "problem": {
+      "path": "problems/t94A01/problem.md",
+      "sha256": "fe25b6c8832c068c8e234be735a517f78d47301a35354d035ee67a06a20b41c8"
+    },
+    "informal_solution": {
+      "path": "problems/t94A01/informal-solution.md",
+      "sha256": "8beca5529e84fad7629ed1d6be9403316ca0602c78eb36ba6d8f36bfe6dee0d9"
+    },
+    "lean_proof": {
+      "path": "problems/t94A01/lean/Main.lean",
+      "sha256": "c380fee01c8944ee03384a11b692547653df3bad6674f1e99853d1b19c1dcc6b"
+    }
+  },
+  "roles": {
+    "teacher": {"may_read": ["problem", "informal_solution", "lean_proof"]},
+    "student": {"may_read": ["problem", "disclosed_dialogue"]},
+    "critic": {"may_read": ["problem", "disclosed_dialogue"]},
+    "scribe": {"may_read": ["problem", "disclosed_dialogue"]}
+  },
+  "mining_policy": "freeze dialogue before scope labelling; labels hidden from participants"
+}
