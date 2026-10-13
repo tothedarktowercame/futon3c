@@ -471,8 +471,8 @@ rejects composition of a `{1} → {2}` box with a `{3} → {4}` box at
 elaboration. `lake build DarkTower.CoolMemoriesBoundaryNegative` passed (593
 jobs), meaning the expected rejection occurred. The audit's X2 was separately
 closed by `74e3e35a51`; X4 described its frozen pre-adapter commit and is closed
-by the P0/P4 receipts above. X1 is closed by `9343186e70`; the absence of a
-parallel proof constructor remains open.
+by the P0/P4 receipts above. X1 is closed by `9343186e70`; the parallel proof
+constructor and renderer are closed by `a9a7a03608` and `7a2d350f36`.
 
 ## Stop conditions
 
