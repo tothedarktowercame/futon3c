@@ -25,6 +25,11 @@
       "sha256": "c380fee01c8944ee03384a11b692547653df3bad6674f1e99853d1b19c1dcc6b"
     }
   },
+  "formal_analysis": {
+    "proof_regions": "lean-proof-regions.json",
+    "schema": "futon3c.lean-proof-regions/v1",
+    "status": "syntactic-source-regions; semantic reachability and tactic states pending"
+  },
   "roles": {
     "teacher": {"may_read": ["problem", "informal_solution", "lean_proof"]},
     "student": {"may_read": ["problem", "disclosed_dialogue"]},

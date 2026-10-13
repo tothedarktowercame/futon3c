@@ -1,0 +1,307 @@
+{
+  "declarations": [
+    {
+      "declared_uses": [],
+      "end_line": 18,
+      "id": "decl:APMT94A01.Cube",
+      "kind": "abbrev",
+      "name": "APMT94A01.Cube",
+      "start_line": 17
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube"
+      ],
+      "end_line": 21,
+      "id": "decl:APMT94A01.rho",
+      "kind": "def",
+      "name": "APMT94A01.rho",
+      "start_line": 19
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube"
+      ],
+      "end_line": 26,
+      "id": "decl:abs_sub_le_one",
+      "kind": "lemma",
+      "name": "abs_sub_le_one",
+      "start_line": 22
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube",
+        "abs_sub_le_one"
+      ],
+      "end_line": 31,
+      "id": "decl:term_le",
+      "kind": "lemma",
+      "name": "term_le",
+      "start_line": 27
+    },
+    {
+      "declared_uses": [],
+      "end_line": 36,
+      "id": "decl:summable_geom'",
+      "kind": "lemma",
+      "name": "summable_geom'",
+      "start_line": 32
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube",
+        "summable_geom'",
+        "term_le"
+      ],
+      "end_line": 40,
+      "id": "decl:summable_terms",
+      "kind": "lemma",
+      "name": "summable_terms",
+      "start_line": 37
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube",
+        "APMT94A01.rho",
+        "summable_terms"
+      ],
+      "end_line": 44,
+      "id": "decl:single_le",
+      "kind": "lemma",
+      "name": "single_le",
+      "start_line": 41
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube",
+        "APMT94A01.rho",
+        "summable_geom'",
+        "term_le"
+      ],
+      "end_line": 49,
+      "id": "decl:continuous_rho",
+      "kind": "lemma",
+      "name": "continuous_rho",
+      "start_line": 45
+    },
+    {
+      "declared_uses": [
+        "APMT94A01.Cube",
+        "APMT94A01.rho",
+        "continuous_rho",
+        "single_le"
+      ],
+      "end_line": 79,
+      "id": "decl:apm_t94a01",
+      "kind": "theorem",
+      "name": "apm_t94a01",
+      "start_line": 50
+    }
+  ],
+  "extraction": "syntactic-source-regions",
+  "limitations": [
+    "No tactic-state or goal reconstruction.",
+    "declared_uses records references only to declarations in this source file.",
+    "Semantic dependency closure must be supplied by Lean declaration reachability."
+  ],
+  "line_count": 79,
+  "regions": [
+    {
+      "declaration": "decl:abs_sub_le_one",
+      "id": "decl:abs_sub_le_one:step:23",
+      "kind": "named-tactic-step",
+      "opener": "obtain ⟨a1, a2⟩ := (f i).2",
+      "parent": "decl:abs_sub_le_one",
+      "start_line": 23
+    },
+    {
+      "declaration": "decl:abs_sub_le_one",
+      "id": "decl:abs_sub_le_one:step:24",
+      "kind": "named-tactic-step",
+      "opener": "obtain ⟨b1, b2⟩ := (g i).2",
+      "parent": "decl:abs_sub_le_one",
+      "start_line": 24
+    },
+    {
+      "declaration": "decl:summable_geom'",
+      "id": "decl:summable_geom':step:33",
+      "kind": "named-tactic-step",
+      "opener": "have h := (summable_geometric_of_lt_one (r := (1/2 : ℝ)) (by norm_num) (by norm_num)).mul_left (1/2)",
+      "parent": "decl:summable_geom'",
+      "start_line": 33
+    },
+    {
+      "declaration": "decl:summable_geom'",
+      "id": "decl:summable_geom':step:34",
+      "kind": "named-tactic-step",
+      "opener": "refine h.congr (fun i => ?_)",
+      "parent": "decl:summable_geom'",
+      "start_line": 34
+    },
+    {
+      "declaration": "decl:continuous_rho",
+      "id": "decl:continuous_rho:step:47",
+      "kind": "named-tactic-step",
+      "opener": "refine continuous_tsum (fun i => ?_) summable_geom' (fun i g => term_le f g i)",
+      "parent": "decl:continuous_rho",
+      "start_line": 47
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:branch:1",
+      "indent": 2,
+      "kind": "tactic-branch",
+      "opener": "intro hU f hf",
+      "parent": "decl:apm_t94a01",
+      "start_line": 55
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:56",
+      "kind": "named-tactic-step",
+      "opener": "have hn : U ∈ nhds f := hU.mem_nhds hf",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 56
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:58",
+      "kind": "named-tactic-step",
+      "opener": "obtain ⟨I, hI, t, ht, hsub⟩ := hn",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 58
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:59",
+      "kind": "named-tactic-step",
+      "opener": "have hδ : ∀ i, ∃ δ > (0:ℝ), Metric.ball (f i) δ ⊆ t i := fun i => Metric.mem_nhds_iff.1 (ht i)",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 59
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:60",
+      "kind": "named-tactic-step",
+      "opener": "choose δ hδpos hδsub using hδ",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 60
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:61",
+      "kind": "named-tactic-step",
+      "opener": "have hev : ∀ᶠ ε in nhdsWithin (0:ℝ) (Set.Ioi 0), ∀ i ∈ I, ε < (1/2 : ℝ)^(i+1) * δ i :=",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 61
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:64",
+      "kind": "named-tactic-step",
+      "opener": "obtain ⟨ε, hε, hεpos⟩ := (hev.and self_mem_nhdsWithin).exists",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 64
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:65",
+      "kind": "named-tactic-step",
+      "opener": "refine ⟨ε, hεpos, fun g hg => hsub (fun i hi => hδsub i ?_)⟩",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 65
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:66",
+      "kind": "named-tactic-step",
+      "opener": "have h1 := single_le f g i",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 66
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:67",
+      "kind": "named-tactic-step",
+      "opener": "have h2 := hε i hi",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 67
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:68",
+      "kind": "named-tactic-step",
+      "opener": "have hp : (0:ℝ) < (1/2)^(i+1) := by positivity",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 68
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:70",
+      "kind": "named-tactic-step",
+      "opener": "have : (1/2 : ℝ)^(i+1) * |(f i : ℝ) - g i| < (1/2)^(i+1) * δ i := by",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 70
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:72",
+      "kind": "named-tactic-step",
+      "opener": "exact lt_of_mul_lt_mul_left this hp.le",
+      "parent": "decl:apm_t94a01:branch:1",
+      "start_line": 72
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:branch:2",
+      "indent": 2,
+      "kind": "tactic-branch",
+      "opener": "intro h",
+      "parent": "decl:apm_t94a01",
+      "start_line": 73
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:75",
+      "kind": "named-tactic-step",
+      "opener": "intro f hf",
+      "parent": "decl:apm_t94a01:branch:2",
+      "start_line": 75
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:76",
+      "kind": "named-tactic-step",
+      "opener": "obtain ⟨ε, hε, hsub⟩ := h f hf",
+      "parent": "decl:apm_t94a01:branch:2",
+      "start_line": 76
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:77",
+      "kind": "named-tactic-step",
+      "opener": "refine Filter.mem_of_superset ?_ hsub",
+      "parent": "decl:apm_t94a01:branch:2",
+      "start_line": 77
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:78",
+      "kind": "named-tactic-step",
+      "opener": "have hf0 : APMT94A01.rho f f = 0 := by simp [APMT94A01.rho]",
+      "parent": "decl:apm_t94a01:branch:2",
+      "start_line": 78
+    },
+    {
+      "declaration": "decl:apm_t94a01",
+      "id": "decl:apm_t94a01:step:79",
+      "kind": "named-tactic-step",
+      "opener": "exact (continuous_rho f).isOpen_preimage _ isOpen_Iio |>.mem_nhds (by simpa [hf0] using hε)",
+      "parent": "decl:apm_t94a01:branch:2",
+      "start_line": 79
+    }
+  ],
+  "schema": "futon3c.lean-proof-regions/v1",
+  "source": "problems/t94A01/lean/Main.lean",
+  "source_sha256": "c380fee01c8944ee03384a11b692547653df3bad6674f1e99853d1b19c1dcc6b"
+}

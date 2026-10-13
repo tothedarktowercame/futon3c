@@ -1,4 +1,5 @@
 import { escapeHtml } from "../src/marks.js";
+import renderMathInElement from "katex/contrib/auto-render";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
 import { addressedBody, anchorsAuthorChart, annotationTheme, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "./model.js";
@@ -139,6 +140,21 @@ function decorateRNodes(root: HTMLElement): void {
   }
 }
 
+/** Render explicit TeX delimiters. KaTeX's MathML annotation retains the
+ * literal TeX, so this remains a view over the Matrix message body. */
+function decorateMath(root: HTMLElement): void {
+  renderMathInElement(root, {
+    delimiters: [
+      { left: "$$", right: "$$", display: true },
+      { left: "\\[", right: "\\]", display: true },
+      { left: "\\(", right: "\\)", display: false },
+      { left: "$", right: "$", display: false },
+    ],
+    throwOnError: false,
+    strict: "warn",
+  });
+}
+
 function annotatedBody(event: Event, view: TurnView | undefined): string {
   const raw = event.content.body!;
   if (!view) return escapeHtml(raw).replace(/\n/g, "<br>");
@@ -190,7 +206,10 @@ function render(): void {
     const badges = view ? intents(view).map((m) => `<button class="mark ${m.declared ? "declared" : "inferred"} stage-${intentStage(m.intent)}" data-event="${escapeHtml(event.event_id)}" title="${m.declared ? "authored declaration" : "象 interpretation"}">${markGlyph(m.intent, m.glyph)}<span>${escapeHtml(m.intent)}</span></button>`).join("") : "";
     return `<li class="${event.sender === userId ? "mine" : "theirs"}"><article><div class="meta"><b>${escapeHtml(event.sender)}</b><time>${new Date(event.origin_server_ts).toLocaleTimeString()}</time></div><div class="body">${annotatedBody(event, view)}</div><div class="badges">${badges}</div></article><div class="notes">${sidenotes(view)}${wantsAuthorChart(event) ? authorChart() : ""}</div></li>`;
   }).join("");
-  messages.querySelectorAll<HTMLElement>(".body").forEach(decorateRNodes);
+  messages.querySelectorAll<HTMLElement>(".body").forEach((body) => {
+    decorateRNodes(body);
+    decorateMath(body);
+  });
   messages.querySelectorAll<HTMLButtonElement>("button.mark").forEach((button) => button.onclick = () => showReading(button.dataset.event!));
   if (autoScroll) messages.scrollTop = messages.scrollHeight;
 }

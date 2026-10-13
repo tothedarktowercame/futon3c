@@ -21,6 +21,7 @@
     "src/**/*.ts",
     "test/**/*.ts",
     "widget/**/*.ts",
-    "chat/**/*.ts"
+    "chat/**/*.ts",
+    "chat/**/*.d.ts"
   ]
 }

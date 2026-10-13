@@ -73,3 +73,17 @@ The LaTeX view can proceed independently.  It should be a read-only,
 room-scoped widget backed by the existing `xiang-chat` membership check,
 rendering message bodies with KaTeX while retaining the literal source.  It
 must remain a projection of Matrix events, not a second transcript store.
+
+## First formal and presentation increments (2026-10-13)
+
+`scripts/lean_proof_regions.py` now generates the pilot's versioned
+`lean-proof-regions.json` directly from the frozen Lean bytes.  It records
+declaration ranges and in-file uses, tactic branches, named local steps,
+parents and source positions.  The artifact declares its boundary: this is a
+syntactic manifest, not reconstructed tactic states or semantic reachability.
+
+The existing Matrix-backed FUTON room client now renders explicit `$…$`,
+`$$…$$`, `\(…\)` and `\[…\]` delimiters using locally packaged KaTeX.  It
+continues to read the original Matrix event bodies; KaTeX's MathML annotation
+retains the source TeX.  No alternate transcript or server-side formatted
+body is introduced.
