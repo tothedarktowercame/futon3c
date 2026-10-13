@@ -1,0 +1,48 @@
+{
+ "record": "turn-9e36YJ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-304-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "OK, let's set up another practice turn.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-304-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "@claude-17 please commit and push all work from our session that hasn't been committed and pushed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-304-f-s2-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "then make a signed commit in futon5a, which I will subsequently rewind",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-304-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

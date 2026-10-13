@@ -1,0 +1,61 @@
+{
+ "record": "turn-0anLV2",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-294-f-s1-0",
+   "kind": "explore",
+   "move": "report-problem/suspected",
+   "quote": "It's possible that futon1b problems are making things work slowly, though I'm not sure that the general futon1b proble",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-294-f-s2-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "BTW you could use reazon tests in Emacs to prove real-time behaviour is going as desired.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-294-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Right now I am seeing frame 103, which is again out of date, so automated reload isn't happening yet.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-7-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-294-f-s4-0",
+   "kind": "report",
+   "move": "report-problem/observed",
+   "quote": "象 is pink in my modeline as well indicating that the seat might need to be refreshed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

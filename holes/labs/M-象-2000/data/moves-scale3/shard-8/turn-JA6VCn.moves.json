@@ -1,0 +1,74 @@
+{
+ "record": "turn-JA6VCn",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-136-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "Hold on, let's be clear: just saving this as a memory note will have no effect because I already told you this above.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-136-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "We need to figure out how to make the work \"progressive\".",
+   "answers": [],
+   "scope": {
+    "opens": "make the work progressive",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-136-f-s3-0",
+   "kind": "ask-action",
+   "move": "clarify/context",
+   "quote": "Let's talk that through.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-136-f-s4-0",
+   "kind": "report-problem",
+   "move": "clarify/context",
+   "quote": "There is a capability proof in progress and you spent an entire turn repeating the same mistake?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-136-f-s5-0",
+   "kind": "qualify",
+   "move": "clarify/context",
+   "quote": "That's frankly bizarre.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

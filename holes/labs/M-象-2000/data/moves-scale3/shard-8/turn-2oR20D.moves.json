@@ -1,0 +1,22 @@
+{
+ "record": "turn-2oR20D",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-149-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "Do formal wants appear in the theory of active inference that we have implemented?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

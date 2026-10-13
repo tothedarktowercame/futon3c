@@ -1,0 +1,74 @@
+{
+ "record": "turn-IPhcHY",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-350-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I'd say that TN-baldwin-reboot is superseded by the Rule Rewriting Cellular Automata paper in /wip/ which is substanti",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-350-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "But I might be remembering incorrectly.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-350-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-350-f-s3-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "Anyway, that paper ends up with both an interesting empirical discovery and a negative finding as well.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-350-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-350-f-s4-0",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "M-formal-patterns might inherit \"too much\" from the MMCA/RRCA work and",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-350-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-350-f-s4-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we might need to create a different middlelayer.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-350-f-s4-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

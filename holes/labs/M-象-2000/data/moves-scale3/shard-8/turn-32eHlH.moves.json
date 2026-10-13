@@ -1,0 +1,22 @@
+{
+ "record": "turn-32eHlH",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "codex-10-turn-3@turn-32eHlH-f-s1-0",
+   "kind": "ask-action",
+   "move": "delegate/to-agent",
+   "quote": "OK please pair with codex-22 via Agency to work through items 1-5, using bells for tracability",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

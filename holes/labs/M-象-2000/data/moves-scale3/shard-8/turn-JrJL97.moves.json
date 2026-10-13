@@ -1,0 +1,48 @@
+{
+ "record": "turn-JrJL97",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-300-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "I'd not mark them in the buffer but only in the XTDB / Evidence Landscape.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-300-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "The REPL buffer itself could just be cleanly rewound (a later feature might leave a breadcrumb).",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-300-f-s3-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "Regarding your point about ticking, I think we should go back to your *earlier* point about signing (TBD in CLAUDE.md ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

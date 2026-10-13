@@ -1,0 +1,61 @@
+{
+ "record": "turn-1976zv",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-266-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Yeah, the grouping / merging process is a good case for some pattern-based programming in its own right, e.g., library",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-266-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I have noticed some of the patterns that are were coming through on my starship-style prompt were negatively framed,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-266-f-s2-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "and I'd like to be able to alter them as they come up.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-266-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-266-f-s3-0",
+   "kind": "prioritize",
+   "move": "prioritize/sequencing",
+   "quote": "TBH I think the best thing to build here is the 2-up display, and the old chatgpt-shell UI could potentially be used f",
+   "answers": [],
+   "scope": {
+    "opens": "two-up display first",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

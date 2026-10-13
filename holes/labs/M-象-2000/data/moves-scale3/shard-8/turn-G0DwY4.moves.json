@@ -1,0 +1,61 @@
+{
+ "record": "turn-G0DwY4",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-96-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "That sounds like a good rectification.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-96-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "The machine should represent a standing curiosity about the world, about its own behaviour, about the FUTON stack, etc",
+   "answers": [],
+   "scope": {
+    "opens": "standing curiosity",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-96-f-s3-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "on a technical basis I am also wondering if this is where our choice to use BMR rather than a generative model might a",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-96-f-s4-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "The machine should have a generative model of itself (this is standard AIF stuff) that includes its curiosity.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-96-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

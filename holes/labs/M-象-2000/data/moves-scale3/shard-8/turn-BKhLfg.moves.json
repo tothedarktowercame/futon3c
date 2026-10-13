@@ -1,0 +1,35 @@
+{
+ "record": "turn-BKhLfg",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-339-f-s1-0",
+   "kind": "continue",
+   "move": "clarify/context",
+   "quote": "So...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-339-f-s2-0",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "are there things I could look at to see the behaviour Elephant-2000 style demo(s) represented by futon4/dev/scene-outp",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

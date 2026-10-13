@@ -1,0 +1,92 @@
+{
+ "record": "turn-3mROV9",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-92-f-s1-0",
+   "kind": "propose",
+   "move": "collect/idea",
+   "quote": "https://claude.ai/share/c917810a-c440-4e79-ad37-5420ee47ae7d may be of interest",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-92-f-s1-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "https://zone.hyperreal.enterprises/wip/turns/feed.html is showing non-operator turns",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-92-r-0",
+   "kind": "reply-mark",
+   "move": "report/diagnosis",
+   "quote": "(\"may be of interest if you can read it\") The share page sits behind",
+   "answers": [
+    {
+     "act": "claude-16-turn-92-f-s1-0",
+     "quote": "The share page sits behind",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-92-r-1",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"showing non-operator turns\") Of the 120 entries",
+   "answers": [
+    {
+     "act": "claude-16-turn-92-f-s1-1",
+     "quote": "(\"showing non-operator turns\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-92-r-2",
+   "kind": "reply-mark",
+   "move": "explain/mechanism",
+   "quote": "(how the feed gets refreshed) Nothing schedules the generator",
+   "answers": [
+    {
+     "act": "claude-16-turn-92-f-s1-1",
+     "quote": "(how the feed gets refreshed)",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

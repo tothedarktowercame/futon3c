@@ -1,0 +1,22 @@
+{
+ "record": "turn-JGONrX",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-326-f-s1-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "Has there been any progress on the connected M-象-cascade work from codex-5 ?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

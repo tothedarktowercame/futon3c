@@ -1,0 +1,35 @@
+{
+ "record": "turn-BI6luN",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-311-f-s1-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "there is a \"seam\" with the War Machine work related to the giant connected component of the pattern cascade",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-311-f-s1-1",
+   "kind": "qualify",
+   "move": "clarify/context",
+   "quote": " it's in M-象-cascade I believe",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-311-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

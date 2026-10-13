@@ -1,0 +1,35 @@
+{
+ "record": "turn-GbsFoA",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-193-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "QUOTE",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-193-f-s1-1",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "QUOTE",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

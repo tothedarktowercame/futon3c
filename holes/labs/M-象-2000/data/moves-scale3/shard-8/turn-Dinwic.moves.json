@@ -1,0 +1,131 @@
+{
+ "record": "turn-Dinwic",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-80-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "we have a 5 hour window back we could continue with thd zai mining",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-80-f-s2-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "it would also be useful to work more on tge frontend features",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-80-r-0",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(\"zai mining of Futon related scopes\") I read this as the scope relation",
+   "answers": [
+    {
+     "act": "claude-16-turn-80-f-s1-0",
+     "quote": "(\"zai mining of Futon related scopes\")",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-80-r-1",
+   "kind": "reply-mark",
+   "move": "report/design",
+   "quote": "(batch 3) Each input now carries `mission_id`",
+   "answers": [
+    {
+     "act": "claude-16-turn-80-f-s1-0",
+     "quote": "(batch 3)",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-80-r-2",
+   "kind": "reply-mark",
+   "move": "report/status",
+   "quote": "(second wave) The monthly meter was 73% used",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-80-r-3",
+   "kind": "reply-mark",
+   "move": "report/evidence",
+   "quote": "(\"inspired by this paper\") [KnowTeX]",
+   "answers": [
+    {
+     "act": "claude-16-turn-80-f-s2-0",
+     "quote": "(\"inspired by this paper\")",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-80-r-4",
+   "kind": "reply-mark",
+   "move": "report/in-flight",
+   "quote": "(front-end packets) codex-57 builds",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-16-turn-80-r-5",
+   "kind": "reply-mark",
+   "move": "report-problem/observed",
+   "quote": "(one slip, fixed) My first batch-3 commit",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

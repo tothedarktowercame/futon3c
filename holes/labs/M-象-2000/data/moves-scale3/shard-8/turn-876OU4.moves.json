@@ -1,0 +1,22 @@
+{
+ "record": "turn-876OU4",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-307-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Hm, we could send a followup: message (which you would see): Operator reverted frame N [or respectively, frames N-M].",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

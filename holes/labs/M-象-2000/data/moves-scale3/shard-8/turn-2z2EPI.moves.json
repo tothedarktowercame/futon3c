@@ -1,0 +1,126 @@
+{
+ "record": "turn-2z2EPI",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-309-f-s1-0",
+   "kind": "explore",
+   "move": "clarify/context",
+   "quote": "Hm...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-309-f-s2-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "fork session with a new ID would create a cascade of things to fix, let's not build it right now.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-309-f-s3-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Let's review the McCarthy paper and see what other things we can build.",
+   "answers": [],
+   "scope": {
+    "opens": "review the McCarthy paper",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-309-f-s4-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The mission should have given us the core functionality we need based on the paper, but we haven't built demos of all ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-309-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-309-f-s5-0",
+   "kind": "verify",
+   "move": "ask-action/status-check",
+   "quote": "Since I'm getting a little bit tired of interactive testing, I'd also like to see if we ever built the \"dramaturge\" fe",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-309-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-309-f-s6-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "which presumably would just be a light skin over Emacsclient.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-309-f-s5-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-309-f-s7-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Anyway if we can spec out a range of interactive features that would make 象-2000 \"interactionally compliant\" with Elep",
+   "answers": [],
+   "scope": {
+    "opens": "interactional compliance spec",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-309-f-s7-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "and then we could set about getting a kimi agent to build and test them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-309-f-s7-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-309-f-s8-0",
+   "kind": "prioritize",
+   "move": "prioritize/sequencing",
+   "quote": "I have additional ideas about what I want to do with the session but let's get the interactive feature list specified ",
+   "answers": [],
+   "scope": {
+    "opens": "interactive features first",
+    "closes": null,
+    "within": "claude-17-turn-309-f-s7-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

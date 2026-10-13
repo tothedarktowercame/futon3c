@@ -1,0 +1,35 @@
+{
+ "record": "turn-4cK2SO",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-310-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Sounds great.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-310-f-s2-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you send the task list to Kimi?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

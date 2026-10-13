@@ -1,0 +1,22 @@
+{
+ "record": "turn-FHE2sG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-170-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "So you didn't just repeat 1 failure, you repeatedly ran a machine for 20 \"clicks\" that had no chance of doing anything",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

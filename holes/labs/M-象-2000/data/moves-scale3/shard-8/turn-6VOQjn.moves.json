@@ -1,0 +1,35 @@
+{
+ "record": "turn-6VOQjn",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-285-f-s1-0",
+   "kind": "constrain",
+   "move": "clarify/condition",
+   "quote": "If it works,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-285-f-s1-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "let's treat this turn as a demo of the new path.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-285-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

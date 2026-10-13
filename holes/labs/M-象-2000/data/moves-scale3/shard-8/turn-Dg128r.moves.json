@@ -1,0 +1,48 @@
+{
+ "record": "turn-Dg128r",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-109-f-s1-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "Notice by the way that the adding of checkboxes is something that can be automated.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-109-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The survey is worth doing, I'm just saying, once we get through this process and have an initial reference set, this c",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-109-f-s2-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "part of the \"interpretation\" pass",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-109-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

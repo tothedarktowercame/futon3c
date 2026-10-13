@@ -1,0 +1,35 @@
+{
+ "record": "turn-BAy58C",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-33-f-s1-0",
+   "kind": "report",
+   "move": "clarify/context",
+   "quote": "Well, I was thinking about that.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-33-f-s2-0",
+   "kind": "propose",
+   "move": "clarify/assertion",
+   "quote": "Maybe it's \"knowledge work\" these days not just \"software development\" but we *are* building the missing tools.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-BbSpLU",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-97-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "I think PROOF-2a needs to be superseded with PROOF-2b that includes more about the actual requirements and design that",
+   "answers": [],
+   "scope": {
+    "opens": "supersede with PROOF-2b",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-97-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "Any residual from PROOF-2a can carry over as well",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-97-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-97-f-s2-1",
+   "kind": "explain",
+   "move": "explain/justification",
+   "quote": "but we've spent ages fine-tuning wiring details without seeing any forward motion at all.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-97-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

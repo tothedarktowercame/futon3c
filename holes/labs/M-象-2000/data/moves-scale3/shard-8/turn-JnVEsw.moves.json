@@ -1,0 +1,48 @@
+{
+ "record": "turn-JnVEsw",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-324-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Well, different names aren't really a problem, like I've said",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-324-f-s1-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "we should coalesce the different names into our core set",
+   "answers": [],
+   "scope": {
+    "opens": "coalesce names into core set",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-324-f-s1-2",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "but multiplicity is still interesting for colour or for a 2nd more high-fidelity scan",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-324-f-s1-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

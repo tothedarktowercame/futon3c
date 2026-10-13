@@ -1,0 +1,48 @@
+{
+ "record": "turn-Izl0Vd",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-355-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "So, *if* xiao-xiang was fast enough to run purely classically (which it is) and good enough to parse operator turns al",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-355-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "(\"But a label composes only if it also says what it is about\".)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-355-f-s3-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "Furthermore contrary to the current design in which 象 only models operator turns, with the new markup system, 象 could ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-355-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

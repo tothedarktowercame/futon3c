@@ -1,0 +1,22 @@
+{
+ "record": "turn-Gs8LFo",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "codex-10-turn-10@turn-Gs8LFo-f-s1-0",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "In light of the review are there concrete improvements to the machine that we should make?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-DonEjS",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-151-f-s1-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "How about running the machine in the \"forward direction\" until it works rather than trying to reset it time and time a",
+   "answers": [],
+   "scope": {
+    "opens": "forward direction only",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-151-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "I don't actually know how the latter is even possible, but it seems prevalent.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-151-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

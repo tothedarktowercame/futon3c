@@ -1,0 +1,22 @@
+{
+ "record": "turn-5XGjvV",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-334-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "Can you please bell claude-1 with a summary of this example?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

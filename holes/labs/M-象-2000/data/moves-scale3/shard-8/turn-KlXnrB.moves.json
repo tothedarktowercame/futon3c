@@ -1,0 +1,61 @@
+{
+ "record": "turn-KlXnrB",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-150-f-s1-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "I want this machine to run end to end without getting hung up on irrelevant details",
+   "answers": [],
+   "scope": {
+    "opens": "run end to end, no side quests",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-150-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "take C_tau into consideration because there will not be any outcomes until you get the machine workin",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-150-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-150-f-s2-1",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I have told you time and time again",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-150-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-150-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "you have continued to run the machine into the ground",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-150-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

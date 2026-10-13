@@ -1,0 +1,100 @@
+{
+ "record": "turn-BoYXrQ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s1-0",
+   "kind": "propose",
+   "move": "prioritize/benefit",
+   "quote": "So, the 2m2s seconds for selection (out of 8m56s) is worth looking into, and so would be a breakdown of the tokens, al",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "that's a big success.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s3-0",
+   "kind": "qualify",
+   "move": "clarify/ask-decision",
+   "quote": "Is it as cheap as \"writing DOCUMENT as a one off?\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s4-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "No it is not, but the other work may be very useful!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-10-turn-6@turn-BoYXrQ-f-s3-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s5-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "This is one place where the kind of M-象-2000 work that I've been developing with claude-17 could be interesting.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s6-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "With that stated: can you please bell claude-17 and ask it to develop a *strategy* for evaluating the work that was do",
+   "answers": [],
+   "scope": {
+    "opens": "evaluation strategy for the click",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "codex-10-turn-6@turn-BoYXrQ-f-s7-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "It needn't actually carry out the full strategy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "codex-10-turn-6@turn-BoYXrQ-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

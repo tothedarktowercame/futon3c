@@ -1,0 +1,35 @@
+{
+ "record": "turn-7uXKF3",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-313-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "Claude-8 (Fable) is offline BTW, claude-1 (Opus) has stepped in",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-313-f-s1-1",
+   "kind": "redirect",
+   "move": "propose/next-step",
+   "quote": "so you can message them when it is complete",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

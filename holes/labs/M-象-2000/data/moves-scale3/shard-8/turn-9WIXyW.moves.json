@@ -1,0 +1,35 @@
+{
+ "record": "turn-9WIXyW",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-47-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "i am getting a bunch of mesdages to the effect ⚠ zone: disk heavy writes /dev/nvme0n1 1.39 TB in 24h ...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-14-turn-47-f-s2-0",
+   "kind": "report-problem",
+   "move": "constrain/for-now",
+   "quote": "that seems unnecesdary to repeat so much via fumarimo in element",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-47-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

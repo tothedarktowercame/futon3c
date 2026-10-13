@@ -1,0 +1,22 @@
+{
+ "record": "turn-FDa8gc",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-15-turn-44-f-s1-0",
+   "kind": "verify",
+   "move": "clarify/ask-decision",
+   "quote": "so, we have a demo, i want to know whether this is something we are really ready to use, possibly moving towards switc",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

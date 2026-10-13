@@ -1,0 +1,35 @@
+{
+ "record": "turn-Dl9rjZ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-263-f-s1-0",
+   "kind": "explore",
+   "move": "collect/idea",
+   "quote": "So, regarding 象 itself, I'm wondering what would make a good demo.",
+   "answers": [],
+   "scope": {
+    "opens": "good 象 demo",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-263-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "BTW I noticed that I rejoined Emacs and my session-mode underlining annotations seem to be gone now, I'm not sure why.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

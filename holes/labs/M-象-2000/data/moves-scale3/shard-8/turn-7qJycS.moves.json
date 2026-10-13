@@ -1,0 +1,113 @@
+{
+ "record": "turn-7qJycS",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-342-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I think running 象 on agent turns will find a LOT of promises, but agents tend to be very reactive, and sometimes they ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-342-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I don't think I'd base the model agent on agent prose right now because it's a bit too frothy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-342-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "I think it would be better to be more explicit at first, you think it would be better to run the annotation command on",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-342-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-342-f-s4-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "How about we meet in the middle and just look at  the current *claude-repl:claude-1* session, from line 6706 or so.",
+   "answers": [],
+   "scope": {
+    "opens": "claude-1 session case study",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-342-f-s5-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "On that line I am responding to learning that claude-1 was being very inefficient.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-342-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-342-f-s6-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Later in the session I learned that not only were they being inefficient with managing a development process, yet agai",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-342-f-s4-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-342-f-s7-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "My sense is that if I wanted to make the overall process work better, I wouldn't look for promises that were made in t",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-342-f-s2-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-342-f-s8-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "(Maybe the tools would have made it more efficient.)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-342-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

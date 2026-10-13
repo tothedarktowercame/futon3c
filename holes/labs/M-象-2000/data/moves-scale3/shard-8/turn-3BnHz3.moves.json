@@ -1,0 +1,61 @@
+{
+ "record": "turn-3BnHz3",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-314-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "NB when I change from the claude-17 buffer to e.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-314-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "claude-18 on the same frame (and same window location)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-314-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-314-f-s2-1",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "the *象 stepper* side window should disappear",
+   "answers": [],
+   "scope": {
+    "opens": "stepper per-REPL only",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-314-f-s2-2",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "i.e., it is really attached only to the one REPL it is associated with",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-314-f-s2-1"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

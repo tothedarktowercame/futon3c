@@ -1,0 +1,35 @@
+{
+ "record": "turn-BbVD3M",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-290-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "But the *象 stepper* is lagging one turn behind.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-290-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Right now it is showing my \"I still see\" turn.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-290-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
