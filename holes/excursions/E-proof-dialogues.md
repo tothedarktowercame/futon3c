@@ -47,3 +47,29 @@ The canonical `trace.jsonl` stores the turn bytes, their parent relation and
 Matrix event IDs. The first reply exposed a protocol defect—“Next role:
 Teacher” is not a routable mention—so briefs now require a literal final
 `@proof-…` mention before continuing the chain.
+
+## Tool readiness and build order
+
+The required capabilities mostly exist, but they are not yet joined into an
+analysis pipeline.  In particular, a Matrix transcript and a Lean file are
+not by themselves evidence that conversational scopes correspond to proof
+structure.
+
+| Stage | Reusable substrate | Missing pilot artifact |
+|---|---|---|
+| Capture | Hash-chained moves and immutable Matrix delivery receipts | Automatic Matrix-event-to-trace ingestion; the first two receipts were transcribed into the canonical trace |
+| Mathematical NLP | futon6 LaTeX S-expression/AST/term extraction, theorem extraction, performative analysis and scope-span tooling | An adapter from `trace.jsonl` to a blinded M-象 scope-labelling packet that preserves move IDs and exact source bytes |
+| Formal analysis | apm-lean `Tools/DeclarationReachability.lean` and declaration indexes | A proof-region manifest: theorem/branch/subgoal boundaries, local hypotheses, named declaration uses and source positions |
+| Labelling | The M-象 labelling protocol and accumulated conversational labels | A frozen assignment to labellers who did not author the dialogue, plus an agreement measurement |
+| Alignment and evaluation | futon6 proof-frame alignment templates and provenance tools | An implemented scope-to-proof-region comparator, with shuffled-turn, stripped-standing and informal-proof-only controls |
+| Presentation | Element room transport and the room-authorized `xiang-chat` web surface | A room-scoped KaTeX view; ordinary Matrix formatted messages do not currently render the TeX in the dialogue |
+
+The next critical path is therefore: (1) automatic transcript ingest, (2) a
+Lean proof-region manifest for `t94A01`, (3) a blinded labelling packet, and
+(4) the alignment comparator and negative controls.  These are the minimum
+pieces needed to test the claim rather than illustrate it.
+
+The LaTeX view can proceed independently.  It should be a read-only,
+room-scoped widget backed by the existing `xiang-chat` membership check,
+rendering message bodies with KaTeX while retaining the literal source.  It
+must remain a projection of Matrix events, not a second transcript store.
