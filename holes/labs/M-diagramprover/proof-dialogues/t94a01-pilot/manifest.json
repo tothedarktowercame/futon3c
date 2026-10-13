@@ -33,6 +33,11 @@
     "capture_schema": "futon3c.lean-formal-capture/v1",
     "status": "source regions, Lean-server goals, declaration reachability and blinded goal features captured"
   },
+  "scope_labelling": {
+    "packet": "labelling/scope-packet.json",
+    "schema": "futon3c.proof-dialogue-scope-packet/v1",
+    "status": "ingest contract verified; dialogue has only two moves, labels not commissioned"
+  },
   "roles": {
     "teacher": {"may_read": ["problem", "informal_solution", "lean_proof"]},
     "student": {"may_read": ["problem", "disclosed_dialogue"]},

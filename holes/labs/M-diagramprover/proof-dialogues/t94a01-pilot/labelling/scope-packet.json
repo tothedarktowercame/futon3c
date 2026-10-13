@@ -1,0 +1,36 @@
+{
+  "blinding": {
+    "excluded": [
+      "Lean source",
+      "formal captures",
+      "goal features",
+      "authored move kinds",
+      "role names",
+      "Matrix event IDs",
+      "source references"
+    ],
+    "speaker_aliases_stable_within_packet": true
+  },
+  "messages": [
+    {
+      "message_id": "m0001",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": null,
+      "speaker": "participant-2",
+      "text": "[conjecture | m0001]\n\nWe want to show that the weighted-series distance `rho` induces exactly the\nproduct topology on the countable cube. Before proving either inclusion, state\nthe two neighbourhood obligations separately and identify what makes each\ndirection nontrivial. Do not consult the informal solution or Lean proof.\n\n@proof-student\n",
+      "text_sha256": "c96c6fc4c120cfa8d844c1bcd02f4036b50cc54ae98b2de74d508536800b43aa"
+    },
+    {
+      "message_id": "m0002",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0001",
+      "speaker": "participant-1",
+      "text": "[lemma | m0002]\n\nAt each \\(x\\in X\\), prove two separate obligations:\n\n1. For every \\(\\rho\\)-ball \\(B_\\rho(x,\\varepsilon)\\), find a basic product neighbourhood \\(U\\ni x\\) with \\(U\\subseteq B_\\rho(x,\\varepsilon)\\). The nontrivial point is the uncontrolled infinite tail; use \\(|x_i-y_i|\\le 1\\) and choose finitely many coordinates so \\(\\sum_{i>N}2^{-i}<\\varepsilon\\), then control the finite head.\n\n2. For every basic product neighbourhood \\(U=\\prod U_i\\ni x\\), with only finitely many \\(U_i\\ne[0,1]\\), find \\(\\varepsilon>0\\) such that \\(B_\\rho(x,\\varepsilon)\\subseteq U\\). The nontrivial point is converting finitely many coordinatewise margins into one metric radius; for each constrained \\(i\\), choose \\(\\delta_i>0\\) with the relative interval around \\(x_i\\) contained in \\(U_i\\), then take \\(\\varepsilon\\le\\min_i 2^{-i}\\delta_i\\).\n\nNext role: Teacher.\n",
+      "text_sha256": "a601e5fc8d9d9c01a8202f9ee0d0140c19ad80ce2933ba6af8ad1002bac243fd"
+    }
+  ],
+  "packet_sha256": "78f68d9266babb8c2d1748f2c564ceefcef8b503f5d1638428940fd738750653",
+  "schema": "futon3c.proof-dialogue-scope-packet/v1",
+  "task": "label conversational scopes and their within/keep/close relations",
+  "trace_head_sha256": "3e29e5cf6a994dba82ce6c8f528c929bbefc90e98b5786c6be8458ed44e3a97b"
+}

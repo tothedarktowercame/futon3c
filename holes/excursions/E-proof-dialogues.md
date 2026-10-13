@@ -116,3 +116,12 @@ the exact Lean goal text.  The generated `lean-goal-features.json` contains 24
 regions and 25 goals (the first theorem branch exposes both directions).  Its
 generator reads no dialogue text or scope labels, so this half can be frozen
 before conversational labelling begins.
+
+`scripts/proof_dialogue_label_packet.py` now supplies the converse isolation
+boundary.  It verifies the canonical hash chain and emits exact message bytes,
+ancestry and stable anonymous speakers while excluding the Lean source, formal
+captures, goal features, authored move kinds, role names, source references
+and Matrix event IDs.  The pilot packet is bound to trace head
+`3e29e5cf…3a97b` and has packet hash `78f68d92…0653`.  Its two messages validate
+the ingest contract, but are not enough dialogue to justify commissioning or
+interpreting a scope comparison yet.
