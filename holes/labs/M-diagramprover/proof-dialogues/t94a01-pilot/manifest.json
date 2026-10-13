@@ -28,9 +28,10 @@
   "formal_analysis": {
     "proof_regions": "lean-proof-regions.json",
     "formal_capture": "lean-formal-capture.json",
+    "goal_features": "lean-goal-features.json",
     "schema": "futon3c.lean-proof-regions/v1",
     "capture_schema": "futon3c.lean-formal-capture/v1",
-    "status": "source regions plus Lean-server goals and declaration reachability captured"
+    "status": "source regions, Lean-server goals, declaration reachability and blinded goal features captured"
   },
   "roles": {
     "teacher": {"may_read": ["problem", "informal_solution", "lean_proof"]},

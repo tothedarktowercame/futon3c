@@ -100,3 +100,11 @@ runs apm-lean's `#declaration_reachability` against the compiled theorem
 module.  The frozen `lean-formal-capture.json` has no diagnostics, 24 goal
 captures, a 15,444-constant transitive closure, all 9 local declarations
 reachable, and no local orphan declarations.
+
+`scripts/lean_goal_features.py` normalizes those raw goals into the formal half
+of the future alignment relation: case names, typed local hypotheses, targets,
+references to reachable local declarations, target identifiers and hashes of
+the exact Lean goal text.  The generated `lean-goal-features.json` contains 24
+regions and 25 goals (the first theorem branch exposes both directions).  Its
+generator reads no dialogue text or scope labels, so this half can be frozen
+before conversational labelling begins.

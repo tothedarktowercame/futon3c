@@ -1,0 +1,1873 @@
+{
+  "blinding": "formal-side-only; no dialogue text or labels read",
+  "capture_schema": "futon3c.lean-formal-capture/v1",
+  "regions": [
+    {
+      "goals": [
+        {
+          "case": null,
+          "goal_sha256": "f22c1890d5be6955c5c458cc1968077831d1e6261066948d513afa8bd9713cba",
+          "hypotheses": [
+            {
+              "binders": [
+                "f",
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube"
+          ],
+          "target": "|↑(f i) - ↑(g i)| ≤ 1",
+          "target_identifiers": [
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 23,
+      "region_id": "decl:abs_sub_le_one:step:23"
+    },
+    {
+      "goals": [
+        {
+          "case": null,
+          "goal_sha256": "48003826a43889f7ad0fcb43dd33e051da75b0356e987792b5bb48b70bc5ee3c",
+          "hypotheses": [
+            {
+              "binders": [
+                "f",
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            },
+            {
+              "binders": [
+                "a1"
+              ],
+              "type": "0 ≤ ↑(f i)"
+            },
+            {
+              "binders": [
+                "a2"
+              ],
+              "type": "↑(f i) ≤ 1"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube"
+          ],
+          "target": "|↑(f i) - ↑(g i)| ≤ 1",
+          "target_identifiers": [
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 24,
+      "region_id": "decl:abs_sub_le_one:step:24"
+    },
+    {
+      "goals": [
+        {
+          "case": null,
+          "goal_sha256": "766824a89b4a8458fe2104c2f1d98db649158674f8fa4aaa772b354af6f575ef",
+          "hypotheses": [],
+          "local_declaration_refs": [],
+          "target": "Summable fun i ↦ (1 / 2) ^ (i + 1)",
+          "target_identifiers": [
+            "Summable",
+            "fun",
+            "i"
+          ]
+        }
+      ],
+      "line": 33,
+      "region_id": "decl:summable_geom':step:33"
+    },
+    {
+      "goals": [
+        {
+          "case": null,
+          "goal_sha256": "bf5b0f1657ac256c75643f1fd6cfa489c3a6aa7efcbb721229bf514be8b365d0",
+          "hypotheses": [
+            {
+              "binders": [
+                "h"
+              ],
+              "type": "Summable fun i ↦ 1 / 2 * (1 / 2) ^ i"
+            }
+          ],
+          "local_declaration_refs": [],
+          "target": "Summable fun i ↦ (1 / 2) ^ (i + 1)",
+          "target_identifiers": [
+            "Summable",
+            "fun",
+            "i"
+          ]
+        }
+      ],
+      "line": 34,
+      "region_id": "decl:summable_geom':step:34"
+    },
+    {
+      "goals": [
+        {
+          "case": null,
+          "goal_sha256": "ab25132baed32b0b9b7d6bad28c392a7096758d368b3d5ad18011b3b69782cfd",
+          "hypotheses": [
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube"
+          ],
+          "target": "Continuous fun g ↦ ∑' (i : ℕ), (1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)|",
+          "target_identifiers": [
+            "Continuous",
+            "f",
+            "fun",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 47,
+      "region_id": "decl:continuous_rho:step:47"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "488f3aa116d48584de68f79be3f7edbed893256445a6dc5af90541387b299639",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "IsOpen U → ∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "IsOpen",
+            "U",
+            "f",
+            "g"
+          ]
+        },
+        {
+          "case": "mpr",
+          "goal_sha256": "ed09a421034cfee4709db854b42a99c94e0f77d22d685b6ff1257c8b8c796154",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "(∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U) → IsOpen U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "IsOpen",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 55,
+      "region_id": "decl:apm_t94a01:branch:1"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "5856f4e7a7f8b1c30d20355388cdd0f5249ab04bbe3218c215e0c5a31a2a4cbe",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 56,
+      "region_id": "decl:apm_t94a01:step:56"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "16a110af2b4d28a1a4ea2c4e3dcd87f7ba6b4f55c16cca8b8392112cd6663660",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "hn"
+              ],
+              "type": "∃ I, I.Finite ∧ ∃ t, (∀ (i : ℕ), t i ∈ nhds (f i)) ∧ I.pi t ⊆ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 58,
+      "region_id": "decl:apm_t94a01:step:58"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "2f9f56633f340270dbaac708525e8e633833251e28907f4ff95d116995d513b1",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 59,
+      "region_id": "decl:apm_t94a01:step:59"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "f92e78b14f6e164d92b92c0cd590be6fa83e4051f6d6793ac3a2c34101cfb7d7",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "hδ"
+              ],
+              "type": "∀ (i : ℕ), ∃ δ > 0, Metric.ball (f i) δ ⊆ t i"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 60,
+      "region_id": "decl:apm_t94a01:step:60"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "8f13391c16a3744d0fdb87fcdc6d4a2976d2e4288c78cb52ce8b2ccc2cd05d19",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 61,
+      "region_id": "decl:apm_t94a01:step:61"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "172a2a1b0a0e26b18da793319eaf2c27c1b195817ade6cdfdb1736b42e139912",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 64,
+      "region_id": "decl:apm_t94a01:step:64"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "e3decff0d97a0424227116a9a6c61231f1f831d05454f91609f6ce6b4e2b900f",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hεpos"
+              ],
+              "type": "0 < ε"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 65,
+      "region_id": "decl:apm_t94a01:step:65"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "dc788268ac63caf960c3fd09c02b39588130e64604612ad97c9d02cad4898044",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hεpos"
+              ],
+              "type": "0 < ε"
+            },
+            {
+              "binders": [
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hg"
+              ],
+              "type": "g ∈ {g | APMT94A01.rho f g < ε}"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            },
+            {
+              "binders": [
+                "hi"
+              ],
+              "type": "i ∈ I"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "g i ∈ Metric.ball (f i) (δ i)",
+          "target_identifiers": [
+            "Metric.ball",
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 66,
+      "region_id": "decl:apm_t94a01:step:66"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "0d70abf8aab602167a46622337a5f872f5f55854163bb2b9b8d9d0db41d4c0bb",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hεpos"
+              ],
+              "type": "0 < ε"
+            },
+            {
+              "binders": [
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hg"
+              ],
+              "type": "g ∈ {g | APMT94A01.rho f g < ε}"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            },
+            {
+              "binders": [
+                "hi"
+              ],
+              "type": "i ∈ I"
+            },
+            {
+              "binders": [
+                "h1"
+              ],
+              "type": "(1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "g i ∈ Metric.ball (f i) (δ i)",
+          "target_identifiers": [
+            "Metric.ball",
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 67,
+      "region_id": "decl:apm_t94a01:step:67"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "bf8b5b2a7b6c314941da1a12d7a5dab5d1619b6c9967369d2b530666e5382257",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hεpos"
+              ],
+              "type": "0 < ε"
+            },
+            {
+              "binders": [
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hg"
+              ],
+              "type": "g ∈ {g | APMT94A01.rho f g < ε}"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            },
+            {
+              "binders": [
+                "hi"
+              ],
+              "type": "i ∈ I"
+            },
+            {
+              "binders": [
+                "h1"
+              ],
+              "type": "(1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g"
+            },
+            {
+              "binders": [
+                "h2"
+              ],
+              "type": "ε < (1 / 2) ^ (i + 1) * δ i"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "g i ∈ Metric.ball (f i) (δ i)",
+          "target_identifiers": [
+            "Metric.ball",
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 68,
+      "region_id": "decl:apm_t94a01:step:68"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "8fa185ee6a13e3fcc4ba752ae2799c9d34332bd692c8bbc80e5f26cccdd40fc5",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hεpos"
+              ],
+              "type": "0 < ε"
+            },
+            {
+              "binders": [
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hg"
+              ],
+              "type": "g ∈ {g | APMT94A01.rho f g < ε}"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            },
+            {
+              "binders": [
+                "hi"
+              ],
+              "type": "i ∈ I"
+            },
+            {
+              "binders": [
+                "h1"
+              ],
+              "type": "(1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g"
+            },
+            {
+              "binders": [
+                "h2"
+              ],
+              "type": "ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hp"
+              ],
+              "type": "0 < (1 / 2) ^ (i + 1)"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "|↑(f i) - ↑(g i)| < δ i",
+          "target_identifiers": [
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 70,
+      "region_id": "decl:apm_t94a01:step:70"
+    },
+    {
+      "goals": [
+        {
+          "case": "mp",
+          "goal_sha256": "c2df11865a0dd793181dba84c8746dbead4afbe92393964adbcbceb279e1e6f8",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hU"
+              ],
+              "type": "IsOpen U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "I"
+              ],
+              "type": "Set ℕ"
+            },
+            {
+              "binders": [
+                "hI"
+              ],
+              "type": "I.Finite"
+            },
+            {
+              "binders": [
+                "t"
+              ],
+              "type": "ℕ → Set ↑(Set.Icc 0 1)"
+            },
+            {
+              "binders": [
+                "ht"
+              ],
+              "type": "∀ (i : ℕ), t i ∈ nhds (f i)"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "I.pi t ⊆ U"
+            },
+            {
+              "binders": [
+                "δ"
+              ],
+              "type": "ℕ → ℝ"
+            },
+            {
+              "binders": [
+                "hδpos"
+              ],
+              "type": "∀ (i : ℕ), δ i > 0"
+            },
+            {
+              "binders": [
+                "hδsub"
+              ],
+              "type": "∀ (i : ℕ), Metric.ball (f i) (δ i) ⊆ t i"
+            },
+            {
+              "binders": [
+                "hev"
+              ],
+              "type": "∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), ∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "∀ i ∈ I, ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hεpos"
+              ],
+              "type": "0 < ε"
+            },
+            {
+              "binders": [
+                "g"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hg"
+              ],
+              "type": "g ∈ {g | APMT94A01.rho f g < ε}"
+            },
+            {
+              "binders": [
+                "i"
+              ],
+              "type": "ℕ"
+            },
+            {
+              "binders": [
+                "hi"
+              ],
+              "type": "i ∈ I"
+            },
+            {
+              "binders": [
+                "h1"
+              ],
+              "type": "(1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| ≤ APMT94A01.rho f g"
+            },
+            {
+              "binders": [
+                "h2"
+              ],
+              "type": "ε < (1 / 2) ^ (i + 1) * δ i"
+            },
+            {
+              "binders": [
+                "hp"
+              ],
+              "type": "0 < (1 / 2) ^ (i + 1)"
+            },
+            {
+              "binders": [
+                "this"
+              ],
+              "type": "(1 / 2) ^ (i + 1) * |↑(f i) - ↑(g i)| < (1 / 2) ^ (i + 1) * δ i"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "|↑(f i) - ↑(g i)| < δ i",
+          "target_identifiers": [
+            "f",
+            "g",
+            "i"
+          ]
+        }
+      ],
+      "line": 72,
+      "region_id": "decl:apm_t94a01:step:72"
+    },
+    {
+      "goals": [
+        {
+          "case": "mpr",
+          "goal_sha256": "ed09a421034cfee4709db854b42a99c94e0f77d22d685b6ff1257c8b8c796154",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "(∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U) → IsOpen U",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "IsOpen",
+            "U",
+            "f",
+            "g"
+          ]
+        }
+      ],
+      "line": 73,
+      "region_id": "decl:apm_t94a01:branch:2"
+    },
+    {
+      "goals": [
+        {
+          "case": "mpr",
+          "goal_sha256": "4172bc87d7e299002d50462eebebf39d798b33d9ed4ed11cca071ac1c1a82cef",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "h"
+              ],
+              "type": "∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "∀ x ∈ U, U ∈ nhds x",
+          "target_identifiers": [
+            "U",
+            "nhds",
+            "x"
+          ]
+        }
+      ],
+      "line": 75,
+      "region_id": "decl:apm_t94a01:step:75"
+    },
+    {
+      "goals": [
+        {
+          "case": "mpr",
+          "goal_sha256": "d58cfd6b581e1688885f65b0ea0a779e436e60cbdd32eee584c8d2291d5f098e",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "h"
+              ],
+              "type": "∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "U ∈ nhds f",
+          "target_identifiers": [
+            "U",
+            "f",
+            "nhds"
+          ]
+        }
+      ],
+      "line": 76,
+      "region_id": "decl:apm_t94a01:step:76"
+    },
+    {
+      "goals": [
+        {
+          "case": "mpr",
+          "goal_sha256": "32314afbabc23e7dfd5ff05a39c7a42eea92e5de51de7ef9306021cd46f4da4d",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "h"
+              ],
+              "type": "∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "ε > 0"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "{g | APMT94A01.rho f g < ε} ⊆ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "U ∈ nhds f",
+          "target_identifiers": [
+            "U",
+            "f",
+            "nhds"
+          ]
+        }
+      ],
+      "line": 77,
+      "region_id": "decl:apm_t94a01:step:77"
+    },
+    {
+      "goals": [
+        {
+          "case": "mpr",
+          "goal_sha256": "972581b57e98b853c572e960de103d065332e325790b3ba0f00b44cf4922a951",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "h"
+              ],
+              "type": "∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "ε > 0"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "{g | APMT94A01.rho f g < ε} ⊆ U"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "{g | APMT94A01.rho f g < ε} ∈ nhds f",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "f",
+            "g",
+            "nhds"
+          ]
+        }
+      ],
+      "line": 78,
+      "region_id": "decl:apm_t94a01:step:78"
+    },
+    {
+      "goals": [
+        {
+          "case": "mpr",
+          "goal_sha256": "dfb10d9bcbb787eed72e8301eace05d176b45c596f1bb18a6128b2c0efff085f",
+          "hypotheses": [
+            {
+              "binders": [
+                "U"
+              ],
+              "type": "Set APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "h"
+              ],
+              "type": "∀ f ∈ U, ∃ ε > 0, {g | APMT94A01.rho f g < ε} ⊆ U"
+            },
+            {
+              "binders": [
+                "f"
+              ],
+              "type": "APMT94A01.Cube"
+            },
+            {
+              "binders": [
+                "hf"
+              ],
+              "type": "f ∈ U"
+            },
+            {
+              "binders": [
+                "ε"
+              ],
+              "type": "ℝ"
+            },
+            {
+              "binders": [
+                "hε"
+              ],
+              "type": "ε > 0"
+            },
+            {
+              "binders": [
+                "hsub"
+              ],
+              "type": "{g | APMT94A01.rho f g < ε} ⊆ U"
+            },
+            {
+              "binders": [
+                "hf0"
+              ],
+              "type": "APMT94A01.rho f f = 0"
+            }
+          ],
+          "local_declaration_refs": [
+            "APMT94A01.Cube",
+            "APMT94A01.rho"
+          ],
+          "target": "{g | APMT94A01.rho f g < ε} ∈ nhds f",
+          "target_identifiers": [
+            "APMT94A01.rho",
+            "f",
+            "g",
+            "nhds"
+          ]
+        }
+      ],
+      "line": 79,
+      "region_id": "decl:apm_t94a01:step:79"
+    }
+  ],
+  "schema": "futon3c.lean-goal-features/v1",
+  "source": "problems/t94A01/lean/Main.lean",
+  "source_sha256": "c380fee01c8944ee03384a11b692547653df3bad6674f1e99853d1b19c1dcc6b"
+}
