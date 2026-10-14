@@ -77,3 +77,27 @@ The store's failure shape is the 2026-07-13 futon1b one (`-Xmx1g`, socket
 open, accept queue full, health acceptor alive). The same `ExitOnOutOfMemoryError`
 plus `Restart=on-failure` that fixed it for :7073 is absent from the scratch
 store's command line.
+
+## Addendum 2026-10-14T17:43Z: the three steps, done
+
+1. **Store as a unit.** `~/.config/systemd/user/minus40-store.service` (copy in
+   minus40 `scripts/systemd/`, 592e0a3): `-J-Xmx2g -J-XX:+ExitOnOutOfMemoryError`,
+   `Restart=on-failure`, start limit 3 in 5 min. The ad hoc scope was stopped at
+   17:40:50Z and the unit answered `/health` at 17:41:08Z; the JVM command line
+   shows the 2g heap after the alias's 1g, so the override took. Follower,
+   relate and fault loops carried on; `net-changed 10-13 10-14` answers in 2.4 s.
+2. **Session brief for all seats.** `brief-enabled.txt` = `all` (old list kept
+   beside it). A dry run as claude-16 produced 3,921 chars: open asks with no
+   answer linked, then recently changed memory. Its "open asks" list my own
+   reply paragraphs (㊩ ㊭ 🈸) as asks by claude-16, since agent replies are read
+   as acts: a thing to watch, not a fault of the brief.
+3. **Facts in the resume brief.** futon3c bcbe204c8: the section reads minus40
+   through m40.py, keeps facts true now that mention the mission id or its
+   excursions, newest first, cap 15, with a cache fallback and a note when the
+   store is down; `--no-facts`, `--fact-terms`. Live for M-象-2000: 3 facts
+   (read-the-clock, zai-five-hour-window, minus40-memory-store), 1.0 s.
+
+Seen on the way: the scratch store holds minus40's own test projects
+(`cc:-m40-bench-corner-…`, `cc:-tmp`, hooktest/crysttest memories), so a term
+like `minus40` matches them by id. Not fixed; a store-side filter or a cleanup
+of test projects is minus40's call.
