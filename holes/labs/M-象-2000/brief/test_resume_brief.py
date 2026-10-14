@@ -101,6 +101,34 @@ class ResumeBriefTest(unittest.TestCase):
             self.assertEqual(["m"], [r["turn_id"] for r in strict])
             self.assertEqual("mission", strict_join)
 
+    def test_mission_facts_true_now_matching_newest_first(self):
+        now = dt.datetime(2026, 10, 14, 18, tzinfo=dt.timezone.utc)
+        rows = [
+            {"id": "a", "memory": "cc:p/one", "text": "M-test needs a frozen statement",
+             "said": "2026-10-10T00:00:00Z", "unsaid": None},
+            {"id": "b", "memory": "cc:p/two", "text": "M-test ruling withdrawn",
+             "said": "2026-10-11T00:00:00Z", "unsaid": "2026-10-12T00:00:00Z"},
+            {"id": "c", "memory": "cc:p/three", "text": "unrelated lesson",
+             "said": "2026-10-13T00:00:00Z", "unsaid": None},
+            {"id": "d", "memory": "cc:p/M-test-notes", "text": "said in the id only",
+             "said": "2026-10-12T00:00:00Z", "unsaid": None},
+            {"id": "e", "memory": "cc:p/four", "text": "M-test future fact",
+             "said": "2026-10-15T00:00:00Z", "unsaid": None},
+        ]
+        picked = brief.mission_facts(rows, ["M-test"], now)
+        self.assertEqual(["d", "a"], [f["id"] for f in picked])
+        self.assertEqual(["d"], [f["id"] for f in brief.mission_facts(rows, ["M-test"], now, since="2026-10-11")])
+        self.assertEqual(["d"], [f["id"] for f in brief.mission_facts(rows, ["M-test"], now, cap=1)])
+        self.assertTrue(brief.fact_line(picked[0]).startswith("- 2026-10-12 M-test-notes: "))
+        self.assertEqual("- 2026-10-10 one: M-test needs a frozen statement", brief.fact_line(picked[1]))
+        now2 = dt.datetime(2026, 10, 14, tzinfo=dt.timezone.utc)
+        text = brief.render("M-test", "mission", [], dict(
+            awaiting_you=[], awaiting_others=[], asked=[], in_force=[], adopted=[],
+            obligations=[], closed=[], newest=None, record_count=0, session_count=0,
+            record_ids=[], facts=picked, facts_note="store not answering; cache of x"), now2)
+        self.assertIn("## Facts (2)", text)
+        self.assertIn("_facts: store not answering; cache of x_", text)
+
     def test_default_excursions_from_mission_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "mission.md"

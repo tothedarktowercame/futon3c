@@ -2,12 +2,20 @@
 """Render a classical mission resume brief from turn records."""
 import argparse
 import datetime as dt
+import importlib.util
 import json
+import os
 import re
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_DIR = Path.home() / ".emacs-graph/session-turn-analysis"
+# minus40 (40ºBelowDB): the memory-file facts with their said/unsaid times.
+# Read through its own m40.py so the brief shares its store, cache and
+# true-at rule rather than keeping a second copy of either.
+M40_SCRIPT = ROOT.parent / "minus40/scripts/m40.py"
+FACT_CAP = 15
 
 def instant(s):
     """Parse S as an aware UTC instant. A bare date or naive time (as --since
@@ -207,6 +215,73 @@ def port_section(rows, now):
         output.append("")
     return output
 
+def load_m40(script=M40_SCRIPT):
+    """minus40's m40.py as a module, or None when that checkout is absent."""
+    if not Path(script).exists():
+        return None
+    spec = importlib.util.spec_from_file_location("m40", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+def store_answers(base, timeout=2.0):
+    try:
+        with urllib.request.urlopen(base + "/health", timeout=timeout) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+def read_facts(m40=None, base=None):
+    """(rows, note). Rows come from the store when it answers (through m40's
+    ten-minute cache); when it does not, from the last cache on disk, with a
+    note saying so; otherwise none, with the reason. Never raises: a brief
+    must render whether or not minus40 is up."""
+    m40 = m40 or load_m40()
+    if m40 is None:
+        return [], "not read (minus40 checkout absent at %s)" % M40_SCRIPT
+    base = base or m40.BASE
+    try:
+        if store_answers(base):
+            return m40.facts(), None
+        if os.path.exists(m40.CACHE):
+            with open(m40.CACHE) as fh:
+                rows = json.load(fh)
+            cached = dt.datetime.fromtimestamp(os.path.getmtime(m40.CACHE), dt.timezone.utc)
+            return rows, "store at %s not answering; cache of %s" % (
+                base, cached.strftime("%Y-%m-%dT%H:%MZ"))
+        return [], "not read (store at %s not answering, no cache)" % base
+    except Exception as e:  # a brief never fails on its facts
+        return [], "not read (%s)" % e
+
+def fact_said(f):
+    return f.get("again") or f.get("said") or ""
+
+def mission_facts(rows, terms, now, since=None, cap=FACT_CAP):
+    """Facts true at NOW whose text or memory id mentions any of TERMS
+    (case-insensitive), said at or after SINCE when given, newest first,
+    at most CAP. The fact's stored times are ISO-8601 Z strings, so the
+    comparison is on strings in that form, as m40's own true_at does."""
+    t = now.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    floor = (since + "T00:00:00Z" if since and len(since) == 10 else since) or ""
+    wanted = [w.lower() for w in terms if w]
+    out = []
+    for f in rows:
+        said = f.get("said") or ""
+        if not said or said > t or (f.get("unsaid") and f["unsaid"] <= t):
+            continue
+        if floor and fact_said(f) < floor:
+            continue
+        hay = (f.get("text", "") + " " + f.get("memory", "")).lower()
+        if wanted and not any(w in hay for w in wanted):
+            continue
+        out.append(f)
+    out.sort(key=fact_said, reverse=True)
+    return out[:cap]
+
+def fact_line(f):
+    stem = (f.get("memory") or "").split("/", 1)[-1]
+    return "- {0} {1}: {2}".format(fact_said(f)[:10], stem, shortened(f.get("text", "")))
+
 def render(mission, join, seed_rows, data, now, excursions=()):
     lines = ["# Resume brief: " + mission, ""]
     if join == "seat":
@@ -243,8 +318,13 @@ def render(mission, join, seed_rows, data, now, excursions=()):
         lines += ["## {0} ({1})".format(title, count), ""]
         lines += rows or ["_None._"]
         lines.append("")
-    lines += ["## Facts (0)", "",
-              "facts: not read (no minus40 fact read in this version)", ""]
+    facts = data.get("facts", [])
+    lines += ["## Facts ({0})".format(len(facts)), ""]
+    note = data.get("facts_note")
+    if note:
+        lines.append("_facts: {0}_".format(note))
+    lines += [fact_line(f) for f in facts] or ([] if note else ["_None._"])
+    lines.append("")
     return "\n".join(lines)
 
 def write_measurement(directory, mission, seat, now, data):
@@ -261,7 +341,7 @@ def write_measurement(directory, mission, seat, now, data):
         "adopted_not_applied": [aid(x) for x in data["adopted"]],
         "obligations": [aid(x) for x in data["obligations"]],
         "recently_closed": [aid(x) for x in data["closed"]],
-        "facts": [],
+        "facts": [f.get("id") for f in data.get("facts", [])],
     }
     payload = {"mission": mission, "seat": seat,
                "at": now.isoformat().replace("+00:00", "Z"),
@@ -281,6 +361,11 @@ def main(argv=None):
                    help="auto: mission or listed excursion when any matches, else seats")
     p.add_argument("--excursions",
                    help="comma-separated excursion ids; defaults to E-* tokens in the mission file")
+    p.add_argument("--no-facts", action="store_true",
+                   help="skip the minus40 Facts section (no store contact)")
+    p.add_argument("--fact-terms",
+                   help="comma-separated extra terms a fact may mention; "
+                        "the mission id and excursions always count")
     args = p.parse_args(argv)
     mission_file = ROOT / "holes/missions" / (args.mission + ".md")
     excursions = (list(filter(None, args.excursions.split(","))) if args.excursions
@@ -291,6 +376,14 @@ def main(argv=None):
                                  args.join, set(excursions))
     now = dt.datetime.now(dt.timezone.utc)
     data = prepare(records, now)
+    if args.no_facts:
+        data["facts"], data["facts_note"] = [], "not read (--no-facts)"
+    else:
+        rows, note = read_facts()
+        terms = [args.mission] + list(excursions) + list(
+            filter(None, (args.fact_terms or "").split(",")))
+        data["facts"] = mission_facts(rows, terms, now, args.since)
+        data["facts_note"] = note
     output = render(args.mission, join, seeds(mission_file), data, now, excursions)
     if args.out:
         args.out.write_text(output)
