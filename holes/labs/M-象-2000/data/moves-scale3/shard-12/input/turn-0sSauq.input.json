@@ -1,0 +1,90 @@
+{
+  "record": "turn-0sSauq",
+  "turn_id": "claude-2-turn-12",
+  "session_id": "92706bcc-a97f-472d-b391-4f2ff0052041",
+  "created_at": "2026-09-29T03:16:19Z",
+  "agent_id": "claude-2",
+  "source_text": "OK, I've done items 2 and 3.  What do we need to do with git to prove it works?  My usual thing would be to push \"joe-homepage\" but I'm not finding that so I'm not sure I have the git \"frontend\" to /~joe/ ...",
+  "fragments": [
+    {
+      "id": "claude-2-turn-12-f-s1-0",
+      "intent": "report",
+      "text": "OK, I've done items 2 and 3."
+    },
+    {
+      "id": "claude-2-turn-12-f-s2-0",
+      "intent": "ask-action",
+      "text": "What do we need to do with git to prove it works?"
+    },
+    {
+      "id": "claude-2-turn-12-f-s3-0",
+      "intent": "report-problem",
+      "text": "My usual thing would be to push \"joe-homepage\" but I'm not finding that so I'm not sure I have the git \"frontend\" to /~joe/ ..."
+    }
+  ],
+  "reply_text": "There's no copy of `joe-homepage` on Zone; your working copy lives on one of your own machines. Here's how the site gets updated:\n\n- **How pushes reach the site:** `git@metameso.org:joe-homepage.git` is a bare repository on the box. When you push to it, a small hook copies the new files into `~joe/public_html`, which is what `/~joe/` serves.\n- **Who can push:** only your five machines' keys: `joe@ubuntu`, `joe@Joes-iMac.local`, `joe@joe-Latitude-E5550`, `joe@Teacup` and `joe@Proteus`.\n- **Last push:** 24 June 2026, commit `d04ee5c` \"fixes\", with a +0100 timestamp, so it came from a machine you had in the UK. That machine should have the clone.\n- **The site matches the repository exactly:** no locally edited or extra files in `public_html`. So a push won't overwrite anything.\n\n**To prove git works**, on whichever of those machines has the clone:\n1. Read test: `git ls-remote git@metameso.org:joe-homepage.git`. It should show `d04ee5c`, with no host-key warning.\n2. Full test: make a trivial change (e.g. a comment in an HTML file), commit, and `git push`. Then reload https://metameso.org/~joe/ and check the change is there. That tests your key, the repository, the hook and the web server together.\n\nIf you can't find the clone, `git clone git@metameso.org:joe-homepage.git` works too, but it downloads about 1.3 GB.\n\nIf you'd like to be able to push from Zone as well, I can add Zone's key to git's allowed list. You left it off that list on 14 September, so I'll only add it if you say so.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-2-turn-2-f-s1-0",
+      "kind": "report-problem",
+      "text": "Well Rob has sent other things to me last week, maybe he forgot to upload it, but this is a bit of mystery.",
+      "since": "2026-09-29T02:04:15Z"
+    },
+    {
+      "act": "claude-2-turn-2-f-s2-0",
+      "kind": "propose",
+      "text": "If we look in the Evidence Landscape for history on results-mark7-mark7master-20260921 we will figure out how I obtaine…",
+      "since": "2026-09-29T02:04:15Z"
+    },
+    {
+      "act": "claude-2-turn-3-f-s2-0",
+      "kind": "verify",
+      "text": "Am I still paying rent on an extra linode?",
+      "since": "2026-09-29T02:06:24Z"
+    },
+    {
+      "act": "claude-2-turn-4-f-s1-0",
+      "kind": "report-problem",
+      "text": "Well it is booted according to Linode.com, but I can't get in with ssh -p 2222 joe@172.236.108.82 ...",
+      "since": "2026-09-29T02:12:04Z"
+    },
+    {
+      "act": "claude-2-turn-5-f-s1-1",
+      "kind": "ask-action",
+      "text": "can we open a channel from there to here?",
+      "since": "2026-09-29T02:19:20Z"
+    },
+    {
+      "act": "claude-2-turn-6-f-s1-0",
+      "kind": "report-problem",
+      "text": "Well, let me be frank with you and say that using Termux is very annoying b/c copy-paste is somehow disabled here on Zo…",
+      "since": "2026-09-29T02:20:51Z"
+    },
+    {
+      "act": "claude-2-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should figure out what was going on with the migration and finish it",
+      "since": "2026-09-29T02:27:52Z"
+    },
+    {
+      "act": "claude-2-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "to do the IP swap",
+      "since": "2026-09-29T02:42:33Z"
+    },
+    {
+      "act": "claude-2-turn-12-f-s2-0",
+      "kind": "ask-action",
+      "text": "What do we need to do with git to prove it works?",
+      "since": "2026-09-29T03:16:19Z"
+    },
+    {
+      "act": "claude-2-turn-12-f-s3-0",
+      "kind": "report-problem",
+      "text": "My usual thing would be to push \"joe-homepage\" but I'm not finding that so I'm not sure I have the git \"frontend\" to /~…",
+      "since": "2026-09-29T03:16:19Z"
+    }
+  ]
+}

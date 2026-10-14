@@ -1,0 +1,54 @@
+{
+  "record": "turn-ttWEsr",
+  "turn_id": "claude-3-turn-6",
+  "session_id": "6799e67a-0da8-4bc6-829e-1ff2c07d50c8",
+  "created_at": "2026-09-29T02:55:43Z",
+  "agent_id": "claude-3",
+  "source_text": "Well, I also think you over-correct in your memory notes too, but we could look through them.  The thing is, they are probably you learning how to use Agency (e.g. the right parameters for bells) or learning how not to annoy me",
+  "fragments": [
+    {
+      "id": "claude-3-turn-6-f-s1-0",
+      "intent": "qualify",
+      "text": "Well, I also think you over-correct in your memory notes too, but we could look through them."
+    },
+    {
+      "id": "claude-3-turn-6-f-s2-0",
+      "intent": "explain",
+      "text": "The thing is, they are probably you learning how to use Agency (e.g."
+    },
+    {
+      "id": "claude-3-turn-6-f-s3-0",
+      "intent": "explain",
+      "text": "the right parameters for bells) or learning how not to annoy me"
+    }
+  ],
+  "reply_text": "That's a better description than mine. Going through the index, it splits about the way you say:\n\n- **Tool and infrastructure lore, about half.** Bell modes, park session ids, keyboxd locks, Caddy realms, the `:slow` tag. This is me learning how to operate the setup.\n- **Operator model, most of the rest.** Restarts are yours to do, decide and proceed on go, assessments not rulings, don't ask when nobody needs to judge, never post as you. This is me learning where you draw lines.\n\nVery few notes are about the work itself. That's a finding in its own right: most of what the agent learns goes into operating the harness and reading the operator, not into the domain. So I'd take back the \"labelled failure dataset\" framing. What the notes show is where the agent's learning goes, which is a different claim.\n\nOn over-correcting, I can see it in the index. \"Decide and proceed on go\", \"Assessment, not ruling\" and \"No judgement means act\" all push in the same direction, probably each from a single correction, and each is written as a standing rule with **Why:** and **How to apply:**. One \"don't ask me that\" turns into a general policy against asking. There's a mirror image here too. \"Examples mean the principle\" is a note telling me to generalise *more*, and here you're saying I generalise too much. Judging how far a correction should reach is hard from both sides. The note format makes it worse, because it has no field for \"how far does this apply?\" or \"how many times has this happened?\"\n\nThat's also something a harness could handle, if you want it on the list. A correction could be stored with its scope and a count, and it would only harden into a rule when it recurs. But I'll leave that there unless you want to take it further.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-3-turn-2-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the answers are more clear from the about.html page",
+      "since": "2026-09-29T02:48:11Z"
+    },
+    {
+      "act": "claude-3-turn-3-f-s2-0",
+      "kind": "clarify",
+      "text": "It is an image or two with the best demo I have to offer at the moment which happens to be based on internal tooling.",
+      "since": "2026-09-29T02:49:30Z"
+    },
+    {
+      "act": "claude-3-turn-4-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the \"who\" is left purposefully vague.",
+      "since": "2026-09-29T02:51:29Z"
+    },
+    {
+      "act": "claude-3-turn-4-f-s2-0",
+      "kind": "propose",
+      "text": "Let me interview you.",
+      "since": "2026-09-29T02:51:29Z"
+    }
+  ]
+}

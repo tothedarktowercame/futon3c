@@ -1,0 +1,73 @@
+{
+  "record": "turn-y1ks7J",
+  "turn_id": "claude-2-turn-11",
+  "session_id": "92706bcc-a97f-472d-b391-4f2ff0052041",
+  "created_at": "2026-09-29T02:42:33Z",
+  "agent_id": "claude-2",
+  "source_text": "~/.linodetoken should work for you to do the IP swap",
+  "fragments": [
+    {
+      "id": "claude-2-turn-11-f-s1-0",
+      "intent": "report",
+      "text": "~/.linodetoken should work for you"
+    },
+    {
+      "id": "claude-2-turn-11-f-s1-1",
+      "intent": "delegate",
+      "text": "to do the IP swap"
+    }
+  ],
+  "reply_text": "The token works. I'm doing the swap now.Linode has swapped the addresses. Next I power off the old box and reboot the new one so it takes its new address.The new box is up on 172.236.108.82 and the old box is offline. Now the step-5 checks.The Agency on the new box hasn't answered yet; it was still starting up after the reboot. I'll give it a minute and retry.Zone can reach the new box's Agency, and its roster lists `chi-claude-1` and `chi-codex-1`. But the Agency reported only 6 seconds of uptime, so I'm checking whether it's stuck restarting.That was a false alarm. The unit has been active since 02:43:48 with no restarts; the HTTP server finished starting at 02:44:28, and `uptime-seconds` counts from then. Last, the certbot dry run.certbot is still running. It's probably waiting on validation for the old `zulip.` and `jitsi.` names. I'll leave it running and log the result to a file.The simulated renewal for `metameso.org` succeeded over the new box. The two `certbot delete` commands errored, so I'm checking what's left of those two certificates.Now I'll record the cutover in the inventory notes and my memory.The migration is finished: `metameso.org` is now served by the new box, and the old one is powered off. Powered off still costs rent, so the billing stops only once you delete it.\n\n**What I did**\n- **IP swap:** done through the Linode API with your token. The new box (`metameso-2026`) now holds 172.236.108.82. The old box (7925) took 172.238.176.108 and is shut down. The new box came back up about 50 seconds after its reboot.\n\n**What I checked from Zone**\n- **SSH:** `ssh metameso` reaches the new box with no host-key warning, because the old box's host keys were copied over. Your other machines shouldn't see a warning either.\n- **Web:** https://metameso.org, `/~joe/` and a paper PDF (`docs/joe-corneli-1p.pdf`) all load.\n- **Agency:** the new box's Agency answers Zone, calls itself `.82`, and peers with Zone and London. Zone's roster lists `chi-claude-1` and `chi-codex-1`.\n- **Certificate:** a simulated renewal of the `metameso.org` certificate succeeded on the new box. The certificate runs to 6 December.\n- **Git over SSH:** not tested for real. Zone's key is refused, the same as on the old box, because since 14 September git only accepts your five personal machines. The next push from one of those will be the real test.\n\n**Tidied up**\n- I removed the old `zulip.` and `jitsi.` certificate folders. One had expired in 2022 and the other was empty; a backup is in `/root` on the new box.\n- I deleted the temporary migration key.\n\n**Changed from the runbook**\n- I kept port 22 open. The plan was to close it, but git remotes like `git@metameso.org:…` use port 22 unless told otherwise, so closing it would break your pushes.\n- Root login with Zone's key is still allowed, so I can keep working on the box. Closing it is up to you.\n\n**For you**\n1. **Delete Linode 7925** to stop the billing. I'd do it around 6 October, once a git push has worked. I can do it with the token when you say so.\n2. Remove Zone's key from the Linode LISH settings.\n3. `~/.metameso` holds the old box's root password and can be deleted.\n\nThe full log is in `~/backups/linode-migration/metameso/20260929-cutover-notes.md`, and I've updated my notes on this box with the cutover.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-2-turn-2-f-s1-0",
+      "kind": "report-problem",
+      "text": "Well Rob has sent other things to me last week, maybe he forgot to upload it, but this is a bit of mystery.",
+      "since": "2026-09-29T02:04:15Z"
+    },
+    {
+      "act": "claude-2-turn-2-f-s2-0",
+      "kind": "propose",
+      "text": "If we look in the Evidence Landscape for history on results-mark7-mark7master-20260921 we will figure out how I obtaine…",
+      "since": "2026-09-29T02:04:15Z"
+    },
+    {
+      "act": "claude-2-turn-3-f-s2-0",
+      "kind": "verify",
+      "text": "Am I still paying rent on an extra linode?",
+      "since": "2026-09-29T02:06:24Z"
+    },
+    {
+      "act": "claude-2-turn-4-f-s1-0",
+      "kind": "report-problem",
+      "text": "Well it is booted according to Linode.com, but I can't get in with ssh -p 2222 joe@172.236.108.82 ...",
+      "since": "2026-09-29T02:12:04Z"
+    },
+    {
+      "act": "claude-2-turn-5-f-s1-1",
+      "kind": "ask-action",
+      "text": "can we open a channel from there to here?",
+      "since": "2026-09-29T02:19:20Z"
+    },
+    {
+      "act": "claude-2-turn-6-f-s1-0",
+      "kind": "report-problem",
+      "text": "Well, let me be frank with you and say that using Termux is very annoying b/c copy-paste is somehow disabled here on Zo…",
+      "since": "2026-09-29T02:20:51Z"
+    },
+    {
+      "act": "claude-2-turn-8-f-s2-1",
+      "kind": "propose",
+      "text": "we should figure out what was going on with the migration and finish it",
+      "since": "2026-09-29T02:27:52Z"
+    },
+    {
+      "act": "claude-2-turn-11-f-s1-1",
+      "kind": "delegate",
+      "text": "to do the IP swap",
+      "since": "2026-09-29T02:42:33Z"
+    }
+  ]
+}

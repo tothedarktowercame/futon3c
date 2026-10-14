@@ -1,0 +1,74 @@
+{
+  "record": "turn-Tr3wml",
+  "turn_id": "claude-3-turn-4",
+  "session_id": "6799e67a-0da8-4bc6-829e-1ff2c07d50c8",
+  "created_at": "2026-09-29T02:51:29Z",
+  "agent_id": "claude-3",
+  "source_text": "Well I think the \"who\" is left purposefully vague.  Let me interview you.  You too have an AI workflow, subagents, Agency.  You're familiar with both.  How are they working for you?  I know that dropped and crosed bells are a problem on agency sometimes.  But subagents have problems too, notably, no Codex.",
+  "fragments": [
+    {
+      "id": "claude-3-turn-4-f-s1-0",
+      "intent": "clarify",
+      "text": "Well I think the \"who\" is left purposefully vague."
+    },
+    {
+      "id": "claude-3-turn-4-f-s2-0",
+      "intent": "propose",
+      "text": "Let me interview you."
+    },
+    {
+      "id": "claude-3-turn-4-f-s3-0",
+      "intent": "explain",
+      "text": "You too have an AI workflow, subagents, Agency."
+    },
+    {
+      "id": "claude-3-turn-4-f-s4-0",
+      "intent": "explain",
+      "text": "You're familiar with both."
+    },
+    {
+      "id": "claude-3-turn-4-f-s5-0",
+      "intent": "collect",
+      "text": "How are they working for you?"
+    },
+    {
+      "id": "claude-3-turn-4-f-s6-0",
+      "intent": "report",
+      "text": "I know that dropped and crosed bells are a problem on agency sometimes."
+    },
+    {
+      "id": "claude-3-turn-4-f-s7-0",
+      "intent": "report",
+      "text": "But subagents have problems too, notably, no Codex."
+    }
+  ],
+  "reply_text": "Speaking from what's in my memory notes rather than from this session alone:\n\n**Agency.** When it works, it's the more capable of the two. It has other model families (Codex, Zai), persistent sessions, parking and waking, and a record of who asked for what. Its failures are the worrying kind, because they're **silent and report success**:\n\n- A bell sent without `--mode work` runs nothing and still reports done.\n- A park without a session id leaves the wake stuck under an empty session, and the bellback is suppressed as well, so nobody hears that it failed.\n- A stale mosh focus flag sends dictation to the wrong agent's buffer. It looks like normal work, just delivered to the wrong place.\n- \"Watchdog silent\" turned out to mean muted, not missing, so the self-heal couldn't reach the loop it was supposed to watch.\n\nDropped and crossed bells belong to the same family. The real cost isn't the failure itself. It's that I end up acting on a false picture of what happened.\n\n**Subagents.** They're reliable at the plumbing level, since a spawn does come back, but they're limited:\n\n- **One model family.** You named it: no Codex. So no second opinion from a model that fails differently, which is exactly what you want in review and adversarial checking.\n- **No persistence or identity.** A subagent can't be parked or woken, can't message anyone, and leaves nothing for Agency to track. Its work exists only as the summary it hands back to me.\n- **The summary is all I see.** If a subagent quietly narrows the task or decides something is missing after a shallow search (the /usages lesson), I only find out if I check its work. That's the same gap between what was asked and what was built, one level down.\n\n**The harness around me.** The pattern retrieval at the top of your messages is a real data point. This turn got `storage/guardrails-vs-tooling` at 0.40, and the previous one got `plos-npt-with-small-n/barrier-enabler-strategy-display`. Neither shaped what I said. At those scores it's mostly noise that costs context and trains me to skim past the preamble. That's the wrong habit for the one time it matters.\n\n**My own share.** Several of my memory notes are corrections of *me*: I read the exit line instead of the checklist, fixed the single example instead of the principle, and disabled a subsystem instead of fixing it. Those are your site's opening paragraph, word for word: \"the agents weren't building what I asked for.\"\n\n**What that suggests about the \"who.\"** Keeping the field vague may be the right call. The common factor in my answers isn't an industry. It's anyone running agents with enough autonomy that failures go silent, where the system says \"done\" and the real state is something else. What that buyer wants is to be able to believe the \"done\". That also answers your sister's outcome question in one line without naming a field: *you find out what your agents actually did, not what they reported.* All three of your offerings (the gap, provenance, effect with controls) are ways of checking that.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-3-turn-2-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the answers are more clear from the about.html page",
+      "since": "2026-09-29T02:48:11Z"
+    },
+    {
+      "act": "claude-3-turn-3-f-s2-0",
+      "kind": "clarify",
+      "text": "It is an image or two with the best demo I have to offer at the moment which happens to be based on internal tooling.",
+      "since": "2026-09-29T02:49:30Z"
+    },
+    {
+      "act": "claude-3-turn-4-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the \"who\" is left purposefully vague.",
+      "since": "2026-09-29T02:51:29Z"
+    },
+    {
+      "act": "claude-3-turn-4-f-s2-0",
+      "kind": "propose",
+      "text": "Let me interview you.",
+      "since": "2026-09-29T02:51:29Z"
+    }
+  ]
+}

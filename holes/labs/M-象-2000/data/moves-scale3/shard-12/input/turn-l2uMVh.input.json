@@ -1,0 +1,96 @@
+{
+  "record": "turn-l2uMVh",
+  "turn_id": "claude-3-turn-8",
+  "session_id": "6799e67a-0da8-4bc6-829e-1ff2c07d50c8",
+  "created_at": "2026-09-29T03:01:11Z",
+  "agent_id": "claude-3",
+  "source_text": "OK fair, somewhere in Amsterdam there's a server with software on it.  But the \"bare metal\" is the point here.  Yes, it has Ubuntu on it.  But for all intents and purposes my \"operating system\" is Emacs + Agency + Claude + Codex + Kimi + Zai.  There's no \"Windows\".  When I need to change something on a different server (Linode) I just ask Claude to do it for me.  If I need to change something on my PHONE I ask claude to ssh in there.  You can mount my Kinesis keyboard to my phone in Dallas from a server Amsterdam while you sit in a data centre somewhere else.  What I'm suggesting I guess is that there is \"code\" but no \"software\" in this recipe",
+  "fragments": [
+    {
+      "id": "claude-3-turn-8-f-s1-0",
+      "intent": "qualify",
+      "text": "OK fair, somewhere in Amsterdam there's a server with software on it."
+    },
+    {
+      "id": "claude-3-turn-8-f-s2-0",
+      "intent": "redirect",
+      "text": "But the \"bare metal\" is the point here."
+    },
+    {
+      "id": "claude-3-turn-8-f-s3-0",
+      "intent": "qualify",
+      "text": "Yes, it has Ubuntu on it."
+    },
+    {
+      "id": "claude-3-turn-8-f-s4-0",
+      "intent": "propose",
+      "text": "But for all intents and purposes my \"operating system\" is Emacs + Agency + Claude + Codex + Kimi + Zai."
+    },
+    {
+      "id": "claude-3-turn-8-f-s5-0",
+      "intent": "explain",
+      "text": "There's no \"Windows\"."
+    },
+    {
+      "id": "claude-3-turn-8-f-s6-0",
+      "intent": "report",
+      "text": "When I need to change something on a different server (Linode) I just ask Claude to do it for me."
+    },
+    {
+      "id": "claude-3-turn-8-f-s7-0",
+      "intent": "report",
+      "text": "If I need to change something on my PHONE I ask claude to ssh in there."
+    },
+    {
+      "id": "claude-3-turn-8-f-s8-0",
+      "intent": "extend",
+      "text": "You can mount my Kinesis keyboard to my phone in Dallas from a server Amsterdam while you sit in a data centre somewhere else."
+    },
+    {
+      "id": "claude-3-turn-8-f-s9-0",
+      "intent": "clarify",
+      "text": "What I'm suggesting I guess is that there is \"code\" but no \"software\" in this recipe"
+    }
+  ],
+  "reply_text": "That's a sharper distinction than mine, and I think it holds. **Software** is a packaged product: a vendor ships it, everyone gets the same interface, you learn how to use it, and it changes on the vendor's schedule. **Code** is material written on request for one purpose, by whoever or whatever is on hand, and it can be rewritten the next time you ask. In your setup, the interface is a request in plain language, and code gets written, run and sometimes thrown away. The Kinesis-over-SAF mount is a good example. Nobody sells that. It exists because you asked for it once.\n\nEmacs looks like an exception, but it proves your point. It's the one tool that has worked as code rather than software for forty years, since the user rewrites it as they go. It makes sense that it's the one old tool still at the centre of your setup.\n\nThis matters for the pitch, because it moves the quality question:\n\n- With software, you ask whether the product is good, and there's a vendor, a manual, a changelog and a bug tracker.\n- With code written on request, none of those exist. The request is the spec, the agent is the vendor, and every run is a one-off release. So the only question left is whether the request became the right code. That's the gap, again.\n\nThis also gives your three offerings a plain reason to exist. **Provenance replaces the changelog.** **Finding the gap replaces the bug tracker.** **Effect-with-controls replaces the QA department.** When there's no software, those jobs don't go away. They just have no owner.\n\nThat could be the answer to your sister's framing, and maybe a line on the site: *there's no vertical because there's no software, just requests and code. We help you keep track of what your requests actually turned into.*",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-3-turn-2-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the answers are more clear from the about.html page",
+      "since": "2026-09-29T02:48:11Z"
+    },
+    {
+      "act": "claude-3-turn-3-f-s2-0",
+      "kind": "clarify",
+      "text": "It is an image or two with the best demo I have to offer at the moment which happens to be based on internal tooling.",
+      "since": "2026-09-29T02:49:30Z"
+    },
+    {
+      "act": "claude-3-turn-4-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the \"who\" is left purposefully vague.",
+      "since": "2026-09-29T02:51:29Z"
+    },
+    {
+      "act": "claude-3-turn-4-f-s2-0",
+      "kind": "propose",
+      "text": "Let me interview you.",
+      "since": "2026-09-29T02:51:29Z"
+    },
+    {
+      "act": "claude-3-turn-8-f-s4-0",
+      "kind": "propose",
+      "text": "But for all intents and purposes my \"operating system\" is Emacs + Agency + Claude + Codex + Kimi + Zai.",
+      "since": "2026-09-29T03:01:11Z"
+    },
+    {
+      "act": "claude-3-turn-8-f-s9-0",
+      "kind": "clarify",
+      "text": "What I'm suggesting I guess is that there is \"code\" but no \"software\" in this recipe",
+      "since": "2026-09-29T03:01:11Z"
+    }
+  ]
+}

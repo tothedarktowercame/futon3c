@@ -1,0 +1,26 @@
+{
+  "record": "turn-vZ2kYc",
+  "turn_id": "claude-3-turn-2",
+  "session_id": "6799e67a-0da8-4bc6-829e-1ff2c07d50c8",
+  "created_at": "2026-09-29T02:48:11Z",
+  "agent_id": "claude-3",
+  "source_text": "Well I think the answers are more clear from the about.html page",
+  "fragments": [
+    {
+      "id": "claude-3-turn-2-f-s1-0",
+      "intent": "clarify",
+      "text": "Well I think the answers are more clear from the about.html page"
+    }
+  ],
+  "reply_text": "Agreed. The \"Other offerings\" section on `about.html` gives her the \"what\" and most of the \"outcome\". There are three concrete products, each with a result:\n\n- **Finding the gap:** a diagnostic of your agent logs that runs on your own machines, so no data leaves them.\n- **Provenance for agent-written code:** which changes an agent made, from which request, and who reviewed them.\n- **Which changes have real effects:** analysis of your workflows, with controls, to find the changes that make a difference.\n\nOn top of that there's the custom harnesses and memory systems line. That's a clear offer, and \"agent logs\" and \"agent-written code\" also tell you the field: organisations writing software with AI agents.\n\nSo the content is there, and the problem is how the pages connect. Her reaction suggests she read the homepage and stopped, which most first-time visitors will do. The homepage's only link to `about.html` is the last line of the page, \"Click through for more information.\" (`index.html:72`), and it comes after the older helpouts/Facebook list. Someone who already feels lost won't scroll that far to click it.\n\nTwo things are still missing even on `about.html`:\n\n- **\"Who\" is only implied.** Nothing says \"for engineering teams / CTOs / research labs running coding agents.\" A reader like her needs that said outright.\n- **The offerings sit under a PKD epigraph and a live futon map.** The first thing a reader meets is your own internal tooling, and the part aimed at them only starts at \"Other offerings\". It's also odd that the actual products are labelled \"other\".\n\nThe smallest fix is to bring about.html's answer onto the homepage. After \"Sound familiar?\", add one line naming who it's for, then the three offerings as short one-line items, each linking to its section on `about.html`. That would replace the \"things we've learned\" list, or move it down the page. On `about.html`, I'd rename \"Other offerings\" to something like \"What we offer\" and put it above the map. With those changes she'd get answers to all three of her questions on the first screen, without clicking anything.\n\nIf you tell me who the client is, I can draft that edit to `index.html`.",
+  "reply_acts": [],
+  "previous_reply_acts": [],
+  "open_ports": [
+    {
+      "act": "claude-3-turn-2-f-s1-0",
+      "kind": "clarify",
+      "text": "Well I think the answers are more clear from the about.html page",
+      "since": "2026-09-29T02:48:11Z"
+    }
+  ]
+}

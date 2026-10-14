@@ -1,0 +1,489 @@
+{
+  "record": "turn-HYgvM1",
+  "turn_id": "claude-16-turn-105",
+  "session_id": "00e653e3-28f7-4add-8304-47ca0475b5c2",
+  "created_at": "2026-10-14T18:03:12Z",
+  "agent_id": "claude-16",
+  "source_text": "futon1b has been repaired by an external agent.  with that in mind, can you join things up a bit more?",
+  "fragments": [
+    {
+      "id": "claude-16-turn-105-f-s1-0",
+      "intent": "report",
+      "text": "futon1b has been repaired by an external agent."
+    },
+    {
+      "id": "claude-16-turn-105-f-s2-0",
+      "intent": "ask-action",
+      "text": "with that in mind, can you join things up a bit more?"
+    }
+  ],
+  "reply_text": "Checking the repaired store first, then looking at the record shapes on both sides to see which joins are cheap: turn records to their evidence rows, memory facts to the turn that wrote them, and requisition asks to their finished jobs.Two reads before coding: the emit function's user flag, and the size of the evidence-id backfill.Writing the three joins now: the brief's job-state closure and fact-to-turn join, the Emacs pending evidence id, and the evidence-id backfill script.Fixing the script's two slips (non-dict records, the cursor's two-field shape), then dry run; in parallel committing the brief change, rendering it live, and finding the Emacs defun to reload.Verifying the live Emacs reload properly (the earlier check was truncated by print depth) and checking the Clojure test log.Live Emacs confirmed. Committing the four files plus the backfill script and log, then reloading the two server namespaces from the canonical checkout.㊥ (gist) With futon1b answering again, four joins are in place and one defect came out of making them. The brief now closes bell asks by their job's state and names, under each memory fact, the operator turn it was written after. 62 turn records that had no evidence id now carry their row's id, and future records carry it even while delivery is queued. The defect: every typed exchange was split across two turn ids. Fixed in the live Emacs. Commits futon3c 3cda506ef, f5e1ecd39, 13f032dc5.\n\n㊬ (\"futon1b has been repaired\") Heap 877 of 4096 MB, session evidence query 0.7 s, text search serving. Frames for this session fill with HAPPENED again (26 frames, 1,505 rows), and the McCarthy checks now pass \"recording is a side effect of acting\" and \"the past is well ordered\". Only the rewind check stays pending, on start-heads.\n\n㊢ (joins made)\n- **Bell ask to Agency job.** An open ask whose act id ends in a job id is asked of the Agency; ended jobs move to Recently closed with \"job done\" and the finish time. Live, 246 of the campaign's requisition asks closed this way. The brief's false-open count was those.\n- **Fact to writing turn.** The memory version at a fact's said time names the writing session, and the latest operator record in that session becomes the line under the fact. The three M-象-2000 facts all resolve, for example the Zai window lesson \"written during claude-15-turn-50, after the operator said: happy to go with your direction on this one\".\n- **Record to evidence row, backwards.** 62 operator records since 10-12 were written while futon1b was slow and had no evidence id. A backfill matched each to its row by session and exact text; all 62 filled, none ambiguous, log committed.\n- **Record to evidence row, forwards.** Emacs now records the outbox's stable id with a delivery state of queued or acked, the server stores it, and both sides are live-reloaded.\n\n㊩ (one exchange, two turn ids) Emacs emitted the operator's evidence row before advancing the turn counter. In every typed session the user row carried turn N minus one while the assistant row and the 象 record carried N. Ten of ten acknowledged records in this session showed it. Fixed by moving the increment ahead of the hook, live in your Emacs since 18:14Z. Rows written before then keep the offset, which the backfill tolerated and the lab note records for anyone joining by turn id over history.\n\n㊬ (check on your next turn) Its record should show an evidence id with a delivery state, and its user row, assistant row and record should share one turn id. I will look when it arrives.\n\n㊟ (still apart) The open view does not yet show a memory version beside its writing turn; the brief does. The rewind check needs start-heads in the turn-commits rows, which is the 象-2000 packet 2 work, not a join.",
+  "reply_acts": [
+    {
+      "id": "claude-16-turn-105-r-0",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊬",
+      "text": "(\"futon1b has been repaired\") Heap 877 of 4096 MB, session evidence query 0.7 s, text search serving. Frames for this session fill with HAPPENED again (26 frames, 1,505 rows), and the McCarthy checks now pass \"recording is a side effect of acting\" and \"the past is well ordered\". Only the rewind check stays pending, on start-heads."
+    },
+    {
+      "id": "claude-16-turn-105-r-1",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(joins made)\n- **Bell ask to Agency job.** An open ask whose act id ends in a job id is asked of the Agency; ended jobs move to Recently closed with \"job done\" and the finish time. Live, 246 of the campaign's requisition asks closed this way. The brief's false-open count was those.\n- **Fact to writing turn.** The memory version at a fact's said time names the writing session, and the latest operator record in that session becomes the line under the fact. The three M-象-2000 facts all resolve, for example the Zai window lesson \"written during claude-15-turn-50, after the operator said: happy to go with your direction on this one\".\n- **Record to evidence row, backwards.** 62 operator records since 10-12 were written while futon1b was slow and had no evidence id. A backfill matched each to its row by session and exact text; all 62 filled, none ambiguous, log committed.\n- **Record to evidence row, forwards.** Emacs now records the outbox's stable id with a delivery state of queued or acked, the server stores it, and both sides are live-reloaded."
+    },
+    {
+      "id": "claude-16-turn-105-r-2",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊩",
+      "text": "(one exchange, two turn ids) Emacs emitted the operator's evidence row before advancing the turn counter. In every typed session the user row carried turn N minus one while the assistant row and the 象 record carried N. Ten of ten acknowledged records in this session showed it. Fixed by moving the increment ahead of the hook, live in your Emacs since 18:14Z. Rows written before then keep the offset, which the backfill tolerated and the lab note records for anyone joining by turn id over history."
+    },
+    {
+      "id": "claude-16-turn-105-r-3",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊬",
+      "text": "(check on your next turn) Its record should show an evidence id with a delivery state, and its user row, assistant row and record should share one turn id. I will look when it arrives."
+    },
+    {
+      "id": "claude-16-turn-105-r-4",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊟",
+      "text": "(still apart) The open view does not yet show a memory version beside its writing turn; the brief does. The rewind check needs start-heads in the turn-commits rows, which is the 象-2000 packet 2 work, not a join."
+    }
+  ],
+  "previous_reply_acts": [
+    {
+      "id": "claude-16-turn-104-r-0",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(1, what memory said on a day) On 09-24 memory knew Zai was out on its weekly limit. The five-hour window, the thing that bit on 10-11, entered memory on 10-12. `asof 2026-09-24` versus `asof 2026-10-14` shows the lesson postdating the incident. The flat store cannot show that."
+    },
+    {
+      "id": "claude-16-turn-104-r-1",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(2, how a lesson evolved) `history zai window` gives 17 events across three memories in three projects over five weeks, including the 10-12 rewrite withdrawn and re-said four hours later. The flat store shows one file's final text."
+    },
+    {
+      "id": "claude-16-turn-104-r-2",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(3, net change versus events) Over 10-11 to 10-14 six real facts were said and withdrawn inside the interval, among them \"run at most 3 Zai seats at once\" and this evening's \"Joe is planning time to completion by usage window\". The endpoint delta hides them and events-between shows them. That is the distinction Lean proved in E-cool-memories, and the checker accepted today's live delta."
+    },
+    {
+      "id": "claude-16-turn-104-r-3",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(4, contradictions) 18 open conflicts between pairs of memories, each with both quotes checked verbatim. One pair is route-by-standing-principle against surfacing-reads-blocker-fields, where one note calls ruling-shaped blocker matching a defect and the other requires it. The flat store hands a session both."
+    },
+    {
+      "id": "claude-16-turn-104-r-4",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(5, the same lesson twice) 21 relation edges, 8 across projects. The Zai lesson in home was found to refine the voxterm one, which is why they were merged on 10-12. Two notes on futon1b heap pressure from expensive reads sit in different projects, and they describe this morning's GC spiral on :7073."
+    },
+    {
+      "id": "claude-16-turn-104-r-5",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊢",
+      "text": "(6, the conversation side) The 象 records answer \"what did Joe ask that nobody answered\" (one item today) and now carry the Facts section wired this afternoon, three facts in force about M-象-2000. The McCarthy checks pass five of six on this session."
+    },
+    {
+      "id": "claude-16-turn-104-r-6",
+      "kind": "reply-mark",
+      "author": "claude-16",
+      "mark": "㊟",
+      "text": "(what none of it does yet) The two halves meet only in that Facts section. A memory version is not yet shown beside the turn whose session wrote it, the brief still counts bellback-closed asks as open, and the :7073 store that holds the 象 evidence rows stays in its GC spiral until you restart it."
+    }
+  ],
+  "acts": [
+    {
+      "port?": false,
+      "start": 0,
+      "author": "operator",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-f-s1-0",
+      "kind": "report",
+      "at": "2026-10-14T18:03:12Z",
+      "record": "turn-HYgvM1",
+      "end": 47,
+      "standing?": false,
+      "about": "futon1b, which has been repaired by an external agent",
+      "text": "futon1b has been repaired by an external agent.",
+      "to": "claude-16"
+    },
+    {
+      "port?": true,
+      "start": 49,
+      "author": "operator",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-f-s2-0",
+      "kind": "ask-action",
+      "at": "2026-10-14T18:03:12Z",
+      "record": "turn-HYgvM1",
+      "end": 102,
+      "standing?": false,
+      "about": "joining things up more, now that futon1b works",
+      "text": "with that in mind, can you join things up a bit more?",
+      "to": "claude-16"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-r-0",
+      "kind": "verify",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "target": "claude-16-turn-105-f-s1-0",
+      "standing?": false,
+      "text": "(\"futon1b has been repaired\") Heap 877 of 4096 MB, session evidence query 0.7 s, text search serving. Frames for this s…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-r-1",
+      "kind": "report",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "standing?": false,
+      "text": "(joins made)\n- **Bell ask to Agency job.** An open ask whose act id ends in a job id is asked of the Agency; ended jobs…",
+      "to": "operator"
+    },
+    {
+      "port?": true,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-r-2",
+      "kind": "report-problem",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "standing?": false,
+      "text": "(one exchange, two turn ids) Emacs emitted the operator's evidence row before advancing the turn counter. In every type…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-r-3",
+      "kind": "verify",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "standing?": false,
+      "text": "(check on your next turn) Its record should show an evidence id with a delivery state, and its user row, assistant row …",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-r-4",
+      "kind": "qualify",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "standing?": false,
+      "text": "(still apart) The open view does not yet show a memory version beside its writing turn; the brief does. The rewind chec…",
+      "to": "operator"
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-ec278044",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon2",
+      "subject": "Complete legacy interpretation revision pins (+17 -0 over 2 files)",
+      "sha": "ec278044",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-e2d5f38d",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon2",
+      "subject": "Publish repair ticket T-repair-occ-867efabc59040b5ad75507ec2ab46c58e46937200890bef32f15af022f812a98 (finding repair-occ-867efabc59040b5ad75507ec2ab46c58e46937200890bef32f15af022f812a98) (+25 -0 over 1 files)",
+      "sha": "e2d5f38d",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-fcb309c7",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon2",
+      "subject": "Keep selection census failures inside debugger (+35 -3 over 2 files)",
+      "sha": "fcb309c7",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-4acac42e",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon2",
+      "subject": "Retain machinery cohort 112 registration (+122 -0 over 1 files)",
+      "sha": "4acac42e",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-3cda506e",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon3c",
+      "subject": "resume brief: bell asks close when their job ended; facts name the turn that wrote them (+146 -3 over 2 files)",
+      "sha": "3cda506e",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-47353245",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon3c",
+      "subject": "Record replacement debugger demonstration click (+5 -2 over 1 files)",
+      "sha": "47353245",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-f5e1ecd3",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon3c",
+      "subject": "turn records carry their evidence row's id even when delivery is queued; one turn id per exchange (+255 -13 over 6 files)",
+      "sha": "f5e1ecd3",
+      "standing?": false
+    },
+    {
+      "port?": false,
+      "author": "claude-16",
+      "turn": "claude-16-turn-105",
+      "id": "claude-16-turn-105-c-13f032dc",
+      "kind": "commit",
+      "at": "2026-10-14T18:18:05Z",
+      "record": "turn-HYgvM1",
+      "repo": "futon3c",
+      "subject": "M-象-2000: record the post-repair joins and the one-exchange-two-turn-ids finding (+33 -7 over 3 files)",
+      "sha": "13f032dc",
+      "standing?": false
+    }
+  ],
+  "open_ports": [
+    {
+      "act": "invoke-1791715588861-5127-28ef4c7e-b-0",
+      "kind": "ask-action",
+      "text": "Requisition: M-landscape-positioning — minus40 adopts Mastra OM ideas (borrow rows 3, 4)\n\nFrom claude-13, at Joe's requ…",
+      "since": "2026-10-11T10:46:28Z"
+    },
+    {
+      "act": "invoke-1791736934784-5621-a4ed2943-b-0",
+      "kind": "ask-action",
+      "text": "From claude-15, at Joe's request: please give a first read to the draft spec ~/code/minus40/docs/SPEC-open-items.md (mi…",
+      "since": "2026-10-11T16:42:14Z"
+    },
+    {
+      "act": "claude-16-turn-22-f-s1-0",
+      "kind": "propose",
+      "text": "so, now that there is an agreed -40 spec, I wonder if we can continue to build the Xiang system so that we push forward…",
+      "since": "2026-10-11T16:54:59Z"
+    },
+    {
+      "act": "claude-16-turn-22-r-1",
+      "kind": "propose",
+      "text": "(order, one seat for the record changes) The turn service is one shared file, so the record changes run in sequence on …",
+      "since": "2026-10-11T16:54:59Z"
+    },
+    {
+      "act": "claude-16-turn-29-f-s2-0",
+      "kind": "propose",
+      "text": "it occurs to me that we could use that for mini g the grammar of moves made by both myself and agents, beyond the core …",
+      "since": "2026-10-11T17:21:34Z"
+    },
+    {
+      "act": "claude-16-turn-29-r-1",
+      "kind": "propose",
+      "text": "(what gets mined, and why each) Three things, all over the settled records that now carry acts.\n1. **Answer incidences …",
+      "since": "2026-10-11T17:26:22Z"
+    },
+    {
+      "act": "claude-16-turn-31-r-2",
+      "kind": "report-problem",
+      "text": "(the gap) All of it is keyed by session, and a conversation is not a session. M-象-2000 ran through claude-14, claude-17…",
+      "since": "2026-10-11T17:39:25Z"
+    },
+    {
+      "act": "claude-16-turn-31-r-3",
+      "kind": "propose",
+      "text": "(the join exists; the artifact does not) Every agent-chat turn on the live store already carries its excursion and cloc…",
+      "since": "2026-10-11T17:39:25Z"
+    },
+    {
+      "act": "claude-16-turn-55-r-2",
+      "kind": "ask-action",
+      "text": "(one list still waiting on you, from the label consolidation) Proposals leaked into topics (\"cheat-sheet\", \"bidding\"), …",
+      "since": "2026-10-12T04:39:59Z"
+    },
+    {
+      "act": "claude-16-turn-63-f-s1-0",
+      "kind": "clarify",
+      "text": "i am not sure how to think about the choice above in  terms of producing a real demo;",
+      "since": "2026-10-12T05:57:15Z"
+    },
+    {
+      "act": "claude-16-turn-63-r-5",
+      "kind": "propose",
+      "text": "(order I would take) Mission id on the record, then the brief and its Emacs delivery, then run it on this REPL and on c…",
+      "since": "2026-10-12T05:58:56Z"
+    },
+    {
+      "act": "claude-16-turn-64-r-3",
+      "kind": "propose",
+      "text": "(first two packets, each one file, ready to send on your word) Stamp the seat's mission id onto every turn record at wr…",
+      "since": "2026-10-12T06:13:37Z"
+    },
+    {
+      "act": "claude-16-turn-77-f-s1-0",
+      "kind": "report-problem",
+      "text": "since the focus has been on crash loops most recently, I am not sure how far off we are from a demo,",
+      "since": "2026-10-12T13:46:34Z"
+    },
+    {
+      "act": "claude-16-turn-77-r-3",
+      "kind": "propose",
+      "text": "(order, nothing dispatched until you say) 1. You run the brief in a fresh REPL and tell me in one line whether it felt …",
+      "since": "2026-10-12T13:47:21Z"
+    },
+    {
+      "act": "claude-16-turn-80-r-2",
+      "kind": "propose",
+      "text": "(second wave) The monthly meter was 73% used at 20:06Z and resets at 02:04Z, so what is unspent by then is lost. When t…",
+      "since": "2026-10-12T20:11:47Z"
+    },
+    {
+      "act": "claude-16-turn-80-r-5",
+      "kind": "report-problem",
+      "text": "(one slip, fixed) My first batch-3 commit went in with a failing test because the chain checked the wrong exit code. Th…",
+      "since": "2026-10-12T20:11:47Z"
+    },
+    {
+      "act": "claude-16-turn-92-r-0",
+      "kind": "report-problem",
+      "text": "(\"may be of interest if you can read it\") The share page sits behind a Cloudflare browser check and returns only a chal…",
+      "since": "2026-10-13T01:06:51Z"
+    },
+    {
+      "act": "claude-16-turn-93-r-4",
+      "kind": "propose",
+      "text": "(one small step) Add a \"within\" line to the brief's items where a labelled or kernel scope link exists, and count how o…",
+      "since": "2026-10-13T01:08:36Z"
+    },
+    {
+      "act": "claude-16-turn-99-f-s1-0",
+      "kind": "propose",
+      "text": "BTW while we wait it could be interesting to write up a summary cover note to send to Aleks Kissinger in connection wit…",
+      "since": "2026-10-13T01:37:49Z"
+    },
+    {
+      "act": "claude-16-turn-100-f-s1-0",
+      "kind": "report-problem",
+      "text": "i am concerned that we didnt sufficiently cover the Fong/related causal theories used in thd daxiang notebook",
+      "since": "2026-10-13T03:07:16Z"
+    },
+    {
+      "act": "claude-16-turn-100-r-0",
+      "kind": "report-problem",
+      "text": "(what went wrong on my side) My edit script checked for my own text, failed to find it, and stopped. The following `git…",
+      "since": "2026-10-13T03:11:00Z"
+    },
+    {
+      "act": "invoke-1791871757001-8697-93e1b69c-b-0",
+      "kind": "ask-action",
+      "text": "Please perform the bounded P6 comparison for `/home/joe/code/futon3c/holes/excursions/E-cool-memories.md` now that the …",
+      "since": "2026-10-13T06:09:17Z"
+    },
+    {
+      "act": "matrix:proof-critic-1791933294-1-f-s7-0",
+      "kind": "ask-action",
+      "text": "@proof-critic",
+      "since": "2026-10-13T23:14:55Z"
+    },
+    {
+      "act": "matrix:proof-critic-1791941838-1-f-s9-0",
+      "kind": "ask-action",
+      "text": "@proof-critic",
+      "since": "2026-10-14T01:37:19Z"
+    }
+  ],
+  "in_force": [
+    {
+      "act": "claude-16-turn-103-f-s1-0",
+      "kind": "accept",
+      "text": "go ahead with your plan"
+    },
+    {
+      "act": "claude-16-turn-65-f-s2-1",
+      "kind": "constrain",
+      "text": "but realistically we must consider that most ports will not close in a given session, and nagging to close them is not …"
+    },
+    {
+      "act": "claude-16-turn-77-f-s1-1",
+      "kind": "constrain",
+      "text": "but I don't want to bske in inefficient loops"
+    },
+    {
+      "act": "claude-16-turn-79-f-s1-0",
+      "kind": "accept",
+      "text": "oh, that looks very nice."
+    },
+    {
+      "act": "claude-16-turn-94-f-s2-0",
+      "kind": "delegate",
+      "text": "we still have 8% of zai to use so please dispatch work accordingly"
+    },
+    {
+      "act": "matrix:proof-critic-1791942050-6-f-s4-0",
+      "kind": "delegate",
+      "text": "@proof-critic"
+    },
+    {
+      "act": "matrix:proof-critic-1791942167-8-f-s3-0",
+      "kind": "constrain",
+      "text": "Any continuation should begin with a new problem."
+    }
+  ]
+}
