@@ -52,3 +52,28 @@ ones since 13:21Z carry none. Frames and acceptance output:
 - feed.html at zone.hyperreal.enterprises/wip/turns (operator turns only since
   26ea4df98; nothing schedules its regeneration).
 - `M-x proof-dialogue-demo`: the frozen t94A01 trace (codex-75, 725869826).
+
+## Addendum 2026-10-14T17:36Z: the E-cool-memories features (minus40 / M40°)
+
+Joe asked after the features from E-cool-memories. Those live in `minus40`
+(40ºBelowDB), a separate scratch futon1b on :7093 (`-Xmx1g`, a `systemd-run`
+scope, not a unit), fed by two Claude Code hooks in `~/.claude/settings.json`
+(PostToolUse `ingest_hook.py`, SessionStart `brief.py`) plus three loops
+(`follower.sh`, `relate.py loop`, `fault_intake.py`). Nothing in futon3c's
+`src/`, `emacs/` or `scripts/` references it; the resume brief's Facts section
+is a stub ("no minus40 fact read in this version").
+
+| feature | checked | state |
+|---|---|---|
+| `m40 net-changed 2026-10-12 2026-10-14` | 26 facts added, 0 removed, 1.4 s | works (after the restart below) |
+| `m40 history read-the-clock` | 13 events, the 10-12 rewrite shown as 4 stops + 3 starts | works |
+| `export-delta` piped into `CoolMemoriesTraceChecker.lean` | `M40-DELTA-ACCEPTED 1953→1979`, 3.4 s | works; the P4 live check reproduced on today's data |
+| Lean fixture check | `M40-DELTA-ACCEPTED 2→2`, 1.7 s; oleans for all five CoolMemories targets built 10-13 19:51 | works |
+| `scripts/test_m40.py` | 6 tests pass (run as a script; `-m unittest scripts/test_m40.py` finds 1 and errors) | works |
+| scratch store :7093 | accept backlog 51/50 and connect timeouts from 03:03Z until a restart at 17:30:58Z (14.5 h); the hook logged 826 `FAULT-RECONCILE timed out` lines and advanced no state; follower outputs frozen 02:55Z–17:34Z; `/health` on :7092 kept answering, so nothing alarmed | was down most of today; the restart was not from this seat |
+| SessionStart brief | `brief-enabled.txt` lists claude-15 only; claude-16 gets none | opt-in, one seat |
+
+The store's failure shape is the 2026-07-13 futon1b one (`-Xmx1g`, socket
+open, accept queue full, health acceptor alive). The same `ExitOnOutOfMemoryError`
+plus `Restart=on-failure` that fixed it for :7073 is absent from the scratch
+store's command line.
