@@ -231,6 +231,21 @@ class ResumeBriefTest(unittest.TestCase):
             text = brief.render("M-test", join, [], data, now)
             self.assertIn('within: constrain \u201cKeep the statement frozen\u201d (governing)',
                           text)
+            # the within line sits directly under its item, not after the section
+            lines = text.splitlines()
+            at = next(i for i, l in enumerate(lines) if "I will return the tested patch" in l)
+            self.assertTrue(lines[at + 1].startswith("  within: constrain"), lines[at:at + 2])
+            at = next(i for i, l in enumerate(lines) if "Please check the boundary" in l)
+            self.assertFalse(lines[at + 1].startswith("  within:"), lines[at:at + 2])
+            # opener absent from the records: its own sidecar entry supplies kind and quote
+            data["_moves"]["agent-open"]["within"] = "ghost"
+            data["_moves"]["ghost"] = {"within": None, "kind": "constrain",
+                                       "quote": "never touch the live store", "move": "constrain/plain"}
+            text_ghost = brief.render("M-test", join, [], data, now)
+            self.assertIn('within: constrain \u201cnever touch the live store\u201d (ghost)', text_ghost)
+            self.assertNotIn("I will return the tested patch\u201d (ghost)", text_ghost)
+            data["_moves"]["agent-open"]["within"] = "governing"
+            del data["_moves"]["ghost"]
             self.assertIn("_Binders: 1 of 2 items carry a within link; "
                           "1 labelled without one; 0 unlabelled._", text)
             path = brief.write_measurement(root, "M-test", "claude-1", now, data)

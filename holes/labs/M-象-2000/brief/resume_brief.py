@@ -2,6 +2,7 @@
 """Render a classical mission resume brief from turn records."""
 import argparse
 import datetime as dt
+import glob
 import importlib.util
 import json
 import os
@@ -43,9 +44,9 @@ def load_moves(pattern=DEFAULT_MOVES_GLOB, root=ROOT):
     skipping unreadable ones; a malformed file contributes nothing.
     """
     index = {}
-    base = Path(root)
-    for path in sorted(base.glob(pattern) if not Path(pattern).is_absolute()
-                       else Path(pattern).parent.glob(Path(pattern).name)):
+    paths = (glob.glob(pattern) if Path(pattern).is_absolute()
+             else Path(root).glob(pattern))
+    for path in sorted(Path(x) for x in paths):
         try:
             sidecar = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError, ValueError):
@@ -54,7 +55,8 @@ def load_moves(pattern=DEFAULT_MOVES_GLOB, root=ROOT):
             act_id = act.get("act") if isinstance(act, dict) else None
             if act_id:
                 index[act_id] = {"within": (act.get("scope") or {}).get("within"),
-                                 "quote": act.get("quote"), "move": act.get("move")}
+                                 "quote": act.get("quote"), "move": act.get("move"),
+                                 "kind": act.get("kind")}
     return index
 
 def aid(x):
@@ -253,7 +255,36 @@ def act_line(row):
     return "- {0}: {1}".format(row.get("kind", "unknown"),
                                 shortened(row.get("text") or row.get("source_text")))
 
-def port_section(rows, now):
+def within_line(row, moves, acts):
+    """The line naming the opener ROW was written within, or None. The
+    opener's kind and text come from the records' acts; when the records
+    lack that act, from the opener's own sidecar entry (its kind and quote);
+    failing both, the bare id."""
+    entry = (moves or {}).get(aid(row))
+    within = entry.get("within") if entry else None
+    if not within:
+        return None
+    opener = (acts or {}).get(within) or {}
+    fallback = (moves or {}).get(within) or {}
+    kind = opener.get("kind") or fallback.get("kind") or "unknown"
+    text = opener.get("text") or fallback.get("quote") or within
+    return "  within: {0} “{1}” ({2})".format(kind, shortened(text), within)
+
+def binder_count(rows, moves):
+    """Over every item in ROWS: has a within link / labelled, within null /
+    no sidecar labels the act."""
+    count = {"with": 0, "without": 0, "unlabelled": 0}
+    for row in rows:
+        entry = (moves or {}).get(aid(row))
+        if entry is None:
+            count["unlabelled"] += 1
+        elif entry.get("within"):
+            count["with"] += 1
+        else:
+            count["without"] += 1
+    return count
+
+def port_section(rows, now, moves=None, acts=None):
     stale, recent = {}, []
     for row in rows:
         if now - instant(row.get("session_last")) > dt.timedelta(days=14):
@@ -276,7 +307,11 @@ def port_section(rows, now):
                      reverse=True)
     for kind, items in ordered:
         output += ["### {0} ({1})".format(kind, len(items)), ""]
-        output += [port_line(row, now) for row in items[:8]]
+        for row in items[:8]:
+            output.append(port_line(row, now))
+            extra = within_line(row, moves, acts)
+            if extra:
+                output.append(extra)
         if len(items) > 8:
             oldest = instant(items[-1].get("at") or items[-1].get("since")).date()
             output.append("- … and {0} more, oldest {1}".format(len(items) - 8, oldest))
@@ -408,14 +443,16 @@ def render(mission, join, seed_rows, data, now, excursions=()):
     newest = data["newest"].date() if data["newest"] else "none"
     lines += ["_Read {0} records in {1} sessions, newest {2}._".format(
         data["record_count"], data["session_count"], newest), ""]
+    moves = data.get("_moves") or {}
+    acts = data.get("_acts") or {}
     sections = [
         ("Seed", seed_rows, len(seed_rows)),
-        ("Awaiting you: agent proposals and asks", port_section(data["awaiting_you"], now),
-         len(data["awaiting_you"])),
-        ("Awaiting other agents", port_section(data["awaiting_others"], now),
-         len(data["awaiting_others"])),
-        ("Asked by the operator, no answer linked", port_section(data["asked"], now),
-         len(data["asked"])),
+        ("Awaiting you: agent proposals and asks",
+         port_section(data["awaiting_you"], now, moves, acts), len(data["awaiting_you"])),
+        ("Awaiting other agents",
+         port_section(data["awaiting_others"], now, moves, acts), len(data["awaiting_others"])),
+        ("Asked by the operator, no answer linked",
+         port_section(data["asked"], now, moves, acts), len(data["asked"])),
         ("In force", [act_line(x) for x in data["in_force"]], len(data["in_force"])),
         ("Adopted, not applied", [act_line(x) for x in data["adopted"]], len(data["adopted"])),
         ("Obligations", ["- {0} → {1}: {2}".format(
@@ -427,32 +464,17 @@ def render(mission, join, seed_rows, data, now, excursions=()):
     for x in data["closed"]:
         witness = x.get("inferred")
         closed.append(port_line(x, now) + ((" _(inferred: {0})_".format(witness)) if witness else ""))
+        extra = within_line(x, moves, acts)
+        if extra:
+            closed.append(extra)
     sections.append(("Recently closed", closed, len(data["closed"])))
-    moves = data.get("_moves") or {}
-    acts = data.get("_acts") or {}
-    binder = {"with": 0, "without": 0, "unlabelled": 0}
-    section_rows = {"Awaiting you: agent proposals and asks": data["awaiting_you"],
-                    "Awaiting other agents": data["awaiting_others"],
-                    "Asked by the operator, no answer linked": data["asked"],
-                    "Recently closed": data["closed"]}
     for title, rows, count in sections:
         lines += ["## {0} ({1})".format(title, count), ""]
         lines += rows or ["_None._"]
-        for row in section_rows.get(title, []):
-            entry = moves.get(aid(row))
-            if entry is None:
-                binder["unlabelled"] += 1
-                continue
-            within = entry.get("within")
-            if not within:
-                binder["without"] += 1
-                continue
-            binder["with"] += 1
-            opener = acts.get(within) or {}
-            text = opener.get("text") or entry.get("quote") or within
-            lines.append("  within: {0} “{1}” ({2})".format(
-                opener.get("kind", "unknown"), shortened(text), within))
         lines.append("")
+    # The count is over every item of the four act sections, shown or not.
+    binder = binder_count(data["awaiting_you"] + data["awaiting_others"]
+                          + data["asked"] + data["closed"], moves)
     data["within_binders"] = binder
     total = binder["with"] + binder["without"] + binder["unlabelled"]
     lines += ["_Binders: {0} of {1} items carry a within link; {2} labelled without one; "
