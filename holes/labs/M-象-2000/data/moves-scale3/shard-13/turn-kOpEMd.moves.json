@@ -1,0 +1,35 @@
+{
+ "record": "turn-kOpEMd",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-258-f-s1-0",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "It would be great if it could also produce a box diagram",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-258-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "https://hyperreal.enterprises",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

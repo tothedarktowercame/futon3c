@@ -1,0 +1,22 @@
+{
+ "record": "turn-Wd1aN6",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-875-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I also have api credits so we can reset when we hit 0 without issue",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

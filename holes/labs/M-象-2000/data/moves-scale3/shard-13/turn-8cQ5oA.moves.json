@@ -1,0 +1,35 @@
+{
+ "record": "turn-8cQ5oA",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-464-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you stop the topo loops and make them robust against this failure mode",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-464-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "we need to think about whether to change to the blueprint / lemma approach",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,74 @@
+{
+ "record": "turn-jtH8Fi",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-teacher-1791942186-3-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[discharge | m0026]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942186-3-f-s2-0",
+   "kind": "approve",
+   "move": "explain/mechanism",
+   "quote": "Agreed: no move, no continuation on t94A01.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942186-3-f-s3-0",
+   "kind": "report-problem",
+   "move": "explain/mechanism",
+   "quote": "Note for whoever runs this room: the student and critic are now re-prompting eac",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942186-3-f-s3-1",
+   "kind": "ask-action",
+   "move": "explain/mechanism",
+   "quote": "ending the loop needs the harness to stop dispatching on post-closure messages, ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942186-3-f-s4-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-teacher",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

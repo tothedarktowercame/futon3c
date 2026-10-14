@@ -1,0 +1,48 @@
+{
+ "record": "turn-0TCLZ8",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-259-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "turns relayed through Agency often would *not* be typed by me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-259-f-s2-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "I am almost entirely using Codex via Agency",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-259-f-s3-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Can you fix the Codex logging so that it attributes orgin correctly",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-259-f-s2-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

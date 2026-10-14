@@ -1,0 +1,112 @@
+{
+ "record": "turn-NhxIGZ",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-101-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "hi, we did vairious demos that will be interesting later,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-101-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "I would like to have some live demos based on my current interactions",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-101-r-0",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "Your message was recorded at 16:12:48Z, read by 象-sonnet 90 s later",
+   "answers": [
+    {
+     "act": "claude-16-turn-101-f-s1-1",
+     "quote": "(\"the basic memory system works\") Your message was recorded at 16:12:48Z, read by 象-sonnet 90 s later as",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-101-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "futon1b heap is 4014 of 4096 MB",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-101-r-2",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Restart futon1b-zone now?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-101-r-3",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "two small fixes, if you want them",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-101-r-4",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "live demos based on my current interactions",
+   "answers": [
+    {
+     "act": "claude-16-turn-101-f-s1-1",
+     "quote": "All loaded in your running Emacs and checked",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

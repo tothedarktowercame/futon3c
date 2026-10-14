@@ -1,0 +1,22 @@
+{
+ "record": "turn-mLxFT9",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-876-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "ok i just hit the reset",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,80 @@
+{
+ "record": "turn-xuT1Xm",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-102-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "What about the features from E-cool-memories?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-102-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "Checked this turn, each against the live store",
+   "answers": [
+    {
+     "act": "claude-16-turn-102-f-s1-0",
+     "quote": "Checked this turn, each against the live store",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-102-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "can be brought online",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-102-r-2",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "fully integrated",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-102-r-3",
+   "kind": "propose",
+   "move": "propose/order-of-work",
+   "quote": "three steps, in order",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

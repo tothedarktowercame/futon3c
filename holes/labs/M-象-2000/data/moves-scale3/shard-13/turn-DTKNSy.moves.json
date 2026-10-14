@@ -1,0 +1,22 @@
+{
+ "record": "turn-DTKNSy",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-435-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "set up a lemma attempt for the problems you mentioned",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

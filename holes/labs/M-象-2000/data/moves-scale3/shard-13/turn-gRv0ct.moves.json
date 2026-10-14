@@ -1,0 +1,74 @@
+{
+ "record": "turn-gRv0ct",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-critic-1791941981-4-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[proof | m0013]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-critic-1791941981-4-f-s2-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Verified against `problems/t94A01/problem.md`: the proved statement exactly matc",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-critic-1791941981-4-f-s3-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The proof is complete by the discharged constructions m0004 and m0005 and the op",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-critic-1791941981-4-f-s3-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "no solution or Lean proof file was consulted.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-critic-1791941981-4-f-s4-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-critic",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

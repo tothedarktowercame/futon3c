@@ -1,0 +1,61 @@
+{
+ "record": "turn-vxo2ab",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-89-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "I'd like the run-repair cycles to start working reliably",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-89-f-s1-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "perhaps we could go back to the \"loop\" variant rather than relying on bells.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-89-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-89-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "claude-18 has been refining my topo and solver loops",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-89-f-s2-1",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "there was a previous wm-build-loop that could be adapted",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

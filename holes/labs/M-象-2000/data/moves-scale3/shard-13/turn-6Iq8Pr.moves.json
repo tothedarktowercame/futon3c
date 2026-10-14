@@ -1,0 +1,35 @@
+{
+ "record": "turn-6Iq8Pr",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-488-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "progress has been rapid from 111 a few days ago to 85 now.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-488-f-s2-0",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "do you think ghe remaininv problems are amenable to this overall approach?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

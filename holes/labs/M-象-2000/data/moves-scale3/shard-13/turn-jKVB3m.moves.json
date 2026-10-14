@@ -1,0 +1,73 @@
+{
+ "record": "turn-jKVB3m",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-94-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "let's put it on the list.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-94-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "we still have 8% of zai to use so please dispatch work accordingly",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-94-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "The remaining pool was 274 unlabelled operator turns",
+   "answers": [
+    {
+     "act": "claude-16-turn-94-f-s2-0",
+     "quote": "The remaining pool was 274 unlabelled operator turns",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-94-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Recorded in the mission with your pasted sentence as its source",
+   "answers": [
+    {
+     "act": "claude-16-turn-94-f-s1-0",
+     "quote": "Recorded in the mission",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

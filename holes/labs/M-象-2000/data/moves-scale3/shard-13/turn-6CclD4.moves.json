@@ -1,0 +1,74 @@
+{
+ "record": "turn-6CclD4",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-student-1791924928-1-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[conjecture | m0001]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-student-1791924928-1-f-s2-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "We want to show that the weighted-series distance `rho` induces exactly the\nprod",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791924928-1-f-s3-0",
+   "kind": "ask-action",
+   "move": "explain/mechanism",
+   "quote": "Before proving either inclusion, state\nthe two neighbourhood obligations separat",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791924928-1-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "Do not consult the informal solution or Lean proof.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791924928-1-f-s5-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-student",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

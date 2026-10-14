@@ -1,0 +1,61 @@
+{
+ "record": "turn-UIFG1x",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-874-f-s1-0",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "73 problems still seemd like a lot.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-874-f-s2-0",
+   "kind": "explain",
+   "move": "explain/reasoning",
+   "quote": "if we can close 25 per usage window it is 3 weeks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-874-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "That's not out of the question,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-874-f-s3-1",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "maybe we should start keeping track of progress vs codex usage.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

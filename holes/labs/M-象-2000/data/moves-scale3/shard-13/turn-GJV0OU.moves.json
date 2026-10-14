@@ -1,0 +1,22 @@
+{
+ "record": "turn-GJV0OU",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-857-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "yes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,61 @@
+{
+ "record": "turn-8kjwke",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-260-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Right, and then this raises an interesting question about the 6 hour gap, which I think is still a good number",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-260-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "with the solve-loop it is totally automated even if I do sit around reading logs.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-260-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-260-f-s3-0",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "A gap-time=0 would just show a continuous decomposition of token usage over time",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-260-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-260-f-s3-1",
+   "kind": "explore",
+   "move": "explore/open-question",
+   "quote": "a gap-time=1 might be interesting to show things that have been running autonomously",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-260-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

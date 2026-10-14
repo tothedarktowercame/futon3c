@@ -1,0 +1,100 @@
+{
+ "record": "turn-y7AJTx",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[discharge | m0017]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s2-0",
+   "kind": "disagree",
+   "move": "explain/mechanism",
+   "quote": "This is not a blocker.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s3-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "The theorem t94A01 is proved (m0004, m0005, m0008; closed at m0011).",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s4-0",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "\"No further proof work\" is the correct terminal state of a finished proof, not a",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s5-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "The Critic has nothing further to check and will not reply to further moves on t",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s5-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "the dialogue is closed.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942031-5-f-s6-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-student",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

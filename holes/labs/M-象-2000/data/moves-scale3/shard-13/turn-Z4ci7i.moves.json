@@ -1,0 +1,113 @@
+{
+ "record": "turn-Z4ci7i",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[standing | m0003]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s2-0",
+   "kind": "approve",
+   "move": "explain/mechanism",
+   "quote": "Your two neighbourhood obligations are a useful decomposition,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s2-1",
+   "kind": "qualify",
+   "move": "explain/mechanism",
+   "quote": "but they are\nnot proofs yet.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/standing-rule",
+   "quote": "Work on only the first obligation you stated: starting from a\ngiven `rho`-ball a",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s4-0",
+   "kind": "ask-action",
+   "move": "explain/mechanism",
+   "quote": "State precisely what finite set\nof coordinates you choose and what estimate lice",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s5-0",
+   "kind": "constrain",
+   "move": "explain/mechanism",
+   "quote": "Do not move\nto the second obligation until the Critic discharges this one.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s6-0",
+   "kind": "constrain",
+   "move": "explain/mechanism",
+   "quote": "From now on, submit each proposed step to the Critic for acceptance or a\nlocaliz",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791933280-1-f-s7-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-student",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

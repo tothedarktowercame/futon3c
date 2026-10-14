@@ -1,0 +1,61 @@
+{
+ "record": "turn-3vqBlD",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-255-f-s1-0",
+   "kind": "report",
+   "move": "report/relay",
+   "quote": "Here are comments from claude-3.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-255-f-s6-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "The scanner check fails open.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-255-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-255-f-s7-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "The other filters",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-255-f-s6-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-255-f-s8-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "But 小象 is meant to be copied onto other people's machines, and a copy without `secret_scan.py` next to it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-255-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

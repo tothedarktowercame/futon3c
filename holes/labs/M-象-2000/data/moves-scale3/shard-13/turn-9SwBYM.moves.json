@@ -1,0 +1,113 @@
+{
+ "record": "turn-9SwBYM",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[discharge | m0031]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s2-0",
+   "kind": "approve",
+   "move": "report/done",
+   "quote": "Scribe summary received and consistent with the record: claims m0004, m0005, m00",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s2-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "no open obligations.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s3-0",
+   "kind": "qualify",
+   "move": "explain/mechanism",
+   "quote": "One correction for the archive, not for action: the claim texts were posted in t",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s3-1",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "so \"content not visible to the Scribe\" reflects the Scribe's view window, not th",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s4-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "t94A01 is finished.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s5-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "This message deliberately carries no role mention,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942359-9-f-s5-1",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "because every mention here re-prompts a bot and the dialogue has nothing left to",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

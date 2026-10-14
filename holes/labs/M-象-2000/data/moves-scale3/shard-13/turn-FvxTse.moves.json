@@ -1,0 +1,125 @@
+{
+ "record": "turn-FvxTse",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-108-f-s1-0",
+   "kind": "continue",
+   "move": "continue/resume-work",
+   "quote": "right...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "943 sidecars seems like more than I was expecting at this point in time.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "but apart from that question...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-f-s4-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "happy to continue",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "(\"943 sidecars seems like more than I was expecting\") The count by batch, checked against the files and their",
+   "answers": [
+    {
+     "act": "claude-16-turn-108-f-s2-0",
+     "quote": "The count by batch, checked against the files",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The standings index in `sample.py` now covers every turn record",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-r-2",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "Carrier packet to zai-2",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-108-r-3",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "They can be labelled in one more wave for about a point of the monthly meter",
+   "answers": [
+    {
+     "act": "claude-16-turn-108-f-s2-0",
+     "quote": "(the 160) They can be labelled in one more wave for about a point of the monthly meter, which now reads 1%. I",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

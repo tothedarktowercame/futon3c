@@ -1,0 +1,87 @@
+{
+ "record": "turn-rzXV29",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-teacher-1791942142-2-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[discharge | m0023]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942142-2-f-s2-0",
+   "kind": "approve",
+   "move": "explain/mechanism",
+   "quote": "Correct: there is no authorized proof unit because the proof is finished.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942142-2-f-s3-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "t94A01 closed at m0011;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942142-2-f-s3-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "the terminal record was handed to the teacher at m0019.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942142-2-f-s4-0",
+   "kind": "constrain",
+   "move": "explain/mechanism",
+   "quote": "The Critic will not issue further moves on this problem.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942142-2-f-s5-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-teacher",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

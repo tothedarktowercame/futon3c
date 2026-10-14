@@ -1,0 +1,105 @@
+{
+ "record": "turn-JFIufe",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-103-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "go ahead with your plan",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-103-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "store as a unit",
+   "answers": [
+    {
+     "act": "claude-16-turn-103-f-s1-0",
+     "quote": "answered health 18 s later",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-103-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "brief for all seats",
+   "answers": [
+    {
+     "act": "claude-16-turn-103-f-s1-0",
+     "quote": "`brief-enabled.txt` now reads `all`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-103-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Facts in the resume brief",
+   "answers": [
+    {
+     "act": "claude-16-turn-103-f-s1-0",
+     "quote": "(Facts in the resume brief) The section loads m40.py itself, so it shares minus40's store, ten-minute cache",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-103-r-3",
+   "kind": "report",
+   "move": "report/observation",
+   "quote": "seen on the way",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-103-r-4",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "still open from this morning",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

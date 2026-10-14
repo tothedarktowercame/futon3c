@@ -1,0 +1,98 @@
+{
+ "record": "turn-FjWMVL",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-72-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "let's ask a codex helper tp write blueprints for all",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-72-r-0",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "what counts as set aside",
+   "answers": [
+    {
+     "act": "claude-14-turn-72-f-s1-0",
+     "quote": "There are 19 non-topology problems with real `sorry`s left",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-72-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "what the helper is asked to do",
+   "answers": [
+    {
+     "act": "claude-14-turn-72-f-s1-0",
+     "quote": "The full instructions are in `~/notes/packets/blueprints/preamble.md`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-72-r-2",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "where it runs",
+   "answers": [
+    {
+     "act": "claude-14-turn-72-f-s1-0",
+     "quote": "The helper is a newly registered seat",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-72-r-3",
+   "kind": "report",
+   "move": "report/in-flight",
+   "quote": "pilot status",
+   "answers": [
+    {
+     "act": "claude-14-turn-72-f-s1-0",
+     "quote": "The pilot is m99A06",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

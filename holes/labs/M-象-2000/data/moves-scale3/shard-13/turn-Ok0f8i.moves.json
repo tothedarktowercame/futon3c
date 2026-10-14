@@ -1,0 +1,54 @@
+{
+ "record": "turn-Ok0f8i",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-99-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "it could be interesting to write up a summary cover note to send to Aleks Kissinger",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-99-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "It meets the project at its four parts in turn.",
+   "answers": [
+    {
+     "act": "claude-16-turn-99-f-s1-0",
+     "quote": "It meets the project at its four parts in turn",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-99-r-1",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "things to check before sending",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

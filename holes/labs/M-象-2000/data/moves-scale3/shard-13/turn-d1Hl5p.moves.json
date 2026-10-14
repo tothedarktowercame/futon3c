@@ -1,0 +1,155 @@
+{
+ "record": "turn-d1Hl5p",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-104-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "let's give some examples that this memory system can do that the standard one can't",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-0",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "1, what memory said on a day",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "On 09-24 memory knew Zai was out on its weekly limit",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-1",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "2, how a lesson evolved",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "`history zai window` gives 17 events",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-2",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "3, net change versus events",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "six real facts were said and withdrawn inside the interval",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-3",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "4, contradictions",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "18 open conflicts between pairs of memories",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-4",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "5, the same lesson twice",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "21 relation edges, 8 across projects",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-5",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "6, the conversation side",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "answer \"what did Joe ask that nobody answered\"",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-104-r-6",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "what none of it does yet",
+   "answers": [
+    {
+     "act": "claude-16-turn-104-f-s1-0",
+     "quote": "The two halves meet only in that Facts section",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

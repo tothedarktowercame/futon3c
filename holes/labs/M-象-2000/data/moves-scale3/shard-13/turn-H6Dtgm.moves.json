@@ -1,0 +1,22 @@
+{
+ "record": "turn-H6Dtgm",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-537-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "we shoild be able to build one overall best of str",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

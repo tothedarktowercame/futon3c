@@ -1,0 +1,79 @@
+{
+ "record": "turn-AE13zu",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-100-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "i am concerned that we didnt sufficiently cover the Fong/related causal theories",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-100-r-0",
+   "kind": "report-problem",
+   "move": "report-problem/self-correction",
+   "quote": "My edit script checked for my own text, failed to find it, and stopped.",
+   "answers": [
+    {
+     "act": "claude-16-turn-100-f-s1-0",
+     "quote": "My edit script checked for my own text, failed to find it",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-100-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The new paragraph (2bc17b9cb) says",
+   "answers": [
+    {
+     "act": "claude-16-turn-100-f-s1-0",
+     "quote": "(\"Fong/related causal theories used in the daxiang notebook\") The new paragraph (2bc17b9cb) says, in the",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-100-r-2",
+   "kind": "report",
+   "move": "report/with-options",
+   "quote": "two drafts",
+   "answers": [
+    {
+     "act": "claude-16-turn-100-f-s1-0",
+     "quote": "My longer version",
+     "effect": "keeps"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

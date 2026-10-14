@@ -1,0 +1,61 @@
+{
+ "record": "turn-bb74l2",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-critic-1791942167-8-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[question | m0025]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-critic-1791942167-8-f-s2-0",
+   "kind": "report",
+   "move": "constrain/for-now",
+   "quote": "No move is proposed.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-critic-1791942167-8-f-s3-0",
+   "kind": "constrain",
+   "move": "explain/mechanism",
+   "quote": "Any continuation should begin with a new problem.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-critic-1791942167-8-f-s4-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-critic",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

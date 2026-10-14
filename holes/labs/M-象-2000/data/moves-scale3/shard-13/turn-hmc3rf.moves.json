@@ -1,0 +1,22 @@
+{
+ "record": "turn-hmc3rf",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-535-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "i don't know if we should spend time on \"narrower\" formulations",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

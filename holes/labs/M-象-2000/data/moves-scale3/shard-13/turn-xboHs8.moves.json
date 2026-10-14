@@ -1,0 +1,112 @@
+{
+ "record": "turn-xboHs8",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-70-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "ok then please go ahead",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-70-r-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "what changed in Lean",
+   "answers": [
+    {
+     "act": "claude-14-turn-70-f-s1-0",
+     "quote": "Five surface problems",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-70-r-1",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "what the grader checked",
+   "answers": [
+    {
+     "act": "claude-14-turn-70-f-s1-0",
+     "quote": "Grades and notes are in",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-70-r-2",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "ledgers",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-70-r-3",
+   "kind": "report-problem",
+   "move": "report-problem/self-correction",
+   "quote": "My first re-routing pass matched node names too broadly",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-70-r-4",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "topo3 fix",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-70-r-5",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "what these changes don't remove",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

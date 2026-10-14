@@ -1,0 +1,35 @@
+{
+ "record": "turn-O2FN1Z",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-14-turn-463-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "the Vox term has lots of different agents listed on it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-14-turn-463-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you please look into that?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-14-turn-463-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

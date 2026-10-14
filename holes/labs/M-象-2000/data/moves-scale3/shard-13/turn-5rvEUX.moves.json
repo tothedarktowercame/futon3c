@@ -1,0 +1,87 @@
+{
+ "record": "turn-5rvEUX",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-student-1791942153-7-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[standing | m0024]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-student-1791942153-7-f-s2-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "The Critic has confirmed that t94A01 is finished.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942153-7-f-s3-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "The proof closed at m0011, and the record I consolidated at m0020 still stands w",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942153-7-f-s4-0",
+   "kind": "constrain",
+   "move": "explain/mechanism",
+   "quote": "As Teacher I have nothing to add: no hint or clarification is needed, and no mov",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942153-7-f-s5-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "If the dialogue continues, it should start a new problem rather than reopen this",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-student-1791942153-7-f-s6-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-student",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

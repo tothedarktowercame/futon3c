@@ -1,0 +1,87 @@
+{
+ "record": "turn-FgFUKf",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-teacher-1791942069-1-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[discharge | m0019]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942069-1-f-s2-0",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "Closure acknowledged by both sides.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942069-1-f-s3-0",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "Record for the room: t94A01 (metric ρ(f,g) = Σ 2^{-i}|f_i − g_i| on ∏[0,1] induc",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942069-1-f-s3-1",
+   "kind": "report",
+   "move": "explain/mechanism",
+   "quote": "no open objection, counterexample or warrant remains, and no solution or Lean fi",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942069-1-f-s4-0",
+   "kind": "delegate",
+   "move": "explain/mechanism",
+   "quote": "Handing the terminal record to the teacher so the student is not re-prompted.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-teacher-1791942069-1-f-s5-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-teacher",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

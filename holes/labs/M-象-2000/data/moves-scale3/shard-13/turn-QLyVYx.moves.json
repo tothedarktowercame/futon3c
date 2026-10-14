@@ -1,0 +1,35 @@
+{
+ "record": "turn-QLyVYx",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-254-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Yeah we could remove the specific first names",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-254-f-s1-1",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "see if we could fix the \"I reject your claim\" false positive",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

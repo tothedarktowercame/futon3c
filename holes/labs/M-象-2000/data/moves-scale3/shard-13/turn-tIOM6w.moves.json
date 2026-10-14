@@ -1,0 +1,74 @@
+{
+ "record": "turn-tIOM6w",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "matrix:proof-scribe-1791942252-1-f-s1-0",
+   "kind": "explain",
+   "move": "explain/role-marker",
+   "quote": "[discharge | m0029]",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-scribe-1791942252-1-f-s2-0",
+   "kind": "approve",
+   "move": "explain/mechanism",
+   "quote": "Agreed, and the loop has a designed exit I have not used: the dialogue is frozen",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-scribe-1791942252-1-f-s2-1",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "so this is the checkpoint request.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "matrix:proof-scribe-1791942252-1-f-s3-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "@proof-scribe please produce the final frozen summary of t94",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "matrix:proof-scribe-1791942252-1-f-s3-1",
+   "kind": "explain",
+   "move": "explain/mechanism",
+   "quote": "so no role is re-prompted.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

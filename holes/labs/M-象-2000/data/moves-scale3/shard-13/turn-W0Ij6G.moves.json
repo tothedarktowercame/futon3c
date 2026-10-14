@@ -1,0 +1,67 @@
+{
+ "record": "turn-W0Ij6G",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-106-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "can you dispatch the work packet to a zai agent ?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-106-r-0",
+   "kind": "report",
+   "move": "report/dispatched",
+   "quote": "Job `invoke-1792003840456-12198-00dab8d9`",
+   "answers": [
+    {
+     "act": "claude-16-turn-106-f-s1-0",
+     "quote": "Job `invoke-1792003840456-12198-00dab8d9`",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-106-r-1",
+   "kind": "report-problem",
+   "move": "report-problem/self-correction",
+   "quote": "Last turn I said the open view does not show a memory version beside its writing turn. It does",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-106-r-2",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "Two more are ready to write at the same size",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

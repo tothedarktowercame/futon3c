@@ -1,0 +1,112 @@
+{
+ "record": "turn-HYgvM1",
+ "labeller": "zai-3",
+ "schema": "moves/1",
+ "at": "2026-10-11T22:30:00Z",
+ "acts": [
+  {
+   "act": "claude-16-turn-105-f-s1-0",
+   "kind": "report",
+   "move": "report/status",
+   "quote": "futon1b has been repaired by an external agent.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-105-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "can you join things up a bit more?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-105-f-s1-0"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-105-r-0",
+   "kind": "verify",
+   "move": "verify/checked-live",
+   "quote": "Heap 877 of 4096 MB, session evidence query 0.7 s",
+   "answers": [
+    {
+     "act": "claude-16-turn-105-f-s1-0",
+     "quote": "(\"futon1b has been repaired\") Heap 877 of 4096 MB, session evidence query 0.7 s, text search serving. Frames",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-105-r-1",
+   "kind": "report",
+   "move": "report/done",
+   "quote": "(joins made)",
+   "answers": [
+    {
+     "act": "claude-16-turn-105-f-s2-0",
+     "quote": "Bell ask to Agency job.",
+     "effect": "closes"
+    }
+   ],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-105-r-2",
+   "kind": "report",
+   "move": "report/findings",
+   "quote": "one exchange, two turn ids",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-105-r-3",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "check on your next turn",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-105-r-4",
+   "kind": "report",
+   "move": "report/partial",
+   "quote": "still apart",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}
