@@ -47,6 +47,13 @@ def sidecar(**overrides):
     return base
 
 
+class ActIdShapeTest(unittest.TestCase):
+    def test_matrix_turn_ids_with_a_colon_are_act_ids_not_names(self):
+        self.assertTrue(carrier.is_act_id("matrix:proof-critic-1791942333-10-f-s1-0"))
+        self.assertTrue(carrier.is_act_id("claude-17-turn-47@turn-1sNkzc-r-3"))
+        self.assertFalse(carrier.is_act_id("evidentiality discriminator"))
+
+
 class BuildEdgesTest(unittest.TestCase):
     def setUp(self):
         self.edges, self.notes, _ = carrier.build_edges(sidecar(), "shard-2")

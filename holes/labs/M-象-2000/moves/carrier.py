@@ -57,7 +57,9 @@ def answers_edge(answering: str, opener: str, move: str, confidence: str,
     }
 
 
-ACT_ID_RE = re.compile(r"^[\w@.-]+-(?:f-s\d+-\d+|r-\d+|b-\d+)$")
+# Act ids are <turn_id>-f-s<n>-<i> / -r-<i> / -b-<i>; turn ids from the Matrix
+# bridge carry a colon (matrix:proof-critic-1791942333-10), so ":" is allowed.
+ACT_ID_RE = re.compile(r"^[\w@.:-]+-(?:f-s\d+-\d+|r-\d+|b-\d+)$")
 
 
 def is_act_id(target: str) -> bool:
