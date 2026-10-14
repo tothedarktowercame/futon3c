@@ -21,3 +21,4 @@
 2026-10-14T22:53:00Z 5h window 33.0%, monthly 6.0% used; resolver packet (zai-2, 4e64a1ede) accepted after retract-op fix ec58d62fd; 308 name-endpoint scope edges retracted and re-put with act-id openers on :7093; wave 5 shards 12 (zai-1 done) and 13 (zai-3 running) in flight
 2026-10-14T22:57:39Z 5h window 34.0%, monthly 7.0% used; wave 5 shard 12 (zai-1, bea50e949) accepted for moves, scope pass re-dispatched (3 within of 213 acts; 30 of 32 multi-fragment records unlinked); shard 13 (zai-3) running
 2026-10-14T22:54:19Z 5h window 36.0%, monthly 7.0% used; wave 5 shard 13 (zai-3, 3283b7e27) accepted for moves and answers; second pass dispatched (27 uncovered acts in 5 records; 22 within of 374 acts, 33 of 41 multi-fragment records unlinked)
+2026-10-14T22:59:12Z 5h window 40.0%, monthly 8.0% used; shard 12 scope pass (zai-1, 721938a7b) accepted: within 3->97, opens 7->14, only scope fields changed; shard 13 second pass (zai-3) running
