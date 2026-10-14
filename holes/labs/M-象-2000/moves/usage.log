@@ -19,3 +19,4 @@
 2026-10-14T18:58:01Z 5h window 7.0%, monthly 1.0% used; within-line packet (zai-1, ab7768d40) accepted after review fixes 4fab61670
 2026-10-14T22:38:00Z 5h window 9.0%, monthly 2.0% used; carrier packet (zai-2, 3b71ed836) accepted after review fixes 07cb357b6 e19ebc44b; 3,774 edges applied to :7093
 2026-10-14T22:53:00Z 5h window 33.0%, monthly 6.0% used; resolver packet (zai-2, 4e64a1ede) accepted after retract-op fix ec58d62fd; 308 name-endpoint scope edges retracted and re-put with act-id openers on :7093; wave 5 shards 12 (zai-1 done) and 13 (zai-3 running) in flight
+2026-10-14T22:58:00Z 5h window 34.0%, monthly 7.0% used; wave 5 shard 12 (zai-1, bea50e949) accepted for moves, scope pass re-dispatched (3 within of 213 acts; 30 of 32 multi-fragment records unlinked); shard 13 (zai-3) running
