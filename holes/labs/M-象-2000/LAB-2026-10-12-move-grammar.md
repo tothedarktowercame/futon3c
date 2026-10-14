@@ -433,3 +433,52 @@ and the effect rule by move in the kernel; (c) the hyperedge carrier from
 these 763 sidecars; (d) Joe's verdicts through the graph's review table as
 the first measurement. Zai work for this campaign is finished; the monthly
 meter resets 2026-10-13 02:04Z.
+
+### Wave 5 (2026-10-14, 22:45Z–23:03Z): the last eligible records, and two second passes
+
+Joe (10-14): "943 sidecars seems like more than I was expecting ... happy to
+continue", then "please send the first 2". The 161 eligible records the
+campaign had never labelled (2026-09-28 to 10-14) went as shards 12 (81,
+fragments only, zai-1) and 13 (80, 13 with reply acts, zai-3). Inputs were
+generated after `sample.py`'s standings index was made to cover every turn
+record, so their 1,165 `in_force` rows all carry text (shard 10 had 286 of
+489 empty).
+
+Both first passes validated clean and both were short on scope: shard 12
+carried 3 `within` links in 213 acts and shard 13 22 in 374, where shard 11's
+fragments-only records carried 93 in 156. Reading two records in each showed
+governing fragments left unlinked (turn-l2uMVh: "the bare metal is the
+point" governs seven later fragments; turn-peZOT4: a cue request opens five
+rules). Shard 13 also left 27 input acts out of five sidecars without
+declaring them, which the validator could not see because it only checked
+the acts present; `validate.py` now prints `uncovered=N` (a census found 55
+silent omissions in 24 records over the whole campaign, 27 of them here).
+
+Second passes, scope fields only with moves, quotes and answers frozen and a
+field-by-field diff to confirm it, went back to the same seats with two
+worked examples from their own shard and a rule of thumb. Shard 12: within
+3 → 97, opens 7 → 14, all 32 multi-fragment records linked (721938a7b).
+Shard 13: within 22 → 256, opens 0 → 36, uncovered 27 → 0 (9e9bea30f).
+Neither labeller found a multi-fragment record where nothing governed
+anything, so the first-pass gap was the instruction, not the data: a
+paragraph describing `within` produced almost none; two worked examples
+produced the shard-11 rate. Future packets carry a worked example from the
+start.
+
+| | records | acts | within | opens | answers (closes/keeps) |
+|---|---|---|---|---|---|
+| wave 5 | 161 | 617 | 359 | 50 | 37 (29/8) |
+| batch 3, five waves | 746 | 2,621 | | | |
+| whole campaign | 1,104 | 5,276 | | | |
+
+Vocabulary re-consolidated over everything: 25 kinds, 141 labels (762ef617a).
+
+**Carrier.** The sidecars are now hyperedges in the :7093 scratch store
+(`moves/carrier.py`, zai-2 with review fixes): 2,057 `:xiang/answers` and
+2,104 `:xiang/scope` edges, status proposed, deterministic ids. Three things
+the apply taught: the store wants an `x-penholder` header; batch 1 and 2
+labellers wrote the opener's name in `within` (308 links), now resolved to
+the same-record act that opened it; Matrix turn ids carry a colon, which the
+act-id shape at first rejected (199 links in the proof-room records).
+
+Eligible records remaining: 0. Zai meter at the end: 5h window 41%, monthly 8%.
