@@ -10,8 +10,12 @@ ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_DIR = Path.home() / ".emacs-graph/session-turn-analysis"
 
 def instant(s):
-    return (dt.datetime.fromisoformat(s.replace("Z", "+00:00")) if s
-            else dt.datetime.min.replace(tzinfo=dt.timezone.utc))
+    """Parse S as an aware UTC instant. A bare date or naive time (as --since
+    takes) is read as UTC so it compares with the records' Z-suffixed stamps."""
+    if not s:
+        return dt.datetime.min.replace(tzinfo=dt.timezone.utc)
+    t = dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
 
 def aid(x):
     return x if isinstance(x, str) else x.get("act", x.get("id", ""))
