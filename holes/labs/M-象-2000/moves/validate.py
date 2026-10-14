@@ -37,7 +37,7 @@ def validate(path):
             errors.append("schema must be moves/1")
         source = json.loads(input_path(path, sidecar.get("record")).read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        return 0, 0, [str(exc)]
+        return 0, 0, [str(exc)], []
     current = {}
     # Authority: the reply-paragraph acts as the kernel numbers them
     # (sample.py:reply_marks), then the reading's fragments, then the record's
@@ -59,6 +59,13 @@ def validate(path):
     for act_id in sidecar.get("unlabelled", []):
         if act_id not in current:
             errors.append(f"unlabelled: unknown act {act_id!r}")
+    # Coverage: every input fragment and reply act is either labelled or
+    # declared unlabelled. Silent omission is reported, not failed: shard 13
+    # of batch 3 omitted 27 acts in 5 records while declaring none, and six
+    # earlier shards omitted 1-9 each (2026-10-14 census).
+    covered = {act.get("act") for act in sidecar.get("acts", [])} | set(sidecar.get("unlabelled", []))
+    uncovered = [act["id"] for act in source.get("fragments", []) + source.get("reply_acts", [])
+                 if act.get("id") and act["id"] not in covered]
     for index, act in enumerate(sidecar.get("acts", [])):
         where = f"acts[{index}]"
         missing = ACT - act.keys()
@@ -92,7 +99,7 @@ def validate(path):
             if (not answer_quote
                     or answer_quote not in norm(authority.get("text") if authority else "")):
                 errors.append(f"{where}.answers[{aindex}]: quote is not in answering act")
-    return valid, void, errors
+    return valid, void, errors, uncovered
 
 
 def main():
@@ -101,8 +108,10 @@ def main():
     args = parser.parse_args()
     failed = False
     for path in args.files:
-        valid, void, errors = validate(path)
-        print(f"{path}: valid={valid} void={void}")
+        valid, void, errors, uncovered = validate(path)
+        print(f"{path}: valid={valid} void={void} uncovered={len(uncovered)}")
+        for act_id in uncovered:
+            print(f"  UNCOVERED: {act_id} (in the input, in neither acts nor unlabelled)", file=sys.stderr)
         for error in errors:
             print(f"  ERROR: {error}", file=sys.stderr)
         failed |= bool(errors)

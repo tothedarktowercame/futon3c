@@ -20,7 +20,7 @@
       "note": "<one sentence, optional>"
     }
   ],
-  "unlabelled": ["<act ids left unlabelled, with reason in notes>"]
+  "unlabelled": ["<act ids left unlabelled, with reason in notes; every input fragment and reply act is either here or in acts — validate.py prints uncovered=N for the rest>"]
 }
 ```
 

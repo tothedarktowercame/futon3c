@@ -67,8 +67,36 @@ class MovesHarnessTest(unittest.TestCase):
                             "confidence": "high"}]}
             path = root / "turn-a.moves.json"
             path.write_text(json.dumps(sidecar))
-            valid, void, errors = validate.validate(path)
+            valid, void, errors, _uncovered = validate.validate(path)
             self.assertEqual((0, 1, []), (valid, void, errors))
+
+    def test_validator_counts_input_acts_neither_labelled_nor_declared(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = {"record": "turn-a", "fragments": [
+                {"id": "op1", "intent": "constrain", "text": "no second agent reads turns"},
+                {"id": "op2", "intent": "report", "text": "**1."},
+                {"id": "op3", "intent": "report", "text": "the long paragraph nobody labelled"}],
+                "reply_acts": [{"id": "r0", "author": "claude-1", "text": "done, as asked"}],
+                "previous_reply_acts": []}
+            (root / "turn-a.input.json").write_text(json.dumps(source))
+            sidecar = {"record": "turn-a", "labeller": "zai-1", "schema": "moves/1",
+                       "at": "now", "unlabelled": ["op2"], "acts": [
+                           {"act": "op1", "kind": "constrain", "move": "constrain/standing-rule",
+                            "quote": "no second agent reads turns", "answers": [],
+                            "scope": {"opens": "no second agent", "closes": None, "within": None},
+                            "confidence": "high"}]}
+            path = root / "turn-a.moves.json"
+            path.write_text(json.dumps(sidecar))
+            valid, void, errors, uncovered = validate.validate(path)
+            # op3 and r0 are silently missing; op2 is declared; op1 is labelled
+            self.assertEqual((1, 0, []), (valid, void, errors))
+            self.assertEqual(["op3", "r0"], uncovered)
+            out = subprocess.run([sys.executable, "-I", str(HERE / "validate.py"), str(path)],
+                                 capture_output=True, text=True)
+            self.assertEqual(0, out.returncode)
+            self.assertIn("uncovered=2", out.stdout)
+            self.assertIn("UNCOVERED: op3", out.stderr)
 
     def test_validator_catches_unknown_answer_and_bad_move(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -131,7 +159,7 @@ class OpenPortsAreAnswerTargets(unittest.TestCase):
                  "confidence": "high"}], "unlabelled": []}
             path = root / "turn-b.moves.json"
             path.write_text(json.dumps(sidecar))
-            valid, void, errors = validate.validate(path)
+            valid, void, errors, _uncovered = validate.validate(path)
             self.assertEqual((1, 0), (valid, void))
             self.assertEqual(1, len(errors), errors)
             self.assertIn("turn-zzz-f-s1-0", errors[0])
@@ -155,7 +183,7 @@ class FragmentsOutrankStoredActPrefix(unittest.TestCase):
                             "confidence": "high"}], "unlabelled": []}
             path = root / "turn-c.moves.json"
             path.write_text(json.dumps(sidecar))
-            valid, void, errors = validate.validate(path)
+            valid, void, errors, _uncovered = validate.validate(path)
             self.assertEqual((1, 0, []), (valid, void, errors))
 
 
