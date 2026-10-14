@@ -29,6 +29,7 @@ LABEL_SET = "moves/1"
 DEFAULT_GLOB = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "..", "data", "moves-scale*", "shard-*", "turn-*.moves.json")
 DEFAULT_BASE = "http://127.0.0.1:7093"
+PENHOLDER = os.environ.get("MINUS40_PENHOLDER", "api")
 FAILURES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              "..", "data", "carrier-failures.jsonl")
 
@@ -137,7 +138,10 @@ def post_edge(base: str, edge: dict) -> tuple[bool, str]:
     body = json.dumps(edge).encode("utf-8")
     request = urllib.request.Request(
         base.rstrip("/") + "/api/alpha/hyperedge", data=body,
-        headers={"Content-Type": "application/json"}, method="POST")
+        # The store's layer-3 gate wants a penholder; minus40's own writers
+        # send "joe" (ingest_hook.py). "api" is the other allowed value.
+        headers={"Content-Type": "application/json", "Accept": "application/json",
+                 "x-penholder": PENHOLDER}, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             return 200 <= response.status < 300, response.read().decode("utf-8", "replace")[:300]
