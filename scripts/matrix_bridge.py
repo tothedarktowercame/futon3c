@@ -108,6 +108,35 @@ PROOF_DIALOGUE_BRIEFS = {
     ),
 }
 
+PROOF_DIALOGUE_NICKS = frozenset(PROOF_DIALOGUE_BRIEFS)
+PROOF_DIALOGUE_SENDER_RE = re.compile(r"^@proof-(?:teacher|student|critic|scribe)(?=[:$])")
+PROOF_DIALOGUE_CLOSE_RE = re.compile(
+    r"^\[discharge\s*\|\s*m\d+\].*\bdialogue is closed\b", re.IGNORECASE | re.DOTALL)
+PROOF_DIALOGUE_NEW_RE = re.compile(
+    r"^\[conjecture\s*\|\s*m\d+\]", re.IGNORECASE)
+
+
+def proof_dialogue_route(nick, sender, text, closed=False):
+    """Return (dispatch, closed) for the proof-dialogue terminal gate.
+
+    A critic's explicit closure is consumed as a terminal event.  Once closed,
+    proof-role chatter cannot restart the loop; an operator can start a new
+    run with a conjecture, and may explicitly request the frozen scribe output.
+    """
+    if nick not in PROOF_DIALOGUE_NICKS:
+        return True, closed
+    proof_sender = bool(PROOF_DIALOGUE_SENDER_RE.match(sender))
+    if not proof_sender and PROOF_DIALOGUE_NEW_RE.match(text):
+        return True, False
+    if sender.startswith("@proof-critic") and PROOF_DIALOGUE_CLOSE_RE.match(text):
+        return False, True
+    if not closed:
+        return True, False
+    if (nick == "proof-scribe" and not proof_sender
+            and re.search(r"@proof-scribe(?=[:\s]|$)", text, re.IGNORECASE)):
+        return True, True
+    return False, True
+
 FENCED_PYTHON_RE = re.compile(r"```python[ \t]*\n(.*?)\n```", re.DOTALL | re.IGNORECASE)
 
 
@@ -162,14 +191,16 @@ class MatrixBot(IRCBot):
             raise ValueError("Missing or malformed Matrix token file")
         self.state_path = Path(state_dir) / (nick + ".json")
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
-        self._state = {"next_batch": None, "seen": []}
+        self._state = {"next_batch": None, "seen": [], "proof_closed": False}
         if self.state_path.exists():
             self._state = json.loads(self.state_path.read_text())
             if (not isinstance(self._state, dict)
                     or not isinstance(self._state.get("seen"), list)
                     or not all(isinstance(x, str) for x in self._state["seen"])
-                    or not isinstance(self._state.get("next_batch"), (str, type(None)))):
+                    or not isinstance(self._state.get("next_batch"), (str, type(None)))
+                    or not isinstance(self._state.get("proof_closed", False), bool)):
                 raise ValueError("Invalid Matrix state; refusing history replay")
+            self._state.setdefault("proof_closed", False)
         self.mxid = None
         self._encrypted_rooms = set()
         super().__init__(nick, agent_id, rooms[0], parsed.hostname, parsed.port,
@@ -399,8 +430,14 @@ class MatrixBot(IRCBot):
                 self._reply_channel = room
                 self._set_transport_context({"room": room, "event_id": event_id})
                 try:
-                    self._dispatch_message(
-                        sender, self._routable_text(event.get("content", {}), text), room)
+                    routed = self._routable_text(event.get("content", {}), text)
+                    dispatch, closed = proof_dialogue_route(
+                        self.nick, sender, routed, self._state["proof_closed"])
+                    if closed != self._state["proof_closed"]:
+                        self._state["proof_closed"] = closed
+                        self._save_state()
+                    if dispatch:
+                        self._dispatch_message(sender, routed, room)
                 finally:
                     self._set_transport_context(None)
         self._state["next_batch"] = token

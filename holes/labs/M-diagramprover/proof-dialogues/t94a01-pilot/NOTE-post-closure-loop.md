@@ -11,6 +11,22 @@ to each, so the student bot is prompted on every room message, not on mention.
 The bridge posts "[no response]" for an empty reply (`matrix_bridge.py`,
 `_emit_success_reply`), so no role can go silent. Stopping the loop is a
 harness action: stop dispatching in the room after a frozen summary, or stop
-the bridge. Two `matrix_bridge.py` processes were running at 2026-10-14
-(pids 413292 from Oct 09 and 3112769 from Oct 13), which may be doubling
-dispatch; not touched, Joe's call.
+the bridge. Two `matrix_bridge.py` processes appeared in the process table,
+but they were not duplicate proof dispatchers: pid 413292 was the separately
+configured Fumarimo-only service and pid 3112769 was the proof-dialogue
+service. The loop came from the proof bridge's routing and termination
+semantics, not duplicate processes. `proof-dialogue.service` was stopped at
+13:39 UTC; the Fumarimo service was left running.
+
+The canonical trace is therefore frozen at m0011. The later room traffic is
+transport evidence for a termination bug, not part of the proof dialogue. The
+m0030 scribe response is not admitted as a checkpoint: its JSON uses different
+field names from `futon3c.proof-dialogue-scribe-checkpoint/v1`, omits the
+required move range, and says the earlier claim text was unavailable despite
+that text being present in the room history.
+
+The bridge now has a durable terminal gate: the Critic's explicit
+`[discharge | mNNNN] ... dialogue is closed` marks the proof-role state closed
+without dispatching another turn. Subsequent proof-role messages are ignored;
+an operator may still request the frozen Scribe output explicitly or begin a
+new run with `[conjecture | mNNNN]`.

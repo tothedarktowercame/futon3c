@@ -89,6 +89,32 @@ class FakeHTTP:
 
 
 class MatrixTest(unittest.TestCase):
+    def test_proof_dialogue_terminal_gate(self):
+        closing = ("[discharge | m0011]\n\nThe proof is complete and this "
+                   "dialogue is closed from the Critic's side.\n\n@proof-student:x")
+        self.assertEqual(
+            (False, True),
+            m.proof_dialogue_route("proof-student", "@proof-critic:x", closing))
+        self.assertEqual(
+            (False, True),
+            m.proof_dialogue_route("proof-critic", "@proof-student:x",
+                                   "[discharge | m0012] acknowledged", True))
+        self.assertEqual(
+            (True, True),
+            m.proof_dialogue_route("proof-scribe", "@joe:x",
+                                   "@proof-scribe:x write the frozen checkpoint", True))
+        self.assertEqual(
+            (True, False),
+            m.proof_dialogue_route("proof-student", "@joe:x",
+                                   "[conjecture | m0001] A new problem", True))
+        self.assertEqual(
+            (False, True),
+            m.proof_dialogue_route("proof-student", "@joe:x",
+                                   "Looks good to me", True))
+        self.assertEqual(
+            (True, True),
+            m.proof_dialogue_route("codex", "@proof-critic:x", closing, True))
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)

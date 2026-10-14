@@ -67,10 +67,42 @@
       "speaker": "participant-1",
       "text": "[discharge | m0007]\n\nm0006 is verbatim the step I discharged as m0005; the checks stand (finite F from the definition of a basic product open; r_i > 0 from relative openness of U_i at x_i; δ = min over finite nonempty F of positive reals, with the F = ∅ case separate; each summand 2^{-i}|x_i − y_i| ≤ ρ(x,y) < δ ≤ 2^{-i} r_i by nonnegativity of the other summands; unconstrained coordinates in [0,1] = U_i). Discharged again, nothing further owed on it.\n\nThe step still outstanding is the one I asked for after m0005. m0004 gives: every ρ-ball about x contains a basic product open about x. m0005 gives: every basic product open about x contains a ρ-ball about x. The problem asks that the two topologies coincide, i.e. the two families of open sets are equal. Please supply the step that converts these two pointwise, centred containments into \"every ρ-open set is product-open\" and \"every product-open set is ρ-open\", stating what an open set in each topology is (a set that contains a ball about each of its points; a union of basic product opens) and why having the containment at each point x of the set suffices.\n\n@proof-student:matrix.paragogy.net",
       "text_sha256": "8056840a2e2fe232c1cbd6d4ecd346f1e907a64cdc59e4f9722214cf6bdb3adf"
+    },
+    {
+      "message_id": "m0008",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0007",
+      "speaker": "participant-2",
+      "text": "[proof | m0008]\n\nLet \\(O\\subseteq X\\).\n\nIf \\(O\\) is \\(\\rho\\)-open, then for every \\(x\\in O\\) there is \\(\\varepsilon_x>0\\) with \\(B_\\rho(x,\\varepsilon_x)\\subseteq O\\). By m0004, this ball contains a basic product neighbourhood \\(U_x\\ni x\\). Hence\n\\[\nO=\\bigcup_{x\\in O}U_x,\n\\]\nso \\(O\\) is product-open.\n\nConversely, if \\(O\\) is product-open, then for every \\(x\\in O\\) there is a basic product neighbourhood \\(U_x\\) with \\(x\\in U_x\\subseteq O\\). By m0005, some \\(\\rho\\)-ball \\(B_\\rho(x,\\delta_x)\\) satisfies\n\\[\nx\\in B_\\rho(x,\\delta_x)\\subseteq U_x\\subseteq O.\n\\]\nThus \\(O\\) contains a \\(\\rho\\)-ball about each of its points and is therefore \\(\\rho\\)-open. The two families of open sets, hence the two topologies, are equal.\n\n@proof-critic",
+      "text_sha256": "637656df6a9f9b14e71b5b43ac8f863038f35fb273544395ea509ce8422b7ce6"
+    },
+    {
+      "message_id": "m0009",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0008",
+      "speaker": "participant-1",
+      "text": "[discharge | m0009]\n\nChecked m0008.\n\nForward direction: for x ∈ O ρ-open, B_ρ(x,ε_x) ⊆ O and, by m0004, a basic product open U_x with x ∈ U_x ⊆ B_ρ(x,ε_x) ⊆ O. Then ⋃_{x∈O} U_x ⊇ O because x ∈ U_x, and ⊆ O because each U_x ⊆ O. A union of basic opens is product-open. Sound.\n\nReverse direction: O product-open means O is a union of basic opens, so each x ∈ O lies in some basic U_x ⊆ O; by m0005 a ball B_ρ(x,δ_x) ⊆ U_x ⊆ O. A set containing a ρ-ball about each of its points is ρ-open. Sound.\n\nBoth inclusions between the families of open sets hold, so the metric topology and the product topology on X coincide. Discharged. With m0004, m0005 and m0008 together, the problem statement is proved; I have no outstanding objection or open warrant. Please post the closing move, stating the theorem as proved and listing the three steps it rests on, so the dialogue has an explicit end record.\n\n@proof-student:matrix.paragogy.net",
+      "text_sha256": "44313b1a656a28e1d48fc9a2b4f581f2d6719aba619ff5fa6f2e68e9cdbf57b5"
+    },
+    {
+      "message_id": "m0010",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0009",
+      "speaker": "participant-2",
+      "text": "[proof | m0010]\n\nThe theorem is proved: the topology induced by\n\\[\n\\rho(f,g)=\\sum_{i=1}^{\\infty}2^{-i}|f_i-g_i|\n\\]\non \\(\\prod_{i=1}^{\\infty}[0,1]\\) is exactly the product topology.\n\nIt rests on:\n\n1. m0004: every \\(\\rho\\)-ball about \\(x\\) contains a basic product neighbourhood of \\(x\\);\n2. m0005: every basic product neighbourhood of \\(x\\) contains a \\(\\rho\\)-ball about \\(x\\);\n3. m0008: these pointwise containments imply both inclusions between the families of open sets.\n\n@proof-critic",
+      "text_sha256": "55d8426bd79771a2e00790a37883f527ba6d4caae500daf545b2e56277b67c39"
+    },
+    {
+      "message_id": "m0011",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0010",
+      "speaker": "participant-1",
+      "text": "[discharge | m0011]\n\nm0010 is an accurate closing record: it states the theorem exactly as posed in problem.md and lists the three discharged steps it rests on (m0004 ball ⊇ basic set, m0005 basic set ⊇ ball, m0008 pointwise containments to equality of the open-set families). Every step was checked and discharged in turn; no objection, counterexample or missing warrant remains. The proof of t94A01 is complete and this dialogue is closed from the Critic's side.\n\n@proof-student:matrix.paragogy.net",
+      "text_sha256": "be165a3508f5bfed88742e06ea05d7b6dff6a580d9255d6d9a0cf8b33a0e35e4"
     }
   ],
-  "packet_sha256": "08b43eac1cb7df2aad8d73f4fa7e3cc417d3e2a2bdf8592f832f7e9497ee93e6",
+  "packet_sha256": "4eb85a5016a61acdaded2e00667b5751a26f9eeb0d783656570807341d996d4b",
   "schema": "futon3c.proof-dialogue-scope-packet/v1",
   "task": "label conversational scopes and their within/keep/close relations",
-  "trace_head_sha256": "794ff2522616e385cec19163204bd0953d2194745eaf2271dff64bd4ace47df2"
+  "trace_head_sha256": "f27bd65367f5f31027e5f054a52dc2f3c73d4cea500603281a22b6c488b96c1d"
 }

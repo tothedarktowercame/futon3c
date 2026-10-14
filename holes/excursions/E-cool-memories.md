@@ -474,6 +474,16 @@ closed by `74e3e35a51`; X4 described its frozen pre-adapter commit and is closed
 by the P0/P4 receipts above. X1 is closed by `9343186e70`; the parallel proof
 constructor and renderer are closed by `a9a7a03608` and `7a2d350f36`.
 
+The first live proof-dialogue pilot is frozen at m0011. Its canonical artifact
+contains 11 proof moves with 11 Matrix delivery receipts; the Critic discharges
+the topology-level conclusion and explicitly closes the dialogue. Room events
+after m0011 exposed a bridge termination defect and are excluded from the
+proof trace. The proof-dialogue service was stopped, and the Matrix bridge now
+persists an explicit terminal state so role messages cannot create another
+post-closure loop. The blinded scope packet was regenerated from the frozen
+trace; scope labels and a schema-valid final Scribe reconstruction remain
+separate analysis tasks.
+
 ## Stop conditions
 
 Stop and reassess rather than enlarging the theory if:
