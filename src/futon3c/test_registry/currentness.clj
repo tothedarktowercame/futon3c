@@ -39,7 +39,8 @@
   (when-not (and (string? repo-root) (not (str/blank? repo-root)))
     (fail :missing-repo-root))
   (let [closure (:load-closure payload)
-        tests (:test-files payload)]
+        tests (:test-files payload)
+        inputs (or (:input-files payload) {})]
     (when-not (vector? closure) (fail :missing-load-closure))
     (when-not (map? tests) (fail :missing-test-files))
     (reduce
@@ -52,7 +53,7 @@
            (fail :conflicting-recorded-hash {:path path}))
          (assoc files path sha)))
      (sorted-map)
-     (concat (map (juxt :path :sha256) closure) tests))))
+     (concat (map (juxt :path :sha256) closure) tests inputs))))
 
 (defn- decoded [entry]
   (let [text (get-in entry [:evidence/body :payload-edn])

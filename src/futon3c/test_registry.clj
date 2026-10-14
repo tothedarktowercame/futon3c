@@ -224,9 +224,12 @@
             :reasons (frequencies (map :reason offenders))
             :next-action :commit-before-registering})))
 
-(defn capture-code [{:keys [repo-root code-paths test-paths]}]
-  (let [code (manifest repo-root code-paths) tests (manifest repo-root test-paths)]
-    {:code-sha (sha code) :test-sha (sha tests) :code-files code :test-files tests
+(defn capture-code [{:keys [repo-root code-paths test-paths input-paths]}]
+  (let [code (manifest repo-root code-paths)
+        tests (manifest repo-root test-paths)
+        inputs (manifest repo-root (or input-paths []))]
+    {:code-sha (sha code) :test-sha (sha tests) :input-sha (sha inputs)
+     :code-files code :test-files tests :input-files inputs
      :git-head (command! repo-root ["git" "rev-parse" "HEAD"])}))
 
 (defn directory-sha [directory]
@@ -947,7 +950,7 @@
                                     (concat (keys (:code-files code)) (keys (:test-files code)))
                                     :scope)
         common (merge code {:run/id id :author author :ran-at start :repo/root repo-root
-                            :scope (select-keys options [:code-paths :test-paths])
+                            :scope (select-keys options [:code-paths :test-paths :input-paths])
                             :command command :env-fingerprint env
                             :reader-version reader-version
                             :origin (:origin options "agency-local")})
