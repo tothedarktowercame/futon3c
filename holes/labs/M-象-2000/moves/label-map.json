@@ -29,6 +29,10 @@
       "label": "approve/with-amendment",
       "reason": "label:with"
     },
+    "ask-action/ask-decision": {
+      "label": "ask-action/ask-decision",
+      "reason": "kept"
+    },
     "ask-action/commission": {
       "label": "ask-action/commission",
       "reason": "kept"
@@ -137,6 +141,10 @@
       "label": "clarify/check-understand",
       "reason": "folded:co-op,mean"
     },
+    "clarify/analogy": {
+      "label": "clarify/assertion",
+      "reason": "folded:codex,time"
+    },
     "clarify/answer": {
       "label": "clarify/context",
       "reason": "folded:someone,version"
@@ -165,6 +173,10 @@
       "label": "clarify/assertion",
       "reason": "kept"
     },
+    "clarify/caveat": {
+      "label": "clarify/assertion",
+      "reason": "folded:different,live"
+    },
     "clarify/check-understand": {
       "label": "clarify/check-understand",
       "reason": "kept"
@@ -190,8 +202,8 @@
       "reason": "kept"
     },
     "clarify/examples": {
-      "label": "clarify/ask-decision",
-      "reason": "folded:last,turn,turns"
+      "label": "clarify/context",
+      "reason": "folded:previous,turn"
     },
     "clarify/introduce-topic": {
       "label": "clarify/other",
@@ -337,9 +349,13 @@
       "label": "delegate/handoff-spec",
       "reason": "kept"
     },
-    "delegate/investigate": {
+    "delegate/interview": {
       "label": "delegate/other",
       "reason": "other"
+    },
+    "delegate/investigate": {
+      "label": "delegate/to-agent",
+      "reason": "folded:context,line"
     },
     "delegate/other": {
       "label": "delegate/other",
@@ -398,8 +414,8 @@
       "reason": "folded:months,space"
     },
     "explain/accept-retraction": {
-      "label": "explain/reason",
-      "reason": "folded:machine,until"
+      "label": "explain/mechanism",
+      "reason": "folded:machine,noted,otherwise,until"
     },
     "explain/accumulator": {
       "label": "explain/mechanism",
@@ -414,8 +430,8 @@
       "reason": "other"
     },
     "explain/adopt-division": {
-      "label": "explain/reason",
-      "reason": "folded:only,tasks"
+      "label": "explain/mechanism",
+      "reason": "folded:agreed,only"
     },
     "explain/alternative": {
       "label": "explain/other",
@@ -466,8 +482,8 @@
       "reason": "kept"
     },
     "explain/convergence-vision": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/context",
+      "reason": "folded:based,system"
     },
     "explain/counter": {
       "label": "explain/example",
@@ -479,7 +495,7 @@
     },
     "explain/cross-check-use": {
       "label": "explain/mechanism",
-      "reason": "folded:live,records,since"
+      "reason": "folded:live,records,since,useful"
     },
     "explain/decision-reversal": {
       "label": "explain/mechanism",
@@ -498,8 +514,8 @@
       "reason": "other"
     },
     "explain/design": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:asks,line"
     },
     "explain/design-fit": {
       "label": "explain/other",
@@ -535,7 +551,7 @@
     },
     "explain/endorse-idea": {
       "label": "explain/mechanism",
-      "reason": "folded:fits,sense"
+      "reason": "folded:fits,makes,sense"
     },
     "explain/endorse-proposal": {
       "label": "explain/other",
@@ -547,7 +563,7 @@
     },
     "explain/evidence": {
       "label": "explain/mechanism",
-      "reason": "folded:buffer,list"
+      "reason": "folded:buffer,list,proved"
     },
     "explain/example": {
       "label": "explain/example",
@@ -555,11 +571,11 @@
     },
     "explain/expectation": {
       "label": "explain/mechanism",
-      "reason": "folded:agents,self-talk"
+      "reason": "folded:agents,between,relatively,requests,self-talk"
     },
     "explain/feasibility": {
       "label": "explain/mechanism",
-      "reason": "folded:agent,correspondence,turns"
+      "reason": "folded:agent,correspondence,reply,turns"
     },
     "explain/fit": {
       "label": "explain/other",
@@ -590,8 +606,8 @@
       "reason": "other"
     },
     "explain/implication": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:coordinate,under"
     },
     "explain/improvable-loop": {
       "label": "explain/other",
@@ -615,7 +631,7 @@
     },
     "explain/iteration": {
       "label": "explain/mechanism",
-      "reason": "folded:each,explicit,structure"
+      "reason": "folded:adds,each,explicit,structure"
     },
     "explain/justification": {
       "label": "explain/justification",
@@ -626,8 +642,8 @@
       "reason": "other"
     },
     "explain/lean-is-model": {
-      "label": "explain/context",
-      "reason": "folded:basically,given"
+      "label": "explain/mechanism",
+      "reason": "folded:given,lean,model,otherwise"
     },
     "explain/live-system-goal": {
       "label": "explain/other",
@@ -646,16 +662,16 @@
       "reason": "kept"
     },
     "explain/metaphor": {
-      "label": "explain/motive",
-      "reason": "folded:head,keeping"
+      "label": "explain/mechanism",
+      "reason": "folded:head,needed"
     },
     "explain/motive": {
       "label": "explain/motive",
       "reason": "kept"
     },
     "explain/no-finish-needed": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:doesn't,finished,useful"
     },
     "explain/note": {
       "label": "explain/other",
@@ -666,8 +682,8 @@
       "reason": "kept"
     },
     "explain/offering": {
-      "label": "explain/justification",
-      "reason": "folded:custom,provision,service"
+      "label": "explain/context",
+      "reason": "folded:build,system"
     },
     "explain/other": {
       "label": "explain/other",
@@ -730,12 +746,12 @@
       "reason": "other"
     },
     "explain/reference": {
-      "label": "explain/other",
-      "reason": "other"
+      "label": "explain/mechanism",
+      "reason": "folded:give,point,view"
     },
     "explain/reflection": {
       "label": "explain/mechanism",
-      "reason": "folded:comparator,found,four"
+      "reason": "folded:comparator,found,four,once,useful"
     },
     "explain/relate-debugger": {
       "label": "explain/other",
@@ -743,15 +759,19 @@
     },
     "explain/requirements": {
       "label": "explain/mechanism",
-      "reason": "folded:alignment,turns"
+      "reason": "folded:alignment,between,turns"
     },
     "explain/roadmap": {
       "label": "explain/mechanism",
       "reason": "folded:emacs,memory,rapid,whole"
     },
+    "explain/role-marker": {
+      "label": "explain/role-marker",
+      "reason": "kept"
+    },
     "explain/role-tension": {
-      "label": "explain/context",
-      "reason": "folded:doing,session"
+      "label": "explain/role-marker",
+      "reason": "label:role"
     },
     "explain/semantics": {
       "label": "explain/g-semantic",
@@ -767,7 +787,7 @@
     },
     "explain/structure-change": {
       "label": "explain/mechanism",
-      "reason": "folded:change,fixed,structure"
+      "reason": "folded:change,exactly,fixed,structure"
     },
     "explain/subject-to-constraints": {
       "label": "explain/other",
@@ -783,15 +803,15 @@
     },
     "explain/why-gaps-matter": {
       "label": "explain/mechanism",
-      "reason": "folded:memory,search"
+      "reason": "folded:exactly,memory,search"
     },
     "explain/why-insufficient": {
       "label": "explain/mechanism",
-      "reason": "folded:differently,memory"
+      "reason": "folded:differently,memory,sides"
     },
     "explain/workflow-idea": {
-      "label": "explain/answer-question",
-      "reason": "folded:last,night"
+      "label": "explain/mechanism",
+      "reason": "folded:last,until"
     },
     "explain/zeroth-engagement": {
       "label": "explain/other",
@@ -898,8 +918,8 @@
       "reason": "kept"
     },
     "prioritize/hook-first": {
-      "label": "prioritize/other",
-      "reason": "other"
+      "label": "prioritize/benefit",
+      "reason": "folded:let's,start"
     },
     "prioritize/next-milestone": {
       "label": "prioritize/other",
@@ -970,15 +990,15 @@
       "reason": "folded:kind,rather"
     },
     "propose/applied-idea": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/design",
+      "reason": "folded:diagram,idea"
     },
     "propose/bidding": {
       "label": "propose/other",
       "reason": "other"
     },
     "propose/build-cascade": {
-      "label": "propose/alternative",
+      "label": "propose/tentative",
       "reason": "folded:cascade,develop"
     },
     "propose/cheat-sheet": {
@@ -1002,8 +1022,8 @@
       "reason": "other"
     },
     "propose/comparison": {
-      "label": "propose/alternative",
-      "reason": "folded:both,potentially"
+      "label": "propose/directive",
+      "reason": "folded:analyse,both,turns"
     },
     "propose/complexify": {
       "label": "propose/tentative",
@@ -1030,7 +1050,7 @@
       "reason": "folded:agent,case,chat,live,we'd"
     },
     "propose/cross-pollinate": {
-      "label": "propose/tentative",
+      "label": "propose/next-step",
       "reason": "folded:machine,maybe"
     },
     "propose/data-source": {
@@ -1078,8 +1098,8 @@
       "reason": "folded:cascade,live"
     },
     "propose/edit": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/directive",
+      "reason": "folded:long,paper"
     },
     "propose/elaborate-cascade": {
       "label": "propose/tentative",
@@ -1095,10 +1115,10 @@
     },
     "propose/evidence": {
       "label": "propose/next-step",
-      "reason": "folded:emacs,example,live"
+      "reason": "folded:emacs,evidence,example,landscape,live"
     },
     "propose/example": {
-      "label": "propose/alternative",
+      "label": "propose/directive",
       "reason": "folded:lean,port"
     },
     "propose/explanation-outline": {
@@ -1138,8 +1158,8 @@
       "reason": "folded:hard,shouldn't"
     },
     "propose/floats-idea": {
-      "label": "propose/alternative",
-      "reason": "folded:standard,time"
+      "label": "propose/directive",
+      "reason": "folded:practice,time"
     },
     "propose/forward-model": {
       "label": "propose/next-step",
@@ -1167,7 +1187,7 @@
     },
     "propose/hud": {
       "label": "propose/next-step",
-      "reason": "folded:start,turn"
+      "reason": "folded:maybe,start,turn"
     },
     "propose/hydra-as-tools": {
       "label": "propose/tentative",
@@ -1191,7 +1211,7 @@
     },
     "propose/infer-from-behaviour": {
       "label": "propose/directive",
-      "reason": "folded:high,priority"
+      "reason": "folded:fact,high,priority"
     },
     "propose/infrastructure-need": {
       "label": "propose/other",
@@ -1199,7 +1219,7 @@
     },
     "propose/inner-structure": {
       "label": "propose/tentative",
-      "reason": "folded:each,itself"
+      "reason": "folded:each,itself,pattern"
     },
     "propose/linkage": {
       "label": "propose/other",
@@ -1210,7 +1230,7 @@
       "reason": "folded:changes,time"
     },
     "propose/mark-correction": {
-      "label": "propose/tentative",
+      "label": "propose/next-step",
       "reason": "folded:form,same"
     },
     "propose/merge-staging": {
@@ -1246,8 +1266,8 @@
       "reason": "other"
     },
     "propose/optimisation": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/alternative",
+      "reason": "folded:fast,possible"
     },
     "propose/order-of-work": {
       "label": "propose/order-of-work",
@@ -1262,8 +1282,8 @@
       "reason": "normalised"
     },
     "propose/orphan-warning-route": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/redirect-scope",
+      "reason": "folded:feed,items"
     },
     "propose/other": {
       "label": "propose/redirect-scope",
@@ -1302,7 +1322,7 @@
       "reason": "folded:cascade,r-nodes"
     },
     "propose/reading-claim": {
-      "label": "propose/directive",
+      "label": "propose/tentative",
       "reason": "folded:even,pattern"
     },
     "propose/redirect-scope": {
@@ -1318,8 +1338,8 @@
       "reason": "folded:later,paper"
     },
     "propose/reframe": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/redirect-scope",
+      "reason": "folded:maybe,sessions"
     },
     "propose/reminder-system": {
       "label": "propose/other",
@@ -1330,8 +1350,8 @@
       "reason": "folded:isn't,rather"
     },
     "propose/renew-role": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/redirect-scope",
+      "reason": "folded:agency,relative"
     },
     "propose/reorganization": {
       "label": "propose/directive",
@@ -1446,8 +1466,8 @@
       "reason": "folded:better,emacs"
     },
     "propose/track-efficiency": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/next-step",
+      "reason": "folded:keep,track"
     },
     "propose/two-consequences": {
       "label": "propose/other",
@@ -1470,8 +1490,8 @@
       "reason": "folded:terms,wonder"
     },
     "propose/validate-early": {
-      "label": "propose/other",
-      "reason": "other"
+      "label": "propose/tentative",
+      "reason": "folded:approach,validate"
     },
     "propose/weave-together": {
       "label": "propose/other",
@@ -1479,7 +1499,7 @@
     },
     "propose/with-options": {
       "label": "propose/next-step",
-      "reason": "folded:fixes,order"
+      "reason": "folded:fixes,order,size"
     },
     "propose/wording": {
       "label": "propose/next-step",
@@ -1491,7 +1511,7 @@
     },
     "propose/write-spec": {
       "label": "propose/next-step",
-      "reason": "folded:including,lean"
+      "reason": "folded:including,lean,maybe"
     },
     "propose/zip-two-sides": {
       "label": "propose/next-step",
@@ -1669,6 +1689,10 @@
       "label": "reframe/other",
       "reason": "other"
     },
+    "report-problem/blocked": {
+      "label": "report-problem/other",
+      "reason": "other"
+    },
     "report-problem/concern": {
       "label": "report-problem/concern",
       "reason": "kept"
@@ -1696,6 +1720,10 @@
     "report-problem/observed-then-fixed": {
       "label": "report-problem/observ",
       "reason": "label:observ"
+    },
+    "report-problem/relay": {
+      "label": "report-problem/observ",
+      "reason": "folded:agent,commits,don't"
     },
     "report-problem/retrospective": {
       "label": "report-problem/retrospective",
@@ -1731,7 +1759,7 @@
     },
     "report/architecture": {
       "label": "report/done",
-      "reason": "folded:agency,already,turn,what's,writes"
+      "reason": "folded:agency,already,record,turn,what's,writes"
     },
     "report/assessment": {
       "label": "report/done",
@@ -1830,8 +1858,8 @@
       "reason": "kept"
     },
     "report/false-open-census": {
-      "label": "report/status",
-      "reason": "folded:acts,open"
+      "label": "report/done",
+      "reason": "folded:counts,open"
     },
     "report/findings": {
       "label": "report/finding",
@@ -1851,7 +1879,7 @@
     },
     "report/genuinely-open": {
       "label": "report/done",
-      "reason": "folded:hand,items"
+      "reason": "folded:four,hand,items"
     },
     "report/history": {
       "label": "report/other",
@@ -1870,7 +1898,7 @@
       "reason": "folded:every,rewritten"
     },
     "report/intent": {
-      "label": "report/finding",
+      "label": "report/context",
       "reason": "folded:quote,turn"
     },
     "report/inventory": {
@@ -1902,8 +1930,8 @@
       "reason": "label:next"
     },
     "report/numbers": {
-      "label": "report/evidence",
-      "reason": "folded:split,three"
+      "label": "report/done",
+      "reason": "folded:open,three"
     },
     "report/observation": {
       "label": "report/observation",
@@ -1965,6 +1993,10 @@
       "label": "report/done",
       "reason": "folded:asked,change,line"
     },
+    "report/relay": {
+      "label": "report/done",
+      "reason": "folded:both,i've,passed,words"
+    },
     "report/relayed": {
       "label": "report/done",
       "reason": "folded:both,i've,passed,words"
@@ -1991,7 +2023,7 @@
     },
     "report/tooling": {
       "label": "report/done",
-      "reason": "folded:codex,every"
+      "reason": "folded:codex,every,record"
     },
     "report/uncertainty": {
       "label": "report/evidence",
@@ -2028,6 +2060,14 @@
     "retract/other": {
       "label": "retract/correction",
       "reason": "folded:forgot,sorry"
+    },
+    "verify/ask-option": {
+      "label": "verify/other",
+      "reason": "other"
+    },
+    "verify/assertion": {
+      "label": "verify/other",
+      "reason": "other"
     },
     "verify/check-live": {
       "label": "verify/check-live",
