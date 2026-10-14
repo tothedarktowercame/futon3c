@@ -101,3 +101,25 @@ Seen on the way: the scratch store holds minus40's own test projects
 (`cc:-m40-bench-corner-…`, `cc:-tmp`, hooktest/crysttest memories), so a term
 like `minus40` matches them by id. Not fixed; a store-side filter or a cleanup
 of test projects is minus40's call.
+
+## Addendum 2026-10-14T18:17Z: joins made after futon1b's repair (Joe: "join things up a bit more")
+
+futon1b :7073 was restarted at 17:30Z by an external agent (heap 877/4096 MB,
+session evidence query 0.7 s, text search serving). With it answering:
+
+| join | what | evidence |
+|---|---|---|
+| frames ↔ store | `turn_frames.py` for this session now has HAPPENED rows (26 frames, 1,505 rows); McCarthy checks R17 and R18 PASS, R19 PENDING on start-heads only | `~/notes/xiang-live-2026-10-14/frames-claude-16-after.json` |
+| bell ask ↔ Agency job | the brief asks the Agency for each open bell ask's job (`<job-id>-b-<n>` act ids); ended jobs move to Recently closed with "job done <finished-at>" | 3cda506ef; live: 246 of the campaign's requisition asks closed this way |
+| fact ↔ writing turn | each fact's memory version at its said time names the writing session (minus40 hook); the latest operator record in that session at or before then is shown under the fact with what Joe said | 3cda506ef; live: all 3 M-象-2000 facts resolved, e.g. zai-five-hour-window written during claude-15-turn-50 after "happy to go with your direction on this one" |
+| record ↔ evidence row | 62 operator records since 10-12 with `evidence_id` null now carry their row's id (`evidence_delivery` "backfilled") | f5e1ecd39, log `data/evidence-id-backfill.jsonl` |
+| record ↔ row, going forward | Emacs passes the outbox's stable id as `evidence_id` with `evidence_delivery` queued/acked; server stores it; both live-reloaded (operator Emacs forms, JVM turn-record + http) | f5e1ecd39 |
+
+**Found on the way: one exchange, two turn ids.** Emacs emitted the operator's
+evidence row before advancing the turn counter, so in every typed session the
+user row carried turn N-1 while the assistant row and the 象 record carried N
+(10 of 10 acknowledged claude-16 records checked). Fixed in
+`agent-chat--start-turn` (f5e1ecd39) and live in the operator Emacs since
+18:14Z; rows written before then keep the offset, which the backfill tolerates
+(turn N or N-1, text equal). Anything joining user rows to records by turn id
+alone over history must allow for it.

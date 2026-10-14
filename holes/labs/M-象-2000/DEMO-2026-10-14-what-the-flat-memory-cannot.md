@@ -117,10 +117,12 @@ every turn was answered, whether the past is well ordered, whether every
 promise is accounted for, and whether each turn can be rewound to its
 starting commits. Five of six pass for this session today.
 
-## What none of this does yet
+## What none of this does yet (revised 2026-10-14T18:17Z)
 
-The two halves meet only in example 6's Facts section (wired today). A
-memory version is not yet shown beside the operator turn whose session wrote
-it in the open view, the brief still counts bellback-closed asks as open, and
-the live :7073 store that holds the 象 evidence rows is in a GC spiral until it
-is restarted.
+The two halves now meet in three places: the brief's Facts section, each
+fact's line naming the operator turn it was written under, and the brief's
+closing of bell asks by their job's state. Still open: the open view does not
+yet show a memory version beside its writing turn (the brief does); R19's
+start-heads are not recorded; and the `:7073` evidence rows written before
+18:14Z today carry the operator row one turn id behind its record (see the
+lab note's addendum).
