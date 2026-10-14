@@ -171,6 +171,23 @@ class StandingsInForceAreShipped(unittest.TestCase):
         self.assertIn("debugger", rows[0]["text"])
         self.assertEqual("", rows[1]["text"])
 
+    def test_store_act_index_covers_records_the_sampler_never_selects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # an agent reply record: not eligible (origin agent), but it holds the opener
+            (root / "turn-aaaaaa.json").write_text(json.dumps(
+                {"origin": "agent", "acts": [{"id": "t-88-r-0", "kind": "constrain",
+                                              "text": "run end to end, no side quests"}]}))
+            # an eligible-looking record whose standing cites that opener
+            (root / "turn-bbbbbb.json").write_text(json.dumps(
+                {"origin": "operator", "acts": [], "standings": {"in_force": ["t-88-r-0"]}}))
+            (root / "turn-bbbbbb.json.analysis.json").write_text("{}")  # derived file, skipped
+            (root / "turn-cccccc.json").write_text("not json")          # unreadable, skipped
+            index = sample.store_act_index(root)
+            self.assertEqual({"t-88-r-0"}, set(index))
+            rows = sample.in_force({"standings": {"in_force": ["t-88-r-0"]}}, index)
+            self.assertIn("no side quests", rows[0]["text"])
+
     def test_open_ports_cap_is_24(self):
         self.assertEqual(24, sample.OPEN_PORTS_CAP)
 

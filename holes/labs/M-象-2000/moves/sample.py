@@ -94,6 +94,25 @@ def act_index(rows):
     return index
 
 
+def store_act_index(root=ROOT):
+    """act_index over EVERY readable turn record under ROOT, eligible or not.
+    A standing in force at a sampled record was usually opened in a record the
+    sampler never selects (an agent reply, a turn without reply text, a bell),
+    so indexing only the eligible rows left 286 of 489 standings in shard 10
+    with empty text (batch 3, 2026-10-13)."""
+    rows = []
+    for path in sorted(root.glob("turn-*.json")):
+        if path.name.count(".json") != 1:
+            continue
+        try:
+            record = load_json(path)
+        except (OSError, ValueError):
+            continue
+        if isinstance(record, dict):
+            rows.append((path, record, None))
+    return act_index(rows)
+
+
 def in_force(record, index, cap=IN_FORCE_CAP):
     """The kernel's standings in force at this record (standings.in_force:
     constraints, rules, plans that still govern), resolved to text through
@@ -190,7 +209,7 @@ def write_inputs(chosen, out):
     for session_rows in by_session.values():
         session_rows.sort(key=lambda row: (row[1].get("created_at", ""), row[0].name))
     written = []
-    index = act_index(row for rows in by_session.values() for row in rows)
+    index = store_act_index(ROOT)
     for path, record, fs in chosen:
         session_rows = by_session.get(record.get("session_id"), [])
         position = next((i for i, row in enumerate(session_rows) if row[0] == path), -1)
