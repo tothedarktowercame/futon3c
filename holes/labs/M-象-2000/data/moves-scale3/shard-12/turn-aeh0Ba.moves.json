@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-2-turn-8-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -37,9 +37,9 @@
    "quote": "we should figure out what was going on with the migration and finish it",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "finish the linode migration",
     "closes": null,
-    "within": null
+    "within": "claude-2-turn-8-f-s2-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-2-turn-8-f-s2-1"
    },
    "confidence": "medium"
   }

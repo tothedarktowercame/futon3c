@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-17-turn-243-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": "demo first, held items later",
     "closes": null,
-    "within": null
+    "within": "claude-17-turn-243-f-s1-1"
    },
    "confidence": "high"
   }

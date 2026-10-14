@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -50,9 +50,9 @@
    "quote": "The CTO who draws direct inferences from my chat log to their chat log probably wouldn't be my ideal customer.",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "world-listening audience",
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s4-0"
    },
    "confidence": "medium"
   },
@@ -78,7 +78,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s5-0"
    },
    "confidence": "medium"
   },
@@ -91,7 +91,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s5-0"
    },
    "confidence": "medium"
   },
@@ -104,7 +104,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-19-f-s4-0"
    },
    "confidence": "medium"
   }

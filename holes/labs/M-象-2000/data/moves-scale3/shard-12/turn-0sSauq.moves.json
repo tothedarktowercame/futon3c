@@ -24,7 +24,7 @@
    "quote": "What do we need to do with git to prove it works?",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "git proof of work",
     "closes": null,
     "within": null
    },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-2-turn-12-f-s2-0"
    },
    "confidence": "medium"
   }

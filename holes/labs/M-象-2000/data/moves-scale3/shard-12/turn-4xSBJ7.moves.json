@@ -24,9 +24,9 @@
    "quote": "turns that include explicit secrets should be redacted and I should be alerted even when they don't go live).",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "secrets redacted and alerted",
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-20-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-20-f-s3-0"
    },
    "confidence": "medium"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-20-f-s4-0"
    },
    "confidence": "medium"
   },
@@ -78,7 +78,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-3-turn-20-f-s4-0"
    },
    "confidence": "medium"
   }

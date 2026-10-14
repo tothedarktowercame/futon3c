@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-1-turn-30-f-s2-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-1-turn-30-f-s3-0"
    },
    "confidence": "medium"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-1-turn-30-f-s4-0"
    },
    "confidence": "medium"
   },
@@ -78,7 +78,7 @@
    "scope": {
     "opens": "scope the BMR alternatives",
     "closes": null,
-    "within": null
+    "within": "claude-1-turn-30-f-s5-0"
    },
    "confidence": "high"
   },

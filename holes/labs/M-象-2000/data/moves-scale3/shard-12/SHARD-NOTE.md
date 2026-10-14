@@ -51,3 +51,15 @@ not tool-development turns.
 ## Time
 
 ~2 h (81 mostly-1-3-fragment records; wave-5 bulk builder).
+
+## Scope pass (2026-10-14)
+
+Before: 3 within links across 213 acts.  After: **97** within links
+(14 opens).  All 32 records in scope-pass.txt now carry at least one
+within link (every one of the 32 was patchable: none had "nothing governs
+anything" — each had a frame fragment the rest elaborated).  All 97
+targets are same-record fragment ids; 0 in_force, 0 open_ports (this
+shard's in_force lists are empty and its open_ports chains govern other
+sessions' tool work, not these positioning/ops turns).  Validator: exit
+0, valid=213, void=0, unchanged quotes and moves verified by the build
+sidecar untouched.
