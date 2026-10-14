@@ -65,8 +65,10 @@
   authorization document named above, plus one further successor click granted
   directly by Joe on 2026-10-12 after the reviewed-mission pin repair, plus one
   granted directly by Joe to codex-68 on 2026-10-14 after the bounded CI and
-  build repairs (`run one click ... turn on the debugger and watch the run`)."
-  57)
+  build repairs (`run one click ... turn on the debugger and watch the run`),
+  plus one granted directly by Joe to codex-68 on 2026-10-14 after that run's
+  debugger postmortem (`ok, let's run another click under this system`)."
+  58)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
