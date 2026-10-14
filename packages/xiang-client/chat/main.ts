@@ -2,7 +2,7 @@ import { escapeHtml } from "../src/marks.js";
 import renderMathInElement from "katex/contrib/auto-render";
 import type { TurnSummary, TurnView } from "../src/types.js";
 import { turnDetail } from "../widget/model.js";
-import { addressedBody, anchorsAuthorChart, annotationTheme, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "./model.js";
+import { addressedBody, anchorsAuthorChart, annotationTheme, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, plainMessageHtml, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "./model.js";
 
 const HS = "https://matrix.paragogy.net";
 const DEFAULT_ROOM = "!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw";
@@ -157,10 +157,10 @@ function decorateMath(root: HTMLElement): void {
 
 function annotatedBody(event: Event, view: TurnView | undefined): string {
   const raw = event.content.body!;
-  if (!view) return escapeHtml(raw).replace(/\n/g, "<br>");
+  if (!view) return plainMessageHtml(raw);
   const detail = turnDetail(view), source = view.record.source_text, index = raw.indexOf(source);
   if (index < 0) return detail.html;
-  return escapeHtml(raw.slice(0, index)) + detail.html + escapeHtml(raw.slice(index + source.length)).replace(/\n/g, "<br>");
+  return escapeHtml(raw.slice(0, index)) + detail.html + escapeHtml(raw.slice(index + source.length));
 }
 
 function sidenotes(view: TurnView | undefined): string {

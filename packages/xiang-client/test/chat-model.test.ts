@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addressedBody, anchorsAuthorChart, annotationTheme, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "../chat/model.js";
+import { addressedBody, anchorsAuthorChart, annotationTheme, countByAuthor, highlightedIntent, intentStage, intents, needsViewRefresh, pageBounds, plainMessageHtml, postsPerAuthorPython, selectedMatrixEvent, shouldAutoScroll } from "../chat/model.js";
 import type { TurnSummary, TurnView } from "../src/types.js";
 
 test("an addressed message uses the Matrix bot identity", () => {
   assert.equal(addressedBody("fucodex", " hello "), "@fucodex hello");
   assert.equal(addressedBody("", " room note "), "room note");
+});
+
+test("display-math delimiters remain in one text node across newlines", () => {
+  const html = plainMessageHtml("before\n\\[\nx^2\n\\]\nafter");
+  assert.equal(html, "before\n\\[\nx^2\n\\]\nafter");
+  assert.doesNotMatch(html, /<br>/);
 });
 
 test("only the fork's explicit timeline selection identifies a Matrix event", () => {

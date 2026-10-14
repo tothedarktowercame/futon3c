@@ -51,10 +51,26 @@
       "speaker": "participant-1",
       "text": "**discharge** [m0004]\n\nChecked against the problem's metric ρ(f,g) = Σ_{i≥1} (1/2)^i |f_i − g_i| on ∏[0,1]:\n\n- Tail: Σ_{i>N} 2^{-i} = 2^{-N} exactly, and |x_i − y_i| ≤ 1 on [0,1], so the tail of ρ(x,y) is ≤ 2^{-N} < ε/2. Sound.\n- Head: for i ≤ N, |x_i − y_i| < ε2^i/(2N) gives 2^{-i}|x_i − y_i| < ε/(2N); N terms, each strict, N ≥ 1 so the sum is < ε/2. Sound.\n- U = ∏U_i restricts finitely many coordinates (exactly F = {1,…,N}) to sets open in [0,1] (relative open intervals, radius positive so x ∈ U). It is a basic open set of the product topology containing x. Sound.\n- Combining: ρ(x,y) < ε/2 + ε/2 = ε for every y ∈ U, so U ⊆ B_ρ(x,ε). Sound.\n\nm0004 is discharged: every ρ-ball contains a product-basic neighbourhood of its centre, so the metric topology is contained in the product topology.\n\n**question** The converse inclusion is still open: a basic product set ∏U_i (finitely many U_i proper, each open in [0,1]) around x must contain some ρ-ball B_ρ(x,δ). The thing to control is that a single coordinate i carries weight 2^{-i}, so a δ-ball constrains coordinate i only up to |x_i − y_i| < 2^i δ. Please give the next step choosing δ for a given finite set of constrained coordinates and their radii.\n\n@proof-student:matrix.paragogy.net",
       "text_sha256": "ddf0adbb89f981e97fabf8138c912ccc9fe188e23041f69119846990b146bc0e"
+    },
+    {
+      "message_id": "m0006",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0005",
+      "speaker": "participant-2",
+      "text": "[proof | m0006]\n\nLet \\(F=\\{i:U_i\\neq[0,1]\\}\\), which is finite. For each \\(i\\in F\\), since \\(U_i\\) is relatively open and contains \\(x_i\\), choose \\(r_i>0\\) such that\n\\[\n\\{t\\in[0,1]:|t-x_i|<r_i\\}\\subseteq U_i.\n\\]\nIf \\(F=\\varnothing\\), take \\(\\delta=1\\). Otherwise set\n\\[\n\\delta=\\min_{i\\in F}2^{-i}r_i>0.\n\\]\nIf \\(\\rho(x,y)<\\delta\\), then for every \\(i\\in F\\),\n\\[\n2^{-i}|x_i-y_i|\\le \\rho(x,y)<\\delta\\le2^{-i}r_i,\n\\]\nhence \\(|x_i-y_i|<r_i\\) and therefore \\(y_i\\in U_i\\). Unconstrained coordinates automatically lie in \\(U_i=[0,1]\\), so \\(y\\in\\prod_iU_i\\). Thus \\(B_\\rho(x,\\delta)\\subseteq\\prod_iU_i\\).\n\n@proof-critic\n",
+      "text_sha256": "368d2fecf94431673b810474d67a44a9cd67cb12f204bfd6c140264db48a4a51"
+    },
+    {
+      "message_id": "m0007",
+      "offset_unit": "unicode-codepoint",
+      "parent_message_id": "m0006",
+      "speaker": "participant-1",
+      "text": "[discharge | m0007]\n\nm0006 is verbatim the step I discharged as m0005; the checks stand (finite F from the definition of a basic product open; r_i > 0 from relative openness of U_i at x_i; δ = min over finite nonempty F of positive reals, with the F = ∅ case separate; each summand 2^{-i}|x_i − y_i| ≤ ρ(x,y) < δ ≤ 2^{-i} r_i by nonnegativity of the other summands; unconstrained coordinates in [0,1] = U_i). Discharged again, nothing further owed on it.\n\nThe step still outstanding is the one I asked for after m0005. m0004 gives: every ρ-ball about x contains a basic product open about x. m0005 gives: every basic product open about x contains a ρ-ball about x. The problem asks that the two topologies coincide, i.e. the two families of open sets are equal. Please supply the step that converts these two pointwise, centred containments into \"every ρ-open set is product-open\" and \"every product-open set is ρ-open\", stating what an open set in each topology is (a set that contains a ball about each of its points; a union of basic product opens) and why having the containment at each point x of the set suffices.\n\n@proof-student:matrix.paragogy.net",
+      "text_sha256": "8056840a2e2fe232c1cbd6d4ecd346f1e907a64cdc59e4f9722214cf6bdb3adf"
     }
   ],
-  "packet_sha256": "fe11166bb604f3bebe5bee99c0b3e26fb443a38f801cc472e872b9a8634efa97",
+  "packet_sha256": "08b43eac1cb7df2aad8d73f4fa7e3cc417d3e2a2bdf8592f832f7e9497ee93e6",
   "schema": "futon3c.proof-dialogue-scope-packet/v1",
   "task": "label conversational scopes and their within/keep/close relations",
-  "trace_head_sha256": "8bfe23e3a93736fd7a1dc102252bbcb2d1af514653dcb670479d7a72b718f6f6"
+  "trace_head_sha256": "794ff2522616e385cec19163204bd0953d2194745eaf2271dff64bd4ace47df2"
 }

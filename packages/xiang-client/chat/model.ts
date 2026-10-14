@@ -1,4 +1,5 @@
 import type { TurnSummary, TurnView } from "../src/types.js";
+import { escapeHtml } from "../src/marks.js";
 
 export const GLYPHS: Record<string, string> = {
   gist: "㊥", constrain: "🈲", propose: "㊭", "ask-action": "🈸", approve: "㊣",
@@ -69,6 +70,12 @@ function unique<T extends { intent: string }>(rows: T[]): T[] {
 export function addressedBody(agent: string, body: string): string {
   const text = body.trim();
   return agent ? `@${agent} ${text}` : text;
+}
+
+/** Preserve newlines in one text node so KaTeX auto-render can see display
+ * delimiters whose `\\[` and `\\]` occur on separate source lines. */
+export function plainMessageHtml(body: string): string {
+  return escapeHtml(body);
 }
 
 /** Event selection sent by the FUTON Element fork to the annotation widget. */
