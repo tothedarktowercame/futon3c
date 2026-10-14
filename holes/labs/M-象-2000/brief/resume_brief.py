@@ -16,6 +16,14 @@ DEFAULT_DIR = Path.home() / ".emacs-graph/session-turn-analysis"
 # true-at rule rather than keeping a second copy of either.
 M40_SCRIPT = ROOT.parent / "minus40/scripts/m40.py"
 FACT_CAP = 15
+M40_BASE = "http://127.0.0.1:7093"
+AGENCY_BASE = os.environ.get("FUTON3C_AGENCY_BASE", "http://localhost:7070")
+# A bell recorded as a 象 turn gets act ids <job-id>-b-<n>; the job's state at
+# the Agency says whether the ask was answered (E-agency-work-orders W1).
+JOB_ACT = re.compile(r"^(invoke-\d+-\d+-[0-9a-f]+)-b-\d+$")
+# session_id -> [(created_at, turn_id, agent_id, text, record_id)] over every
+# record load_records parsed, joined or not: the writing-turn lookup for facts.
+SESSION_INDEX = {}
 
 def instant(s):
     """Parse S as an aware UTC instant. A bare date or naive time (as --since
@@ -52,6 +60,10 @@ def load_records(directory, mission, seats, since=None, join="auto", excursions=
             continue
         if not row.get("turn_id") or not row.get("session_id"):
             continue
+        if row.get("origin", "operator") == "operator":
+            SESSION_INDEX.setdefault(row["session_id"], []).append(
+                (row.get("created_at") or "", row.get("turn_id"), row.get("agent_id"),
+                 (row.get("source_text") or "")[:200], path.name.split(".", 1)[0]))
         if since and instant(row.get("created_at")) < instant(since):
             continue
         row["_record_id"] = path.name.split(".", 1)[0]
@@ -99,7 +111,30 @@ def unique(rows):
             out.append(row)
     return out
 
-def prepare(records, now):
+def job_of(act_id):
+    m = JOB_ACT.match(act_id or "")
+    return m.group(1) if m else None
+
+def agency_job_state(job_id, base=AGENCY_BASE, timeout=2.0, _cache={}):
+    """(state, finished-at) of an Agency job; (None, None) when the Agency
+    does not answer or does not know it. Cached for the process."""
+    if job_id not in _cache:
+        try:
+            with urllib.request.urlopen(base + "/api/alpha/invoke/jobs/" + job_id,
+                                        timeout=timeout) as r:
+                d = json.load(r)
+            job = d.get("job") or d
+            _cache[job_id] = (job.get("state"), job.get("finished-at"))
+        except Exception:
+            _cache[job_id] = (None, None)
+    return _cache[job_id]
+
+ENDED = ("done", "failed", "cancelled", "canceled")
+
+def prepare(records, now, job_state=None):
+    """JOB_STATE, when given, maps a job id to (state, finished-at); an open
+    bell ask whose job has ended moves to the closed list with the job's
+    state as its witness, since the bellback is the answer."""
     acts = {a.get("id"): a for r in records for a in (r.get("acts") or [])}
     latest = {}
     for r in records:
@@ -119,6 +154,15 @@ def prepare(records, now):
             row["session_id"] = sid
             row["session_agent"] = r.get("agent_id", "unknown")
             row["session_last"] = r.get("created_at")
+            job = job_of(aid(row))
+            if job and job_state:
+                state, finished = job_state(job)
+                if state in ENDED:
+                    row["inferred"] = "job {0}{1}".format(
+                        state, (" " + finished[:16] + "Z") if finished else "")
+                    row["closed_by_job"] = job
+                    data["closed"].append(row)
+                    continue
             if row.get("author") == "operator":
                 data["asked"].append(row)
             elif row.get("author") == r.get("agent_id"):
@@ -280,7 +324,53 @@ def mission_facts(rows, terms, now, since=None, cap=FACT_CAP):
 
 def fact_line(f):
     stem = (f.get("memory") or "").split("/", 1)[-1]
-    return "- {0} {1}: {2}".format(fact_said(f)[:10], stem, shortened(f.get("text", "")))
+    line = "- {0} {1}: {2}".format(fact_said(f)[:10], stem, shortened(f.get("text", "")))
+    turn = f.get("_turn")
+    if turn:
+        line += "\n  ↳ written during {0} ({1}), after the operator said: “{2}”".format(
+            turn.get("turn_id"), turn.get("agent") or "?", shortened(turn.get("text") or ""))
+    return line
+
+def read_versions(base=M40_BASE, timeout=3.0):
+    """minus40's :memory/version edges as (memory, at, session); the ingest
+    hook records the writing session since 2026-10-11. Empty when the store
+    does not answer."""
+    try:
+        req = urllib.request.Request(
+            base + "/api/alpha/hyperedges?type=memory/version&limit=1000",
+            headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            d = json.load(r)
+    except Exception:
+        return []
+    out = []
+    for h in d.get("hyperedges", []):
+        p = h.get("hx/props") or {}
+        out.append(((p.get("roles") or {}).get("memory"),
+                    p.get("at") or h.get("prop/at") or "", p.get("session")))
+    return out
+
+def writing_turn(fact, versions, index, slack_s=120):
+    """The operator turn during which FACT was written, or None. The version
+    of the fact's memory nearest at or before the fact's said time (within
+    SLACK_S after it, since the hook stamps the file's mtime) names the
+    writing session; the latest operator record in that session at or before
+    that time is the turn. Both halves are classical lookups."""
+    said = fact_said(fact)
+    memory = fact.get("memory")
+    if not said or not memory:
+        return None
+    limit = (instant(said) + dt.timedelta(seconds=slack_s)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    hits = sorted(v for v in versions if v[0] == memory and v[1] and v[1] <= limit and v[2])
+    if not hits:
+        return None
+    session = hits[-1][2]
+    turns = sorted(t for t in index.get(session, []) if t[0] and t[0] <= limit)
+    if not turns:
+        return None
+    at, turn_id, agent, text, record_id = turns[-1]
+    return {"turn_id": turn_id, "agent": agent, "text": text, "record_id": record_id,
+            "at": at, "session_id": session}
 
 def render(mission, join, seed_rows, data, now, excursions=()):
     lines = ["# Resume brief: " + mission, ""]
@@ -363,6 +453,8 @@ def main(argv=None):
                    help="comma-separated excursion ids; defaults to E-* tokens in the mission file")
     p.add_argument("--no-facts", action="store_true",
                    help="skip the minus40 Facts section (no store contact)")
+    p.add_argument("--no-agency", action="store_true",
+                   help="do not ask the Agency whether open bell asks' jobs have ended")
     p.add_argument("--fact-terms",
                    help="comma-separated extra terms a fact may mention; "
                         "the mission id and excursions always count")
@@ -375,7 +467,7 @@ def main(argv=None):
                                  set(filter(None, seat_text.split(","))), args.since,
                                  args.join, set(excursions))
     now = dt.datetime.now(dt.timezone.utc)
-    data = prepare(records, now)
+    data = prepare(records, now, None if args.no_agency else agency_job_state)
     if args.no_facts:
         data["facts"], data["facts_note"] = [], "not read (--no-facts)"
     else:
@@ -384,6 +476,9 @@ def main(argv=None):
             filter(None, (args.fact_terms or "").split(",")))
         data["facts"] = mission_facts(rows, terms, now, args.since)
         data["facts_note"] = note
+        versions = read_versions() if data["facts"] else []
+        for f in data["facts"]:
+            f["_turn"] = writing_turn(f, versions, SESSION_INDEX)
     output = render(args.mission, join, seeds(mission_file), data, now, excursions)
     if args.out:
         args.out.write_text(output)

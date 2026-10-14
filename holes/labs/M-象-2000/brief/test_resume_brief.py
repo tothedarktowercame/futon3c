@@ -129,6 +129,54 @@ class ResumeBriefTest(unittest.TestCase):
         self.assertIn("## Facts (2)", text)
         self.assertIn("_facts: store not answering; cache of x_", text)
 
+    def test_bell_ask_closed_when_its_job_ended(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rec = {"mission_id": "M-test", "agent_id": "zai-1", "session_id": "zai-s",
+                   "turn_id": "bell-1", "created_at": "2026-10-13T00:00:00Z",
+                   "acts": [{"id": "invoke-1791000000000-1-abcdef01-b-0", "author": "zai-9a",
+                             "kind": "ask-action", "text": "Requisition: shard 3",
+                             "at": "2026-10-13T00:00:00Z"},
+                            {"id": "invoke-1791000000000-2-abcdef02-b-0", "author": "zai-9a",
+                             "kind": "ask-action", "text": "Requisition: shard 4",
+                             "at": "2026-10-13T00:00:00Z"}],
+                   "ports": {"still_open": [
+                       {"act": "invoke-1791000000000-1-abcdef01-b-0", "since": "2026-10-13T00:00:00Z"},
+                       {"act": "invoke-1791000000000-2-abcdef02-b-0", "since": "2026-10-13T00:00:00Z"}],
+                       "closed_this_turn": []},
+                   "standings": {"in_force": [], "adopted_not_applied": []}, "obligations": []}
+            self.write(root, "turn-z.json", rec)
+            records, join = brief.load_records(root, "M-test", set())
+            now = dt.datetime(2026, 10, 14, tzinfo=dt.timezone.utc)
+            states = {"invoke-1791000000000-1-abcdef01": ("done", "2026-10-13T01:30:00.000Z"),
+                      "invoke-1791000000000-2-abcdef02": ("running", None)}
+            data = brief.prepare(records, now, lambda j: states.get(j, (None, None)))
+            self.assertEqual(["invoke-1791000000000-2-abcdef02-b-0"],
+                             [brief.aid(x) for x in data["awaiting_others"]])
+            self.assertEqual(1, len(data["closed"]))
+            self.assertEqual("job done 2026-10-13T01:30Z", data["closed"][0]["inferred"])
+            text = brief.render("M-test", join, [], data, now)
+            self.assertIn("inferred: job done 2026-10-13T01:30Z", text)
+            self.assertEqual("invoke-1791000000000-1-abcdef01", brief.job_of("invoke-1791000000000-1-abcdef01-b-3"))
+            self.assertIsNone(brief.job_of("agent-open"))
+
+    def test_fact_joined_to_the_turn_that_wrote_it(self):
+        fact = {"id": "f", "memory": "cc:p/lesson", "text": "M-test lesson",
+                "said": "2026-10-14T17:35:10.469Z", "unsaid": None}
+        versions = [("cc:p/lesson", "2026-10-14T17:35:10.469Z", "sess-A"),
+                    ("cc:p/other", "2026-10-14T17:36:00.000Z", "sess-B"),
+                    ("cc:p/lesson", "2026-10-14T18:00:00.000Z", "sess-C")]
+        index = {"sess-A": [("2026-10-14T17:20:00Z", "claude-14-turn-7", "claude-14", "earlier ask", "turn-x"),
+                            ("2026-10-14T17:31:34Z", "claude-14-turn-8", "claude-14", "73 problems still seemed like a lot", "turn-y"),
+                            ("2026-10-14T17:40:00Z", "claude-14-turn-9", "claude-14", "later", "turn-z")]}
+        turn = brief.writing_turn(fact, versions, index)
+        self.assertEqual("claude-14-turn-8", turn["turn_id"])
+        self.assertEqual("turn-y", turn["record_id"])
+        fact["_turn"] = turn
+        self.assertIn("↳ written during claude-14-turn-8 (claude-14), after the operator said: “73 problems",
+                      brief.fact_line(fact))
+        self.assertIsNone(brief.writing_turn(dict(fact, memory="cc:p/none"), versions, index))
+
     def test_default_excursions_from_mission_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "mission.md"
