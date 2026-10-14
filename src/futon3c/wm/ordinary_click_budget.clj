@@ -67,8 +67,11 @@
   granted directly by Joe to codex-68 on 2026-10-14 after the bounded CI and
   build repairs (`run one click ... turn on the debugger and watch the run`),
   plus one granted directly by Joe to codex-68 on 2026-10-14 after that run's
-  debugger postmortem (`ok, let's run another click under this system`)."
-  58)
+  debugger postmortem (`ok, let's run another click under this system`), plus
+  one replacement demonstration click granted directly by Joe on 2026-10-14
+  after the post-selection debugger-boundary repair (`do any needed repairs
+  and get another live run going`)."
+  59)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
