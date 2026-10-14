@@ -227,7 +227,7 @@
 (defn capture-code [{:keys [repo-root code-paths test-paths input-paths]}]
   (let [code (manifest repo-root code-paths)
         tests (manifest repo-root test-paths)
-        inputs (manifest repo-root (or input-paths []))]
+        inputs (if (seq input-paths) (manifest repo-root input-paths) {})]
     {:code-sha (sha code) :test-sha (sha tests) :input-sha (sha inputs)
      :code-files code :test-files tests :input-files inputs
      :git-head (command! repo-root ["git" "rev-parse" "HEAD"])}))
