@@ -147,11 +147,14 @@ def build_edges(sidecar: dict, shard: str,
             opener_id = target
             resolution = None
             if not is_act_id(target):
+                # The store reads the retract op at the TOP level of the body
+                # (API-CONTRACT "POST /api/alpha/hyperedge": :hx/op "retract");
+                # inside props it would be an ordinary upsert of a stub doc.
                 retracts.append({
                     "hx/id": "hx-xiang-scope-" + _sha20(relation, target, act_id),
                     "hx/type": "xiang/scope",
+                    "hx/op": "retract",
                     "hx/endpoints": [target, act_id],
-                    "hx/props": {"hx/op": "retract"},
                 })
                 if opens_index is None:
                     notes.append(

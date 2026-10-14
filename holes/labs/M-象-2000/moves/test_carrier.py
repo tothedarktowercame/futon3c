@@ -248,7 +248,8 @@ class ResolveNamedTest(unittest.TestCase):
         index = carrier.build_opens_index([(sc, "shard-9")])
         edges, notes, retracts = carrier.build_edges(sc, "shard-9", index)
         self.assertEqual(len(retracts), 1)
-        self.assertEqual(retracts[0]["hx/props"], {"hx/op": "retract"})
+        self.assertEqual(retracts[0]["hx/op"], "retract")
+        self.assertNotIn("hx/props", retracts[0])
         expected = "hx-xiang-scope-" + carrier._sha20(
             "within", "evidentiality", "a-turn-2-r-0")
         self.assertEqual(retracts[0]["hx/id"], expected)
