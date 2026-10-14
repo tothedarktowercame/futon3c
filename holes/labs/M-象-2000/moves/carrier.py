@@ -208,7 +208,10 @@ def main(argv: list[str] | None = None) -> int:
             no_op += 1
         else:
             written += 1
-    print(f"written: {written}  no-op: {no_op}  failed: {failed}")
+    # The scratch store's compat route answers 200 {"ok":true,...} for a put
+    # whether or not the doc changed, so "posted" is what we can count;
+    # no-op only when the server says so (futon1b proper: {:no-op? true}).
+    print(f"posted: {written}  no-op: {no_op}  failed: {failed}")
     if failure_lines:
         with open(FAILURES_PATH, "a", encoding="utf-8") as handle:
             for line in failure_lines:
