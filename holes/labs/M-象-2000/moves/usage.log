@@ -17,3 +17,4 @@
 2026-10-13T01:21:08Z 5h window 12.0%, monthly 94.0% used; wave 4: shard 10 done, shard 8 running, shard 9 failed on Zai HTTP 500 at 01:16Z (7 sidecars kept), remainder re-dispatched as shard 11
 2026-10-13T01:30:56Z 5h window 29.0%, monthly 98.0% used; wave 4 complete (shards 8, 9+11, 10: 180 records); campaign Zai work finished before the 02:04Z reset
 2026-10-14T18:58:01Z 5h window 7.0%, monthly 1.0% used; within-line packet (zai-1, ab7768d40) accepted after review fixes 4fab61670
+2026-10-14T22:38:00Z 5h window 9.0%, monthly 2.0% used; carrier packet (zai-2, 3b71ed836) accepted after review fixes 07cb357b6 e19ebc44b; 3,774 edges applied to :7093
