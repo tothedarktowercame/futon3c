@@ -45,7 +45,7 @@ def answers_edge(answering: str, opener: str, move: str, confidence: str,
         "hx/type": "xiang/answers",
         "hx/endpoints": [answering, opener],
         "hx/props": {
-            "roles": {"answer": "A", "opener": "O"},
+            "roles": {"answer": answering, "opener": opener},
             "effect": None,  # filled by the caller from the entry
             "quote": None,
             "move": move, "confidence": confidence, "record": record,
@@ -80,13 +80,16 @@ def build_edges(sidecar: dict, shard: str) -> tuple[list[dict], list[str]]:
             edges.append(edge)
         scope = act.get("scope") or {}
         within = scope.get("within")
+        if within == act_id:
+            notes.append(f"{record}: {act_id} is within itself; no edge")
+            within = None
         if within:
             edges.append({
                 "hx/id": "hx-xiang-scope-" + _sha20("within", within, act_id),
                 "hx/type": "xiang/scope",
                 "hx/endpoints": [within, act_id],
                 "hx/props": {
-                    "roles": {"opener": "O", "governed": "G"},
+                    "roles": {"opener": within, "governed": act_id},
                     "relation": "within", "move": move,
                     "confidence": confidence, "record": record,
                     "labeller": labeller, "status": "proposed",
@@ -94,13 +97,16 @@ def build_edges(sidecar: dict, shard: str) -> tuple[list[dict], list[str]]:
                 },
             })
         closes = scope.get("closes")
+        if closes == act_id:
+            notes.append(f"{record}: {act_id} closes itself; no edge")
+            closes = None
         if closes:
             edges.append({
                 "hx/id": "hx-xiang-scope-" + _sha20("closes", closes, act_id),
                 "hx/type": "xiang/scope",
                 "hx/endpoints": [closes, act_id],
                 "hx/props": {
-                    "roles": {"opener": "O", "governed": "G"},
+                    "roles": {"opener": closes, "governed": act_id},
                     "relation": "closes", "move": move,
                     "confidence": confidence, "record": record,
                     "labeller": labeller, "status": "proposed",

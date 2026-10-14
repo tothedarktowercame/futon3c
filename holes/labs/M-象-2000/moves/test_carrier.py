@@ -61,7 +61,7 @@ class BuildEdgesTest(unittest.TestCase):
         self.assertEqual(answers[0]["hx/props"]["status"], "proposed")
         self.assertEqual(answers[0]["hx/props"]["label_set"], "moves/1")
         self.assertEqual(answers[0]["hx/props"]["roles"],
-                         {"answer": "A", "opener": "O"})
+                         {"answer": "a-turn-1-r-0", "opener": "a-turn-1-f-s1-0"})
 
     def test_within_edge_endpoint_order_and_relation(self):
         within = [e for e in self.edges
@@ -71,7 +71,15 @@ class BuildEdgesTest(unittest.TestCase):
         self.assertEqual(within[0]["hx/endpoints"],
                          ["a-turn-0-f-s2-0", "a-turn-1-r-0"])
         self.assertEqual(within[0]["hx/props"]["roles"],
-                         {"opener": "O", "governed": "G"})
+                         {"opener": "a-turn-0-f-s2-0", "governed": "a-turn-1-r-0"})
+
+    def test_self_referential_scope_is_noted_not_edged(self):
+        sc = sidecar()
+        sc["acts"][0]["scope"] = {"opens": None, "closes": "a-turn-1-r-0",
+                                  "within": "a-turn-1-r-0"}
+        edges, notes = carrier.build_edges(sc, "shard-2")
+        self.assertEqual([], [e for e in edges if e["hx/type"] == "xiang/scope"])
+        self.assertEqual(2, sum("itself" in n for n in notes), notes)
 
     def test_closes_edge_endpoint_order_and_relation(self):
         closes = [e for e in self.edges
