@@ -1,277 +1,274 @@
 {
- "record": "turn-3vqBlD",
- "labeller": "zai-3",
- "schema": "moves/1",
- "at": "2026-10-11T22:30:00Z",
- "acts": [
-  {
-   "act": "claude-17-turn-255-f-s1-0",
-   "kind": "report",
-   "move": "report/relay",
-   "quote": "Here are comments from claude-3.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": null
-   },
-   "confidence": "high"
-  },
-  {
-   "act": "claude-17-turn-255-f-s6-0",
-   "kind": "report-problem",
-   "move": "report-problem/observed",
-   "quote": "The scanner check fails open.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s1-0"
-   },
-   "confidence": "high"
-  },
-  {
-   "act": "claude-17-turn-255-f-s7-0",
-   "kind": "qualify",
-   "move": "qualify/caveat",
-   "quote": "The other filters",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s6-0"
-   },
-   "confidence": "high"
-  },
-  {
-   "act": "claude-17-turn-255-f-s8-0",
-   "kind": "report-problem",
-   "move": "report-problem/observed",
-   "quote": "But 小象 is meant to be copied onto other people's machines, and a copy without `secret_scan.py` next to it",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s6-0"
-   },
-   "confidence": "high"
-  },
-  {
-   "act": "claude-17-turn-255-f-s2-0",
-   "kind": "report-problem",
-   "move": "report-problem/relay",
-   "quote": "The commits don't name the owning agent.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s1-0"
-   },
-   "confidence": "high",
-   "note": "Joe quoting claude-3's comment back; already labelled in first pass? check"
-  },
-  {
-   "act": "claude-17-turn-255-f-s3-0",
-   "kind": "qualify",
-   "move": "qualify/caveat",
-   "quote": "Its last commit was at 04:26, so it may still be working",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s2-0"
-   },
-   "confidence": "high"
-  },
-  {
-   "act": "claude-17-turn-255-f-s4-0",
-   "kind": "propose",
-   "move": "propose/next-step",
-   "quote": "Here's what I'd suggest to them, or to you.",
-   "answers": [],
-   "scope": {
-    "opens": "claude-3-comment-response",
-    "closes": null,
-    "within": "claude-17-turn-255-f-s1-0"
-   },
-   "confidence": "high"
-  },
-  {
-   "act": "claude-17-turn-255-f-s9-0",
-   "kind": "propose",
-   "move": "propose/directive",
-   "quote": "`export` and `page` should refuse to run without the scanner",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s6-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s11-0",
-   "kind": "propose",
-   "move": "propose/design",
-   "quote": "They fit together as the free sample.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s4-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s12-0",
-   "kind": "explain",
-   "move": "explain/mechanism",
-   "quote": "- `xiaoxiang.py` with an exported model: what kinds of requests you make, by intent.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s11-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s13-0",
-   "kind": "explain",
-   "move": "explain/mechanism",
-   "quote": "The shipped file is the filtered vocabulary",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s11-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s14-0",
-   "kind": "explain",
-   "move": "explain/mechanism",
-   "quote": "- The gap bars: what your agents did while you weren't watching.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s11-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s15-0",
-   "kind": "qualify",
-   "move": "qualify/caveat",
-   "quote": "This part isn't written yet.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s11-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s16-0",
-   "kind": "explain",
-   "move": "explain/mechanism",
-   "quote": "All three read the same local logs.",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s11-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s17-0",
-   "kind": "report-problem",
-   "move": "report-problem/observed",
-   "quote": "The missing piece is a reader for someone else's raw logs",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s11-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s18-0",
-   "kind": "explain",
-   "move": "explain/context",
-   "quote": "小象 currently reads 象's labelled records",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s17-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s19-0",
-   "kind": "constrain",
-   "move": "constrain/standing-rule",
-   "quote": "That reader should redact with `secret_scan` before anything is classified",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s17-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s21-0",
-   "kind": "explain",
-   "move": "explain/observation",
-   "quote": "One scanner, two consumers.**",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s6-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s22-0",
-   "kind": "explain",
-   "move": "explain/context",
-   "quote": "Before today's fixes, the capture path would have redacted paths",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s21-0"
-   },
-   "confidence": "medium"
-  },
-  {
-   "act": "claude-17-turn-255-f-s23-0",
-   "kind": "constrain",
-   "move": "constrain/standing-rule",
-   "quote": "the regression tests in `test_secret_scan.py` are what protect both users",
-   "answers": [],
-   "scope": {
-    "opens": null,
-    "closes": null,
-    "within": "claude-17-turn-255-f-s21-0"
-   },
-   "confidence": "medium"
-  }
- ],
- "unlabelled": [
-  "claude-17-turn-255-f-s5-0",
-  "claude-17-turn-255-f-s10-0",
-  "claude-17-turn-255-f-s20-0",
-  "claude-17-turn-255-f-s5-0",
-  "claude-17-turn-255-f-s10-0",
-  "claude-17-turn-255-f-s20-0"
- ]
+  "record": "turn-3vqBlD",
+  "labeller": "zai-3",
+  "schema": "moves/1",
+  "at": "2026-10-11T22:30:00Z",
+  "acts": [
+    {
+      "act": "claude-17-turn-255-f-s1-0",
+      "kind": "report",
+      "move": "report/relay",
+      "quote": "Here are comments from claude-3.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": null
+      },
+      "confidence": "high"
+    },
+    {
+      "act": "claude-17-turn-255-f-s6-0",
+      "kind": "report-problem",
+      "move": "report-problem/observed",
+      "quote": "The scanner check fails open.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s1-0"
+      },
+      "confidence": "high"
+    },
+    {
+      "act": "claude-17-turn-255-f-s7-0",
+      "kind": "qualify",
+      "move": "qualify/caveat",
+      "quote": "The other filters",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s6-0"
+      },
+      "confidence": "high"
+    },
+    {
+      "act": "claude-17-turn-255-f-s8-0",
+      "kind": "report-problem",
+      "move": "report-problem/observed",
+      "quote": "But 小象 is meant to be copied onto other people's machines, and a copy without `secret_scan.py` next to it",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s6-0"
+      },
+      "confidence": "high"
+    },
+    {
+      "act": "claude-17-turn-255-f-s2-0",
+      "kind": "report-problem",
+      "move": "report-problem/relay",
+      "quote": "The commits don't name the owning agent.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s1-0"
+      },
+      "confidence": "high",
+      "note": "Joe quoting claude-3's comment back; already labelled in first pass? check"
+    },
+    {
+      "act": "claude-17-turn-255-f-s3-0",
+      "kind": "qualify",
+      "move": "qualify/caveat",
+      "quote": "Its last commit was at 04:26, so it may still be working",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s2-0"
+      },
+      "confidence": "high"
+    },
+    {
+      "act": "claude-17-turn-255-f-s4-0",
+      "kind": "propose",
+      "move": "propose/next-step",
+      "quote": "Here's what I'd suggest to them, or to you.",
+      "answers": [],
+      "scope": {
+        "opens": "claude-3-comment-response",
+        "closes": null,
+        "within": "claude-17-turn-255-f-s1-0"
+      },
+      "confidence": "high"
+    },
+    {
+      "act": "claude-17-turn-255-f-s9-0",
+      "kind": "propose",
+      "move": "propose/directive",
+      "quote": "`export` and `page` should refuse to run without the scanner",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s6-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s11-0",
+      "kind": "propose",
+      "move": "propose/design",
+      "quote": "They fit together as the free sample.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s4-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s12-0",
+      "kind": "explain",
+      "move": "explain/mechanism",
+      "quote": "- `xiaoxiang.py` with an exported model: what kinds of requests you make, by intent.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s11-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s13-0",
+      "kind": "explain",
+      "move": "explain/mechanism",
+      "quote": "The shipped file is the filtered vocabulary",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s11-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s14-0",
+      "kind": "explain",
+      "move": "explain/mechanism",
+      "quote": "- The gap bars: what your agents did while you weren't watching.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s11-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s15-0",
+      "kind": "qualify",
+      "move": "qualify/caveat",
+      "quote": "This part isn't written yet.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s11-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s16-0",
+      "kind": "explain",
+      "move": "explain/mechanism",
+      "quote": "All three read the same local logs.",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s11-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s17-0",
+      "kind": "report-problem",
+      "move": "report-problem/observed",
+      "quote": "The missing piece is a reader for someone else's raw logs",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s11-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s18-0",
+      "kind": "explain",
+      "move": "explain/context",
+      "quote": "小象 currently reads 象's labelled records",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s17-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s19-0",
+      "kind": "constrain",
+      "move": "constrain/standing-rule",
+      "quote": "That reader should redact with `secret_scan` before anything is classified",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s17-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s21-0",
+      "kind": "explain",
+      "move": "explain/observation",
+      "quote": "One scanner, two consumers.**",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s6-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s22-0",
+      "kind": "explain",
+      "move": "explain/context",
+      "quote": "Before today's fixes, the capture path would have redacted paths",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s21-0"
+      },
+      "confidence": "medium"
+    },
+    {
+      "act": "claude-17-turn-255-f-s23-0",
+      "kind": "constrain",
+      "move": "constrain/standing-rule",
+      "quote": "the regression tests in `test_secret_scan.py` are what protect both users",
+      "answers": [],
+      "scope": {
+        "opens": null,
+        "closes": null,
+        "within": "claude-17-turn-255-f-s21-0"
+      },
+      "confidence": "medium"
+    }
+  ],
+  "unlabelled": [
+    "claude-17-turn-255-f-s5-0",
+    "claude-17-turn-255-f-s10-0",
+    "claude-17-turn-255-f-s20-0"
+  ]
 }
