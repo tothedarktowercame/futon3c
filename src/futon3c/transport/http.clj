@@ -11953,6 +11953,9 @@
                            :session-id (str (:session-id payload))
                            :turn-id (str (:turn-id payload))
                            :evidence-id (some-> (:evidence-id payload) str)
+                           ;; "acked" or "queued": whether futon1b had the row
+                           ;; when the record was made (Emacs outbox, 2026-10-14).
+                           :evidence-delivery (some-> (:evidence-delivery payload) str)
                            :surface (some-> (:surface payload) str)
                            :failed? (boolean (:failed payload))
                            :origin (or (some-> (:origin payload) str) "operator")

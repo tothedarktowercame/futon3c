@@ -6,6 +6,7 @@
 (require 'url)
 (require 'url-util)
 
+(defvar agent-chat--last-evidence-id-pending nil) ; agent-chat.el
 (defvar agent-chat--last-evidence-id nil
   "Most recently acknowledged chat evidence id in the current REPL buffer.")
 
@@ -356,8 +357,15 @@ record `not-requested' and no seat is ever belled for it."
                           (agent-id . ,(or agent-chat--agent-id ""))
                           (session-id . ,(or agent-chat--session-id ""))
                           (turn-id . ,(or agent-chat--current-turn-id ""))
-                          ,(when agent-chat--last-evidence-id
-                             `(evidence-id . ,agent-chat--last-evidence-id))
+                          ;; The operator row's stable id: acknowledged by
+                          ;; futon1b, or still queued in the outbox under the
+                          ;; same id (evidence-delivery says which).
+                          ,(when (or agent-chat--last-evidence-id
+                                     agent-chat--last-evidence-id-pending)
+                             `(evidence-id . ,(or agent-chat--last-evidence-id
+                                                  agent-chat--last-evidence-id-pending)))
+                          ,(cond (agent-chat--last-evidence-id '(evidence-delivery . "acked"))
+                                 (agent-chat--last-evidence-id-pending '(evidence-delivery . "queued")))
                           (failed . ,(if failed t :json-false))
                           (analysis-requested . ,(if requested t :json-false))
                           ;; The reading starts at send: the JVM dispatches
@@ -430,9 +438,15 @@ The addressed agent has already received the original turn and is out of scope."
                       (turn_id . ,agent-chat--current-turn-id)
                       (secrets_redacted . ,(vconcat redaction-kinds))
                       ;; `agent-chat--start-turn' runs :before-send before it
-                      ;; calls us, so this is the acknowledged operator row,
-                      ;; not an id reconstructed from text later.
-                      (evidence_id . ,agent-chat--last-evidence-id)
+                      ;; calls us, so this is the operator row's own id, not
+                      ;; one reconstructed from text later: acknowledged by
+                      ;; futon1b, or queued in the outbox under the same
+                      ;; stable id (evidence_delivery says which).
+                      (evidence_id . ,(or agent-chat--last-evidence-id
+                                          agent-chat--last-evidence-id-pending))
+                      (evidence_delivery . ,(cond (agent-chat--last-evidence-id "acked")
+                                                  (agent-chat--last-evidence-id-pending "queued")
+                                                  (t :null)))
                       (origin . "operator")
                       (surface . ,(if surface (symbol-name surface) "typed"))
                       (quote_count . ,(length quotes))

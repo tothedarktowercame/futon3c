@@ -314,6 +314,14 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat--last-evidence-id nil
   "Last evidence entry ID for the current chat buffer.")
 
+(defvar-local agent-chat--last-evidence-id-pending nil
+  "Stable id of the current operator turn's evidence row while its delivery
+is still queued in the outbox.  The id is deterministic and the outbox
+replays the row until futon1b acknowledges it, so a turn record may carry
+it marked `queued' instead of nothing (2026-10-14: a slow futon1b left 50
+operator records with no evidence id).  `agent-chat--last-evidence-id'
+remains the acknowledged id, which acceptance checks require.")
+
 (defvar-local agent-chat--evidence-session-id nil
   "Session ID associated with `agent-chat--last-evidence-id`.")
 
@@ -2811,9 +2819,21 @@ operator input arriving while they run is queued for the next turn."
     (agent-chat-insert-message speaker trimmed)
     (when (agent-chat--operator-speaker-p speaker)
       (agent-chat--maybe-auto-clock-from-turn trimmed))
+    ;; The turn gets its id before anything is emitted for it.  Until
+    ;; 2026-10-14 the counter advanced after :before-send, so the operator's
+    ;; evidence row carried the previous turn's id while the assistant row
+    ;; and the 象 turn record carried the new one: every typed exchange in
+    ;; the store was split across two turn ids (claude-16 session, 10 of 10
+    ;; acknowledged records off by one).
+    (cl-incf agent-chat--turn-counter)
+    (setq agent-chat--current-turn-id
+          (format "%s-turn-%d"
+                  (or agent-chat--agent-id agent-name "agent")
+                  agent-chat--turn-counter))
     ;; The evidence hook is synchronous.  It sets this shared acknowledgement
     ;; only after futon1b has accepted this exact user turn.
-    (setq agent-chat--last-evidence-id nil)
+    (setq agent-chat--last-evidence-id nil
+          agent-chat--last-evidence-id-pending nil)
     (when (functionp before-send)
       (funcall before-send trimmed))
     (when (and (agent-chat--operator-speaker-p speaker)
@@ -2821,11 +2841,6 @@ operator input arriving while they run is queued for the next turn."
       (agent-chat--check-acceptance trimmed agent-chat--last-evidence-id))
     (setq agent-chat--last-auto-clock-witness nil)
     (agent-chat-insert-thinking)
-    (cl-incf agent-chat--turn-counter)
-    (setq agent-chat--current-turn-id
-          (format "%s-turn-%d"
-                  (or agent-chat--agent-id agent-name "agent")
-                  agent-chat--turn-counter))
     (agent-chat-start-turn-commit-window!)
     (agent-chat--refresh-prompt-line! "> ")
     (setq agent-chat--done-prompt-line nil)
@@ -3990,6 +4005,8 @@ character the operator meant to write."
       (when-let* ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
         (set last-id-var new-id)
+        (when is-user
+          (setq agent-chat--last-evidence-id-pending new-id))
         (when (eq agent-chat--last-evidence-delivery-outcome 'acked)
           (setq agent-chat--last-evidence-id new-id
                 agent-chat--evidence-session-id sid)

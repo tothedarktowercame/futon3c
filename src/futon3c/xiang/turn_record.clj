@@ -459,11 +459,14 @@
 
    OPTS: :text (required), :original-text (what was typed, when it differs:
    the failure marker form), :agent-id, :session-id, :turn-id, :evidence-id
-   (the acknowledged operator row), :surface override, :failed? (the operator
+   (the operator row's stable id), :evidence-delivery (\"acked\" when futon1b
+   had accepted that row at record time, \"queued\" when Emacs still held it in
+   its outbox under the same id; absent for records made before 2026-10-14 or
+   with no row), :surface override, :failed? (the operator
    said tagging failed), :origin (default \"operator\"), :vocabulary,
    :now-ms, :redact (fn text -> {:text :kinds}; default `redact-secrets`),
    :analysis-requested? (fn record -> bool; default: every turn)."
-  [{:keys [text original-text agent-id session-id turn-id evidence-id surface
+  [{:keys [text original-text agent-id session-id turn-id evidence-id evidence-delivery surface
            failed? origin vocabulary now-ms redact analysis-requested? operator-id author]
     :or {origin "operator" vocabulary default-vocabulary
          redact redact-secrets}}]
@@ -487,6 +490,7 @@
                     (when-let [a (or author (when (= origin "agent") agent-id) operator-id)]
                       {:author a})
                     (when operator-id {:operator_id operator-id})
+                    (when evidence-delivery {:evidence_delivery evidence-delivery})
                     {:created_at (iso-now (or now-ms (System/currentTimeMillis)))
                      :vocabulary_version vocabulary-version
                      :interpretation_version interpretation-version
