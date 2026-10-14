@@ -185,5 +185,63 @@ class ResumeBriefTest(unittest.TestCase):
             path.write_text("Mentions E-three only in passing, no declaration.")
             self.assertEqual([], brief.mission_excursions(path))
 
+    def test_within_line_and_binder_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            moves = root / "moves"
+            moves.mkdir()
+            common = {"mission_id": "M-test", "agent_id": "claude-1",
+                      "created_at": "2026-10-11T00:00:00Z",
+                      "ports": {"still_open": [], "closed_this_turn": []},
+                      "standings": {"in_force": [], "adopted_not_applied": []},
+                      "obligations": []}
+            rec = dict(common, turn_id="turn-1", session_id="session-one",
+                       evidence_id="record-1")
+            rec["acts"] = [
+                {"id": "agent-open", "author": "claude-1", "kind": "promise",
+                 "text": "I will return the tested patch", "at": "2026-10-10T00:00:00Z"},
+                {"id": "governing", "author": "operator", "kind": "constrain",
+                 "text": "Keep the statement frozen", "at": "2026-10-10T01:00:00Z"},
+                {"id": "operator-open", "author": "operator", "kind": "ask-action",
+                 "text": "Please check the boundary", "at": "2026-10-10T02:00:00Z"}]
+            rec["ports"] = {"still_open": [
+                {"act": "agent-open", "since": "2026-10-10T00:00:00Z"},
+                {"act": "operator-open", "since": "2026-10-10T02:00:00Z"}],
+                "closed_this_turn": []}
+            self.write(root, "turn-a.json", rec)
+            (moves / "turn-a.moves.json").write_text(json.dumps({
+                "record": "turn-a", "labeller": "zai-1", "schema": "moves/1",
+                "at": "2026-10-11T00:00:00Z", "unlabelled": [],
+                "acts": [
+                    {"act": "agent-open", "kind": "promise", "move": "promise/other",
+                     "quote": "I will return the tested patch", "answers": [],
+                     "scope": {"opens": None, "closes": None,
+                               "within": "governing"}, "confidence": "high"},
+                    {"act": "operator-open", "kind": "ask-action",
+                     "move": "ask-action/commission",
+                     "quote": "Please check the boundary", "answers": [],
+                     "scope": {"opens": None, "closes": None, "within": None},
+                     "confidence": "high"}]}))
+            records, join = brief.load_records(root, "M-test", set())
+            now = dt.datetime(2026, 10, 12, tzinfo=dt.timezone.utc)
+            data = brief.prepare(records, now)
+            data["_moves"] = brief.load_moves("moves/turn-*.moves.json", root)
+            data["_acts"] = {a.get("id"): a for r in records
+                             for a in (r.get("acts") or [])}
+            text = brief.render("M-test", join, [], data, now)
+            self.assertIn('within: constrain \u201cKeep the statement frozen\u201d (governing)',
+                          text)
+            self.assertIn("_Binders: 1 of 2 items carry a within link; "
+                          "1 labelled without one; 0 unlabelled._", text)
+            path = brief.write_measurement(root, "M-test", "claude-1", now, data)
+            payload = json.loads(path.read_text())
+            self.assertEqual({"with": 1, "without": 1, "unlabelled": 0},
+                             payload["within"])
+            # an item with no sidecar entry counts as unlabelled
+            data["_moves"] = {}
+            text2 = brief.render("M-test", join, [], data, now)
+            self.assertIn("_Binders: 0 of 2 items carry a within link; "
+                          "0 labelled without one; 2 unlabelled._", text2)
+
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_DIR = Path.home() / ".emacs-graph/session-turn-analysis"
+DEFAULT_MOVES_GLOB = ("holes/labs/M-象-2000/data/moves-scale*/shard-*/"
+                      "turn-*.moves.json")
 # minus40 (40ºBelowDB): the memory-file facts with their said/unsaid times.
 # Read through its own m40.py so the brief shares its store, cache and
 # true-at rule rather than keeping a second copy of either.
@@ -32,6 +34,28 @@ def instant(s):
         return dt.datetime.min.replace(tzinfo=dt.timezone.utc)
     t = dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
     return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
+
+
+def load_moves(pattern=DEFAULT_MOVES_GLOB, root=ROOT):
+    """Index labelled sidecar acts by act id -> {"within", "quote", "move"}.
+
+    Reads every file matching the glob (relative to ROOT or absolute),
+    skipping unreadable ones; a malformed file contributes nothing.
+    """
+    index = {}
+    base = Path(root)
+    for path in sorted(base.glob(pattern) if not Path(pattern).is_absolute()
+                       else Path(pattern).parent.glob(Path(pattern).name)):
+        try:
+            sidecar = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError, ValueError):
+            continue
+        for act in sidecar.get("acts") or []:
+            act_id = act.get("act") if isinstance(act, dict) else None
+            if act_id:
+                index[act_id] = {"within": (act.get("scope") or {}).get("within"),
+                                 "quote": act.get("quote"), "move": act.get("move")}
+    return index
 
 def aid(x):
     return x if isinstance(x, str) else x.get("act", x.get("id", ""))
@@ -404,10 +428,36 @@ def render(mission, join, seed_rows, data, now, excursions=()):
         witness = x.get("inferred")
         closed.append(port_line(x, now) + ((" _(inferred: {0})_".format(witness)) if witness else ""))
     sections.append(("Recently closed", closed, len(data["closed"])))
+    moves = data.get("_moves") or {}
+    acts = data.get("_acts") or {}
+    binder = {"with": 0, "without": 0, "unlabelled": 0}
+    section_rows = {"Awaiting you: agent proposals and asks": data["awaiting_you"],
+                    "Awaiting other agents": data["awaiting_others"],
+                    "Asked by the operator, no answer linked": data["asked"],
+                    "Recently closed": data["closed"]}
     for title, rows, count in sections:
         lines += ["## {0} ({1})".format(title, count), ""]
         lines += rows or ["_None._"]
+        for row in section_rows.get(title, []):
+            entry = moves.get(aid(row))
+            if entry is None:
+                binder["unlabelled"] += 1
+                continue
+            within = entry.get("within")
+            if not within:
+                binder["without"] += 1
+                continue
+            binder["with"] += 1
+            opener = acts.get(within) or {}
+            text = opener.get("text") or entry.get("quote") or within
+            lines.append("  within: {0} “{1}” ({2})".format(
+                opener.get("kind", "unknown"), shortened(text), within))
         lines.append("")
+    data["within_binders"] = binder
+    total = binder["with"] + binder["without"] + binder["unlabelled"]
+    lines += ["_Binders: {0} of {1} items carry a within link; {2} labelled without one; "
+              "{3} unlabelled._".format(binder["with"], total, binder["without"],
+                                        binder["unlabelled"]), ""]
     facts = data.get("facts", [])
     lines += ["## Facts ({0})".format(len(facts)), ""]
     note = data.get("facts_note")
@@ -433,7 +483,11 @@ def write_measurement(directory, mission, seat, now, data):
         "recently_closed": [aid(x) for x in data["closed"]],
         "facts": [f.get("id") for f in data.get("facts", [])],
     }
+    binder = data.get("within_binders") or {}
     payload = {"mission": mission, "seat": seat,
+               "within": {"with": binder.get("with", 0),
+                          "without": binder.get("without", 0),
+                          "unlabelled": binder.get("unlabelled", 0)},
                "at": now.isoformat().replace("+00:00", "Z"),
                "sections": sections, "record_ids": data["record_ids"]}
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
@@ -451,6 +505,8 @@ def main(argv=None):
                    help="auto: mission or listed excursion when any matches, else seats")
     p.add_argument("--excursions",
                    help="comma-separated excursion ids; defaults to E-* tokens in the mission file")
+    p.add_argument("--moves-glob", default=DEFAULT_MOVES_GLOB,
+                   help="glob of moves sidecars to read within links from")
     p.add_argument("--no-facts", action="store_true",
                    help="skip the minus40 Facts section (no store contact)")
     p.add_argument("--no-agency", action="store_true",
@@ -468,6 +524,8 @@ def main(argv=None):
                                  args.join, set(excursions))
     now = dt.datetime.now(dt.timezone.utc)
     data = prepare(records, now, None if args.no_agency else agency_job_state)
+    data["_moves"] = load_moves(args.moves_glob)
+    data["_acts"] = {a.get("id"): a for r in records for a in (r.get("acts") or [])}
     if args.no_facts:
         data["facts"], data["facts_note"] = [], "not read (--no-facts)"
     else:
