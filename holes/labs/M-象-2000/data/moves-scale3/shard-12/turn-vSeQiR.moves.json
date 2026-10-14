@@ -1,0 +1,35 @@
+{
+ "record": "turn-vSeQiR",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-3-f-s1-0",
+   "kind": "disagree",
+   "move": "challenge/other",
+   "quote": "How would Rob upload to an old offline box, if the IP was switched over?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-3-f-s2-0",
+   "kind": "verify",
+   "move": "verify/ask-option",
+   "quote": "Am I still paying rent on an extra linode?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

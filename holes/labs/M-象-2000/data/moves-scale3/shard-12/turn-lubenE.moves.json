@@ -1,0 +1,48 @@
+{
+ "record": "turn-lubenE",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-231-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "lest we get any more mission creep or bolted on hot-fixes",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-231-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "please give me the list of remaining items (if any)",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-231-f-s1-2",
+   "kind": "explain",
+   "move": "explain/justification",
+   "quote": "to close the mission's INSTANTIATE phase",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-dw6OaV",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-75-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Yes please carry on with item 6",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

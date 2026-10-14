@@ -1,0 +1,35 @@
+{
+ "record": "turn-6AlohH",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-4-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Well it is booted according to Linode.com, but I can't get in with ssh -p 2222 joe@172.236.108.82 ...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-4-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "so someone has changed the configuration",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-SHCcjP",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-13-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/analogy",
+   "quote": "OK, so just like claude-repl is my interface, and codex is your coding assistant,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-13-f-s1-1",
+   "kind": "ask-action",
+   "move": "delegate/to-agent",
+   "quote": "let's set up some simulated runs for Zai, in which they interact with my web page under different protocols and give c",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-5qPemC",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-252-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Yes in fact we could develop the classical model 小象 *already* on the basis of what we've already tagged and expect it ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-252-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "intent collision.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-252-f-s3-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "So this can all fit together as a pipeline.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

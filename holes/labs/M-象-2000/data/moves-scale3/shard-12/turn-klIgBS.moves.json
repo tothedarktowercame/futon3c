@@ -1,0 +1,35 @@
+{
+ "record": "turn-klIgBS",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-173-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "It could be nice if keywords like yes got fontified in session mode, even in cases where they aren't being treated as ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-173-f-s3-0",
+   "kind": "propose",
+   "move": "propose/extend",
+   "quote": "the \"yes\" here could be underlined, whereas if it was being used as a command (on a single line) it could turn red",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

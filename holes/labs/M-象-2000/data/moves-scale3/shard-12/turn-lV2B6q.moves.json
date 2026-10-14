@@ -1,0 +1,61 @@
+{
+ "record": "turn-lV2B6q",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-12-f-s1-0",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "What I had thought is that we would get Zai to \"stand in\" for all the roles that are not design and code, including cu",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-12-f-s2-0",
+   "kind": "propose",
+   "move": "clarify/context",
+   "quote": "Zai is back at 100% now so maybe we could look into this a bit.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-12-f-s3-0",
+   "kind": "redirect",
+   "move": "clarify/context",
+   "quote": "So, rather than imagining my ideal customer...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-12-f-s4-0",
+   "kind": "propose",
+   "move": "clarify/context",
+   "quote": "I can just build one.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

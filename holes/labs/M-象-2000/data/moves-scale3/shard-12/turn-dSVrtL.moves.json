@@ -1,0 +1,74 @@
+{
+ "record": "turn-dSVrtL",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-10-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Even so, my sister went to an extremely good business school and gave me good impartial advice.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-10-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "The question is what a less-well-trained person might need to, say, click through for more information, or just click ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-10-f-s3-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "The fact is there are probably a dozen other features that exist that could be \"products\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-10-f-s4-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "Like, Voxterm is cool, 象-2000 is cool (if just finishing up), and the War Machine could be a pretty nice product",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-10-f-s4-1",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "if I changed the name to something a bit less mystifying and off-putting.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

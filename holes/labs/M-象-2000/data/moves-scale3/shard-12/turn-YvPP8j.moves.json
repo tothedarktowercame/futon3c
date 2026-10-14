@@ -1,0 +1,100 @@
+{
+ "record": "turn-YvPP8j",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-30-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "OK to your plan.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-30-f-s2-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "By teh way regarding \"policy free energy on the live path\" this reminds me of what you said above about Item 6 (BMR): ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-30-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "— I allowed it to be built rather than using a generative model, but I wonder if I was being somewhat pressured into i",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-30-f-s4-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "My hope was that we would build the BMR to get unstuck, allow it to exist as a prototype, and then replace it with a p",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-30-f-s5-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "Claude-8 said this would take significantly more work.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-30-f-s6-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "I think we should scope the alternatives.",
+   "answers": [],
+   "scope": {
+    "opens": "scope the BMR alternatives",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-30-f-s7-0",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "If we are building AIF without a generative model I'm not sure what we're doing exactly!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-1-turn-30-f-s6-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

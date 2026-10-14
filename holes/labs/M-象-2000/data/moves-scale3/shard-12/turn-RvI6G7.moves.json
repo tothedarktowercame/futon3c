@@ -1,0 +1,35 @@
+{
+ "record": "turn-RvI6G7",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-167-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Yes, let's open M-象-cascade following futon4/holes/mission-lifecycle.md, at IDENTIFY.",
+   "answers": [],
+   "scope": {
+    "opens": "open M-象-cascade",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-167-f-s2-0",
+   "kind": "explain",
+   "move": "explain/justification",
+   "quote": "The gap is clear, and I quoted you above to identify it.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-167-f-s1-0"
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

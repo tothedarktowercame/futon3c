@@ -1,0 +1,35 @@
+{
+ "record": "turn-g5VNfb",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-226-f-s1-0",
+   "kind": "withdraw",
+   "move": "withdraw/correction",
+   "quote": "no to act:08df47e1-0727-44cc-ad8b-d294241e7483",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-226-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "I want pictures of elephants",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

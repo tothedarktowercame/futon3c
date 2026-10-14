@@ -1,0 +1,74 @@
+{
+ "record": "turn-mZPdh3",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-18-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yeah that works.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-18-f-s2-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "For feed...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-18-f-s3-0",
+   "kind": "propose",
+   "move": "clarify/assertion",
+   "quote": "here's the thing, I have the crazy idea that my chat messages are an open research record, so that's a whole other \"an",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-18-f-s4-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "Chat is a primary research record — that's fun.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-18-f-s5-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "Chat as a primary open research record — that's dangerous and interesting.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

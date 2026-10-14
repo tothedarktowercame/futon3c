@@ -1,0 +1,35 @@
+{
+ "record": "turn-f6D9z8",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-166-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "that would be bad if we were not somehow building the missing part.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-166-f-s4-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "If 象 interpretations can be read as semantic parses, then we should be able to provide a background corpus of IF-THEN ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

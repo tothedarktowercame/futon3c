@@ -1,0 +1,100 @@
+{
+ "record": "turn-jGVwFx",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-11-f-s1-0",
+   "kind": "continue",
+   "move": "clarify/context",
+   "quote": "So, yeah...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-11-f-s2-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "but let's consider this all relative to my \"code, no software\" claim.",
+   "answers": [],
+   "scope": {
+    "opens": "code, no software",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-3-turn-11-f-s3-0",
+   "kind": "collect",
+   "move": "collect/idea",
+   "quote": "Remember, a few years ago it was all about \"no code\" and \"low code\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-11-f-s4-0",
+   "kind": "propose",
+   "move": "clarify/assertion",
+   "quote": "What we have here is a different paradigm.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-11-f-s5-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "I'm basically trying to bring a cyberpunk aesthetic to life here.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-11-f-s6-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "If I could get 象-2000 to be written entirely in Chinese I would be tremendously happy.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-11-f-s7-0",
+   "kind": "verify",
+   "move": "verify/assertion",
+   "quote": "In fact, I probably could do that if I put a little bit more thought into it!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

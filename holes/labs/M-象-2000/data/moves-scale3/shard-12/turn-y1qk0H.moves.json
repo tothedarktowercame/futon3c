@@ -1,0 +1,22 @@
+{
+ "record": "turn-y1qk0H",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-15-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "OK, let's try to run Kimi with images and otherwise the same prompts",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

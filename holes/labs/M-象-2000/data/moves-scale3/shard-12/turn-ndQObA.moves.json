@@ -1,0 +1,35 @@
+{
+ "record": "turn-ndQObA",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-248-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "So, the classical scanner would work on rollout files (codex) and history.jsonl (claude) or other log formats, no assu",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-248-f-s2-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "We can use *our* futon1b to develop the classical model",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

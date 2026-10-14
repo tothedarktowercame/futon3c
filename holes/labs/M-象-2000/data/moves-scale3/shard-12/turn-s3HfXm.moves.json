@@ -1,0 +1,61 @@
+{
+ "record": "turn-s3HfXm",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-7-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "But I think my sister's question about \"verticals\" isn't really quite right either.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-7-f-s2-0",
+   "kind": "explain",
+   "move": "clarify/assertion",
+   "quote": "There's no vertical just like there's no software anymore.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-7-f-s3-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I don't need a computer.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-7-f-s4-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I just need a phone!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

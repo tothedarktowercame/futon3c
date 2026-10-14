@@ -1,0 +1,35 @@
+{
+ "record": "turn-yVU18M",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-13-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "Uh those personal machines are all dead laptops...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-13-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "there was another called Dionysus that should have had access",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

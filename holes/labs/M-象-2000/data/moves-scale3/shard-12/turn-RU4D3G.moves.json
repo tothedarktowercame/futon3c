@@ -1,0 +1,35 @@
+{
+ "record": "turn-RU4D3G",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-228-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I'm not sure about a periodic pass",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-228-f-s1-1",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "it seems to me the system is supposed to be turn-based",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

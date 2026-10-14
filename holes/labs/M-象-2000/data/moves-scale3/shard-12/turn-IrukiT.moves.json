@@ -1,0 +1,48 @@
+{
+ "record": "turn-IrukiT",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-24-f-s1-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "So, agree, as long as it is very fast, b/c we'd be running it on every turn.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-24-f-s2-0",
+   "kind": "propose",
+   "move": "propose/alternative",
+   "quote": "If it's not fast enough we could port it to compiled Clojure or whatever makes it fast.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-24-f-s3-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "For public use as part of the \"小象\" feature, we can keep it as easy-to-read Python.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

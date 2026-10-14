@@ -1,0 +1,113 @@
+{
+ "record": "turn-50BJM3",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-19-f-s1-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "So, I've tried to be discreet about details and write as if the whole world is listening.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "I might screw up, but it's it is potentially better for security to do things this way than not.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s3-0",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "Of course, I might also back down as well, but for now, I'd rather go with kimi-4's inference (which furthermore shows",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s4-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "The CTO who draws direct inferences from my chat log to their chat log probably wouldn't be my ideal customer.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s5-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "The one who downloads the tool and inspects it to see there are no strings attached would be an ideal customer.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s6-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "In fact, it's kind of the same model.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s7-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "The \"no strings\" also extends to not talking about people behind their back.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-19-f-s8-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "But yes, do I agree that the feed turns my chat into a blog and is written for an audience.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

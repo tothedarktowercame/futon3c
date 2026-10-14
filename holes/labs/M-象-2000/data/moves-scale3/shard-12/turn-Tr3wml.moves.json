@@ -1,0 +1,100 @@
+{
+ "record": "turn-Tr3wml",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-4-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "Well I think the \"who\" is left purposefully vague.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-4-f-s2-0",
+   "kind": "propose",
+   "move": "delegate/interview",
+   "quote": "Let me interview you.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-4-f-s3-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "You too have an AI workflow, subagents, Agency.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-4-f-s4-0",
+   "kind": "explain",
+   "move": "clarify/context",
+   "quote": "You're familiar with both.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-4-f-s5-0",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "How are they working for you?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-4-f-s6-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I know that dropped and crosed bells are a problem on agency sometimes.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-4-f-s7-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "But subagents have problems too, notably, no Codex.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

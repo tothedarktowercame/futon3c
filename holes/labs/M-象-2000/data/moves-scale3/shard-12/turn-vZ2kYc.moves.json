@@ -1,0 +1,22 @@
+{
+ "record": "turn-vZ2kYc",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-2-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "Well I think the answers are more clear from the about.html page",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

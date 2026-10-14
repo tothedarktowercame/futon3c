@@ -1,0 +1,22 @@
+{
+ "record": "turn-RcNIwA",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-35-f-s1-0",
+   "kind": "continue",
+   "move": "prioritize/benefit",
+   "quote": "So we still have your other items to do too, let's get these working through in parallel.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

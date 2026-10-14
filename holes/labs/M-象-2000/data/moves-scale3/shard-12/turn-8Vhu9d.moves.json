@@ -1,0 +1,22 @@
+{
+ "record": "turn-8Vhu9d",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-232-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "OK let's work through these items thanks",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

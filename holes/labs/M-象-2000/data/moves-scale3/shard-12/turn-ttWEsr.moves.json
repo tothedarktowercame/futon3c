@@ -1,0 +1,48 @@
+{
+ "record": "turn-ttWEsr",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-6-f-s1-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "Well, I also think you over-correct in your memory notes too, but we could look through them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-6-f-s2-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "The thing is, they are probably you learning how to use Agency (e.g.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-6-f-s3-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "the right parameters for bells) or learning how not to annoy me",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

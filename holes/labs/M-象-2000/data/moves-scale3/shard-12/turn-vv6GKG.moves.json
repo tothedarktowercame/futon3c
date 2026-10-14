@@ -1,0 +1,35 @@
+{
+ "record": "turn-vv6GKG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-14-f-s1-0",
+   "kind": "retract",
+   "move": "retract/correction",
+   "quote": "Dionysus is long gone!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-14-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Anyway, yes, let's just add Zone's key, that's the inevitable conclusion of this discussion",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

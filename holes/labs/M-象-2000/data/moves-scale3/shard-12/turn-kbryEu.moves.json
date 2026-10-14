@@ -1,0 +1,48 @@
+{
+ "record": "turn-kbryEu",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-244-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I'm a bit dubious about the 15 minute catch up.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-244-f-s2-0",
+   "kind": "explain",
+   "move": "explain/context",
+   "quote": "XTDB  is used in finance, based on clojure, and should be transactional.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-244-f-s3-0",
+   "kind": "reframe",
+   "move": "clarify/analogy",
+   "quote": "15 minutes is \"forever\" in City time",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

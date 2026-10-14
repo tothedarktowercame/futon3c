@@ -1,0 +1,48 @@
+{
+ "record": "turn-9IqYMj",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-87-f-s1-0",
+   "kind": "continue",
+   "move": "clarify/context",
+   "quote": "OK...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-87-f-s2-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "\"built but read by nothing\" is a little concerning...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-87-f-s3-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "but should we do those 4 fixes/integrations before we run the machine?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

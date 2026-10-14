@@ -1,0 +1,35 @@
+{
+ "record": "turn-6si8KG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-60-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "PROOF-2a is build complete, apparently, or very nearly",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-60-f-s1-1",
+   "kind": "propose",
+   "move": "ask-action/ask-decision",
+   "quote": "and we now need to move to the runtime evindence gathering?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

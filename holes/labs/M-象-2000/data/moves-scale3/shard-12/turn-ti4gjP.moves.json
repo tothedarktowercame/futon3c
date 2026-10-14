@@ -1,0 +1,22 @@
+{
+ "record": "turn-ti4gjP",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-249-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "So, interesting idea to create fake passwords in real sessions, though rather than altering my futon1b why don't we cr",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

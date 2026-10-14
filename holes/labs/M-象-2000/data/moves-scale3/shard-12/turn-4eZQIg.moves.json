@@ -1,0 +1,48 @@
+{
+ "record": "turn-4eZQIg",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-185-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/status-check",
+   "quote": "Can you give me a quick progress-bar style update for this mission?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-185-f-s2-0",
+   "kind": "constrain",
+   "move": "clarify/assertion",
+   "quote": "If the major numbers like P11 span 100% of the build in total (when all are summed up) and the minor numbers like P11-",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-185-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/ask-decision",
+   "quote": "1/6th of a major-number assuming that P11-6 is the last in its subseries), help me understand the percentage completed",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

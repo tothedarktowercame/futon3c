@@ -1,0 +1,35 @@
+{
+ "record": "turn-RdcHmd",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-5-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "OK, I am in as root with Lish,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-5-f-s1-1",
+   "kind": "ask-action",
+   "move": "ask-action/ask-decision",
+   "quote": "can we open a channel from there to here?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

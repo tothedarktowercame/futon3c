@@ -1,0 +1,48 @@
+{
+ "record": "turn-jVvq32",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-250-f-s1-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "We also have several seats registered who represent my \"ideal customers\" (kimi and zai), claude-3 can pass you *their*",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-250-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I guess maybe we'd want to build a fake \"maude\" agent for them to interact with that doesn't actually execute its comm",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-250-f-s3-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "This is getting pretty deep",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

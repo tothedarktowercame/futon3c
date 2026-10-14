@@ -1,0 +1,48 @@
+{
+ "record": "turn-KHGVtE",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-67-f-s1-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I'm personally feeling quite tired",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-67-f-s1-1",
+   "kind": "delegate",
+   "move": "delegate/to-agent",
+   "quote": "and if your recommendations are in line with the proof plan and don't void any of our requirements, I will follow your",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-67-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Since they have been put forward as \"decisions\" they should be recorded as such in case we ever want to revisit them.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

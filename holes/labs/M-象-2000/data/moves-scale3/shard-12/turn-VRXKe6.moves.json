@@ -1,0 +1,22 @@
+{
+ "record": "turn-VRXKe6",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-21-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "Fine, the password check can be the first classical tool, so we ensure that we redact anything that looks like a passw",
+   "answers": [],
+   "scope": {
+    "opens": "password check as first classical tool",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

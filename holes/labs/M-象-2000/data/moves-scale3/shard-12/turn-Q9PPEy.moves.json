@@ -1,0 +1,35 @@
+{
+ "record": "turn-Q9PPEy",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-9-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I have put the key back in.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-9-f-s2-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "I have put the new box password is ~/.metameso so you can get it without exposing it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

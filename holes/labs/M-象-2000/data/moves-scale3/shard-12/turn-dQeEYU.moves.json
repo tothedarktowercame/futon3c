@@ -1,0 +1,48 @@
+{
+ "record": "turn-dQeEYU",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-243-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Very appropriate pattern selection BTW;",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-243-f-s1-1",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "on the topic of the re-arm condition, I'd say the explicit condition I personally intended wasn't just P12 but all of ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-243-f-s2-0",
+   "kind": "prioritize",
+   "move": "prioritize/benefit",
+   "quote": "That's because the two specific held items to me are less vital to build than getting a demo of working system, \"end t",
+   "answers": [],
+   "scope": {
+    "opens": "demo first, held items later",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  }
+ ],
+ "unlabelled": []
+}

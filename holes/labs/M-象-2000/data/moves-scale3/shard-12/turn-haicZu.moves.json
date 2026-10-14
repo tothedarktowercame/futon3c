@@ -1,0 +1,48 @@
+{
+ "record": "turn-haicZu",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-33-f-s1-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "OK, I think we should build (c) and then tackle (b).",
+   "answers": [],
+   "scope": {
+    "opens": "build (c) then (b)",
+    "closes": null,
+    "within": null
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-1-turn-33-f-s2-0",
+   "kind": "explain",
+   "move": "explain/analogy",
+   "quote": "This is similar to the futon2/holes/M-a-wmc-scaling.md mission, i.e., let's prototype first then improve once we have ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-33-f-s3-0",
+   "kind": "clarify",
+   "move": "clarify/distinction",
+   "quote": "This is different from a facade b/c no one is claiming we've done something we haven't..",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

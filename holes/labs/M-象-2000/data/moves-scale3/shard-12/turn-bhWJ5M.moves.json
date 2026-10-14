@@ -1,0 +1,22 @@
+{
+ "record": "turn-bhWJ5M",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-7-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "OK, I pasted the key",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

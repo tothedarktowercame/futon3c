@@ -1,0 +1,22 @@
+{
+ "record": "turn-SGszhl",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-245-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Yes please make the futon1b fix",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

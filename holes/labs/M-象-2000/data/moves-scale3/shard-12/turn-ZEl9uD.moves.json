@@ -1,0 +1,35 @@
+{
+ "record": "turn-ZEl9uD",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-217-f-s2-0",
+   "kind": "qualify",
+   "move": "qualify/caveat",
+   "quote": "regarding your earlier questions for me, if they are now \"settled\" as packets, fine, and if not, also fine,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-217-f-s2-1",
+   "kind": "defer",
+   "move": "defer/until",
+   "quote": "I think we can wait until we see the core system working to deal with edge cases around provisional withdrawal and cou",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,61 @@
+{
+ "record": "turn-NLtkIK",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-10-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Thanks.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-10-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Keep the PROOF-2a log up to date.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-10-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Please note that I had previously gotten most of the sections to be \"complete\" so there was a clear case of mission cr",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-10-f-s3-1",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "and I will want an account of that.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

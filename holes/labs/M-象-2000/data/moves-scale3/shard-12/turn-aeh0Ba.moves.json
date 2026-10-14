@@ -1,0 +1,61 @@
+{
+ "record": "turn-aeh0Ba",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-8-f-s1-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "So Rob got lucky to get something in, if it got disabled shortly thereafter!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-8-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "I had forgotten that we hadn't disabled the old Linode",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-8-f-s2-1",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "we should figure out what was going on with the migration and finish it",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-8-f-s2-2",
+   "kind": "constrain",
+   "move": "constrain/for-now",
+   "quote": "b/c I don't want to be billed for an unneeded linode forever",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-V1WtGC",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-9-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "Yes, Emacs proves my point because when I use Emacs I live in \"claude-repl\" (which I wrote) and you have your own codi",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-9-f-s2-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "It is, frankly rather strange.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

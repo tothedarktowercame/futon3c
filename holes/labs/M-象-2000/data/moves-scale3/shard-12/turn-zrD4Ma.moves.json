@@ -1,0 +1,35 @@
+{
+ "record": "turn-zrD4Ma",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-2-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "Well Rob has sent other things to me last week, maybe he forgot to upload it, but this is a bit of mystery.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-2-f-s2-0",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "If we look in the Evidence Landscape for history on results-mark7-mark7master-20260921 we will figure out how I obtain",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

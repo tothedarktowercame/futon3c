@@ -1,0 +1,113 @@
+{
+ "record": "turn-peZOT4",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-242-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "Okay, could you please select a 🎒 PATTERN CARD?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s2-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "I have here tension foreclosure in mind prompt, but you could select a different pattern if you prefer.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s3-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "[Voxterm process cue v1: pattern-card — request]\nRequest a pattern card for this task.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s4-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Name the pattern and version, relevant clause and intended use; use existing backpack/PSR facilities where available.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s5-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Carriage alone is not evidence of use.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s6-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Interpret cues in the surrounding message: discussion, examples and negation do not request execution.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s7-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "Preserve existing gates and operator rulings.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-242-f-s8-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "For an actual request, report execution evidence or an explicit blocker; this cue itself is not evidence that the acti",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-Xh34tQ",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-247-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Cool.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-247-f-s2-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "FYI I have started to work with claude-3 on a classical log scanner.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-247-f-s3-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "So we should start to think about whether we have enough info from the 象 agent to start to develop an extension of /ho",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

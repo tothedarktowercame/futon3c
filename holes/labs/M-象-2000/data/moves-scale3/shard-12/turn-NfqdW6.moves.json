@@ -1,0 +1,22 @@
+{
+ "record": "turn-NfqdW6",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-88-f-s1-0",
+   "kind": "ask-action",
+   "move": "ask-action/commission",
+   "quote": "OK let's run 20 ticks, you can do repairs between them",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

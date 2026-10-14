@@ -1,0 +1,35 @@
+{
+ "record": "turn-6qUfIt",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-3-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "So, I don't really agree that that is \"internal tooling\".",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-3-f-s2-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "It is an image or two with the best demo I have to offer at the moment which happens to be based on internal tooling.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

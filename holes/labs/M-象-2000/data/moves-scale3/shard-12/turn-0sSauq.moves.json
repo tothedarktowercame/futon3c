@@ -1,0 +1,48 @@
+{
+ "record": "turn-0sSauq",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-12-f-s1-0",
+   "kind": "report",
+   "move": "report/status-update",
+   "quote": "OK, I've done items 2 and 3.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-12-f-s2-0",
+   "kind": "ask-action",
+   "move": "ask-action/ask-decision",
+   "quote": "What do we need to do with git to prove it works?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-2-turn-12-f-s3-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "My usual thing would be to push \"joe-homepage\" but I'm not finding that so I'm not sure I have the git \"frontend\" to /",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,35 @@
+{
+ "record": "turn-6m1znw",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-22-f-s1-0",
+   "kind": "verify",
+   "move": "clarify/assertion",
+   "quote": "Now that's something that our hypothetical CTO might be interested in.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-22-f-s2-0",
+   "kind": "explain",
+   "move": "explain/interpretation",
+   "quote": "They might not want the employees at their company slinging passwords or other such info around in their agent chats.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

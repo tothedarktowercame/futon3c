@@ -1,0 +1,35 @@
+{
+ "record": "turn-5PUuAM",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-215-f-s1-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "I still disagree with triggering save on your turns as a result of mine,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-215-f-s1-1",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "but I need to put in a turn to say so, so \"unknown origin\" will go into the record once, unfortunately",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,22 @@
+{
+ "record": "turn-1DjXRw",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-17-f-s1-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Let's push, we can always take it down later",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

@@ -1,0 +1,48 @@
+{
+ "record": "turn-Tgmnta",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-164-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/suspected",
+   "quote": "What remains a bit unclear to me is how we're going to give the patterns semantics.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-164-f-s2-0",
+   "kind": "collect",
+   "move": "collect/ask-option",
+   "quote": "This is something that is assumed to happen in the war machine, so it would be good to understand a bit more about how",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-164-f-s3-0",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "Right now it acts as a semantic parse but only for use as a black-box recorder.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

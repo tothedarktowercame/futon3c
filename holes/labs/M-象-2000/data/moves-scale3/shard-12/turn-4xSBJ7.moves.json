@@ -1,0 +1,87 @@
+{
+ "record": "turn-4xSBJ7",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-20-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "Well, this is something that the 象 scribe could be made aware of (i.e.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-20-f-s2-0",
+   "kind": "constrain",
+   "move": "constrain/stand-rule",
+   "quote": "turns that include explicit secrets should be redacted and I should be alerted even when they don't go live).",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-20-f-s3-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "Also, your point about \"who is the customer\" is a very good one.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-20-f-s4-0",
+   "kind": "propose",
+   "move": "propose/directive",
+   "quote": "There's a big blank spot on the index.html page now where I could put the pro bono \"download this software to analyse ",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-20-f-s5-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "That's the pitch.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-20-f-s6-0",
+   "kind": "clarify",
+   "move": "clarify/assertion",
+   "quote": "The free sample.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

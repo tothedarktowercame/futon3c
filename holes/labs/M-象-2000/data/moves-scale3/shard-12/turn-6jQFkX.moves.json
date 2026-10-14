@@ -1,0 +1,48 @@
+{
+ "record": "turn-6jQFkX",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-5-f-s1-0",
+   "kind": "continue",
+   "move": "clarify/context",
+   "quote": "Yeah, so...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-5-f-s2-0",
+   "kind": "approve",
+   "move": "approve/plain",
+   "quote": "I think we're on the same page pretty much!",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-5-f-s3-0",
+   "kind": "extend",
+   "move": "propose/extend",
+   "quote": "And this also suggests that your memory notes could be a useful untapped resource, including the self-corrections (a l",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

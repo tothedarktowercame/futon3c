@@ -1,0 +1,48 @@
+{
+ "record": "turn-KLNya2",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-3-turn-16-f-s1-0",
+   "kind": "propose",
+   "move": "propose/tentative",
+   "quote": "TBH, Voxterm right now would make a good demo,",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-16-f-s1-1",
+   "kind": "report",
+   "move": "report/context",
+   "quote": "just took a screenshot that I've scp'ed to ~/Screenshot_20260928_223805_Chrome.jpg here.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-3-turn-16-f-s2-0",
+   "kind": "propose",
+   "move": "propose/extend",
+   "quote": "It could go on the margin of the index.html page with a caption \"me running agents like a boss\"",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

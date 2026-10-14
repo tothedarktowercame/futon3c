@@ -1,0 +1,22 @@
+{
+ "record": "turn-vNvckF",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-2-turn-6-f-s1-0",
+   "kind": "report-problem",
+   "move": "report-problem/observed",
+   "quote": "Well, let me be frank with you and say that using Termux is very annoying b/c copy-paste is somehow disabled here on Z",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

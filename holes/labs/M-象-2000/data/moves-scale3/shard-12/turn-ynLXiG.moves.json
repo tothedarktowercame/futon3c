@@ -1,0 +1,35 @@
+{
+ "record": "turn-ynLXiG",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-17-turn-251-f-s1-0",
+   "kind": "redirect",
+   "move": "propose/redirect-scope",
+   "quote": "Yes, I agree, this is useful brainstorming, but 象 will earn its keep running on *my* real logs",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-17-turn-251-f-s1-1",
+   "kind": "clarify",
+   "move": "clarify/context",
+   "quote": "(in futon1b) and contributing to the classical model, which isn't specifically about passwords but about design patter",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}

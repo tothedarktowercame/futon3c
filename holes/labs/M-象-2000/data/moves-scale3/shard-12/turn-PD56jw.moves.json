@@ -1,0 +1,61 @@
+{
+ "record": "turn-PD56jw",
+ "labeller": "zai-1",
+ "schema": "moves/1",
+ "at": "2026-10-12T20:00:00Z",
+ "acts": [
+  {
+   "act": "claude-1-turn-45-f-s1-0",
+   "kind": "clarify",
+   "move": "clarify/check-understand",
+   "quote": "You said \"no PROOF-2a clause uses the mean-field state-prediction error\"...",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-45-f-s2-0",
+   "kind": "disagree",
+   "move": "disagree/correction",
+   "quote": "to me that sounds like a flaw in the proof plan rather than a reason to drop an [R4 R3a] edge but I may be wrong.",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-45-f-s3-0",
+   "kind": "verify",
+   "move": "challenge/other",
+   "quote": "Why would we compute a value that is not used?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  },
+  {
+   "act": "claude-1-turn-45-f-s4-0",
+   "kind": "verify",
+   "move": "challenge/other",
+   "quote": "Why would we define a value that we can't compute?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": null
+   },
+   "confidence": "medium"
+  }
+ ],
+ "unlabelled": []
+}
