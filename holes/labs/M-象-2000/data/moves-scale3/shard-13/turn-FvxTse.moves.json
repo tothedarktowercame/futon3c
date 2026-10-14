@@ -24,7 +24,7 @@
    "quote": "943 sidecars seems like more than I was expecting at this point in time.",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "sidecar-count-review",
     "closes": null,
     "within": null
    },
@@ -84,7 +84,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-16-turn-108-r-0"
    },
    "confidence": "high"
   },
@@ -97,7 +97,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-16-turn-108-r-0"
    },
    "confidence": "high"
   },

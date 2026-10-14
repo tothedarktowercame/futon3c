@@ -11,7 +11,7 @@
    "quote": "[proof | m0008]",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-CvMHWj-frame",
     "closes": null,
     "within": null
    },
@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -78,7 +78,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -91,7 +91,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -104,7 +104,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -117,7 +117,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -130,7 +130,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791941886-2-f-s1-0"
    },
    "confidence": "high"
   }

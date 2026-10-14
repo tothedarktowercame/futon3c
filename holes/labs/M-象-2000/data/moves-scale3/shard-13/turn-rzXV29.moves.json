@@ -11,7 +11,7 @@
    "quote": "[discharge | m0023]",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-rzXV29-frame",
     "closes": null,
     "within": null
    },
@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-teacher-1791942142-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-teacher-1791942142-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-teacher-1791942142-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-teacher-1791942142-2-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -78,7 +78,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-teacher-1791942142-2-f-s1-0"
    },
    "confidence": "high"
   }

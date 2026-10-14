@@ -52,3 +52,25 @@ in every record; claude-14's turn-18..20 in every record) — refused.
 ## Time & budget
 
 About 2 h.  No 429 or 500 encountered.
+
+## Second pass (2026-10-14)
+
+- Uncovered acts: 27 before (turn-3vqBlD 19, turn-zngcGd 5, fRjuGO 1,
+  xuT1Xm 1, QLyVYx 1) → **0 after**.  turn-3vqBlD's three `**N.` stubs and
+  QLyVYx s1-2 (a kernel duplicate) went to `unlabelled`; the rest are now
+  labelled: the `>>>` quote as report-problem/relay (Joe quoting claude-3
+  back), the packaging/design chain under "the free sample" (s4-0 opens the
+  response frame), zngcGd's reply r-1..r-5, fRjuGO s1-1, xuT1Xm r-4.
+- Within: 22 before → **262 after**.  Opens: 0 → **36**.  Every one of the
+  38 listed records now has at least one within.
+- Matrix proof-room records (21 of the 38): the `[role | mNNNN]` header now
+  `opens` `<record>-frame` and every body/`@mention` fragment sits within
+  it — their prose is a single framed move per record.  Hand-labeled
+  records: the framing fragment opens (IJhnCI's "why not port the core
+  faithfully?", UIFG1x's "73 problems still seemd like a lot", VR7PGI's
+  heads-up, QLyVYx's rename proposal, FvxTse's sidecar-count question,
+  Qna6DD's "Hm...", 3vqBlD's suggestion frame, fRjuGO's packaging).
+- Records where nothing governs anything: none in the listed set — every
+  listed record gained a frame or an in-record within chain.
+- All within/closes/answer targets verified resolvable (fragment,
+  reply-act, open_ports or in_force ids); validator exit 0, void 0 on 80.

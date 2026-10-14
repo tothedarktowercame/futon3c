@@ -74,6 +74,32 @@
     "within": null
    },
    "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-102-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I do the first step now?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-102-r-3"
+   },
+   "confidence": "high"
+  },
+  {
+   "act": "claude-16-turn-102-r-4",
+   "kind": "ask-action",
+   "move": "ask-action/one-decision",
+   "quote": "Shall I do the first step now?",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-16-turn-102-r-3"
+   },
+   "confidence": "high"
   }
  ],
  "unlabelled": []

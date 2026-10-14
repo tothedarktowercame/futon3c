@@ -11,7 +11,7 @@
    "quote": "so, why not port the core faithfully?",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-IJhnCI-frame",
     "closes": null,
     "within": null
    },
@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-11-turn-43-f-s1-0"
    },
    "confidence": "high"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-11-turn-43-f-s1-0"
    },
    "confidence": "high"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-11-turn-43-f-s1-0"
    },
    "confidence": "high"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-11-turn-43-f-s1-0"
    },
    "confidence": "high"
   }

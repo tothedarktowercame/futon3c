@@ -11,7 +11,7 @@
    "quote": "I think it would be more convenient to package it up",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "xiaoxiang-packaging",
     "closes": null,
     "within": null
    },
@@ -29,6 +29,19 @@
     "within": "claude-17-turn-256-f-s1-0"
    },
    "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-256-f-s1-1",
+   "kind": "propose",
+   "move": "propose/design",
+   "quote": "include instructions and downloads in a fancy click-to-copy box",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-256-f-s1-0"
+   },
+   "confidence": "medium"
   }
  ],
  "unlabelled": []

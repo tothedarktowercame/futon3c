@@ -11,7 +11,7 @@
    "quote": "Yeah we could remove the specific first names",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-QLyVYx-frame",
     "closes": null,
     "within": null
    },
@@ -26,9 +26,23 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-17-turn-254-f-s1-0"
    },
    "confidence": "high"
+  },
+  {
+   "act": "claude-17-turn-254-f-s1-2",
+   "kind": "propose",
+   "move": "propose/next-step",
+   "quote": "see if we could fix the \"I reject your claim\" false positive",
+   "answers": [],
+   "scope": {
+    "opens": null,
+    "closes": null,
+    "within": "claude-17-turn-254-f-s1-0"
+   },
+   "confidence": "medium",
+   "note": "kernel duplicate of s1-1"
   }
  ],
  "unlabelled": []

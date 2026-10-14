@@ -11,7 +11,7 @@
    "quote": "73 problems still seemd like a lot.",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-UIFG1x-frame",
     "closes": null,
     "within": null
    },
@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-14-turn-874-f-s1-0"
    },
    "confidence": "high"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-14-turn-874-f-s1-0"
    },
    "confidence": "high"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "claude-14-turn-874-f-s2-0"
    },
    "confidence": "high"
   }

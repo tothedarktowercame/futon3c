@@ -11,7 +11,7 @@
    "quote": "[question | m0016]",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-3Uw5mU-frame",
     "closes": null,
     "within": null
    },
@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791942012-5-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791942012-5-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791942012-5-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-critic-1791942012-5-f-s1-0"
    },
    "confidence": "high"
   }

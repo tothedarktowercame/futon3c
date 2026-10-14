@@ -11,7 +11,7 @@
    "quote": "[discharge | m0029]",
    "answers": [],
    "scope": {
-    "opens": null,
+    "opens": "turn-tIOM6w-frame",
     "closes": null,
     "within": null
    },
@@ -26,7 +26,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-scribe-1791942252-1-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -39,7 +39,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-scribe-1791942252-1-f-s1-0"
    },
    "confidence": "medium"
   },
@@ -52,7 +52,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-scribe-1791942252-1-f-s1-0"
    },
    "confidence": "high"
   },
@@ -65,7 +65,7 @@
    "scope": {
     "opens": null,
     "closes": null,
-    "within": null
+    "within": "matrix:proof-scribe-1791942252-1-f-s1-0"
    },
    "confidence": "medium"
   }
