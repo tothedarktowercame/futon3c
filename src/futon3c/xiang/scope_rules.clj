@@ -3,7 +3,8 @@
 
   These rules are deliberately structural: no model call and no persistence.
   The opener set and close relation remain owned by futon3c.logic.xiang."
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.logic.xiang :as lx]
             [futon3c.xiang.turn-acts :as turn-acts]))
 
@@ -69,27 +70,49 @@
             acts)))))
 
 (defn- close-pairs
-  "The kernel's per-turn close result joined to explicit/inferred answer ids."
+  "The kernel's per-turn close result joined to explicit/inferred answer ids.
+   One ports-context serves every turn: the inferred pairs are the same for
+   all of them, and the closed set needs only the two open-port queries per
+   turn, not the obligations, in-force and promulgated queries turn-ports
+   also answers."
   [acts]
-  (let [by-id (into {} (map (juxt :id identity) acts))
+  (let [ctx (turn-acts/ports-context acts)
+        by-id (:by-id ctx)
         explicit (lx/explicit-answers acts)
-        inferred (map (juxt :answer :opener) (mapcat (fn [turn]
-                                                       (:inferred (turn-acts/turn-ports acts turn)))
-                                                     (distinct (map :turn acts))))
+        inferred (map (juxt :answer :opener) (:inferred ctx))
         pairs (distinct (concat explicit inferred))
         closed (into #{} (mapcat (fn [turn]
-                                   (:closed-this-turn (turn-acts/turn-ports acts turn)))
-                                 (distinct (map :turn acts))))]
+                                   (let [{:keys [before after]} (turn-acts/turn-closure ctx turn)]
+                                     (set/difference before after))))
+                     (distinct (map :turn acts)))]
     (for [[answer opener] pairs
           :when (and (contains? closed opener)
                      (get by-id answer) (get by-id opener)
                      (lx/port-act? (get by-id opener)))]
       [(get by-id answer) (get by-id opener)])))
 
+(def ^:private opens-cache
+  "OPEN edges by the act stream they were computed from, a few sessions
+   deep. close-pairs still asks the kernel two open-port questions per turn
+   (about 0.7 s for a 68-turn session on 2026-10-15), and every request for
+   a session between two new turns asks over the same acts: the ledger's
+   cold build asks once per turn, the Emacs overlay once per refresh. The
+   stream is compared by value, so a changed act is a miss."
+  (atom {}))
+
 (defn opens-edges
   "Return classical close-to-opener edges for ports the kernel says closed."
   [acts]
-  (mapv (fn [[act opener]] (edge act opener "OPEN")) (close-pairs acts)))
+  (let [acts (vec acts)
+        k (hash acts)
+        hit (get @opens-cache k)]
+    (if (and hit (= (:acts hit) acts))
+      (:edges hit)
+      (let [edges (mapv (fn [[act opener]] (edge act opener "OPEN")) (close-pairs acts))]
+        (swap! opens-cache (fn [cache]
+                             (assoc (if (>= (count cache) 8) {} cache)
+                                    k {:acts acts :edges edges})))
+        edges))))
 
 (defn scope-for-turn
   "Edges displayed for TURN-ID: that turn's acts plus the previous reply."

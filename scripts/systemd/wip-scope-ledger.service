@@ -1,5 +1,5 @@
 [Unit]
-Description=Publish the live 象 scope ledger
+Description=Publish the live 象 scope ledger and the operator-turn feed
 
 [Service]
 Type=oneshot
@@ -7,3 +7,7 @@ WorkingDirectory=/home/joe/code/futon3c
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 TimeoutStartSec=900
 ExecStart=/usr/bin/python3 -I /home/joe/code/futon3c/scripts/scope_ledger.py --agent claude-16
+# The operator-turn feed (wip/turns/feed.html reads feed-all.json) had no
+# scheduler: it was last rebuilt by hand on 2026-10-13 and sat two days
+# stale. 120 turns is what that run covered; the script takes about a second.
+ExecStart=/usr/bin/python3 -I /home/joe/code/futon3c/scripts/turn_margin_html.py --latest 120 --agent all

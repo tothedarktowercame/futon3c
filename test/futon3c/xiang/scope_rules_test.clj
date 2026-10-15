@@ -3,8 +3,10 @@
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [cheshire.core :as json]
+            [futon3c.logic.xiang :as lx]
             [futon3c.transport.http :as http]
-            [futon3c.xiang.scope-rules :as scopes]))
+            [futon3c.xiang.scope-rules :as scopes]
+            [futon3c.xiang.turn-acts :as ta]))
 
 (def fixture
   (edn/read-string (slurp (io/resource "futon3c/xiang/turn_acts_fixtures/scope-session.edn"))))
@@ -63,3 +65,24 @@
     (let [bad (route (assoc request :query-string
                             "session=fixture-session&turn=missing") {})]
       (is (= 404 (:status bad))))))
+
+(deftest open-edges-match-the-per-turn-kernel-answer
+  ;; close-pairs builds one ports-context for the session instead of calling
+  ;; turn-ports twice per turn. The OPEN edges it yields must be exactly the
+  ;; explicit or inferred pairs whose opener turn-ports reports closed in
+  ;; some turn, which is what the twice-per-turn version computed.
+  (let [turns (distinct (map :turn acts))
+        per-turn (map #(ta/turn-ports acts %) turns)
+        closed (into #{} (mapcat :closed-this-turn) per-turn)
+        by-id (into {} (map (juxt :id identity) acts))
+        pairs (distinct (concat (lx/explicit-answers acts)
+                                (mapcat #(map (juxt :answer :opener) (:inferred %)) per-turn)))
+        expected (set (for [[answer opener] pairs
+                            :when (and (contains? closed opener)
+                                       (get by-id answer) (get by-id opener)
+                                       (lx/port-act? (get by-id opener)))]
+                        [answer opener]))
+        edges (scopes/opens-edges acts)]
+    (is (seq expected) "the fixture has at least one closed port")
+    (is (= expected (set (map (juxt :act :within) edges))))
+    (is (every? #(= "OPEN" (:rule %)) edges))))

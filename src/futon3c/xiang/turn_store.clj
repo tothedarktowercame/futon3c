@@ -193,6 +193,29 @@
          (catch Exception _ nil))
     {:id id :path path}))
 
+(def ^:private record-index
+  "Parsed records by path, each with the file's mtime (ms) and length at the
+   time it was read. list-records used to consult the directory by parsing
+   every turn-*.json in it (6920 files, 9 MB on 2026-10-15) to find the few
+   dozen of one session, about 600 ms a call, and the scopes route paid that
+   on every request. A file whose mtime and length are unchanged is served
+   from here; one that changed, or is new, is read again; one that has gone
+   is forgotten. Keyed by store directory so test stores never meet."
+  (atom {}))
+
+(defn- indexed-record
+  "The index entry for F: the one on hand when the file is unchanged, else a
+   fresh read."
+  [index ^java.io.File f]
+  (let [path (.getPath f)
+        mtime (.lastModified f)
+        length (.length f)
+        hit (get index path)]
+    (if (and hit (= mtime (:mtime hit)) (= length (:length hit)))
+      hit
+      {:mtime mtime :length length
+       :record (try (read-json path) (catch Exception _ nil))})))
+
 (defn list-records
   "Records in the store, newest first by created_at, optionally for one
    SESSION-ID, AGENT-ID and/or SURFACE (exact, e.g. \"matrix (!room:server)\",
@@ -202,19 +225,24 @@
   (let [dir (io/file (:dir store))]
     (if-not (.isDirectory dir)
       []
-      (->> (.listFiles dir)
-           (filter (fn [^java.io.File f]
-                     (and (.isFile f)
-                          (re-matches #"turn-[A-Za-z0-9_-]+\.json" (.getName f)))))
-           (keep (fn [^java.io.File f]
-                   (let [id (str/replace (.getName f) #"\.json$" "")
-                         record (try (read-json (.getPath f)) (catch Exception _ nil))]
-                     (when (and (map? record)
-                                (or (nil? session-id) (= session-id (:session_id record)))
-                                (or (nil? agent-id) (= agent-id (:agent_id record)))
-                                (or (nil? surface) (= surface (:surface record))))
-                       {:id id :record record}))))
-           (sort-by #(str (get-in % [:record :created_at])))
-           reverse
-           (take limit)
-           vec))))
+      (let [files (filterv (fn [^java.io.File f]
+                             (and (.isFile f)
+                                  (re-matches #"turn-[A-Za-z0-9_-]+\.json" (.getName f))))
+                           (.listFiles dir))
+            index (get @record-index (:dir store) {})
+            fresh (into {} (map (fn [^java.io.File f] [(.getPath f) (indexed-record index f)]))
+                        files)]
+        (swap! record-index assoc (:dir store) fresh)
+        (->> files
+             (keep (fn [^java.io.File f]
+                     (let [id (str/replace (.getName f) #"\.json$" "")
+                           record (:record (get fresh (.getPath f)))]
+                       (when (and (map? record)
+                                  (or (nil? session-id) (= session-id (:session_id record)))
+                                  (or (nil? agent-id) (= agent-id (:agent_id record)))
+                                  (or (nil? surface) (= surface (:surface record))))
+                         {:id id :record record}))))
+             (sort-by #(str (get-in % [:record :created_at])))
+             reverse
+             (take limit)
+             vec)))))

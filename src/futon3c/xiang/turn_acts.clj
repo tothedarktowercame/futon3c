@@ -522,38 +522,17 @@
   [iso]
   (str (.minusSeconds (java.time.Instant/parse iso) 1)))
 
-(defn turn-ports
-  "Which ports closed in TURN-ID and which are still open after it, over
-   ACTS (a session-acts vector): {:closed-this-turn [act-id ..]
-   :still-open [{:act :kind :since}] :obligations [{:debtor :creditor
-   :source}] :in-force [act-id ..] :promulgated [act-id ..]
-   :inferred [{:answer :opener :rule :effect}]}. Per turn, an
-   untargeted reply paragraph is inferred to answer the sole operator opening
-   fragment, if there is exactly one. The adjacency table alone determines
-   that inferred pair's effect. The before-anchor is the operator turn's own
-   timestamp; the after-state runs through the latest act attributed to that
-   turn, so its later reply/commit can close what it opened. RECORD-ID selects one occurrence when a
-   process restart reused TURN-ID; the two-argument form remains compatible
-   with histories whose turn ids are unique."
-  ([acts turn-id] (turn-ports acts turn-id nil))
-  ([acts turn-id record-id]
-  (let [chosen? (fn [{:keys [turn record]}]
-                  (and (= turn turn-id)
-                       (or (nil? record-id) (= record record-id))))
-        at (some (fn [{:keys [at] :as act}] (when (chosen? act) at)) acts)
-        _ (when-not at
-            (throw (ex-info (str "No acts for turn " turn-id)
-                            {:reason :unknown-turn :turn turn-id})))
-        through (reduce (fn [latest candidate]
-                          (if (.isAfter (java.time.Instant/parse candidate)
-                                        (java.time.Instant/parse latest))
-                            candidate
-                            latest))
-                        at
-                        (keep (fn [{act-at :at :as act}]
-                                (when (chosen? act) act-at))
-                              acts))
-        inferred (->> (group-by (juxt :turn :record) acts)
+(declare turn-ports-in)
+
+(defn ports-context
+  "What every per-turn question over ACTS shares: the sole-port inferred
+   answers (a per-record matter, the same for every turn), the kernel db
+   holding them, and the acts by id. Built once per session; turn-ports and
+   scope-rules/close-pairs used to rebuild it on every call, and
+   close-pairs asked twice per turn, so a 68-turn session cost 136 builds
+   and about five seconds per scopes request (2026-10-15)."
+  [acts]
+  (let [inferred (->> (group-by (juxt :turn :record) acts)
                       vals
                       (mapcat (fn [turn-acts]
                                 (let [openers (filterv #(and (= "operator" (:author %))
@@ -570,18 +549,73 @@
                                          :effect (lx/answer-effect (:kind opener)
                                                                    (:kind answer))}))))))
                       (sort-by (juxt :answer :opener))
-                      vec)
-        pairs (mapv (juxt :answer :opener) inferred)
-        db (lx/db acts pairs)
-        ;; A port the turn itself opened and closed counts too: a bell's
-        ;; request and its answer share one turn (E-agency-work-orders W1),
-        ;; and so does an operator request answered in the same reply.
-        before (into (lx/open-ports db (instant-minus-1s at))
-                     (keep (fn [{:keys [id] :as act}]
-                             (when (and (chosen? act) (lx/port-act? act)) id)))
-                     acts)
-        after (lx/open-ports db through)
-        by-id (into {} (map (juxt :id identity) acts))]
+                      vec)]
+    {:acts (vec acts)
+     :inferred inferred
+     :db (lx/db acts (mapv (juxt :answer :opener) inferred))
+     :by-id (into {} (map (juxt :id identity) acts))}))
+
+(defn- turn-window
+  "The before-anchor and through-instant of TURN-ID in CTX, with the chosen
+   acts' predicate. RECORD-ID selects one occurrence when a process restart
+   reused TURN-ID."
+  [{:keys [acts]} turn-id record-id]
+  (let [chosen? (fn [{:keys [turn record]}]
+                  (and (= turn turn-id)
+                       (or (nil? record-id) (= record record-id))))
+        at (some (fn [{:keys [at] :as act}] (when (chosen? act) at)) acts)
+        _ (when-not at
+            (throw (ex-info (str "No acts for turn " turn-id)
+                            {:reason :unknown-turn :turn turn-id})))
+        through (reduce (fn [latest candidate]
+                          (if (.isAfter (java.time.Instant/parse candidate)
+                                        (java.time.Instant/parse latest))
+                            candidate
+                            latest))
+                        at
+                        (keep (fn [{act-at :at :as act}]
+                                (when (chosen? act) act-at))
+                              acts))]
+    {:chosen? chosen? :at at :through through}))
+
+(defn turn-closure
+  "The ports open before TURN-ID and after it, in CTX: {:before #{id ..}
+   :after #{id ..} :through iso}. A port the turn itself opened and closed
+   counts too: a bell's request and its answer share one turn
+   (E-agency-work-orders W1), and so does an operator request answered in
+   the same reply."
+  ([ctx turn-id] (turn-closure ctx turn-id nil))
+  ([{:keys [acts db] :as ctx} turn-id record-id]
+   (let [{:keys [chosen? at through]} (turn-window ctx turn-id record-id)]
+     {:before (into (lx/open-ports db (instant-minus-1s at))
+                    (keep (fn [{:keys [id] :as act}]
+                            (when (and (chosen? act) (lx/port-act? act)) id)))
+                    acts)
+      :after (lx/open-ports db through)
+      :through through})))
+
+(defn turn-ports
+  "Which ports closed in TURN-ID and which are still open after it, over
+   ACTS (a session-acts vector): {:closed-this-turn [act-id ..]
+   :still-open [{:act :kind :since}] :obligations [{:debtor :creditor
+   :source}] :in-force [act-id ..] :promulgated [act-id ..]
+   :inferred [{:answer :opener :rule :effect}]}. Per turn, an
+   untargeted reply paragraph is inferred to answer the sole operator opening
+   fragment, if there is exactly one. The adjacency table alone determines
+   that inferred pair's effect. The before-anchor is the operator turn's own
+   timestamp; the after-state runs through the latest act attributed to that
+   turn, so its later reply/commit can close what it opened. RECORD-ID selects one occurrence when a
+   process restart reused TURN-ID; the two-argument form remains compatible
+   with histories whose turn ids are unique. A caller asking about several
+   turns of one session builds the context once with ports-context and
+   calls turn-ports-in."
+  ([acts turn-id] (turn-ports acts turn-id nil))
+  ([acts turn-id record-id] (turn-ports-in (ports-context acts) turn-id record-id)))
+
+(defn turn-ports-in
+  "turn-ports over a prebuilt ports-context CTX."
+  [{:keys [db by-id inferred] :as ctx} turn-id record-id]
+  (let [{:keys [before after through]} (turn-closure ctx turn-id record-id)]
     {:closed-this-turn (vec (sort (set/difference before after)))
      :still-open (vec (sort-by :act
                                (map (fn [id]
@@ -592,4 +626,4 @@
      :obligations (vec (lx/obligations db through))
      :in-force (vec (sort (lx/in-force db through)))
      :promulgated (vec (sort (lx/promulgated db through)))
-     :inferred inferred})))
+     :inferred inferred}))

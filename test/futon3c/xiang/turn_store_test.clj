@@ -60,3 +60,20 @@
     (is (= [] (ts/list-records (ts/store (str (:dir s) "/missing")))))
     (testing "the analysis sibling is not listed as a record"
       (is (= 3 (count (ts/list-records s)))))))
+
+(deftest listing-sees-changes-made-on-disk
+  ;; list-records keeps an index of parsed records by file mtime and length.
+  ;; A record rewritten by another writer, a record removed, and a record
+  ;; added after the first listing must all show on the next one.
+  (let [s (temp-store)
+        a (:id (ts/write-record! s (assoc (record "s1" "one") :created_at "2026-10-01T00:00:00Z")))
+        b (:id (ts/write-record! s (assoc (record "s1" "two") :created_at "2026-10-02T00:00:00Z")))]
+    (is (= [b a] (map :id (ts/list-records s :session-id "s1"))))
+    (ts/update-record! s a #(assoc % :session_id "s2" :happened_summary "moved to another session"))
+    (io/delete-file (ts/record-path s b))
+    (let [c (:id (ts/write-record! s (assoc (record "s1" "three") :created_at "2026-10-03T00:00:00Z")))]
+      (is (= [c] (map :id (ts/list-records s :session-id "s1"))) "a rewritten record leaves s1, a deleted one is gone, a new one arrives")
+      (is (= [a] (map :id (ts/list-records s :session-id "s2"))))
+      (is (= "moved to another session"
+             (:happened_summary (:record (first (ts/list-records s :session-id "s2")))))
+          "the listed record is the rewritten one, not the indexed copy"))))
