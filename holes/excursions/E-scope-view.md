@@ -122,9 +122,11 @@ sub-layers of one plate: model as three layers), the defined-term classes
    text first, anchored second. No build step for the page use: compiled
    once to a single `scopes.js`.
 3. Adapter one: 象 acts. `GET /api/alpha/xiang/scopes?session&turn` gives
-   spans and edges; the operator text comes from the turn record's
-   `source_text`, the reply text from the reply record. The route returns
-   no text of its own, so the adapter needs the record too.
+   spans and edges but no text of its own. The operator text is the
+   record's `source_text`, served by `GET /api/alpha/xiang/turns/<record-id>`
+   (keyed by the record id, `turn-ecOiC4`, not the turn id,
+   `claude-16-turn-162`; the adapter has to map one to the other), and the
+   reply text comes from the reply record.
 4. Adapter two: the turn record's analysis, replacing the hand-rolled
    markup in `turn_margin_html.py`.
 5. Adapter three: mark7, replacing the second half of its painting script;
