@@ -114,6 +114,20 @@ so an agent paragraph is placed by its first words, not by offset."
                          '((id . "seat-turn-4-r-2") (side . "agent") (start . 3) (text . "zz"))
                          entries))))))
 
+(ert-deftest xiang-scope-overlay-dead-region-entries-are-skipped ()
+  "An entry whose markers died (cleared or text deleted) is dropped, not fed
+to arithmetic, so one stale entry cannot abort the paint."
+  (with-temp-buffer
+    (insert "joe: hello there\n\n")
+    (let* ((dead-beg (make-marker)) (dead-end (make-marker))   ; never set: no position
+           (live-beg (copy-marker 6 t)) (live-end (copy-marker 17 nil)))
+      (setq-local session-mode--turn-text-regions
+                  (list (cons "seat-turn-2" (cons "operator" (cons dead-beg dead-end)))
+                        (cons "seat-turn-3" (cons "operator" (cons live-beg live-end)))))
+      (should (equal '("seat-turn-3") (mapcar #'car (xiang-scope-overlay--regions))))
+      (should (null (xiang-scope-overlay--position (cons dead-beg dead-end) 0)))
+      (should (= 6 (xiang-scope-overlay--position (cons live-beg live-end) 0))))))
+
 (ert-deftest xiang-scope-overlay-404-schedules-one-retry-for-the-current-turn ()
   "The landing refresh can race the route; after the fallback, one retry is
 scheduled for the current turn and that retry schedules none."

@@ -35,7 +35,21 @@ nil disables the retry (the retry itself runs with it nil, so it is one-shot).")
   (setq xiang-scope-overlay--overlays nil
         xiang-scope-overlay--parents nil))
 
+(defun xiang-scope-overlay--live-entry-p (entry)
+  "Non-nil when ENTRY's two markers still point into a buffer.
+Markers die when the text they covered is deleted or the marker is cleared;
+a dead entry must be skipped, not fed to arithmetic (seen 2026-10-15: two
+dead operator entries aborted the whole paint with a nil-marker error)."
+  (let ((region (cddr entry)))
+    (and (consp region)
+         (markerp (car region)) (markerp (cdr region))
+         (marker-position (car region)) (marker-position (cdr region)))))
+
 (defun xiang-scope-overlay--regions ()
+  (cl-remove-if-not #'xiang-scope-overlay--live-entry-p
+                    (xiang-scope-overlay--all-regions)))
+
+(defun xiang-scope-overlay--all-regions ()
   (or (and (boundp 'session-mode--turn-text-regions)
            session-mode--turn-text-regions)
       (and (fboundp 'session-mode--scope-text-regions)
@@ -50,6 +64,7 @@ nil disables the retry (the retry itself runs with it nil, so it is one-shot).")
   (when (and region (integerp offset))
     (let ((beg (car region)) (end (cdr region)))
       (when (and (markerp beg) (markerp end)
+                 (marker-position beg) (marker-position end)
                  (<= (+ (marker-position beg) offset) (marker-position end)))
         (+ (marker-position beg) offset)))))
 
