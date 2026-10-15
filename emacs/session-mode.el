@@ -1020,7 +1020,12 @@ Use the real inserted span, including any agent-chat text transformations."
             ;; cl-incf), so the id in force here is the previous turn's. Record
             ;; the region under :pending and let `session-mode--key-pending-region'
             ;; (an :after advice on agent-chat--start-turn) give it the new id.
-            (push (cons :pending (cons "operator" session-mode--last-operator-region))
+            ;; Copies, not the same marker objects: `session-mode--last-operator-region'
+            ;; is cleared with set-marker nil at the next send, which would kill the
+            ;; alist entry too (seen 2026-10-15: the previous turn's region read nil).
+            (push (cons :pending (cons "operator"
+                                       (cons (copy-marker (car session-mode--last-operator-region) t)
+                                             (copy-marker (cdr session-mode--last-operator-region) nil))))
                   session-mode--turn-text-regions)
             (setq session-mode--turn-text-regions
                   (session-mode--retain-recent-turn-regions
