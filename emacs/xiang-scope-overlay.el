@@ -113,8 +113,14 @@ found by its own words instead."
       (xiang-scope-overlay--position (and (car entries) (cddr (car entries))) start))))
 
 (defun xiang-scope-overlay--parent-text (id acts)
+  "The governing act's first words, or its id when it lies outside the acts
+the route returned (a reply paragraph's parent is often an operator
+fragment of the previous turn, which is outside the this-turn-plus-previous-
+reply bound)."
   (let ((parent (cl-find id acts :key (lambda (a) (alist-get 'id a)) :test #'equal)))
-    (truncate-string-to-width (or (alist-get 'text parent) "") 60 nil nil t)))
+    (if (and parent (alist-get 'text parent))
+        (truncate-string-to-width (alist-get 'text parent) 60 nil nil t)
+      (or id "?"))))
 
 (defun xiang-scope-overlay--apply (payload)
   (let* ((acts (alist-get 'acts payload))
