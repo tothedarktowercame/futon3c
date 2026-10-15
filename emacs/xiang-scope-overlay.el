@@ -1,0 +1,152 @@
+;;; xiang-scope-overlay.el --- Scope edges for the current REPL turn -*- lexical-binding: t; -*-
+
+;;; Commentary:
+;; Draws the bounded (current turn plus previous reply) scope graph returned by
+;; /api/alpha/xiang/scopes.  The fetch is deliberately injectable for ERT.
+
+;;; Code:
+
+(require 'json)
+(require 'cl-lib)
+(require 'subr-x)
+(require 'url)
+(require 'url-http)
+
+(defgroup xiang-scope-overlay nil "Scope overlays for 象 readings." :group 'session-mode)
+(defface xiang-scope-operator-face '((t :underline t)) "Operator acts.")
+(defface xiang-scope-agent-face '((t :underline (:style wave :color "#8ec07c"))) "Agent acts.")
+(defface xiang-scope-open-face '((t :box (:line-width 1 :color "#d79921"))) "OPEN parent acts.")
+
+(defcustom xiang-scope-overlay-base-url "http://127.0.0.1:7070"
+  "Base URL for the scope route." :type 'string)
+(defvar xiang-scope-overlay-fetch-function #'url-retrieve)
+(defvar agent-chat--session-id)
+(defvar agent-chat--current-turn-id)
+(defvar-local session-mode--last-operator-region nil)
+(defvar-local xiang-scope-overlay--overlays nil)
+(defvar-local xiang-scope-overlay--parents nil)
+
+(defun xiang-scope-overlay--delete ()
+  (mapc #'delete-overlay xiang-scope-overlay--overlays)
+  (setq xiang-scope-overlay--overlays nil
+        xiang-scope-overlay--parents nil))
+
+(defun xiang-scope-overlay--regions ()
+  (or (and (fboundp 'session-mode--scope-text-regions)
+           (session-mode--scope-text-regions))
+      (delq nil (list (and session-mode--last-operator-region
+                           (cons "operator" session-mode--last-operator-region))
+                      (and (boundp 'session-mode--last-agent-region)
+                           session-mode--last-agent-region
+                           (cons "agent" session-mode--last-agent-region))))))
+
+(defun xiang-scope-overlay--position (region offset)
+  (when (and region (integerp offset))
+    (let ((beg (car region)) (end (cdr region)))
+      (when (and (markerp beg) (markerp end)
+                 (<= (+ (marker-position beg) offset) (marker-position end)))
+        (+ (marker-position beg) offset)))))
+
+(defun xiang-scope-overlay--act-position (act regions)
+  (let* ((side (alist-get 'side act nil nil #'equal))
+         (region (cdr (assoc side regions)))
+         (start (alist-get 'start act)))
+    (xiang-scope-overlay--position region start)))
+
+(defun xiang-scope-overlay--parent-text (id acts)
+  (let ((parent (cl-find id acts :key (lambda (a) (alist-get 'id a)) :test #'equal)))
+    (truncate-string-to-width (or (alist-get 'text parent) "") 60 nil nil t)))
+
+(defun xiang-scope-overlay--apply (payload)
+  (let* ((acts (alist-get 'acts payload))
+         (edges (alist-get 'edges payload))
+         (regions (xiang-scope-overlay--regions))
+         (by-id (make-hash-table :test #'equal)))
+    (setq xiang-scope-overlay--parents (make-hash-table :test #'equal))
+    (dolist (act acts) (puthash (alist-get 'id act) act by-id))
+    (dolist (act acts)
+      (when-let ((pos (xiang-scope-overlay--act-position act regions)))
+        (let* ((id (alist-get 'id act))
+               (edge (cl-find id edges :key (lambda (e) (alist-get 'act e)) :test #'equal))
+               (parent (and edge (gethash (alist-get 'within edge) by-id)))
+               (ov (make-overlay pos
+                                 (+ pos (length (or (alist-get 'text act) ""))))))
+          (overlay-put ov 'face (if (equal "operator" (alist-get 'side act))
+                                   'xiang-scope-operator-face
+                                 'xiang-scope-agent-face))
+          (overlay-put ov 'xiang-scope-act id)
+          (overlay-put ov 'help-echo
+                       (format "%s · within %s → %s"
+                               (or (alist-get 'kind act) "act")
+                               (or (alist-get 'rule edge) "OPEN")
+                               (xiang-scope-overlay--parent-text
+                                (alist-get 'within edge) acts)))
+          (when (equal "OPEN" (alist-get 'rule edge))
+            (overlay-put ov 'face 'xiang-scope-open-face))
+          (push ov xiang-scope-overlay--overlays)
+          (when parent (puthash id (alist-get 'within edge) xiang-scope-overlay--parents)))))))
+
+(defun xiang-scope-overlay--url ()
+  (format "%s/api/alpha/xiang/scopes?session=%s&turn=%s"
+          (string-remove-suffix "/" xiang-scope-overlay-base-url)
+          (url-hexify-string agent-chat--session-id)
+          (url-hexify-string (or agent-chat--current-turn-id ""))))
+
+(defun xiang-scope-overlay--callback (buffer status)
+  (let ((body (unless (plist-get status :error)
+                (goto-char (point-min))
+                (re-search-forward "^$" nil t)
+                (buffer-substring-no-properties (point) (point-max)))))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (if (plist-get status :error)
+            (message "xiang scope fetch failed: %s" (plist-get status :error))
+          (condition-case err
+              (xiang-scope-overlay--apply
+               (json-parse-string body :object-type 'alist :array-type 'list))
+            (error (message "xiang scope fetch failed: %s"
+                            (error-message-string err)))))))))
+
+(defun xiang-scope-overlay-refresh ()
+  "Asynchronously refresh scope overlays for the current turn."
+  (interactive)
+  (xiang-scope-overlay--delete)
+  (let ((buffer (current-buffer)))
+    (condition-case err
+        (funcall xiang-scope-overlay-fetch-function
+                 (xiang-scope-overlay--url)
+                 (apply-partially #'xiang-scope-overlay--callback buffer))
+      (error (message "xiang scope fetch failed: %s" (error-message-string err))))))
+
+(defun xiang-scope-overlay-jump-to-parent ()
+  "Jump to the governing act at point." 
+  (interactive)
+  (let ((id (cl-some (lambda (ov)
+                       (and (overlay-buffer ov)
+                            (<= (overlay-start ov) (point))
+                            (< (point) (overlay-end ov))
+                            (overlay-get ov 'xiang-scope-act)))
+                     xiang-scope-overlay--overlays)))
+    (if-let ((parent (and id (gethash id xiang-scope-overlay--parents))))
+        (when-let ((ov (cl-find parent xiang-scope-overlay--overlays
+                                :key (lambda (o) (overlay-get o 'xiang-scope-act))
+                                :test #'equal)))
+          (goto-char (overlay-start ov)))
+      (message "No governing scope act at point"))))
+
+(defvar xiang-scope-overlay-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-^") #'xiang-scope-overlay-jump-to-parent)
+    map))
+
+;;;###autoload
+(define-minor-mode xiang-scope-overlay-mode
+  "Show scope acts and within edges in a REPL buffer."
+  :lighter " scope"
+  :keymap xiang-scope-overlay-mode-map
+  (if xiang-scope-overlay-mode
+      (xiang-scope-overlay-refresh)
+    (xiang-scope-overlay--delete)))
+
+(provide 'xiang-scope-overlay)
+;;; xiang-scope-overlay.el ends here

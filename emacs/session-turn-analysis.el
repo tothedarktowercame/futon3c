@@ -135,6 +135,17 @@ anything other than its prompt, turns are read again."
   (expand-file-name "../scripts/session_turn_analysis.py"
                     (file-name-directory (or load-file-name buffer-file-name))))
 (defvar-local session-mode--last-analysis-request nil)
+(defvar-local session-mode--last-agent-region nil
+  "Markers for the most recent agent reply, when the chat mode supplies them.")
+
+(defun session-mode--scope-text-regions ()
+  "Return the current turn's mapped operator and agent text regions.
+The chat insertion hook owns these markers; scope painting must consume the
+mapping rather than rediscovering text by searching the REPL."
+  (delq nil (list (and session-mode--last-operator-region
+                       (cons "operator" session-mode--last-operator-region))
+                  (and session-mode--last-agent-region
+                       (cons "agent" session-mode--last-agent-region)))))
 
 (defcustom session-mode-secret-scan-script
   (expand-file-name "../scripts/secret_scan.py"
@@ -596,7 +607,10 @@ Existing phrase assignments, including human corrections, always take precedence
                 (session-mode--refresh-sent-tags)
                 (setq session-mode--sent-tag-overlays
                       (append (session-mode--paint-analysis-cues data source base)
-                              session-mode--sent-tag-overlays)))))
+                              session-mode--sent-tag-overlays)))
+                (when (and (bound-and-true-p xiang-scope-overlay-mode)
+                         (fboundp 'xiang-scope-overlay-refresh))
+                (xiang-scope-overlay-refresh))))
         (error (message "Turn analysis display failed: %s" (error-message-string err)))))))
 
 (defun session-mode--paint-analysis-cues (data source base)

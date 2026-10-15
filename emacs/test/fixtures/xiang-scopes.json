@@ -1,0 +1,1 @@
+{"ok":true,"turn":"turn-1","acts":[{"id":"op-1","kind":"ask","text":"open","side":"operator","start":0,"end":4},{"id":"ag-1","kind":"answer","text":"reply","side":"agent","start":0,"end":5}],"edges":[{"act":"ag-1","within":"op-1","rule":"R3","opener-kind":"ask"}]}
