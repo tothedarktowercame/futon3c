@@ -390,6 +390,21 @@ def summarise(name, record, analysis):
                      else "not yet interpreted"}
 
 
+def write_if_changed(path, text):
+    """Leave the file alone when its content is unchanged, so its mtime and
+    hence Caddy's ETag stay put and the feed page's conditional poll gets a
+    bodiless 304 instead of the whole file every ten seconds."""
+    try:
+        if open(path).read() == text:
+            return False
+    except OSError:
+        pass
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.replace(tmp, path)
+    return True
+
 def write_session_log(a, written):
     """A log for one agent's turns that appends without a reload."""
     mine = [(n, r, x) for n, r, x in written
@@ -397,8 +412,8 @@ def write_session_log(a, written):
     mine.sort(key=lambda w: w[1].get("created_at", ""), reverse=True)
     rows = [summarise(n, r, x) for n, r, x in mine]
 
-    json.dump([feed_entry(n, r, x) for n, r, x in mine],
-              open(os.path.join(a.out, f"feed-{a.agent}.json"), "w"))
+    write_if_changed(os.path.join(a.out, f"feed-{a.agent}.json"),
+                     json.dumps([feed_entry(n, r, x) for n, r, x in mine]))
     manifest = f"session-{a.agent}.json"
     json.dump(rows, open(os.path.join(a.out, manifest), "w"), indent=1)
 
