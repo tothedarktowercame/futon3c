@@ -49,6 +49,7 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
             [futon3c.xiang.reply-target :as rt]
+            [futon3c.xiang.scope-rules :as scope-rules]
             [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts])
@@ -79,6 +80,10 @@
    ;; evidence store. Default no-op so tests and existing callers are
    ;; unaffected; the real append is wired in http.clj's xiang-turn-service.
    :evidence! (fn [_] {:ok true})
+   ;; The configured futon1b hyperedge writer.  Scope writes deliberately
+   ;; share the runtime's existing writer; this hook is optional for old
+   ;; cached services and tests that do not install the substrate.
+   :post-hyperedge! nil
    ;; How a settled turn's append is run off the caller's path (fn [thunk]); nil
    ;; means on the scheduler at delay 0.
    :evidence-async! nil
@@ -293,6 +298,69 @@
 
 (declare append-evidence! compute-ports!)
 
+(defn- sha1-hex [s]
+  (let [digest (.digest (doto (java.security.MessageDigest/getInstance "SHA-1")
+                          (.update (.getBytes (str s) "UTF-8"))))]
+    (apply str (map #(format "%02x" (bit-and 0xff %)) digest))))
+
+(defn- scope-hyperedge [record-id by-id {:keys [act within rule]}]
+  (let [relation (if (= "OPEN" rule) "closes" "within")
+        opener (str within)
+        governed (str act)
+        confidence (case rule "R3" "high" "R5" "medium" "R4" "low" "R1" "low" "OPEN" "high" "low")]
+    {:hx/id (str "hx-xiang-scope-" (sha1-hex (str opener "|" governed "|" relation)))
+     :hx/type "xiang/scope"
+     :hx/endpoints [opener governed]
+     :hx/props {:roles {:opener opener :governed governed}
+                :relation relation
+                :status "proposed"
+                :record (str record-id)
+                :labeller "rule"
+                :confidence confidence
+                :label-set (str "scope-rules/" scope-rules/version)
+                :move (str (name (or (:kind (get by-id act)) :unknown)) "/rule")}}))
+
+(defn- post-scope-edges!
+  "Best-effort persistence of the classical scope projection.
+
+  The callback is the service's already-configured hyperedge writer. A 409
+  is the durable idempotency acknowledgement, not a turn failure."
+  [svc record-id acts]
+  (when-let [post! (cfg svc :post-hyperedge!)]
+    (try
+      (let [record (ts/read-record (cfg svc :store) record-id)
+            by-id (into {} (map (juxt :id identity) acts))]
+        (doseq [edge (map #(scope-hyperedge record-id by-id %)
+                          (scope-rules/scope-for-turn acts (:turn_id record)))]
+          (let [result (post! edge)
+                status (:status result)]
+            (when-not (or (:ok result)
+                          (and status (<= 200 status 299))
+                          (= 409 status))
+              (set-health! svc nil (str (:hx/id edge) ": scope hyperedge rejected"))))))
+      (catch Throwable t
+        (set-health! svc nil
+                     (str record-id ": scope hyperedges failed: " (.getMessage t)))))))
+
+(defn- settled-acts [svc record-id]
+  (let [store (cfg svc :store)
+        record (ts/read-record store record-id)]
+    (->> (ts/list-records store :session-id (:session_id record) :limit 50)
+         (keep (fn [{rid :id r :record}]
+                 (let [status (:analysis_status r)]
+                   (when (or (contains? #{"analyzed" "drafted"} status)
+                             (and (= "declared" status)
+                                  (contains? #{"agent" "system"} (:origin r))))
+                     {:record r :record-id rid
+                      :reading (if (= "analyzed" status)
+                                 (or (ts/read-analysis store rid) {})
+                                 {:sentences []})
+                      :reply (or (:reply_text r) "")
+                      :commits (turn-acts/happened-commits (:happened_summary r))}))))
+         (sort-by #(get-in % [:record :created_at]))
+         vec
+         turn-acts/session-acts)))
+
 (defn- settle-evidence!
   "Write settled turn ID as evidence, off the caller's path. The packet
    should carry both the reading and the happened summary, so a turn whose
@@ -307,7 +375,9 @@
         write! (fn []
                  ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
                   #(append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
-                                     (cfg svc :store-busy-delays))))]
+                                     (cfg svc :store-busy-delays)))
+                 (when (= :analyzed how)
+                   (post-scope-edges! svc id (settled-acts svc id))))]
     (if (:happened_summary (ts/read-record store id))
       (do (write!)
           ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))

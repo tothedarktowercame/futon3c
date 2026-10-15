@@ -584,6 +584,38 @@
       (is (some #{:xiang-turn-analyzed} (:tags e)))
       (is (= "sess-1" (:session-id e))))))
 
+(deftest an-analysed-turn-posts-classical-scope-hyperedges
+  (let [edges (atom [])
+        h (harness {:post-hyperedge! (fn [edge]
+                                       (swap! edges conj edge)
+                                       {:status 201})})
+        {:keys [id record]} (turn! h)
+        _ (svc/publish-analysis! (:svc h) id (analysis-for record) {})]
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    (is (seq @edges) "settling an analyzed turn emits its scope links")
+    (is (every? #(and (= "xiang/scope" (:hx/type %))
+                      (= 2 (count (:hx/endpoints %)))
+                      (= "rule" (get-in % [:hx/props :labeller]))
+                      (= "proposed" (get-in % [:hx/props :status]))
+                      (str/starts-with? (get-in % [:hx/props :label-set])
+                                        "scope-rules/"))
+                @edges))))
+
+(deftest scope-hyperedge-duplicates-and-failures-do-not-block-settlement
+  (let [calls (atom 0)
+        h (harness {:post-hyperedge! (fn [_]
+                                       (swap! calls inc)
+                                       {:status 409})})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    (is (pos? @calls) "a known hyperedge is still submitted")
+    (is (= "analyzed" (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id))))
+    (let [failed (harness {:post-hyperedge! (fn [_] (throw (ex-info "store down" {})))})
+          {:keys [id record]} (turn! failed)]
+      (svc/publish-analysis! (:svc failed) id (analysis-for record) {})
+      (is (= "analyzed" (:analysis_status (ts/read-record (get-in (:svc failed) [:config :store]) id)))))))
+
 (deftest happened-then-reading-is-also-one-entry-with-both
   (let [appended (atom [])
         h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
