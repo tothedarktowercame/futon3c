@@ -7,7 +7,7 @@
             [futon3c.logic.xiang :as lx]
             [futon3c.xiang.turn-acts :as turn-acts]))
 
-(def version "2026-10-15.1")
+(def version "2026-10-15.2")
 
 (def ^:private framing-kinds
   #{:constrain :propose :ask-action :prioritize :redirect})
@@ -33,18 +33,20 @@
 (defn within-edges
   "Apply the mined R3/R5/R4/R1 precedence to ACTS in stream order.
 
-  R3 is the nearest earlier kernel opener. R5 is a non-first reply paragraph
-  governed by that turn's first reply paragraph. R4 is the nearest earlier
-  framing fragment. R1 is the first fragment of the act's turn. The first act
-  in the supplied stream, and a first fragment with no earlier candidate, have
-  no edge rather than a self-edge."
+  R3 is the nearest earlier kernel opener in the same turn. R5 is a non-first
+  reply paragraph governed by that turn's first reply paragraph. R4 is the
+  nearest earlier framing fragment in the same turn. R1 is the first fragment
+  of the act's turn. All four look inside the act's own turn, as the mined
+  rules did (within_rules.py searches the record's own act order; 95.8% of
+  labelled targets are in the same record): a cross-turn opener never
+  governs, so the first act of a turn has no edge rather than a self-edge."
   [acts]
   (let [acts (vec acts)]
     (vec
      (keep identity
            (map-indexed
             (fn [idx act]
-              (let [earlier (subvec acts 0 idx)
+              (let [earlier (filterv #(same-turn? % act) (subvec acts 0 idx))
                     opener (last (filter #(lx/port-act? %) earlier))
                     first-reply (when (reply? act)
                                   (->> earlier
@@ -58,7 +60,7 @@
                                                        (fragment? %)) acts))]
                 (cond
                   opener (edge act opener "R3")
-                  (and first-reply (pos? (long (reply-index act))))
+                  (and first-reply (pos? (long (reply-index (:id act)))))
                   (edge act first-reply "R5")
                   framing (edge act framing "R4")
                   (and first-fragment (not= (:id first-fragment) (:id act)))

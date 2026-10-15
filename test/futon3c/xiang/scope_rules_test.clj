@@ -24,8 +24,15 @@
                    :rule "R3" :opener-kind :propose} %)
               edges))
     (is (not-any? #(= "claude-18-turn-87-f-s1-0" (:act %)) edges))
-    (is (some #(and (= "fixture-turn-2-f-s1-0" (:act %))
-                    (= "R3" (:rule %))) edges))
+    ;; a turn's first fragment is not governed by the previous turn's opener:
+    ;; the rules look inside the act's own turn, as the mined rules did
+    (is (not-any? #(= "fixture-turn-2-f-s1-0" (:act %)) edges))
+    (is (some #(= {:act "fixture-turn-2-r-0" :within "fixture-turn-2-f-s1-0"
+                   :rule "R4" :opener-kind :prioritize} %)
+              edges))
+    (is (some #(= {:act "fixture-turn-2-r-1" :within "fixture-turn-2-r-0"
+                   :rule "R5" :opener-kind :report} %)
+              edges))
     (is (= [{:act "isolated-f-s2-0" :within "isolated-f-s1-0"
              :rule "R1" :opener-kind :explore}]
            (scopes/within-edges isolated)))))
