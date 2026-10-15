@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the live 象 scope ledger every five minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=wip-scope-ledger.service
+
+[Install]
+WantedBy=timers.target

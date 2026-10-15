@@ -1,0 +1,9 @@
+[Unit]
+Description=Publish the live 象 scope ledger
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/joe/code/futon3c
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+TimeoutStartSec=900
+ExecStart=/usr/bin/python3 -I /home/joe/code/futon3c/scripts/scope_ledger.py --agent claude-16
