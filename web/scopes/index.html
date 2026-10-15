@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scope view</title>
+  <style>
+    :root { color-scheme: light; font: 15px/1.45 system-ui, sans-serif; }
+    body { margin: 0; background: #f5f4ef; color: #222; }
+    #scopes { max-width: 1500px; margin: auto; padding: 1.25rem; }
+    .scope-controls { display: flex; gap: 2rem; align-items: start; margin-bottom: 1rem; }
+    .scope-layers { display: flex; gap: 1rem; border: 1px solid #bbb; background: white; }
+    .scope-layer-toggle { display: flex; align-items: center; gap: .35rem; }
+    .scope-swatch { width: .9rem; height: .9rem; border: 1px solid #777; }
+    .ink-c { background: cyan; } .ink-m { background: magenta; } .ink-y { background: yellow; }
+    .scope-legend { max-width: 54rem; } .scope-legend dl { columns: 2; }
+    .scope-legend dt { font-weight: 700; break-after: avoid; }
+    .scope-legend dt.undefined::after { content: " · undefined"; color: #a21; }
+    .scope-legend dd { margin: 0 0 .55rem; break-inside: avoid; }
+    .scope-columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); gap: 1rem; }
+    .scope-segment { background: white; border: 1px solid #ccc; margin: 0 0 1rem; padding: .8rem; }
+    .scope-segment-label { margin: 0 0 .55rem; font-size: .9rem; color: #555; }
+    .scope-segment-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(13rem, .55fr); gap: .9rem; }
+    .scope-text { white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
+    .scope-piece { transition: outline .12s; } .scope-mark { font: 700 .78rem system-ui; margin-right: .15rem; }
+    [data-span].lit { outline: 2px solid #111; outline-offset: 1px; }
+    .scope-notes { margin: 0; padding-left: 1.5rem; font-size: .8rem; }
+    .scope-note { padding: .25rem; margin-bottom: .4rem; } .scope-note p { margin: 0 0 .2rem; }
+    .scope-edge { display: block; border: 0; padding: .12rem 0; color: #0645ad; background: none; text-align: left; cursor: pointer; }
+    .scope-edge.stub { color: #777; cursor: default; }
+    .scope-side .scope-segment { font-size: .78rem; } .scope-side .scope-segment-body { display: block; }
+    .scope-side .scope-notes { margin-top: .6rem; }
+    @media (max-width: 850px) { .scope-columns, .scope-segment-body { grid-template-columns: 1fr; } .scope-controls { display: block; } }
+  </style>
+</head>
+<body>
+  <div id="scopes">Loading…</div>
+  <script type="module">
+    import { renderScopes } from "./scopes.js";
+    const host = document.querySelector("#scopes");
+    try {
+      const response = await fetch("./fixtures/claude-16-turn-162.json");
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      renderScopes(await response.json(), host);
+    } catch (error) {
+      host.textContent = `Could not load scope data: ${error}`;
+    }
+  </script>
+</body>
+</html>
