@@ -23,6 +23,7 @@
 (require 'agent-turn-origin)
 (require 'json)
 (require 'cl-lib)
+(require 'seq)
 (require 'subr-x)
 (require 'agent-chat nil t)   ; for agent-chat--session-id / agent-chat--on-turn-end (soft)
 
@@ -1014,6 +1015,13 @@ Use the real inserted span, including any agent-chat text transformations."
             (setq session-mode--last-operator-region
                   (cons (copy-marker (+ (marker-position start) (length name) 2) t)
                         (copy-marker (- (marker-position agent-chat--prompt-marker) 2) nil)))
+            (when (and (boundp 'agent-chat--current-turn-id)
+                       agent-chat--current-turn-id)
+              (push (cons agent-chat--current-turn-id
+                          (cons "operator" session-mode--last-operator-region))
+                    session-mode--turn-text-regions)
+              (setq session-mode--turn-text-regions
+                    (seq-take session-mode--turn-text-regions 6)))
             ;; The previous turn keeps its underlines: they move to the past
             ;; list instead of being deleted, so an earlier turn can still be
             ;; cited by its marks (Joe, 2026-09-29).
@@ -1027,6 +1035,26 @@ Use the real inserted span, including any agent-chat text transformations."
                         ;; agent-chat appends two newlines after message text.
                         (- (marker-position agent-chat--prompt-marker) 2) nil)))
             (session-mode-turn-tags-refresh))
+        (set-marker start nil)))))
+
+(defun session-mode--tag-agent-message (original name text)
+  "Record the exact inserted assistant TEXT region for its answered turn."
+  (if (or (equal name agent-chat-user-speaker) (equal name "system"))
+      (funcall original name text)
+    (let ((start (copy-marker agent-chat--prompt-marker nil)))
+      (unwind-protect
+          (prog1 (funcall original name text)
+            (when (and (boundp 'agent-chat--current-turn-id)
+                       agent-chat--current-turn-id
+                       (markerp agent-chat--prompt-marker))
+              (let ((beg (copy-marker (+ (marker-position start) (length name) 2) t))
+                    (end (copy-marker (- (marker-position agent-chat--prompt-marker) 2) nil)))
+                (push (cons agent-chat--current-turn-id
+                            (cons "agent" (cons beg end)))
+                      session-mode--turn-text-regions)
+                (setq session-mode--last-agent-region (cons beg end)
+                      session-mode--turn-text-regions
+                      (seq-take session-mode--turn-text-regions 6)))))
         (set-marker start nil)))))
 
 (defun session-mode-describe-turn-intent ()
@@ -1772,6 +1800,8 @@ to talk off the record."
   "Saved operator sentence labels; independent of inferred phrase cues.")
 (defvar-local session-mode--last-operator-text nil)
 (defvar-local session-mode--last-operator-region nil)
+(defvar-local session-mode--turn-text-regions nil
+  "Recent ((TURN SIDE BEG-MARKER . END-MARKER)) transcript regions.")
 
 (defun session-mode--refresh-sent-tags ()
   "Reclassify the captured latest operator passage without changing its text."
@@ -1878,7 +1908,8 @@ The directive never starts an agent turn and never sends a preceding draft."
 (with-eval-after-load 'agent-chat
   (advice-add 'agent-chat-send-input :around #'session-mode--consume-tag-command)
   (advice-add 'agent-chat-init-buffer :after #'session-mode--tags-after-init)
-  (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message))
+  (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message)
+  (advice-add 'agent-chat-insert-message :around #'session-mode--tag-agent-message))
 
 (require 'session-turn-analysis)
 

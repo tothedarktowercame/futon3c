@@ -25,6 +25,7 @@
 (defvar-local session-mode--last-operator-region nil)
 (defvar-local xiang-scope-overlay--overlays nil)
 (defvar-local xiang-scope-overlay--parents nil)
+(defvar-local xiang-scope-overlay--missing 0)
 
 (defun xiang-scope-overlay--delete ()
   (mapc #'delete-overlay xiang-scope-overlay--overlays)
@@ -32,7 +33,9 @@
         xiang-scope-overlay--parents nil))
 
 (defun xiang-scope-overlay--regions ()
-  (or (and (fboundp 'session-mode--scope-text-regions)
+  (or (and (boundp 'session-mode--turn-text-regions)
+           session-mode--turn-text-regions)
+      (and (fboundp 'session-mode--scope-text-regions)
            (session-mode--scope-text-regions))
       (delq nil (list (and session-mode--last-operator-region
                            (cons "operator" session-mode--last-operator-region))
@@ -47,9 +50,18 @@
                  (<= (+ (marker-position beg) offset) (marker-position end)))
         (+ (marker-position beg) offset)))))
 
+(defun xiang-scope-overlay--act-turn (id)
+  (when (string-match "\\`\\(.*\\)-[fr]-" id)
+    (match-string 1 id)))
+
 (defun xiang-scope-overlay--act-position (act regions)
   (let* ((side (alist-get 'side act nil nil #'equal))
-         (region (cdr (assoc side regions)))
+         (turn (xiang-scope-overlay--act-turn (alist-get 'id act)))
+         (entry (cl-find-if (lambda (r)
+                              (and (equal turn (car r))
+                                   (equal side (cadr r))))
+                            regions))
+         (region (and entry (cddr entry)))
          (start (alist-get 'start act)))
     (xiang-scope-overlay--position region start)))
 
@@ -62,10 +74,11 @@
          (edges (alist-get 'edges payload))
          (regions (xiang-scope-overlay--regions))
          (by-id (make-hash-table :test #'equal)))
+    (setq xiang-scope-overlay--missing 0)
     (setq xiang-scope-overlay--parents (make-hash-table :test #'equal))
     (dolist (act acts) (puthash (alist-get 'id act) act by-id))
     (dolist (act acts)
-      (when-let ((pos (xiang-scope-overlay--act-position act regions)))
+      (if-let ((pos (xiang-scope-overlay--act-position act regions)))
         (let* ((id (alist-get 'id act))
                (edge (cl-find id edges :key (lambda (e) (alist-get 'act e)) :test #'equal))
                (parent (and edge (gethash (alist-get 'within edge) by-id)))
@@ -84,13 +97,16 @@
           (when (equal "OPEN" (alist-get 'rule edge))
             (overlay-put ov 'face 'xiang-scope-open-face))
           (push ov xiang-scope-overlay--overlays)
-          (when parent (puthash id (alist-get 'within edge) xiang-scope-overlay--parents)))))))
+          (when parent (puthash id (alist-get 'within edge) xiang-scope-overlay--parents))))
+        (setq xiang-scope-overlay--missing (1+ xiang-scope-overlay--missing))))
+    (when (> xiang-scope-overlay--missing 0)
+      (message "%d acts had no region" xiang-scope-overlay--missing)))
 
-(defun xiang-scope-overlay--url ()
+(defun xiang-scope-overlay--url (&optional turn)
   (format "%s/api/alpha/xiang/scopes?session=%s&turn=%s"
           (string-remove-suffix "/" xiang-scope-overlay-base-url)
           (url-hexify-string agent-chat--session-id)
-          (url-hexify-string (or agent-chat--current-turn-id ""))))
+          (url-hexify-string (or turn agent-chat--current-turn-id ""))))
 
 (defun xiang-scope-overlay--callback (buffer status)
   (let ((body (unless (plist-get status :error)
@@ -111,12 +127,26 @@
   "Asynchronously refresh scope overlays for the current turn."
   (interactive)
   (xiang-scope-overlay--delete)
-  (let ((buffer (current-buffer)))
-    (condition-case err
-        (funcall xiang-scope-overlay-fetch-function
-                 (xiang-scope-overlay--url)
-                 (apply-partially #'xiang-scope-overlay--callback buffer))
-      (error (message "xiang scope fetch failed: %s" (error-message-string err))))))
+  (let* ((buffer (current-buffer))
+         (current (or agent-chat--current-turn-id ""))
+         (previous (cl-loop for r in (xiang-scope-overlay--regions)
+                            for turn = (car r)
+                            unless (equal turn current) return turn)))
+    (cl-labels ((fetch (turn &optional fallback)
+                  (condition-case err
+                      (funcall xiang-scope-overlay-fetch-function
+                               (xiang-scope-overlay--url turn)
+                               (lambda (status)
+                                 (if (and fallback (plist-get status :error)
+                                          (string-match-p "404"
+                                                          (format "%s" (plist-get status :error))))
+                                     (progn
+                                       (message "xiang scope 404; falling back to previous turn %s" fallback)
+                                       (fetch fallback))
+                                   (xiang-scope-overlay--callback buffer status))))
+                    (error (message "xiang scope fetch failed: %s"
+                                    (error-message-string err))))))
+      (fetch current previous))))
 
 (defun xiang-scope-overlay-jump-to-parent ()
   "Jump to the governing act at point." 
