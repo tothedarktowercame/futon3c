@@ -41,9 +41,10 @@
   (reg/register-agent!
    {:agent-id {:id/value "war-machine" :id/type :apparatus}
     :type :wm :invoke-fn nil :capabilities [] :metadata {:apparatus? true}})
-  (reg/register-agent!
-   {:agent-id {:id/value "rehearsal-reviewer" :id/type :agent}
-    :type :agent :invoke-fn (fn [_] nil) :capabilities [] :metadata {}}))
+  (doseq [seat ["wm-author" "wm-reviewer"]]
+    (reg/register-agent!
+     {:agent-id {:id/value seat :id/type :agent}
+      :type :agent :invoke-fn (fn [_] nil) :capabilities [] :metadata {}})))
 
 (defn- fixture-repo [run-out]
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
@@ -53,6 +54,7 @@
         body (str "(ns futon2.aif.full-loop-runner (:require [clojure.edn :as edn]))\n"
                   "(defn config [x] x)\n"
                   "(defn run-opportunity! [_]\n"
+                  "  (when-let [admit (:readiness-admitted-fn _)] (admit))\n"
                   "  (let [run (assoc (edn/read-string (slurp " (pr-str fixture-run) "))\n"
                   "                   :startedAt (str (java.time.Instant/now))\n"
                   "                   :click/id (:click-id _))]\n"
@@ -107,13 +109,15 @@
     (binding [service/*resolve-var* resolver
               service/*roster-fn*
               (fn [_]
-                {:rehearsal-reviewer {:status :idle :invoke-ready? true}})
+                {:wm-author {:status :idle :invoke-ready? true}
+                 :wm-reviewer {:status :idle :invoke-ready? true}})
               service/*click-run-binding-dir* binding-dir
               budget/*ledger-path* (str binding-dir "/ordinary.jsonl")]
       (let [h (handler)
             observe! (resolve 'checks.wm-click-resource-observer/observe!)]
         (reset! observed-receipt
-                (observe! {:payload {:reviewer "rehearsal-reviewer"}
+                (observe! {:payload {:author "wm-author"
+                                     :reviewer "wm-reviewer"}
                            :post-click #(json/parse-string
                                          (:body (h {:request-method :post
                                                     :uri "/api/alpha/wm/click"
@@ -128,7 +132,8 @@
                            ;; 25 ms preserves the observer's finite 600-poll
                            ;; bound while allowing a 15-second entry window.
                            :sleep-ms (fn [_] (Thread/sleep 25))})))
-      (is (= "clean" (:resource-status @observed-receipt))))
+      (is (= "clean" (:resource-status @observed-receipt))
+          (pr-str {:observer @observed-receipt :service (service/status)})))
     (is (.isFile (io/file run-out)))
     (is (= :grounded-no-change
            (get-in (service/status) [:last-result :outcome])))
