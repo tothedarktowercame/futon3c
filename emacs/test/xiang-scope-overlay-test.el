@@ -80,6 +80,33 @@
         (should (string-match-p "within R3" (buffer-string)))
         (should (string-match-p "\"alpha\"" (buffer-string)))))))
 
+(ert-deftest xiang-scope-overlay-agent-acts-are-found-by-their-words ()
+  "The buffer shows tool-call blocks and a speaker prefix the record does not,
+so an agent paragraph is placed by its first words, not by offset."
+  (with-temp-buffer
+    (insert "claude: Narration before the tools.\n\n[Bash] cd somewhere && run a long command\n  output line one\n  output line two\n\n")
+    (insert "㊢ (what was done) The first marked paragraph of the reply.\n\n")
+    (insert "[Bash] another tool call\n\n")
+    (insert "㊬ (checked) The second marked paragraph, after a tool block.\n\n")
+    (let* ((beg (copy-marker 1 t)) (end (copy-marker (point-max) nil))
+           (entries (list (cons "seat-turn-4" (cons "agent" (cons beg end)))))
+           (act-a '((id . "seat-turn-4-r-0") (side . "agent") (start . 40)
+                    (text . "(what was done) The first marked paragraph of the reply.")))
+           (act-b '((id . "seat-turn-4-r-1") (side . "agent") (start . 98)
+                    (text . "(checked) The second marked paragraph, after a tool block."))))
+      (should (equal "(what was done) The first marked par"
+                     (buffer-substring-no-properties
+                      (xiang-scope-overlay--act-position act-a entries)
+                      (+ (xiang-scope-overlay--act-position act-a entries) 36))))
+      (should (equal "(checked) The second marked paragrap"
+                     (buffer-substring-no-properties
+                      (xiang-scope-overlay--act-position act-b entries)
+                      (+ (xiang-scope-overlay--act-position act-b entries) 36))))
+      ;; the offset fallback is still there for a text that cannot be found
+      (should (integerp (xiang-scope-overlay--act-position
+                         '((id . "seat-turn-4-r-2") (side . "agent") (start . 3) (text . "zz"))
+                         entries))))))
+
 (ert-deftest xiang-scope-overlay-404-schedules-one-retry-for-the-current-turn ()
   "The landing refresh can race the route; after the fallback, one retry is
 scheduled for the current turn and that retry schedules none."

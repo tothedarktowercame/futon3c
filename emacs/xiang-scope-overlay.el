@@ -71,6 +71,33 @@ nil disables the retry (the retry itself runs with it nil, so it is one-shot).")
           (setq remaining (- remaining length 2)))))
       nil)))
 
+(defun xiang-scope-overlay--search-key (text)
+  "The first line of TEXT, up to 40 characters, as a literal search key."
+  (let ((line (car (split-string (or text "") "\n" t))))
+    (when line
+      (let ((key (string-trim line)))
+        (when (>= (length key) 8)
+          (substring key 0 (min 40 (length key))))))))
+
+(defun xiang-scope-overlay--find-text (text entries)
+  "Position of TEXT's first words inside the buffer spans of ENTRIES, or nil.
+The record's reply_text is the assistant segments joined by blank lines;
+the buffer shows the same segments with tool-call blocks and a speaker
+prefix between and before them (turn 151: 2,047 chars recorded, 5,762 in
+the buffer), so offsets cannot be trusted across them and the paragraph is
+found by its own words instead."
+  (when-let ((key (xiang-scope-overlay--search-key text)))
+    (catch 'found
+      (dolist (entry entries)
+        (let ((beg (marker-position (car (cddr entry))))
+              (end (marker-position (cdr (cddr entry)))))
+          (when (and beg end (< beg end))
+            (save-excursion
+              (goto-char beg)
+              (when (search-forward key end t)
+                (throw 'found (match-beginning 0)))))))
+      nil)))
+
 (defun xiang-scope-overlay--act-position (act regions)
   (let* ((side (alist-get 'side act nil nil #'equal))
          (turn (xiang-scope-overlay--act-turn (alist-get 'id act)))
@@ -80,7 +107,9 @@ nil disables the retry (the retry itself runs with it nil, so it is one-shot).")
                                     regions))
          (start (alist-get 'start act)))
     (if (equal side "agent")
-        (and entries (xiang-scope-overlay--agent-position start entries))
+        (and entries
+             (or (xiang-scope-overlay--find-text (alist-get 'text act) entries)
+                 (xiang-scope-overlay--agent-position start entries)))
       (xiang-scope-overlay--position (and (car entries) (cddr (car entries))) start))))
 
 (defun xiang-scope-overlay--parent-text (id acts)
