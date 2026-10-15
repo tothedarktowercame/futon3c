@@ -56,6 +56,30 @@
                    xiang-scope-overlay--overlays)))
       (kill-buffer buffer))))
 
+(ert-deftest xiang-scope-overlay-describe-and-list-read-without-hover ()
+  "A terminal Emacs has no hover: the echo and the list carry the same text."
+  (with-temp-buffer
+    (insert "alpha beta gamma")
+    (let ((ov (make-overlay 1 6)))
+      (overlay-put ov 'help-echo "propose · within R3 → the parent act")
+      (overlay-put ov 'xiang-scope-act "t-f-s1-0")
+      (setq-local xiang-scope-overlay--overlays (list ov))
+      (goto-char 3)
+      (let ((echoed nil))
+        (cl-letf (((symbol-function 'message)
+                   (lambda (fmt &rest args) (setq echoed (apply #'format fmt args)))))
+          (xiang-scope-overlay-describe)
+          (should (equal "propose · within R3 → the parent act" echoed))
+          (goto-char 10)
+          (xiang-scope-overlay-describe)
+          (should (equal "No scope act at point" echoed))))
+      (cl-letf (((symbol-function 'display-buffer) #'ignore))
+        (xiang-scope-overlay-list))
+      (with-current-buffer "*xiang scopes*"
+        (should (string-match-p "t-f-s1-0" (buffer-string)))
+        (should (string-match-p "within R3" (buffer-string)))
+        (should (string-match-p "\"alpha\"" (buffer-string)))))))
+
 (ert-deftest xiang-scope-overlay-refresh-removes-duplicates-and-errors-cleanly ()
   (let ((buffer (xiang-scope-overlay-test--setup)) messages)
     (unwind-protect

@@ -201,9 +201,64 @@
           (goto-char (overlay-start ov)))
       (message "No governing scope act at point"))))
 
+(defun xiang-scope-overlay--at-point ()
+  "The scope overlay under point, or nil."
+  (cl-find-if (lambda (ov)
+                (and (overlay-buffer ov)
+                     (<= (overlay-start ov) (point))
+                     (< (point) (overlay-end ov))))
+              xiang-scope-overlay--overlays))
+
+(defun xiang-scope-overlay-describe ()
+  "Say in the echo area what the act at point is and what governs it.
+The same text the GUI shows on hover; a terminal Emacs has no hover
+(Joe, 2026-10-15), so this is the way to read an underline there."
+  (interactive)
+  (if-let ((ov (xiang-scope-overlay--at-point)))
+      (message "%s" (overlay-get ov 'help-echo))
+    (message "No scope act at point")))
+
+(defvar-local xiang-scope-overlay--last-echoed nil)
+
+(defun xiang-scope-overlay--echo-on-move ()
+  "Echo the act under point when point enters a new scope overlay.
+Silent while the minibuffer is active or when point leaves an overlay,
+so it never fights another echo."
+  (when (and xiang-scope-overlay-mode (not (minibufferp)))
+    (let ((ov (xiang-scope-overlay--at-point)))
+      (unless (eq ov xiang-scope-overlay--last-echoed)
+        (setq xiang-scope-overlay--last-echoed ov)
+        (when (and ov (not (current-message)))
+          (message "%s" (overlay-get ov 'help-echo)))))))
+
+(defun xiang-scope-overlay-list ()
+  "List this turn's scope acts and edges as plain text in a side buffer."
+  (interactive)
+  (let ((rows (mapcar (lambda (ov)
+                        (list (overlay-start ov)
+                              (overlay-get ov 'xiang-scope-act)
+                              (overlay-get ov 'help-echo)
+                              (buffer-substring-no-properties
+                               (overlay-start ov)
+                               (min (overlay-end ov) (+ (overlay-start ov) 50)))))
+                      (seq-filter #'overlay-buffer xiang-scope-overlay--overlays)))
+        (source (current-buffer)))
+    (with-current-buffer (get-buffer-create "*xiang scopes*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (format "Scope acts in %s (%d), in buffer order. Each line: act id, then kind · within <rule> → governing act, then the act's first words.\n\n"
+                        (buffer-name source) (length rows)))
+        (dolist (row (sort rows (lambda (a b) (< (car a) (car b)))))
+          (insert (format "%s\n    %s\n    \"%s\"\n" (nth 1 row) (nth 2 row)
+                          (replace-regexp-in-string "\n" " " (nth 3 row)))))
+        (special-mode)))
+    (display-buffer "*xiang scopes*")))
+
 (defvar xiang-scope-overlay-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-^") #'xiang-scope-overlay-jump-to-parent)
+    (define-key map (kbd "C-c C-?") #'xiang-scope-overlay-describe)
+    (define-key map (kbd "C-c C-|") #'xiang-scope-overlay-list)
     map))
 
 ;;;###autoload
@@ -212,7 +267,10 @@
   :lighter " scope"
   :keymap xiang-scope-overlay-mode-map
   (if xiang-scope-overlay-mode
-      (xiang-scope-overlay-refresh)
+      (progn
+        (add-hook 'post-command-hook #'xiang-scope-overlay--echo-on-move nil t)
+        (xiang-scope-overlay-refresh))
+    (remove-hook 'post-command-hook #'xiang-scope-overlay--echo-on-move t)
     (xiang-scope-overlay--delete)))
 
 (provide 'xiang-scope-overlay)
