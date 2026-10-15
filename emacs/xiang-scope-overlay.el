@@ -163,7 +163,9 @@ reply bound)."
                  recorded-length (length reply-text))))
     (setq xiang-scope-overlay--parents (make-hash-table :test #'equal))
     (dolist (act acts) (puthash (alist-get 'id act) act by-id))
-    (dolist (act acts)
+    (dolist (act (cl-remove-if (lambda (a) (string-match-p "-c-" (or (alist-get 'id a) "")))
+                               acts))
+      ;; commit acts (<turn>-c-<sha>) have no text in the buffer to mark
       (if-let ((pos (xiang-scope-overlay--act-position act regions)))
         (let* ((id (alist-get 'id act))
                (edge (cl-find id edges :key (lambda (e) (alist-get 'act e)) :test #'equal))
