@@ -6841,11 +6841,15 @@
                               :message "prompt is required"})
 
           :else
-          (let [aid (str agent-id)]
+          (let [aid (str agent-id)
+                !own-sinks (atom #{})]
             (hk/as-channel
              request
              {:on-close (fn [_channel _status]
-                          (reg/clear-invoke-event-sink! aid))
+                          ;; Clear only this channel's own sinks; another
+                          ;; stream may hold the agent's sink by now.
+                          (doseq [f @!own-sinks]
+                            (reg/clear-invoke-event-sink-if! aid f)))
               :on-open
               (fn [channel]
                 (let [turn-id (str (or (:turn-id payload) (get payload "turn-id")
@@ -6859,6 +6863,7 @@
                                       (stamp-turn-event turn-id event)) "\n")
                                 false)
                               (catch Throwable _)))
+                  _ (swap! !own-sinks conj sink-fn)
                   caller (or (some-> payload :caller str)
                              (some-> payload (get "caller") str)
                              "http-caller")
@@ -6948,6 +6953,17 @@
                   ;; Tell the operator what the turn is waiting on (if anything).
                   (when-let [ev (queued-turn-activity aid turn-id)]
                     (sink-fn ev))
+                  ;; The turn ahead may have lost its own stream (the client
+                  ;; timed out while the agent worked on). Show its progress
+                  ;; here until our turn starts; its terminal event stays out,
+                  ;; since a done on this channel would end OUR turn.
+                  (let [adopt-fn (fn [event]
+                                   (when-not (= "done" (str (:type event)))
+                                     (sink-fn event)))]
+                    (swap! !own-sinks conj adopt-fn)
+                    (when (reg/adopt-invoke-event-sink! aid adopt-fn)
+                      (sink-fn {:type "invoke.activity"
+                                :activity "attached to the agent's in-flight turn; this turn starts after it"})))
                   (catch clojure.lang.ExceptionInfo e
                     (sink-fn {:type "done" :ok false
                               :error (name (or (:reason (ex-data e)) :queue-refused))

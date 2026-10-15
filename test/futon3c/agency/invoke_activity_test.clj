@@ -89,3 +89,31 @@
              :activity "using bash"}]
            (mapv #(dissoc % :at) @events)))
     (is (string? (:at (first @events))))))
+
+(deftest orphaned-in-flight-turn-can-be-adopted-by-a-new-stream
+  ;; 2026-10-14: codex-68's REPL stream timed out at 61 min while the turn
+  ;; worked on; the old channel's close cleared the sink, and the operator's
+  ;; next stream saw nothing until the turn ended.
+  (register! "adopt-1")
+  (let [events (atom [])
+        adopt (fn [e] (swap! events conj e))]
+    (testing "an idle agent has no turn to adopt"
+      (is (false? (reg/adopt-invoke-event-sink! "adopt-1" adopt)))
+      (is (nil? (reg/get-invoke-event-sink "adopt-1"))))
+    (reg/update-agent! "adopt-1" :agent/status :invoking)
+    (testing "an invoking agent with no sink is adopted, and its activity flows to the new stream"
+      (is (true? (reg/adopt-invoke-event-sink! "adopt-1" adopt)))
+      (reg/update-invoke-activity! "adopt-1" "using bash again")
+      (is (= ["using bash again"] (mapv :activity @events))))
+    (testing "a second stream cannot take a sink that is already held"
+      (is (false? (reg/adopt-invoke-event-sink! "adopt-1" (fn [_]))))
+      (is (identical? adopt (reg/get-invoke-event-sink "adopt-1"))))))
+
+(deftest a-closing-stream-clears-only-its-own-sink
+  (register! "own-1")
+  (let [old-sink (fn [_]) new-sink (fn [_])]
+    (reg/set-invoke-event-sink! "own-1" new-sink)
+    (reg/clear-invoke-event-sink-if! "own-1" old-sink)
+    (is (identical? new-sink (reg/get-invoke-event-sink "own-1")))
+    (reg/clear-invoke-event-sink-if! "own-1" new-sink)
+    (is (nil? (reg/get-invoke-event-sink "own-1")))))

@@ -1758,6 +1758,36 @@
              (assoc m agent-id-val (dissoc a :agent/invoke-event-sink))
              m))))
 
+(defn clear-invoke-event-sink-if!
+  "Remove the agent's event sink only while it is still SINK-FN. A closing
+   stream must not strip a sink some other stream installed since."
+  [agent-id-val sink-fn]
+  (swap! !registry
+         (fn [m]
+           (let [a (get m agent-id-val)]
+             (if (and a (identical? sink-fn (:agent/invoke-event-sink a)))
+               (assoc m agent-id-val (dissoc a :agent/invoke-event-sink))
+               m)))))
+
+(defn adopt-invoke-event-sink!
+  "Install SINK-FN on an agent whose turn is in flight but has no sink, and
+   return true; otherwise change nothing and return false. That state arises
+   when the stream that started the turn has closed (the codex REPL's curl
+   gave up at 61 min while codex-68 worked on, 2026-10-14): the turn's events
+   then had nowhere to go until it ended."
+  [agent-id-val sink-fn]
+  (let [[before after]
+        (swap-vals! !registry
+                    (fn [m]
+                      (let [a (get m agent-id-val)]
+                        (if (and a
+                                 (= :invoking (:agent/status a))
+                                 (nil? (:agent/invoke-event-sink a)))
+                          (assoc m agent-id-val (assoc a :agent/invoke-event-sink sink-fn))
+                          m))))]
+    (and (not (identical? before after))
+         (identical? sink-fn (get-in after [agent-id-val :agent/invoke-event-sink])))))
+
 (defn- surface-projection-live?
   [entry]
   (let [updated-at ^Instant (:updated-at entry)]

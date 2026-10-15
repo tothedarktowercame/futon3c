@@ -81,6 +81,14 @@ Set to nil to disable and send raw user text."
   :type 'number
   :group 'codex-repl)
 
+(defcustom codex-repl-stream-max-time 21600
+  "Seconds before the invoke stream's curl gives up, or nil for no limit.
+The agent's turn runs on regardless; only this buffer stops hearing it.
+At the old 3660 s, supervised War Machine turns outlived the stream
+(codex-68, 2026-10-14) and their progress went nowhere."
+  :type '(choice (const :tag "No limit" nil) number)
+  :group 'codex-repl)
+
 (defcustom codex-repl-drawbridge-url "http://localhost:6768"
   "Drawbridge REPL URL for direct registry access."
   :type 'string
@@ -3971,9 +3979,13 @@ CALLBACK receives the final response text."
 	           (make-process
             :name "codex-repl-stream"
             :buffer outbuf
-            :command (list "curl" "-N" "-sS" "--max-time" "3660"
-                           "-H" "Content-Type: application/json"
-                           "-d" json-body url)
+            :command (append
+                      (list "curl" "-N" "-sS")
+                      (when codex-repl-stream-max-time
+                        (list "--max-time"
+                              (number-to-string codex-repl-stream-max-time)))
+                      (list "-H" "Content-Type: application/json"
+                            "-d" json-body url))
             :noquery t
             :connection-type 'pipe
 	            :filter
