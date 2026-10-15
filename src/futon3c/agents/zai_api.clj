@@ -328,13 +328,66 @@
     :parameters (json-schema
                  {:target {:type "string" :description "Optional mission id, e.g. M-custom-harness. Defaults to the clocked mission."}
                   :limit {:type "integer" :description "Max items (default 20, max 100)."}}
-                 [])}])
+                 [])}
+   {:name "m40_asof"
+    :description "What memory SAID on a date (said time): facts said by then and not yet unsaid, optionally filtered by terms."
+    :parameters {:type "object"
+                 :properties {:date {:type "string"}
+                              :terms {:type "array" :items {:type "string"}}}
+                 :required ["date"]}}
+   {:name "m40_state"
+    :description "What was SO on a date (referent time, current knowledge): the latest statement per subject at or before the date."
+    :parameters {:type "object"
+                 :properties {:date {:type "string"}
+                              :terms {:type "array" :items {:type "string"}}}
+                 :required ["date"]}}
+   {:name "m40_history"
+    :description "The timeline of matching facts: said, stopped being said, said again."
+    :parameters {:type "object"
+                 :properties {:terms {:type "array" :items {:type "string"}}}
+                 :required ["terms"]}}
+   {:name "m40_find"
+    :description "Memories whose text matches the terms, by the store's text index."
+    :parameters {:type "object"
+                 :properties {:terms {:type "array" :items {:type "string"}}
+                              :limit {:type "integer"}}
+                 :required ["terms"]}}
+   {:name "m40_near"
+    :description "Rank facts by meaning (cosine over the embeddings sidecar); runs the futon3a venv as a subprocess."
+    :parameters {:type "object"
+                 :properties {:texts {:type "array" :items {:type "string"}}
+                              :k {:type "integer"}
+                              :asof {:type "string"}}
+                 :required ["texts"]}}
+   {:name "sorry_list"
+    :description "The open sorries (conflicts between memories), with both quotes."
+    :parameters {:type "object" :properties {}}}
+   {:name "sorry_discharge"
+    :description "Close a sorry: side a|b|both|neither with a note; the open period stays in history."
+    :parameters {:type "object"
+                 :properties {:id {:type "string"}
+                              :side {:type "string"}
+                              :note {:type "string"}}
+                 :required ["id" "side" "note"]}}
+   {:name "memory_assert"
+    :description "Append one body line to an existing memory file and ingest it, so the version joins this writer."
+    :parameters {:type "object"
+                 :properties {:project {:type "string"}
+                              :name {:type "string"}
+                              :line {:type "string"}}
+                 :required ["project" "name" "line"]}}])
+
+(def ^:private m40-tool-names
+  #{"m40_asof" "m40_state" "m40_history" "m40_find" "m40_near"
+    "sorry_list" "sorry_discharge" "memory_assert"})
 
 (def ^:private memory-family-tool-names
   "The memory write/read tools plus the two orientation tools; removable per
    :memory-mode for the M-custom-harness §8.4 comparison conditions."
   #{"memory_record" "memory_search" "memory_read" "tool_history" "evidence_graph" "pattern_memory"
-    "recent_coordination" "mission_context"})
+    "recent_coordination" "mission_context"
+    "m40_asof" "m40_state" "m40_history" "m40_find" "m40_near"
+    "sorry_list" "sorry_discharge" "memory_assert"})
 
 (def ^:private orientation-tool-names
   #{"boot_context" "repo_contract"})
@@ -563,6 +616,26 @@
          reverse
          vec)))
 
+(def ^:private m40-command
+  ["timeout" "--signal=TERM" "120s" "python3" "-I"
+   "/home/joe/code/minus40/scripts/m40_mcp.py" "--call"])
+
+(def ^:private m40-shell
+  "Indirect the process boundary so unit tests never start minus40 or its model."
+  (fn [argv] (apply shell/sh argv)))
+
+(defn- m40-call
+  [tool-name args]
+  (let [{:keys [exit out err]}
+        (m40-shell (conj m40-command tool-name (json/generate-string args)))]
+    (case exit
+      0 {:ok true :result out}
+      1 {:ok false :error out}
+      124 {:ok false :error (str "m40: " (if (str/blank? err)
+                                               "timed out after 120s"
+                                               err))}
+      {:ok false :error (str "m40: " err)})))
+
 (defn- execute-tool
   [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
                    evidence-store dispatch-id turn-id round profile session-id-fallback]
@@ -607,7 +680,12 @@
                      "then edit_file to append the rest piece by piece."))
 
           :else
-          (case name
+          (if (contains? m40-tool-names name)
+            (m40-call name (cond-> args
+                             (and (= "memory_assert" name)
+                                  (str/blank? (str (:project args))))
+                             (assoc :project (str agent-id))))
+            (case name
           "read_file"
           (tools/execute-tool backend :read
                               [(:path args)
@@ -818,7 +896,7 @@
               (catch Throwable t (fail (.getMessage t))))
             (fail "IRC sender is not configured"))
 
-          (fail (str "Unknown tool: " name))))
+          (fail (str "Unknown tool: " name)))))
         _pull-receipt
         (when (contains? pull-receipts/pull-tool-names name)
           (try

@@ -1,5 +1,7 @@
 (ns futon3c.agents.zai-api-test
-  (:require [clojure.java.shell :as shell]
+  (:require [cheshire.core :as json]
+            [clojure.java.shell :as shell]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.agents.zai-api :as zai]
@@ -460,6 +462,69 @@
     (is (identical? store (:evidence-store (first @captured))))
     (is (= "e-d11811de"
            (get-in executed [:result :result :items 0 :id])))))
+
+(def m40-tool-names
+  #{"m40_asof" "m40_state" "m40_history" "m40_find" "m40_near"
+    "sorry_list" "sorry_discharge" "memory_assert"})
+
+(defn- execute-m40
+  [agent-id tool-name args]
+  (#'zai/execute-tool
+   (tools/make-mock-backend)
+   {:agent-id agent-id :session-id-atom (atom "sid")
+    :evidence-store (atom {:entries {} :order []})}
+   {:id (str "tc-" tool-name)
+    :type "function"
+    :function {:name tool-name :arguments (json/generate-string args)}}))
+
+(deftest minus40-tools-are-advertised-as-one-memory-family
+  (let [full (set (map #(get-in % [:function :name]) (#'zai/openai-tools :full)))
+        files (set (map #(get-in % [:function :name]) (#'zai/openai-tools :files)))
+        none (set (map #(get-in % [:function :name]) (#'zai/openai-tools :none)))]
+    (is (every? full m40-tool-names))
+    (is (every? @#'zai/memory-family-tool-names m40-tool-names))
+    (is (empty? (set/intersection files m40-tool-names)))
+    (is (empty? (set/intersection none m40-tool-names)))))
+
+(deftest minus40-tool-dispatch-preserves-json-and-maps-process-results
+  (let [calls (atom [])
+        stub (fn [argv]
+               (swap! calls conj argv)
+               (case (count @calls)
+                 1 {:exit 0 :out "state result" :err ""}
+                 2 {:exit 1 :out "tool refused" :err "ignored"}
+                 3 {:exit 2 :out "ignored" :err "bad JSON"}
+                 4 {:exit 124 :out "" :err ""}))]
+    (with-redefs-fn {#'zai/m40-shell stub}
+      (fn []
+        (let [ok (execute-m40 "zai-1" "m40_state" {:date "2026-10-15"})
+              tool-error (execute-m40 "zai-1" "m40_find" {:terms ["x"]})
+              bad-call (execute-m40 "zai-1" "sorry_discharge"
+                                    {:id "s-1" :side "a" :note "resolved"})
+              timed-out (execute-m40 "zai-1" "sorry_list" {})
+              state-call (first @calls)]
+          (is (= ["m40_state" "{\"date\":\"2026-10-15\"}"]
+                 (take-last 2 state-call)))
+          (is (= {:ok true :result "state result"} (:result ok)))
+          (is (= {:ok false :error "tool refused"} (:result tool-error)))
+          (is (= {:ok false :error "m40: bad JSON"} (:result bad-call)))
+          (is (= {:ok false :error "m40: timed out after 120s"}
+                 (:result timed-out))))))))
+
+(deftest memory-assert-defaults-project-and-preserves-hook
+  (let [call (atom nil)]
+    (with-redefs-fn {#'zai/m40-shell
+                     (fn [argv]
+                       (reset! call argv)
+                       {:exit 0 :out "appended" :err ""})}
+      (fn []
+        (let [executed (execute-m40 "zai-7" "memory_assert"
+                                    {:name "note.md" :line "one fact"
+                                     :hook "retrieval cue"})
+              args (json/parse-string (last @call) true)]
+          (is (= "zai-7" (:project args)))
+          (is (= "retrieval cue" (:hook args)))
+          (is (= {:ok true :result "appended"} (:result executed))))))))
 
 (deftest round-commits-names-the-seats-own-commits-in-a-real-repo
   (let [dir (str (java.nio.file.Files/createTempDirectory
