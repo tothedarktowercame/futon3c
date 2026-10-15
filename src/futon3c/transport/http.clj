@@ -11860,6 +11860,30 @@
         (and mission (not (get-in agent [:agent/metadata :mission-id])))
         (assoc-in [:agent/metadata :mission-id] mission)))))
 
+(def ^:private xiang-scope-edge-base
+  "Where the classical scope edges are written. Every `xiang/scope` edge so
+   far (the lab batch, 2026-10-12..14) is in the minus40 scratch store, and
+   its readers (the resume brief footer, the walkthrough, the m40 tools) read
+   there; the live store has none. So the default is :7093, not :7073."
+  (or (System/getenv "FUTON3C_SCOPE_EDGE_BASE") "http://127.0.0.1:7093"))
+
+(defn- xiang-post-hyperedge!
+  "POST one hyperedge map to the scope-edge store. Returns {:status n :body s};
+   the turn service treats 2xx and 409 (known id) as success and never lets a
+   failure block settlement."
+  [edge]
+  (let [client (java.net.http.HttpClient/newHttpClient)
+        req (-> (java.net.http.HttpRequest/newBuilder
+                 (java.net.URI/create (str xiang-scope-edge-base "/api/alpha/hyperedge")))
+                (.timeout (java.time.Duration/ofSeconds 10))
+                (.header "Content-Type" "application/json")
+                (.header "Accept" "application/json")
+                (.POST (java.net.http.HttpRequest$BodyPublishers/ofString
+                        (json/generate-string edge)))
+                (.build))
+        resp (.send client req (java.net.http.HttpResponse$BodyHandlers/ofString))]
+    {:status (.statusCode resp) :body (.body resp)}))
+
 (defn- xiang-turn-service
   "The one service for this JVM, built on first use. Reload-safe: a
    Drawbridge reload of this namespace keeps the running scheduler."
@@ -11896,6 +11920,7 @@
                                      (xiang-ring->effect (handle-negation-interpretation (xiang-synthetic-request payload) config)))
                     :deliver-notice (fn [payload]
                                       (xiang-ring->effect (handle-turn-notice (xiang-synthetic-request payload))))
+                    :post-hyperedge! xiang-post-hyperedge!
                     ;; M-象-2000 step 2: every record and reading is also
                     ;; evidence. Duplicate appends are quiet; failures are
                     ;; retried by the service on its store-busy schedule.
