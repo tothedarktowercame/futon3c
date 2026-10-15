@@ -118,11 +118,15 @@
                                  'xiang-scope-agent-face))
           (overlay-put ov 'xiang-scope-act id)
           (overlay-put ov 'help-echo
-                       (format "%s · within %s → %s"
-                               (or (alist-get 'kind act) "act")
-                               (or (alist-get 'rule edge) "OPEN")
-                               (xiang-scope-overlay--parent-text
-                                (alist-get 'within edge) acts)))
+                       (if edge
+                           (format "%s · within %s → %s"
+                                   (or (alist-get 'kind act) "act")
+                                   (alist-get 'rule edge)
+                                   (xiang-scope-overlay--parent-text
+                                    (alist-get 'within edge) acts))
+                         ;; the turn's first act, or an act no rule reached
+                         (format "%s · no governing act in this turn"
+                                 (or (alist-get 'kind act) "act"))))
           (when (equal "OPEN" (alist-get 'rule edge))
             (overlay-put ov 'face 'xiang-scope-open-face))
           (push ov xiang-scope-overlay--overlays)
