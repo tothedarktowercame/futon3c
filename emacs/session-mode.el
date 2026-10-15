@@ -1051,6 +1051,33 @@ Use the real inserted span, including any agent-chat text transformations."
                       r))
                   session-mode--turn-text-regions))))
 
+(defun session-mode--record-streamed-segment (&rest _)
+  "Record the streamed reply segment about to be finalised as an agent region.
+Assistant replies are streamed between `agent-chat--streaming-origin' and
+`agent-chat--streaming-marker' and never pass through
+`agent-chat-insert-message', so the message advice never sees them. Runs
+as :before advice on `agent-chat-end-streaming-message'; each segment of a
+turn (narration between tool calls, then the marked reply) is one region,
+in order, which is how the record's reply_text is joined."
+  (when (and (boundp 'agent-chat--streaming-origin) agent-chat--streaming-origin
+             (markerp agent-chat--streaming-origin)
+             (marker-position agent-chat--streaming-origin)
+             (boundp 'agent-chat--streaming-marker) agent-chat--streaming-marker
+             (markerp agent-chat--streaming-marker)
+             (marker-position agent-chat--streaming-marker)
+             (boundp 'agent-chat--current-turn-id) agent-chat--current-turn-id
+             (< (marker-position agent-chat--streaming-origin)
+                (marker-position agent-chat--streaming-marker)))
+    (let ((beg (copy-marker (marker-position agent-chat--streaming-origin) t))
+          (end (copy-marker (marker-position agent-chat--streaming-marker) nil)))
+      ;; regions are kept oldest-first within a turn by the overlay's
+      ;; segment walk, which sorts by buffer position
+      (push (cons agent-chat--current-turn-id (cons "agent" (cons beg end)))
+            session-mode--turn-text-regions)
+      (setq session-mode--last-agent-region (cons beg end)
+            session-mode--turn-text-regions
+            (session-mode--retain-recent-turn-regions session-mode--turn-text-regions)))))
+
 (defun session-mode--tag-agent-message (original name text)
   "Record the exact inserted assistant TEXT region for its answered turn."
   (if (or (equal name agent-chat-user-speaker)
@@ -1934,7 +1961,8 @@ The directive never starts an agent turn and never sends a preceding draft."
   (advice-add 'agent-chat-init-buffer :after #'session-mode--tags-after-init)
   (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message)
   (advice-add 'agent-chat-insert-message :around #'session-mode--tag-agent-message)
-  (advice-add 'agent-chat--start-turn :after #'session-mode--key-pending-region))
+  (advice-add 'agent-chat--start-turn :after #'session-mode--key-pending-region)
+  (advice-add 'agent-chat-end-streaming-message :before #'session-mode--record-streamed-segment))
 
 (require 'session-turn-analysis)
 
