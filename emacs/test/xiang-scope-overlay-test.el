@@ -80,6 +80,33 @@
         (should (string-match-p "within R3" (buffer-string)))
         (should (string-match-p "\"alpha\"" (buffer-string)))))))
 
+(ert-deftest xiang-scope-overlay-404-schedules-one-retry-for-the-current-turn ()
+  "The landing refresh can race the route; after the fallback, one retry is
+scheduled for the current turn and that retry schedules none."
+  (with-temp-buffer
+    (setq-local agent-chat--session-id "s")
+    (setq-local agent-chat--current-turn-id "seat-turn-9")
+    (setq-local xiang-scope-overlay-mode t)
+    (let ((scheduled nil)
+          (fetched nil))
+      (cl-letf (((symbol-function 'run-at-time)
+                 (lambda (secs _repeat fn &rest _) (push (list secs fn) scheduled) 'timer))
+                ((symbol-function 'message) #'ignore)
+                (xiang-scope-overlay-fetch-function
+                 (lambda (url callback)
+                   (push url fetched)
+                   (if (string-match-p "turn=seat-turn-9" url)
+                       (funcall callback '(:error (error http 404)))
+                     (funcall callback '(:error (error http 404)))))))
+        (xiang-scope-overlay-refresh)
+        (should (= 1 (length scheduled)))
+        (should (= 4 (car (car scheduled))))
+        ;; running the retry asks for the current turn again and schedules nothing more
+        (setq fetched nil)
+        (funcall (cadr (car scheduled)))
+        (should (cl-some (lambda (u) (string-match-p "turn=seat-turn-9" u)) fetched))
+        (should (= 1 (length scheduled)))))))
+
 (ert-deftest xiang-scope-overlay-refresh-removes-duplicates-and-errors-cleanly ()
   (let ((buffer (xiang-scope-overlay-test--setup)) messages)
     (unwind-protect

@@ -20,6 +20,9 @@
 (defcustom xiang-scope-overlay-base-url "http://127.0.0.1:7070"
   "Base URL for the scope route." :type 'string)
 (defvar xiang-scope-overlay-fetch-function #'url-retrieve)
+(defvar xiang-scope-overlay-retry-seconds 4
+  "After a 404 on the current turn, refresh once more this many seconds later.
+nil disables the retry (the retry itself runs with it nil, so it is one-shot).")
 (defvar agent-chat--session-id)
 (defvar agent-chat--current-turn-id)
 (defvar-local session-mode--last-operator-region nil)
@@ -183,7 +186,20 @@
                                                           (format "%s" (plist-get status :error))))
                                      (progn
                                        (message "xiang scope 404; falling back to turn=latest")
-                                       (fetch latest-url nil))
+                                       (fetch latest-url nil)
+                                       ;; The analysis file can say "analyzed" a moment before the
+                                       ;; route's view of the session has the turn's acts (seen on
+                                       ;; turn 151: the landing refresh painted the previous turn).
+                                       ;; Ask once more for the current turn after a short wait.
+                                       (when (and xiang-scope-overlay-retry-seconds
+                                                  (not (string-empty-p current)))
+                                         (run-at-time xiang-scope-overlay-retry-seconds nil
+                                                      (lambda ()
+                                                        (when (buffer-live-p buffer)
+                                                          (with-current-buffer buffer
+                                                            (when xiang-scope-overlay-mode
+                                                              (let ((xiang-scope-overlay-retry-seconds nil))
+                                                                (xiang-scope-overlay-refresh)))))))))
                                    (xiang-scope-overlay--callback buffer status))))
                     (error (message "xiang scope fetch failed: %s"
                                     (error-message-string err))))))
