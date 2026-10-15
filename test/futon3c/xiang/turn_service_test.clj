@@ -586,7 +586,8 @@
 
 (deftest an-analysed-turn-posts-classical-scope-hyperedges
   (let [edges (atom [])
-        h (harness {:post-hyperedge! (fn [edge]
+        h (harness {:scope-async! (fn [f] (f))
+                    :post-hyperedge! (fn [edge]
                                        (swap! edges conj edge)
                                        {:status 201})})
         {:keys [id record]} (turn! h)
@@ -603,7 +604,8 @@
 
 (deftest scope-hyperedge-duplicates-and-failures-do-not-block-settlement
   (let [calls (atom 0)
-        h (harness {:post-hyperedge! (fn [_]
+        h (harness {:scope-async! (fn [f] (f))
+                    :post-hyperedge! (fn [_]
                                        (swap! calls inc)
                                        {:status 409})})
         {:keys [id record]} (turn! h)]
@@ -611,7 +613,8 @@
     (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
     (is (pos? @calls) "a known hyperedge is still submitted")
     (is (= "analyzed" (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id))))
-    (let [failed (harness {:post-hyperedge! (fn [_] (throw (ex-info "store down" {})))})
+    (let [failed (harness {:scope-async! (fn [f] (f))
+                    :post-hyperedge! (fn [_] (throw (ex-info "store down" {})))})
           {:keys [id record]} (turn! failed)]
       (svc/publish-analysis! (:svc failed) id (analysis-for record) {})
       (is (= "analyzed" (:analysis_status (ts/read-record (get-in (:svc failed) [:config :store]) id)))))))

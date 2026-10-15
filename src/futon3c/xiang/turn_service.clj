@@ -84,6 +84,9 @@
    ;; share the runtime's existing writer; this hook is optional for old
    ;; cached services and tests that do not install the substrate.
    :post-hyperedge! nil
+   ;; Runs the scope-edge post off the caller's path once a turn is analyzed;
+   ;; nil means a plain future. Tests pass (fn [f] (f)) to make it synchronous.
+   :scope-async! nil
    ;; How a settled turn's append is run off the caller's path (fn [thunk]); nil
    ;; means on the scheduler at delay 0.
    :evidence-async! nil
@@ -381,7 +384,8 @@
     ;; turn is analyzed, and their readers (the REPL overlay, the brief) want
     ;; them now, not after :settle-evidence-delay (30 min).
     (when (= :analyzed how)
-      ((cfg svc :schedule!) 0 #(post-scope-edges! svc id (settled-acts svc id))))
+      ((or (cfg svc :scope-async!) (fn [thunk] (future (thunk))))
+       #(post-scope-edges! svc id (settled-acts svc id))))
     (if (:happened_summary (ts/read-record store id))
       (do (write!)
           ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
