@@ -1,7 +1,11 @@
 # E-scope-view: one view of segments, spans and edges, with four data sources
 
-Date: 2026-10-15. Owner: claude-16. Status: proposal, for comment on
-mfuton-share issue 7 before any module is written.
+Date: 2026-10-15. Owner: claude-16. Status: building a demo. Joe
+(2026-10-15, later): no need to ask Rob first, he has a good model of what is
+needed; make the demo from what we know. Adapter one is written
+(`scripts/scope_view_data.py`), fixture at
+`web/scopes/fixtures/claude-16-turn-162.json`; the view module is out to
+Codex.
 
 ## What this is
 
@@ -101,6 +105,46 @@ span and vice versa; a jump along an edge to its parent; a layer toggle and
 legend. What it does not do: fetch, relocate, compute run statistics, or
 know what 象, Lean or LaTeXML are.
 
+## A fourth source: what was retrieved to support the agent's turn
+
+Joe (2026-10-15): "Where this may start to become interesting is if we're
+able to demonstrate some inference, e.g., if we had scopes that also tapped
+into m40 memories that were retrieved to support the agent's turns."
+
+Two retrievals already happen around every operator turn, and both leave a
+record the adapter can join on:
+
+- **Patterns.** Each turn's prompt line carries the patterns futon3a
+  retrieved for it (`Prompt: pattern ~musn/intent-restatement (retrieved,
+  score 0.4249; also ...)`). The record is a `context-retrieval` evidence
+  entry in futon1b (author = agent, session id, body with `query` = the
+  operator text's first 100 characters and `results` with id, title, score,
+  rank). The adapter joins on the query prefix. In the view: one segment per
+  pattern (title and conclusion line from its flexiarg), a `query` span over
+  the operator text's first 100 characters, and `retrieved-for` edges
+  labelled with the score.
+- **Memory (minus40).** Nothing yet records which m40 facts supported a
+  given turn: the SessionStart brief (`~/code/data/minus40/briefs/`) lists
+  facts per session, not per turn, and the Claude Code memory index is loaded
+  whole. So the adapter computes it after the fact: each reply paragraph
+  (each 象 act on the agent side) is embedded with the same MiniLM model and
+  sidecar `m40_near` uses, and its k nearest facts become segments, with
+  `near` edges labelled score and the fact's standing at the turn's time
+  (`in-force`, `retracted-since`, `not-in-force`, `not-yet-said`), computed
+  from minus40's said / unsaid / said-again dates.
+
+What the first fixture shows (turn 162, k = 2): the three pattern scores are
+0.42, 0.32, 0.32; the twelve memory scores run 0.33 to 0.46 and the matches
+are weak (a paragraph about the data shape lands nearest a memory about
+keyboard firmware). The view inks a span by its weight, so these show faint,
+which is the honest reading. The inference Joe wants needs a better signal
+than post-hoc nearest neighbour over fact sentences: the per-turn retrieval
+should be recorded when it happens (as the pattern retrieval already is),
+and the m40 memories put in front of the agent at turn time, not the nearest
+afterwards. That is the next adapter change, and it belongs on the minus40
+side (a per-turn `context-retrieval`-shaped record for memory), not in the
+view.
+
 ## What "drop-in" covers for the mark7 page
 
 Covered by the view: the three plates and their toggles, ink mixing, the
@@ -113,15 +157,16 @@ a second span set, switched by the adapter), the S1 group select (three
 sub-layers of one plate: model as three layers), the defined-term classes
 (a fourth layer), and word placement.
 
-## Order of work (Joe agreed to the shape on 2026-10-15)
+## Order of work (Joe agreed to the shape on 2026-10-15; Rob gate dropped later that day)
 
-1. Propose the data shape above on issue 7 and hear Rob's reading of
-   "scopes" and of what the Element room view needs. Nothing is written
-   until then; where the module lives is his call as much as ours.
+1. ~~Propose the data shape on issue 7 first.~~ Joe: not needed; build the
+   demo. The draft comment below stays as a description for Rob once there
+   is something to look at.
 2. One framework-free TypeScript module, `renderScopes(data, host)`, owned
    text first, anchored second. No build step for the page use: compiled
    once to a single `scopes.js`.
-3. Adapter one: 象 acts. `GET /api/alpha/xiang/scopes?session&turn` gives
+3. Adapter one (done, `scripts/scope_view_data.py`): 象 acts plus the two
+   retrieval sources above. `GET /api/alpha/xiang/scopes?session&turn` gives
    spans and edges but no text of its own. The operator text is the
    record's `source_text`, served by `GET /api/alpha/xiang/turns/<record-id>`
    (keyed by the record id, `turn-ecOiC4`, not the turn id,

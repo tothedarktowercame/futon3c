@@ -1,0 +1,592 @@
+{
+ "turn": "claude-16-turn-162",
+ "record": "turn-ecOiC4",
+ "session": "00e653e3-28f7-4add-8304-47ca0475b5c2",
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "segments": [
+  {
+   "id": "claude-16-turn-162",
+   "role": "operator",
+   "label": "joe · 2026-10-15T23:23:46Z",
+   "text": "BTW my previous turn came through all underlined, which isn't useful for me b/c all-underlined contains no information (except visual noise).  Regarding the \"order of work\" — yes this sounds useful, in fact we could make it so that it could be a drop-in replacement for https://zone.hyperreal.enterprises/wip/mark7-0708.2185-margin.html *as well* as for scopes as applied to the speech act scopes and whatever else Rob might have in mind for it vis a vis compilers, though I'm not sure that Rob had the compiler scopes in mind when he wrote \"A pluggable typescript view of scopes that could be used in the developing VS Code Plugin and the Augmented Element view of a room.\"  This would, in my view, be much closer to what we are doing with Emacs, Matrix, etc."
+  },
+  {
+   "id": "claude-16-turn-162-reply",
+   "role": "agent",
+   "label": "claude-16 · 2026-10-15T23:31:59Z",
+   "text": "㊥ (gist) The all-underlined turn is fixed and already reloaded into your Emacs: an operator fragment now shows its intent mark before it instead of a whole-text underline. The drop-in idea holds, with one honest caveat about the mark7 page, and the data shape plus a draft comment for issue 7 are written up in `futon3c/holes/excursions/E-scope-view.md`.\n\n㊬ (\"all underlined\") The route split your turn into five fragments covering 754 of its 760 characters, and the overlay underlined each operator fragment whole. Tiled fragments underlined whole is the whole turn underlined. The fix in `xiang-scope-overlay.el` gives an operator fragment an empty span and sets its intent's proforma mark before it, the same thing 小象 does on a draft, so your turn reads ㊩ BTW… 🈰 Regarding… ㊭ yes this sounds useful… ㊟ though I'm not sure… 🈖 This would… Ten ERT tests pass, check-parens is clean, and a repaint of the live REPL buffer placed 10 overlays with 5 marks. Commit 30999e93d.\n\n㊣ (\"drop-in replacement\") Yes, and reading the mark7 page shows why the same module fits. Its painting script is two halves. The first half places every rendered word and formula at an offset in the paper's source, because LaTeXML only stamps blocks and formula columns are approximate. The second half inks three plates, mixes them, writes margin notes and lights passages on hover. The second half is the view. The first half is the same relocation work the Emacs module spends 250 lines on, and the turn-margin page, which renders the record's own text, needs none of it. So the view never relocates. A host that paints over text it does not own supplies anchored segments through an adapter, which mark7 has already computed as its word list.\n\n㊟ (\"drop-in\") Not everything on the mark7 page moves into the view. The run-level numbers in the banner, the mock-verdict mode, and word placement stay with the page as its adapter. Plates, toggles, ink mixing, hover, margin notes and the glossary rule move.\n\n㊟ (\"not sure that Rob had the compiler scopes in mind\") I could not read the issue thread from here, since the GitHub query returned nothing, so the note quotes only the title you gave. The draft comment asks Rob directly which \"scopes\" he meant and what the Augmented Element view needs from a room. Element rooms map cleanly: segments are messages, spans are acts, edges are replies and governing acts, which is your point about Emacs and Matrix.\n\n🈖 (the shape) Segments of text, layers, spans with a kind, a mark, a weight and a note, edges with a relation and label, and a legend that must define every label. Offsets are code points into one segment, the unit the turn records already declare. The 象 adapter has what it needs: the scopes route gives spans and edges, and the turn view route serves the record's text, keyed by record id rather than turn id.\n\n㊭ (next) Post the draft from the note on issue 7, or tell me to post it, and nothing gets written until Rob answers. Meanwhile the Emacs overlay is frozen at marks and jump-to-parent, no more relocation fixes."
+  },
+  {
+   "id": "pattern:musn/intent-restatement",
+   "role": "pattern",
+   "label": "musn/intent-restatement",
+   "text": "Intent Restatement. Start the response with a one-line intent restatement."
+  },
+  {
+   "id": "pattern:writing-coherence/name-what-you-drop",
+   "role": "pattern",
+   "label": "writing-coherence/name-what-you-drop",
+   "text": "Name What You Drop, Not Only What You Inherit. When a section describes what a successor project inherits from a predecessor, listing only the inheritance leaves readers to infer the full extent of the inheritance — which they will do generously.  The remedy is to name, alongside what is taken, what is deliberately dropped.  The drop list is short, explicit, and located in the same eyeshot as the inheritance list; without it, scope is implicit-by-omission and readers will silently over-attribute.  The discipline applies symmetrically: when naming what one is doing with a predecessor's work, name what one is leaving behind."
+  },
+  {
+   "id": "pattern:workday/single-focus-amidst-agenda",
+   "role": "pattern",
+   "label": "workday/single-focus-amidst-agenda",
+   "text": "Single-Focus Amidst Agenda Saturation"
+  },
+  {
+   "id": "m40:hx-m40-fact-a9885794222a66499490",
+   "role": "memory",
+   "label": "matrix-bridge-on-lucy · said 2026-09-14",
+   "text": "**Live test:** `!help` and an `@fuzai` pong round trip both came back as threaded replies; the zai-6 job took about 5 s."
+  },
+  {
+   "id": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8",
+   "role": "memory",
+   "label": "repl-send-argv-limit · said 2026-09-01",
+   "text": "Repair in place with `(agent-chat--ensure-prompt-markers!)` — additive, appends a fresh prompt and re-seats all three markers, deletes nothing. A buffer that never finished drawing (no keybinding line, no separator, no prompt) needs `claude-repl-clear` instead, which redraws without losing agent identity."
+  },
+  {
+   "id": "m40:hx-m40-fact-d042104132f71a00b895",
+   "role": "memory",
+   "label": "mfuton-lisp-port-codex-18 · said 2026-10-04",
+   "text": "\"codex-18 (Joe's seat) is porting claude-4's mfuton Python port to Lisp, following claude-4's sequence; goal is marker-based incremental edits instead of ~10-min probe cycles\""
+  },
+  {
+   "id": "m40:hx-m40-fact-39e90f557c984d3265fc",
+   "role": "memory",
+   "label": "futon6-run-contract-vs-machine-config · said 2026-09-21",
+   "text": "**Why:** mark7probe-20260921 ran with the span-quotation code present but silently OFF. Candidates lacked `spans` (candidate_spans.py was never wired into extraction) and `nodes_schema` fell back to the old retype contract with no error. That was a regression from the line contract, which had always been on. Runs on different machines were meant to be comparable, and no one could tell which contract had run."
+  },
+  {
+   "id": "m40:hx-m40-fact-4a5d6c66b6a0cb481319",
+   "role": "memory",
+   "label": "html-comment-leak-in-site-reads · said 2026-09-29",
+   "text": "`re.sub(r'<[^>]+>','',html)` removes `<!-- <p>` as if it were a tag and leaves the commented-out text behind. On 2026-09-29, futon7a `index.html:63-70` commented out the \"things we've learned\" list. I criticised that list to Joe as live homepage content, and four Zai simulated customers (storage/futon7a/customer-sims/2026-09-29/) clicked links that no browser shows."
+  },
+  {
+   "id": "m40:hx-m40-fact-82f378d3ae5429ec9bf3",
+   "role": "memory",
+   "label": "kinesis-vdrive-editing · said 2026-09-24",
+   "text": "Location tokens are confirmed from Appendix 13.1 Figs 32/33 (diagrams, not text — render with `pdftoppm -r 200 -f 37 -l 37 -png adv2-manual.pdf`). Dvorak keypad layer, left keywell:"
+  },
+  {
+   "id": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4",
+   "role": "memory",
+   "label": "matrix-bridge-on-lucy · said 2026-09-14",
+   "text": "**How to apply:** for Matrix bridge changes, start from futon3c `scripts/matrix_bridge.md`. Still open: joining Rob's room. Every room member can run bang commands (`!ungate`, `!reset`), and nothing stops two agents looping by mentioning each other. Related: [[joe-views-via-terminal-or-web-only]], [[evidence-full-text-search-is-in-futon1b]]."
+  },
+  {
+   "id": "m40:hx-m40-fact-fd4b18af6be9ed996a79",
+   "role": "memory",
+   "label": "matrix-bridge-on-lucy · said 2026-10-02",
+   "text": "\"futon Matrix bridge deployed 2026-09-14 on lucy (matrix.paragogy.net); where its config, tokens and room live; lucy's own Agency is down\""
+  },
+  {
+   "id": "m40:hx-m40-fact-6b8fc74c33fc910532a8",
+   "role": "memory",
+   "label": "apparatus-design-principles · said 2026-09-08",
+   "text": "\"15 apparatus design patterns in futon3/library/apparatus/*.flexiarg, PROMOTED by Joe 2026-09-08 after the APM repair field trial; scoring ledger futon3c b0c36489; WM assurance frontier binds tickets via pattern×signature edges\""
+  },
+  {
+   "id": "m40:hx-m40-fact-ed858a3e69114c763859",
+   "role": "memory",
+   "label": "operator-turns-as-pattern-language · said 2026-09-23",
+   "text": "Related: [[run-data-is-data]] (corpus lives in `code/storage/operator-turns/`), [[flexiarg-directive-misuse]], [[agency-send-mode-brief-trap]]."
+  },
+  {
+   "id": "m40:hx-m40-fact-2cc92183c9b1add27ebd",
+   "role": "memory",
+   "label": "kinesis-vdrive-editing · said 2026-09-24",
+   "text": "Also: always read the drive file before writing. The keyboard's rewrite reorders everything and adds Joe's onboard changes, so a blind overwrite clobbers his work."
+  },
+  {
+   "id": "m40:hx-m40-fact-6a0c4d9126b6d826615c",
+   "role": "memory",
+   "label": "futon6-no-host-paths · said 2026-09-21",
+   "text": "never commit /home/joe (or any home path) into futon6 code or notes; Rob keeps having to strip them"
+  }
+ ],
+ "layers": [
+  {
+   "id": "acts",
+   "name": "speech acts (象)",
+   "ink": "c"
+  },
+  {
+   "id": "patterns",
+   "name": "patterns retrieved for the turn",
+   "ink": "m"
+  },
+  {
+   "id": "memory",
+   "name": "minus40 memory nearest the reply",
+   "ink": "y"
+  }
+ ],
+ "spans": [
+  {
+   "id": "claude-16-turn-162-f-s1-0",
+   "seg": "claude-16-turn-162",
+   "start": 0,
+   "end": 141,
+   "layer": "acts",
+   "kind": "report-problem",
+   "mark": "㊩",
+   "weight": 1.0,
+   "note": "says that something produced does not fit the world"
+  },
+  {
+   "id": "claude-16-turn-162-f-s2-0",
+   "seg": "claude-16-turn-162",
+   "start": 143,
+   "end": 174,
+   "layer": "acts",
+   "kind": "continue",
+   "mark": "🈰",
+   "weight": 1.0,
+   "note": "takes up an earlier thread"
+  },
+  {
+   "id": "claude-16-turn-162-f-s2-1",
+   "seg": "claude-16-turn-162",
+   "start": 175,
+   "end": 465,
+   "layer": "acts",
+   "kind": "propose",
+   "mark": "㊭",
+   "weight": 1.0,
+   "note": "puts forward a course of action"
+  },
+  {
+   "id": "claude-16-turn-162-f-s2-2",
+   "seg": "claude-16-turn-162",
+   "start": 466,
+   "end": 674,
+   "layer": "acts",
+   "kind": "qualify",
+   "mark": "㊟",
+   "weight": 1.0,
+   "note": "limits or conditions an earlier point"
+  },
+  {
+   "id": "claude-16-turn-162-f-s3-0",
+   "seg": "claude-16-turn-162",
+   "start": 676,
+   "end": 760,
+   "layer": "acts",
+   "kind": "explain",
+   "mark": "🈖",
+   "weight": 1.0,
+   "note": "says how or why something is so"
+  },
+  {
+   "id": "claude-16-turn-162-r-1",
+   "seg": "claude-16-turn-162-reply",
+   "start": 356,
+   "end": 971,
+   "layer": "acts",
+   "kind": "verify",
+   "mark": "㊬",
+   "weight": 1.0,
+   "note": "something checked this turn"
+  },
+  {
+   "id": "claude-16-turn-162-r-2",
+   "seg": "claude-16-turn-162-reply",
+   "start": 973,
+   "end": 1719,
+   "layer": "acts",
+   "kind": "approve",
+   "mark": "㊣",
+   "weight": 1.0,
+   "note": "agreement the speaker actually holds"
+  },
+  {
+   "id": "claude-16-turn-162-r-3",
+   "seg": "claude-16-turn-162-reply",
+   "start": 1721,
+   "end": 1979,
+   "layer": "acts",
+   "kind": "qualify",
+   "mark": "㊟",
+   "weight": 1.0,
+   "note": "limits or conditions an earlier point"
+  },
+  {
+   "id": "claude-16-turn-162-r-4",
+   "seg": "claude-16-turn-162-reply",
+   "start": 1981,
+   "end": 2429,
+   "layer": "acts",
+   "kind": "qualify",
+   "mark": "㊟",
+   "weight": 1.0,
+   "note": "limits or conditions an earlier point"
+  },
+  {
+   "id": "claude-16-turn-162-r-5",
+   "seg": "claude-16-turn-162-reply",
+   "start": 2431,
+   "end": 2842,
+   "layer": "acts",
+   "kind": "explain",
+   "mark": "🈖",
+   "weight": 1.0,
+   "note": "says how or why something is so"
+  },
+  {
+   "id": "claude-16-turn-162-r-6",
+   "seg": "claude-16-turn-162-reply",
+   "start": 2844,
+   "end": 3053,
+   "layer": "acts",
+   "kind": "propose",
+   "mark": "㊭",
+   "weight": 1.0,
+   "note": "puts forward a course of action"
+  },
+  {
+   "id": "claude-16-turn-162-query",
+   "seg": "claude-16-turn-162",
+   "start": 0,
+   "end": 100,
+   "layer": "patterns",
+   "kind": "query",
+   "weight": 0.5,
+   "note": "query recorded in e-88c3844c-7b08-4436-8c5d-05a8cce0f0fd at 2026-10-15T23:31:56.342740964Z"
+  },
+  {
+   "id": "pattern:musn/intent-restatement#",
+   "seg": "pattern:musn/intent-restatement",
+   "start": 0,
+   "end": 74,
+   "layer": "patterns",
+   "kind": "pattern",
+   "weight": 0.4249,
+   "note": "rank 1, cosine 0.4249 (futon3a embeddings)"
+  },
+  {
+   "id": "pattern:writing-coherence/name-what-you-drop#",
+   "seg": "pattern:writing-coherence/name-what-you-drop",
+   "start": 0,
+   "end": 630,
+   "layer": "patterns",
+   "kind": "pattern",
+   "weight": 0.3199,
+   "note": "rank 2, cosine 0.3199 (futon3a embeddings)"
+  },
+  {
+   "id": "pattern:workday/single-focus-amidst-agenda#",
+   "seg": "pattern:workday/single-focus-amidst-agenda",
+   "start": 0,
+   "end": 37,
+   "layer": "patterns",
+   "kind": "pattern",
+   "weight": 0.3196,
+   "note": "rank 3, cosine 0.3196 (futon3a embeddings)"
+  },
+  {
+   "id": "m40:hx-m40-fact-a9885794222a66499490#",
+   "seg": "m40:hx-m40-fact-a9885794222a66499490",
+   "start": 0,
+   "end": 120,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.373,
+   "note": "minus40 fact hx-m40-fact-a9885794222a66499490 from memory cc:-home-joe-code/matrix-bridge-on-lucy"
+  },
+  {
+   "id": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8#",
+   "seg": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8",
+   "start": 0,
+   "end": 306,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3693,
+   "note": "minus40 fact hx-m40-fact-3fb7ab03af13ff0dd5e8 from memory cc:-home-joe-code/repl-send-argv-limit"
+  },
+  {
+   "id": "m40:hx-m40-fact-d042104132f71a00b895#",
+   "seg": "m40:hx-m40-fact-d042104132f71a00b895",
+   "start": 0,
+   "end": 175,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3724,
+   "note": "minus40 fact hx-m40-fact-d042104132f71a00b895 from memory cc:-home-joe-code/mfuton-lisp-port-codex-18"
+  },
+  {
+   "id": "m40:hx-m40-fact-39e90f557c984d3265fc#",
+   "seg": "m40:hx-m40-fact-39e90f557c984d3265fc",
+   "start": 0,
+   "end": 411,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3717,
+   "note": "minus40 fact hx-m40-fact-39e90f557c984d3265fc from memory cc:-home-joe/futon6-run-contract-vs-machine-config"
+  },
+  {
+   "id": "m40:hx-m40-fact-4a5d6c66b6a0cb481319#",
+   "seg": "m40:hx-m40-fact-4a5d6c66b6a0cb481319",
+   "start": 0,
+   "end": 368,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3467,
+   "note": "minus40 fact hx-m40-fact-4a5d6c66b6a0cb481319 from memory cc:-home-joe/html-comment-leak-in-site-reads"
+  },
+  {
+   "id": "m40:hx-m40-fact-82f378d3ae5429ec9bf3#",
+   "seg": "m40:hx-m40-fact-82f378d3ae5429ec9bf3",
+   "start": 0,
+   "end": 181,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3319,
+   "note": "minus40 fact hx-m40-fact-82f378d3ae5429ec9bf3 from memory cc:-home-joe/kinesis-vdrive-editing"
+  },
+  {
+   "id": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4#",
+   "seg": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4",
+   "start": 0,
+   "end": 343,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.4635,
+   "note": "minus40 fact hx-m40-fact-ac7fedb2bb1a30fafbd4 from memory cc:-home-joe-code/matrix-bridge-on-lucy"
+  },
+  {
+   "id": "m40:hx-m40-fact-fd4b18af6be9ed996a79#",
+   "seg": "m40:hx-m40-fact-fd4b18af6be9ed996a79",
+   "start": 0,
+   "end": 138,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3479,
+   "note": "minus40 fact hx-m40-fact-fd4b18af6be9ed996a79 from memory cc:-home-joe-code/matrix-bridge-on-lucy"
+  },
+  {
+   "id": "m40:hx-m40-fact-6b8fc74c33fc910532a8#",
+   "seg": "m40:hx-m40-fact-6b8fc74c33fc910532a8",
+   "start": 0,
+   "end": 228,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3641,
+   "note": "minus40 fact hx-m40-fact-6b8fc74c33fc910532a8 from memory cc:-home-joe-code-voxterm/apparatus-design-principles"
+  },
+  {
+   "id": "m40:hx-m40-fact-ed858a3e69114c763859#",
+   "seg": "m40:hx-m40-fact-ed858a3e69114c763859",
+   "start": 0,
+   "end": 143,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.3428,
+   "note": "minus40 fact hx-m40-fact-ed858a3e69114c763859 from memory cc:-home-joe/operator-turns-as-pattern-language"
+  },
+  {
+   "id": "m40:hx-m40-fact-2cc92183c9b1add27ebd#",
+   "seg": "m40:hx-m40-fact-2cc92183c9b1add27ebd",
+   "start": 0,
+   "end": 163,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.4363,
+   "note": "minus40 fact hx-m40-fact-2cc92183c9b1add27ebd from memory cc:-home-joe/kinesis-vdrive-editing"
+  },
+  {
+   "id": "m40:hx-m40-fact-6a0c4d9126b6d826615c#",
+   "seg": "m40:hx-m40-fact-6a0c4d9126b6d826615c",
+   "start": 0,
+   "end": 99,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 0.4319,
+   "note": "minus40 fact hx-m40-fact-6a0c4d9126b6d826615c from memory cc:-home-joe/futon6-no-host-paths"
+  }
+ ],
+ "edges": [
+  {
+   "from": "claude-16-turn-162-f-s2-0",
+   "to": "claude-16-turn-162-f-s1-0",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-f-s2-1",
+   "to": "claude-16-turn-162-f-s1-0",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-f-s2-2",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-f-s3-0",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-1",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-2",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-3",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-4",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-5",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-6",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "R3"
+  },
+  {
+   "from": "claude-16-turn-162-r-1",
+   "to": "claude-16-turn-162-f-s1-0",
+   "relation": "within",
+   "label": "OPEN"
+  },
+  {
+   "from": "claude-16-turn-162-r-2",
+   "to": "claude-16-turn-162-f-s2-1",
+   "relation": "within",
+   "label": "OPEN"
+  },
+  {
+   "from": "pattern:musn/intent-restatement#",
+   "to": "claude-16-turn-162-query",
+   "relation": "retrieved-for",
+   "label": "0.4249"
+  },
+  {
+   "from": "pattern:writing-coherence/name-what-you-drop#",
+   "to": "claude-16-turn-162-query",
+   "relation": "retrieved-for",
+   "label": "0.3199"
+  },
+  {
+   "from": "pattern:workday/single-focus-amidst-agenda#",
+   "to": "claude-16-turn-162-query",
+   "relation": "retrieved-for",
+   "label": "0.3196"
+  },
+  {
+   "from": "claude-16-turn-162-r-1",
+   "to": "m40:hx-m40-fact-a9885794222a66499490#",
+   "relation": "near",
+   "label": "0.3730 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-1",
+   "to": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8#",
+   "relation": "near",
+   "label": "0.3693 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-2",
+   "to": "m40:hx-m40-fact-d042104132f71a00b895#",
+   "relation": "near",
+   "label": "0.3724 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-2",
+   "to": "m40:hx-m40-fact-39e90f557c984d3265fc#",
+   "relation": "near",
+   "label": "0.3717 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-3",
+   "to": "m40:hx-m40-fact-4a5d6c66b6a0cb481319#",
+   "relation": "near",
+   "label": "0.3467 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-3",
+   "to": "m40:hx-m40-fact-82f378d3ae5429ec9bf3#",
+   "relation": "near",
+   "label": "0.3319 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-4",
+   "to": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4#",
+   "relation": "near",
+   "label": "0.4635 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-4",
+   "to": "m40:hx-m40-fact-fd4b18af6be9ed996a79#",
+   "relation": "near",
+   "label": "0.3479 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-5",
+   "to": "m40:hx-m40-fact-6b8fc74c33fc910532a8#",
+   "relation": "near",
+   "label": "0.3641 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-5",
+   "to": "m40:hx-m40-fact-ed858a3e69114c763859#",
+   "relation": "near",
+   "label": "0.3428 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-6",
+   "to": "m40:hx-m40-fact-2cc92183c9b1add27ebd#",
+   "relation": "near",
+   "label": "0.4363 · in-force"
+  },
+  {
+   "from": "claude-16-turn-162-r-6",
+   "to": "m40:hx-m40-fact-6a0c4d9126b6d826615c#",
+   "relation": "near",
+   "label": "0.4319 · in-force"
+  }
+ ],
+ "legend": {
+  "report-problem": "says that something produced does not fit the world",
+  "continue": "takes up an earlier thread",
+  "propose": "puts forward a course of action",
+  "qualify": "limits or conditions an earlier point",
+  "explain": "says how or why something is so",
+  "verify": "something checked this turn",
+  "approve": "agreement the speaker actually holds",
+  "within": "the act is governed by the act it sits within",
+  "R3": "a reply paragraph answers inside the operator act it quotes or continues",
+  "OPEN": "an act that nothing governs opens its own scope",
+  "query": "the text futon3a was asked with: the operator turn's first 100 characters",
+  "pattern": "a pattern futon3a retrieved for the turn",
+  "retrieved-for": "the pattern was retrieved by embedding similarity to the query; label is the cosine score",
+  "in-force": "the memory was said before the turn and not withdrawn by then",
+  "memory": "a minus40 fact (one statement from a memory file)",
+  "near": "the memory fact is the nearest in meaning to the reply paragraph; label is the cosine score"
+ }
+}
