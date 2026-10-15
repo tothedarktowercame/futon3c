@@ -146,3 +146,14 @@ store. Steps 6 and 7 need the live store and your own session. Steps 8 and 9
 are where the demo becomes a conversation. If a step fails on the day, the
 walkthrough says so and moves on; the record of the run is the demo's own
 evidence.
+
+**Addendum, 15 October.** The walkthrough exists: `M-x m40-walkthrough`, in
+`minus40/emacs/m40-walkthrough.el`. It ran all nine steps in the operator's
+Emacs today, with `SPC` between steps, `r` to re-run one and `q` to stop, and
+wrote each run's record under `~/code/data/minus40/walkthroughs/`. Its first
+live run caught something the shell had hidden: step 3's Lean checker exited
+127 because the Emacs process had no `~/.elan/bin` on its path, and the
+walkthrough said so and moved on, as promised. Step 1 gained two reads built
+since the post: `m40 state`, the latest statement per subject at or before a
+date, and `m40 find`, the store's text index grouped by memory. The state
+read took the corner-store benchmark from 7/8 to 8/8, level with Mastra.
