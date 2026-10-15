@@ -12108,6 +12108,14 @@
       (try
         (let [svc (xiang-turn-service config)
               {:keys [acts records]} (xiang-scope-settled svc session)
+              ;; turn=latest: the newest operator turn that has acts, so a
+              ;; client refreshing before the current turn is analysed (or on
+              ;; a harness turn, which never has acts) shows the last settled
+              ;; exchange instead of a 404.
+              turn (if (= "latest" turn)
+                     (or (->> acts (filter #(= "operator" (:author %))) (map :turn) last)
+                         turn)
+                     turn)
               scoped (xiang-scopes/acts-for-turn acts turn)
               ;; Production reply acts are made by turn-acts from the marked
               ;; paragraphs; add their persisted codepoint spans here for the
