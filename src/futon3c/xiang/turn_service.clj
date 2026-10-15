@@ -375,9 +375,13 @@
         write! (fn []
                  ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
                   #(append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
-                                     (cfg svc :store-busy-delays)))
-                 (when (= :analyzed how)
-                   (post-scope-edges! svc id (settled-acts svc id))))]
+                                     (cfg svc :store-busy-delays))))]
+    ;; The scope edges do not wait for the happened summary: they are a
+    ;; projection of the reading and the marked replies, both final once the
+    ;; turn is analyzed, and their readers (the REPL overlay, the brief) want
+    ;; them now, not after :settle-evidence-delay (30 min).
+    (when (= :analyzed how)
+      ((cfg svc :schedule!) 0 #(post-scope-edges! svc id (settled-acts svc id))))
     (if (:happened_summary (ts/read-record store id))
       (do (write!)
           ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
