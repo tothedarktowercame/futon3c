@@ -72,8 +72,10 @@
   after the post-selection debugger-boundary repair (`do any needed repairs
   and get another live run going`), plus two clicks granted directly by Joe to
   codex-68 on 2026-10-14 to validate the new learning certificates under the
-  debugger (`run 1 or 2 clicks as needed`)."
-  61)
+  debugger (`run 1 or 2 clicks as needed`), plus one granted directly by Joe
+  to codex-68 on 2026-10-15 after the debugger readiness repair (`OK please
+  try 1 click now, we'll see whether it can go end-to-end`)."
+  62)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
