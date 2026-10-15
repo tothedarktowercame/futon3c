@@ -370,12 +370,17 @@
                               :note {:type "string"}}
                  :required ["id" "side" "note"]}}
    {:name "memory_assert"
-    :description "Append one body line to an existing memory file and ingest it, so the version joins this writer."
+    :description (str "Append one body line to an existing memory file and ingest it, so the version joins this writer. "
+                      "With a one-line hook (under 80 chars) a missing file is created with that hook as its description, "
+                      "and the project's memory directory may be created too (a seat's own project, e.g. its agent id); "
+                      "without a hook a missing file is refused, so a bare assert cannot create files by typo. "
+                      "project defaults to your agent id when omitted.")
     :parameters {:type "object"
                  :properties {:project {:type "string"}
                               :name {:type "string"}
-                              :line {:type "string"}}
-                 :required ["project" "name" "line"]}}])
+                              :line {:type "string"}
+                              :hook {:type "string"}}
+                 :required ["name" "line"]}}])
 
 (def ^:private m40-tool-names
   #{"m40_asof" "m40_state" "m40_history" "m40_find" "m40_near"
