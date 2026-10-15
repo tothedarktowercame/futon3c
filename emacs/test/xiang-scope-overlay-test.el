@@ -128,6 +128,33 @@ to arithmetic, so one stale entry cannot abort the paint."
       (should (null (xiang-scope-overlay--position (cons dead-beg dead-end) 0)))
       (should (= 6 (xiang-scope-overlay--position (cons live-beg live-end) 0))))))
 
+(ert-deftest xiang-scope-overlay-stale-reply-is-dropped ()
+  "A reply from an earlier refresh must not paint over a later one."
+  (with-temp-buffer
+    (setq-local agent-chat--session-id "s")
+    (setq-local agent-chat--current-turn-id "seat-turn-5")
+    (setq-local xiang-scope-overlay-mode t)
+    (insert "joe: one two\n\n")
+    (setq-local session-mode--turn-text-regions
+                (list (cons "seat-turn-5" (cons "operator" (cons (copy-marker 6 t) (copy-marker 13 nil))))))
+    (let ((callbacks nil)
+          (payload "{\"ok\":true,\"turn\":\"seat-turn-5\",\"edges\":[],\"acts\":[{\"id\":\"seat-turn-5-f-s1-0\",\"kind\":\"report\",\"side\":\"operator\",\"start\":0,\"end\":7,\"text\":\"one two\"}]}"))
+      (cl-letf (((symbol-function 'message) #'ignore)
+                ((symbol-function 'run-at-time) #'ignore)
+                (xiang-scope-overlay-fetch-function
+                 (lambda (_url callback) (push callback callbacks))))
+        (xiang-scope-overlay-refresh)      ; generation 1, reply held
+        (xiang-scope-overlay-refresh)      ; generation 2, reply held
+        (should (= 2 (length callbacks)))
+        (let ((reply (lambda (cb)
+                       (with-temp-buffer
+                         (insert "HTTP/1.1 200 OK\n\n" payload)
+                         (funcall cb nil)))))
+          (funcall reply (car callbacks))        ; newest first in the list: generation 2
+          (should (= 1 (length xiang-scope-overlay--overlays)))
+          (funcall reply (cadr callbacks))       ; the stale generation-1 reply
+          (should (= 1 (length xiang-scope-overlay--overlays))))))))
+
 (ert-deftest xiang-scope-overlay-404-schedules-one-retry-for-the-current-turn ()
   "The landing refresh can race the route; after the fallback, one retry is
 scheduled for the current turn and that retry schedules none."

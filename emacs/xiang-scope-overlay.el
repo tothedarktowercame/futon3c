@@ -215,26 +215,33 @@ reply bound)."
           (url-hexify-string agent-chat--session-id)
           (url-hexify-string (or turn agent-chat--current-turn-id ""))))
 
-(defun xiang-scope-overlay--callback (buffer status)
+(defun xiang-scope-overlay--callback (buffer status &optional generation)
   (let ((body (unless (plist-get status :error)
                 (goto-char (point-min))
                 (re-search-forward "^$" nil t)
                 (buffer-substring-no-properties (point) (point-max)))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
-        (if (plist-get status :error)
-            (message "xiang scope fetch failed: %s" (plist-get status :error))
+        (cond
+         ((and generation (/= generation xiang-scope-overlay--generation))
+          nil)                          ; a newer refresh owns the buffer now
+         ((plist-get status :error)
+          (message "xiang scope fetch failed: %s" (plist-get status :error)))
+         (t
+          (xiang-scope-overlay--delete)   ; this generation's paint replaces whatever is there
           (condition-case err
               (xiang-scope-overlay--apply
                (json-parse-string body :object-type 'alist :array-type 'list))
             (error (message "xiang scope fetch failed: %s"
-                            (error-message-string err)))))))))
+                            (error-message-string err))))))))))
 
 (defun xiang-scope-overlay-refresh ()
   "Asynchronously refresh scope overlays for the current turn."
   (interactive)
   (xiang-scope-overlay--delete)
+  (cl-incf xiang-scope-overlay--generation)
   (let* ((buffer (current-buffer))
+         (generation xiang-scope-overlay--generation)
          (current (or agent-chat--current-turn-id ""))
          (session (or agent-chat--session-id ""))
          (previous (cl-loop for r in (xiang-scope-overlay--regions)
@@ -271,7 +278,7 @@ reply bound)."
                                                             (when xiang-scope-overlay-mode
                                                               (let ((xiang-scope-overlay-retry-seconds nil))
                                                                 (xiang-scope-overlay-refresh)))))))))
-                                   (xiang-scope-overlay--callback buffer status))))
+                                   (xiang-scope-overlay--callback buffer status generation))))
                     (error (message "xiang scope fetch failed: %s"
                                     (error-message-string err))))))
       (fetch current-url latest-url))))
@@ -310,6 +317,11 @@ The same text the GUI shows on hover; a terminal Emacs has no hover
     (message "No scope act at point")))
 
 (defvar-local xiang-scope-overlay--last-echoed nil)
+(defvar-local xiang-scope-overlay--generation 0
+  "Bumped by every refresh; a fetch reply from an older generation is dropped.
+Three refreshes within seconds (landing, its retry, a manual one) each
+cleared the overlays and then painted when their replies came back, so the
+set was painted three times over (seen 2026-10-15, 24 overlays for 8 acts).")
 
 (defun xiang-scope-overlay--echo-on-move ()
   "Echo the act under point when point enters a new scope overlay.
