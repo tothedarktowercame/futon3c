@@ -112,6 +112,25 @@ found by its own words instead."
                  (xiang-scope-overlay--agent-position start entries)))
       (xiang-scope-overlay--position (and (car entries) (cddr (car entries))) start))))
 
+(defconst xiang-scope-overlay--marks
+  '(?㊥ ?㊭ ?㊣ ?🈚 ?㊟ ?🈖 ?🈯 ?㊢ ?㊩ ?㊬ ?🈹 ?🈳 ?🈲 ?🈸 ?㊯ ?㊝ ?㊮ ?🈕 ?🈰 ?🈝 ?🈘 ?㊫ ?🈡)
+  "The reply-proforma marks (CLAUDE.md key); an agent paragraph opens with one.")
+
+(defun xiang-scope-overlay--span (act pos)
+  "The buffer span to underline for ACT whose text starts at POS.
+An operator fragment is underlined whole. An agent paragraph is underlined
+only at the proforma mark that opens it (Joe, 2026-10-15: underlining every
+paragraph of a reply is noise; mark the ㊟ or ㊬); the mark is the first
+character of the paragraph's line, before the optional colon and the
+bracketed target. Falls back to the text span when no mark is there."
+  (let ((text-end (+ pos (length (or (alist-get 'text act) "")))))
+    (if (equal "operator" (alist-get 'side act nil nil #'equal))
+        (cons pos text-end)
+      (let ((lbp (save-excursion (goto-char pos) (line-beginning-position))))
+        (if (and (< lbp (point-max)) (memq (char-after lbp) xiang-scope-overlay--marks))
+            (cons lbp (1+ lbp))
+          (cons pos text-end))))))
+
 (defun xiang-scope-overlay--parent-text (id acts)
   "The governing act's first words, or its id when it lies outside the acts
 the route returned (a reply paragraph's parent is often an operator
@@ -149,8 +168,8 @@ reply bound)."
         (let* ((id (alist-get 'id act))
                (edge (cl-find id edges :key (lambda (e) (alist-get 'act e)) :test #'equal))
                (parent (and edge (gethash (alist-get 'within edge) by-id)))
-               (ov (make-overlay pos
-                                 (+ pos (length (or (alist-get 'text act) ""))))))
+               (span (xiang-scope-overlay--span act pos))
+               (ov (make-overlay (car span) (cdr span))))
           (overlay-put ov 'face (if (equal "operator" (alist-get 'side act))
                                    'xiang-scope-operator-face
                                  'xiang-scope-agent-face))
