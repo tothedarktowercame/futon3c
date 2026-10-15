@@ -25,6 +25,8 @@
 nil disables the retry (the retry itself runs with it nil, so it is one-shot).")
 (defvar agent-chat--session-id)
 (defvar agent-chat--current-turn-id)
+(defvar-local xiang-scope-overlay--warned-turn nil
+  "The turn id the last 404 message was about; the message is said once per turn.")
 (defvar-local session-mode--last-operator-region nil)
 (defvar-local xiang-scope-overlay--overlays nil)
 (defvar-local xiang-scope-overlay--parents nil)
@@ -204,10 +206,21 @@ reply bound)."
           (when (equal "OPEN" (alist-get 'rule edge))
             (overlay-put ov 'face 'xiang-scope-open-face))
           (push ov xiang-scope-overlay--overlays)
-          (when parent (puthash id (alist-get 'within edge) xiang-scope-overlay--parents))))
-        (setq xiang-scope-overlay--missing (1+ xiang-scope-overlay--missing))))
+          (when parent (puthash id (alist-get 'within edge) xiang-scope-overlay--parents)))
+        ;; An act of a turn with no region at all has nothing to mark: the
+        ;; retention window dropped that turn.  Only a failure to place an act
+        ;; of a turn that is on screen is a miss worth saying.
+        (when (xiang-scope-overlay--turn-on-screen-p (alist-get 'id act) regions)
+          (setq xiang-scope-overlay--missing (1+ xiang-scope-overlay--missing)))))
+    ;; Until 2026-10-15 this setq sat after the if-let, so every act counted:
+    ;; "13 acts had no region" reported a paint that had placed 9 of 13.
     (when (> xiang-scope-overlay--missing 0)
-      (message "%d acts had no region" xiang-scope-overlay--missing)))
+      (message "%d acts had no region" xiang-scope-overlay--missing))))
+
+(defun xiang-scope-overlay--turn-on-screen-p (act-id regions)
+  "Non-nil when some region of ACT-ID's turn is in REGIONS."
+  (let ((turn (xiang-scope-overlay--act-turn (or act-id ""))))
+    (and turn (cl-some (lambda (r) (equal turn (car r))) regions))))
 
 (defun xiang-scope-overlay--url (&optional turn)
   (format "%s/api/alpha/xiang/scopes?session=%s&turn=%s"
@@ -235,6 +248,23 @@ reply bound)."
             (error (message "xiang scope fetch failed: %s"
                             (error-message-string err))))))))))
 
+(defun xiang-scope-overlay--target-turn ()
+  "The turn to ask the route for.
+The current turn when the operator wrote it; otherwise the newest turn that
+has operator text in the buffer.  An unsolicited turn (a bell, a park wake)
+is a turn to agent-chat but not to 象, which reads operator turns only: asked
+for one, the route answered unknown-turn on every refresh and each refresh
+said so and fell back (turn 156, 2026-10-15, six times in a row)."
+  (let* ((current (or agent-chat--current-turn-id ""))
+         (entries (sort (cl-remove-if-not
+                         (lambda (r) (and (stringp (car r)) (equal "operator" (cadr r))))
+                         (xiang-scope-overlay--regions))
+                        (lambda (a b) (> (marker-position (car (cddr a)))
+                                         (marker-position (car (cddr b))))))))
+    (if (or (null entries) (cl-some (lambda (r) (equal current (car r))) entries))
+        current
+      (car (car entries)))))
+
 (defun xiang-scope-overlay-refresh ()
   "Asynchronously refresh scope overlays for the current turn."
   (interactive)
@@ -242,7 +272,7 @@ reply bound)."
   (cl-incf xiang-scope-overlay--generation)
   (let* ((buffer (current-buffer))
          (generation xiang-scope-overlay--generation)
-         (current (or agent-chat--current-turn-id ""))
+         (current (xiang-scope-overlay--target-turn))
          (session (or agent-chat--session-id ""))
          (previous (cl-loop for r in (xiang-scope-overlay--regions)
                             for turn = (car r)
@@ -263,7 +293,12 @@ reply bound)."
                                           (string-match-p "404"
                                                           (format "%s" (plist-get status :error))))
                                      (progn
-                                       (message "xiang scope 404; falling back to turn=latest")
+                                       (when (buffer-live-p buffer)
+                                         (with-current-buffer buffer
+                                           (unless (equal current xiang-scope-overlay--warned-turn)
+                                             (setq xiang-scope-overlay--warned-turn current)
+                                             (message "xiang scope: %s not analyzed yet; showing the latest analyzed turn"
+                                                      current))))
                                        (fetch latest-url nil)
                                        ;; The analysis file can say "analyzed" a moment before the
                                        ;; route's view of the session has the turn's acts (seen on

@@ -9,10 +9,6 @@
 (defvar agent-chat--current-turn-id nil)
 (defvar session-mode--turn-text-regions nil)
 
-(defun session-mode--retain-recent-turn-regions (regions)
-  (let ((turns (seq-take (delete-dups (mapcar #'car regions)) 3)))
-    (cl-remove-if-not (lambda (entry) (member (car entry) turns)) regions)))
-
 (defun session-mode-regions-test--load-real-definition ()
   "Evaluate the production `session-mode--key-pending-region' from session-mode.el,
 so the test exercises the definition that runs, not a copy."
@@ -22,7 +18,8 @@ so the test exercises the definition that runs, not a copy."
                                              (directory-file-name
                                               (file-name-directory (or load-file-name buffer-file-name))))))
     (goto-char (point-min))
-    (dolist (name '("session-mode--key-pending-region" "session-mode--record-streamed-segment"))
+    (dolist (name '("session-mode--key-pending-region" "session-mode--record-streamed-segment"
+                    "session-mode--retain-recent-turn-regions"))
       (goto-char (point-min))
       (search-forward (concat "(defun " name))
       (goto-char (match-beginning 0))
@@ -81,6 +78,30 @@ region is recorded as :pending and keyed once the send assigns the id."
     (session-mode--key-pending-region)
     (should (equal '("seat-turn-9" "seat-turn-8" "seat-turn-7")
                    (mapcar #'car session-mode--turn-text-regions)))))
+
+(ert-deftest session-mode-retention-keeps-three-operator-turns-past-a-bell-turn ()
+  "A bell or park-wake turn has agent text only.  It must not count as one
+of the three retained turns, or the previous reply's regions are dropped
+while the route still returns its paragraphs."
+  (let ((regions (list (cons :pending (cons "operator" (cons 90 . (99))))
+                       (cons "seat-turn-156" (cons "agent" (cons 70 . (89))))
+                       (cons "seat-turn-155" (cons "agent" (cons 50 . (69))))
+                       (cons "seat-turn-155" (cons "operator" (cons 40 . (49))))
+                       (cons "seat-turn-153" (cons "agent" (cons 20 . (39))))
+                       (cons "seat-turn-153" (cons "operator" (cons 10 . (19))))
+                       (cons "seat-turn-151" (cons "agent" (cons 5 . (9))))
+                       (cons "seat-turn-151" (cons "operator" (cons 1 . (4)))))))
+    (should (equal '(:pending "seat-turn-156" "seat-turn-155" "seat-turn-155"
+                     "seat-turn-153" "seat-turn-153")
+                   (mapcar #'car (session-mode--retain-recent-turn-regions regions))))
+    ;; with operator text in every turn the window is three turns, as before
+    (should (equal '("t3" "t3" "t2" "t1")
+                   (mapcar #'car (session-mode--retain-recent-turn-regions
+                                  (list (cons "t3" (cons "operator" (cons 7 . (8))))
+                                        (cons "t3" (cons "agent" (cons 5 . (6))))
+                                        (cons "t2" (cons "operator" (cons 3 . (4))))
+                                        (cons "t1" (cons "operator" (cons 1 . (2))))
+                                        (cons "t0" (cons "operator" (cons 0 . (1)))))))))))
 
 (provide 'session-mode-regions-test)
 ;;; session-mode-regions-test.el ends here

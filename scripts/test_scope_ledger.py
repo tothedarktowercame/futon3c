@@ -62,6 +62,38 @@ class ScopeLedgerTest(unittest.TestCase):
         self.assertIn("open 3 (+2 −1)", rows[0][0])                    # 3 now, 2 before, 1 closed: 2 opened
         self.assertIn("open 2 (+· −0)", rows[1][0])                    # the oldest has no predecessor
 
+    def test_cached_scopes_are_reused_except_for_changed_or_newest_records(self):
+        """A second build asks the route only for the newest record and for
+        records whose fingerprint changed; the cached rows read the same."""
+        older = dict(self.record, turn_id="agent-turn-6", created_at="2026-10-14T19:00:00Z")
+        middle = dict(self.record)
+        newest = dict(self.record, turn_id="agent-turn-8", created_at="2026-10-15T20:00:00Z")
+        calls, cache = [], {}
+
+        def opener(_session, turn):
+            calls.append(turn)
+            return self.scope
+
+        first, _ = build([older, middle, newest], "claude-16", "sess", opener=opener, cache=cache)
+        self.assertEqual(["agent-turn-6", "agent-turn-7", "agent-turn-8"], calls)
+        self.assertEqual({"agent-turn-6", "agent-turn-7", "agent-turn-8"}, set(cache))
+        calls.clear()
+        second, _ = build([older, middle, newest], "claude-16", "sess", opener=opener, cache=cache)
+        self.assertEqual(["agent-turn-8"], calls)
+        self.assertEqual([line for line, _ in first], [line for line, _ in second])
+        calls.clear()
+        changed = dict(middle, ports={"still_open": ["a"], "closed_this_turn": []})
+        rows, _ = build([older, changed, newest], "claude-16", "sess", opener=opener, cache=cache)
+        self.assertEqual(["agent-turn-7", "agent-turn-8"], calls)
+        self.assertIn("open 1", rows[1][0])
+        # a turn the route did not answer is not cached, so it is asked again
+        calls.clear()
+        build([older, dict(self.record, turn_id="agent-turn-9")], "claude-16", "sess",
+              opener=lambda _s, turn: (calls.append(turn), None)[1] if turn == "agent-turn-9" else self.scope,
+              cache=cache)
+        self.assertEqual(["agent-turn-9"], calls)
+        self.assertNotIn("agent-turn-9", cache)
+
     def test_records_skip_drafts_and_non_objects(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "turn-a.json"

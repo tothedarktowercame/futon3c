@@ -206,7 +206,79 @@ scheduled for the current turn and that retry schedules none."
             (should (= 4 (length xiang-scope-overlay--overlays)))
             (xiang-scope-overlay-refresh)
             (should (= 4 (length xiang-scope-overlay--overlays)))
-            (should (cl-some (lambda (m) (string-match-p "falling back" m)) messages))))
+            (should (cl-some (lambda (m) (string-match-p "not analyzed yet" m)) messages))))
+      (kill-buffer buffer))))
+
+(ert-deftest xiang-scope-overlay-counts-only-acts-it-failed-to-place ()
+  "Placed acts are not misses; nor are acts of a turn the retention window
+dropped (nothing on screen to mark).  Until 2026-10-15 every act counted:
+a paint that placed 9 of 13 said \"13 acts had no region\"."
+  (let ((buffer (xiang-scope-overlay-test--setup)) messages)
+    (unwind-protect
+        (with-current-buffer buffer
+          (cl-letf (((symbol-function 'message)
+                     (lambda (fmt &rest args) (push (apply #'format fmt args) messages))))
+            (xiang-scope-overlay--apply
+             '((turn . "turn-1") (edges . ())
+               (acts . (((id . "turn-1-f-s1-0") (side . "operator") (start . 0) (end . 3) (text . "op1"))
+                        ((id . "turn-1-f-s2-0") (side . "operator") (start . 40) (end . 43) (text . "far"))
+                        ((id . "turn-9-r-0") (side . "agent") (start . 0) (text . "a turn with no region"))))))
+            (should (= 1 (length xiang-scope-overlay--overlays)))
+            (should (= 1 xiang-scope-overlay--missing))
+            (should (equal '("1 acts had no region") messages))))
+      (kill-buffer buffer))))
+
+(ert-deftest xiang-scope-overlay-asks-for-the-newest-operator-turn-not-a-bell-turn ()
+  "During an unsolicited turn (bell, park wake) the current turn has agent
+text only and 象 will never analyze it.  The refresh asks for the newest turn
+with operator text instead: no 404, no fallback, no retry."
+  (let ((buffer (xiang-scope-overlay-test--setup)) fetched scheduled)
+    (unwind-protect
+        (with-current-buffer buffer
+          (setq-local agent-chat--current-turn-id "turn-2")
+          (push (cons "turn-2" (cons "agent" (cons (copy-marker 27) (copy-marker 31))))
+                session-mode--turn-text-regions)
+          (cl-letf (((symbol-function 'run-at-time)
+                     (lambda (&rest args) (push args scheduled) 'timer))
+                    ((symbol-function 'message) #'ignore)
+                    (xiang-scope-overlay-fetch-function
+                     (lambda (url _callback) (push url fetched))))
+            (should (equal "turn-1" (xiang-scope-overlay--target-turn)))
+            (xiang-scope-overlay-refresh)
+            (should (= 1 (length fetched)))
+            (should (string-match-p "turn=turn-1\\'" (car fetched)))
+            (should (null scheduled))
+            ;; an operator turn of its own is asked for as itself
+            (push (cons "turn-2" (cons "operator" (cons (copy-marker 23) (copy-marker 27))))
+                  session-mode--turn-text-regions)
+            (should (equal "turn-2" (xiang-scope-overlay--target-turn)))))
+      (kill-buffer buffer))))
+
+(ert-deftest xiang-scope-overlay-says-not-analyzed-once-per-turn ()
+  "Repeated refreshes while the same turn awaits analysis say so once."
+  (let ((buffer (xiang-scope-overlay-test--setup)) messages)
+    (unwind-protect
+        (with-current-buffer buffer
+          (cl-letf (((symbol-function 'run-at-time) #'ignore)
+                    ((symbol-function 'message)
+                     (lambda (fmt &rest args) (push (apply #'format fmt args) messages)))
+                    (xiang-scope-overlay-fetch-function
+                     (lambda (url callback)
+                       (when (string-match-p "turn=turn-1\\'" url)
+                         (funcall callback '(:error (error http 404)))))))
+            (xiang-scope-overlay-refresh)
+            (xiang-scope-overlay-refresh)
+            (should (= 1 (length messages)))
+            (should (string-match-p "turn-1 not analyzed yet" (car messages)))
+            (setq-local agent-chat--current-turn-id "turn-3")
+            (push (cons "turn-3" (cons "operator" (cons (copy-marker 23) (copy-marker 27))))
+                  session-mode--turn-text-regions)
+            (cl-letf ((xiang-scope-overlay-fetch-function
+                       (lambda (url callback)
+                         (when (string-match-p "turn=turn-3\\'" url)
+                           (funcall callback '(:error (error http 404)))))))
+              (xiang-scope-overlay-refresh)
+              (should (= 2 (length messages))))))
       (kill-buffer buffer))))
 
 ;;; xiang-scope-overlay-test.el ends here

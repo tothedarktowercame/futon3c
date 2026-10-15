@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Publish a compact, classical scope ledger for one 象 session."""
 import argparse
+import hashlib
 import datetime as dt
 import html
 import json
@@ -171,17 +172,40 @@ def make_row(record, scope, previous_open=0):
     return line, json_row, acts, edges
 
 
-def build(records, agent, session, opener=None, base="http://localhost:7070"):
+def fingerprint(record):
+    """What of a record the row reads; a cached scope is reused while this holds."""
+    keys = ("turn_id", "created_at", "reply_text", "ports", "standings", "analysis_status")
+    text = json.dumps([record.get(k) for k in keys], sort_keys=True, default=str, ensure_ascii=False)
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()
+
+
+def build(records, agent, session, opener=None, base="http://localhost:7070",
+          cache=None, refetch_newest=1):
     """Rows newest first. The open delta needs the previous turn's open count,
     so the rows are built oldest first and reversed at the end (built newest
     first, the first turn had no predecessor and its whole open set read as
-    opened: "+53", 2026-10-15)."""
+    opened: "+53", 2026-10-15).
+
+    CACHE maps turn id to {"fingerprint", "scope"} and is updated in place.
+    The route answers in about five seconds per turn, so twenty turns took
+    two minutes and the page lagged a fresh turn by up to seven (2026-10-15);
+    a turn whose record is unchanged reuses its cached scope, and the newest
+    REFETCH_NEWEST records are always asked for again."""
     rows, details, previous = [], [], None
-    for record in records:          # records arrive oldest first
-        scope = fetch_scopes(session, record.get("turn_id", ""), base, opener)
+    total = len(records)
+    for index, record in enumerate(records):          # records arrive oldest first
+        turn_id = record.get("turn_id", "")
+        stamp = fingerprint(record)
+        cached = (cache or {}).get(turn_id)
+        fresh = (cached is not None and cached.get("fingerprint") == stamp
+                 and index < total - refetch_newest)
+        scope = cached["scope"] if fresh else fetch_scopes(session, turn_id, base, opener)
         if scope is None:
-            rows.append((record.get("created_at", "")[11:16] + " " + _tail(record.get("turn_id", "")) + "  ·", None))
+            rows.append((record.get("created_at", "")[11:16] + " " + _tail(turn_id) + "  ·", None))
             continue
+        if cache is not None:
+            cache[turn_id] = {"fingerprint": stamp,
+                              "scope": {"acts": scope.get("acts", []), "edges": scope.get("edges", [])}}
         line, data, acts, edges = make_row(record, scope, previous)
         if data["open_count"] is not None:
             previous = data["open_count"]
@@ -213,19 +237,33 @@ def main():
     parser.add_argument("--records", type=Path, default=RECORDS)
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--no-cache", action="store_true",
+                        help="ask the route for every turn (the cache file beside the page is still rewritten)")
     args = parser.parse_args()
     session = args.session or latest_session(args.records, args.agent)
     records = read_records(args.records, agent=args.agent, session=session)
     if args.limit > 0:
         records = records[-args.limit:]
     now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
-    rows, details = build(records, args.agent, session)
+    cache_path = args.out / f"scopes-{args.agent}.cache.json"
+    cache = {}
+    if not args.no_cache:
+        try:
+            loaded = json.loads(cache_path.read_text())
+            cache = loaded if isinstance(loaded, dict) and loaded.get("session") == session else {}
+            cache = cache.get("turns", {}) if cache else {}
+        except (OSError, json.JSONDecodeError):
+            cache = {}
+    rows, details = build(records, args.agent, session, cache=cache)
+    wanted = {r.get("turn_id") for r in records}
+    cache = {t: v for t, v in cache.items() if t in wanted}
     payload = {"session": session, "agent": args.agent, "generated_at": now,
                "turns": [data for _, data in rows if data is not None],
                "missing": [line for line, data in rows if data is None]}
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / f"scopes-{args.agent}.html").write_text(render(session, args.agent, rows, details, now), encoding="utf-8")
     (args.out / f"scopes-{args.agent}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    cache_path.write_text(json.dumps({"session": session, "turns": cache}, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

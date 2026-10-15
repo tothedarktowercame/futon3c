@@ -1856,8 +1856,24 @@ to talk off the record."
   "Recent ((TURN SIDE BEG-MARKER . END-MARKER)) transcript regions.")
 
 (defun session-mode--retain-recent-turn-regions (regions)
-  (let ((turns (seq-take (delete-dups (mapcar #'car regions)) 3)))
-    (cl-remove-if-not (lambda (entry) (member (car entry) turns)) regions)))
+  "Keep the regions of the three newest turns with operator text, and of
+every turn newer than the oldest of those.  REGIONS is newest first.
+An unsolicited turn (a bell, a park wake) has agent text only; counted as a
+turn of the three, it pushed the previous operator turn out of the window
+and the previous reply's paragraphs lost their regions (turns 153 and 156,
+2026-10-15)."
+  (let* ((turns (delete-dups (mapcar #'car regions)))
+         (operator-turns (seq-take (cl-remove-if-not
+                                    (lambda (turn)
+                                      (cl-some (lambda (r) (and (equal turn (car r))
+                                                                (equal "operator" (cadr r))))
+                                               regions))
+                                    turns)
+                                   3))
+         (keep (if operator-turns
+                   (seq-take turns (1+ (cl-position (car (last operator-turns)) turns)))
+                 (seq-take turns 3))))
+    (cl-remove-if-not (lambda (entry) (member (car entry) keep)) regions)))
 
 (defun session-mode--refresh-sent-tags ()
   "Reclassify the captured latest operator passage without changing its text."
