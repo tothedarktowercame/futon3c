@@ -11878,6 +11878,9 @@
                 (.timeout (java.time.Duration/ofSeconds 10))
                 (.header "Content-Type" "application/json")
                 (.header "Accept" "application/json")
+                ;; the store's write gate (layer 3) wants a penholder; "api" is
+                ;; the one the minus40 follower writes under
+                (.header "x-penholder" (or (System/getenv "FUTON3C_SCOPE_EDGE_PENHOLDER") "api"))
                 (.POST (java.net.http.HttpRequest$BodyPublishers/ofString
                         (json/generate-string edge)))
                 (.build))
