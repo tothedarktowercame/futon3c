@@ -1015,14 +1015,16 @@ Use the real inserted span, including any agent-chat text transformations."
             (setq session-mode--last-operator-region
                   (cons (copy-marker (+ (marker-position start) (length name) 2) t)
                         (copy-marker (- (marker-position agent-chat--prompt-marker) 2) nil)))
-            (when (and (boundp 'agent-chat--current-turn-id)
-                       agent-chat--current-turn-id)
-              (push (cons agent-chat--current-turn-id
-                          (cons "operator" session-mode--last-operator-region))
-                    session-mode--turn-text-regions)
-              (setq session-mode--turn-text-regions
-                    (session-mode--retain-recent-turn-regions
-                     session-mode--turn-text-regions)))
+            ;; The operator's message is inserted BEFORE agent-chat--start-turn
+            ;; advances the turn counter (agent-chat.el, the insert then the
+            ;; cl-incf), so the id in force here is the previous turn's. Record
+            ;; the region under :pending and let `session-mode--key-pending-region'
+            ;; (an :after advice on agent-chat--start-turn) give it the new id.
+            (push (cons :pending (cons "operator" session-mode--last-operator-region))
+                  session-mode--turn-text-regions)
+            (setq session-mode--turn-text-regions
+                  (session-mode--retain-recent-turn-regions
+                   session-mode--turn-text-regions))
             ;; The previous turn keeps its underlines: they move to the past
             ;; list instead of being deleted, so an earlier turn can still be
             ;; cited by its marks (Joe, 2026-09-29).
@@ -1037,6 +1039,17 @@ Use the real inserted span, including any agent-chat text transformations."
                         (- (marker-position agent-chat--prompt-marker) 2) nil)))
             (session-mode-turn-tags-refresh))
         (set-marker start nil)))))
+
+(defun session-mode--key-pending-region (&rest _)
+  "Give the :pending operator region the turn id the send just assigned."
+  (when (and (boundp 'agent-chat--current-turn-id) agent-chat--current-turn-id
+             (boundp 'session-mode--turn-text-regions))
+    (setq session-mode--turn-text-regions
+          (mapcar (lambda (r)
+                    (if (eq (car r) :pending)
+                        (cons agent-chat--current-turn-id (cdr r))
+                      r))
+                  session-mode--turn-text-regions))))
 
 (defun session-mode--tag-agent-message (original name text)
   "Record the exact inserted assistant TEXT region for its answered turn."
@@ -1920,7 +1933,8 @@ The directive never starts an agent turn and never sends a preceding draft."
   (advice-add 'agent-chat-send-input :around #'session-mode--consume-tag-command)
   (advice-add 'agent-chat-init-buffer :after #'session-mode--tags-after-init)
   (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message)
-  (advice-add 'agent-chat-insert-message :around #'session-mode--tag-agent-message))
+  (advice-add 'agent-chat-insert-message :around #'session-mode--tag-agent-message)
+  (advice-add 'agent-chat--start-turn :after #'session-mode--key-pending-region))
 
 (require 'session-turn-analysis)
 
