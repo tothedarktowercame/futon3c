@@ -13,7 +13,8 @@
 (require 'url-http)
 
 (defgroup xiang-scope-overlay nil "Scope overlays for 象 readings." :group 'session-mode)
-(defface xiang-scope-operator-face '((t :underline t)) "Operator acts.")
+(defface xiang-scope-operator-face '((t :foreground "#b16286" :weight bold))
+  "The intent mark set before an operator fragment.")
 (defface xiang-scope-agent-face '((t :underline (:style wave :color "#8ec07c"))) "Agent acts.")
 (defface xiang-scope-open-face '((t :box (:line-width 1 :color "#d79921"))) "OPEN parent acts.")
 
@@ -129,20 +130,38 @@ found by its own words instead."
                  (xiang-scope-overlay--agent-position start entries)))
       (xiang-scope-overlay--position (and (car entries) (cddr (car entries))) start))))
 
+(defconst xiang-scope-overlay--intent-marks
+  '(("gist" . "㊥") ("propose" . "㊭") ("approve" . "㊣") ("disagree" . "🈚")
+    ("qualify" . "㊟") ("explain" . "🈖") ("clarify" . "🈯") ("report" . "㊢")
+    ("report-problem" . "㊩") ("verify" . "㊬") ("retract" . "🈹") ("withdraw" . "🈡")
+    ("unresolved" . "🈳") ("constrain" . "🈲") ("ask-action" . "🈸") ("delegate" . "㊯")
+    ("prioritize" . "㊝") ("collect" . "㊮") ("extend" . "🈕") ("continue" . "🈰")
+    ("defer" . "🈝") ("redirect" . "🈘") ("explore" . "㊫"))
+  "Intent to mark, the CLAUDE.md reply-proforma key (same table as
+`xiaoxiang-preview-marks' and turnfeed's intent-mark).")
+
 (defconst xiang-scope-overlay--marks
-  '(?㊥ ?㊭ ?㊣ ?🈚 ?㊟ ?🈖 ?🈯 ?㊢ ?㊩ ?㊬ ?🈹 ?🈳 ?🈲 ?🈸 ?㊯ ?㊝ ?㊮ ?🈕 ?🈰 ?🈝 ?🈘 ?㊫ ?🈡)
-  "The reply-proforma marks (CLAUDE.md key); an agent paragraph opens with one.")
+  (mapcar (lambda (pair) (string-to-char (cdr pair))) xiang-scope-overlay--intent-marks)
+  "The reply-proforma marks; an agent paragraph opens with one.")
+
+(defun xiang-scope-overlay--intent-mark (kind)
+  "The mark for KIND, or a dot for a kind the key does not have."
+  (or (cdr (assoc kind xiang-scope-overlay--intent-marks)) "·"))
 
 (defun xiang-scope-overlay--span (act pos)
-  "The buffer span to underline for ACT whose text starts at POS.
-An operator fragment is underlined whole. An agent paragraph is underlined
-only at the proforma mark that opens it (Joe, 2026-10-15: underlining every
-paragraph of a reply is noise; mark the ㊟ or ㊬); the mark is the first
-character of the paragraph's line, before the optional colon and the
-bracketed target. Falls back to the text span when no mark is there."
+  "The buffer span to mark for ACT whose text starts at POS.
+An operator fragment gets an empty span at its start: the fragments of a
+turn tile it (five covered 754 of a 760-character turn on 2026-10-15), so
+underlining each whole underlined the turn and said nothing; the intent
+mark is set before the fragment instead, as 小象 does on the draft. An agent
+paragraph is underlined only at the proforma mark that opens it (Joe,
+2026-10-15: underlining every paragraph of a reply is noise; mark the ㊟ or
+㊬); the mark is the first character of the paragraph's line, before the
+optional colon and the bracketed target. Falls back to the text span when
+no mark is there."
   (let ((text-end (+ pos (length (or (alist-get 'text act) "")))))
     (if (equal "operator" (alist-get 'side act nil nil #'equal))
-        (cons pos text-end)
+        (cons pos pos)
       (let ((lbp (save-excursion (goto-char pos) (line-beginning-position))))
         (if (and (< lbp (point-max)) (memq (char-after lbp) xiang-scope-overlay--marks))
             (cons lbp (1+ lbp))
@@ -188,10 +207,19 @@ reply bound)."
                (edge (cl-find id edges :key (lambda (e) (alist-get 'act e)) :test #'equal))
                (parent (and edge (gethash (alist-get 'within edge) by-id)))
                (span (xiang-scope-overlay--span act pos))
-               (ov (make-overlay (car span) (cdr span))))
-          (overlay-put ov 'face (if (equal "operator" (alist-get 'side act))
-                                   'xiang-scope-operator-face
-                                 'xiang-scope-agent-face))
+               (ov (make-overlay (car span) (cdr span)))
+               (operator-p (equal "operator" (alist-get 'side act)))
+               (face (cond ((equal "OPEN" (alist-get 'rule edge)) 'xiang-scope-open-face)
+                           (operator-p 'xiang-scope-operator-face)
+                           (t 'xiang-scope-agent-face))))
+          (if operator-p
+              ;; the span is empty; what shows is the mark before it
+              (overlay-put ov 'before-string
+                           (propertize (concat (xiang-scope-overlay--intent-mark
+                                                (alist-get 'kind act))
+                                               " ")
+                                       'face face))
+            (overlay-put ov 'face face))
           (overlay-put ov 'xiang-scope-act id)
           (overlay-put ov 'help-echo
                        (if edge
@@ -203,8 +231,6 @@ reply bound)."
                          ;; the turn's first act, or an act no rule reached
                          (format "%s · no governing act in this turn"
                                  (or (alist-get 'kind act) "act"))))
-          (when (equal "OPEN" (alist-get 'rule edge))
-            (overlay-put ov 'face 'xiang-scope-open-face))
           (push ov xiang-scope-overlay--overlays)
           (when parent (puthash id (alist-get 'within edge) xiang-scope-overlay--parents)))
         ;; An act of a turn with no region at all has nothing to mark: the

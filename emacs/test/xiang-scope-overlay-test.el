@@ -106,9 +106,9 @@ so an agent paragraph is placed by its first words, not by offset."
       (let ((pos (xiang-scope-overlay--act-position act-a entries)))
         (should (equal (cons (- pos 2) (- pos 1)) (xiang-scope-overlay--span act-a pos)))
         (should (equal "㊢" (buffer-substring-no-properties (- pos 2) (- pos 1)))))
-      ;; an operator fragment keeps its whole text
-      (should (equal (cons 5 11) (xiang-scope-overlay--span
-                                  '((id . "t-f-s1-0") (side . "operator") (text . "abcdef")) 5)))
+      ;; an operator fragment is an empty span at its start (its mark is a before-string)
+      (should (equal (cons 5 5) (xiang-scope-overlay--span
+                                 '((id . "t-f-s1-0") (side . "operator") (text . "abcdef")) 5)))
       ;; the offset fallback is still there for a text that cannot be found
       (should (integerp (xiang-scope-overlay--act-position
                          '((id . "seat-turn-4-r-2") (side . "agent") (start . 3) (text . "zz"))
@@ -152,6 +152,10 @@ to arithmetic, so one stale entry cannot abort the paint."
                          (funcall cb nil)))))
           (funcall reply (car callbacks))        ; newest first in the list: generation 2
           (should (= 1 (length xiang-scope-overlay--overlays)))
+          ;; an operator fragment shows its intent's mark, not an underline
+          (let ((ov (car xiang-scope-overlay--overlays)))
+            (should (= (overlay-start ov) (overlay-end ov)))
+            (should (string-prefix-p "㊢" (overlay-get ov 'before-string))))
           (funcall reply (cadr callbacks))       ; the stale generation-1 reply
           (should (= 1 (length xiang-scope-overlay--overlays))))))))
 
