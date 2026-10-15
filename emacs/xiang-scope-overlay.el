@@ -54,16 +54,31 @@
   (when (string-match "\\`\\(.*\\)-[fr]-" id)
     (match-string 1 id)))
 
+(defun xiang-scope-overlay--agent-position (offset entries)
+  (catch 'found
+    (let ((remaining offset))
+      (dolist (entry (sort (copy-sequence entries)
+                           (lambda (a b) (< (marker-position (car (cddr a)))
+                                             (marker-position (car (cddr b)))))))
+      (let* ((region (cddr entry))
+             (length (- (marker-position (cdr region))
+                        (marker-position (car region)))))
+        (if (< remaining length)
+            (throw 'found (+ (marker-position (car region)) remaining))
+          (setq remaining (- remaining length 2)))))
+      nil)))
+
 (defun xiang-scope-overlay--act-position (act regions)
   (let* ((side (alist-get 'side act nil nil #'equal))
          (turn (xiang-scope-overlay--act-turn (alist-get 'id act)))
-         (entry (cl-find-if (lambda (r)
-                              (and (equal turn (car r))
-                                   (equal side (cadr r))))
-                            regions))
-         (region (and entry (cddr entry)))
+         (entries (cl-remove-if-not (lambda (r)
+                                      (and (equal turn (car r))
+                                           (equal side (cadr r))))
+                                    regions))
          (start (alist-get 'start act)))
-    (xiang-scope-overlay--position region start)))
+    (if (equal side "agent")
+        (and entries (xiang-scope-overlay--agent-position start entries))
+      (xiang-scope-overlay--position (and (car entries) (cddr (car entries))) start))))
 
 (defun xiang-scope-overlay--parent-text (id acts)
   (let ((parent (cl-find id acts :key (lambda (a) (alist-get 'id a)) :test #'equal)))
@@ -75,6 +90,20 @@
          (regions (xiang-scope-overlay--regions))
          (by-id (make-hash-table :test #'equal)))
     (setq xiang-scope-overlay--missing 0)
+    (let* ((reply-text (alist-get 'reply_text payload))
+           (reply-turn (alist-get 'turn payload))
+           (agent-regions (cl-remove-if-not
+                           (lambda (r) (and (equal "agent" (cadr r))
+                                            (equal reply-turn (car r))))
+                           regions))
+           (recorded-length (apply #'+ (mapcar (lambda (r)
+                                                 (- (marker-position (cdr (cddr r)))
+                                                    (marker-position (car (cddr r)))))
+                                               agent-regions))))
+      (when (and reply-text (/= (length reply-text)
+                                (+ recorded-length (* 2 (max 0 (1- (length agent-regions)))))))
+        (message "xiang scope reply length mismatch: recorded=%d route=%d"
+                 recorded-length (length reply-text))))
     (setq xiang-scope-overlay--parents (make-hash-table :test #'equal))
     (dolist (act acts) (puthash (alist-get 'id act) act by-id))
     (dolist (act acts)
@@ -129,24 +158,32 @@
   (xiang-scope-overlay--delete)
   (let* ((buffer (current-buffer))
          (current (or agent-chat--current-turn-id ""))
+         (session (or agent-chat--session-id ""))
          (previous (cl-loop for r in (xiang-scope-overlay--regions)
                             for turn = (car r)
-                            unless (equal turn current) return turn)))
-    (cl-labels ((fetch (turn &optional fallback)
+                            unless (equal turn current) return turn))
+         (current-url (format "%s/api/alpha/xiang/scopes?session=%s&turn=%s"
+                              (string-remove-suffix "/" xiang-scope-overlay-base-url)
+                              (url-hexify-string session)
+                              (url-hexify-string current)))
+         (latest-url (format "%s/api/alpha/xiang/scopes?session=%s&turn=latest"
+                            (string-remove-suffix "/" xiang-scope-overlay-base-url)
+                            (url-hexify-string session))))
+    (cl-labels ((fetch (url fallback)
                   (condition-case err
                       (funcall xiang-scope-overlay-fetch-function
-                               (xiang-scope-overlay--url turn)
+                               url
                                (lambda (status)
                                  (if (and fallback (plist-get status :error)
                                           (string-match-p "404"
                                                           (format "%s" (plist-get status :error))))
                                      (progn
-                                       (message "xiang scope 404; falling back to previous turn %s" fallback)
-                                       (fetch fallback))
+                                       (message "xiang scope 404; falling back to turn=latest")
+                                       (fetch latest-url nil))
                                    (xiang-scope-overlay--callback buffer status))))
                     (error (message "xiang scope fetch failed: %s"
                                     (error-message-string err))))))
-      (fetch current previous))))
+      (fetch current-url latest-url))))
 
 (defun xiang-scope-overlay-jump-to-parent ()
   "Jump to the governing act at point." 

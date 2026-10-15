@@ -1021,7 +1021,8 @@ Use the real inserted span, including any agent-chat text transformations."
                           (cons "operator" session-mode--last-operator-region))
                     session-mode--turn-text-regions)
               (setq session-mode--turn-text-regions
-                    (seq-take session-mode--turn-text-regions 6)))
+                    (session-mode--retain-recent-turn-regions
+                     session-mode--turn-text-regions)))
             ;; The previous turn keeps its underlines: they move to the past
             ;; list instead of being deleted, so an earlier turn can still be
             ;; cited by its marks (Joe, 2026-09-29).
@@ -1039,7 +1040,12 @@ Use the real inserted span, including any agent-chat text transformations."
 
 (defun session-mode--tag-agent-message (original name text)
   "Record the exact inserted assistant TEXT region for its answered turn."
-  (if (or (equal name agent-chat-user-speaker) (equal name "system"))
+  (if (or (equal name agent-chat-user-speaker)
+          (equal name "system")
+          (not (equal name (or (and (boundp 'agent-chat--agent-name)
+                                    agent-chat--agent-name)
+                               (and (boundp 'agent-chat--agent-id)
+                                    agent-chat--agent-id)))))
       (funcall original name text)
     (let ((start (copy-marker agent-chat--prompt-marker nil)))
       (unwind-protect
@@ -1054,7 +1060,8 @@ Use the real inserted span, including any agent-chat text transformations."
                       session-mode--turn-text-regions)
                 (setq session-mode--last-agent-region (cons beg end)
                       session-mode--turn-text-regions
-                      (seq-take session-mode--turn-text-regions 6)))))
+                      (session-mode--retain-recent-turn-regions
+                       session-mode--turn-text-regions)))))
         (set-marker start nil)))))
 
 (defun session-mode-describe-turn-intent ()
@@ -1802,6 +1809,10 @@ to talk off the record."
 (defvar-local session-mode--last-operator-region nil)
 (defvar-local session-mode--turn-text-regions nil
   "Recent ((TURN SIDE BEG-MARKER . END-MARKER)) transcript regions.")
+
+(defun session-mode--retain-recent-turn-regions (regions)
+  (let ((turns (seq-take (delete-dups (mapcar #'car regions)) 3)))
+    (cl-remove-if-not (lambda (entry) (member (car entry) turns)) regions)))
 
 (defun session-mode--refresh-sent-tags ()
   "Reclassify the captured latest operator passage without changing its text."

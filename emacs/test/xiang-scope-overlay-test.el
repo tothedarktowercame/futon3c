@@ -16,7 +16,7 @@
 (defun xiang-scope-overlay-test--setup ()
   (let ((buffer (generate-new-buffer " *xiang-scope-test*")))
     (with-current-buffer buffer
-      (insert "op0rep0op1rep1")
+      (insert "op0rep0op1seg0TOOLseg1TOOLseg2")
       (setq-local agent-chat--session-id "s")
       (setq-local agent-chat--current-turn-id "turn-1")
       (setq-local session-mode--turn-text-regions
@@ -25,7 +25,11 @@
                         (cons "turn-1" (cons "operator"
                                                 (cons (copy-marker 8) (copy-marker 11))))
                         (cons "turn-1" (cons "agent"
-                                                (cons (copy-marker 11) (copy-marker 15))))))
+                                                (cons (copy-marker 11) (copy-marker 15))))
+                        (cons "turn-1" (cons "agent"
+                                                (cons (copy-marker 19) (copy-marker 23))))
+                        (cons "turn-1" (cons "agent"
+                                                (cons (copy-marker 27) (copy-marker 31))))))
       (setq-local session-mode--last-operator-region
                   (cons (copy-marker 8) (copy-marker 11))))
     buffer))
@@ -35,12 +39,17 @@
     (unwind-protect
         (with-current-buffer buffer
           (xiang-scope-overlay--apply (xiang-scope-overlay-test--fixture))
-          (should (= 2 (length xiang-scope-overlay--overlays)))
+          (should (= 4 (length xiang-scope-overlay--overlays)))
           (should (= 4 (overlay-start (cl-find-if
                                        (lambda (ov)
                                          (equal "turn-0-r-0"
                                                 (overlay-get ov 'xiang-scope-act)))
                                        xiang-scope-overlay--overlays))))
+          (should (cl-some (lambda (ov)
+                             (and (equal "turn-1-r-2"
+                                         (overlay-get ov 'xiang-scope-act))
+                                  (= 27 (overlay-start ov))))
+                           xiang-scope-overlay--overlays))
           (should (cl-some
                    (lambda (ov)
                      (string-match-p "R3" (or (overlay-get ov 'help-echo) "")))
@@ -68,9 +77,9 @@
                                                 xiang-scope-overlay-test--dir))
                              (funcall callback nil)))))))
             (xiang-scope-overlay-refresh)
-            (should (= 2 (length xiang-scope-overlay--overlays)))
+            (should (= 4 (length xiang-scope-overlay--overlays)))
             (xiang-scope-overlay-refresh)
-            (should (= 2 (length xiang-scope-overlay--overlays)))
+            (should (= 4 (length xiang-scope-overlay--overlays)))
             (should (cl-some (lambda (m) (string-match-p "falling back" m)) messages))))
       (kill-buffer buffer))))
 
