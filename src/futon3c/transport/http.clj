@@ -80,6 +80,8 @@
             [futon3c.xiang.turn-service :as xiang-turns]
             [futon3c.xiang.turn-store :as xiang-store]
             [futon3c.xiang.turn-record :as xiang-record]
+            [futon3c.xiang.turn-acts :as xiang-acts]
+            [futon3c.xiang.scope-rules :as xiang-scopes]
             [futon3c.agency.act-harness :as act-harness]
             [futon3c.agency.act-stamp :as act-stamp]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
@@ -12039,6 +12041,68 @@
         (json-response 404 {:ok false :reason :unknown-action :action action}))
       (catch clojure.lang.ExceptionInfo e (xiang-refusal e)))))
 
+(defn- xiang-scope-settled [svc session-id]
+  (if-let [fixture (get-in svc [:config :scope-acts session-id])]
+    {:acts fixture :records nil}
+    (let [store (get-in svc [:config :store])
+          settled (->> (xiang-store/list-records store :session-id session-id :limit 10000)
+                       (keep (fn [{rid :id r :record}]
+                               (let [status (:analysis_status r)]
+                                 (when (or (contains? #{"analyzed" "drafted"} status)
+                                           (and (= "declared" status)
+                                                (contains? #{"agent" "system"} (:origin r))))
+                                   {:record r :record-id rid
+                                    :reading (if (= "analyzed" status)
+                                               (or (xiang-store/read-analysis store rid) {})
+                                               {:sentences []})
+                                    :reply (or (:reply_text r) "")
+                                    :commits (xiang-acts/happened-commits (:happened_summary r))}))))
+                       (sort-by #(get-in % [:record :created_at]))
+                       vec)]
+      {:acts (xiang-acts/session-acts settled) :records settled})))
+
+(defn- xiang-scope-act-view [act]
+  (cond-> {:id (:id act)
+           :kind (:kind act)
+           :text (:text act)
+           :side (if (= "operator" (:author act)) "operator" "agent")}
+    (contains? act :start) (assoc :start (:start act))
+    (contains? act :end) (assoc :end (:end act))))
+
+(defn- handle-xiang-scopes [request config]
+  (let [params (parse-query-params request)
+        session (get params "session")
+        turn (get params "turn")]
+    (cond
+      (str/blank? session) (json-response 400 {:ok false :reason :missing-field :field "session"})
+      (str/blank? turn) (json-response 400 {:ok false :reason :missing-field :field "turn"})
+      :else
+      (try
+        (let [svc (xiang-turn-service config)
+              {:keys [acts records]} (xiang-scope-settled svc session)
+              scoped (xiang-scopes/acts-for-turn acts turn)
+              ;; Production reply acts are made by turn-acts from the marked
+              ;; paragraphs; add their persisted codepoint spans here for the
+              ;; renderer without changing the kernel act representation.
+              by-record (into {} (map (juxt :record-id identity) records))
+              scoped (mapv (fn [act]
+                             (if-let [record (get by-record (:record act))]
+                               (if-let [idx (some-> (re-find #"-r-(\d+)$" (:id act)) second parse-long)]
+                                 (merge act (select-keys (nth (xiang-record/reply-marks
+                                                               (or (:reply_text (:record record)) "")) idx {})
+                                                         [:start :end]))
+                                 act)
+                               act))
+                           scoped)]
+          (json-response 200 {:ok true :turn turn
+                              :edges (xiang-scopes/scope-for-turn acts turn)
+                              :acts (mapv xiang-scope-act-view scoped)
+                              :rules-version xiang-scopes/version}))
+        (catch clojure.lang.ExceptionInfo e
+          (if (= :unknown-turn (:reason (ex-data e)))
+            (json-response 404 {:ok false :reason :unknown-turn :turn turn})
+            (xiang-refusal e)))))))
+
 (defn- handle-xiang
   "Routes under /api/alpha/xiang/. Returns a response, or nil for an unknown path."
   [request config]
@@ -12059,6 +12123,9 @@
                                                                    :agent-id (get params "agent")
                                                                    :surface (get params "surface")
                                                                    :limit (max 1 (min 1000 limit))))}))
+
+      (and (= :get method) (= "/api/alpha/xiang/scopes" uri))
+      (handle-xiang-scopes request config)
 
       (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
       (let [params (parse-query-params request)]

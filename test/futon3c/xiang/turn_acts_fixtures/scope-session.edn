@@ -1,0 +1,29 @@
+[{:turn "claude-18-turn-87"
+  :record "fixture-87"
+  :at "2026-09-28T22:59:11Z"
+  :acts [{:id "claude-18-turn-87-f-s1-0" :kind :propose :author "operator"
+          :turn "claude-18-turn-87" :record "fixture-87" :port? true
+          :at "2026-09-28T22:59:11Z" :text "here's an interesting thought: since we have a writeup of AIF in Lean"
+          :start 0 :end 74}
+         {:id "claude-18-turn-87-f-s2-0" :kind :propose :author "operator"
+          :turn "claude-18-turn-87" :record "fixture-87" :port? true
+          :at "2026-09-28T22:59:11Z" :text "we could map back to the informal problems"
+          :start 75 :end 119}]}
+ {:turn "fixture-turn-2"
+  :record "fixture-2"
+  :at "2026-09-28T23:00:11Z"
+  :acts [{:id "fixture-turn-2-f-s1-0" :kind :prioritize :author "operator"
+          :turn "fixture-turn-2" :record "fixture-2" :port? false
+          :at "2026-09-28T23:00:11Z" :text "start with the first item" :start 0 :end 24}
+         {:id "fixture-turn-2-r-0" :kind :report :author "agent"
+          :turn "fixture-turn-2" :record "fixture-2" :at "2026-09-28T23:00:12Z"
+          :target "claude-18-turn-87-f-s1-0" :text "reported progress" :start 0 :end 16}
+         {:id "fixture-turn-2-r-1" :kind :explain :author "agent"
+          :turn "fixture-turn-2" :record "fixture-2" :at "2026-09-28T23:00:13Z"
+          :text "explained the result" :start 18 :end 38}]}
+ {:turn "fixture-turn-3"
+  :record "fixture-3"
+  :at "2026-09-28T23:01:11Z"
+  :acts [{:id "fixture-turn-3-f-s1-0" :kind :explore :author "operator"
+          :turn "fixture-turn-3" :record "fixture-3" :port? false
+          :at "2026-09-28T23:01:11Z" :text "look at the adjacent idea" :start 0 :end 25}]}]
