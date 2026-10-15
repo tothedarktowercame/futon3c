@@ -82,8 +82,20 @@ def _tail(turn_id):
     return str(turn_id).rsplit("-", 1)[-1]
 
 
-def _act_label(act, turn_id):
-    return local_id(act["id"], turn_id)
+def _sentence(act_id):
+    m = re.search(r"-f-s(\d+)-(\d+)$", str(act_id))
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _act_label(act, turn_id, multi=()):
+    """s<n> for a sentence with one fragment; s<n>.<i> for every fragment of a
+    sentence that has several (two fragments both printed as s1 made the
+    line unreadable, 2026-10-15)."""
+    label = local_id(act["id"], turn_id)
+    sent = _sentence(act["id"])
+    if sent and sent[0] in multi and "." not in label.rsplit(":", 1)[-1]:
+        label += "." + sent[1]
+    return label
 
 
 def make_row(record, scope, previous_open=0):
@@ -97,20 +109,31 @@ def make_row(record, scope, previous_open=0):
     operators = [a for a in acts if current(a) and (a.get("side") == "operator" or a.get("author") == "operator")]
     replies = [a for a in acts if current(a) and (a.get("side") == "agent" or a.get("author") not in ("operator", None))]
 
+    # sentences of this turn with more than one fragment get .<i> on every fragment
+    counts = {}
+    for a in operators:
+        sent = _sentence(a.get("id"))
+        if sent:
+            counts[sent[0]] = counts.get(sent[0], 0) + 1
+    multi = {n for n, c in counts.items() if c > 1}
+
     def parent_token(edge):
-        return _act_label(by_id.get(edge.get("within"), {"id": edge.get("within")}), turn_id)
+        return _act_label(by_id.get(edge.get("within"), {"id": edge.get("within")}), turn_id, multi)
 
     op_tokens = []
     for act in operators:
         aid = act.get("id")
-        label = _act_label(act, turn_id)
+        label = _act_label(act, turn_id, multi)
         edge = within.get(aid)
         op_tokens.append(("⊢" + label) if not edge else (label + "↳" + parent_token(edge)))
 
     reply_text = record.get("reply_text") or ""
     reply_tokens = []
+    # commit acts (<turn>-c-<sha>) have no glyph in the reply text: count them
+    commits = [a for a in replies if "-c-" in str(a.get("id", ""))]
+    replies = [a for a in replies if "-c-" not in str(a.get("id", ""))]
     for act in replies:
-        label = _act_label(act, turn_id)
+        label = _act_label(act, turn_id, multi)
         start = int(act.get("start", 0))
         glyph = reply_text[start:start + 1] or (str(act.get("text", " "))[:1] or "·")
         edge = within.get(act.get("id"))
@@ -118,18 +141,25 @@ def make_row(record, scope, previous_open=0):
         for close in closes:
             if close.get("act") == act.get("id"):
                 target = by_id.get(close.get("within"), {"id": close.get("within")})
-                token += "✓" + _act_label(target, turn_id)
+                token += "✓" + _act_label(target, turn_id, multi)
         reply_tokens.append(token)
+    if commits:
+        reply_tokens.append("⎘%d" % len(commits))
 
-    still_open = (record.get("ports") or {}).get("still_open", [])
-    closed = (record.get("ports") or {}).get("closed_this_turn", [])
-    open_count = len(still_open)
-    opened = max(0, open_count - previous_open + len(closed))
-    in_force = len((record.get("standings") or {}).get("in_force", []))
+    ports = record.get("ports")
+    still_open = (ports or {}).get("still_open", [])
+    closed = (ports or {}).get("closed_this_turn", [])
+    open_count = len(still_open) if ports else None
+    # opened this turn = what is open after it, less what was open before,
+    # plus what closed in it (the closed ones were open before and are not now)
+    opened = (max(0, open_count - previous_open + len(closed))
+              if (ports and previous_open is not None) else None)
+    in_force = len((record.get("standings") or {}).get("in_force", [])) if record.get("standings") else None
+    fmt = lambda v: "·" if v is None else str(v)
     line = (f"{record.get('created_at', '')[11:16]} {_tail(turn_id)}  "
             f"{'  '.join(op_tokens) or '·'} │ "
             f"{'  '.join(reply_tokens) or '·'} │ "
-            f"open {open_count} (+{opened} −{len(closed)}) │ force {in_force}")
+            f"open {fmt(open_count)} (+{fmt(opened)} −{len(closed)}) │ force {fmt(in_force)}")
     json_row = {"turn_id": turn_id, "record_id": record.get("id"),
                 "created_at": record.get("created_at"), "line": line,
                 "operator": [{"id": a.get("id"), "kind": a.get("kind"),
@@ -142,16 +172,23 @@ def make_row(record, scope, previous_open=0):
 
 
 def build(records, agent, session, opener=None, base="http://localhost:7070"):
-    rows, details, previous = [], [], 0
-    for record in reversed(records):
+    """Rows newest first. The open delta needs the previous turn's open count,
+    so the rows are built oldest first and reversed at the end (built newest
+    first, the first turn had no predecessor and its whole open set read as
+    opened: "+53", 2026-10-15)."""
+    rows, details, previous = [], [], None
+    for record in records:          # records arrive oldest first
         scope = fetch_scopes(session, record.get("turn_id", ""), base, opener)
         if scope is None:
             rows.append((record.get("created_at", "")[11:16] + " " + _tail(record.get("turn_id", "")) + "  ·", None))
             continue
         line, data, acts, edges = make_row(record, scope, previous)
-        previous = data["open_count"]
+        if data["open_count"] is not None:
+            previous = data["open_count"]
         rows.append((line, data))
         details.append((data, acts, edges))
+    rows.reverse()
+    details.reverse()
     return rows, details
 
 

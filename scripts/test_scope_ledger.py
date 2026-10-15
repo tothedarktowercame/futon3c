@@ -36,6 +36,32 @@ class ScopeLedgerTest(unittest.TestCase):
         self.assertIn("t6:s1", rows[1][0])
         self.assertIn("agent-turn-7-f-s2-0", rows[1][1]["operator"][1]["id"])
 
+    def test_multi_fragment_sentences_commits_and_missing_ports(self):
+        """Two fragments of one sentence read s1.0 and s1.1; commit acts fold
+        into ⎘n; a record whose ports are not yet written shows · not 0."""
+        scope = {"acts": [{"id": "agent-turn-9-f-s1-0", "kind": "approve", "side": "operator", "start": 0},
+                          {"id": "agent-turn-9-f-s1-1", "kind": "clarify", "side": "operator", "start": 20},
+                          {"id": "agent-turn-9-r-0", "kind": "report", "side": "agent", "start": 0},
+                          {"id": "agent-turn-9-c-abc123", "kind": "commit", "side": "agent"},
+                          {"id": "agent-turn-9-c-def456", "kind": "commit", "side": "agent"}],
+                 "edges": [{"act": "agent-turn-9-f-s1-1", "within": "agent-turn-9-f-s1-0", "rule": "R3"},
+                           {"act": "agent-turn-9-r-0", "within": "agent-turn-9-f-s1-1", "rule": "R3"}]}
+        record = {"turn_id": "agent-turn-9", "created_at": "2026-10-15T19:47:00Z",
+                  "reply_text": "㊢ (x) done"}
+        line, row, _, _ = make_row(record, scope, previous_open=5)
+        self.assertEqual("19:47 9  ⊢s1.0  s1.1↳s1.0 │ ㊢↳s1.1  ⎘2 │ open · (+· −0) │ force ·", line)
+        self.assertEqual(2, len(row["replies"]) + 1)  # the two commits are not rows
+
+    def test_rows_are_built_oldest_first_so_the_delta_has_a_predecessor(self):
+        older = dict(self.record, turn_id="agent-turn-6", created_at="2026-10-14T19:00:00Z",
+                     ports={"still_open": [{"act": "a"}, {"act": "b"}], "closed_this_turn": []})
+        newer = dict(self.record, ports={"still_open": [{"act": "a"}, {"act": "b"}, {"act": "c"}],
+                                         "closed_this_turn": [{"act": "d"}]})
+        rows, _ = build([older, newer], "claude-16", "sess", opener=lambda _s, _t: self.scope)
+        self.assertEqual("agent-turn-7", rows[0][1]["turn_id"])        # newest first in the output
+        self.assertIn("open 3 (+2 −1)", rows[0][0])                    # 3 now, 2 before, 1 closed: 2 opened
+        self.assertIn("open 2 (+· −0)", rows[1][0])                    # the oldest has no predecessor
+
     def test_records_skip_drafts_and_non_objects(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "turn-a.json"
