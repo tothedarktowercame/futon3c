@@ -95,9 +95,12 @@
 
 (deftest throwing-send-unsubscribes
   (let [h (harness (fn [_] {:ok true :frames [{:n 1}]}))
-        _ (cache/frames! "s" (:opts h)) attempts (atom 0)]
+        _ (cache/frames! "s" (:opts h)) attempts (atom 0)
+        before (set (keys (.getWatches cache/!cache)))]
     (stream/subscribe! "s" {:send! (fn [_] (swap! attempts inc) (throw (ex-info "closed" {})))})
     (is (= 1 @attempts))
+    ;; the watch itself must be gone, not just silenced by the stopped flag
+    (is (= before (set (keys (.getWatches cache/!cache)))))
     (cache/invalidate! "s" (:opts h))
     (run-next! h)
     (is (= 1 @attempts))))
