@@ -243,7 +243,7 @@ checks (packets in `web/scopes/packets/`), fixtures
 | seat | calls | memories reached | echoed in the reply | named in the reply |
 |---|---|---|---|---|
 | zai-1 (/tmp checkouts) | 3 | 4 | 0 | 0; the reply says none applied |
-| zai-2 (park protocol) | 3 | 18 | 3 | 3, by name |
+| zai-2 (park protocol) | 3 | 17 | 3 | 3, by name |
 
 zai-2's reply used three memories (verify-running-before-parking,
 park-deadlines-budget-the-acceptance-run, seat-bellbacks-look-like-mine)
@@ -261,6 +261,45 @@ marks, so the reply has no act spans and echoes anchor on raw offsets; Zai
 seats write no context-retrieval evidence, so the pattern layer is empty
 for them.
 
-Next: the over-time view, one row per turn across a session and one column
-per memory that ever reached, each cell retrieved-only, reached or echoed,
-with said/unsaid/again from `m40_history` along the column.
+## The memory layer over a session (2026-10-16, futon3c 8c5d549f2)
+
+`scripts/scope_view_over_time.py` lays the same layer out across a
+session: one row per 象 turn record, one column per memory any recorded
+call ever named, and in each cell the strongest thing the record shows.
+A cell is **retrieved-only** when the name (with up to three matching
+lines) came back from `m40_find` and nothing read the statements;
+**reached** when the statements came back (`m40_state`, `m40_asof`,
+`m40_history`, `m40_near`); **echoed** when the reply shares a run of five
+words or the name with it. The per-turn view did not make the first
+distinction: it drew every named memory as reached. Each cell also says
+whether the memory was in force at the reply, and each column carries the
+memory's said / unsaid / said-again events from the store (the data
+`m40_history` renders), so a memory withdrawn mid-session shows where
+along the column it stopped. A turn with no recorded call is a row of
+blanks, not a missing row: how often the seat consulted memory is part of
+what the view shows.
+
+First grids (`web/scopes/fixtures/over-time-zai-{1,2}.json`; `--md`
+prints them as a table):
+
+| session | turns | turns with calls | memories named | echoed | reached | retrieved-only |
+|---|---|---|---|---|---|---|
+| zai-1 (24 turns since 10-09) | 24 | 1 | 4 | 0 | 4 | 0 |
+| zai-2 (22 turns since 10-09) | 22 | 1 | 17 | 3 | 8 | 6 |
+
+Both populated rows are the turns belled on 2026-10-16 with an instruction
+to use the tools; the 45 earlier turns in the two sessions made no minus40
+call. zai-2's six retrieved-only memories are those `m40_find` listed for
+["parking" "accepted"] and the like that `m40_state` did not then surface;
+the three echoed are the three the reply named. Two of zai-1's four
+memories have unsaid facts (blueprint-parallel-lemmas, 2 of 18;
+vsat-upstream-write-access, 5 of 17) but were still in force at the
+reply, so no cell is marked not-in-force yet. The count of 17 above
+corrects the 18 first written in the table above (the per-turn fixture
+has 22 segments: two texts, three calls, 17 memories).
+
+Next: a second packet to each seat (`web/scopes/packets/zai-1-amend-rule.md`,
+`zai-2-kimi-seats.md`) so each grid has two populated rows, which is the
+least the view needs to show whether a memory reached on one turn is
+reached again, or only echoed, on a later one; then an HTML grid renderer
+beside `scopes.js`.
