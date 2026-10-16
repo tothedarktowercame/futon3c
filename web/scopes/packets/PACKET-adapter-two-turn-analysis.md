@@ -49,7 +49,7 @@ retiring it is a later step.
 `scripts/scope_view_turn_analysis.py RECORD.json [--out FILE]`, like
 `scope_view_data.py`. Write one fixture to
 `web/scopes/fixtures/analysis-<record-id>.json` for the newest record in
-the directory that has at least three fragments with display cues.
+the directory that has at least three display cues (recent records have two fragments and three cues; `relations` is a list of strings on a fragment, read how `render` shows it).
 
 Make it reachable on the page the way the existing fixtures are
 (`web/scopes/index.html` picks a fixture from `?turn=`): read how that
