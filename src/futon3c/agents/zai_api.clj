@@ -1123,7 +1123,7 @@
 (def ^:private transcript-text-cap 4096)
 (def ^:private transcript-args-cap 2048)
 (def ^:private transcript-preview-cap 240)
-(def ^:private transcript-memory-result-cap 8192)
+(def ^:private transcript-memory-result-cap 16384)
 
 (def ^:private memory-read-tool-names
   "minus40 reads whose full result text is kept on the round record: the
