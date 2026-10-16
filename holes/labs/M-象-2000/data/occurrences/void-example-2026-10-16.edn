@@ -1,0 +1,3 @@
+{:squares []
+ :void [{:pattern "ukrns/publication-cadence" :turn "turn-zZ52wx" :cited-by "example: cited on a turn where HOWEVER's costs name nothing" :assignment {:IF "I1" :HOWEVER "I2" :BECAUSE "G" :THEN "B"} :status "void" :void [{:part "HOWEVER" :reason "no-situation-element"}]}]
+ :cascade {:occurrences [] :void ["ukrns/publication-cadence"] :glued [] :components 0 :verdict "empty"}}

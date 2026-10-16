@@ -1,0 +1,5 @@
+[{"turn": "turn-zZ52wx", "pattern": "ukrns/publication-cadence", "cited-by": "example: cited on a turn where HOWEVER's costs name nothing",
+  "maps": {"I1": {"element": "the spec draft and its committed revisions", "source": "futon2"},
+           "I2": {"element": null},
+           "G": {"element": "readers of the spec", "source": "turn-zZ52wx"},
+           "B": {"element": "the committed spec at e5c3a4604", "source": "futon2"}}}]

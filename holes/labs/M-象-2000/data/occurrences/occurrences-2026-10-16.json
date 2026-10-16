@@ -1,0 +1,26 @@
+[
+ {"turn": "turn-w3xIu6", "pattern": "ukrns/publication-cadence", "cited-by": "象 (2026-10-01 rationale: 'The pattern names exactly this axis')",
+  "maps": {
+   "I1": {"element": "plop-2026.html's living rendering and its frozen conference snapshot", "source": "turn-w3xIu6: Joe asks the viewer to 'bring up the conference version there'"},
+   "I2": {"element": "the viewer serves only the living rendering, so the conference version cannot be cited from the address", "source": "turn-w3xIu6"},
+   "G":  {"element": "the one address plop-2026.html read by both citing and current readers", "source": "CASCADE-SPEC-v3 §2 (c17 reading, 2026-10-05)"},
+   "B":  {"element": "the conference version served at plop-2026.html with the living version still findable", "source": "turn-w3xIu6; CHECK: engaged when readers can find both"}}},
+ {"turn": "turn-zZ52wx", "pattern": "pattern-interpretation/cite-the-source-bytes", "cited-by": "retrieval (score 0.5428)",
+  "maps": {
+   "I1": {"element": "the WM blend-square producer, want_interpretation/validate-response", "source": "futon2 src/futon2/aif/want_interpretation.clj:260"},
+   "I2": {"element": "the legacy migration template and seat-authored square texts on the 2026-10-14 trace", "source": "futon2 data/wm-trace/wm-trace-2026-10-14.edn; legacy_three_halves_registry.clj"},
+   "G":  {"element": "the pattern file bytes at their sha256", "source": "futon3/library/<family>/<name>.flexiarg"},
+   "B":  {"element": "the parts-check refusal at the producer", "source": "packet to codex-2, job invoke-1792193935835-15912-5c902ffb"}}},
+ {"turn": "turn-zZ52wx", "pattern": "cascade-construction/lift-when-three-align", "cited-by": "retrieval",
+  "maps": {
+   "I1": {"element": "WM blend squares, 象 citations and m40 facts carrying the same four parts", "source": "turn-zZ52wx: 'we will be working with similar data structures'"},
+   "I2": {"element": "WM and 象 have written squares; m40 holds none", "source": "m40_find publication-cadence, 2026-10-16: one memory, no square"},
+   "G":  {"element": "CASCADE-SPEC-v3 §2 five rules", "source": "futon2 e5c3a4604"},
+   "B":  {"element": "the 象-side occurrence records as the third written instance", "source": "futon3c/scripts/occurrence_square.py output"}}},
+ {"turn": "turn-zZ52wx", "pattern": "peripherals/pattern-becomes-peripheral", "cited-by": "retrieval",
+  "maps": {
+   "I1": {"element": "CASCADE-SPEC-v3 §2 five rules", "source": "futon2 e5c3a4604"},
+   "I2": {"element": "defaulted squares on the 2026-10-14 trace, written and never read against the pattern", "source": "futon2 data/wm-trace/wm-trace-2026-10-14.edn"},
+   "G":  {"element": "seat-authored square text that no later check reads", "source": "futon2 data/wm-interpretations/M-futonzero-mvp.edn"},
+   "B":  {"element": "the parts-check refusal at the producer", "source": "packet to codex-2"}}}
+]
