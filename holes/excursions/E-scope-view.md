@@ -213,6 +213,23 @@ the view; written once (a) and (b) are reviewed. Proof-body shading and
 the mock-verdict re-selection stay in the page, as the drop-in section
 says.
 
+**(a) reviewed, accepted** (a597ab26d, codex-23, three files: `scopes.ts`,
+`scopes.js`, `test_scopes.mjs`; `index.html` untouched; the reply names
+the compile command). The five acceptance cases are in the test and each
+pins what it names: the mixed unit is compared to `mixInk` itself, the
+half-weight case to `round(255 * (1 - 0.5))`, the straddling unit
+`[3, 5)` to a span ending at 4. Two things the record did not pin, added
+in the follow-up commit: a unit starting exactly at a span's end and a
+unit ending exactly at a span's start are both uncovered. Loosening the
+overlap to `<=` fails the first, so they are not vacuous. Reshaping
+named in the reply and visible in the diff: owned pieces now get the
+same `title` readout (layer, kind, mark, note) that anchored units get;
+before, only legend terms had a title. Two things for (c) to watch: in
+anchored mode the view root is appended to the host rather than
+replacing its children, and an anchored segment still gets an empty
+`article` with its label in the main column. Neither is wrong for mark7;
+the second may want hiding once the page is wired.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw
