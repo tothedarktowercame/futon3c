@@ -5,6 +5,7 @@
 (require 'subr-x)
 (require 'url)
 (require 'url-util)
+(require 'futon-url)
 
 (defvar agent-chat--last-evidence-id-pending nil) ; agent-chat.el
 (defvar agent-chat--last-evidence-id nil
@@ -338,10 +339,20 @@ on a transport failure."
                             (encode-coding-string (json-encode payload) 'utf-8)))
         (url (concat (session-mode--xiang-base-url) api-path)))
     (if callback
-        (url-retrieve url
-                      (lambda (_status cb)
-                        (funcall cb (session-mode--xiang-parse-buffer)))
-                      (list callback) t t)
+        ;; `futon-url-retrieve' calls back once with a deadline: bare
+        ;; `url-retrieve' can call back twice (forking the turn poller) and
+        ;; never times out.  The response buffer is ours to kill — leaving
+        ;; it leaked one buffer per poll (1317 by 2026-10-16).
+        (let ((done (lambda (&rest _)
+                      (let ((buf (current-buffer)))
+                        (unwind-protect
+                            (funcall callback (session-mode--xiang-parse-buffer))
+                          (when (buffer-live-p buf)
+                            (let (kill-buffer-query-functions)
+                              (kill-buffer buf))))))))
+          (if (fboundp 'futon-url-retrieve)
+              (futon-url-retrieve url 20 done)
+            (url-retrieve url done nil t t)))
       (let ((buf (if (fboundp 'futon-url-retrieve-synchronously)
                      (futon-url-retrieve-synchronously url 10)
                    (url-retrieve-synchronously url t t 10))))

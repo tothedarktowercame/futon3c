@@ -376,5 +376,25 @@ own words in the same buffer still do, and stopping re-arms."
                                                (buffer-string)))))))
       (delete-directory dir t))))
 
+(ert-deftest session-turn-analysis-jvm/async-request-kills-buffer-and-calls-once ()
+  "An async 象 request kills its response buffer and calls back once.
+url.el can call back twice for one request (it re-issues when a connection
+closes early); a second call used to fork the turn poller, and the response
+buffer was never killed — 1317 leaked by 2026-10-16."
+  (let ((answers nil) (resp nil))
+    (cl-letf (((symbol-function 'url-retrieve)
+               (lambda (_url cb &optional cbargs &rest _)
+                 (setq resp (generate-new-buffer " *http stub*"))
+                 (with-current-buffer resp
+                   (insert "HTTP/1.1 200 OK\r\n\r\n{\"ok\":true}")
+                   ;; Two callbacks for one request, as url.el can do.
+                   (apply cb nil cbargs)
+                   (when (buffer-live-p resp) (apply cb nil cbargs)))
+                 resp)))
+      (session-mode--xiang-request "GET" "/api/alpha/xiang/turns/turn-x" nil
+                                   (lambda (a) (push a answers))))
+    (should (equal answers '(((ok . t)))))
+    (should-not (buffer-live-p resp))))
+
 (provide 'session-turn-analysis-jvm-test)
 ;;; session-turn-analysis-jvm-test.el ends here
