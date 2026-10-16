@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {cuePieces, frameModel, happenedDetail, portsAge, readyFrames} from "./stepper.js";
+import {PARSE_PENDING, cuePieces, frameModel, happenedDetail, portsAge, readyFrames} from "./stepper.js";
 
 const fixture = JSON.parse(await readFile(new URL("./fixtures/frames-claude-16-00e653e3.json", import.meta.url)));
 
@@ -10,6 +10,10 @@ assert.equal(readyFrames([...fixture, provisional]).length, fixture.length + 1);
 const missing = structuredClone(fixture.at(-1));
 missing.parse.status = "missing";
 assert.equal(readyFrames([...fixture, missing]).length, fixture.length);
+// live mode keeps the current (unread) turn and names the pending reading
+assert.equal(readyFrames([...fixture, missing], true).length, fixture.length + 1);
+assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
+assert.equal(frameModel(fixture.at(-1)).parseNote, "");
 
 const unfound = [];
 for (const [fi, frame] of fixture.entries()) {

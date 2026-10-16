@@ -117,8 +117,28 @@ window; empty ports; the absence sentence; a cue spanning an emoji found by
 code point) all came out as the Emacs code would have them. Not checked by
 anyone yet: the page by eye in a browser (no browser on the box). Published
 at `zone.hyperreal.enterprises/wip/stepper/` (fixture mode); live mode on the
-box: `web/stepper/index.html?session=<id>&base=http://localhost:7070`.
+box: `web/stepper/index.html?session=<id>&base=http://localhost:7070`;
+on the zone site: `/wip/stepper/?agent=claude-16` (G8).
 The live route answered 3 frames of claude-16's session in 6.6 s.
+
+Joe's first look (2026-10-16 07:10Z): the demo showed the fixture's 12
+frames of 10-11/10-12, opened on the oldest, while the point of a live view
+is the current turn. Three causes, fixed the same hour (claude-16, no
+handoff: small edits in files held in context): `turn_frames.py --limit`
+kept the *oldest* N turns, so the page's default limit of 60 cut off this
+morning of a 67-turn session (now the newest N, tests
+`test_limit_keeps_the_newest_turns` and `..._window_ending_at_the_next_turn`);
+the page opened on frame 1 (live mode now opens on the newest, `?frame=`
+still overrides); and `readyFrames` dropped a trailing turn 象 had not read,
+which in live mode is the turn in progress (live mode keeps it, the PARSE
+section says "no reading yet — 象 has not read this turn", HAPPENED shows the
+window so far). Live mode refetches every 30 s while the tab is visible
+(`?poll=0` stops it); a reader on the newest frame follows the newest, one
+reading back stays put, as `turn-stepper--index-after-reload` does.
+`?agent=claude-16` resolves the seat's current session from the roster, so
+the link in the WIP index does not go stale when the session changes. Each
+refetch runs `turn_frames.py` (about 6 s of python and futon1b reads for
+this session); if that shows up in the JVM's load the interval goes up.
 
 One deviation worth knowing: the SAID heading links to the scope view for
 the turn, but `web/scopes/index.html` loads fixtures only, so the link
@@ -137,7 +157,7 @@ mode over `GET /api/alpha/xiang/scopes` is a follow-up under G2.
 | G5 | Claude and Codex seats leave no tool trace the record can join | `minus40/scripts/ingest_hook.py` (PostToolUse) posts, for each `m40_*` call, a `coordination` evidence row `{event "memory-call", tool, args, reached[]}` with the seat's session id and the call time. `turn_frames.py` already puts every non-operator row in the window into HAPPENED, so the stepper shows it with no further change; G3's `memory` reads these rows too. Acceptance: a claude-16 turn that calls `m40_find` shows the call in HAPPENED and in MEMORY; the use-rate script, given `--agents claude-16`, counts it. |
 | G6 | effect is unmeasured | **Task bank with failing baselines.** About five tasks taken from incidents whose cause was a missing memory (the 09-09 and 09-30 stash incidents; the amend-in-shared-tree, /tmp-worktree and park-deadline incidents are candidates, see `web/scopes/packets/zai-*.md`). For each: run the baseline (no store) first; a task whose baseline passes is dropped and the drop recorded. Then the informed run. Report the pair table, task by task, with the job ids; prose only after the table. Acceptance: at least one task with a failing baseline and a passing informed run, or the finding that none of the five has a failing baseline today, which is itself the result. |
 | G7 | a memory's derivation stops at the frontmatter | **Memory derivation.** Every minus40 version carries the turn id and act id it was written in, taken from the 象 record of the turn whose tool call wrote the file (the hook knows the session and the time; the record store has the turn). The scope view's margin shows, for a memory segment, the operator act it descends from (`derived-from` edge). Acceptance: `m40 history <name>` prints a turn id and act per version written since the change; the margin link opens that turn in the stepper. |
-| G8 | the live page cannot be reached from the zone site | The zone site (`/var/www/zone.hyperreal.enterprises/wip/`) serves files only; `web/scopes/` is published there with fixtures, and `web/stepper/` will be. Live mode needs the browser to reach :7070. Options: a Caddy `handle_path /wip/api/*` → `127.0.0.1:7070` block (system config, Joe), or opening the page on the box with `?base=http://localhost:7070`. Decision: Joe. Until then the published page runs on fixtures and says so in its header. |
+| G8 | the live page cannot be reached from the zone site | **done** 2026-10-16 07:19Z: `/etc/caddy/Caddyfile` forwards GET `/wip/stepper/api/alpha/xiang/*` and `/wip/stepper/api/alpha/agents` to loopback :7070 with the prefix stripped; the page and the routes share basic_auth realm `xiang` (password `~/.xiang-web-password`), under the page's own prefix so the browser sends the credential preemptively (a route outside the prefix gets a bare 401 from the host's poll-401 handler and the fetch never retries). Nothing else on :7070 is reachable: POST to the routes, `bell`, `parked` all 404. Backup `Caddyfile.before-xiang-20261016-071710`. I had marked this Joe's: it was not blocked, joe has sudo and the file carries a dozen agent-made backups. |
 
 Pieces are small on purpose: one file or one behaviour each, a checkpoint
 between discovery and implementation, as the handoff protocol asks.
@@ -169,7 +189,7 @@ useful", and the page should say exactly that.
 | 5 | G4 injection for Zai seats | packet after 3 and 4 | not started |
 | 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
 | 7 | G7 derivation | packet | not started |
-| 8 | G8 reach | Joe | open |
+| 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live |
 
 ## Cross-links
 

@@ -1,7 +1,16 @@
 const MEMORY_ABSENT = "no recorded memory call for this turn (nothing reached it that the record can show)";
-export function readyFrames(frames) {
+export const PARSE_PENDING = "no reading yet — 象 has not read this turn; what has happened so far is under HAPPENED";
+export const READ_STATUSES = ["analyzed", "drafted-provisional"];
+/** Frames to show. By default the newest turns that 象 has not read yet are
+ * left out, as the Emacs stepper does. In live mode (keepPending) they stay:
+ * the current turn's SAID and HAPPENED are what is going on right now, and
+ * the reading arrives on the next refresh. An older unread turn always stays,
+ * shown as missing. */
+export function readyFrames(frames, keepPending = false) {
+    if (keepPending)
+        return frames;
     let end = frames.length;
-    while (end > 0 && !["analyzed", "drafted-provisional"].includes(frames[end - 1].parse?.status || ""))
+    while (end > 0 && !READ_STATUSES.includes(frames[end - 1].parse?.status || ""))
         end--;
     return frames.slice(0, end);
 }
@@ -119,7 +128,8 @@ function memoryLines(frame) {
     return out.length ? out : ["(no memory events recorded)"];
 }
 export function frameModel(frame) {
-    const provisional = frame.parse?.status === "drafted-provisional";
+    const status = frame.parse?.status || "missing";
+    const provisional = status === "drafted-provisional";
     const parse = (frame.parse?.fragments || []).map(f => {
         const labels = f.labels || [];
         const intents = labels.map(l => l.intent).filter((x) => !!x);
@@ -129,11 +139,11 @@ export function frameModel(frame) {
     });
     const happened = (frame.happened || []).map(row => `${shown(row.at)}  ${shown(row.type).padEnd(28)} ${happenedDetail(row)}`);
     return {
-        status: frame.parse?.status || "missing", at: frame.turn?.at || "?",
+        status, at: frame.turn?.at || "?",
         said: frame.turn?.text || "(no text)",
         saidHref: frame.record?.turn_id ? `../scopes/index.html?turn=${encodeURIComponent(frame.record.turn_id)}` : undefined,
         operators: operatorLines(frame),
-        parseNote: provisional ? "小象, provisional — 象's reading pending" : "",
+        parseNote: provisional ? "小象, provisional — 象's reading pending" : READ_STATUSES.includes(status) ? "" : PARSE_PENDING,
         parse, patterns: patternLines(frame),
         happened: happened.length ? happened : ["(nothing between this turn and the next)"],
         ports: portsText(frame), memory: memoryLines(frame),
@@ -149,9 +159,17 @@ function add(parent, tag, cls, text) {
     parent.append(node);
     return node;
 }
+/** opts.frame: 1-based frame to open on; absent means the newest frame in
+ * live mode and the first in fixture mode. opts.pollMs: in live mode, refetch
+ * this often while the page is visible (0 or absent: only on `g`). A reader on
+ * the newest frame follows the newest after a refresh; one reading back stays
+ * put, as the Emacs stepper does after a reload. */
 export function renderStepper(initial, host, opts = {}) {
-    let frames = readyFrames(initial);
-    let current = Math.max(0, Math.min((opts.frame || 1) - 1, Math.max(0, frames.length - 1)));
+    const clamp = (i) => Math.max(0, Math.min(i, Math.max(0, frames.length - 1)));
+    let frames = readyFrames(initial, !!opts.live);
+    let current = clamp(opts.frame ? opts.frame - 1 : opts.live ? frames.length - 1 : 0);
+    let refreshed = "";
+    let busy = false;
     const status = add(host, "div", "stepper-status");
     const body = add(host, "main", "stepper-frame");
     const footer = add(host, "footer", "stepper-footer", "rewind: Emacs only");
@@ -178,7 +196,7 @@ export function renderStepper(initial, host, opts = {}) {
             return;
         }
         const model = frameModel(frames[current]);
-        status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status} · ${opts.live ? "live" : "fixture"}`;
+        status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status} · ${opts.live ? "live" : "fixture"}${refreshed}`;
         const said = add(body, "section");
         const saidHeading = add(said, "h2");
         const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");
@@ -207,9 +225,35 @@ export function renderStepper(initial, host, opts = {}) {
         section("MEMORY", model.memory);
         updateUrl();
     };
-    const goTo = (i) => { current = Math.max(0, Math.min(i, Math.max(0, frames.length - 1))); draw(); };
+    const goTo = (i) => { current = clamp(i); draw(); };
     const next = () => goTo(current + 1);
     const prev = () => goTo(current - 1);
+    const refresh = async () => {
+        if (!opts.live || !opts.refetch) {
+            status.textContent += " · fixture mode: no refetch";
+            return;
+        }
+        if (busy)
+            return;
+        busy = true;
+        try {
+            const onNewest = current >= frames.length - 1;
+            frames = readyFrames(await opts.refetch(), true);
+            current = onNewest ? frames.length - 1 : clamp(current);
+            refreshed = ` · refreshed ${new Date().toISOString().slice(11, 19)}Z`;
+            draw();
+        }
+        catch (error) {
+            status.textContent += ` · refresh failed: ${String(error)}`;
+        }
+        finally {
+            busy = false;
+        }
+    };
+    if (opts.live && opts.refetch && (opts.pollMs || 0) > 0) {
+        setInterval(() => { if (typeof document === "undefined" || !document.hidden)
+            void refresh(); }, opts.pollMs);
+    }
     window.addEventListener("keydown", async (event) => {
         if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target?.tagName))
             return;
@@ -221,21 +265,9 @@ export function renderStepper(initial, host, opts = {}) {
             goTo(0);
         else if (event.key === "End")
             goTo(frames.length - 1);
-        else if (event.key === "g") {
-            if (!opts.live || !opts.refetch) {
-                status.textContent += " · fixture mode: no refetch";
-                return;
-            }
-            try {
-                frames = readyFrames(await opts.refetch());
-                current = Math.min(current, Math.max(0, frames.length - 1));
-                draw();
-            }
-            catch (error) {
-                status.textContent += ` · refresh failed: ${String(error)}`;
-            }
-        }
+        else if (event.key === "g")
+            await refresh();
     });
     draw();
-    return { goTo, next, prev, index: () => current, count: () => frames.length };
+    return { goTo, next, prev, refresh, index: () => current, count: () => frames.length };
 }

@@ -15,15 +15,30 @@
 </head>
 <body>
   <h1>象 stepper</h1>
-  <p class="help">n / → next · p / ← previous · Home / End · g refetch</p>
+  <p class="help">n / → next · p / ← previous · Home / End · g refetch.
+    Live: <code>?agent=claude-16</code> (the seat's current session, from the roster) or <code>?session=&lt;id&gt;</code>;
+    opens on the newest turn and refetches every <code>poll</code> seconds (default 30, <code>poll=0</code> to stop). Without either, a fixture.</p>
   <div id="stepper">Loading…</div>
   <script type="module">
     import {renderStepper} from './stepper.js';
     const params = new URLSearchParams(location.search);
-    const session = params.get('session');
-    const base = (params.get('base') || location.origin).replace(/\/$/, '');
+    // Default base: this page's directory, where the zone site forwards
+    // api/alpha/xiang/* and api/alpha/agents to the Agency. On the box:
+    // ?base=http://localhost:7070.
+    const base = (params.get('base') || new URL('.', location.href).href).replace(/\/$/, '');
     const limit = params.get('limit') || '60';
+    const agent = params.get('agent');
     const host = document.querySelector('#stepper');
+    let session = params.get('session');
+    async function resolveAgent(id) {
+      // GET /api/alpha/agents: the roster, each seat with its current session-id.
+      const response = await fetch(`${base}/api/alpha/agents`);
+      if (!response.ok) throw new Error(`roster: ${response.status} ${response.statusText}`);
+      const roster = (await response.json()).agents || {};
+      const entry = roster[id];
+      if (!entry || !entry['session-id']) throw new Error(`${id} is not on the roster, or has no session`);
+      return entry['session-id'];
+    }
     async function load() {
       const url = session
         ? `${base}/api/alpha/xiang/frames?session=${encodeURIComponent(session)}&limit=${encodeURIComponent(limit)}`
@@ -35,8 +50,11 @@
       return session ? value.frames : value;
     }
     try {
+      if (!session && agent) session = await resolveAgent(agent);
       const frames = await load(); host.textContent = '';
-      renderStepper(frames, host, {frame: Number(params.get('frame') || 1), live: !!session, refetch: load});
+      const frame = params.get('frame') ? Number(params.get('frame')) : undefined;
+      const pollMs = 1000 * Number(params.get('poll') ?? '30');
+      renderStepper(frames, host, {frame, live: !!session, refetch: load, pollMs});
     } catch (error) {
       host.textContent = `Could not load frames: ${error}`;
     }
