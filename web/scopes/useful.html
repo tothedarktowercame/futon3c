@@ -150,7 +150,7 @@ m40_state {:date "2026-10-16", :terms ["amend"]}</pre>
   </section>
 
   <section class="row" id="live-check">
-    <h2>Same task, with and without the store<span class="when">2026-10-16 06:27Z, dispatched; results below</span></h2>
+    <h2>Same task, with and without the store<span class="when">2026-10-16 06:14Z, zai-1 and codex-68</span></h2>
     <div>
       <p>A real review task, the kind that produced both incidents: commit 67dc57602 (this morning's failover fix) claims
       its new test "fails on the pre-fix code, passes here". Two idle seats were asked, with the same packet, to verify
@@ -164,21 +164,32 @@ m40_state {:date "2026-10-16", :terms ["amend"]}</pre>
         <tr><td>codex-68</td><td>none</td><td><code>invoke-1792131272674-15169-7b033592</code></td></tr>
       </table>
       <div id="live-check-results">
-        <p class="thin">Results pending at the time this page was written. They are filled in from the two job records
-        when they land: the commands each seat ran, in order; whether zai-1's turn-round evidence shows a minus40 call;
-        whether either used <code>git stash</code>; and the test outcomes.</p>
+        <p>Both seats answered within a minute (dispatched 06:14:32Z; codex-68 done 06:15:09Z, zai-1 done 06:15:31Z) and both
+        confirmed the claim: 4 failures in the new test against the pre-fix source, 0 failures at the fix, 60 tests and 331
+        assertions each time. Both worktrees were left clean at 67dc57602; the live stash stack still has its two entries.
+        Neither seat used <code>git stash</code>. How each obtained the pre-fix source:</p>
+<pre>zai-1     git checkout 67dc57602^ -- src/futon3c/xiang/turn_service.clj     … test …   git checkout HEAD -- src/futon3c/xiang/turn_service.clj
+codex-68  git restore --source=67dc57602^ -- src/futon3c/xiang/turn_service.clj … test … git restore --source=67dc57602 -- src/futon3c/xiang/turn_service.clj</pre>
+        <p>zai-1's turn-round evidence for this job (turn <code>zai-turn-b2e813c4-…</code>, four rounds) records three
+        <code>run_shell</code> calls and <strong>no minus40 call</strong>. It did not consult the store; it chose the
+        path-scoped checkout on its own, as codex-68 did without any memory tools.</p>
       </div>
     </div>
-    <div class="what pending" id="live-check-verdict"><strong>Pending</strong>
-      This cell is written from the records once both seats answer. One run each; it is one observation, not a measurement.</div>
+    <div class="what pending" id="live-check-verdict"><strong>Null result for the memory</strong>
+      Neither seat reached for the stash, and neither read the memory. On this task, this morning, the memory was not what
+      kept them off it. One run each. What the row does show is that the task was real, both seats verified the claim, and the
+      hazard in the first section is still armed for any seat that does reach for <code>git stash</code>.</div>
   </section>
 
   <h2>What "useful" means on this page</h2>
   <p>Not that the memory was retrieved, and not that the reply mentions it. On 09-09 and 09-30 the memory's absence from
-  the seat's context cost a stopped campaign and a hand restore of the live Emacs code. Today the same pop leaves four
-  files with conflict markers. A seat that reaches the memory before testing pre-fix code runs one <code>git show</code>
-  instead, and the stash stack is never touched. The grid shows whether the memory reached; this page shows what reaching
-  it is worth in this one case, dated and quoted.</p>
+  the seat's context cost a stopped campaign and a hand restore of the live Emacs code; the second time, the lesson already
+  existed and had not reached the seat. Today the same pop leaves four files with conflict markers, so the memory still
+  describes a live hazard. What this page could not show is the memory making the difference on a fresh task: in the one
+  live check, both seats avoided the stash without reading it. So the evidence for "useful" here is historical and
+  counterfactual (two dated incidents, one reproduction), not a before/after on a seat today. The grid shows whether a
+  memory reached; a page like this one is what it takes to say what reaching it was worth, and the honest answer for this
+  memory is: worth a stopped campaign on the two days it was missing, and unneeded by the two seats that were tested.</p>
 
   <h2>Where this is thin</h2>
   <ul class="thin">
@@ -187,7 +198,9 @@ m40_state {:date "2026-10-16", :terms ["amend"]}</pre>
     <li>The two memories prescribe slightly different recipes (overwrite the path in place and check out HEAD after, or
     write to a temp path and point the test at it). <code>m40 state</code> gives the 09-30 wording as the latest; the store
     does not list them as a contradiction, and they are not one.</li>
-    <li>The live check is one run per seat.</li>
+    <li>The live check is one run per seat, and neither seat consulted the store, so it says nothing about memory changing an
+    action. A seat that habitually stashes would be the test; neither of these two is one.</li>
+    <li>The dispatch time first written on this page was a guess (06:27Z); the job records say 06:14:32Z. Corrected.</li>
   </ul>
 
   <h2>Commands behind each quotation</h2>
