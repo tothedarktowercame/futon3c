@@ -7,6 +7,7 @@ calls, no writes.
 
 Usage:
     python3 scripts/turn_frames.py SESSION_ID [--limit N] [--base URL] > frames.json
+        (--limit N: the newest N operator turns)
     python3 scripts/turn_frames.py --one-record PATH > frame.json
 
 Frame shape:
@@ -503,14 +504,16 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                                  or is_legacy_operator_turn(
                                      row, legacy_operator_texts, session_id))
     all_turns = [r for r in rows if operator_turn(r)]
-    # --limit cuts the frames, not the windows: the last frame shown still
-    # ends at the next operator turn.
-    turns = all_turns[:limit] if limit else all_turns
+    # --limit keeps the NEWEST N turns (the stepper lands on the newest), and
+    # cuts the frames, not the windows: every frame's window still ends at
+    # the next operator turn.
+    turns = all_turns[-limit:] if limit else all_turns
+    first = len(all_turns) - len(turns)
 
     frames = []
     for i, turn in enumerate(turns):
         start = at_key(turn)
-        end = at_key(all_turns[i + 1]) if i + 1 < len(all_turns) else None
+        end = at_key(all_turns[first + i + 1]) if first + i + 1 < len(all_turns) else None
         eid = turn.get("evidence/id")
         b = body_of(turn)
 
