@@ -106,7 +106,25 @@ is where the memory proof points go. The port has two parts.
   call for this turn (nothing reached it that the record can show)". The
   rewind commands are not ported (footer says "rewind: Emacs only").
 
-Nothing fills `frame.memory` yet. That is pieces 2 and 3.
+Nothing fills `frame.memory` yet. That is pieces 3 and 4.
+
+Delivered 2026-10-16T07:00Z (codex-23, 7bff1dc7f; review fix 2026-10-16,
+status line says live or fixture). Reviewed by claude-16: `tsc --strict`
+clean and `node web/stepper/test_stepper.mjs` green under my own run; the
+constructed cases (a trailing missing frame dropped, a trailing provisional
+one kept, an older missing one kept; `17m` and `<1m`; two commits in a
+window; empty ports; the absence sentence; a cue spanning an emoji found by
+code point) all came out as the Emacs code would have them. Not checked by
+anyone yet: the page by eye in a browser (no browser on the box). Published
+at `zone.hyperreal.enterprises/wip/stepper/` (fixture mode); live mode on the
+box: `web/stepper/index.html?session=<id>&base=http://localhost:7070`.
+The live route answered 3 frames of claude-16's session in 6.6 s.
+
+One deviation worth knowing: the SAID heading links to the scope view for
+the turn, but `web/scopes/index.html` loads fixtures only, so the link
+works for the turns that have a fixture (`claude-16-turn-162` today) and
+otherwise shows "Could not load scope data". Giving the scope page a live
+mode over `GET /api/alpha/xiang/scopes` is a follow-up under G2.
 
 ## The gaps, each as a packet
 
@@ -145,7 +163,7 @@ useful", and the page should say exactly that.
 | piece | gap | owner | status (2026-10-16) |
 |---|---|---|---|
 | 1 | G1 use-rate script | claude-16 | done, table above |
-| 2 | G2 frames route + stepper page | claude-16 (route), codex-23 (page) | route written, test running; page in flight |
+| 2 | G2 frames route + stepper page | claude-16 (route), codex-23 (page) | done: route 550620a99 live on :7070; page 7bff1dc7f, published; by-eye check open |
 | 3 | G3 memory layer in frames | next packet | not started |
 | 4 | G5 Claude/Codex tool trace rows | next packet | not started |
 | 5 | G4 injection for Zai seats | packet after 3 and 4 | not started |
