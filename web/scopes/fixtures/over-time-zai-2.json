@@ -179,9 +179,280 @@
    "memories": 17,
    "reply_at": "2026-10-16T03:40:42Z",
    "reply_chars": 1633
+  },
+  {
+   "turn": "invoke-1792122812718-15113-c99086c6",
+   "record": "turn-oHWZaE",
+   "at": "2026-10-16T03:53:32Z",
+   "calls": [
+    {
+     "tool": "m40_find",
+     "args": "{:terms [\"kimi\" \"seat\"]}",
+     "round": 1,
+     "error": false,
+     "truncated": false
+    },
+    {
+     "tool": "m40_find",
+     "args": "{:terms [\"kimi\" \"window\"]}",
+     "round": 1,
+     "error": false,
+     "truncated": false
+    },
+    {
+     "tool": "m40_state",
+     "args": "{:date \"2026-10-16\", :terms [\"kimi\"]}",
+     "round": 1,
+     "error": false,
+     "truncated": false
+    }
+   ],
+   "memories": 11,
+   "reply_at": "2026-10-16T03:54:06Z",
+   "reply_chars": 1784
   }
  ],
  "columns": [
+  {
+   "memory": "cc:-home-joe-code-voxterm/proof2-dispatch-pool",
+   "name": "proof2-dispatch-pool",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 12,
+   "events": [
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "**Why:** A20 needs a Codex non-author reviewer plus Zai; with Zai out, no PROOF-2 row can pass codex-accepted before 09-29 unless Joe changes A20 or the quota."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "Claude seats have a session limit too: at ~22:30Z 2026-09-24 seven claude-N seats died mid-work with \"You've hit your session limit, resets 12:10am UTC\". Their partial work stayed in the shared tree (uncommitted diffs and untracked files from three seats at once). Recovery that worked: read the tree, tell each seat by bell exactly which paths are its own to stage and that the others' are not, and let it continue in its own conversation. Do not commit another seat's partial work for it."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "Later 2026-09-24 (Joe): Fable, Codex and Zai all unavailable; Claude at ~92% weekly (resets 09-26 ~14:00 UTC), and Joe wants the remaining Claude used before he resets. Kimi is the only dispatch pool. claude-8 (PROOF-2 coordinator) runs on Fable, so claude-10 carries the work: PROOF-2a (futon2 holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md, 1a13386e) = PROOF-2 plus Clause T (target choice), machine-constructed semilattice clause 0, scope statement. Spend Claude on review and definitions; dispatch drafting/building to Kimi, staggered."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "Quota facts observed 2026-09-24: Kimi's 5-hour usage limit ended at 05:12 (HTTP 403 on every seat); Zai's weekly limit ended at ~05:15 (HTTP 429, \"Weekly/Monthly Limit Exhausted\", reset 2026-09-29 10:04:33). Both zai-1 and zai-2 are dead until then. Kimi was NOT out for the day: its 5-hour window resets on its own (0% used again by 13:07 UTC) and the monthly pool was 5.1% used. Joe corrected a claim that Kimi was exhausted (2026-09-24); he reads the monthly figure, which is what voxterm's collapsed usage strip shows."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "2026-09-25 ~13:15Z: the Kimi 5h window ran out again (HTTP 403 access_terminated_error on kimi-11 and kimi-12 right after dispatch; kimi-10 had been invoking since ~07:00Z). A Kimi bell also FAILS without `--requisition \"E-… — purpose\"` on agency_send.py (invoke-error, before any model call); Claude seats do not need it. Re-route small items to idle Claude seats (claude-2..9) when the window is out, and say which window."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "2026-09-27 03:43Z: Kimi's 5-hour window ran out again (HTTP 403 access_terminated_error on kimi-1/2/3 mid-job, no edits made). The Agency reports the failure only in the job's `failed` event; the park resume arrives as \"(no summary)\". Check the job state before assuming a seat finished. When it happens, `kimi-task.sh --complete` the requisitions and re-dispatch the same packet files to Codex seats with a one-line preface."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "Joe (2026-09-24): Zai for B4 (zai-2 owned the slices), Kimi agents authorized for my dispatches, codex-3/4 for the proof documents; claude-4's WM data is stale and it is not in the loop."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "**How to apply:** before calling any pool exhausted, read the current quota (voxterm `_usage_kimi()` / GET /usage, or the job's terminal-message) and name the window and its reset time. Seven Kimi seats in parallel drained the 5h window in about 30 minutes, so stagger them. Otherwise dispatch implementation and review to idle Codex seats (roster GET /api/alpha/agents; 10+ idle codex-N on 09-24); check a job reaches `running` and survives ~8s before parking, because quota refusals fail at the first prompt; preserve any partial work a dead seat left in a shared checkout under proof2/partial and restore the tree. See [[reload-needs-no-permission]], [[never-git-stash-in-shared-futon-trees]]."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "ROOT CAUSE of the Kimi drains (Joe, 2026-09-25): a Kimi seat clears its conversation only when the requisition TARGET changes (zai_api.clj context-carry-decision; same target accumulates up to a 512k cap). Sending every packet under one requisition (E-cascade-real) made each seat carry all its prior packets on every request. Rule: every Kimi dispatch clocks in on a UNIQUE task target, E-kimi-task-N, one small excursion file per task under a canonical holes/excursions/ (the target must resolve to holes/<kind>/<TARGET>.md or the seat refuses :requisition-unresolved). Fresh conversation per task; the file doubles as the task's record. The seat's requisition-mismatch reminder is an OPERATOR turn and reclocks the caller onto the requisitioned target; futon3c zai_api.clj caller-minted-task? skips it when the task file's head line says this caller minted it for this seat (kimi-task.sh writes that line). An agent has no HTTP route to set its own clock; the REPL buffer's clock (Joe's C-c C-m) i"
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "From 2026-09-24 ~16:40 UTC (claude-11, futon3c 5146606d): every Kimi dispatch must carry `Requisition: M-foo — <purpose>` in the prompt, or `agency_send.py --requisition \"M-foo — purpose\"`; without it the seat refuses and sends a reminder. Kimi seats also start a fresh conversation per target now (the 5h window was being filled by 200–335k-token carried contexts)."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "Second drain, 2026-09-24 ~22:20Z: six Kimi seats dispatched within ~10 minutes (claude-8) drained the 5h window again, killing the machine's own answering seat (kimi-6) mid-read. Joe had authorized Claude Opus agents that evening; work moved to idle claude-N seats (claude-2 as the machine's answer seat, claude-5/6/7/9/11 for packets). Rule that was already here and got ignored: STAGGER Kimi dispatches, at most two or three seats in parallel, and keep one seat in reserve for the machine's own asks."
+    },
+    {
+     "at": "2026-09-27T03:47:30.937Z",
+     "event": "said",
+     "text": "Which agent pools PROOF-2 work may use; Kimi's 09-24 outage was its 5-hour window only (monthly ~95% left), Zai weekly out until 09-29"
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code-voxterm/kimi-seat-creation",
+   "name": "kimi-seat-creation",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 4,
+   "events": [
+    {
+     "at": "2026-09-24T20:20:36.970Z",
+     "event": "said",
+     "text": "**How to apply:** for N parallel Kimi packets, loop create-then-dispatch: call auto, dispatch to the returned seat (which makes it busy), then call auto again. Guard against being handed kimi-1 (claude-1's turn-analysis delegate) or a seat already in use. Verify each job reaches `running` with a `tool_use` event before parking. See [[proof2-dispatch-pool]], [[zai-seat-allocation]]."
+    },
+    {
+     "at": "2026-09-24T20:20:36.970Z",
+     "event": "said",
+     "text": "Observed 2026-09-24 evening. `POST /api/alpha/agents/auto {\"type\":\"kimi\",\"cwd\":...}` returns an existing reclaimable idle seat of that type if one exists (three calls in a row all returned kimi-5 while it was idle), and creates the next kimi-N with a live runtime otherwise. `POST /api/alpha/agents {\"agent-id\":\"kimi-6\",\"type\":\"kimi\"}` registers a seat with NO runtime: a job to it ends in seconds with result-summary `registered-via-http`. Cancel a queued job with `POST /api/alpha/invoke/jobs/<id>/cancel`; deregister a stub with `DELETE /api/alpha/agents/<id>`."
+    },
+    {
+     "at": "2026-09-24T20:20:36.970Z",
+     "event": "said",
+     "text": "How to get a fresh Kimi seat with a real runtime (auto route reuses an idle reclaimable seat; explicit-id POST makes a stub); create-then-dispatch one at a time"
+    },
+    {
+     "at": "2026-09-24T20:20:36.970Z",
+     "event": "said",
+     "text": "**Why:** three packets meant for three seats all queued on kimi-5, then two resends went to stubs and silently \"completed\"."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code-voxterm/kimi-unique-requisition",
+   "name": "kimi-unique-requisition",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 5,
+   "events": [
+    {
+     "at": "2026-09-25T15:34:38.333Z",
+     "event": "said",
+     "text": "Since futon3c 25228c0f the script writes `**Requisition:** in-progress — …` at dispatch; after the job ends run `kimi-task.sh --complete <E-id> <job-id>` (Joe 2026-09-25, futon2 a461b124: a requisition is never pending work, so it must never be redispatched or flown)."
+    },
+    {
+     "at": "2026-09-25T15:34:38.333Z",
+     "event": "said",
+     "text": "Joe (2026-09-25) asked that each Kimi dispatch use a unique requisition ID. The mechanism is `futon3c/scripts/kimi-task.sh --from <me> --to <kimi-N> --purpose \"<line>\" packet.md`. It creates and commits `futon2/holes/excursions/E-kimi-task-N.md`, then bells with `Requisition: E-kimi-task-N — purpose`. README-kimi.md (as of 2026-09-25) says nothing about requisitions, so read the script and `zai_api.clj` parse-requisition rather than the README."
+    },
+    {
+     "at": "2026-09-25T15:34:38.333Z",
+     "event": "said",
+     "text": "**How to apply:** use kimi-task.sh for every Kimi packet, not `agency_send.py --requisition \"M-...\"`. The script neither parks nor passes --mission, so take the job id from its output, confirm the job is running, then park in a second call. See [[kimi-seat-creation]]."
+    },
+    {
+     "at": "2026-09-25T15:34:38.333Z",
+     "event": "said",
+     "text": "Joe 2026-09-25 — every Kimi dispatch gets a unique requisition via futon3c/scripts/kimi-task.sh (E-kimi-task-N); README-kimi doesn't document it; the script doesn't park"
+    },
+    {
+     "at": "2026-09-25T15:34:38.333Z",
+     "event": "said",
+     "text": "**Why:** a Kimi seat keeps its conversation per requisition target and clears it only when the target changes. Reusing one M-* target across dispatches carries old context into new work. Because the file records who created it and for which seat (caller-minted-task?), the caller's own clock stays on its mission."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code/mfuton-lean-compiler-project",
+   "name": "mfuton-lean-compiler-project",
+   "project": "cc:-home-joe-code",
+   "facts": 13,
+   "events": [
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Joe + Rob Meyers ([[hyperreal-people-2026]]) run a FUTON/MFUTON \"Lakatosian dialogue\" on the Lean compiler. Rob's side: Python port of Lean's parser + a Lean-subset→Python compiler, pinned to Lean v4.29.0 (98dc76e3), with Lean's generated C as the behavioural reference."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "**Sequence to Std/Lean (Joe 2026-10-01):** after the Init fix-up, continue to Std and Lean, including overnight. Plan with phases and gates: `/tmp/pyreg/overnight/PLAN.md` (Phase 0 running fixes; 1 finish Init; 2 Std/Lean groundwork: dumps C/D, kind map, env-init stand-ins; 3 Std/Lean verdict batches + fix groups). On each park wake, review, then dispatch the next step whose gate is met."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Upstream push decision (Joe 2026-09-30): do NOT push startup-linux to electric-samurai main until the blank-file startup completes; then fast-forward (re-enable origin push for that one push only). Model repo: tothedarktowercame/lean-wiring (branch v4.29.0); binding: tothedarktowercame/mfuton-linux-binding; cache-key question is upstream issue #2."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "\"FUTON×MFUTON Lean compiler study with Rob — repos, version pin, fork/push rules, reference-C decision\""
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "**Merge procedure (as done 2026-09-30, Rob's a372214..d15de97):** `git fetch origin`; move local `main` to `origin/main`; `git merge --no-ff origin/main` into `tail-call-depth` (main checkout); rerun the C-authority sweep (`futon3c/scripts/pytest_warrant_suite.py`, PYTEST_ADDOPTS must include `--tb=short`) and diff outcomes. Merge into a branch an agent is working in (`startup-linux` in /tmp/mfs-real) only after its job returns. Our branches are local only unless Joe says to push them to `fork`."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Our repos: ~/code/lean-wiring (branch/worktree `v4.29.0` at ~/code/lean-wiring-v4.29.0 has the 4.29 run + `ir` stage), ~/code/lean-docs-align (NOTE-mfuton-getting-started.md), ~/code/lean-dyncov, ~/code/lean-c-markup (Basic.c markup + census.bb)."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "2026-10-01 05:05: G0 reached — cold blank startup no longer OOMs (peak 4.2 GB/12G); fork startup-linux = a3cb14c; next stop syntheticHole ?m not callable (Init.Prelude instance). Overnight log /tmp/pyreg/overnight/PLAN.md."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Reference C: stage0 C at v4.29.0 differs slightly from the release compiler's output (255 diff lines in Parser/Basic.c). Decision 2026-09-30: work with THEIR version (stage0) for now; asked Rob in upstream issue #1."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "**Why:** Rob's port is the comparison target; the fork keeps our work from landing directly in his repo (we have write access there). **How to apply:** never push to Rob's repo directly; check issue #1 before switching the reference C to the release output."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "2026-10-03 backup: all ~/code/mfuton-share branches + claude-4-pin tags pushed to fork; /tmp/pyreg copied to ~/mfuton-notes/pyreg and committed to fork branch `notes/claude-4-pyreg` (8152e86, with uncommitted-worktree patches). Every /tmp/mfs-* worktree shares ~/code/mfuton-share/.git, so committed work already lives in /home."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Push authority (Joe 2026-10-01 ~04:00): push to the fork (tothedarktowercame/mfuton-share) and other private tothedarktowercame repos as commits build up; reviewed branches go up as their own branches. origin (electric-samurai) stays disabled until blank-file startup completes."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Upstream: github electric-samurai/mfuton-share (PRIVATE), local ~/code/mfuton-share. Our private fork tothedarktowercame/mfuton-share = remote `fork`; push to `origin` is DISABLED (Joe 2026-09-30). PRs go fork → upstream; issues go on upstream."
+    },
+    {
+     "at": "2026-10-03T14:53:00.724Z",
+     "event": "said",
+     "text": "Kimi dispatches need a `--requisition \"M-diagramprover — …\"` line or the seat rejects them."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code-voxterm/minus40-rollout-vision",
+   "name": "minus40-rollout-vision",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 6,
+   "events": [
+    {
+     "at": "2026-10-15T17:33:21.165Z",
+     "event": "said",
+     "text": "**Why:** Zai seats have no memory of their own worth keeping (only a pattern-use tool over futon1b), so they are the cheapest trial; Claude Code's auto memory is the source minus40 ingests, so switching it off (`CLAUDE_CODE_DISABLE_AUTO_MEMORY`, `autoMemoryEnabled`) must wait until writes go through m40. Mastra's gap is conversation-to-facts (milestone 7)."
+    },
+    {
+     "at": "2026-10-15T17:33:21.165Z",
+     "event": "said",
+     "text": "Joe (2026-10-15): \"I like the vision. We can test things out with Zai first, then bring Codex and Claude online; we can also work towards Mastra parity (along with any extra features from ZeroDB and Alinery that are worth integrating, though to be clear, with Alinery, it's more about maintaining the intents that are passed on by agents in a dispatch pattern, which are worth remembering but are a little different from memories that are drawn from interactive use).\""
+    },
+    {
+     "at": "2026-10-15T17:33:21.165Z",
+     "event": "said",
+     "text": "Joe 2026-10-15 approved the minus40 rollout: Zai seats first, then Codex and Claude; work towards Mastra parity; take worthwhile extras from ZeroDB and Alinery, where Alinery means remembering the intents passed in dispatch packets, distinct from interactive-use memories"
+    },
+    {
+     "at": "2026-10-15T17:33:21.165Z",
+     "event": "said",
+     "text": "**How to apply:** dispatch increments in that order without re-asking (per [[those-are-fine-covers-the-sequence]]). Treat dispatch packets (~/notes/packets) as a memory kind of their own, \"dispatch intents\", with the Agency job id; do not fold them into interactive memories. Related: [[no-hits-on-unfamiliar-content]], [[minus40-encryption-parked]], [[landscape-tool-names-local-clones]]."
+    },
+    {
+     "at": "2026-10-15T17:51:23.648Z",
+     "event": "said",
+     "text": "Status 2026-10-15 17:5xZ: Zai seats have the eight m40 tools (futon3c d12ad334b reloaded); first native calls confirmed on zai-5; a week of Zai memories runs to 2026-10-22, then review with sorries and relations.py over the `zai-*` projects. zai-3, a restored seat with long history, denied having tools it was sent; give it a fresh session first."
+    },
+    {
+     "at": "2026-10-15T19:45:46.949Z",
+     "event": "said",
+     "text": "Seat quota, 2026-10-15 evening: Kimi (the 象 analysis seats) hit its MONTHLY limit (HTTP 403, 19:11Z); Zai hit its 5-hour window at 19:43Z (HTTP 429, meter reset 22:19Z). The 象 analysis pool was swapped to zai-1/2/5 at 19:15Z and fell to the alternate 象-sonnet (Claude) when Zai ran out. Check `futon3c/scripts/zai-usage` before dispatching Zai work."
+    }
+   ]
+  },
   {
    "memory": "cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run",
    "name": "park-deadlines-budget-the-acceptance-run",
@@ -207,6 +478,34 @@
      "at": "2026-09-02T18:40:32.508Z",
      "event": "said",
      "text": "CLAUDE.md sets a floor of 45 min for Codex park deadlines. That floor is about the *coding*; it is not enough when the packet's own acceptance bar requires long verification runs. On 2026-09-02 claude-6 belled a packet whose acceptance demanded two ~10-minute `wm_status_report.py` runs (each launches two bounded test suites), parked at 2700s, and the deadline fired at 18:17 while the job sat in `delivering` — it had finished at 18:16:47. A third of the budget was verification, not work."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code/prefer-kimi-zai-over-codex",
+   "name": "prefer-kimi-zai-over-codex",
+   "project": "cc:-home-joe-code",
+   "facts": 4,
+   "events": [
+    {
+     "at": "2026-09-28T20:40:09.441Z",
+     "event": "said",
+     "text": "**How to apply:** check the roster for idle `kimi-N` and Zai seats first; dispatch Kimi work through `futon3c/scripts/kimi-task.sh` (unique excursion per task, `--complete` after review). On 2026-09-28 the roster had kimi-1 and kimi-2 but no Zai seats registered; bringing one up is a question for Joe. Fall back to codex-N only when no Kimi/Zai seat is free or the provider is out of usage, and say so. Seat reservations still apply: [[codex-seat-reservations]]. Zai owner lanes: [[wm-closure-strategy-zai-owners]]."
+    },
+    {
+     "at": "2026-09-28T20:40:09.441Z",
+     "event": "said",
+     "text": "**Why:** Joe is running three intensive Codex projects of his own in parallel with the War Machine work, so Codex usage and seats are contended."
+    },
+    {
+     "at": "2026-09-28T20:40:09.441Z",
+     "event": "said",
+     "text": "Joe, 2026-09-28: prefer Kimi and Zai seats to Codex for my dispatches whenever those systems have usage left. Codex goes last."
+    },
+    {
+     "at": "2026-09-28T20:40:09.441Z",
+     "event": "said",
+     "text": "\"Joe 2026-09-28: dispatch to Kimi/Zai seats before Codex when they have usage; Joe runs 3 intensive Codex projects in parallel\""
     }
    ]
   },
@@ -263,6 +562,84 @@
      "at": "2026-09-06T16:59:16.508Z",
      "event": "said",
      "text": "**Why:** roster `idle` status and `accepted: true` say nothing about a live worker. The CLAUDE.md corollary (\"after any bell that matters, check its job state (~5s)\") applies to routine work dispatches, not just unfamiliar recipients."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe/zai-five-hour-window",
+   "name": "zai-five-hour-window",
+   "project": "cc:-home-joe",
+   "facts": 11,
+   "events": [
+    {
+     "at": "2026-10-12T15:34:35.793Z",
+     "event": "said",
+     "text": "Zai's binding quota is the five-hour token window, not the monthly meter; five seats at once exhausted it in ~25 min (429s, 4 h to reset); keep to 2-3 seats; check futon3c/scripts/zai-usage."
+    },
+    {
+     "at": "2026-10-12T15:34:35.793Z",
+     "event": "said",
+     "text": "claude-16, 2026-10-12: five Zai seats labelling at once exhausted the five-hour window in about 25 minutes (2026-10-11 18:21Z, all jobs died on HTTP 429 having written nothing; reset 22:33Z). Two or three seats at a time was fine. `~/code/futon3c/scripts/zai-usage` shows both windows; claude-16 logs readings in futon3c `holes/labs/M-象-2000/moves/usage.log`. The monthly meter resets around the 13th, ~02:04Z (67% used at 2026-10-12 05:15Z)."
+    },
+    {
+     "at": "2026-10-12T15:34:35.793Z",
+     "event": "said",
+     "text": "**How to apply:** when dispatching Zai packets, run at most 3 at once, and check zai-usage before adding a fourth. A Zai job that comes back \"done\" with nothing written may have hit a 429; check before re-dispatching. Related: [[wm-lean-registry-closure]] (Zai owners stall; re-audit yourself)."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "unsaid",
+     "text": "Zai's binding quota is the five-hour token window, not the monthly meter; five seats at once exhausted it in ~25 min (429s, 4 h to reset); keep to 2-3 seats; check futon3c/scripts/zai-usage."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "unsaid",
+     "text": "claude-16, 2026-10-12: five Zai seats labelling at once exhausted the five-hour window in about 25 minutes (2026-10-11 18:21Z, all jobs died on HTTP 429 having written nothing; reset 22:33Z). Two or three seats at a time was fine. `~/code/futon3c/scripts/zai-usage` shows both windows; claude-16 logs readings in futon3c `holes/labs/M-象-2000/moves/usage.log`. The monthly meter resets around the 13th, ~02:04Z (67% used at 2026-10-12 05:15Z)."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "unsaid",
+     "text": "**How to apply:** when dispatching Zai packets, run at most 3 at once, and check zai-usage before adding a fourth. A Zai job that comes back \"done\" with nothing written may have hit a 429; check before re-dispatching. Related: [[wm-lean-registry-closure]] (Zai owners stall; re-audit yourself)."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "\"Zai has a five-hour token window AND a weekly/monthly limit; parallel seats burn the five-hour one (5 seats ≈ 25 min, 10-11); ≤3 seats; exhausted jobs die silently; check futon3c/scripts/zai-usage.\""
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "Zai quota, as learned across projects (merged here 2026-10-12 so every project's sessions see it; minus40 relate.py found the earlier copies):"
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "**Exhaustion is silent.** The seats share one upstream quota; when it runs out, invoke jobs end as bare `state failed` / `invoke-error` with no output, indistinguishable from a crash (voxterm memory `zai-seat-allocation`, 09-15)."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "**Weekly/monthly limit** is separate. 2026-09-24 it ran out (\"Weekly/Monthly Limit Exhausted\", HTTP 429, reset 09-29), stopping PROOF-2 work (voxterm memory `proof2-dispatch-pool`). The monthly meter resets around the 13th, ~02:04Z (67% used at 2026-10-12 05:15Z)."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "**How to apply:** run at most 3 Zai packets at once and check zai-usage before a fourth. A Zai job that comes back \"done\" or \"failed\" with nothing written may have hit a limit; check usage before re-dispatching. Related: [[wm-lean-registry-closure]] (Zai owners stall; re-audit yourself)."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "**Five-hour window** binds under parallel load. claude-16, 2026-10-12: five seats labelling at once exhausted it in about 25 minutes (2026-10-11 18:21Z, all jobs died on HTTP 429 having written nothing; reset 22:33Z). Two or three seats at a time was fine."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "Kimi has its own five-hour window (403 on every seat when out, 09-24); don't confuse the two."
+    },
+    {
+     "at": "2026-10-12T19:52:10.388Z",
+     "event": "said",
+     "text": "`~/code/futon3c/scripts/zai-usage` shows both Zai windows; claude-16 logs readings in futon3c `holes/labs/M-象-2000/moves/usage.log`."
     }
    ]
   },
@@ -359,79 +736,6 @@
      "at": "2026-10-01T16:53:02.843Z",
      "event": "said",
      "text": "On an emacs surface, always include `\"session\":\"<CLAUDE_CODE_SESSION_ID>\"` in POST /api/alpha/park."
-    }
-   ]
-  },
-  {
-   "memory": "cc:-home-joe-code/mfuton-lean-compiler-project",
-   "name": "mfuton-lean-compiler-project",
-   "project": "cc:-home-joe-code",
-   "facts": 13,
-   "events": [
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Joe + Rob Meyers ([[hyperreal-people-2026]]) run a FUTON/MFUTON \"Lakatosian dialogue\" on the Lean compiler. Rob's side: Python port of Lean's parser + a Lean-subset→Python compiler, pinned to Lean v4.29.0 (98dc76e3), with Lean's generated C as the behavioural reference."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "**Sequence to Std/Lean (Joe 2026-10-01):** after the Init fix-up, continue to Std and Lean, including overnight. Plan with phases and gates: `/tmp/pyreg/overnight/PLAN.md` (Phase 0 running fixes; 1 finish Init; 2 Std/Lean groundwork: dumps C/D, kind map, env-init stand-ins; 3 Std/Lean verdict batches + fix groups). On each park wake, review, then dispatch the next step whose gate is met."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Upstream push decision (Joe 2026-09-30): do NOT push startup-linux to electric-samurai main until the blank-file startup completes; then fast-forward (re-enable origin push for that one push only). Model repo: tothedarktowercame/lean-wiring (branch v4.29.0); binding: tothedarktowercame/mfuton-linux-binding; cache-key question is upstream issue #2."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "\"FUTON×MFUTON Lean compiler study with Rob — repos, version pin, fork/push rules, reference-C decision\""
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "**Merge procedure (as done 2026-09-30, Rob's a372214..d15de97):** `git fetch origin`; move local `main` to `origin/main`; `git merge --no-ff origin/main` into `tail-call-depth` (main checkout); rerun the C-authority sweep (`futon3c/scripts/pytest_warrant_suite.py`, PYTEST_ADDOPTS must include `--tb=short`) and diff outcomes. Merge into a branch an agent is working in (`startup-linux` in /tmp/mfs-real) only after its job returns. Our branches are local only unless Joe says to push them to `fork`."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Our repos: ~/code/lean-wiring (branch/worktree `v4.29.0` at ~/code/lean-wiring-v4.29.0 has the 4.29 run + `ir` stage), ~/code/lean-docs-align (NOTE-mfuton-getting-started.md), ~/code/lean-dyncov, ~/code/lean-c-markup (Basic.c markup + census.bb)."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "2026-10-01 05:05: G0 reached — cold blank startup no longer OOMs (peak 4.2 GB/12G); fork startup-linux = a3cb14c; next stop syntheticHole ?m not callable (Init.Prelude instance). Overnight log /tmp/pyreg/overnight/PLAN.md."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Reference C: stage0 C at v4.29.0 differs slightly from the release compiler's output (255 diff lines in Parser/Basic.c). Decision 2026-09-30: work with THEIR version (stage0) for now; asked Rob in upstream issue #1."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "**Why:** Rob's port is the comparison target; the fork keeps our work from landing directly in his repo (we have write access there). **How to apply:** never push to Rob's repo directly; check issue #1 before switching the reference C to the release output."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "2026-10-03 backup: all ~/code/mfuton-share branches + claude-4-pin tags pushed to fork; /tmp/pyreg copied to ~/mfuton-notes/pyreg and committed to fork branch `notes/claude-4-pyreg` (8152e86, with uncommitted-worktree patches). Every /tmp/mfs-* worktree shares ~/code/mfuton-share/.git, so committed work already lives in /home."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Push authority (Joe 2026-10-01 ~04:00): push to the fork (tothedarktowercame/mfuton-share) and other private tothedarktowercame repos as commits build up; reviewed branches go up as their own branches. origin (electric-samurai) stays disabled until blank-file startup completes."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Upstream: github electric-samurai/mfuton-share (PRIVATE), local ~/code/mfuton-share. Our private fork tothedarktowercame/mfuton-share = remote `fork`; push to `origin` is DISABLED (Joe 2026-09-30). PRs go fork → upstream; issues go on upstream."
-    },
-    {
-     "at": "2026-10-03T14:53:00.724Z",
-     "event": "said",
-     "text": "Kimi dispatches need a `--requisition \"M-diagramprover — …\"` line or the seat rejects them."
     }
    ]
   },
@@ -722,70 +1026,96 @@
    ]
   },
   {
-   "memory": "cc:-home-joe-code-voxterm/proof2-dispatch-pool",
-   "name": "proof2-dispatch-pool",
+   "memory": "cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log",
+   "name": "proof-plan-structured-dispatch-log",
    "project": "cc:-home-joe-code-voxterm",
-   "facts": 12,
+   "facts": 4,
    "events": [
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-26T12:42:22.237Z",
      "event": "said",
-     "text": "**Why:** A20 needs a Codex non-author reviewer plus Zai; with Zai out, no PROOF-2 row can pass codex-accepted before 09-29 unless Joe changes A20 or the quota."
+     "text": "**How to apply:** the plan lives at `futon2/holes/labs/wm-contract/PROOF-2a-PLAN.md` with steps ⟨n⟩m, each with ACCEPT / DEPENDS / PAR / STATUS / LOG. Before any dispatch, write its LOG line under its step (packet · seat · job · outcome · shas); on return, update STATUS and the line. Do not dispatch a step whose DEPENDS are not ACCEPTED unless it is marked PAR-now. When a return changes the plan (a new class of gap), add a step, do not just add a packet. For parallel per-row/per-edge/per-lane work use Kimi seats via `futon3c/scripts/kimi-task.sh`, one unique task each, warrant as acceptance ([[kimi-unique-requisition]]). See [[verify-wires-before-flights]], [[empirical-parameters-not-rulings]]."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-26T12:42:22.237Z",
      "event": "said",
-     "text": "Claude seats have a session limit too: at ~22:30Z 2026-09-24 seven claude-N seats died mid-work with \"You've hit your session limit, resets 12:10am UTC\". Their partial work stayed in the shared tree (uncommitted diffs and untracked files from three seats at once). Recovery that worked: read the tree, tell each seat by bell exactly which paths are its own to stage and that the others' are not, and let it continue in its own conversation. Do not commit another seat's partial work for it."
+     "text": "Joe 2026-09-26: the PROOF-2a plan is a Lamport-style structured proof (futon2 wm-contract/PROOF-2a-PLAN.md); every dispatch is logged under its step before it goes out; reactive packet names alone do not show a viable plan; Kimi seats usable per row/edge/lane"
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-26T12:42:22.237Z",
      "event": "said",
-     "text": "Later 2026-09-24 (Joe): Fable, Codex and Zai all unavailable; Claude at ~92% weekly (resets 09-26 ~14:00 UTC), and Joe wants the remaining Claude used before he resets. Kimi is the only dispatch pool. claude-8 (PROOF-2 coordinator) runs on Fable, so claude-10 carries the work: PROOF-2a (futon2 holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md, 1a13386e) = PROOF-2 plus Clause T (target choice), machine-constructed semilattice clause 0, scope statement. Spend Claude on review and definitions; dispatch drafting/building to Kimi, staggered."
+     "text": "Joe, 2026-09-26: \"Your dispatch tasks like WM-HANDOFF-H4 etc WM-LEAN-ABSENT-TRIAGE-D in and of themselves do not provide enough clarity to me that you have a viable plan that can be followed in roughly linear (or indeed parallel) logic. The standard here is that the proof should be understandable via compressed Lamport structured proof style summary, and that your dispatches should be logged into that structured summary, not just occur in a reactive way.\" He also allowed Kimi agents \"when requisitioned correctly, e.g. per block diagonal in the matrix, per red term from your summary\"."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-26T12:42:22.237Z",
      "event": "said",
-     "text": "Quota facts observed 2026-09-24: Kimi's 5-hour usage limit ended at 05:12 (HTTP 403 on every seat); Zai's weekly limit ended at ~05:15 (HTTP 429, \"Weekly/Monthly Limit Exhausted\", reset 2026-09-29 10:04:33). Both zai-1 and zai-2 are dead until then. Kimi was NOT out for the day: its 5-hour window resets on its own (0% used again by 13:07 UTC) and the monthly pool was 5.1% used. Joe corrected a claim that Kimi was exhausted (2026-09-24); he reads the monthly figure, which is what voxterm's collapsed usage strip shows."
+     "text": "**Why:** a sequence of sound packets is not a plan unless the order, dependencies and acceptance of each step can be read off one page; the operator cannot audit a reactive stream."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code-voxterm/proof2a-project-lead",
+   "name": "proof2a-project-lead",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 4,
+   "events": [
+    {
+     "at": "2026-09-24T20:14:03.503Z",
+     "event": "said",
+     "text": "**Why:** the critical path (tick wiring of `:construction`, the flight loop, interpretation supply) sat idle with claude-10 stopped, while I was only doing my own layer; Joe wants one driver."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-24T20:14:03.503Z",
      "event": "said",
-     "text": "2026-09-25 ~13:15Z: the Kimi 5h window ran out again (HTTP 403 access_terminated_error on kimi-11 and kimi-12 right after dispatch; kimi-10 had been invoking since ~07:00Z). A Kimi bell also FAILS without `--requisition \"E-… — purpose\"` on agency_send.py (invoke-error, before any model call); Claude seats do not need it. Re-route small items to idle Claude seats (claude-2..9) when the window is out, and say which window."
+     "text": "**How to apply:** I sequence and dispatch; claude-10 does the wiring/flight loop/E-outer-loop items; Kimi seats take small hole packets requisitioned on the excursion (one behaviour each, fresh seat per packet); I review every unit (record check, bad case), keep the Holes table current, and report to Joe by hole, not by packet. Clicks fire only when a flight can be a fair falsifier test. See [[proof2a-governs-proof2]], [[proof2a-loop-in-claude-10]], [[proof2-dispatch-pool]]."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-24T20:14:03.503Z",
      "event": "said",
-     "text": "2026-09-27 03:43Z: Kimi's 5-hour window ran out again (HTTP 403 access_terminated_error on kimi-1/2/3 mid-job, no edits made). The Agency reports the failure only in the job's `failed` event; the park resume arrives as \"(no summary)\". Check the job state before assuming a seat finished. When it happens, `kimi-task.sh --complete` the requisitions and re-dispatch the same packet files to Codex seats with a one-line preface."
+     "text": "Joe, 2026-09-24 (after the walkthroughs and the Lean kernel landed): \"manage the project as a whole, driving claude-10 and the kimi seats until we have the thing done.\" Done = the PROOF-2a theorem: a flight of the War Machine completes a mission, every completion criterion met with checked evidence; no hole open."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-24T20:14:03.503Z",
      "event": "said",
-     "text": "Joe (2026-09-24): Zai for B4 (zai-2 owned the slices), Kimi agents authorized for my dispatches, codex-3/4 for the proof documents; claude-4's WM data is stale and it is not in the loop."
+     "text": "Joe 2026-09-24 assigned claude-8 to manage PROOF-2a as a whole, driving claude-10 and the Kimi seats until the theorem is done"
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe-code-voxterm/reload-needs-no-permission",
+   "name": "reload-needs-no-permission",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 6,
+   "events": [
+    {
+     "at": "2026-09-27T23:39:46.334Z",
+     "event": "said",
+     "text": "Joe 2026-09-24 — reloading a shared JVM from its own master checkout never needs his permission; only a process RESTART is his call; do the reload and report it"
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-27T23:39:46.334Z",
      "event": "said",
-     "text": "**How to apply:** before calling any pool exhausted, read the current quota (voxterm `_usage_kimi()` / GET /usage, or the job's terminal-message) and name the window and its reset time. Seven Kimi seats in parallel drained the 5h window in about 30 minutes, so stagger them. Otherwise dispatch implementation and review to idle Codex seats (roster GET /api/alpha/agents; 10+ idle codex-N on 09-24); check a job reaches `running` and survives ~8s before parking, because quota refusals fail at the first prompt; preserve any partial work a dead seat left in a shared checkout under proof2/partial and restore the tree. See [[reload-needs-no-permission]], [[never-git-stash-in-shared-futon-trees]]."
+     "text": "Limit (2026-09-25): a reload only reaches code called through a var at call time. Kimi/Zai seats hold an invoke CLOSURE built by zai-api/make-invoke-fn at registration, so anything inlined in that closure body keeps its old form in every running seat until the seat is rebuilt (DELETE + POST /agents/auto) or the JVM restarts. Put seat behaviour in top-level defns called from the closure, not inline."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-27T23:39:46.334Z",
      "event": "said",
-     "text": "ROOT CAUSE of the Kimi drains (Joe, 2026-09-25): a Kimi seat clears its conversation only when the requisition TARGET changes (zai_api.clj context-carry-decision; same target accumulates up to a 512k cap). Sending every packet under one requisition (E-cascade-real) made each seat carry all its prior packets on every request. Rule: every Kimi dispatch clocks in on a UNIQUE task target, E-kimi-task-N, one small excursion file per task under a canonical holes/excursions/ (the target must resolve to holes/<kind>/<TARGET>.md or the seat refuses :requisition-unresolved). Fresh conversation per task; the file doubles as the task's record. The seat's requisition-mismatch reminder is an OPERATOR turn and reclocks the caller onto the requisitioned target; futon3c zai_api.clj caller-minted-task? skips it when the task file's head line says this caller minted it for this seat (kimi-task.sh writes that line). An agent has no HTTP route to set its own clock; the REPL buffer's clock (Joe's C-c C-m) i"
+     "text": "**How to apply:** after commits land on master in a repo on a serving JVM's classpath, reload the changed namespaces via `futon3c/scripts/proof-eval.sh` with `(require 'ns :reload)` in dependency order, verify with `scripts/wm_load_identity.sh` or a var check, and REPORT the reload. Never load a worktree or branch copy. A process restart (futon3c :6768/:7070, futon1b, API :7073, liveness-only :7072) is still Joe's call, though futon1b needs no quiet time ([[futon1b-restart-policy]])."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-27T23:39:46.334Z",
      "event": "said",
-     "text": "From 2026-09-24 ~16:40 UTC (claude-11, futon3c 5146606d): every Kimi dispatch must carry `Requisition: M-foo — <purpose>` in the prompt, or `agency_send.py --requisition \"M-foo — purpose\"`; without it the seat refuses and sends a reminder. Kimi seats also start a fresh conversation per target now (the 5h window was being filled by 200–335k-token carried contexts)."
+     "text": "2026-09-27: I again wrote that I would bring a reload list to Joe \"as one request\". Joe: \"Reloading is fine as you know, I don't need to be involved as you have Drawbridge.\" Do the reload through `futon3c/scripts/proof-eval.sh` and report it afterwards. What does still need him: a RESTART, including when a new jar dependency (deps.edn change) is not on the running JVM's classpath — check with `(Class/forName ...)` before assuming."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-27T23:39:46.334Z",
      "event": "said",
-     "text": "Second drain, 2026-09-24 ~22:20Z: six Kimi seats dispatched within ~10 minutes (claude-8) drained the 5h window again, killing the machine's own answering seat (kimi-6) mid-read. Joe had authorized Claude Opus agents that evening; work moved to idle claude-N seats (claude-2 as the machine's answer seat, claude-5/6/7/9/11 for packets). Rule that was already here and got ignored: STAGGER Kimi dispatches, at most two or three seats in parallel, and keep one seat in reserve for the machine's own asks."
+     "text": "**Why:** CLAUDE.md already says \"Restart of a shared JVM is Joe's call; reload-from-master is always allowed.\" Waiting for permission left landed code dead in the serving JVM for hours and pushed an operator decision onto Joe that was never his."
     },
     {
-     "at": "2026-09-27T03:47:30.937Z",
+     "at": "2026-09-27T23:39:46.334Z",
      "event": "said",
-     "text": "Which agent pools PROOF-2 work may use; Kimi's 09-24 outage was its 5-hour window only (monthly ~95% left), Zai weekly out until 09-29"
+     "text": "Joe, 2026-09-24: \"reload does not need my permission, that is a misconception.\" I had been ending reports with \"pending your reload\"."
     }
    ]
   },
@@ -887,6 +1217,39 @@
      "text": "**How to apply:** (1) End every campaign turn with the same compact block — IN FLIGHT (job-id / seat / park-id / deadline), DONE THIS TICK, NEXT, BLOCKED ON JOE — same headings every time so turns read as a dashboard. (2) Refresh `futon2/holes/labs/wm-contract/BOARD.md` (created 536691b3) each tick and commit with the STATUS.edn update; STATUS.edn stays the machine ledger, BOARD.md is the human view. Job-ids and park-ids also go in turn text at dispatch time (CLAUDE.md already requires this). Related: [[wm-contract-standing-continue]], [[claude-15-not-cast-in-wm-loops]]."
     }
    ]
+  },
+  {
+   "memory": "cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor",
+   "name": "warrant-limit-ten-triggers-refactor",
+   "project": "cc:-home-joe-code-voxterm",
+   "facts": 5,
+   "events": [
+    {
+     "at": "2026-09-28T17:59:00.934Z",
+     "event": "said",
+     "text": "**Joe 2026-09-28 17:56Z:** \"just like with the Inbox0 work, we need to get this to actually run properly, and we should look at the recent refactoring of that to get some ideas\"; refactoring packets may go to Kimi as well as Codex (\"a pretty straightforward task\"). Kimi dispatches go through scripts/kimi-task.sh ([[kimi-unique-requisition]]); check the 5-hour window first ([[proof2-dispatch-pool]]). The work is tracked as mission `futon3c/holes/missions/M-warrant-limit.md` (C1-C8), shaped after M-inbox-zero-claim-lifecycle. As read on 09-28 the inbox-zero mission's files show DERIVE pending and nothing deployed; the lessons taken are in the mission's Principle section."
+    },
+    {
+     "at": "2026-09-28T17:59:00.934Z",
+     "event": "said",
+     "text": "**Why:** on 2026-09-28 every edit made 122 to 194 of 194 wire warrants stale (file-level load closure); a full rerun costs about 30 minutes at ten JVMs."
+    },
+    {
+     "at": "2026-09-28T17:59:00.934Z",
+     "event": "said",
+     "text": "Joe 2026-09-28 — a change that makes more than 10 test warrants stale triggers an automatic refactor; mass reruns are not tolerated"
+    },
+    {
+     "at": "2026-09-28T17:59:00.934Z",
+     "event": "said",
+     "text": "Joe, 2026-09-28 17:50Z: if a change invalidates more than 10 tests, a refactor is triggered; the warrant system is for convenience and must not cause mass reruns; the War Machine must run automatically without redoing work."
+    },
+    {
+     "at": "2026-09-28T17:59:00.934Z",
+     "event": "said",
+     "text": "**How to apply:** the rule for what a warrant depends on is `futon2/holes/labs/wm-contract/NOTE-warrant-definition-rule.md` (definitions, not files; futon3c scripts/warrant_reach.py, warrant_index.py, currentness.clj). At 17:53Z 2,511 of 7,683 reached product definitions had more than 10 dependent tests, mostly because wire tests run product operations to get their values; the refactor direction is producer tests that write content-addressed records and wire tests that read them ([[no-recomputation-across-a-seam]]). Packets LIMIT-I and PRODUCERS-D opened this. Related: [[test-work-is-bounded-proof-work-first]], [[warrant-checks-instantaneous-small-files]]."
+    }
+   ]
   }
  ],
  "cells": {
@@ -927,9 +1290,7 @@
     "verify-running-before-parking",
     "verify-running-before-parking",
     "sat `queued` for an hour",
-    "confirm an event beyond `accepted` (`running`/`prompt",
-    "seat-bellbacks-look-like-mine",
-    "seat-bellbacks-look-like-mine"
+    "confirm an event beyond `accepted` (`running`/`prompt"
    ],
    "status": "in-force"
   },
@@ -1025,6 +1386,118 @@
    "level": "reached",
    "calls": [
     "m40_state r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code/mfuton-lean-compiler-project": {
+   "level": "retrieved-only",
+   "calls": [
+    "m40_find r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/minus40-rollout-vision": {
+   "level": "echoed",
+   "calls": [
+    "m40_find r1",
+    "m40_find r1",
+    "m40_state r1"
+   ],
+   "echoes": [
+    "minus40-rollout-vision",
+    "minus40-rollout-vision",
+    "2026-10-15 evening Kimi",
+    "pool was swapped to zai-1/2/5"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe/zai-five-hour-window": {
+   "level": "echoed",
+   "calls": [
+    "m40_find r1",
+    "m40_find r1",
+    "m40_state r1"
+   ],
+   "echoes": [
+    "zai-five-hour-window",
+    "403 on every seat when"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/reload-needs-no-permission": {
+   "level": "retrieved-only",
+   "calls": [
+    "m40_find r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/proof2a-project-lead": {
+   "level": "retrieved-only",
+   "calls": [
+    "m40_find r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log": {
+   "level": "retrieved-only",
+   "calls": [
+    "m40_find r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code/prefer-kimi-zai-over-codex": {
+   "level": "echoed",
+   "calls": [
+    "m40_find r1",
+    "m40_state r1"
+   ],
+   "echoes": [
+    "prefer-kimi-zai-over-codex",
+    "prefer-kimi-zai-over-codex",
+    "kimi-1 and kimi-2"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/kimi-seat-creation": {
+   "level": "echoed",
+   "calls": [
+    "m40_find r1"
+   ],
+   "echoes": [
+    "kimi-seat-creation",
+    "POST /api/alpha/agents/auto {\"type\":\"kimi",
+    "an existing reclaimable idle seat of that type"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/proof2-dispatch-pool": {
+   "level": "echoed",
+   "calls": [
+    "m40_find r1",
+    "m40_find r1",
+    "m40_state r1"
+   ],
+   "echoes": [
+    "proof2-dispatch-pool",
+    "HTTP 403 on every seat"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/kimi-unique-requisition": {
+   "level": "echoed",
+   "calls": [
+    "m40_find r1"
+   ],
+   "echoes": [
+    "kimi-unique-requisition",
+    "kimi-unique-requisition"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122812718-15113-c99086c6|cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor": {
+   "level": "retrieved-only",
+   "calls": [
+    "m40_find r1"
    ],
    "status": "in-force"
   }

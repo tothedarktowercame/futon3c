@@ -1,0 +1,637 @@
+{
+ "turn": "invoke-1792122812718-15113-c99086c6",
+ "record": "turn-oHWZaE",
+ "session": "zai-d19c3168-7064-4b54-8279-e1bf18d646de",
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "segments": [
+  {
+   "id": "invoke-1792122812718-15113-c99086c6",
+   "role": "operator",
+   "label": "joe · 2026-10-16T03:53:32Z",
+   "text": "Requisition: E-scope-view — traced memory use, task 3 (Kimi seats: record vs scripts)\n\nFrom claude-16. This is a short, real check whose session will be read as evidence for E-scope-view: which minus40 memories reached your turn, whether your reply echoes them, and how that compares with your earlier turn today. Your tool calls ARE the evidence, so use the tools rather than answering from recall.\n\nSteps, in this order:\n1. Call m40_find with terms [\"kimi\" \"seat\"] and again with terms [\"kimi\" \"window\"]. Call m40_state with date \"2026-10-16\" and terms [\"kimi\"].\n2. Read /home/joe/code/futon3c/scripts/kimi-task.sh (the first 60 lines are enough) and check whether /home/joe/code/futon3c/README-kimi.md exists.\n3. Run: curl -s localhost:7070/api/alpha/agents and count the registered agents whose id starts with kimi, noting their state.\n\nReply in prose, four to eight sentences: what the memories say about creating Kimi seats and about the Kimi usage window; whether the script matches (does it park? does it create a seat or reuse one?); how many kimi seats are registered now and in what state; and any point where a memory is out of date against what you saw. Name each memory you relied on by its name as m40_find printed it. Do not edit or commit anything. Your reply this turn is delivered back to me automatically; no bell needed.\n"
+  },
+  {
+   "id": "invoke-1792122812718-15113-c99086c6-reply",
+   "role": "agent",
+   "label": "zai-2 · 2026-10-16T03:54:06Z",
+   "text": "All four steps run live. The memories on creating Kimi seats: `kimi-seat-creation` records that `POST /api/alpha/agents/auto {\"type\":\"kimi\",...}` *reuses* an existing reclaimable idle seat of that type rather than always minting a new one — which once queued three packets on kimi-5 — so for N parallel packets you must loop create-then-dispatch; `kimi-unique-requisition` says each dispatch needs a unique requisition target via `scripts/kimi-task.sh` (a fresh `E-kimi-task-N` excursion per task, `--complete` afterwards), and `prefer-kimi-zai-over-codex` codifies Joe's 2026-09-28 preference for Kimi/Zai over contended Codex seats. On the usage window: `proof2-dispatch-pool` and `zai-five-hour-window` say Kimi has its own 5-hour window (HTTP 403 on every seat when drained; seven parallel seats drained it in ~30 min), read the live quota before calling a pool exhausted — and `minus40-rollout-vision` (via m40_state as of 2026-10-16, the latest statement) updates this: on 2026-10-15 evening Kimi hit its **monthly** limit (403 at 19:11Z) and the 象 pool was swapped to zai-1/2/5. The script matches the memories on requisitions — it mints the unique excursion file, prepends the Requisition line, commits, and cleans up on a failed dispatch — but it *does not* create or reuse a seat (that's the separate `/agents/auto` call) and it does not park; `kimi-unique-requisition` and the 09-27 memory note parking is the *caller's* separate step. `README-kimi.md` exists. No kimi seats are registered right now: the roster (46 agents) shows zero ids starting with `kimi`, consistent with `minus40-rollout-vision`'s monthly-limit swap — the only stale-ish note is `prefer-kimi-zai-over-codex`'s snapshot of \"kimi-1 and kimi-2 on the roster,\" which was true 2026-09-28 and is not today."
+  },
+  {
+   "id": "call:1:0",
+   "role": "call",
+   "label": "m40_find · round 1",
+   "text": "m40_find {:terms [\"kimi\" \"seat\"]}\n→ 10 memories named"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/mfuton-lean-compiler-project",
+   "role": "memory",
+   "label": "mfuton-lean-compiler-project · cc:-home-joe-code · said 2026-10-03",
+   "text": "Joe + Rob Meyers ([[hyperreal-people-2026]]) run a FUTON/MFUTON \"Lakatosian dialogue\" on the Lean compiler. Rob's side: Python port of Lean's parser + a Lean-subset→Python compiler, pinned to Lean v4.29.0 (98dc76e3), with Lean's generated C as the behavioural reference.\n**Sequence to Std/Lean (Joe 2026-10-01):** after the Init fix-up, continue to Std and Lean, including overnight. Plan with phases and gates: `/tmp/pyreg/overnight/PLAN.md` (Phase 0 running fixes; 1 finish Init; 2 Std/Lean groundwork: dumps C/D, kind map, env-init stand-ins; 3 Std/Lean verdict batches + fix groups). On each park wake, review, then dispatch the next step whose gate is met.\nUpstream push decision (Joe 2026-09-30): do NOT push startup-linux to electric-samurai main until the blank-file startup completes; then fast-forward (re-enable origin push for that one push only). Model repo: tothedarktowercame/lean-wiring (branch v4.29.0); binding: tothedarktowercame/mfuton-linux-binding; cache-key question is upstream issue #2.\n\"FUTON×MFUTON Lean compiler study with Rob — repos, version pin, fork/push rules, reference-C decision\"\n**Merge procedure (as done 2026-09-30, Rob's a372214..d15de97):** `git fetch origin`; move local `main` to `origin/main`; `git merge --no-ff origin/main` into `tail-call-depth` (main checkout); rerun the C-authority sweep (`futon3c/scripts/pytest_warrant_suite.py`, PYTEST_ADDOPTS must include `--tb=short`) and diff outcomes. Merge into a branch an agent is working in (`startup-linux` in /tmp/mfs-real) only after its job returns. Our branches are local only unless Joe says to push them to `fork`.\nOur repos: ~/code/lean-wiring (branch/worktree `v4.29.0` at ~/code/lean-wiring-v4.29.0 has the 4.29 run + `ir` stage), ~/code/lean-docs-align (NOTE-mfuton-getting-started.md), ~/code/lean-dyncov, ~/code/lean-c-markup (Basic.c markup + census.bb).\n2026-10-01 05:05: G0 reached — cold blank startup no longer OOMs (peak 4.2 GB/12G); fork startup-linux = a3cb14c; next stop syntheticHole ?m not callable (Init.Prelude instance). Overnight log /tmp/pyreg/overnight/PLAN.md.\nReference C: stage0 C at v4.29.0 differs slightly from the release compiler's output (255 diff lines in Parser/Basic.c). Decision 2026-09-30: work with THEIR version (stage0) for now; asked Rob in upstream issue #1.\n**Why:** Rob's port is the comparison target; the fork keeps our work from landing directly in his repo (we have write access there). **How to apply:** never push to Rob's repo directly; check issue #1 before switching the reference C to the release output.\n2026-10-03 backup: all ~/code/mfuton-share branches + claude-4-pin tags pushed to fork; /tmp/pyreg copied to ~/mfuton-notes/pyreg and committed to fork branch `notes/claude-4-pyreg` (8152e86, with uncommitted-worktree patches). Every /tmp/mfs-* worktree shares ~/code/mfuton-share/.git, so committed work already lives in /home.\nPush authority (Joe 2026-10-01 ~04:00): push to the fork (tothedarktowercame/mfuton-share) and other private tothedarktowercame repos as commits build up; reviewed branches go up as their own branches. origin (electric-samurai) stays disabled until blank-file startup completes.\nUpstream: github electric-samurai/mfuton-share (PRIVATE), local ~/code/mfuton-share. Our private fork tothedarktowercame/mfuton-share = remote `fork`; push to `origin` is DISABLED (Joe 2026-09-30). PRs go fork → upstream; issues go on upstream.\nKimi dispatches need a `--requisition \"M-diagramprover — …\"` line or the seat rejects them."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision",
+   "role": "memory",
+   "label": "minus40-rollout-vision · cc:-home-joe-code-voxterm · said 2026-10-15",
+   "text": "**Why:** Zai seats have no memory of their own worth keeping (only a pattern-use tool over futon1b), so they are the cheapest trial; Claude Code's auto memory is the source minus40 ingests, so switching it off (`CLAUDE_CODE_DISABLE_AUTO_MEMORY`, `autoMemoryEnabled`) must wait until writes go through m40. Mastra's gap is conversation-to-facts (milestone 7).\nJoe (2026-10-15): \"I like the vision. We can test things out with Zai first, then bring Codex and Claude online; we can also work towards Mastra parity (along with any extra features from ZeroDB and Alinery that are worth integrating, though to be clear, with Alinery, it's more about maintaining the intents that are passed on by agents in a dispatch pattern, which are worth remembering but are a little different from memories that are drawn from interactive use).\"\nJoe 2026-10-15 approved the minus40 rollout: Zai seats first, then Codex and Claude; work towards Mastra parity; take worthwhile extras from ZeroDB and Alinery, where Alinery means remembering the intents passed in dispatch packets, distinct from interactive-use memories\n**How to apply:** dispatch increments in that order without re-asking (per [[those-are-fine-covers-the-sequence]]). Treat dispatch packets (~/notes/packets) as a memory kind of their own, \"dispatch intents\", with the Agency job id; do not fold them into interactive memories. Related: [[no-hits-on-unfamiliar-content]], [[minus40-encryption-parked]], [[landscape-tool-names-local-clones]].\nStatus 2026-10-15 17:5xZ: Zai seats have the eight m40 tools (futon3c d12ad334b reloaded); first native calls confirmed on zai-5; a week of Zai memories runs to 2026-10-22, then review with sorries and relations.py over the `zai-*` projects. zai-3, a restored seat with long history, denied having tools it was sent; give it a fresh session first.\nSeat quota, 2026-10-15 evening: Kimi (the 象 analysis seats) hit its MONTHLY limit (HTTP 403, 19:11Z); Zai hit its 5-hour window at 19:43Z (HTTP 429, meter reset 22:19Z). The 象 analysis pool was swapped to zai-1/2/5 at 19:15Z and fell to the alternate 象-sonnet (Claude) when Zai ran out. Check `futon3c/scripts/zai-usage` before dispatching Zai work."
+  },
+  {
+   "id": "m40:cc:-home-joe/zai-five-hour-window",
+   "role": "memory",
+   "label": "zai-five-hour-window · cc:-home-joe · said 2026-10-12",
+   "text": "\"Zai has a five-hour token window AND a weekly/monthly limit; parallel seats burn the five-hour one (5 seats ≈ 25 min, 10-11); ≤3 seats; exhausted jobs die silently; check futon3c/scripts/zai-usage.\"\nZai quota, as learned across projects (merged here 2026-10-12 so every project's sessions see it; minus40 relate.py found the earlier copies):\n**Exhaustion is silent.** The seats share one upstream quota; when it runs out, invoke jobs end as bare `state failed` / `invoke-error` with no output, indistinguishable from a crash (voxterm memory `zai-seat-allocation`, 09-15).\n**Weekly/monthly limit** is separate. 2026-09-24 it ran out (\"Weekly/Monthly Limit Exhausted\", HTTP 429, reset 09-29), stopping PROOF-2 work (voxterm memory `proof2-dispatch-pool`). The monthly meter resets around the 13th, ~02:04Z (67% used at 2026-10-12 05:15Z).\n**How to apply:** run at most 3 Zai packets at once and check zai-usage before a fourth. A Zai job that comes back \"done\" or \"failed\" with nothing written may have hit a limit; check usage before re-dispatching. Related: [[wm-lean-registry-closure]] (Zai owners stall; re-audit yourself).\n**Five-hour window** binds under parallel load. claude-16, 2026-10-12: five seats labelling at once exhausted it in about 25 minutes (2026-10-11 18:21Z, all jobs died on HTTP 429 having written nothing; reset 22:33Z). Two or three seats at a time was fine.\nKimi has its own five-hour window (403 on every seat when out, 09-24); don't confuse the two.\n`~/code/futon3c/scripts/zai-usage` shows both Zai windows; claude-16 logs readings in futon3c `holes/labs/M-象-2000/moves/usage.log`."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/reload-needs-no-permission",
+   "role": "memory",
+   "label": "reload-needs-no-permission · cc:-home-joe-code-voxterm · said 2026-09-27",
+   "text": "Joe 2026-09-24 — reloading a shared JVM from its own master checkout never needs his permission; only a process RESTART is his call; do the reload and report it\nLimit (2026-09-25): a reload only reaches code called through a var at call time. Kimi/Zai seats hold an invoke CLOSURE built by zai-api/make-invoke-fn at registration, so anything inlined in that closure body keeps its old form in every running seat until the seat is rebuilt (DELETE + POST /agents/auto) or the JVM restarts. Put seat behaviour in top-level defns called from the closure, not inline.\n**How to apply:** after commits land on master in a repo on a serving JVM's classpath, reload the changed namespaces via `futon3c/scripts/proof-eval.sh` with `(require 'ns :reload)` in dependency order, verify with `scripts/wm_load_identity.sh` or a var check, and REPORT the reload. Never load a worktree or branch copy. A process restart (futon3c :6768/:7070, futon1b, API :7073, liveness-only :7072) is still Joe's call, though futon1b needs no quiet time ([[futon1b-restart-policy]]).\n2026-09-27: I again wrote that I would bring a reload list to Joe \"as one request\". Joe: \"Reloading is fine as you know, I don't need to be involved as you have Drawbridge.\" Do the reload through `futon3c/scripts/proof-eval.sh` and report it afterwards. What does still need him: a RESTART, including when a new jar dependency (deps.edn change) is not on the running JVM's classpath — check with `(Class/forName ...)` before assuming.\n**Why:** CLAUDE.md already says \"Restart of a shared JVM is Joe's call; reload-from-master is always allowed.\" Waiting for permission left landed code dead in the serving JVM for hours and pushed an operator decision onto Joe that was never his.\nJoe, 2026-09-24: \"reload does not need my permission, that is a misconception.\" I had been ending reports with \"pending your reload\"."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2a-project-lead",
+   "role": "memory",
+   "label": "proof2a-project-lead · cc:-home-joe-code-voxterm · said 2026-09-24",
+   "text": "**Why:** the critical path (tick wiring of `:construction`, the flight loop, interpretation supply) sat idle with claude-10 stopped, while I was only doing my own layer; Joe wants one driver.\n**How to apply:** I sequence and dispatch; claude-10 does the wiring/flight loop/E-outer-loop items; Kimi seats take small hole packets requisitioned on the excursion (one behaviour each, fresh seat per packet); I review every unit (record check, bad case), keep the Holes table current, and report to Joe by hole, not by packet. Clicks fire only when a flight can be a fair falsifier test. See [[proof2a-governs-proof2]], [[proof2a-loop-in-claude-10]], [[proof2-dispatch-pool]].\nJoe, 2026-09-24 (after the walkthroughs and the Lean kernel landed): \"manage the project as a whole, driving claude-10 and the kimi seats until we have the thing done.\" Done = the PROOF-2a theorem: a flight of the War Machine completes a mission, every completion criterion met with checked evidence; no hole open.\nJoe 2026-09-24 assigned claude-8 to manage PROOF-2a as a whole, driving claude-10 and the Kimi seats until the theorem is done"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log",
+   "role": "memory",
+   "label": "proof-plan-structured-dispatch-log · cc:-home-joe-code-voxterm · said 2026-09-26",
+   "text": "**How to apply:** the plan lives at `futon2/holes/labs/wm-contract/PROOF-2a-PLAN.md` with steps ⟨n⟩m, each with ACCEPT / DEPENDS / PAR / STATUS / LOG. Before any dispatch, write its LOG line under its step (packet · seat · job · outcome · shas); on return, update STATUS and the line. Do not dispatch a step whose DEPENDS are not ACCEPTED unless it is marked PAR-now. When a return changes the plan (a new class of gap), add a step, do not just add a packet. For parallel per-row/per-edge/per-lane work use Kimi seats via `futon3c/scripts/kimi-task.sh`, one unique task each, warrant as acceptance ([[kimi-unique-requisition]]). See [[verify-wires-before-flights]], [[empirical-parameters-not-rulings]].\nJoe 2026-09-26: the PROOF-2a plan is a Lamport-style structured proof (futon2 wm-contract/PROOF-2a-PLAN.md); every dispatch is logged under its step before it goes out; reactive packet names alone do not show a viable plan; Kimi seats usable per row/edge/lane\nJoe, 2026-09-26: \"Your dispatch tasks like WM-HANDOFF-H4 etc WM-LEAN-ABSENT-TRIAGE-D in and of themselves do not provide enough clarity to me that you have a viable plan that can be followed in roughly linear (or indeed parallel) logic. The standard here is that the proof should be understandable via compressed Lamport structured proof style summary, and that your dispatches should be logged into that structured summary, not just occur in a reactive way.\" He also allowed Kimi agents \"when requisitioned correctly, e.g. per block diagonal in the matrix, per red term from your summary\".\n**Why:** a sequence of sound packets is not a plan unless the order, dependencies and acceptance of each step can be read off one page; the operator cannot audit a reactive stream."
+  },
+  {
+   "id": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex",
+   "role": "memory",
+   "label": "prefer-kimi-zai-over-codex · cc:-home-joe-code · said 2026-09-28",
+   "text": "**How to apply:** check the roster for idle `kimi-N` and Zai seats first; dispatch Kimi work through `futon3c/scripts/kimi-task.sh` (unique excursion per task, `--complete` after review). On 2026-09-28 the roster had kimi-1 and kimi-2 but no Zai seats registered; bringing one up is a question for Joe. Fall back to codex-N only when no Kimi/Zai seat is free or the provider is out of usage, and say so. Seat reservations still apply: [[codex-seat-reservations]]. Zai owner lanes: [[wm-closure-strategy-zai-owners]].\n**Why:** Joe is running three intensive Codex projects of his own in parallel with the War Machine work, so Codex usage and seats are contended.\nJoe, 2026-09-28: prefer Kimi and Zai seats to Codex for my dispatches whenever those systems have usage left. Codex goes last.\n\"Joe 2026-09-28: dispatch to Kimi/Zai seats before Codex when they have usage; Joe runs 3 intensive Codex projects in parallel\""
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation",
+   "role": "memory",
+   "label": "kimi-seat-creation · cc:-home-joe-code-voxterm · said 2026-09-24",
+   "text": "**How to apply:** for N parallel Kimi packets, loop create-then-dispatch: call auto, dispatch to the returned seat (which makes it busy), then call auto again. Guard against being handed kimi-1 (claude-1's turn-analysis delegate) or a seat already in use. Verify each job reaches `running` with a `tool_use` event before parking. See [[proof2-dispatch-pool]], [[zai-seat-allocation]].\nObserved 2026-09-24 evening. `POST /api/alpha/agents/auto {\"type\":\"kimi\",\"cwd\":...}` returns an existing reclaimable idle seat of that type if one exists (three calls in a row all returned kimi-5 while it was idle), and creates the next kimi-N with a live runtime otherwise. `POST /api/alpha/agents {\"agent-id\":\"kimi-6\",\"type\":\"kimi\"}` registers a seat with NO runtime: a job to it ends in seconds with result-summary `registered-via-http`. Cancel a queued job with `POST /api/alpha/invoke/jobs/<id>/cancel`; deregister a stub with `DELETE /api/alpha/agents/<id>`.\nHow to get a fresh Kimi seat with a real runtime (auto route reuses an idle reclaimable seat; explicit-id POST makes a stub); create-then-dispatch one at a time\n**Why:** three packets meant for three seats all queued on kimi-5, then two resends went to stubs and silently \"completed\"."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool",
+   "role": "memory",
+   "label": "proof2-dispatch-pool · cc:-home-joe-code-voxterm · said 2026-09-27",
+   "text": "**Why:** A20 needs a Codex non-author reviewer plus Zai; with Zai out, no PROOF-2 row can pass codex-accepted before 09-29 unless Joe changes A20 or the quota.\nClaude seats have a session limit too: at ~22:30Z 2026-09-24 seven claude-N seats died mid-work with \"You've hit your session limit, resets 12:10am UTC\". Their partial work stayed in the shared tree (uncommitted diffs and untracked files from three seats at once). Recovery that worked: read the tree, tell each seat by bell exactly which paths are its own to stage and that the others' are not, and let it continue in its own conversation. Do not commit another seat's partial work for it.\nLater 2026-09-24 (Joe): Fable, Codex and Zai all unavailable; Claude at ~92% weekly (resets 09-26 ~14:00 UTC), and Joe wants the remaining Claude used before he resets. Kimi is the only dispatch pool. claude-8 (PROOF-2 coordinator) runs on Fable, so claude-10 carries the work: PROOF-2a (futon2 holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md, 1a13386e) = PROOF-2 plus Clause T (target choice), machine-constructed semilattice clause 0, scope statement. Spend Claude on review and definitions; dispatch drafting/building to Kimi, staggered.\nQuota facts observed 2026-09-24: Kimi's 5-hour usage limit ended at 05:12 (HTTP 403 on every seat); Zai's weekly limit ended at ~05:15 (HTTP 429, \"Weekly/Monthly Limit Exhausted\", reset 2026-09-29 10:04:33). Both zai-1 and zai-2 are dead until then. Kimi was NOT out for the day: its 5-hour window resets on its own (0% used again by 13:07 UTC) and the monthly pool was 5.1% used. Joe corrected a claim that Kimi was exhausted (2026-09-24); he reads the monthly figure, which is what voxterm's collapsed usage strip shows.\n2026-09-25 ~13:15Z: the Kimi 5h window ran out again (HTTP 403 access_terminated_error on kimi-11 and kimi-12 right after dispatch; kimi-10 had been invoking since ~07:00Z). A Kimi bell also FAILS without `--requisition \"E-… — purpose\"` on agency_send.py (invoke-error, before any model call); Claude seats do not need it. Re-route small items to idle Claude seats (claude-2..9) when the window is out, and say which window.\n2026-09-27 03:43Z: Kimi's 5-hour window ran out again (HTTP 403 access_terminated_error on kimi-1/2/3 mid-job, no edits made). The Agency reports the failure only in the job's `failed` event; the park resume arrives as \"(no summary)\". Check the job state before assuming a seat finished. When it happens, `kimi-task.sh --complete` the requisitions and re-dispatch the same packet files to Codex seats with a one-line preface.\nJoe (2026-09-24): Zai for B4 (zai-2 owned the slices), Kimi agents authorized for my dispatches, codex-3/4 for the proof documents; claude-4's WM data is stale and it is not in the loop.\n**How to apply:** before calling any pool exhausted, read the current quota (voxterm `_usage_kimi()` / GET /usage, or the job's terminal-message) and name the window and its reset time. Seven Kimi seats in parallel drained the 5h window in about 30 minutes, so stagger them. Otherwise dispatch implementation and review to idle Codex seats (roster GET /api/alpha/agents; 10+ idle codex-N on 09-24); check a job reaches `running` and survives ~8s before parking, because quota refusals fail at the first prompt; preserve any partial work a dead seat left in a shared checkout under proof2/partial and restore the tree. See [[reload-needs-no-permission]], [[never-git-stash-in-shared-futon-trees]].\nROOT CAUSE of the Kimi drains (Joe, 2026-09-25): a Kimi seat clears its conversation only when the requisition TARGET changes (zai_api.clj context-carry-decision; same target accumulates up to a 512k cap). Sending every packet under one requisition (E-cascade-real) made each seat carry all its prior packets on every request. Rule: every Kimi dispatch clocks in on a UNIQUE task target, E-kimi-task-N, one small excursion file per task under a canonical holes/excursions/ (the target must resolve to holes/<kind>/<TARGET>.md or the seat refuses :requisition-unresolved). Fresh conversation per task; the file doubles as the task's record. The seat's requisition-mismatch reminder is an OPERATOR turn and reclocks the caller onto the requisitioned target; futon3c zai_api.clj caller-minted-task? skips it when the task file's head line says this caller minted it for this seat (kimi-task.sh writes that line). An agent has no HTTP route to set its own clock; the REPL buffer's clock (Joe's C-c C-m) i\nFrom 2026-09-24 ~16:40 UTC (claude-11, futon3c 5146606d): every Kimi dispatch must carry `Requisition: M-foo — <purpose>` in the prompt, or `agency_send.py --requisition \"M-foo — purpose\"`; without it the seat refuses and sends a reminder. Kimi seats also start a fresh conversation per target now (the 5h window was being filled by 200–335k-token carried contexts).\nSecond drain, 2026-09-24 ~22:20Z: six Kimi seats dispatched within ~10 minutes (claude-8) drained the 5h window again, killing the machine's own answering seat (kimi-6) mid-read. Joe had authorized Claude Opus agents that evening; work moved to idle claude-N seats (claude-2 as the machine's answer seat, claude-5/6/7/9/11 for packets). Rule that was already here and got ignored: STAGGER Kimi dispatches, at most two or three seats in parallel, and keep one seat in reserve for the machine's own asks.\nWhich agent pools PROOF-2 work may use; Kimi's 09-24 outage was its 5-hour window only (monthly ~95% left), Zai weekly out until 09-29"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition",
+   "role": "memory",
+   "label": "kimi-unique-requisition · cc:-home-joe-code-voxterm · said 2026-09-25",
+   "text": "Since futon3c 25228c0f the script writes `**Requisition:** in-progress — …` at dispatch; after the job ends run `kimi-task.sh --complete <E-id> <job-id>` (Joe 2026-09-25, futon2 a461b124: a requisition is never pending work, so it must never be redispatched or flown).\nJoe (2026-09-25) asked that each Kimi dispatch use a unique requisition ID. The mechanism is `futon3c/scripts/kimi-task.sh --from <me> --to <kimi-N> --purpose \"<line>\" packet.md`. It creates and commits `futon2/holes/excursions/E-kimi-task-N.md`, then bells with `Requisition: E-kimi-task-N — purpose`. README-kimi.md (as of 2026-09-25) says nothing about requisitions, so read the script and `zai_api.clj` parse-requisition rather than the README.\n**How to apply:** use kimi-task.sh for every Kimi packet, not `agency_send.py --requisition \"M-...\"`. The script neither parks nor passes --mission, so take the job id from its output, confirm the job is running, then park in a second call. See [[kimi-seat-creation]].\nJoe 2026-09-25 — every Kimi dispatch gets a unique requisition via futon3c/scripts/kimi-task.sh (E-kimi-task-N); README-kimi doesn't document it; the script doesn't park\n**Why:** a Kimi seat keeps its conversation per requisition target and clears it only when the target changes. Reusing one M-* target across dispatches carries old context into new work. Because the file records who created it and for which seat (caller-minted-task?), the caller's own clock stays on its mission."
+  },
+  {
+   "id": "call:1:1",
+   "role": "call",
+   "label": "m40_find · round 1",
+   "text": "m40_find {:terms [\"kimi\" \"window\"]}\n→ 4 memories named"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor",
+   "role": "memory",
+   "label": "warrant-limit-ten-triggers-refactor · cc:-home-joe-code-voxterm · said 2026-09-28",
+   "text": "**Joe 2026-09-28 17:56Z:** \"just like with the Inbox0 work, we need to get this to actually run properly, and we should look at the recent refactoring of that to get some ideas\"; refactoring packets may go to Kimi as well as Codex (\"a pretty straightforward task\"). Kimi dispatches go through scripts/kimi-task.sh ([[kimi-unique-requisition]]); check the 5-hour window first ([[proof2-dispatch-pool]]). The work is tracked as mission `futon3c/holes/missions/M-warrant-limit.md` (C1-C8), shaped after M-inbox-zero-claim-lifecycle. As read on 09-28 the inbox-zero mission's files show DERIVE pending and nothing deployed; the lessons taken are in the mission's Principle section.\n**Why:** on 2026-09-28 every edit made 122 to 194 of 194 wire warrants stale (file-level load closure); a full rerun costs about 30 minutes at ten JVMs.\nJoe 2026-09-28 — a change that makes more than 10 test warrants stale triggers an automatic refactor; mass reruns are not tolerated\nJoe, 2026-09-28 17:50Z: if a change invalidates more than 10 tests, a refactor is triggered; the warrant system is for convenience and must not cause mass reruns; the War Machine must run automatically without redoing work.\n**How to apply:** the rule for what a warrant depends on is `futon2/holes/labs/wm-contract/NOTE-warrant-definition-rule.md` (definitions, not files; futon3c scripts/warrant_reach.py, warrant_index.py, currentness.clj). At 17:53Z 2,511 of 7,683 reached product definitions had more than 10 dependent tests, mostly because wire tests run product operations to get their values; the refactor direction is producer tests that write content-addressed records and wire tests that read them ([[no-recomputation-across-a-seam]]). Packets LIMIT-I and PRODUCERS-D opened this. Related: [[test-work-is-bounded-proof-work-first]], [[warrant-checks-instantaneous-small-files]]."
+  },
+  {
+   "id": "call:1:2",
+   "role": "call",
+   "label": "m40_state · round 1",
+   "text": "m40_state {:date \"2026-10-16\", :terms [\"kimi\"]}\n→ 4 memories named"
+  }
+ ],
+ "layers": [
+  {
+   "id": "acts",
+   "name": "speech acts (象)",
+   "ink": "c"
+  },
+  {
+   "id": "patterns",
+   "name": "patterns retrieved for the turn",
+   "ink": "m"
+  },
+  {
+   "id": "memory",
+   "name": "minus40 memory that reached the turn (tool trace)",
+   "ink": "y"
+  }
+ ],
+ "spans": [
+  {
+   "id": "call:1:0#",
+   "seg": "call:1:0",
+   "start": 0,
+   "end": 53,
+   "layer": "memory",
+   "kind": "call",
+   "weight": 0.5,
+   "note": "recorded in e-59c78149-b1cd-4fba-9d4c-705efa8a1862 at 2026-10-16T03:53:46.793870459Z"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/mfuton-lean-compiler-project#",
+   "seg": "m40:cc:-home-joe-code/mfuton-lean-compiler-project",
+   "start": 0,
+   "end": 3505,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code/mfuton-lean-compiler-project: 13 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "seg": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision",
+   "start": 0,
+   "end": 2187,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/minus40-rollout-vision: 6 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~0",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 883,
+   "end": 905,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/minus40-rollout-vision"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~1",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 1589,
+   "end": 1611,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/minus40-rollout-vision"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~2",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 979,
+   "end": 1002,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/minus40-rollout-vision"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~3",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 1055,
+   "end": 1084,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/minus40-rollout-vision"
+  },
+  {
+   "id": "m40:cc:-home-joe/zai-five-hour-window#",
+   "seg": "m40:cc:-home-joe/zai-five-hour-window",
+   "start": 0,
+   "end": 1610,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe/zai-five-hour-window: 11 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe/zai-five-hour-window~0",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 684,
+   "end": 704,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe/zai-five-hour-window"
+  },
+  {
+   "id": "m40:cc:-home-joe/zai-five-hour-window~1",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 747,
+   "end": 769,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe/zai-five-hour-window"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/reload-needs-no-permission#",
+   "seg": "m40:cc:-home-joe-code-voxterm/reload-needs-no-permission",
+   "start": 0,
+   "end": 1866,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/reload-needs-no-permission: 6 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2a-project-lead#",
+   "seg": "m40:cc:-home-joe-code-voxterm/proof2a-project-lead",
+   "start": 0,
+   "end": 1113,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/proof2a-project-lead: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log#",
+   "seg": "m40:cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log",
+   "start": 0,
+   "end": 1735,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex#",
+   "seg": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex",
+   "start": 0,
+   "end": 916,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code/prefer-kimi-zai-over-codex: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex~0",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 529,
+   "end": 555,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/prefer-kimi-zai-over-codex"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex~1",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 1664,
+   "end": 1690,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/prefer-kimi-zai-over-codex"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex~2",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 1707,
+   "end": 1724,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/prefer-kimi-zai-over-codex"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation#",
+   "seg": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation",
+   "start": 0,
+   "end": 1234,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/kimi-seat-creation: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation~0",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 63,
+   "end": 81,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/kimi-seat-creation"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation~1",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 97,
+   "end": 138,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/kimi-seat-creation"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation~2",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 155,
+   "end": 201,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/kimi-seat-creation"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "seg": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool",
+   "start": 0,
+   "end": 5467,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/proof2-dispatch-pool: 12 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool~0",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 657,
+   "end": 677,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/proof2-dispatch-pool"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool~1",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 742,
+   "end": 764,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/proof2-dispatch-pool"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition#",
+   "seg": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition",
+   "start": 0,
+   "end": 1470,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/kimi-unique-requisition: 5 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition~0",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 348,
+   "end": 371,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/kimi-unique-requisition"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition~1",
+   "seg": "invoke-1792122812718-15113-c99086c6-reply",
+   "start": 1355,
+   "end": 1378,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/kimi-unique-requisition"
+  },
+  {
+   "id": "call:1:1#",
+   "seg": "call:1:1",
+   "start": 0,
+   "end": 54,
+   "layer": "memory",
+   "kind": "call",
+   "weight": 0.5,
+   "note": "recorded in e-59c78149-b1cd-4fba-9d4c-705efa8a1862 at 2026-10-16T03:53:46.793870459Z"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor#",
+   "seg": "m40:cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor",
+   "start": 0,
+   "end": 1851,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor: 5 facts, in-force at the reply"
+  },
+  {
+   "id": "call:1:2#",
+   "seg": "call:1:2",
+   "start": 0,
+   "end": 66,
+   "layer": "memory",
+   "kind": "call",
+   "weight": 0.5,
+   "note": "recorded in e-59c78149-b1cd-4fba-9d4c-705efa8a1862 at 2026-10-16T03:53:46.793870459Z"
+  }
+ ],
+ "edges": [
+  {
+   "from": "m40:cc:-home-joe-code/mfuton-lean-compiler-project#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~0",
+   "to": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "relation": "echoed",
+   "label": "minus40-rollout-vision"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~1",
+   "to": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "relation": "echoed",
+   "label": "minus40-rollout-vision"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~2",
+   "to": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "relation": "echoed",
+   "label": "2026-10-15 evening Kimi"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision~3",
+   "to": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "relation": "echoed",
+   "label": "pool was swapped to zai-1/2/5"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe/zai-five-hour-window~0",
+   "to": "m40:cc:-home-joe/zai-five-hour-window#",
+   "relation": "echoed",
+   "label": "zai-five-hour-window"
+  },
+  {
+   "from": "m40:cc:-home-joe/zai-five-hour-window~1",
+   "to": "m40:cc:-home-joe/zai-five-hour-window#",
+   "relation": "echoed",
+   "label": "403 on every seat when"
+  },
+  {
+   "from": "m40:cc:-home-joe/zai-five-hour-window#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/reload-needs-no-permission#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2a-project-lead#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof-plan-structured-dispatch-log#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex~0",
+   "to": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex#",
+   "relation": "echoed",
+   "label": "prefer-kimi-zai-over-codex"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex~1",
+   "to": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex#",
+   "relation": "echoed",
+   "label": "prefer-kimi-zai-over-codex"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex~2",
+   "to": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex#",
+   "relation": "echoed",
+   "label": "kimi-1 and kimi-2"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation~0",
+   "to": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation#",
+   "relation": "echoed",
+   "label": "kimi-seat-creation"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation~1",
+   "to": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation#",
+   "relation": "echoed",
+   "label": "POST /api/alpha/agents/auto {\"type\":\"kimi"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation~2",
+   "to": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation#",
+   "relation": "echoed",
+   "label": "an existing reclaimable idle seat of that type"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-seat-creation#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool~0",
+   "to": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "relation": "echoed",
+   "label": "proof2-dispatch-pool"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool~1",
+   "to": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "relation": "echoed",
+   "label": "HTTP 403 on every seat"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition~0",
+   "to": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition#",
+   "relation": "echoed",
+   "label": "kimi-unique-requisition"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition~1",
+   "to": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition#",
+   "relation": "echoed",
+   "label": "kimi-unique-requisition"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/kimi-unique-requisition#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/warrant-limit-ten-triggers-refactor#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe/zai-five-hour-window#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/minus40-rollout-vision#",
+   "to": "call:1:2#",
+   "relation": "reached",
+   "label": "m40_state round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe/zai-five-hour-window#",
+   "to": "call:1:2#",
+   "relation": "reached",
+   "label": "m40_state round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/prefer-kimi-zai-over-codex#",
+   "to": "call:1:2#",
+   "relation": "reached",
+   "label": "m40_state round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "to": "call:1:2#",
+   "relation": "reached",
+   "label": "m40_state round 1 · in-force"
+  }
+ ],
+ "legend": {
+  "call": "a minus40 tool call the agent made during the turn, from the harness round record",
+  "in-force": "the memory was said before the turn and not withdrawn by then",
+  "echo": "a run of the reply's words that also occurs in a memory the agent reached",
+  "echoed": "the reply shares the labelled run of words (or the memory's name) with a memory the agent reached",
+  "memory": "a minus40 memory (its statements now in force) that a recorded tool call returned to the agent",
+  "reached": "the memory's name appears in the result of this recorded tool call, so its text entered the agent's context at that round"
+ }
+}

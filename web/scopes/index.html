@@ -30,19 +30,43 @@
     .scope-edge.stub { color: #777; cursor: default; }
     .scope-side .scope-segment { font-size: .78rem; } .scope-side .scope-segment-body { display: block; }
     .scope-side .scope-notes { margin-top: .6rem; }
-    @media (max-width: 850px) { .scope-columns, .scope-segment-body { grid-template-columns: 1fr; } .scope-controls { display: block; } }
+    .grid-head h1 { font-size: 1.1rem; margin: 0 0 .3rem; } .grid-counts { margin: 0 0 .8rem; color: #444; }
+    .grid-legend { columns: 2; max-width: 60rem; font-size: .85rem; margin-bottom: 1rem; }
+    .grid-legend dt { font-weight: 700; break-after: avoid; } .grid-legend dd { margin: 0 0 .4rem; break-inside: avoid; }
+    .grid-columns { display: grid; grid-template-columns: minmax(0, 3fr) minmax(18rem, 1fr); gap: 1rem; }
+    .grid-table { border-collapse: collapse; background: white; border: 1px solid #ccc; font: .82rem ui-monospace, monospace; }
+    .grid-table th, .grid-table td { padding: .1rem .3rem; border-bottom: 1px solid #eee; text-align: center; }
+    .grid-table th { position: sticky; top: 0; background: #fafafa; }
+    .grid-turn { text-align: left !important; white-space: nowrap; } .grid-calls { color: #777; }
+    .grid-row-quiet td { color: #bbb; } .grid-row-quiet .grid-turn { color: #888; }
+    .grid-cell.level-retrieved-only { color: #777; } .grid-cell.level-reached { color: #0645ad; } .grid-cell.level-echoed { color: #a21; font-weight: 700; }
+    .grid-cell[class*="status-"]:not(.status-in-force) { background: #fff3c4; }
+    .grid-memory-name, .grid-edge { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; padding: 0; text-align: left; }
+    th.grid-memory.lit { outline: 2px solid #111; outline-offset: -2px; }
+    .grid-key { font-size: .8rem; padding-left: 1.4rem; columns: 1; } .grid-key li { margin: 0 0 .1rem; }
+    .grid-detail { font-size: .8rem; background: white; border: 1px solid #ccc; padding: .6rem; margin-top: .8rem; }
+    .grid-detail h2 { font-size: .95rem; margin: 0 0 .3rem; } .grid-events { padding-left: 1rem; }
+    .grid-events li { margin-bottom: .35rem; } .grid-event-when { font-weight: 700; white-space: nowrap; }
+    .event-unsaid .grid-event-when { color: #a21; } .event-again .grid-event-when { color: #0a7; }
+    @media (max-width: 850px) { .scope-columns, .scope-segment-body, .grid-columns { grid-template-columns: 1fr; } .scope-controls { display: block; } }
   </style>
 </head>
 <body>
   <div id="scopes">Loading…</div>
   <script type="module">
     import { renderScopes } from "./scopes.js";
+    import { renderGrid } from "./grid.js";
     const host = document.querySelector("#scopes");
     try {
-      const turn = new URLSearchParams(location.search).get("turn") || "claude-16-turn-162";
-      const response = await fetch(`./fixtures/${turn}.json`);
+      // ?session=zai-2 draws the memory layer over that seat's whole session
+      // (fixtures/over-time-<seat>.json); ?turn=<id> draws one turn.
+      const params = new URLSearchParams(location.search);
+      const session = params.get("session");
+      const turn = params.get("turn") || "claude-16-turn-162";
+      const response = await fetch(session ? `./fixtures/over-time-${session}.json` : `./fixtures/${turn}.json`);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      renderScopes(await response.json(), host);
+      if (session) renderGrid(await response.json(), host, { turnHref: (row) => `?turn=${row.turn}` });
+      else renderScopes(await response.json(), host);
     } catch (error) {
       host.textContent = `Could not load scope data: ${error}`;
     }

@@ -1,0 +1,527 @@
+{
+ "turn": "invoke-1792122812004-15112-6f64d143",
+ "record": "turn-7pVUkq",
+ "session": "zai-c02b13ca-b1db-4357-8f76-b6f9382b7a1f",
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "segments": [
+  {
+   "id": "invoke-1792122812004-15112-6f64d143",
+   "role": "operator",
+   "label": "joe · 2026-10-16T03:53:32Z",
+   "text": "Requisition: E-scope-view — traced memory use, task 3 (amending commits in shared trees: record vs hook)\n\nFrom claude-16. This is a short, real check whose session will be read as evidence for E-scope-view: which minus40 memories reached your turn, whether your reply echoes them, and how that compares with your earlier turn today. Your tool calls ARE the evidence, so use the tools rather than answering from recall.\n\nSteps, in this order:\n1. Call m40_find with terms [\"amend\" \"shared\"] and again with terms [\"stash\" \"shared\"]. Call m40_state with date \"2026-10-16\" and terms [\"amend\"].\n2. Read /home/joe/code/futon3c/scripts/git-hooks/prepare-commit-msg.\n3. Run: cd /home/joe/code/futon3c && git log -5 --format='%h %an %s' and note whether any of the five commits is by an agent (Agent-Id trailer: git log -5 --format='%h %(trailers:key=Agent-Id,valueonly)').\n\nReply in prose, four to eight sentences: what the memories say about amending or stashing in a shared checkout and why; whether the hook enforces any of it or only signs; which of the last five commits carry an agent trailer; and any point where the memories disagree with what you saw. Name each memory you relied on by its name as m40_find printed it. Do not edit or commit anything. Your reply this turn is delivered back to me automatically; no bell needed.\n"
+  },
+  {
+   "id": "invoke-1792122812004-15112-6f64d143-reply",
+   "role": "agent",
+   "label": "zai-1 · 2026-10-16T03:54:01Z",
+   "text": "This turn the record reached me directly: m40_find returned real memories. **never-amend-in-shared-futon-trees** (cc voxterm) says multiple agents commit to master in futon2/futon3c minutes apart, and on 2026-09-02 claude-1's `--amend` rewrote codex-22's just-landed commit b8c4463 — so never amend there; check `git log -1` before committing and prefer a follow-up commit, with reflog + `reset --soft` as the recovery if you amend by mistake. Its stash twin **never-git-stash-in-shared-futon-trees** (cc voxterm) explains why: the stash stack is shared with every other agent, so `pop` can apply a stranger's preserved entry; **no-git-stash-in-shared-checkout** (cc /home/joe/code) records the 2026-09-30 incident where stash saved nothing and pop applied a 2026-09-01 codex entry, and prescribes `git show <sha>:path > /tmp/...` instead. Supporting context came from **shared-worktree-never-commit-a**, **live-pin-rule-for-tests**, **park-deadlines-budget-the-acceptance-run**, and **inbox-zero-stale-claims-commit-others-edits** (never leave tracked files dirty across others' turns).\n\nThe hook enforces none of this: `prepare-commit-msg` only *signs* — it appends Agent-Session, Agent-Id, Agency-Job, Dispatched-By trailers from the environment so the 象 stepper can rewind one dispatch's commits, and its own comment says \"This hook never blocks a commit\" (and Joe's terminal commits stay unsigned). So the amend/stash rules live purely in memory, not in enforcement — though signing is what would make an amend's damage traceable. Of the last five futon3c commits, two carry an agent trailer (e2bde17b6 and c04ce9dee, both `codex-68`); the other three are Joe's, unsigned, as designed. I found no disagreement between the memories and what I saw — the record and the live hook are consistent, just complementary rather than redundant; and unlike task 1 earlier today (where m40_find returned zero memories and the rule came only from CLAUDE.md), this time the memory layer carried the whole rule."
+  },
+  {
+   "id": "call:1:0",
+   "role": "call",
+   "label": "m40_find · round 1",
+   "text": "m40_find {:terms [\"amend\" \"shared\"]}\n→ 6 memories named"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests",
+   "role": "memory",
+   "label": "live-pin-rule-for-tests · cc:-home-joe-code-voxterm · said 2026-09-02",
+   "text": "**Why:** authored constants encode the author's assumed vocabulary; the live path's vocabulary drifts (type, shape, presence) without failing such tests.\nA test whose fixtures speak a vocabulary the live path doesn't speak stays green while meaning something false. Two same-evening instances (2026-09-02, futon2/futon3c): the U8 report gate's `:u8/mission-status-signal-overbroad` kept firing (test green) after D11 removed the overbroad condition — it was now firing on a typed *absence*; and the wm side's `mission_c_test` pinned a Bernoulli branch with a long `0` that the live all-doubles observation vocabulary can never produce, so `(= 0 x)` was false live while the test passed.\n**How to apply:** when writing or reviewing a test packet, require at least one pin whose values are captured verbatim from a live record (id cited) — e.g. D11's negative tests quote the actual false-positive prose from the store. In review, ask of every green test: *which live record does this agree with?* Corollary (same class, same evening): any claim of the form \"all sites are X\" must state the search command and whether its output was truncated — a head-limited grep presented as an enumeration is the tool speaking a truncated vocabulary while the text stays confident. Second corollary (2026-09-02, SURPRISES entry 9 correction 7ad831a): reproduction validates numbers, not their labels — a review-confirmed, byte-reproduced measurement can still mis-attribute its population (\"live decisions\" that were actually calibration sessions); check what the counted things ARE, not only that the counts re-derive. Adopted in the zaif-harness board conventions (futon2/holes/labs/zaif-harness/work\nRequire at least one test pin captured verbatim from a live record; tests built only from authored constants can stay green while meaning something false"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run",
+   "role": "memory",
+   "label": "park-deadlines-budget-the-acceptance-run · cc:-home-joe-code-voxterm · said 2026-09-02",
+   "text": "\"Park deadlines must cover the acceptance runs a packet demands, not just the coding time\"\n**How to apply:** when writing the packet, add up what the acceptance bar makes the agent *run*, and set `--park-deadline` to comfortably exceed coding plus that. If the bar includes a command you have timed yourself, use the measured number. See [[never-amend-in-shared-futon-trees]].\n**Why:** a deadline wake that fires on a job which is merely slow, not stuck, costs a round of \"is it healthy?\" reasoning and can trigger a needless re-dispatch. The park exists to catch silence, not to race the acceptance bar.\nCLAUDE.md sets a floor of 45 min for Codex park deadlines. That floor is about the *coding*; it is not enough when the packet's own acceptance bar requires long verification runs. On 2026-09-02 claude-6 belled a packet whose acceptance demanded two ~10-minute `wm_status_report.py` runs (each launches two bounded test suites), parked at 2700s, and the deadline fired at 18:17 while the job sat in `delivering` — it had finished at 18:16:47. A third of the budget was verification, not work."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits",
+   "role": "memory",
+   "label": "inbox-zero-stale-claims-commit-others-edits · cc:-home-joe-code-voxterm · said 2026-09-27",
+   "text": "Found 2026-09-27 (by claude-10): futon3c `inbox_zero/turn_promotion.clj` commits, at the end of a seat's turn, every dirty path that has exactly one ACTIVE claim naming that seat in `/home/joe/code/storage/inbox-zero/state.edn`. A claim of claude-10's on `test/futon3c/diagramprover/wm_wire_ledger_test.clj` (from 2026-09-26) was never closed, so my uncommitted one-line edits to that file were committed twice as \"inbox-zero: promote 1 path(s) for claude-10\" (futon3c 58c3dd7c, 685d211d).\n**Why:** an active claim with no end outlives the edit that made it.\ninbox-zero turn-end promotion commits any dirty path with one active claim for a seat; a never-closed claim makes another agent's uncommitted edit get committed under that seat's name\n**How to apply:** in shared futon checkouts never leave a tracked file dirty across other agents' turns; for the wire ledger, commit the header literal by path BEFORE starting the ledger run. If a stray \"inbox-zero: promote\" commit appears, check the claim store before suspecting the named agent. Closing the claim is for whoever owns inbox-zero (raised with Joe). Related: [[never-amend-in-shared-futon-trees]], [[never-git-stash-in-shared-futon-trees]]."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees",
+   "role": "memory",
+   "label": "never-git-stash-in-shared-futon-trees · cc:-home-joe-code-voxterm · said 2026-09-09",
+   "text": "\"Never `git stash` in a shared futon tree; a no-op stash push followed by pop applies a stranger's old stash entry. Use `git show <sha>^:<path> > <path>` to test pre-fix code.\"\n**How to apply:** to run tests against pre-fix code, check the old blob out by path instead — `git show <sha>^:<path> > <path>`, run, then `git checkout HEAD -- <path>`. It touches only the file you named and cannot reach the stash stack. Verify with `git status --porcelain` afterwards. If a pop does fire, `git restore --staged --worktree <paths>` returns them to HEAD and leaves the stash entries intact — do not drop them, they are not yours. See [[never-amend-in-shared-futon-trees]], whose \"commit or stash them\" advice does not extend to popping in a shared tree.\n**Why:** stash is a stack shared with every other agent working the tree, and its push is silently a no-op when the path is already committed — which is exactly the state right after you commit a review fix.\nOn 2026-09-09 that put conflict markers into `holes/labs/M-apm-demonstration/frame-park-decisions.edn`. The APM coordinator reads that file every tick, so within about a minute the jit-all-open-v3 regulator went `:failed` with `:problem-queue-park-decision-read-failed` (\"Map literal must contain an even number of forms\") and the campaign stopped until the file was restored and the coordinator resumed.\nThe shared futon repos carry other agents' abandoned stash entries — futon3c has two from 2026-09-01 (`codex/http-test-ledger-isolation`, `codex/persona-registry-aliases`). `git stash push -q <path>` on a **clean** path creates no entry and says nothing under `-q`, so the following `git stash pop` pops whichever stranger's entry is on top and applies it to the shared tree."
+  },
+  {
+   "id": "m40:cc:-home-joe-code/shared-worktree-never-commit-a",
+   "role": "memory",
+   "label": "shared-worktree-never-commit-a · cc:-home-joe-code · said 2026-10-04",
+   "text": "2026-08-22, `git commit -qam` (futon3c a2af5067) silently included codex-13's half-finished `agent_pouch.clj` / `http.clj`; the Codex bellback then cited *my* sha as its implementation commit. Not rewritten — the mislabelled commit stands.\n2026-09-05, working row :F6 in futon2 I committed `20381c6c`, then spent a few minutes on a one-line comment fix and ran `git commit --amend --no-edit`. The library-loop lane had committed `d3c36581` in between, so the amend rewrote *their* commit (`1ac01e5e`), pulling my generator file into it. Repaired with `git reset --soft d3c36581` (the pre-amend sha from `git reflog`), then a fresh commit of my own — their commit is byte-identical again.\n**Why (two incidents, same root: HEAD is not yours):**\n2026-10-04, mfuton-sbcl. My new `tools/smoke.sh` ended with `git checkout -- lisp/transpiler/evidence` \"to drop test churn\". Run once in the shared checkout, it discarded ~22 *other agents'* uncommitted receipt edits (not in git, unrecoverable). Fixed by tar-snapshot + exact restore.\nshared checkouts (futon3c, futon2, mfuton-sbcl) — `git commit -a` swept in another agent's files (2026-08-22); `--amend` rewrote another lane's commit (2026-09-05); another writer committed MY staged index (2026-09-07); a script's `git checkout -- dir` discarded ~22 uncommitted receipts (2026-10-04)\n**How to apply:** `git add <paths>` then `git commit`; run `git status --short` *after* the add and expect to see your paths staged — if they are missing, someone else committed them, so find the sha with `git log -1 --stat` and report **that** sha rather than assuming your commit exists. Never `--amend` without checking `git log --oneline -1` is still your commit — prefer a follow-up commit. Never put `git checkout --`/`git restore`/`git clean` of a path into a script that may run in a shared checkout; snapshot and restore the files instead. If you do amend by mistake, `git reflog` still holds the original; `git reset --soft <original-sha>` restores it with your change left staged. Also: the Agency JVM (port 7070, Drawbridge 6768) takes `(require 'ns :reload)` via `/eval` for function bodies only — new routes must go in `futon3c.transport.http/extra-routes`, `(do …)` forms are rejected by `/eval`, and `rebuild-handler!` has no builder on the zone server. See [[park-payloads-must-not-r\nIn any checkout other agents are also committing to (`/home/joe/code/futon3c`, `/home/joe/code/futon2`): stage exact paths, and **re-read `git log -1` right before `--amend`**.\n2026-09-07, wm-edge loop row `:F12` slice 16 in futon2. I wrote three files, ran `git add <three paths>`, and the very next `git status --short` showed them *already tracked and clean*: an unidentified writer had committed them as `23f22dc5` seconds earlier, so my own `git commit` reported \"nothing added to commit\". Not the build loop — `wm-build-loop.sh` only commits `workflow-report.edn` and `worklist.edn`. The content was byte-identical to mine, but the sha and the commit message were someone else's."
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees",
+   "role": "memory",
+   "label": "never-amend-in-shared-futon-trees · cc:-home-joe-code-voxterm · said 2026-09-25",
+   "text": "**How to apply:** corrections are always follow-up commits. Before committing in a shared tree, check `git log -1` — if HEAD isn't yours, never amend or reset it. When reviewing a delivered sha, confirm it is still reachable from HEAD (collisions are disclosed in the lab's SURPRISES.md process section). Don't leave in-progress untracked files sitting in a shared tree — commit or stash them; a concurrent dirt review will adopt them and invent a rationale. See [[agency-dispatch-mode-work]].\n**Why:** other agents report and park on shas the moment they commit; a rewrite invalidates their reports and mixes authorship in the record.\nIn the shared futon trees (futon2, futon3c, …) multiple agents commit to master concurrently, minutes apart. Never `git commit --amend` there: on 2026-09-02 claude-1's amend rewrote codex-22's just-landed commit (b8c4463 → 33f7a46), folding unrelated changes into another agent's commit and leaving the reported sha dangling — the second collision that evening (the first was 206bb02, a staged-files sweep). Path-scoped commits (`git commit -- <paths>`) protect what you sweep IN; amend rewrites whatever HEAD happens to be.\n\"Never `git commit --amend` in the shared futon repos; corrections are follow-up commits, and verify HEAD is yours before any commit\"\nA third variant, 2026-09-02: **untracked** in-progress files get swept too. While claude-6 was mid-review with new `test/fixtures/*` in the futon2 working tree, another lane's \"dirt review\" (futon2-d promotion hold) committed them as 108d9f0 with a message asserting they had been omitted from e0d1868 — false; the test that reads them was still uncommitted. Content was identical so nothing needed redoing, but the record now carries a wrong claim about another commit.\nAlso (2026-09-25): in a shared checkout ALWAYS commit with explicit paths, `git commit -m ... -- <paths>`, never bare `git add X && git commit`. A bare commit sweeps whatever another seat has staged: claude-8's PROOF-2a record commit 92beed80 swallowed claude-6's three staged H-VALUE-G-D files, so the packet lives in a commit whose message is about something else."
+  },
+  {
+   "id": "call:1:1",
+   "role": "call",
+   "label": "m40_find · round 1",
+   "text": "m40_find {:terms [\"stash\" \"shared\"]}\n→ 5 memories named"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool",
+   "role": "memory",
+   "label": "proof2-dispatch-pool · cc:-home-joe-code-voxterm · said 2026-09-27",
+   "text": "**Why:** A20 needs a Codex non-author reviewer plus Zai; with Zai out, no PROOF-2 row can pass codex-accepted before 09-29 unless Joe changes A20 or the quota.\nClaude seats have a session limit too: at ~22:30Z 2026-09-24 seven claude-N seats died mid-work with \"You've hit your session limit, resets 12:10am UTC\". Their partial work stayed in the shared tree (uncommitted diffs and untracked files from three seats at once). Recovery that worked: read the tree, tell each seat by bell exactly which paths are its own to stage and that the others' are not, and let it continue in its own conversation. Do not commit another seat's partial work for it.\nLater 2026-09-24 (Joe): Fable, Codex and Zai all unavailable; Claude at ~92% weekly (resets 09-26 ~14:00 UTC), and Joe wants the remaining Claude used before he resets. Kimi is the only dispatch pool. claude-8 (PROOF-2 coordinator) runs on Fable, so claude-10 carries the work: PROOF-2a (futon2 holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md, 1a13386e) = PROOF-2 plus Clause T (target choice), machine-constructed semilattice clause 0, scope statement. Spend Claude on review and definitions; dispatch drafting/building to Kimi, staggered.\nQuota facts observed 2026-09-24: Kimi's 5-hour usage limit ended at 05:12 (HTTP 403 on every seat); Zai's weekly limit ended at ~05:15 (HTTP 429, \"Weekly/Monthly Limit Exhausted\", reset 2026-09-29 10:04:33). Both zai-1 and zai-2 are dead until then. Kimi was NOT out for the day: its 5-hour window resets on its own (0% used again by 13:07 UTC) and the monthly pool was 5.1% used. Joe corrected a claim that Kimi was exhausted (2026-09-24); he reads the monthly figure, which is what voxterm's collapsed usage strip shows.\n2026-09-25 ~13:15Z: the Kimi 5h window ran out again (HTTP 403 access_terminated_error on kimi-11 and kimi-12 right after dispatch; kimi-10 had been invoking since ~07:00Z). A Kimi bell also FAILS without `--requisition \"E-… — purpose\"` on agency_send.py (invoke-error, before any model call); Claude seats do not need it. Re-route small items to idle Claude seats (claude-2..9) when the window is out, and say which window.\n2026-09-27 03:43Z: Kimi's 5-hour window ran out again (HTTP 403 access_terminated_error on kimi-1/2/3 mid-job, no edits made). The Agency reports the failure only in the job's `failed` event; the park resume arrives as \"(no summary)\". Check the job state before assuming a seat finished. When it happens, `kimi-task.sh --complete` the requisitions and re-dispatch the same packet files to Codex seats with a one-line preface.\nJoe (2026-09-24): Zai for B4 (zai-2 owned the slices), Kimi agents authorized for my dispatches, codex-3/4 for the proof documents; claude-4's WM data is stale and it is not in the loop.\n**How to apply:** before calling any pool exhausted, read the current quota (voxterm `_usage_kimi()` / GET /usage, or the job's terminal-message) and name the window and its reset time. Seven Kimi seats in parallel drained the 5h window in about 30 minutes, so stagger them. Otherwise dispatch implementation and review to idle Codex seats (roster GET /api/alpha/agents; 10+ idle codex-N on 09-24); check a job reaches `running` and survives ~8s before parking, because quota refusals fail at the first prompt; preserve any partial work a dead seat left in a shared checkout under proof2/partial and restore the tree. See [[reload-needs-no-permission]], [[never-git-stash-in-shared-futon-trees]].\nROOT CAUSE of the Kimi drains (Joe, 2026-09-25): a Kimi seat clears its conversation only when the requisition TARGET changes (zai_api.clj context-carry-decision; same target accumulates up to a 512k cap). Sending every packet under one requisition (E-cascade-real) made each seat carry all its prior packets on every request. Rule: every Kimi dispatch clocks in on a UNIQUE task target, E-kimi-task-N, one small excursion file per task under a canonical holes/excursions/ (the target must resolve to holes/<kind>/<TARGET>.md or the seat refuses :requisition-unresolved). Fresh conversation per task; the file doubles as the task's record. The seat's requisition-mismatch reminder is an OPERATOR turn and reclocks the caller onto the requisitioned target; futon3c zai_api.clj caller-minted-task? skips it when the task file's head line says this caller minted it for this seat (kimi-task.sh writes that line). An agent has no HTTP route to set its own clock; the REPL buffer's clock (Joe's C-c C-m) i\nFrom 2026-09-24 ~16:40 UTC (claude-11, futon3c 5146606d): every Kimi dispatch must carry `Requisition: M-foo — <purpose>` in the prompt, or `agency_send.py --requisition \"M-foo — purpose\"`; without it the seat refuses and sends a reminder. Kimi seats also start a fresh conversation per target now (the 5h window was being filled by 200–335k-token carried contexts).\nSecond drain, 2026-09-24 ~22:20Z: six Kimi seats dispatched within ~10 minutes (claude-8) drained the 5h window again, killing the machine's own answering seat (kimi-6) mid-read. Joe had authorized Claude Opus agents that evening; work moved to idle claude-N seats (claude-2 as the machine's answer seat, claude-5/6/7/9/11 for packets). Rule that was already here and got ignored: STAGGER Kimi dispatches, at most two or three seats in parallel, and keep one seat in reserve for the machine's own asks.\nWhich agent pools PROOF-2 work may use; Kimi's 09-24 outage was its 5-hour window only (monthly ~95% left), Zai weekly out until 09-29"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout",
+   "role": "memory",
+   "label": "no-git-stash-in-shared-checkout · cc:-home-joe-code · said 2026-09-30",
+   "text": "never use git stash / stash pop to test against old code in a shared checkout; pop can apply someone else's old stash\n**Why:** on 2026-09-30 the file was already committed, so `git stash` saved nothing, and `git stash pop` then applied a preserved stash from 2026-09-01 (codex/http-test-ledger-isolation) onto futon3c master: four live `emacs/*.el` files modified and two files left with conflicts. Recovered with `git checkout HEAD -- <the six files>`; the stash entry survived because the pop failed. See [[shared-worktree-never-commit-a]] and [[futon3c-emacs-dir-is-live-code]].\n**How to apply:** to run a test against an earlier version, write it to a temp path with `git show <sha>:path > /tmp/...` and point the test at that (PYTHONPATH or a copied file), never through the stash. futon3c has two long-lived preserved stashes that must not be popped or dropped.\nDo not use `git stash -- FILE; test; git stash pop` to check a test against the unfixed code in the shared futon checkouts."
+  },
+  {
+   "id": "call:1:2",
+   "role": "call",
+   "label": "m40_state · round 1",
+   "text": "m40_state {:date \"2026-10-16\", :terms [\"amend\"]}\n→ 2 memories named"
+  },
+  {
+   "id": "m40:cc:-home-joe/futon1b-504-storm-0930",
+   "role": "memory",
+   "label": "futon1b-504-storm-0930 · cc:-home-joe · said 2026-09-30",
+   "text": "**Causes found:**\n**Still open:**\n**Fixed (futon1b master, 37d1b1e..143b767):**\n`entities?type=mission` took 30–40 s. The mission-accept loop and the scope lane issue it constantly.\nA mission-doc edit (mission-accept rewrites ~330 missions) enqueues a scope re-ingest per mission.\nfill! is resumable and yielding, and the server resumes it at boot.\n`/home/joe/code/futon3a/futon3a` was a symlink to its own parent, created 09-28 00:55 and untracked. The futon3c fs-watcher followed it at ever-deeper paths, and each event enqueued a mission-scope-lane re-ingest: 75 an hour for 2 missions. Each re-ingest does the `entities/latest?type=pattern/library` read (85–100 s). The symlink was removed 02:05Z.\nthe entity sidecar (`futon1b_entindex.clj`), which serves typed and latest reads from `ent_node` once filled; see the C1 amendment in CANDIDATE-INDEX-CONTRACT.md;\nOn 2026-09-30, 00:45–02:15Z, futon1b's 504s rose from 0 to 191 per 15 min. They were \"query permit unavailable after 5000ms\": futon1b-xt has 4 query permits, and every evidence append and point read needs one too.\n\"2026-09-30 futon1b 504 storm — a futon3a self-symlink fed the mission-scope lane, catch-ups held permits, and the entity/pattern-library reads cost 30–100 s; what was fixed and what is still open\"\ncatch-ups defer while fewer than 2 permits are free;\n**How to apply:** when futon1b 504s climb, jstack the JVM and list the threads inside `run_guarded` (the holders), and rank `[futon1b-request] end` lines by total elapsed per shape before guessing. Related: [[futon1b-evidence-index-reads]] [[own-your-own-breakage]]\nThe fts and hx periodic catch-ups held 2 of the 4 permits during the storm.\nthe sidecar registry, with `:sidecars` in /health;\n`hyperedges?type=code/v05/mission-doc&limit=500` averaged 24 s and all 36 calls failed. futon3c `mission_delta_t` never caches a failure, so it retries.\n**Rule:** never project `hx/props.<key>` for mission-doc. 162 of the 389 rows keep props as an EDN string, which a per-key projection cannot reach into.\nThe alias-warrant cache never serves: 0 of 2,598 honoured. Joe said to hold this.\n**Also fixed, the mission-doc family:** three Agency callers read every `code/v05/mission-doc` hyperedge as whole documents, which is two whole-table scans of 1.05M hyperedges and about 25 s. Their timeouts were shorter than that: war_machine 20 s, mission-control 5 s, delta-t 30 s. So each call failed, the next call fetched again, and futon1b kept scanning for nobody.\nI recommended against a general hyperedge body cache (1.05M rows, the busiest writes, about a day to fill); Joe asked, and has not decided. A per-type declared cache is also undecided.\nfuton1b `3d2202d`: one `IN` read per page instead of two. `feb010a`: `fields=hx/props`.\nfuton1b `b2cd820`: the hx gate and checkpoint now survive failures during a catch-up.\nfuton3c `a37a0e81` and `2692222c`, futon2 `fb6d515e9`: narrow fields, a 2–10 min cache, keep the last good result, back off after a failure."
+  }
+ ],
+ "layers": [
+  {
+   "id": "acts",
+   "name": "speech acts (象)",
+   "ink": "c"
+  },
+  {
+   "id": "patterns",
+   "name": "patterns retrieved for the turn",
+   "ink": "m"
+  },
+  {
+   "id": "memory",
+   "name": "minus40 memory that reached the turn (tool trace)",
+   "ink": "y"
+  }
+ ],
+ "spans": [
+  {
+   "id": "call:1:0#",
+   "seg": "call:1:0",
+   "start": 0,
+   "end": 55,
+   "layer": "memory",
+   "kind": "call",
+   "weight": 0.5,
+   "note": "recorded in e-484eb8f0-09c0-4f68-8e65-97217271b9b3 at 2026-10-16T03:53:42.897418345Z"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests#",
+   "seg": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests",
+   "start": 0,
+   "end": 1841,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/live-pin-rule-for-tests: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 907,
+   "end": 930,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/live-pin-rule-for-tests"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run#",
+   "seg": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run",
+   "start": 0,
+   "end": 1096,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 936,
+   "end": 976,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run~1",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 201,
+   "end": 221,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits#",
+   "seg": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits",
+   "start": 0,
+   "end": 1199,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 986,
+   "end": 1029,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees#",
+   "seg": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees",
+   "start": 0,
+   "end": 1736,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees: 5 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 461,
+   "end": 498,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees~1",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 547,
+   "end": 576,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/shared-worktree-never-commit-a#",
+   "seg": "m40:cc:-home-joe-code/shared-worktree-never-commit-a",
+   "start": 0,
+   "end": 3015,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code/shared-worktree-never-commit-a: 8 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/shared-worktree-never-commit-a~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 871,
+   "end": 901,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/shared-worktree-never-commit-a"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/shared-worktree-never-commit-a~1",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 347,
+   "end": 372,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/shared-worktree-never-commit-a"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees#",
+   "seg": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees",
+   "start": 0,
+   "end": 2132,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees: 6 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 77,
+   "end": 110,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees~1",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 131,
+   "end": 163,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees~2",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 201,
+   "end": 281,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees"
+  },
+  {
+   "id": "call:1:1#",
+   "seg": "call:1:1",
+   "start": 0,
+   "end": 55,
+   "layer": "memory",
+   "kind": "call",
+   "weight": 0.5,
+   "note": "recorded in e-484eb8f0-09c0-4f68-8e65-97217271b9b3 at 2026-10-16T03:53:42.897418345Z"
+  },
+  {
+   "id": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "seg": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool",
+   "start": 0,
+   "end": 5467,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code-voxterm/proof2-dispatch-pool: 12 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout#",
+   "seg": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout",
+   "start": 0,
+   "end": 991,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe-code/no-git-stash-in-shared-checkout: 4 facts, in-force at the reply"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout~0",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 629,
+   "end": 660,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/no-git-stash-in-shared-checkout"
+  },
+  {
+   "id": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout~1",
+   "seg": "invoke-1792122812004-15112-6f64d143-reply",
+   "start": 799,
+   "end": 825,
+   "layer": "memory",
+   "kind": "echo",
+   "weight": 1.0,
+   "note": "shared with cc:-home-joe-code/no-git-stash-in-shared-checkout"
+  },
+  {
+   "id": "call:1:2#",
+   "seg": "call:1:2",
+   "start": 0,
+   "end": 67,
+   "layer": "memory",
+   "kind": "call",
+   "weight": 0.5,
+   "note": "recorded in e-484eb8f0-09c0-4f68-8e65-97217271b9b3 at 2026-10-16T03:53:42.897418345Z"
+  },
+  {
+   "id": "m40:cc:-home-joe/futon1b-504-storm-0930#",
+   "seg": "m40:cc:-home-joe/futon1b-504-storm-0930",
+   "start": 0,
+   "end": 2982,
+   "layer": "memory",
+   "kind": "memory",
+   "weight": 1.0,
+   "note": "minus40 memory cc:-home-joe/futon1b-504-storm-0930: 26 facts, in-force at the reply"
+  }
+ ],
+ "edges": [
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests~0",
+   "to": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests#",
+   "relation": "echoed",
+   "label": "live-pin-rule-for-tests"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/live-pin-rule-for-tests#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run~0",
+   "to": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run#",
+   "relation": "echoed",
+   "label": "park-deadlines-budget-the-acceptance-run"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run~1",
+   "to": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run#",
+   "relation": "echoed",
+   "label": "on 2026-09-02 claude"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/park-deadlines-budget-the-acceptance-run#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits~0",
+   "to": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits#",
+   "relation": "echoed",
+   "label": "inbox-zero-stale-claims-commit-others-edits"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees~0",
+   "to": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees#",
+   "relation": "echoed",
+   "label": "never-git-stash-in-shared-futon-trees"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees~1",
+   "to": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees#",
+   "relation": "echoed",
+   "label": "shared with every other agent"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/shared-worktree-never-commit-a~0",
+   "to": "m40:cc:-home-joe-code/shared-worktree-never-commit-a#",
+   "relation": "echoed",
+   "label": "shared-worktree-never-commit-a"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/shared-worktree-never-commit-a~1",
+   "to": "m40:cc:-home-joe-code/shared-worktree-never-commit-a#",
+   "relation": "echoed",
+   "label": "prefer a follow-up commit"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/shared-worktree-never-commit-a#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees~0",
+   "to": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees#",
+   "relation": "echoed",
+   "label": "never-amend-in-shared-futon-trees"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees~1",
+   "to": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees#",
+   "relation": "echoed",
+   "label": "multiple agents commit to master"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees~2",
+   "to": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees#",
+   "relation": "echoed",
+   "label": "on 2026-09-02 claude-1's `--amend` rewrote codex-22's just-landed commit b8c4463"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees#",
+   "to": "call:1:0#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/proof2-dispatch-pool#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-amend-in-shared-futon-trees#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/inbox-zero-stale-claims-commit-others-edits#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code-voxterm/never-git-stash-in-shared-futon-trees#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout~0",
+   "to": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout#",
+   "relation": "echoed",
+   "label": "no-git-stash-in-shared-checkout"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout~1",
+   "to": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout#",
+   "relation": "echoed",
+   "label": "git show <sha>:path > /tmp"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/no-git-stash-in-shared-checkout#",
+   "to": "call:1:1#",
+   "relation": "reached",
+   "label": "m40_find round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe-code/shared-worktree-never-commit-a#",
+   "to": "call:1:2#",
+   "relation": "reached",
+   "label": "m40_state round 1 · in-force"
+  },
+  {
+   "from": "m40:cc:-home-joe/futon1b-504-storm-0930#",
+   "to": "call:1:2#",
+   "relation": "reached",
+   "label": "m40_state round 1 · in-force"
+  }
+ ],
+ "legend": {
+  "call": "a minus40 tool call the agent made during the turn, from the harness round record",
+  "echo": "a run of the reply's words that also occurs in a memory the agent reached",
+  "echoed": "the reply shares the labelled run of words (or the memory's name) with a memory the agent reached",
+  "in-force": "the memory was said before the turn and not withdrawn by then",
+  "memory": "a minus40 memory (its statements now in force) that a recorded tool call returned to the agent",
+  "reached": "the memory's name appears in the result of this recorded tool call, so its text entered the agent's context at that round"
+ }
+}

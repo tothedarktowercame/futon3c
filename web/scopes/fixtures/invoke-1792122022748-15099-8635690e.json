@@ -286,26 +286,6 @@
    "note": "shared with cc:-home-joe-code-voxterm/verify-running-before-parking"
   },
   {
-   "id": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking~4",
-   "seg": "invoke-1792122022748-15099-8635690e-reply",
-   "start": 580,
-   "end": 609,
-   "layer": "memory",
-   "kind": "echo",
-   "weight": 1.0,
-   "note": "shared with cc:-home-joe-code-voxterm/verify-running-before-parking"
-  },
-  {
-   "id": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking~5",
-   "seg": "invoke-1792122022748-15099-8635690e-reply",
-   "start": 1192,
-   "end": 1221,
-   "layer": "memory",
-   "kind": "echo",
-   "weight": 1.0,
-   "note": "shared with cc:-home-joe-code-voxterm/verify-running-before-parking"
-  },
-  {
    "id": "m40:cc:-home-joe-code-voxterm/voxterm-visibility-state-block#",
    "seg": "m40:cc:-home-joe-code-voxterm/voxterm-visibility-state-block",
    "start": 0,
@@ -542,18 +522,6 @@
    "to": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking#",
    "relation": "echoed",
    "label": "confirm an event beyond `accepted` (`running`/`prompt"
-  },
-  {
-   "from": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking~4",
-   "to": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking#",
-   "relation": "echoed",
-   "label": "seat-bellbacks-look-like-mine"
-  },
-  {
-   "from": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking~5",
-   "to": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking#",
-   "relation": "echoed",
-   "label": "seat-bellbacks-look-like-mine"
   },
   {
    "from": "m40:cc:-home-joe-code-voxterm/verify-running-before-parking#",

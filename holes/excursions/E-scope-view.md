@@ -279,27 +279,72 @@ along the column it stopped. A turn with no recorded call is a row of
 blanks, not a missing row: how often the seat consulted memory is part of
 what the view shows.
 
-First grids (`web/scopes/fixtures/over-time-zai-{1,2}.json`; `--md`
-prints them as a table):
+Grids after two packets per seat (`web/scopes/fixtures/over-time-zai-{1,2}.json`;
+`--md` prints them as a table; `web/scopes/index.html?session=zai-2` draws
+one, see below):
 
 | session | turns | turns with calls | memories named | echoed | reached | retrieved-only |
 |---|---|---|---|---|---|---|
-| zai-1 (24 turns since 10-09) | 24 | 1 | 4 | 0 | 4 | 0 |
-| zai-2 (22 turns since 10-09) | 22 | 1 | 17 | 3 | 8 | 6 |
+| zai-1 (25 turns since 10-09) | 25 | 2 | 13 | 7 | 5 | 1 |
+| zai-2 (23 turns since 10-09) | 23 | 2 | 26 | 9 | 8 | 11 |
 
-Both populated rows are the turns belled on 2026-10-16 with an instruction
-to use the tools; the 45 earlier turns in the two sessions made no minus40
-call. zai-2's six retrieved-only memories are those `m40_find` listed for
-["parking" "accepted"] and the like that `m40_state` did not then surface;
-the three echoed are the three the reply named. Two of zai-1's four
-memories have unsaid facts (blueprint-parallel-lemmas, 2 of 18;
-vsat-upstream-write-access, 5 of 17) but were still in force at the
-reply, so no cell is marked not-in-force yet. The count of 17 above
-corrects the 18 first written in the table above (the per-turn fixture
-has 22 segments: two texts, three calls, 17 memories).
+Per row:
 
-Next: a second packet to each seat (`web/scopes/packets/zai-1-amend-rule.md`,
-`zai-2-kimi-seats.md`) so each grid has two populated rows, which is the
-least the view needs to show whether a memory reached on one turn is
-reached again, or only echoed, on a later one; then an HTML grid renderer
-beside `scopes.js`.
+| row | packet | named | echoed | reached | retrieved-only |
+|---|---|---|---|---|---|
+| zai-1 437a4a50 03:40Z | hook trailers (task 1) | 4 | 0 | 4 | 0 |
+| zai-1 6f64d143 03:53Z | amend rule in shared trees | 9 | 7 | 1 | 1 |
+| zai-2 8635690e 03:40Z | park / accepted (task 2) | 17 | 3 | 8 | 6 |
+| zai-2 c99086c6 03:53Z | Kimi seats, record vs script | 11 | 6 | 0 | 5 |
+
+The populated rows are the four turns belled on 2026-10-16 with an
+instruction to use the tools; the 44 earlier turns in the two sessions
+made no minus40 call. zai-2's six retrieved-only memories on the first row
+are those `m40_find` listed for ["parking" "accepted"] and the like that
+`m40_state` did not then surface; the three echoed are the three the reply
+named. Two of zai-1's first four memories have unsaid facts
+(blueprint-parallel-lemmas, 2 of 18; vsat-upstream-write-access, 5 of 17)
+but were still in force at the reply, so no cell is marked not-in-force
+yet. (The count of 17 for zai-2's first row corrects an 18 first written;
+the per-turn fixture has 22 segments: two texts, three calls, 17 memories.)
+
+What the second rows show. The two seats were given packets chosen to
+overlap the first in memory neighbourhood for zai-2 and not for zai-1, and
+the grids come out that way: zai-1's two rows share no column, zai-2's
+share two. Those two are the point of the view. proof2-dispatch-pool was
+retrieved-only on zai-2's first row (listed by `m40_find`, statements not
+read) and echoed on the second (read by `m40_state` and quoted: "HTTP 403
+on every seat"); mfuton-lean-compiler-project went the other way, reached
+on the first row and only listed on the second. On zai-1's second row the
+reply named seven of the nine memories it was given, and the two it did
+not name differ in kind: futon1b-504-storm-0930 was reached (its text came
+back from `m40_state`) and not used, proof2-dispatch-pool was only listed.
+The Kimi row (zai-2, second) has no reached-but-unechoed cell at all: the
+reply quoted a run of words from every memory whose statements it read.
+
+A false echo found and removed. proof2-dispatch-pool first came out
+**echoed** on zai-1's second row with the evidence
+"never-git-stash-in-shared-futon-trees": its text links to that memory as
+`[[never-git-stash-in-shared-futon-trees]]`, the reply named that memory,
+and the seven hyphen-split words matched as a five-word run. A link names
+another memory; it is not this memory's own words. `echoes` in
+`scope_view_data.py` now drops `[[...]]` before matching (the displayed
+text keeps its links). The same fix removed two echo spans from the
+per-turn fixture for zai-2's first turn, where verify-running-before-parking
+had read as echoed through its link to seat-bellbacks-look-like-mine.
+Both are in the regenerated fixtures.
+
+The grid on the page. `web/scopes/grid.js` draws a fixture as a table
+(`renderGrid`), with the four cell marks of the `--md` table, a yellow cell
+for a memory not in force at the reply, a column key by `cN` on the side,
+and a click on a column header or key entry listing that memory's said /
+unsaid / said-again events. Rows with calls link to the per-turn view of
+that turn (`?turn=<id>`), so the grid and the per-turn view read on one
+page: `index.html?session=zai-2` for the grid, a row click for the turn.
+`auditGridData` and `tallyGrid` check a fixture (every cell names a row
+and a column, the legend defines every level and status, a row's memory
+count is the sum of its cells, a row with no call has no memory);
+`test_scopes.mjs` runs them over both grids beside the per-turn audits.
+The renderer was exercised against a minimal DOM shim in node (no browser
+on this host): 13 and 26 column headers, 325 and 598 cells, two row links
+per grid, a column click lights its header.

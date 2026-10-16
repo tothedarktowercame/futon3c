@@ -220,6 +220,7 @@ def memory_text(facts):
 
 
 WORD = re.compile(r"\w+", re.U)
+LINK = re.compile(r"\[\[[^\]]*\]\]")
 
 
 def echoes(reply, memory_name, text, n=5):
@@ -230,7 +231,11 @@ def echoes(reply, memory_name, text, n=5):
     for m in re.finditer(re.escape(memory_name), reply):
         found.append((m.start(), m.end(), memory_name))
     reply_words = [(w.group().lower(), w.start(), w.end()) for w in WORD.finditer(reply)]
-    mem_words = [w.group().lower() for w in WORD.finditer(text)]
+    # A [[link]] names another memory; it is not this memory's own words, and
+    # left in makes a reply that names the linked memory read as echoing this
+    # one (proof2-dispatch-pool, zai-1 turn 6f64d143, 2026-10-16). The text
+    # shown in the view keeps its links; only the matching drops them.
+    mem_words = [w.group().lower() for w in WORD.finditer(LINK.sub(" ", text))]
     grams = {tuple(mem_words[i:i + n]) for i in range(len(mem_words) - n + 1)}
     i = 0
     while i <= len(reply_words) - n:
