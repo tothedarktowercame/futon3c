@@ -15,6 +15,14 @@
             [futon3c.xiang.turn-service :as svc]))
 
 (use-fixtures :each session-end-fixture/with-isolated-session-end-outbox)
+(use-fixtures :each
+  (fn [f]
+    ;; transport.http installs its production listener at namespace load. These
+    ;; service-unit tests own the registry and add only the listener they assert.
+    (svc/remove-turn-listener! :futon3c.transport.http/frames-cache)
+    (svc/remove-turn-listener! ::test)
+    (svc/remove-turn-listener! ::bad)
+    (f)))
 
 (defn- temp-store []
   (ts/store (str (java.nio.file.Files/createTempDirectory
@@ -59,6 +67,47 @@
                                      :agent-id "claude-17" :session-id "sess-1" :turn-id "claude-17-turn-3"
                                      :evidence-id "emacs-abc"}
                                     opts)))
+
+(declare analysis-for)
+
+(deftest turn-listeners-are-off-path-and-carry-lifecycle-events
+  (let [events (atom []) h (harness)]
+    (svc/add-turn-listener! ::test #(swap! events conj %))
+    (try
+      (let [result (turn! h {:dispatch :none})]
+        (is (= :declared (:dispatch result)))
+        (is (empty? @events) "record notification is scheduled, not on the caller path")
+        (run-next! h)
+        (is (= [{:event :recorded :id (:id result) :session-id "sess-1"
+                 :agent-id "claude-17" :how nil}]
+               @events)))
+      (finally (svc/remove-turn-listener! ::test)))))
+
+(deftest settling-notifies-reading-then-settled
+  (let [events (atom []) h (harness)
+        {:keys [id record]} (turn! h {:dispatch :none})
+        store (get-in (:svc h) [:config :store])]
+    ;; Discard the unobserved recorded notification, then make the evidence
+    ;; packet complete so settle writes immediately in this synchronous harness.
+    (reset! (:scheduled h) [])
+    (ts/update-record! store id #(assoc % :happened_summary "done"))
+    (svc/add-turn-listener! ::test #(swap! events conj (:event %)))
+    (try
+      (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+      (while (seq @(:scheduled h)) (run-next! h))
+      (is (= [:reading :settled] @events))
+      (finally (svc/remove-turn-listener! ::test)))))
+
+(deftest throwing-turn-listener-never-fails-recording
+  (let [h (harness)]
+    (svc/add-turn-listener! ::bad (fn [_] (throw (ex-info "listener broke" {}))))
+    (try
+      (let [result (turn! h {:dispatch :none})]
+        (is (= :declared (:dispatch result)))
+        (is (string? (:id result)))
+        (run-next! h)
+        (is (str/includes? (:detail (svc/health (:svc h))) "listener broke")))
+      (finally (svc/remove-turn-listener! ::bad)))))
 
 (deftest a-turn-is-recorded-at-send-and-dispatched-at-reply-end
   (let [h (harness)

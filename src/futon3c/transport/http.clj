@@ -78,6 +78,7 @@
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.xiang.turn-service :as xiang-turns]
+            [futon3c.xiang.frames-cache :as frames-cache]
             [futon3c.xiang.turn-store :as xiang-store]
             [futon3c.xiang.turn-record :as xiang-record]
             [futon3c.xiang.turn-acts :as xiang-acts]
@@ -12179,6 +12180,33 @@
     (catch Exception e
       {:ok false :reason :exception :err (.getMessage e)})))
 
+(defn- build-xiang-frames [session]
+  (let [script (xiang-frames-script)
+        r (run-turn-frames! (xiang-frames-argv script session nil) 90)
+        frames (when (:ok r)
+                 (try (json/parse-string (:out r)) (catch Exception _ ::bad)))]
+    (cond
+      (not (:ok r)) r
+      (or (= ::bad frames) (not (sequential? frames)))
+      {:ok false :reason :bad-json :stderr (some-> (:err r) str/trim not-empty)}
+      :else {:ok true :frames (vec frames)
+             :warnings (some-> (:err r) str/trim not-empty)})))
+
+(defn- schedule-frames-cache! [delay-ms thunk]
+  (future
+    (when (pos? delay-ms) (Thread/sleep delay-ms))
+    (thunk)))
+
+(defn- frames-cache-opts []
+  {:runner build-xiang-frames :schedule! schedule-frames-cache!})
+
+;; The service object survives namespace reloads; the keyed listener does too,
+;; while its function is replaced with this namespace's current implementation.
+(xiang-turns/add-turn-listener!
+ ::frames-cache
+ (fn [event]
+   (frames-cache/invalidate! (:session-id event) (frames-cache-opts))))
+
 (defn- handle-xiang-frames [request _config]
   (let [params (parse-query-params request)
         session (get params "session")
@@ -12197,25 +12225,21 @@
 
       :else
       (let [t0 (System/nanoTime)
-            r (run-turn-frames! (xiang-frames-argv script session limit) 90)
+            entry (frames-cache/frames! session (frames-cache-opts))
             elapsed (quot (- (System/nanoTime) t0) 1000000)
-            frames (when (:ok r) (try (json/parse-string (:out r)) (catch Exception _ ::bad)))]
-        (cond
-          (not (:ok r))
-          (json-response (if (= :timeout (:reason r)) 504 502)
-                         (assoc r :session session :elapsed-ms elapsed))
-
-          (or (= ::bad frames) (not (sequential? frames)))
-          (json-response 502 {:ok false :reason :bad-json :session session :elapsed-ms elapsed
-                              :stderr (some-> (:err r) str/trim not-empty)})
-
-          :else
-          (json-response 200 {:ok true :session session :limit limit
-                              :count (count frames) :frames frames
-                              :elapsed-ms elapsed
-                              ;; turn_frames.py warns on stderr when futon1b
-                              ;; did not answer and it fell back to files alone.
-                              :warnings (some-> (:err r) str/trim not-empty)}))))))
+            error (:last-error entry)]
+        (if-not (:ok entry)
+          (json-response (if (= :timeout (:reason error)) 504 502)
+                         (merge {:ok false :session session :elapsed-ms elapsed} error))
+          (let [all (:frames entry)
+                frames (if limit (vec (take-last limit all)) all)]
+            (json-response 200
+                           (cond-> {:ok true :session session :limit limit
+                                    :count (count frames) :frames frames
+                                    :elapsed-ms elapsed :version (:version entry)
+                                    :built-at (:built-at entry) :cached (:cached entry)
+                                    :warnings (:warnings entry)}
+                             error (assoc :last-error error)))))))))
 
 (defn- handle-xiang
   "Routes under /api/alpha/xiang/. Returns a response, or nil for an unknown path."

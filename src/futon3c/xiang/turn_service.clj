@@ -144,6 +144,31 @@
   (swap! (:state svc) assoc :health {:state state :detail detail :at (now-ms svc)})
   nil)
 
+(defonce ^:private !turn-listeners (atom {}))
+
+(defn add-turn-listener!
+  "Register keyed F for turn lifecycle events. Re-registering replaces it."
+  [key f]
+  (swap! !turn-listeners assoc key f)
+  nil)
+
+(defn remove-turn-listener! [key]
+  (swap! !turn-listeners dissoc key)
+  nil)
+
+(defn- notify-turn! [svc {:keys [id] :as event}]
+  (when-let [record (ts/read-record (cfg svc :store) id)]
+    (let [event (assoc event :session-id (:session_id record)
+                             :agent-id (:agent_id record))]
+      (doseq [[key listener] @!turn-listeners]
+        ((cfg svc :schedule!) 0
+         (fn []
+           (try (listener event)
+                (catch Throwable t
+                  (set-health! svc nil
+                               (str id ": turn listener " key " threw: "
+                                    (.getMessage t)))))))))))
+
 (defn health [svc] (:health @(:state svc)))
 
 (defn note-health!
@@ -374,11 +399,13 @@
    When the packet is complete (reading and happened both present, in
    either arrival order) the turn's ports are (re)computed alongside it."
   [svc id reading how]
+  (notify-turn! svc {:event :reading :id id :how how})
   (let [store (cfg svc :store)
         write! (fn []
                  ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-                  #(append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
-                                     (cfg svc :store-busy-delays))))]
+                  #(do (append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
+                                         (cfg svc :store-busy-delays))
+                       (notify-turn! svc {:event :settled :id id :how how}))))]
     ;; The scope edges do not wait for the happened summary: they are a
     ;; projection of the reading and the marked replies, both final once the
     ;; turn is analyzed, and their readers (the REPL overlay, the brief) want
@@ -697,6 +724,7 @@
                  caller (assoc :caller (str caller))
                  mission-id (assoc :mission_id mission-id))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
+        _ (notify-turn! svc {:event :recorded :id id :how nil})
         _ (when (seq quotes) (ts/write-quotes! (cfg svc :store) id quotes))
         ;; Which agent turn this operator turn answers (Joe's `<mark>:`
         ;; pointers), resolved classically against the agent's turns since

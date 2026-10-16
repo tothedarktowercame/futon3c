@@ -6,9 +6,13 @@
    route's shaping is tested with the runner redefined, so no futon1b is
    needed."
   (:require [cheshire.core :as json]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.social.test-fixtures :as fix]
-            [futon3c.transport.http :as http]))
+            [futon3c.transport.http :as http]
+            [futon3c.xiang.frames-cache :as frames-cache]))
+
+(use-fixtures :each (fn [f] (frames-cache/reset!)
+                      (try (f) (finally (frames-cache/reset!)))))
 
 (defn- handler []
   (http/make-handler {:registry (fix/mock-registry) :patterns (fix/mock-patterns)}))
@@ -54,7 +58,7 @@
 (deftest route-wraps-the-frames-and-the-script-warnings
   (with-redefs-fn {#'http/run-turn-frames!
                    (fn [argv _]
-                     (is (= ["--limit" "3"] (take-last 2 argv)))
+                     (is (= "00e653e3-28f7-4add-8304-47ca0475b5c2" (last argv)))
                      {:ok true
                       :out (json/generate-string [{:turn {:at "2026-10-11T04:24:22Z" :text "hi"}
                                                    :parse {:status "analyzed" :fragments []}}])
@@ -66,7 +70,26 @@
         (is (= 1 (:count body)))
         (is (= "hi" (get-in body [:frames 0 :turn :text])))
         (is (= 3 (:limit body)))
+        (is (false? (:cached body)))
         (is (= "evidence fetch failed: timed out" (:warnings body)))))))
+
+(deftest route-caches-whole-session-and-limits-newest-frames
+  (let [calls (atom 0)]
+    (with-redefs-fn {#'http/run-turn-frames!
+                     (fn [_ _]
+                       (swap! calls inc)
+                       {:ok true :out (json/generate-string
+                                       (mapv (fn [n] {:turn {:text (str n)}}) (range 5)))
+                        :err ""})}
+      (fn []
+        (let [[s1 b1] (get-frames "session=s-cache&limit=2")
+              [s2 b2] (get-frames "session=s-cache&limit=2")]
+          (is (= [200 200] [s1 s2]))
+          (is (= 1 @calls))
+          (is (false? (:cached b1)))
+          (is (true? (:cached b2)))
+          (is (= ["3" "4"] (mapv #(get-in % [:turn :text]) (:frames b2))))
+          (is (= (:version b1) (:version b2) 1)))))))
 
 (deftest route-reports-a-timeout-and-bad-output-as-such
   (with-redefs-fn {#'http/run-turn-frames! (fn [_ _] {:ok false :reason :timeout :timeout-s 90})}
