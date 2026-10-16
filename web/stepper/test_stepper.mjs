@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {
-  PARSE_PENDING, cuePieces, frameModel, happenedDetail, parseStreamEvent,
-  portsAge, readyFrames, receiveFrames,
+  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cuePieces,
+  frameModel, happenedDetail, parseStreamEvent, portsAge, readyFrames, receiveFrames,
 } from "./stepper.js";
 
 const fixture = JSON.parse(await readFile(new URL("./fixtures/frames-claude-16-00e653e3.json", import.meta.url)));
@@ -71,6 +71,37 @@ assert.deepEqual(
 );
 assert.deepEqual(parseStreamEvent("hello", '{"session":"x"}'), {kind: "ignore"});
 assert.equal(parseStreamEvent("frames", "{not json").kind, "status");
+
+// ANSWERED: the reply's quoted brackets lined up with the sentences they quote
+const withReply = structuredClone(fixture[0]);
+withReply.parse.fragments = [
+  {sentence: "s1", text: "please fix the spinner", combined: "ask-action"},
+  {sentence: "s2", text: "and tell me what to expect", combined: "clarify"},
+];
+withReply.reply = {at: "2026-10-16T22:37:50Z", paragraphs: [
+  {mark: "㊥", intent: "gist", target: "gist", quoted: false, answers: []},
+  {mark: "㊬", intent: "verify", target: "fix the spinner", quoted: true, answers: ["s1"]},
+], unanswered: ["s2"], unanchored: [0]};
+assert.deepEqual(answeredLines(withReply), [
+  "reply at 2026-10-16T22:37:50Z · 2 marked paragraph(s)",
+  's1 ask-action  ← ㊬ verify ("fix the spinner")',
+  "s2 clarify  ← (no paragraph quotes this sentence)",
+  "not lined up with any sentence: ㊥ gist (gist)",
+]);
+const noReply = structuredClone(withReply);
+delete noReply.reply;
+assert.deepEqual(frameModel(noReply).answered, [REPLY_ABSENT]);
+const unmarked = structuredClone(withReply);
+unmarked.reply = {at: "t", paragraphs: []};
+assert.equal(answeredLines(unmarked)[1], "the reply carries no marks, so nothing can be lined up");
+// PATTERNS: an empty match after 象's reading is not the same line as a reading in flight
+const noneRead = structuredClone(fixture[0]);
+noneRead.parse.status = "analyzed"; noneRead.patterns = {matched: [], rejected: [{}, {}, {}]};
+assert.equal(frameModel(noneRead).patterns[0], PATTERNS_NONE_READ);
+assert.equal(frameModel(noneRead).patterns.at(-1), "rejected: 3");
+const stillReading = structuredClone(noneRead);
+stillReading.parse.status = "missing"; stillReading.patterns = {matched: [], rejected: []};
+assert.equal(frameModel(stillReading).patterns[0], PATTERNS_PENDING);
 
 const compiled = await readFile(new URL("./stepper.js", import.meta.url), "utf8");
 const page = await readFile(new URL("./index.html", import.meta.url), "utf8");

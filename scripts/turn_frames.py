@@ -24,7 +24,15 @@ Frame shape:
  "happened": [non-operator rows with at in [turn.at, next-turn.at), sorted,
               each {"at","type","summary"}],
  "ports":  {closed_this_turn, still_open} when the record carries them,
- "record": {"id","turn_id","agent_id","session_id"} when a record was joined}
+ "record": {"id","turn_id","agent_id","session_id"} when a record was joined,
+ "reply":  the agent's reply to this turn, lined up against the parse:
+           {"at", "evidence_id", "turn_id",
+            "paragraphs": [{"mark", "intent", "target", "quoted", "body",
+                            "answers": [sentence ids whose text contains the
+                                        bracketed target]}],
+            "unanswered": [sentence ids no paragraph quotes],
+            "unanchored": [paragraph indexes that quote no sentence]}
+           -- absent when no final assistant segment answers the turn yet}
 """
 
 import argparse
@@ -453,6 +461,120 @@ def summarize_row(row):
     return s
 
 
+# ---------------------------------------------------------------- replies
+#
+# The reply proforma (workspace CLAUDE.md, "Reply proforma"): each paragraph
+# of a reply to the operator starts with one mark from 象's vocabulary, then a
+# bracketed target, which quotes the operator's words when it answers a
+# particular part of the turn.  A quoted target can be found in the turn
+# without a model, so a paragraph is lined up with every sentence whose text
+# contains it.  The paragraph reader is the one in xiang_bracket_census.py
+# (that file runs its census on import, so the three functions are copied).
+
+MARK_INTENTS = {
+    "㊥": "gist", "㊭": "propose", "㊣": "approve", "🈚": "disagree",
+    "㊟": "qualify", "🈖": "explain", "🈯": "clarify", "㊢": "report",
+    "㊩": "report-problem", "㊬": "verify", "🈹": "retract", "🈳": "unresolved",
+    "🈲": "constrain", "🈸": "ask-action", "㊯": "delegate", "㊝": "prioritize",
+    "㊮": "collect", "🈕": "extend", "🈰": "continue", "🈝": "defer",
+    "🈘": "redirect", "㊫": "explore", "🈡": "withdraw",
+}
+TARGET_MIN = 8       # shorter targets are labels ("status"), not quotations
+
+
+def squash(text):
+    return re.sub(r"\s+", " ", (text or "").lower()).strip()
+
+
+def paragraphs(text):
+    return [p.strip() for p in re.split(r"\n\s*\n", text or "") if p.strip()]
+
+
+def bracket(after):
+    """Text of a leading balanced (...) in AFTER; (None, after) when absent."""
+    s = after.lstrip()
+    if s.startswith(":"):
+        s = s[1:].lstrip()
+    if not s.startswith("("):
+        return None, after
+    depth = 0
+    for i, ch in enumerate(s):
+        depth += ch == "("
+        depth -= ch == ")"
+        if depth == 0:
+            return s[1:i].strip(), s[i + 1:]
+    return None, after
+
+
+def marked_paragraphs(text):
+    """The marked paragraphs of a reply, in order."""
+    out = []
+    for p in paragraphs(text):
+        mark = p[0] if p else ""
+        if mark not in MARK_INTENTS:
+            continue
+        target, body = bracket(p[1:])
+        quoted = False
+        if target is not None:
+            m = re.fullmatch(r"[\"\u201c\u2018']+(.*?)[\"\u201d\u2019']+", target.strip())
+            if m:
+                quoted, target = True, m.group(1)
+        out.append({"mark": mark, "intent": MARK_INTENTS[mark], "target": target,
+                    "quoted": quoted, "body": body.strip()[:160]})
+    return out
+
+
+def is_final_reply(row):
+    b = body_of(row)
+    return b.get("role") == "assistant" and b.get("segment-final") is not False
+
+
+def reply_row_for(rows, start, end, turn_id=None):
+    """The agent's final reply segment to the turn whose window is [start, end).
+
+    The reply's body carries the operator turn's id as turn-id, so that join
+    comes first; otherwise the last final assistant row inside the window."""
+    if turn_id:
+        for r in reversed(rows):
+            if is_final_reply(r) and body_of(r).get("turn-id") == turn_id:
+                return r
+    found = None
+    for r in rows:
+        if not is_final_reply(r):
+            continue
+        at = at_key(r)
+        if at < start or (end is not None and at >= end):
+            continue
+        found = r
+    return found
+
+
+def align_reply(fragments, reply_text):
+    """Line the reply's marked paragraphs up with the turn's sentences.
+
+    A paragraph answers every sentence whose squashed text contains its
+    squashed target (TARGET_MIN chars or more).  Sentences with no such
+    paragraph are unanswered; paragraphs with no such sentence are unanchored
+    (a gist, a status, or a paraphrase)."""
+    paras = marked_paragraphs(reply_text)
+    by_sentence = []
+    for f in fragments:
+        sid = f.get("sentence")
+        if sid is not None and all(sid != s for s, _ in by_sentence):
+            by_sentence.append((sid, ""))
+        if sid is not None:
+            by_sentence = [(s, (t + " " + squash(f.get("text"))).strip()) if s == sid else (s, t)
+                           for s, t in by_sentence]
+    for p in paras:
+        t = squash(p["target"]) if p["target"] else ""
+        p["answers"] = [sid for sid, text in by_sentence
+                        if len(t) >= TARGET_MIN and t in text]
+    answered = {sid for p in paras for sid in p["answers"]}
+    return {"paragraphs": paras,
+            "unanswered": [sid for sid, _ in by_sentence if sid not in answered],
+            "unanchored": [i for i, p in enumerate(paras) if not p["answers"]]}
+
+
 def find_fragment(sentences, fragment_id):
     """Resolve a negation fragment-id like 's1:0' to (sentence_id, fragment)."""
     if not fragment_id or ":" not in fragment_id:
@@ -675,6 +797,18 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                 "agent_id": rec.get("agent_id"),
                 "session_id": rec.get("session_id"),
             }
+        # reply: the agent's final answer to this turn, lined up against the
+        # parse by quoted bracket targets.  Absent until the reply lands.
+        reply_row = reply_row_for(rows, start, end,
+                                  entry["record"].get("turn_id") if entry else None)
+        if reply_row is not None:
+            rb = body_of(reply_row)
+            reply = {"at": reply_row.get("evidence/at"),
+                     "evidence_id": reply_row.get("evidence/id"),
+                     "turn_id": rb.get("turn-id")}
+            reply.update(align_reply(fragments_out,
+                                     rb.get("unified-text") or rb.get("text") or ""))
+            frames[-1]["reply"] = reply
     return frames
 
 

@@ -7,6 +7,13 @@ export interface Commit { repo?: string; sha?: string; author?: string; subject?
 export interface HappenedRow { at?: string; type?: string; summary?: Record<string, unknown> }
 export interface PortAct { kind?: string; text?: string; since?: string }
 export interface MemoryCall { round?: number | string; tool?: string; args?: unknown; reached?: string[] }
+export interface ReplyParagraph {
+  mark?: string; intent?: string; target?: string | null; quoted?: boolean; body?: string; answers?: string[];
+}
+export interface Reply {
+  at?: string; evidence_id?: string; turn_id?: string;
+  paragraphs?: ReplyParagraph[]; unanswered?: string[]; unanchored?: number[];
+}
 export interface Frame {
   turn: { evidence_id?: string; at?: string; text?: string };
   parse: { status?: string; fragments?: Fragment[] };
@@ -20,6 +27,7 @@ export interface Frame {
   ports?: { closed_this_turn?: PortAct[]; still_open?: PortAct[] };
   record?: { id?: string; turn_id?: string; agent_id?: string; session_id?: string };
   memory?: { calls?: MemoryCall[]; injected?: string[] };
+  reply?: Reply;
 }
 
 export interface CuePiece { text: string; cue: boolean }
@@ -28,6 +36,7 @@ export interface FrameModel {
   status: string; at: string; said: string; saidHref?: string;
   operators: string[]; parseNote: string; parse: ParseLine[];
   patterns: string[]; happened: string[]; ports: string; memory: string[];
+  answered: string[];
   session: string;
 }
 export interface StreamStatus {
@@ -41,6 +50,9 @@ export type ParsedStreamEvent =
 
 const MEMORY_ABSENT = "no recorded memory call for this turn (nothing reached it that the record can show)";
 export const PARSE_PENDING = "no reading yet — 象 has not read this turn; what has happened so far is under HAPPENED";
+export const REPLY_ABSENT = "no reply recorded for this turn yet";
+export const PATTERNS_NONE_READ = "matched: (none — 象 read this turn and matched no library pattern)";
+export const PATTERNS_PENDING = "matched: (象's reading has not landed; nothing is matched or rejected yet)";
 
 export const READ_STATUSES = ["analyzed", "drafted-provisional"];
 
@@ -154,7 +166,10 @@ function operatorLines(frame: Frame): string[] {
 function patternLines(frame: Frame): string[] {
   const p = frame.patterns || {};
   const matched = (p.matched || []).map(x => typeof x === "string" ? x : shown(x.id));
-  const out = [`matched: ${matched.length ? matched.join(", ") : "(none)"}`];
+  // An empty match must not look like a reading still in flight (Joe,
+  // 2026-10-16): say which it is.
+  const out = [matched.length ? `matched: ${matched.join(", ")}`
+    : frame.parse?.status === "analyzed" ? PATTERNS_NONE_READ : PATTERNS_PENDING];
   const proposed = Object.entries(p.proposed_by_parent || {});
   if (!proposed.length) out.push("proposed: (none)");
   for (const [parent, children] of proposed) {
@@ -193,6 +208,32 @@ function memoryLines(frame: Frame): string[] {
   return out.length ? out : ["(no memory events recorded)"];
 }
 
+/** The reply's marked paragraphs lined up with the turn's sentences: one
+ * line per sentence naming the paragraph whose bracketed target quotes it,
+ * then the paragraphs that quote no sentence (a gist, a label, a paraphrase). */
+export function answeredLines(frame: Frame): string[] {
+  const reply = frame.reply;
+  if (!reply) return [REPLY_ABSENT];
+  const paras = reply.paragraphs || [];
+  const out = [`reply at ${shown(reply.at)} · ${paras.length} marked paragraph(s)`];
+  if (!paras.length) { out.push("the reply carries no marks, so nothing can be lined up"); return out; }
+  const label = (p: ReplyParagraph): string =>
+    `${shown(p.mark)} ${shown(p.intent)} (${p.quoted ? `"${shown(p.target, "")}"` : shown(p.target, "")})`;
+  const seen = new Set<string>();
+  for (const f of frame.parse?.fragments || []) {
+    const sid = f.sentence || "?";
+    if (seen.has(sid)) continue;
+    seen.add(sid);
+    const intent = f.combined || (f.disagree ? "disagree" : "(unlabelled)");
+    const hits = paras.filter(p => (p.answers || []).includes(sid));
+    if (!hits.length) out.push(`${sid} ${intent}  ← (no paragraph quotes this sentence)`);
+    for (const p of hits) out.push(`${sid} ${intent}  ← ${label(p)}`);
+  }
+  const loose = paras.filter(p => !(p.answers || []).length);
+  if (loose.length) out.push(`not lined up with any sentence: ${loose.map(label).join(", ")}`);
+  return out;
+}
+
 export function frameModel(frame: Frame): FrameModel {
   const status = frame.parse?.status || "missing";
   const provisional = status === "drafted-provisional";
@@ -214,6 +255,7 @@ export function frameModel(frame: Frame): FrameModel {
     parse, patterns: patternLines(frame),
     happened: happened.length ? happened : ["(nothing between this turn and the next)"],
     ports: portsText(frame), memory: memoryLines(frame),
+    answered: answeredLines(frame),
     session: frame.record?.session_id || "?",
   };
 }
@@ -288,6 +330,7 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
       for (const piece of line.pieces) add(row, "span", piece.cue ? "parse-cue" : "", piece.text);
       add(row, "div", "parse-sources", `(${line.sources})`);
     }
+    section("ANSWERED", model.answered);
     section("PATTERNS", model.patterns);
     section("HAPPENED", model.happened);
     if (model.ports) section("PORTS", model.ports.split("\n"));

@@ -68,6 +68,31 @@ def fixture_rows():
             "evidence/origin": {"kind": "harness"},
             "evidence/body": {"park-id": "p-1", "reason": "waiting"},
         },
+        {  # the agent's final reply to turn 1: marked paragraphs, one of
+           # them quoting the operator's words, one a label
+            "evidence/id": "emacs-reply1",
+            "evidence/type": "coordination",
+            "evidence/at": "2026-09-29T10:05:00Z",
+            "evidence/in-reply-to": "e-job-1",
+            "evidence/origin": {"kind": "agent", "actor": "agent-1",
+                                "writer": "agent-chat/turn"},
+            "evidence/body": {"event": "chat-turn", "role": "assistant",
+                              "turn-id": "agent-turn-1", "segment-final": True,
+                              "unified-text": ("\u32a5 (gist) Doing it.\n\n"
+                                               "\U0001f216 (\"do the thing\") The thing is done, "
+                                               "here is how.\n\n"
+                                               "\u32a2 (progress) Two files changed.")},
+        },
+        {  # a draft segment of the same reply; never the one lined up
+            "evidence/id": "emacs-reply1-draft",
+            "evidence/type": "coordination",
+            "evidence/at": "2026-09-29T10:04:00Z",
+            "evidence/origin": {"kind": "agent", "actor": "agent-1",
+                                "writer": "agent-chat/turn"},
+            "evidence/body": {"event": "chat-turn", "role": "assistant",
+                              "turn-id": "agent-turn-1", "segment-final": False,
+                              "text": "\u32a5 (gist) Doing"},
+        },
         {  # exactly AT the next turn's time -> belongs to frame 2
             "evidence/id": "e-boundary",
             "evidence/type": "promise/woken",
@@ -133,6 +158,42 @@ class TurnFramesTest(unittest.TestCase):
         analyses = tf.load_analyses(SID, analysis_dir=self.dir)
         return tf.build_frames(fixture_rows(), analyses, session_id=SID,
                                limit=limit)
+
+    def test_reply_lined_up_against_the_parse(self):
+        frames = self.build()
+        reply = frames[0]["reply"]
+        self.assertEqual(reply["evidence_id"], "emacs-reply1")   # final, not the draft
+        self.assertEqual(reply["turn_id"], "agent-turn-1")
+        marks = [(p["mark"], p["intent"], p["target"], p["quoted"], p["answers"])
+                 for p in reply["paragraphs"]]
+        self.assertEqual(marks, [
+            ("\u32a5", "gist", "gist", False, []),
+            ("\U0001f216", "explain", "do the thing", True, ["s1"]),
+            ("\u32a2", "report", "progress", False, []),
+        ])
+        self.assertEqual(reply["unanswered"], [])
+        self.assertEqual(reply["unanchored"], [0, 2])
+        # turn 2 has no reply in the record: the field is absent, not empty
+        self.assertNotIn("reply", frames[1])
+
+    def test_reply_by_window_when_no_record_and_unanswered_sentences(self):
+        rows = fixture_rows()
+        for r in rows:
+            if r["evidence/id"] == "emacs-reply1":
+                r["evidence/body"]["turn-id"] = "something-else"
+        analyses = tf.load_analyses(SID, analysis_dir=self.dir)
+        frames = tf.build_frames(rows, analyses, session_id=SID)
+        self.assertEqual(frames[0]["reply"]["evidence_id"], "emacs-reply1")
+        short = tf.align_reply([{"sentence": "s1", "text": "do the thing"},
+                                {"sentence": "s2", "text": "and then stop"}],
+                               "\u32ac (\"thing\") Done.\n\n\u329f (stop) Not yet.")
+        # "thing" is under TARGET_MIN chars: a label, so s1 stays unanswered
+        self.assertEqual(short["unanswered"], ["s1", "s2"])
+        self.assertEqual(short["unanchored"], [0, 1])
+        longer = tf.align_reply([{"sentence": "s2", "text": "and then stop"}],
+                                "\u329f (\"and then stop\") Not yet.")
+        self.assertEqual(longer["paragraphs"][0]["answers"], ["s2"])
+        self.assertEqual(longer["unanswered"], [])
 
     def test_frame_count_and_operator_filter(self):
         frames = self.build()
