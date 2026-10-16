@@ -40,6 +40,16 @@ export function mixInk(spans, layers) {
     const blue = Math.round(255 * (1 - strength.y));
     return `rgb(${red}, ${green}, ${blue})`;
 }
+/** Compute the ink for host-positioned units without requiring a DOM. */
+export function inkUnits(units, spans, layers, active) {
+    return units.map((unit) => {
+        const covering = spans.filter((span) => active.has(span.layer) && span.start < unit.b && unit.a < span.end);
+        return {
+            color: covering.length === 0 ? "" : mixInk(covering, layers),
+            spanIds: covering.map((span) => span.id),
+        };
+    });
+}
 /** Report invalid ranges, unresolved edge destinations, and legend coverage. */
 export function auditScopeData(data) {
     const segments = new Map(data.segments.map((segment) => [segment.id, segment]));
@@ -91,6 +101,7 @@ export function renderScopes(data, host, opts = {}) {
     let active = new Set((opts.layers ?? data.layers.map((layer) => layer.id))
         .filter((id) => knownLayers.has(id)));
     const spanById = new Map(data.spans.map((span) => [span.id, span]));
+    const anchored = opts.anchored ?? {};
     const edgesByFrom = new Map();
     for (const edge of data.edges) {
         const edges = edgesByFrom.get(edge.from) ?? [];
@@ -109,7 +120,10 @@ export function renderScopes(data, host, opts = {}) {
     const side = element("aside", "scope-side");
     columns.append(main, side);
     root.append(columns);
-    host.replaceChildren(root);
+    if (Object.keys(anchored).length === 0)
+        host.replaceChildren(root);
+    else
+        host.append(root);
     const checkboxes = new Map();
     for (const layer of data.layers) {
         const label = element("label", "scope-layer-toggle");
@@ -141,14 +155,46 @@ export function renderScopes(data, host, opts = {}) {
     function setLit(spanId, lit) {
         root.querySelectorAll(`[data-span~="${CSS.escape(spanId)}"]`)
             .forEach((node) => node.classList.toggle("lit", lit));
+        Object.values(anchored).flat().forEach((unit) => {
+            const ids = (unit.e.dataset.spans ?? "").split(" ");
+            if (ids.includes(spanId))
+                unit.e.classList.toggle("lit", lit);
+        });
     }
     function jumpTo(spanId) {
-        const target = root.querySelector(`[data-span~="${CSS.escape(spanId)}"]`);
+        const target = root.querySelector(`[data-span~="${CSS.escape(spanId)}"]`)
+            ?? Object.values(anchored).flat()
+                .find((unit) => (unit.e.dataset.spans ?? "").split(" ").includes(spanId))?.e;
         if (!target)
             return;
         target.scrollIntoView({ behavior: "smooth", block: "center" });
         setLit(spanId, true);
         window.setTimeout(() => setLit(spanId, false), 1200);
+    }
+    function readout(spans) {
+        return spans.map((span) => {
+            const layer = data.layers.find((candidate) => candidate.id === span.layer);
+            return [layer?.name ?? span.layer, span.kind, span.mark, span.note]
+                .filter(Boolean).join(" · ");
+        }).join("\n");
+    }
+    function bindSpanInteraction(node, spanIds) {
+        node.title = readout(spanIds.map((id) => spanById.get(id))
+            .filter((span) => span !== undefined));
+        node.onmouseenter = () => spanIds.forEach((id) => setLit(id, true));
+        node.onmouseleave = () => spanIds.forEach((id) => setLit(id, false));
+        node.onclick = () => spanIds.forEach((id) => setLit(id, true));
+    }
+    function paintAnchored(segment, visibleSpans) {
+        const units = anchored[segment.id] ?? [];
+        const inks = inkUnits(units, visibleSpans, data.layers, active);
+        units.forEach((unit, index) => {
+            const ink = inks[index];
+            unit.e.style.backgroundColor = ink.color;
+            unit.e.dataset.spans = ink.spanIds.join(" ");
+            unit.e.dataset.span = ink.spanIds.join(" ");
+            bindSpanInteraction(unit.e, ink.spanIds);
+        });
     }
     function paint() {
         main.replaceChildren();
@@ -157,6 +203,9 @@ export function renderScopes(data, host, opts = {}) {
             const segmentSpans = data.spans.filter((span) => span.seg === segment.id);
             const visibleSpans = segmentSpans.filter((span) => active.has(span.layer));
             const primary = segment.role === "operator" || segment.role === "agent";
+            const anchoredSegment = Object.prototype.hasOwnProperty.call(anchored, segment.id);
+            if (anchoredSegment)
+                paintAnchored(segment, visibleSpans);
             if (!primary && segmentSpans.length > 0 && visibleSpans.length === 0)
                 continue;
             const article = element("article", `scope-segment role-${segment.role}`);
@@ -171,7 +220,7 @@ export function renderScopes(data, host, opts = {}) {
                 marks.push(span);
                 marksAt.set(span.start, marks);
             });
-            for (const piece of splitPieces(segment.text, visibleSpans)) {
+            for (const piece of anchoredSegment ? [] : splitPieces(segment.text, visibleSpans)) {
                 for (const marked of marksAt.get(piece.start) ?? []) {
                     const mark = element("span", "scope-mark", marked.mark);
                     mark.dataset.span = marked.id;
@@ -182,9 +231,7 @@ export function renderScopes(data, host, opts = {}) {
                 const pieceNode = element("span", "scope-piece", piece.text);
                 pieceNode.dataset.span = piece.spanIds.join(" ");
                 pieceNode.style.backgroundColor = mixInk(pieceSpans, data.layers);
-                pieceNode.addEventListener("mouseenter", () => piece.spanIds.forEach((id) => setLit(id, true)));
-                pieceNode.addEventListener("mouseleave", () => piece.spanIds.forEach((id) => setLit(id, false)));
-                pieceNode.addEventListener("click", () => piece.spanIds.forEach((id) => setLit(id, true)));
+                bindSpanInteraction(pieceNode, piece.spanIds);
                 text.append(pieceNode);
             }
             visibleSpans.filter((span) => span.note).sort((a, b) => a.start - b.start)

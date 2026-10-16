@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { auditScopeData, mixInk, splitPieces } from "./scopes.js";
+import { auditScopeData, inkUnits, mixInk, splitPieces } from "./scopes.js";
 import { auditGridData, tallyGrid } from "./grid.js";
 
 const fixture = JSON.parse(await readFile(
@@ -69,6 +69,37 @@ assert.equal(mixInk([
   { id: "m", seg: "s", start: 0, end: 1, layer: "m", kind: "k", weight: 1 },
 ], [{ id: "c", name: "c", ink: "c" }, { id: "m", name: "m", ink: "m" }]),
 "rgb(0, 0, 255)");
+
+const unitLayers = [
+  { id: "cyan", name: "cyan", ink: "c" },
+  { id: "magenta", name: "magenta", ink: "m" },
+];
+const unitSpans = [
+  { id: "cyan-span", seg: "s", start: 1, end: 4, layer: "cyan", kind: "k", weight: 1 },
+  { id: "magenta-span", seg: "s", start: 2, end: 5, layer: "magenta", kind: "k", weight: 1 },
+];
+const mixedUnit = inkUnits([{ a: 2, b: 3 }], unitSpans, unitLayers,
+  new Set(["cyan", "magenta"]))[0];
+assert.equal(mixedUnit.color, mixInk(unitSpans, unitLayers),
+  "a unit under cyan and magenta uses the shared mixer");
+assert.deepEqual(mixedUnit.spanIds, ["cyan-span", "magenta-span"]);
+assert.deepEqual(inkUnits([{ a: 8, b: 9 }], unitSpans, unitLayers,
+  new Set(["cyan", "magenta"])), [{ color: "", spanIds: [] }],
+"a unit outside every span keeps the host background");
+assert.deepEqual(inkUnits([{ a: 3, b: 5 }], [unitSpans[0]], unitLayers,
+  new Set(["cyan"]))[0].spanIds, ["cyan-span"],
+"a unit straddling a span end is covered");
+const half = inkUnits([{ a: 1, b: 2 }],
+  [{ ...unitSpans[0], weight: 0.5 }], unitLayers, new Set(["cyan"]))[0];
+const redChannel = Number(half.color.match(/^rgb\((\d+),/)?.[1]);
+assert.equal(redChannel, Math.round(255 * (1 - 0.5)),
+  "half-strength cyan subtracts half the red channel");
+const inactive = inkUnits([{ a: 2, b: 3 }], unitSpans, unitLayers,
+  new Set(["cyan"]))[0];
+assert.deepEqual(inactive.spanIds, ["cyan-span"],
+  "an inactive layer contributes no span id");
+assert.equal(inactive.color, mixInk([unitSpans[0]], unitLayers),
+  "an inactive layer contributes no ink");
 
 console.log(`ok: ${fixture.spans.length} spans, ${fixture.edges.length} edges, ` +
   `${audit.legend.length} legend values (${audit.legend.filter((entry) => !entry.defined).length} undefined)`);
