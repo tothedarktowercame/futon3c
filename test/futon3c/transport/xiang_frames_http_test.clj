@@ -55,6 +55,14 @@
     (is (= 400 status))
     (is (= "bad-session" (:reason body)))))
 
+(deftest stream-route-refuses-a-missing-session-before-upgrade
+  (let [resp ((handler) {:request-method :get
+                         :uri "/api/alpha/xiang/frames/stream"})
+        body (json/parse-string (:body resp) true)]
+    (is (= 400 (:status resp)))
+    (is (= "missing-field" (:reason body)))
+    (is (= "session" (:field body)))))
+
 (deftest route-wraps-the-frames-and-the-script-warnings
   (with-redefs-fn {#'http/run-turn-frames!
                    (fn [argv _]

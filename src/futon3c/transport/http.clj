@@ -79,6 +79,7 @@
             [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.xiang.turn-service :as xiang-turns]
             [futon3c.xiang.frames-cache :as frames-cache]
+            [futon3c.xiang.frames-stream :as frames-stream]
             [futon3c.xiang.turn-store :as xiang-store]
             [futon3c.xiang.turn-record :as xiang-record]
             [futon3c.xiang.turn-acts :as xiang-acts]
@@ -171,7 +172,7 @@
            [java.nio.charset StandardCharsets]
            [java.nio.file Files Path StandardCopyOption StandardOpenOption]
            [java.util UUID]
-           [java.util.concurrent Executors ExecutorService RejectedExecutionException]
+           [java.util.concurrent Executors ExecutorService RejectedExecutionException ScheduledThreadPoolExecutor TimeUnit]
            [org.httpkit.logger ContextLogger]))
 
 ;; =============================================================================
@@ -12241,6 +12242,67 @@
                                     :warnings (:warnings entry)}
                              error (assoc :last-error error)))))))))
 
+(defonce ^:private frames-stream-keepalive-executor
+  (doto
+   (ScheduledThreadPoolExecutor.
+    1
+    (reify java.util.concurrent.ThreadFactory
+      (newThread [_ runnable]
+        (doto (Thread. runnable "xiang-frames-stream-keepalive")
+          (.setDaemon true)))))
+    (.setRemoveOnCancelPolicy true)))
+
+(defn- handle-xiang-frames-stream [request _config]
+  (let [params (parse-query-params request)
+        session (get params "session")
+        limit (some-> (get params "limit") parse-long)
+        limit (when limit (max 1 (min 500 limit)))
+        last-event-id (some-> (get-in request [:headers "last-event-id"]) parse-long)]
+    (cond
+      (str/blank? session)
+      (json-response 400 {:ok false :reason :missing-field :field "session"})
+
+      (not (re-matches #"[A-Za-z0-9_.:-]{1,80}" session))
+      (json-response 400 {:ok false :reason :bad-session :session session})
+
+      :else
+      (let [!unsubscribe (atom nil)
+            !keepalive (atom nil)
+            !closed (atom false)
+            cleanup! (fn []
+                       (when-let [unsubscribe @!unsubscribe]
+                         (unsubscribe)
+                         (reset! !unsubscribe nil))
+                       (when-let [task @!keepalive]
+                         (.cancel ^java.util.concurrent.ScheduledFuture task false)
+                         (reset! !keepalive nil)))]
+        (hk/as-channel
+         request
+         {:on-close (fn [_channel _status]
+                      (reset! !closed true)
+                      (cleanup!))
+          :on-open
+          (fn [channel]
+            (hk/send! channel
+                      {:status 200
+                       :headers {"Content-Type" "text/event-stream; charset=utf-8"
+                                 "Cache-Control" "no-cache"
+                                 "X-Accel-Buffering" "no"}
+                       :body (frames-stream/sse-event "hello" nil {:session session})}
+                      false)
+            (reset! !unsubscribe
+                    (frames-stream/subscribe!
+                     session {:limit limit :last-event-id last-event-id
+                              :send! #(hk/send! channel % false)
+                              :on-missing #(future (frames-cache/frames! session
+                                                                        (frames-cache-opts)))}))
+            (reset! !keepalive
+                    (.scheduleAtFixedRate
+                     frames-stream-keepalive-executor
+                     ^Runnable #(hk/send! channel (frames-stream/keepalive) false)
+                     25 25 TimeUnit/SECONDS))
+            (when @!closed (cleanup!)))})))))
+
 (defn- handle-xiang
   "Routes under /api/alpha/xiang/. Returns a response, or nil for an unknown path."
   [request config]
@@ -12267,6 +12329,9 @@
 
       (and (= :get method) (= "/api/alpha/xiang/frames" uri))
       (handle-xiang-frames request config)
+
+      (and (= :get method) (= "/api/alpha/xiang/frames/stream" uri))
+      (handle-xiang-frames-stream request config)
 
       (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
       (let [params (parse-query-params request)]
