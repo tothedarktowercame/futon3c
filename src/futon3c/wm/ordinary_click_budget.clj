@@ -84,8 +84,10 @@
   post-closure-fix verification click authorized directly by Joe, plus one
   handoff-repair verification click authorized directly by Joe with the
   debugger attached, plus one post-contract-audit debugger click and one
-  consolidated-handoff verification click authorized directly by Joe."
-  73)
+  consolidated-handoff verification click authorized directly by Joe, plus
+  one explicit repair-loop click authorized directly by Joe after the live
+  excerpt-boundary repair."
+  74)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
