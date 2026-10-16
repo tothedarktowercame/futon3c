@@ -348,3 +348,15 @@ count is the sum of its cells, a row with no call has no memory);
 The renderer was exercised against a minimal DOM shim in node (no browser
 on this host): 13 and 26 column headers, 325 and 598 cells, two row links
 per grid, a column click lights its header.
+
+The not-in-force cell and the store as it stands (2026-10-16, 04:10Z). A
+cell is marked not-in-force when the memory's newest statement had been
+withdrawn before the reply and not said again. Read over the whole store
+(2158 facts, 320 memories), no memory meets that today: partial
+withdrawals exist (blueprint-parallel-lemmas 2 of 18, vsat-upstream-write-access
+5 of 17) but every memory has a statement still in force. So the yellow
+cell cannot appear in live data until a memory is actually withdrawn as a
+whole, and that is a fact about the store, not a gap in the view; it stays
+exercised only by the renderer test. Nothing is being retracted to make
+the cell show. A third consulting turn per seat would add rows of the same
+kinds already shown and is not being requisitioned for its own sake.
