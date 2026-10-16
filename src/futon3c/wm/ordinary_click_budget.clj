@@ -80,8 +80,9 @@
   directly by Joe to codex-68 on 2026-10-16 for the live selected-target
   author-contact proof, plus one further debugger-attached contact-proof click
   authorized directly by Joe after the live-judgement predicate repair. Joe additionally required a designated,
-  freshness-checked WM cast rather than opportunistic roster reuse."
-  69)
+  freshness-checked WM cast rather than opportunistic roster reuse, plus one
+  post-closure-fix verification click authorized directly by Joe."
+  70)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
