@@ -146,6 +146,43 @@ works for the turns that have a fixture (`claude-16-turn-162` today) and
 otherwise shows "Could not load scope data". Giving the scope page a live
 mode over `GET /api/alpha/xiang/scopes` is a follow-up under G2.
 
+## Joe's second look (2026-10-16 22:52Z): features, not a surface
+
+Joe: the page shows what the Emacs stepper already showed, and nothing of
+what 象 can do. He named four things he is not seeing: his turn's intents
+lined up with the intents my reply addresses; Elephant-2000 rewind moves;
+the connected pattern graph growing as turns are mined; patterns and
+cascades stored as 3/2 categories that support inference. Checked the same
+hour, each against the record:
+
+- **Alignment**: built (commit below, same hour, no handoff). Each frame
+  carries `reply`: my final answer to the turn, read as marked paragraphs,
+  each lined up with the sentences whose text contains its bracketed
+  target. The page's ANSWERED section shows it per sentence. On turn 196
+  the two quoted brackets land on s2 and s1 and the ㊟ label on nothing;
+  on turn 193 one of six brackets was a quotation and five were labels,
+  which is the 4% of `xiang_bracket_census.py` seen one turn at a time.
+  This is daxiang_live §9 step 1 running live.
+- **Rewind**: exists in Emacs only (`r`, `R` in `turn-stepper.el`, with
+  the `Agent-Session` trailers). Not on the page; the footer says so.
+- **Graph growth**: not happening. `mined-pattern-graph.json` was last
+  written 2026-10-01T23:18Z, and nothing runs `mined_pattern_graph.py` on
+  a producing event. 象-sonnet's per-turn candidates (1,902 files, four
+  for turn 197) are read into the frame's "proposed" list and go nowhere
+  else: no promotion, no graph node. A rebuild to a dated sibling
+  (`mined-pattern-graph.2026-10-16.json`, canonical file and its pin left
+  alone) added 1,129 edges (551 next-in-session, 422 rejected-beside, 149
+  co-cited, 7 why) and 10 patterns from 1,677 analyses the graph had never
+  seen; giant component 734 → 794 of 1,441.
+- **3/2 categories**: nothing in the record stores a pattern or cascade in
+  that form. The notebook's §7 compilation is "finite and Boolean" and runs
+  only there.
+- Also: the Emacs stepper refreshes only on `g`; nothing refreshes it when
+  a reading lands, so it and the page drift apart until the key is pressed.
+
+The pattern-status wording was Joe's s2 exactly: "no patterns matched" read
+the same whether 象 had finished or not. The page now says which.
+
 ## The gaps, each as a packet
 
 | id | gap | packet (one behaviour, one acceptance) |
@@ -157,6 +194,9 @@ mode over `GET /api/alpha/xiang/scopes` is a follow-up under G2.
 | G5 | Claude and Codex seats leave no tool trace the record can join | `minus40/scripts/ingest_hook.py` (PostToolUse) posts, for each `m40_*` call, a `coordination` evidence row `{event "memory-call", tool, args, reached[]}` with the seat's session id and the call time. `turn_frames.py` already puts every non-operator row in the window into HAPPENED, so the stepper shows it with no further change; G3's `memory` reads these rows too. Acceptance: a claude-16 turn that calls `m40_find` shows the call in HAPPENED and in MEMORY; the use-rate script, given `--agents claude-16`, counts it. |
 | G6 | effect is unmeasured | **Task bank with failing baselines.** About five tasks taken from incidents whose cause was a missing memory (the 09-09 and 09-30 stash incidents; the amend-in-shared-tree, /tmp-worktree and park-deadline incidents are candidates, see `web/scopes/packets/zai-*.md`). For each: run the baseline (no store) first; a task whose baseline passes is dropped and the drop recorded. Then the informed run. Report the pair table, task by task, with the job ids; prose only after the table. Acceptance: at least one task with a failing baseline and a passing informed run, or the finding that none of the five has a failing baseline today, which is itself the result. |
 | G7 | a memory's derivation stops at the frontmatter | **Memory derivation.** Every minus40 version carries the turn id and act id it was written in, taken from the 象 record of the turn whose tool call wrote the file (the hook knows the session and the time; the record store has the turn). The scope view's margin shows, for a memory segment, the operator act it descends from (`derived-from` edge). Acceptance: `m40 history <name>` prints a turn id and act per version written since the change; the margin link opens that turn in the stepper. |
+| G9 | the reply is not lined up with the turn it answers | **done** 2026-10-16 23:0xZ (claude-16): `reply` layer in `turn_frames.py`, ANSWERED on the page; tests in both suites |
+| G10 | the pattern graph does not grow with the mined turns | rebuild `mined_pattern_graph.py` on the producing event (a reading landing), write the delta (edges and patterns added by this turn) on the frame as a GRAPH line; promotion of 象-sonnet candidates is a separate decision for Joe |
+| G11 | the Emacs stepper does not follow new readings | `session-turn-analysis.el` calls `turn-stepper-refresh` on a live stepper buffer when a reading or candidates file lands |
 | G8 | the live page cannot be reached from the zone site | **done** 2026-10-16 07:19Z: `/etc/caddy/Caddyfile` forwards GET `/wip/stepper/api/alpha/xiang/*` and `/wip/stepper/api/alpha/agents` to loopback :7070 with the prefix stripped; the page and the routes share basic_auth realm `xiang` (password `~/.xiang-web-password`), under the page's own prefix so the browser sends the credential preemptively (a route outside the prefix gets a bare 401 from the host's poll-401 handler and the fetch never retries). Nothing else on :7070 is reachable: POST to the routes, `bell`, `parked` all 404. Backup `Caddyfile.before-xiang-20261016-071710`. I had marked this Joe's: it was not blocked, joe has sudo and the file carries a dozen agent-made backups. |
 
 Pieces are small on purpose: one file or one behaviour each, a checkpoint
@@ -190,6 +230,9 @@ useful", and the page should say exactly that.
 | 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
 | 7 | G7 derivation | packet | not started |
 | 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live |
+| 9 | G9 reply alignment | claude-16 | done 2026-10-16 23:0xZ, live on the page |
+| 10 | G10 graph growth per turn | next packet | not started; today's one-off rebuild measured the backlog |
+| 11 | G11 Emacs stepper follows readings | small, claude-16 | not started |
 
 ## Cross-links
 
