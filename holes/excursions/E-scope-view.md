@@ -179,6 +179,16 @@ sub-layers of one plate: model as three layers), the defined-term classes
 6. Freeze `xiang-scope-overlay.el`: marks and jump-to-parent only, no more
    relocation fixes; retire it when the page is up in the REPL's place.
 
+### Adapter two — 2026-10-16
+
+`scripts/scope_view_turn_analysis.py` now turns an interpreted operator-turn
+record and its analysis sidecar into the shared owned-text shape: display cues
+become interpretation-layer spans, while whole-sentence interpretation spans
+remain absent.  The committed `turn-OfO380` spot check has 2 fragments, 3 cues
+drawn, 0 overlapping cues dropped, and 0 unresolved sentences; `[4,16)` lands
+on “too confused” in the source text.  Structural-role relations are retained
+from each later fragment's first cue to its predecessor's first cue.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw

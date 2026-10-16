@@ -11,6 +11,7 @@ const audit = auditScopeData(fixture);
 // fixture has segments; an over-time grid (fixtures/over-time-*.json) has cells.
 const fixtureNames = (await readdir(new URL("./fixtures/", import.meta.url))).filter((n) => n.endsWith(".json"));
 let grids = 0;
+let analyses = 0;
 for (const name of fixtureNames) {
   const data = JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
   if (data.cells) {
@@ -35,8 +36,15 @@ for (const name of fixtureNames) {
     .filter((entry) => !entry.defined && entry.categories.some((c) => c !== "label"))
     .map((entry) => entry.value);
   assert.deepEqual(undefinedKinds, [], `${name}: legend defines every span kind and edge relation`);
+  if (name.startsWith("analysis-")) {
+    analyses += 1;
+    assert.equal(data.segments.length, 1, `${name}: analysis fixture owns one operator segment`);
+    assert.equal(data.layers.length, 1, `${name}: analysis fixture has one interpretation layer`);
+    assert.equal(data.layers[0].id, "analysis");
+  }
 }
 assert(grids >= 2, "both over-time grids are audited");
+assert(analyses >= 1, "at least one turn-analysis fixture is audited");
 assert.deepEqual(audit.invalidSpans, [], "all span ranges are valid code-point ranges");
 assert.deepEqual(audit.stubs, [], "fixture edge destinations resolve");
 assert.equal(audit.legend.filter((entry) => !entry.defined).length, 15,
