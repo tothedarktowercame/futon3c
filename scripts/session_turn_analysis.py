@@ -51,6 +51,15 @@ def acceptance_contract():
             "relation_vocabulary": sorted(ROLES),
             "offset_unit": "unicode-codepoint",
             "sentence_coverage": "exactly-one-entry-per-request-sentence",
+            "fragments": {
+                "container": "array",
+                "range": "inside-the-named-source-sentence",
+                "text": "exact-source-slice-at-start-end",
+                "required_text_fields": ["intent", "rationale"],
+                "target": "nonempty-except-null-is-allowed-for-withdraw",
+                "relations": "nonempty-array-from-relation_vocabulary",
+                "unresolved_sentence": "empty-fragments-requires-nonempty-unresolved_reason",
+            },
             # These are not prompt advice.  They are the limits enforced by
             # validate(), published here so a producer can satisfy the same
             # contract the consumer will later apply.
@@ -70,8 +79,34 @@ def acceptance_contract():
             },
             "intent_label": {"pattern": "^[a-z][a-z0-9_-]*$"},
             "pattern_references": {
+                "container": "array",
                 "must_exist_in": str(LIBRARY),
                 "declaration_must_match_id": True,
+                "each_reference_requires": ["id", "rationale"],
+            },
+            "pattern_rejections": {
+                "container": "array",
+                "must_exist_in": str(LIBRARY),
+                "each_rejection_requires": ["id", "reason"],
+            },
+            "reusable_cues": {
+                "container": "array",
+                "range": "inside-source",
+                "text": "exact-source-slice-at-start-end",
+                "max_words": 8,
+                "max_characters": 80,
+                "newlines_allowed": False,
+                "intent_pattern": "^[a-z][a-z0-9_-]*$",
+                "required_text_fields": ["rationale"],
+            },
+            "rnode_cues": {
+                "container": "array",
+                "invalid_entries": "dropped-and-counted",
+                "range": "inside-source",
+                "text": "exact-source-slice-at-start-end",
+                "node_and_operation": "must-match-authoritative-rnode-contract",
+                "required_text_fields": ["justification"],
+                "intent-and-generic-phrases": "dropped-and-counted",
             },
         },
         "validator": {"id": "wm/session-turn-analysis", "version": 2},

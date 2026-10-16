@@ -37,6 +37,22 @@ class ValidationTest(unittest.TestCase):
         self.assertTrue(
             cues["max_covered_words"]["applies_across_all_fragments_in_sentence"])
 
+    def test_acceptance_contract_discloses_every_validator_boundary(self):
+        response = analysis.acceptance_contract()["response"]
+        self.assertEqual(response["fragments"]["text"],
+                         "exact-source-slice-at-start-end")
+        self.assertEqual(response["fragments"]["range"],
+                         "inside-the-named-source-sentence")
+        self.assertIn("relations", response["fragments"])
+        self.assertEqual(response["pattern_references"]["container"], "array")
+        self.assertEqual(response["pattern_rejections"]["container"], "array")
+        self.assertEqual(response["reusable_cues"]["text"],
+                         "exact-source-slice-at-start-end")
+        self.assertEqual(response["rnode_cues"]["invalid_entries"],
+                         "dropped-and-counted")
+        self.assertEqual(response["display_cues"]["inside_interpretation_span"],
+                         True)
+
     def test_exact_unicode_span_and_real_pattern(self):
         self.request["interpretation_version"] = 3
         self.request["vocabulary_version"] = 3
