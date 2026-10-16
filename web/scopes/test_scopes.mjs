@@ -100,6 +100,14 @@ assert.deepEqual(inactive.spanIds, ["cyan-span"],
   "an inactive layer contributes no span id");
 assert.equal(inactive.color, mixInk([unitSpans[0]], unitLayers),
   "an inactive layer contributes no ink");
+// The boundary of [a, b) against [start, end): a unit beginning exactly at a
+// span's end, or ending exactly at its start, touches it without overlapping.
+assert.deepEqual(inkUnits([{ a: 5, b: 6 }], unitSpans, unitLayers,
+  new Set(["cyan", "magenta"])), [{ color: "", spanIds: [] }],
+"a unit starting one code point past a span end is uncovered");
+assert.deepEqual(inkUnits([{ a: 0, b: 1 }], unitSpans, unitLayers,
+  new Set(["cyan", "magenta"])), [{ color: "", spanIds: [] }],
+"a unit ending where a span starts is uncovered");
 
 console.log(`ok: ${fixture.spans.length} spans, ${fixture.edges.length} edges, ` +
   `${audit.legend.length} legend values (${audit.legend.filter((entry) => !entry.defined).length} undefined)`);
