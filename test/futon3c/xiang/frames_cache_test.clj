@@ -87,3 +87,27 @@
       (deliver release true)
       (is (= 1 @calls))
       (is (= (:version @a) (:version @b) 1)))))
+
+(deftest event-during-first-build-rebuilds-once-after-it
+  ;; Live on 2026-10-16: a turn event landed while the page's first build was
+  ;; running. The rebuild ran alongside it and wrote the first-build promise
+  ;; back into the entry, so every later read came from that frozen promise.
+  (let [calls (atom 0) entered (promise) release (promise)
+        h (harness (fn [_] (let [n (swap! calls inc)]
+                             (when (= n 1) (deliver entered true) @release)
+                             {:ok true :frames [{:n n}]})))
+        a (future (cache/frames! "s" (:opts h)))]
+    @entered
+    (is (false? (cache/invalidate! "s" (:opts h))) "the event is noted, not scheduled")
+    (is (empty? @(:scheduled h)) "nothing runs alongside the first build")
+    (deliver release true)
+    (is (= 1 (:version @a)))
+    (is (false? (:cached @a)))
+    (is (= 1 (count @(:scheduled h))) "the finished build queues the one follow-up")
+    (is (nil? (:building (get @cache/!cache "s"))) "no promise is left on the entry")
+    (run-next! h)
+    (let [c (cache/frames! "s" (:opts h))]
+      (is (= 2 @calls))
+      (is (= 2 (:version c)))
+      (is (true? (:cached c)))
+      (is (nil? (:building (get @cache/!cache "s")))))))
