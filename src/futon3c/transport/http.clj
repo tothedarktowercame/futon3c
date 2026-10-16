@@ -12139,6 +12139,84 @@
             (json-response 404 {:ok false :reason :unknown-turn :turn turn})
             (xiang-refusal e)))))))
 
+;; ---------------------------------------------------------------- frames
+;; GET /api/alpha/xiang/frames?session=&limit=  — the stepper's frames, one
+;; per operator turn of a session, as scripts/turn_frames.py builds them
+;; (evidence rows from futon1b plus the turn records on disk). The Emacs
+;; stepper runs the same script; a browser page cannot, so the JVM runs it
+;; here as a helper process (I-1/I-3), read-only, bounded.
+
+(defn- xiang-frames-script []
+  (or (System/getenv "FUTON3C_TURN_FRAMES")
+      (str (or (System/getenv "FUTON3C_ROOT") (str (System/getProperty "user.home") "/code/futon3c"))
+           "/scripts/turn_frames.py")))
+
+(defn- xiang-frames-argv
+  "The command for SESSION's frames; LIMIT (newest N turns) when given."
+  [script session limit]
+  (cond-> ["python3" "-I" script (str session)]
+    limit (conj "--limit" (str limit))))
+
+(defn- run-turn-frames!
+  "Run ARGV, waiting up to TIMEOUT-S seconds, draining both streams.
+   {:ok true :out s :err s}, or {:ok false :reason :timeout|:script-failed|:exception ...}."
+  [argv timeout-s]
+  (try
+    (let [p (.start (doto (ProcessBuilder. ^java.util.List (vec argv))
+                      (.redirectErrorStream false)))
+          out-f (future (slurp (.getInputStream p) :encoding "UTF-8"))
+          err-f (future (slurp (.getErrorStream p) :encoding "UTF-8"))
+          done? (.waitFor p (long timeout-s) java.util.concurrent.TimeUnit/SECONDS)]
+      (if-not done?
+        (do (.destroyForcibly p)
+            (future-cancel out-f) (future-cancel err-f)
+            {:ok false :reason :timeout :timeout-s timeout-s})
+        (let [out @out-f err @err-f exit (.exitValue p)]
+          (if (zero? exit)
+            {:ok true :out out :err err}
+            {:ok false :reason :script-failed :exit exit
+             :err (str/join "\n" (take-last 5 (str/split-lines (str err))))}))))
+    (catch Exception e
+      {:ok false :reason :exception :err (.getMessage e)})))
+
+(defn- handle-xiang-frames [request _config]
+  (let [params (parse-query-params request)
+        session (get params "session")
+        limit (some-> (get params "limit") parse-long)
+        limit (when limit (max 1 (min 500 limit)))
+        script (xiang-frames-script)]
+    (cond
+      (str/blank? session)
+      (json-response 400 {:ok false :reason :missing-field :field "session"})
+
+      (not (re-matches #"[A-Za-z0-9_.:-]{1,80}" session))
+      (json-response 400 {:ok false :reason :bad-session :session session})
+
+      (not (.isFile (io/file script)))
+      (json-response 503 {:ok false :reason :script-missing :script script})
+
+      :else
+      (let [t0 (System/nanoTime)
+            r (run-turn-frames! (xiang-frames-argv script session limit) 90)
+            elapsed (quot (- (System/nanoTime) t0) 1000000)
+            frames (when (:ok r) (try (json/parse-string (:out r)) (catch Exception _ ::bad)))]
+        (cond
+          (not (:ok r))
+          (json-response (if (= :timeout (:reason r)) 504 502)
+                         (assoc r :session session :elapsed-ms elapsed))
+
+          (or (= ::bad frames) (not (sequential? frames)))
+          (json-response 502 {:ok false :reason :bad-json :session session :elapsed-ms elapsed
+                              :stderr (some-> (:err r) str/trim not-empty)})
+
+          :else
+          (json-response 200 {:ok true :session session :limit limit
+                              :count (count frames) :frames frames
+                              :elapsed-ms elapsed
+                              ;; turn_frames.py warns on stderr when futon1b
+                              ;; did not answer and it fell back to files alone.
+                              :warnings (some-> (:err r) str/trim not-empty)}))))))
+
 (defn- handle-xiang
   "Routes under /api/alpha/xiang/. Returns a response, or nil for an unknown path."
   [request config]
@@ -12162,6 +12240,9 @@
 
       (and (= :get method) (= "/api/alpha/xiang/scopes" uri))
       (handle-xiang-scopes request config)
+
+      (and (= :get method) (= "/api/alpha/xiang/frames" uri))
+      (handle-xiang-frames request config)
 
       (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
       (let [params (parse-query-params request)]
