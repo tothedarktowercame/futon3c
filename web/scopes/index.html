@@ -39,7 +39,8 @@
     import { renderScopes } from "./scopes.js";
     const host = document.querySelector("#scopes");
     try {
-      const response = await fetch("./fixtures/claude-16-turn-162.json");
+      const turn = new URLSearchParams(location.search).get("turn") || "claude-16-turn-162";
+      const response = await fetch(`./fixtures/${turn}.json`);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       renderScopes(await response.json(), host);
     } catch (error) {
