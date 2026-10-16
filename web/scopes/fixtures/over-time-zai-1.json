@@ -1,0 +1,581 @@
+{
+ "agent": "zai-1",
+ "session": "zai-c02b13ca-b1db-4357-8f76-b6f9382b7a1f",
+ "rows": [
+  {
+   "turn": "invoke-1791561191498-676-25d844d0",
+   "record": "turn-JH9Qtk",
+   "at": "2026-10-09T15:53:11Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791569995321-748-2f176ba7",
+   "record": "turn-795aR2",
+   "at": "2026-10-09T18:19:55Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791651229181-2448-40f03655",
+   "record": "turn-9mNCTf",
+   "at": "2026-10-10T16:53:49Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791667809397-2990-d4a1287c",
+   "record": "turn-BCnlvy",
+   "at": "2026-10-10T21:30:09Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791683460797-3710-425715c5",
+   "record": "turn-6xo5sF",
+   "at": "2026-10-11T01:51:00Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791714222214-5041-c43bca69",
+   "record": "turn-wrHxPe",
+   "at": "2026-10-11T10:23:42Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791717153457-5212-bbf7ae38",
+   "record": "turn-4nLNzj",
+   "at": "2026-10-11T11:12:33Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791739983477-5687-5b6be0f4",
+   "record": "turn-RFJKcD",
+   "at": "2026-10-11T17:33:03Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791741301272-5714-271747e0",
+   "record": "turn-d3vfvE",
+   "at": "2026-10-11T17:55:01Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791779970130-6328-f7848399",
+   "record": "turn-kufcPO",
+   "at": "2026-10-12T04:39:30Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791817337265-7181-7f253626",
+   "record": "turn-3mzZ6Y",
+   "at": "2026-10-12T15:02:17Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791820508372-7308-6eac3e1c",
+   "record": "turn-iXqQfO",
+   "at": "2026-10-12T15:55:08Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791821921183-7381-b3dff44b",
+   "record": "turn-Tk2nni",
+   "at": "2026-10-12T16:18:41Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791822782050-7412-082e8b1c",
+   "record": "turn-aACyj4",
+   "at": "2026-10-12T16:33:02Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791835679042-7827-1e9d017b",
+   "record": "turn-Qk4FFn",
+   "at": "2026-10-12T20:07:59Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791836764003-7853-a9ef1321",
+   "record": "turn-jQi6BK",
+   "at": "2026-10-12T20:26:04Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1791854010784-8137-2b90f7d4",
+   "record": "turn-oNiwAX",
+   "at": "2026-10-13T01:13:30Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792003840456-12198-00dab8d9",
+   "record": "turn-HErqpC",
+   "at": "2026-10-14T18:50:40Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792017917877-12594-f57d8891",
+   "record": "turn-QMWOnl",
+   "at": "2026-10-14T22:45:18Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792018649076-12610-722e6eab",
+   "record": "turn-1czDlM",
+   "at": "2026-10-14T22:57:29Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792037417554-13175-128a8fc5",
+   "record": "turn-FteyVo",
+   "at": "2026-10-15T04:10:17Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792084726827-14360-ebce8255",
+   "record": "turn-SDzG6w",
+   "at": "2026-10-15T17:18:46Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792092217699-14482-aa007b77",
+   "record": "turn-tNcgT2",
+   "at": "2026-10-15T19:23:38Z",
+   "calls": [],
+   "memories": 0
+  },
+  {
+   "turn": "invoke-1792122022238-15098-437a4a50",
+   "record": "turn-DJMDLo",
+   "at": "2026-10-16T03:40:22Z",
+   "calls": [
+    {
+     "tool": "m40_find",
+     "args": "{:terms [\"tmp\" \"worktrees\"]}",
+     "round": 1,
+     "error": false,
+     "truncated": false
+    },
+    {
+     "tool": "m40_find",
+     "args": "{:terms [\"zone-health\"]}",
+     "round": 1,
+     "error": false,
+     "truncated": false
+    },
+    {
+     "tool": "m40_state",
+     "args": "{:date \"2026-10-16\", :terms [\"tmp\"]}",
+     "round": 1,
+     "error": false,
+     "truncated": true
+    }
+   ],
+   "memories": 4,
+   "reply_at": "2026-10-16T03:40:55Z",
+   "reply_chars": 1741
+  }
+ ],
+ "columns": [
+  {
+   "memory": "cc:-home-joe/blueprint-parallel-lemmas",
+   "name": "blueprint-parallel-lemmas",
+   "project": "cc:-home-joe",
+   "facts": 18,
+   "events": [
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "**How to apply:** assign seats per lemma, not per problem (round 1 slip serialised pairs). Split by shared dependency; pass a sibling lemma's conclusion as a hypothesis to keep pieces parallel (checker rejects sorryAx). Large lemmas came back PARTIAL with nothing banked — split them myself into 4–7 pieces; the brief now requires partials to bank `NAME_aux_*` helpers. a96A07 needs a Jordan-curve program. Records: ~/notes/packets/{blueprints,lemmas}/."
+    },
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "Review every lemma's truth myself, and send statement changes to read-only outside graders before admitting (STATEMENTS.json). Reviews caught m98J02 (false, non-hypoelliptic), m99J06 (needless narrowing), m95A03 (IsMinOn has no membership — I missed it, a grader caught it)."
+    },
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "\"Joe-endorsed method (10-13) for stuck apm-lean problems — blueprint, outside grade, then one seat per lemma with a mechanical checker; tools and pitfalls\""
+    },
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "**Why:** the solve loop retried whole problems (m99A06: 6 failed attempts; done in 2 short lemma jobs). Round 1 closed m99A06, a00J04, m96J02 within ~2 h."
+    },
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "2026-10-13 Joe: \"this seemed quite an effective approach\". For set-aside apm-lean problems:"
+    },
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "One seat per lemma (lemma-1..8, gpt-5.6-sol), worktree ~/worktrees/apm-lean/lemmas: files holes/labs/lemmas/P/NAME.lean with SEAT AREA markers; ~/notes/packets/lemmas/lemmatool.py {make,check,splice} and land.sh. check = outside text identical to creation-time template, statement unchanged, compiles, no sorryAx."
+    },
+    {
+     "at": "2026-10-13T05:10:19.371Z",
+     "event": "said",
+     "text": "Blueprint (Codex seat blueprint-1, worktree ~/worktrees/apm-lean/blueprints → merged): Blueprint.lean = registered theorem proved from standalone `sorry` lemmas; BLUEPRINT.md with truth checks. Output in holes/labs/blueprints/P/ (holes/labs/solve-loop/ is gitignored)."
+    },
+    {
+     "at": "2026-10-13T05:14:59.996Z",
+     "event": "unsaid",
+     "text": "**How to apply:** assign seats per lemma, not per problem (round 1 slip serialised pairs). Split by shared dependency; pass a sibling lemma's conclusion as a hypothesis to keep pieces parallel (checker rejects sorryAx). Large lemmas came back PARTIAL with nothing banked — split them myself into 4–7 pieces; the brief now requires partials to bank `NAME_aux_*` helpers. a96A07 needs a Jordan-curve program. Records: ~/notes/packets/{blueprints,lemmas}/."
+    },
+    {
+     "at": "2026-10-13T05:14:59.996Z",
+     "event": "said",
+     "text": "**How to apply:** Always run the checker: a seat reported \"compiles\" on m99A02 directional_hasDerivAt and it did not (one `rw` failed on `innerSL`; fixed by `erw [RCLike.inner_apply]`). assign seats per lemma, not per problem (round 1 slip serialised pairs). Split by shared dependency; pass a sibling lemma's conclusion as a hypothesis to keep pieces parallel (checker rejects sorryAx). Large lemmas came back PARTIAL with nothing banked — split them myself into 4–7 pieces; the brief now requires partials to bank `NAME_aux_*` helpers. a96A07 needs a Jordan-curve program. Records: ~/notes/packets/{blueprints,lemmas}/."
+    },
+    {
+     "at": "2026-10-13T14:13:28.152Z",
+     "event": "said",
+     "text": "Topology works too (Joe asked for it; 10-13 round 3): a97J08 closed in about 3 h after I re-split blueprint-1's v2 grid plan into 15 parallel leaves. Every partial got split again, giving about 33 leaves in total. Re-check blueprint splits for vacuous or overloaded lemmas: v2's G3 restated its own hypothesis, so G2 carried the whole Jordan argument, and a missing margin made G1 false. Partials' banked helpers are NOT checked. Four \"compiles\" claims were false (aux_expand, aux_ne_zero, a `change` step, the m99A02 rw). Always compile the partial file before splicing it."
+    },
+    {
+     "at": "2026-10-13T21:18:46.285Z",
+     "event": "said",
+     "text": "Easiest-first closure (Joe 10-13 evening, \"work through from easiest to hardest\"): LIBRARY lemmas estimated ≤ ~900 lines are not left to the loops. A blueprint seat splits them into leaves with ~/notes/packets/blueprints/split-next.sh SEAT waveN (split-P.md = library-split-preamble.md + context). Idle lemma seats also take blueprint and split packets; take them out of idle-seats.txt first. Plan: ~/notes/closer/CLOSURE-PLAN-2026-10-13.md; wave log in QUEUE.md."
+    },
+    {
+     "at": "2026-10-13T22:20:23.234Z",
+     "event": "unsaid",
+     "text": "Easiest-first closure (Joe 10-13 evening, \"work through from easiest to hardest\"): LIBRARY lemmas estimated ≤ ~900 lines are not left to the loops. A blueprint seat splits them into leaves with ~/notes/packets/blueprints/split-next.sh SEAT waveN (split-P.md = library-split-preamble.md + context). Idle lemma seats also take blueprint and split packets; take them out of idle-seats.txt first. Plan: ~/notes/closer/CLOSURE-PLAN-2026-10-13.md; wave log in QUEUE.md."
+    },
+    {
+     "at": "2026-10-13T22:20:23.234Z",
+     "event": "said",
+     "text": "Easiest-first closure (Joe 10-13 evening, \"work through from easiest to hardest\"): LIBRARY lemmas estimated ≤ ~900 lines are not left to the loops. A blueprint seat splits them into leaves with ~/notes/packets/blueprints/split-next.sh SEAT waveN (split-P.md = library-split-preamble.md + context). Idle lemma seats also take blueprint and split packets; take them out of idle-seats.txt first. Plan: ~/notes/closer/CLOSURE-PLAN-2026-10-13.md; wave log in QUEUE.md. Restating a blueprint lemma while a seat is working on the old version: the seat's file passes `check` against its creation-time template, but the splice breaks Blueprint.lean (t96A08 transfer, 10-13). land.sh now compiles the blueprint after each splice and reverts if it fails (exit 2). Requeue such lemmas with the old proof under partials/ as a starting point."
+    },
+    {
+     "at": "2026-10-14T02:28:25.495Z",
+     "event": "said",
+     "text": "Compile-gate pitfall (10-14): `lean ... | grep -A6 error | head && git commit` commits even on error (head exits 0). Write output to a file and test `grep -c \": error\"` = 0 before committing; and gate `lemmatool make` on the bank commit succeeding (a failed bank + make overwrote a seat's partial work)."
+    },
+    {
+     "at": "2026-10-14T18:28:49.834Z",
+     "event": "said",
+     "text": "Design trap (10-14, t02A01): a blueprint `def` whose body uses a sorry'd lemma (e.g. a subtype membership proof) makes every leaf about that def carry sorryAx, so the checker rejects proved leaves. Prove such membership facts inline in the def, or land that lemma first and reland the rest."
+    },
+    {
+     "at": "2026-10-14T23:28:10.536Z",
+     "event": "said",
+     "text": "Seat compile claims are unreliable (10-14, Fmoves zipCone_continuous, zip_halfDisk_cone): a \"PROVED, compiles\" or \"sorryAx remains\" report can hide plain compile errors. Lean marks a declaration that fails to elaborate as sorryAx. The usual causes are swapped argument order in add_le_add_left/right, nonexistent names (Filter.nhds, ContinuousAt.subtype_mk), and positivity failing on a bound it cannot see is nonnegative. land.sh catches it. When the argument is sound, fix the names myself (minutes) rather than redispatching."
+    },
+    {
+     "at": "2026-10-15T00:23:50.621Z",
+     "event": "said",
+     "text": "Own slip 10-14 (Fmoves 94c052f64): I banked a seat's \"proved\" helper and committed without checking the error count. The helper did not compile in the blueprint. Always gate blueprint commits: `[ \"$(grep -c ': error' out)\" = 0 ] && git commit`. When reverting, use the explicit pre-commit hash, never HEAD~1: next.sh commits seat files to the same branch in between, so HEAD~1 was my own bad commit."
+    },
+    {
+     "at": "2026-10-15T04:38:10.022Z",
+     "event": "said",
+     "text": "Disk load (Joe, 2026-10-15): run few seats. `~/notes/packets/lemmas/SEATS` lists the seats next.sh may feed (3 to start); `PAUSE` stops all dispatch. Every Lean compile, in seats and in land.sh, goes through `flock /tmp/apm-lean-compile.lock`, so only one runs at a time."
+    },
+    {
+     "at": "2026-10-15T06:47:45.582Z",
+     "event": "said",
+     "text": "Coordinate trap (t99A01, 10-15, three times in one problem): when leaves state equations \"in coordinates\", the coordinate isos must be canonical defs, built from the witnesses passed in as parameters. Never `∃ e, …` in one leaf and `(e : …)` arbitrary in another. Seats catch the resulting false or vacuous leaves; sign flips of an arbitrary H₀ ≅ ℤ are the typical counterexample."
+    },
+    {
+     "at": "2026-10-15T13:39:30.857Z",
+     "event": "said",
+     "text": "Registry trap (10-15): `statement-registry.py admit` fingerprints the COMMITTED file (HEAD), not the working tree. Commit the statement change first, then admit, then commit STATEMENTS.json; an admit before the commit silently registers the old statement (m01J04)."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe/invoke-ledger-test-clobber",
+   "name": "invoke-ledger-test-clobber",
+   "project": "cc:-home-joe",
+   "facts": 4,
+   "events": [
+    {
+     "at": "2026-10-12T05:26:57.308Z",
+     "event": "said",
+     "text": "futon3c test JVMs default to /tmp/futon3c-invoke-jobs.edn, the live Agency ledger path; run tests with FUTON3C_INVOKE_JOBS_FILE set to a temp path."
+    },
+    {
+     "at": "2026-10-12T05:29:05.776Z",
+     "event": "said",
+     "text": "**Why:** with whole-file rewrites the clobber healed itself in 1.5 s; with append-only journals it doesn't, so a stray writer now matters."
+    },
+    {
+     "at": "2026-10-12T05:29:05.776Z",
+     "event": "said",
+     "text": "The live Agency's invoke ledger uses the default path `/tmp/futon3c-invoke-jobs.edn` (FUTON3C_INVOKE_JOBS_FILE unset), and so do test JVMs. On 2026-10-12 05:02 one of my suite runs left a 102-byte empty ledger in place of the live 99 MB snapshot. Under the journal writer that persisted: a restart would have loaded an empty ledger and refused it. I repaired it from the live JVM (forced snapshot), and futon3c f7f8dff6 makes both journal writers re-snapshot when the snapshot's [file-key size mtime] changes underneath them."
+    },
+    {
+     "at": "2026-10-12T05:29:05.776Z",
+     "event": "said",
+     "text": "**How to apply:** since futon3c cd33eebd the :test aliases redirect these defaults themselves (-Dfuton3c.test-run=true); for other runners, still run tests with `FUTON3C_INVOKE_JOBS_FILE=$(mktemp -d)/i.edn FUTON3C_DURABLE_QUEUE_PATH=$(mktemp -d)/q.edn` (pass them with `systemd-run -E`). The lasting fix, moving the live ledger out of /tmp via the unit's environment, is Joe's call at a restart. Related: [[proc-io-includes-reaped-children]], [[slow-tagged-tests-hide]]."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe/topology-loop-restart",
+   "name": "topology-loop-restart",
+   "project": "cc:-home-joe",
+   "facts": 16,
+   "events": [
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "The 09-27 statement-fidelity hold was answered by the 09-28 statement-registry gate (`scripts/statement-registry.py check`). Joe restarted the loops after that. Related: [[codex-default-model-astra]], [[zone-1-1-rebuild]]."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "Lemma DAG (10-10, ac733bac, Joe: \"previous loops maintained a DAG\"): ledger rows of kind :lemma, :backlog/:banked, edges in :depends-on; receipts' :missing-theorems/:lemmas upsert by name; PASS banks :implements-lemma; `build_step.bb priorities LEDGER` ranks; `add-lemmas LEDGER FILE` for owner edits. Editing tracked lab files makes the canonical tree dirty and the loops wait: `touch ~/topo-watch/hold` (silences the watch 15 min), stop them, edit, commit, relaunch."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "Signature-approval trap (10-10, ddbcd691): seats STOPped twice on rows whose acceptance listed supporting declarations in prose (\"would invent the public API\", \"no owner-approved signatures\"). Ten rows went to needs-owner and nothing was built. The prompts now say only the registered statement and the fixture's interface-axiom types are frozen; the author designs everything else. If needs-owner rows pile up, read their STOP reasons before refilling."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "**Before launching, register topo-1..8 yourself** (`POST /api/alpha/agents/restore`, with `\"model\":\"gpt-5.6-sol\"`). If they are missing, both loops auto-register at the same moment and collapse onto topo-1/topo-2: one seat ends up as owner, author and probe for both loops. Agency forgets seats when it restarts."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "The loops are `apm-lean/holes/labs/topology-contract/topology-supervisor.sh`, run as transient user units `topo1` (worklist.edn, runs/) and `topo2` (worklist2.edn, runs2/) in `futon-agents.slice`. topo1 seats: owner topo-1, author topo-2, review topo-3, probe/strategy topo-4, repair topo-2. topo2 seats: topo-5/6/7/8, repair topo-6. Escalations go to claude-18, and `TOPOLOGY_SEAT_MODEL=gpt-5.6-sol`. The full `systemd-run` line is in this session's transcript (2026-10-10, claude-14). Stop with `systemctl --user stop topo1 topo2`; TERM keeps the in-flight job for reclaim."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "Fixed 10-10 (apm-lean c95abe26, dc10d9f7):"
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "topo3 (10-10, 33ecc2a1): third HEAVY loop, unit `topo3`, `worklist3.edn`, `runs3/`, seats topo-9 owner, topo-10 author/repair, topo-11 review, topo-12 probe/strategy; 19 registered unassigned HEAVY problems. Register topo-1..12 before launch. The watch covers all three."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "When Agency has forgotten an in-flight job (it answers 404), the loop applies the local `runs*/jobs/<job>.result.txt` if there is one; otherwise it moves the record into `orphaned/` itself."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "The loops run out of work: a strategy checkpoint can answer \"terminal\", meaning no eligible row under stop-after-two, and the loop then PAUSES and exits 0. Nothing restarts it. On 10-10 I started `~/topo-watch/overnight-watch.sh` under bg.py; it bells claude-14 (`--mode work`) when a unit is inactive or silent for 75 min. Progress numbers come from `~/topo-watch/check.py` (open/closed by real sorry count)."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "\"How to restart Joe's two topology formalization loops (topo1/topo2 systemd units, seats topo-1..8 on sol) and the three faults hit on 2026-10-10\""
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "Joe 10-10 (e71e1cec): \"they need to extend mathlib not stop.\" The signature rule was only the surface; the real STOPs named theorems Mathlib lacks. Authors now prove missing theorems in scope; unfinished ones become lemma nodes and may not go terminal while it has unbuilt entries. Restrategising is valid without an outside seat."
+    },
+    {
+     "at": "2026-10-11T01:15:14.442Z",
+     "event": "said",
+     "text": "About 750 fixtures lived in /tmp and were lost in zone's rebuild, so the ledger refused to validate. Fixtures are now copied to `fixture-store/<sha256>` when a receipt is applied, and PASS rows that lost their /tmp file are counted rather than fatal."
+    },
+    {
+     "at": "2026-10-12T05:05:18.327Z",
+     "event": "said",
+     "text": "10-11 closer work with codex-71: notes in ~/notes/closer/ (reports, pattern-2026-10-11.md). Route audits of 55 problems in 10 batches: audits/send-batch.sh N, audits/ingest.sh P... (stops loops, add-lemmas+sync-banked, commits, relaunches); relaunch-loops.sh relaunches only inactive units. Foundation programs (38a2a5ac6): rows with :program true continue across stops (max 10); point-wedge van Kampen in worklist.edn, deck-group pi1 in worklist3.edn."
+    },
+    {
+     "at": "2026-10-12T05:05:18.327Z",
+     "event": "said",
+     "text": "`:stopped` state (10-12, 46edc9d54): a PASS on a STOP used to set `:done`, which unblocked dependents and banked the elected lemma. 190 rows were affected, and 10 lemmas were banked with no declaration. Joe had noted it before; on 10-11 I only patched the priorities report. Now a reviewed STOP becomes `:stopped`; worklist_check rejects done-with-STOP. When judging \"banked\", check that the declaration exists, not just the ledger state."
+    },
+    {
+     "at": "2026-10-13T19:18:47.243Z",
+     "event": "said",
+     "text": "Blueprint LIBRARY programs (10-13, cc49d21eb, Joe approved; script ~/notes/closer/programs-2026-10-13.bb): closure programs start from holes/labs/blueprints/P/Blueprint.lean and build only its LIBRARY lemmas. topo1 van Kampen = t99J01's only sorry. topo2: close t94A08, polygon-surface-homology foundation, close t97A01 and t94J09 (blocked on it), close t92J06. topo3: close t93J03, close t99J05, collared-connected-sum-homology foundation, close t98A02 and t00A01 (blocked on it). Rows depending on an unfinished row must start :blocked (validator). `statement-registry.py admit` fingerprints HEAD: commit Main.lean BEFORE admitting, or it silently re-pins the old statement."
+    },
+    {
+     "at": "2026-10-13T20:19:58.640Z",
+     "event": "said",
+     "text": "Batch 4 (10-13): closure programs e0d0d5a74 (script programs-2026-10-13b.bb), ranking ~/notes/packets/blueprints/FOUNDATION-RANKING.md. Review rule 633326e39: hypotheses of a registered statement that problem.md states may go unused (close-t93j03 went needs-owner on the coverage gate). needs-owner rows asking for `:acceptance :mode :post-build-export-check` just need it added (b41cb4da6). Registry: `admit` refuses narrower-acceptable without --prelim-defect."
+    }
+   ]
+  },
+  {
+   "memory": "cc:-home-joe/vsat-upstream-write-access",
+   "name": "vsat-upstream-write-access",
+   "project": "cc:-home-joe",
+   "facts": 17,
+   "events": [
+    {
+     "at": "2026-10-15T22:02:22.630Z",
+     "event": "said",
+     "text": "Merging to Brookes main does NOT deploy vsatool. Deploys are manual, done by Rich (Heroku releases v29–v33). Main sat 11 commits ahead of the live app from May onward without any auto-deploy."
+    },
+    {
+     "at": "2026-10-15T22:02:22.630Z",
+     "event": "said",
+     "text": "Checked 2026-10-15 with a dry-run push: `github-holtz:BrookesUniversityLearningResources/vsat.git` accepts pushes (holtzermann17 = write). `git@github.com:` authenticates as tothedarktowercame, which only has read access. `gh` is logged in only as tothedarktowercame, so `gh pr merge` fails. Merge via git over the github-holtz alias instead, or ask Joe to `gh auth login` as holtzermann17."
+    },
+    {
+     "at": "2026-10-15T22:02:22.630Z",
+     "event": "said",
+     "text": "Joe can push to BrookesUniversityLearningResources/vsat main as holtzermann17 (SSH alias github-holtz); tothedarktowercame and the gh CLI login are read-only there."
+    },
+    {
+     "at": "2026-10-15T22:02:22.630Z",
+     "event": "said",
+     "text": "Joe 10-15: approved PRs left unmerged for months are his to merge if Rich isn't merging them."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "unsaid",
+     "text": "Merging to Brookes main does NOT deploy vsatool. Deploys are manual, done by Rich (Heroku releases v29–v33). Main sat 11 commits ahead of the live app from May onward without any auto-deploy."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "unsaid",
+     "text": "Joe can push to BrookesUniversityLearningResources/vsat main as holtzermann17 (SSH alias github-holtz); tothedarktowercame and the gh CLI login are read-only there."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "said",
+     "text": "Integration tests need Docker; joe is not in the docker group and there's no setfacl/socat, so run them via `sudo -n env PATH=$PATH HOME=<tmp> npm run test:integration`, then chown the tree back and remove /tmp/tsx-0."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "said",
+     "text": "Brookes main has a ruleset: required_linear_history, non_fast_forward, deletion. `git push --dry-run` does NOT check rulesets, so it passed and the real merge-commit push was refused (GH013). To merge a PR: rebase its fork branch onto main, force-push the fork branch (with lease), then push that same commit to main as a fast-forward. GitHub marks the PR MERGED automatically. Done this way for #303/#305/#308/#304 on 2026-10-15."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "said",
+     "text": "Push to Brookes vsat main as holtzermann17 via github-holtz; main requires LINEAR history (no merge commits); Joe's heroku login can deploy vsatool."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "said",
+     "text": "Merging to Brookes main does NOT deploy. Production is the Heroku app `vsatool` (domain vsatool-d2dd85389e42.herokuapp.com); `vsat-dev` is the authoring-3d dev app. Joe's heroku login (joseph.corneli@hyperreal.enterprises) is admin on both. Deploy = `git push https://git.heroku.com/vsatool.git <sha>:refs/heads/main`; `npm start` runs Kysely migrations on boot. 2026-10-15: v33 (Rich, May, 0d2869b5) -> v34 (f64280b), backup b003 taken first, two additive migrations (storyLink/pilot tables) applied. Rollback = `heroku rollback v33 -a vsatool` (extra tables are harmless to old code) plus `pg:backups:restore b003` only if the data needs reverting."
+    },
+    {
+     "at": "2026-10-15T22:11:37.092Z",
+     "event": "said",
+     "text": "Prod has zero pilots (anthologies), so /story/vsatlatarium renders empty until some exist; contrib/live-demo-anthologies.sql is the seed."
+    },
+    {
+     "at": "2026-10-15T22:14:53.257Z",
+     "event": "unsaid",
+     "text": "Prod has zero pilots (anthologies), so /story/vsatlatarium renders empty until some exist; contrib/live-demo-anthologies.sql is the seed."
+    },
+    {
+     "at": "2026-10-15T22:14:53.257Z",
+     "event": "said",
+     "text": "Prod (v34) predates the pilot->anthology rename: tables are `pilot`/`pilot_story`, UI is /author/pilot (login-gated, NOT steward-gated, not linked from nav). contrib/live-demo-anthologies.sql targets `anthology` and would fail on prod, and Joe 10-15 rejected the demo anthologies anyway: Eric (Brookes) creates real ones via /author/pilot; we offered to build cohort pilots by date. Caveat: story_published.created_at puts 74 stories on 2025-09-07 (an import date), so dates only separate cohorts from 2026-02 onward."
+    },
+    {
+     "at": "2026-10-15T22:21:18.173Z",
+     "event": "said",
+     "text": "2026-10-15: wiki Quickstart page (vsat.wiki, pushed via github-holtz, branch master) documents 2D stories, Remote, anthologies as on `authoring-3d` (= vsat-dev heroku main, 606cd39), plus a section on prod's /author/pilot. Prod v34 = Brookes main f64280b has NO 2D/Remote. Joe: keep the prod herokuapp URL out of public docs (Eric wants it private for now). Joe dislikes prod having no anthology delete; the fix (steward-gated, edit/delete) is on authoring-3d, undeployed."
+    },
+    {
+     "at": "2026-10-15T22:59:09.130Z",
+     "event": "said",
+     "text": "2026-10-15 (later): at Joe's request, created prod pilot id 1 \"Latest stories (since July 2026)\", status active, start_at 2026-07-01, holding the 7 story_published rows created on or after 2026-07-01 (1297, 1363, 157, 1330, 1209, 1364, 1365). Inserted via SQL; backup b004 was taken first. This is demo content for Eric."
+    },
+    {
+     "at": "2026-10-15T23:06:36.475Z",
+     "event": "unsaid",
+     "text": "Push to Brookes vsat main as holtzermann17 via github-holtz; main requires LINEAR history (no merge commits); Joe's heroku login can deploy vsatool."
+    },
+    {
+     "at": "2026-10-15T23:06:36.475Z",
+     "event": "said",
+     "text": "Push to Brookes vsat main as holtzermann17 via github-holtz; main requires LINEAR history; prod vsatool now runs release/2d-remote-anthology (v36) with 3D authoring flagged off."
+    },
+    {
+     "at": "2026-10-15T23:06:36.475Z",
+     "event": "said",
+     "text": "2026-10-15 (later still): Joe wanted prod on the NEW code (2D, Remote, anthologies), minus authoring-in-3D. I had misread that as \"add demo data to old prod\". Deployed `release/2d-remote-anthology` a545004 (= authoring-3d 606cd39 + the #301 config bump + a `VSAT_AUTHORING_3D` flag, default off, that hides the placement keys, focus boards and voice) to vsatool as v36. Backup b005 taken first. The deploy push was forced (not a fast-forward from f64280b), and these commits are NOT on Brookes main. All six migrations ran (pilot→anthology rename, among others). They were rehearsed first on a local restore of b004. Pilot 1 survived as anthology 1. Set STEWARD_EMAILS=ewhite@brookes.ac.uk,eric.b.white@gmail.com,holtzermann17@gmail.com (v35), because anthology management is now steward-gated. Rollback: the rename breaks v34 code, so `heroku rollback v34` needs `pg:backups:restore b005` with it."
+    },
+    {
+     "at": "2026-10-15T23:10:39.396Z",
+     "event": "unsaid",
+     "text": "Push to Brookes vsat main as holtzermann17 via github-holtz; main requires LINEAR history; prod vsatool now runs release/2d-remote-anthology (v36) with 3D authoring flagged off."
+    },
+    {
+     "at": "2026-10-15T23:10:39.396Z",
+     "event": "said",
+     "text": "Push to Brookes vsat main as holtzermann17 via github-holtz; main requires LINEAR history; prod vsatool v37 = Brookes main 759fb30 with 3D authoring flagged off; always deploy prod FROM Brookes main."
+    },
+    {
+     "at": "2026-10-15T23:10:39.396Z",
+     "event": "said",
+     "text": "2026-10-15 (correction): Joe objected to v36. He had asked for the material to go onto Brookes main and for prod to deploy FROM main, not a force-push of a fork-only branch. Fixed: rebased the release onto Brookes main f64280b (clean; same files as a545004), fast-forwarded Brookes main to 759fb30, took backup b006, deployed 759fb30 as v37 (no migrations ran). The Heroku push still had to be forced (lease on a545004), because v36 had put an off-main commit there. Rule: prod's heroku main must always be a commit that is on Brookes main. Land it on main first, then deploy that sha. Rollback to pre-anthology code: `heroku rollback v34` plus restore b005."
+    },
+    {
+     "at": "2026-10-15T23:15:56.140Z",
+     "event": "said",
+     "text": "2026-10-15 (end): wiki Quickstart updated to ab51191. It now describes prod v37 as-is: the \"Which version?\" note and the old pilots section are gone, and it still has no site URL. Prod has exactly one anthology (id 1, 7 stories), which is the one Joe pointed Eric at."
+    }
+   ]
+  }
+ ],
+ "cells": {
+  "invoke-1792122022238-15098-437a4a50|cc:-home-joe/vsat-upstream-write-access": {
+   "level": "reached",
+   "calls": [
+    "m40_state r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122022238-15098-437a4a50|cc:-home-joe/blueprint-parallel-lemmas": {
+   "level": "reached",
+   "calls": [
+    "m40_state r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122022238-15098-437a4a50|cc:-home-joe/invoke-ledger-test-clobber": {
+   "level": "reached",
+   "calls": [
+    "m40_state r1"
+   ],
+   "status": "in-force"
+  },
+  "invoke-1792122022238-15098-437a4a50|cc:-home-joe/topology-loop-restart": {
+   "level": "reached",
+   "calls": [
+    "m40_state r1"
+   ],
+   "status": "in-force"
+  }
+ },
+ "legend": {
+  "retrieved-only": "named by m40_find in this turn; the statements were not read",
+  "reached": "its statements were returned by a recorded call in this turn",
+  "echoed": "the reply shares a run of five words, or the memory's name, with it",
+  "in-force": "the memory was said before the turn and not withdrawn by then",
+  "retracted-since": "the memory was in force at the turn but has since stopped being said",
+  "not-yet-said": "the memory was first said after the turn",
+  "not-in-force": "the memory had stopped being said before the turn"
+ }
+}
