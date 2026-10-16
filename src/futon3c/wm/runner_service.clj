@@ -114,7 +114,16 @@
 (defn status
   "Return the current click service status."
   []
-  (assoc @!status :serving-runner-code
+  (assoc @!status
+         :ordinary-click-budget
+         (try
+           ((requiring-resolve 'futon3c.wm.ordinary-click-budget/availability))
+           (catch Throwable throwable
+             {:status :unavailable
+              :reason :budget-status-failed
+              :error (or (ex-message throwable)
+                         (.getName (class throwable))) }))
+         :serving-runner-code
          (try
            (if-let [status-fn (*resolve-var* 'futon3c.wm.code-identity/status)]
              (status-fn)
