@@ -1,10 +1,22 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { auditScopeData, mixInk, splitPieces } from "./scopes.js";
 
 const fixture = JSON.parse(await readFile(
   new URL("./fixtures/claude-16-turn-162.json", import.meta.url), "utf8"));
 const audit = auditScopeData(fixture);
+
+// Every fixture the page can serve resolves its edges and legend.
+for (const name of (await readdir(new URL("./fixtures/", import.meta.url))).filter((n) => n.endsWith(".json"))) {
+  const data = JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
+  const a = auditScopeData(data);
+  assert.deepEqual(a.invalidSpans, [], `${name}: spans lie inside their segments`);
+  assert.deepEqual(a.stubs, [], `${name}: edge destinations resolve`);
+  const undefinedKinds = a.legend
+    .filter((entry) => !entry.defined && entry.categories.some((c) => c !== "label"))
+    .map((entry) => entry.value);
+  assert.deepEqual(undefinedKinds, [], `${name}: legend defines every span kind and edge relation`);
+}
 assert.deepEqual(audit.invalidSpans, [], "all span ranges are valid code-point ranges");
 assert.deepEqual(audit.stubs, [], "fixture edge destinations resolve");
 assert.equal(audit.legend.filter((entry) => !entry.defined).length, 15,

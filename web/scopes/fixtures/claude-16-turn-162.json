@@ -35,73 +35,73 @@
    "text": "Single-Focus Amidst Agenda Saturation"
   },
   {
-   "id": "m40:hx-m40-fact-a9885794222a66499490",
+   "id": "near:hx-m40-fact-a9885794222a66499490",
    "role": "memory",
    "label": "matrix-bridge-on-lucy · said 2026-09-14",
    "text": "**Live test:** `!help` and an `@fuzai` pong round trip both came back as threaded replies; the zai-6 job took about 5 s."
   },
   {
-   "id": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8",
+   "id": "near:hx-m40-fact-3fb7ab03af13ff0dd5e8",
    "role": "memory",
    "label": "repl-send-argv-limit · said 2026-09-01",
    "text": "Repair in place with `(agent-chat--ensure-prompt-markers!)` — additive, appends a fresh prompt and re-seats all three markers, deletes nothing. A buffer that never finished drawing (no keybinding line, no separator, no prompt) needs `claude-repl-clear` instead, which redraws without losing agent identity."
   },
   {
-   "id": "m40:hx-m40-fact-d042104132f71a00b895",
+   "id": "near:hx-m40-fact-d042104132f71a00b895",
    "role": "memory",
    "label": "mfuton-lisp-port-codex-18 · said 2026-10-04",
    "text": "\"codex-18 (Joe's seat) is porting claude-4's mfuton Python port to Lisp, following claude-4's sequence; goal is marker-based incremental edits instead of ~10-min probe cycles\""
   },
   {
-   "id": "m40:hx-m40-fact-39e90f557c984d3265fc",
+   "id": "near:hx-m40-fact-39e90f557c984d3265fc",
    "role": "memory",
    "label": "futon6-run-contract-vs-machine-config · said 2026-09-21",
    "text": "**Why:** mark7probe-20260921 ran with the span-quotation code present but silently OFF. Candidates lacked `spans` (candidate_spans.py was never wired into extraction) and `nodes_schema` fell back to the old retype contract with no error. That was a regression from the line contract, which had always been on. Runs on different machines were meant to be comparable, and no one could tell which contract had run."
   },
   {
-   "id": "m40:hx-m40-fact-4a5d6c66b6a0cb481319",
+   "id": "near:hx-m40-fact-4a5d6c66b6a0cb481319",
    "role": "memory",
    "label": "html-comment-leak-in-site-reads · said 2026-09-29",
    "text": "`re.sub(r'<[^>]+>','',html)` removes `<!-- <p>` as if it were a tag and leaves the commented-out text behind. On 2026-09-29, futon7a `index.html:63-70` commented out the \"things we've learned\" list. I criticised that list to Joe as live homepage content, and four Zai simulated customers (storage/futon7a/customer-sims/2026-09-29/) clicked links that no browser shows."
   },
   {
-   "id": "m40:hx-m40-fact-82f378d3ae5429ec9bf3",
+   "id": "near:hx-m40-fact-82f378d3ae5429ec9bf3",
    "role": "memory",
    "label": "kinesis-vdrive-editing · said 2026-09-24",
    "text": "Location tokens are confirmed from Appendix 13.1 Figs 32/33 (diagrams, not text — render with `pdftoppm -r 200 -f 37 -l 37 -png adv2-manual.pdf`). Dvorak keypad layer, left keywell:"
   },
   {
-   "id": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4",
+   "id": "near:hx-m40-fact-ac7fedb2bb1a30fafbd4",
    "role": "memory",
    "label": "matrix-bridge-on-lucy · said 2026-09-14",
    "text": "**How to apply:** for Matrix bridge changes, start from futon3c `scripts/matrix_bridge.md`. Still open: joining Rob's room. Every room member can run bang commands (`!ungate`, `!reset`), and nothing stops two agents looping by mentioning each other. Related: [[joe-views-via-terminal-or-web-only]], [[evidence-full-text-search-is-in-futon1b]]."
   },
   {
-   "id": "m40:hx-m40-fact-fd4b18af6be9ed996a79",
+   "id": "near:hx-m40-fact-fd4b18af6be9ed996a79",
    "role": "memory",
    "label": "matrix-bridge-on-lucy · said 2026-10-02",
    "text": "\"futon Matrix bridge deployed 2026-09-14 on lucy (matrix.paragogy.net); where its config, tokens and room live; lucy's own Agency is down\""
   },
   {
-   "id": "m40:hx-m40-fact-6b8fc74c33fc910532a8",
+   "id": "near:hx-m40-fact-6b8fc74c33fc910532a8",
    "role": "memory",
    "label": "apparatus-design-principles · said 2026-09-08",
    "text": "\"15 apparatus design patterns in futon3/library/apparatus/*.flexiarg, PROMOTED by Joe 2026-09-08 after the APM repair field trial; scoring ledger futon3c b0c36489; WM assurance frontier binds tickets via pattern×signature edges\""
   },
   {
-   "id": "m40:hx-m40-fact-ed858a3e69114c763859",
+   "id": "near:hx-m40-fact-ed858a3e69114c763859",
    "role": "memory",
    "label": "operator-turns-as-pattern-language · said 2026-09-23",
    "text": "Related: [[run-data-is-data]] (corpus lives in `code/storage/operator-turns/`), [[flexiarg-directive-misuse]], [[agency-send-mode-brief-trap]]."
   },
   {
-   "id": "m40:hx-m40-fact-2cc92183c9b1add27ebd",
+   "id": "near:hx-m40-fact-2cc92183c9b1add27ebd",
    "role": "memory",
    "label": "kinesis-vdrive-editing · said 2026-09-24",
    "text": "Also: always read the drive file before writing. The keyboard's rewrite reorders everything and adds Joe's onboard changes, so a blind overwrite clobbers his work."
   },
   {
-   "id": "m40:hx-m40-fact-6a0c4d9126b6d826615c",
+   "id": "near:hx-m40-fact-6a0c4d9126b6d826615c",
    "role": "memory",
    "label": "futon6-no-host-paths · said 2026-09-21",
    "text": "never commit /home/joe (or any home path) into futon6 code or notes; Rob keeps having to strip them"
@@ -120,7 +120,12 @@
   },
   {
    "id": "memory",
-   "name": "minus40 memory nearest the reply",
+   "name": "minus40 memory that reached the turn (tool trace) — none recorded for this turn",
+   "ink": "y"
+  },
+  {
+   "id": "near",
+   "name": "minus40 facts resembling the reply (resemblance, not use)",
    "ink": "y"
   }
  ],
@@ -287,124 +292,124 @@
    "note": "rank 3, cosine 0.3196 (futon3a embeddings)"
   },
   {
-   "id": "m40:hx-m40-fact-a9885794222a66499490#",
-   "seg": "m40:hx-m40-fact-a9885794222a66499490",
+   "id": "near:hx-m40-fact-a9885794222a66499490#",
+   "seg": "near:hx-m40-fact-a9885794222a66499490",
    "start": 0,
    "end": 120,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.373,
-   "note": "minus40 fact hx-m40-fact-a9885794222a66499490 from memory cc:-home-joe-code/matrix-bridge-on-lucy"
+   "note": "minus40 fact hx-m40-fact-a9885794222a66499490 from memory cc:-home-joe-code/matrix-bridge-on-lucy; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8#",
-   "seg": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8",
+   "id": "near:hx-m40-fact-3fb7ab03af13ff0dd5e8#",
+   "seg": "near:hx-m40-fact-3fb7ab03af13ff0dd5e8",
    "start": 0,
    "end": 306,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3693,
-   "note": "minus40 fact hx-m40-fact-3fb7ab03af13ff0dd5e8 from memory cc:-home-joe-code/repl-send-argv-limit"
+   "note": "minus40 fact hx-m40-fact-3fb7ab03af13ff0dd5e8 from memory cc:-home-joe-code/repl-send-argv-limit; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-d042104132f71a00b895#",
-   "seg": "m40:hx-m40-fact-d042104132f71a00b895",
+   "id": "near:hx-m40-fact-d042104132f71a00b895#",
+   "seg": "near:hx-m40-fact-d042104132f71a00b895",
    "start": 0,
    "end": 175,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3724,
-   "note": "minus40 fact hx-m40-fact-d042104132f71a00b895 from memory cc:-home-joe-code/mfuton-lisp-port-codex-18"
+   "note": "minus40 fact hx-m40-fact-d042104132f71a00b895 from memory cc:-home-joe-code/mfuton-lisp-port-codex-18; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-39e90f557c984d3265fc#",
-   "seg": "m40:hx-m40-fact-39e90f557c984d3265fc",
+   "id": "near:hx-m40-fact-39e90f557c984d3265fc#",
+   "seg": "near:hx-m40-fact-39e90f557c984d3265fc",
    "start": 0,
    "end": 411,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3717,
-   "note": "minus40 fact hx-m40-fact-39e90f557c984d3265fc from memory cc:-home-joe/futon6-run-contract-vs-machine-config"
+   "note": "minus40 fact hx-m40-fact-39e90f557c984d3265fc from memory cc:-home-joe/futon6-run-contract-vs-machine-config; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-4a5d6c66b6a0cb481319#",
-   "seg": "m40:hx-m40-fact-4a5d6c66b6a0cb481319",
+   "id": "near:hx-m40-fact-4a5d6c66b6a0cb481319#",
+   "seg": "near:hx-m40-fact-4a5d6c66b6a0cb481319",
    "start": 0,
    "end": 368,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3467,
-   "note": "minus40 fact hx-m40-fact-4a5d6c66b6a0cb481319 from memory cc:-home-joe/html-comment-leak-in-site-reads"
+   "note": "minus40 fact hx-m40-fact-4a5d6c66b6a0cb481319 from memory cc:-home-joe/html-comment-leak-in-site-reads; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-82f378d3ae5429ec9bf3#",
-   "seg": "m40:hx-m40-fact-82f378d3ae5429ec9bf3",
+   "id": "near:hx-m40-fact-82f378d3ae5429ec9bf3#",
+   "seg": "near:hx-m40-fact-82f378d3ae5429ec9bf3",
    "start": 0,
    "end": 181,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3319,
-   "note": "minus40 fact hx-m40-fact-82f378d3ae5429ec9bf3 from memory cc:-home-joe/kinesis-vdrive-editing"
+   "note": "minus40 fact hx-m40-fact-82f378d3ae5429ec9bf3 from memory cc:-home-joe/kinesis-vdrive-editing; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4#",
-   "seg": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4",
+   "id": "near:hx-m40-fact-ac7fedb2bb1a30fafbd4#",
+   "seg": "near:hx-m40-fact-ac7fedb2bb1a30fafbd4",
    "start": 0,
    "end": 343,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.4635,
-   "note": "minus40 fact hx-m40-fact-ac7fedb2bb1a30fafbd4 from memory cc:-home-joe-code/matrix-bridge-on-lucy"
+   "note": "minus40 fact hx-m40-fact-ac7fedb2bb1a30fafbd4 from memory cc:-home-joe-code/matrix-bridge-on-lucy; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-fd4b18af6be9ed996a79#",
-   "seg": "m40:hx-m40-fact-fd4b18af6be9ed996a79",
+   "id": "near:hx-m40-fact-fd4b18af6be9ed996a79#",
+   "seg": "near:hx-m40-fact-fd4b18af6be9ed996a79",
    "start": 0,
    "end": 138,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3479,
-   "note": "minus40 fact hx-m40-fact-fd4b18af6be9ed996a79 from memory cc:-home-joe-code/matrix-bridge-on-lucy"
+   "note": "minus40 fact hx-m40-fact-fd4b18af6be9ed996a79 from memory cc:-home-joe-code/matrix-bridge-on-lucy; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-6b8fc74c33fc910532a8#",
-   "seg": "m40:hx-m40-fact-6b8fc74c33fc910532a8",
+   "id": "near:hx-m40-fact-6b8fc74c33fc910532a8#",
+   "seg": "near:hx-m40-fact-6b8fc74c33fc910532a8",
    "start": 0,
    "end": 228,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3641,
-   "note": "minus40 fact hx-m40-fact-6b8fc74c33fc910532a8 from memory cc:-home-joe-code-voxterm/apparatus-design-principles"
+   "note": "minus40 fact hx-m40-fact-6b8fc74c33fc910532a8 from memory cc:-home-joe-code-voxterm/apparatus-design-principles; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-ed858a3e69114c763859#",
-   "seg": "m40:hx-m40-fact-ed858a3e69114c763859",
+   "id": "near:hx-m40-fact-ed858a3e69114c763859#",
+   "seg": "near:hx-m40-fact-ed858a3e69114c763859",
    "start": 0,
    "end": 143,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.3428,
-   "note": "minus40 fact hx-m40-fact-ed858a3e69114c763859 from memory cc:-home-joe/operator-turns-as-pattern-language"
+   "note": "minus40 fact hx-m40-fact-ed858a3e69114c763859 from memory cc:-home-joe/operator-turns-as-pattern-language; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-2cc92183c9b1add27ebd#",
-   "seg": "m40:hx-m40-fact-2cc92183c9b1add27ebd",
+   "id": "near:hx-m40-fact-2cc92183c9b1add27ebd#",
+   "seg": "near:hx-m40-fact-2cc92183c9b1add27ebd",
    "start": 0,
    "end": 163,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.4363,
-   "note": "minus40 fact hx-m40-fact-2cc92183c9b1add27ebd from memory cc:-home-joe/kinesis-vdrive-editing"
+   "note": "minus40 fact hx-m40-fact-2cc92183c9b1add27ebd from memory cc:-home-joe/kinesis-vdrive-editing; resemblance only"
   },
   {
-   "id": "m40:hx-m40-fact-6a0c4d9126b6d826615c#",
-   "seg": "m40:hx-m40-fact-6a0c4d9126b6d826615c",
+   "id": "near:hx-m40-fact-6a0c4d9126b6d826615c#",
+   "seg": "near:hx-m40-fact-6a0c4d9126b6d826615c",
    "start": 0,
    "end": 99,
-   "layer": "memory",
-   "kind": "memory",
+   "layer": "near",
+   "kind": "fact",
    "weight": 0.4319,
-   "note": "minus40 fact hx-m40-fact-6a0c4d9126b6d826615c from memory cc:-home-joe/futon6-no-host-paths"
+   "note": "minus40 fact hx-m40-fact-6a0c4d9126b6d826615c from memory cc:-home-joe/futon6-no-host-paths; resemblance only"
   }
  ],
  "edges": [
@@ -500,73 +505,73 @@
   },
   {
    "from": "claude-16-turn-162-r-1",
-   "to": "m40:hx-m40-fact-a9885794222a66499490#",
+   "to": "near:hx-m40-fact-a9885794222a66499490#",
    "relation": "near",
    "label": "0.3730 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-1",
-   "to": "m40:hx-m40-fact-3fb7ab03af13ff0dd5e8#",
+   "to": "near:hx-m40-fact-3fb7ab03af13ff0dd5e8#",
    "relation": "near",
    "label": "0.3693 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-2",
-   "to": "m40:hx-m40-fact-d042104132f71a00b895#",
+   "to": "near:hx-m40-fact-d042104132f71a00b895#",
    "relation": "near",
    "label": "0.3724 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-2",
-   "to": "m40:hx-m40-fact-39e90f557c984d3265fc#",
+   "to": "near:hx-m40-fact-39e90f557c984d3265fc#",
    "relation": "near",
    "label": "0.3717 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-3",
-   "to": "m40:hx-m40-fact-4a5d6c66b6a0cb481319#",
+   "to": "near:hx-m40-fact-4a5d6c66b6a0cb481319#",
    "relation": "near",
    "label": "0.3467 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-3",
-   "to": "m40:hx-m40-fact-82f378d3ae5429ec9bf3#",
+   "to": "near:hx-m40-fact-82f378d3ae5429ec9bf3#",
    "relation": "near",
    "label": "0.3319 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-4",
-   "to": "m40:hx-m40-fact-ac7fedb2bb1a30fafbd4#",
+   "to": "near:hx-m40-fact-ac7fedb2bb1a30fafbd4#",
    "relation": "near",
    "label": "0.4635 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-4",
-   "to": "m40:hx-m40-fact-fd4b18af6be9ed996a79#",
+   "to": "near:hx-m40-fact-fd4b18af6be9ed996a79#",
    "relation": "near",
    "label": "0.3479 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-5",
-   "to": "m40:hx-m40-fact-6b8fc74c33fc910532a8#",
+   "to": "near:hx-m40-fact-6b8fc74c33fc910532a8#",
    "relation": "near",
    "label": "0.3641 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-5",
-   "to": "m40:hx-m40-fact-ed858a3e69114c763859#",
+   "to": "near:hx-m40-fact-ed858a3e69114c763859#",
    "relation": "near",
    "label": "0.3428 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-6",
-   "to": "m40:hx-m40-fact-2cc92183c9b1add27ebd#",
+   "to": "near:hx-m40-fact-2cc92183c9b1add27ebd#",
    "relation": "near",
    "label": "0.4363 · in-force"
   },
   {
    "from": "claude-16-turn-162-r-6",
-   "to": "m40:hx-m40-fact-6a0c4d9126b6d826615c#",
+   "to": "near:hx-m40-fact-6a0c4d9126b6d826615c#",
    "relation": "near",
    "label": "0.4319 · in-force"
   }
@@ -586,7 +591,7 @@
   "pattern": "a pattern futon3a retrieved for the turn",
   "retrieved-for": "the pattern was retrieved by embedding similarity to the query; label is the cosine score",
   "in-force": "the memory was said before the turn and not withdrawn by then",
-  "memory": "a minus40 fact (one statement from a memory file)",
-  "near": "the memory fact is the nearest in meaning to the reply paragraph; label is the cosine score"
+  "fact": "a minus40 fact (one statement from a memory file) resembling the reply; resemblance only",
+  "near": "the fact is the nearest in meaning to the reply paragraph; label is the cosine score. Resemblance, not evidence the agent saw it"
  }
 }

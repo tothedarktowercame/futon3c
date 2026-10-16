@@ -202,3 +202,65 @@ sub-layers of one plate: model as three layers), the defined-term classes
 > Augmented Element view need from a room that a plain message list does
 > not have? Full shape and the readers compared:
 > `futon3c/holes/excursions/E-scope-view.md`.
+
+## The memory layer shows what reached the turn, not what resembles it (2026-10-16)
+
+The first fixture's yellow layer drew minus40 facts nearest each reply
+paragraph by embedding, with an "in-force" label from the fact's dates.
+Neither says the agent saw the fact: for claude-16-turn-162 the nearest
+facts were the Matrix bridge, a keyboard's drive file and a no-home-paths
+rule at cosine 0.33 to 0.46, and the three most recent claude-16
+transcripts contain no read of a memory file. Joe agreed on 2026-10-16
+that the layer should show what reached the context, with resemblance
+kept only as an opt-in that says what it is.
+
+What `scripts/scope_view_data.py` draws now:
+
+- **reached**: a minus40 tool call the agent made during the turn, from the
+  Zai harness round record (`zai_api.clj` `persist-round!`, one
+  `:turn-round` entry per round with `:calls`), and the memories whose
+  names the call's result lists. The join is 象 record turn id = Agency
+  job id = the harness `:turn-start` entry's `:dispatch-id`, whose
+  `:turn-id` the rounds carry. Since futon3c c7408261b the round record
+  keeps the full result text of minus40 reads (`:result-text`, capped);
+  before it the 240-char preview kept two or three names of ten.
+- **echoed**: a run of five or more words, or the memory's name, that the
+  reply shares with a memory it reached. String match, no model. Whether
+  the reply followed the memory in substance is a judgement; per the
+  2026-10-15 rule it goes to a blind judge and an aggregate, not a drawn edge.
+- A turn with no recorded call gets an empty layer whose name says so.
+  Claude seats have the same tools but no instruction to use them, and the
+  Claude Code transcript is not in the evidence store, so their layer is
+  empty until a reader of that transcript is written.
+- `--near` adds the old layer under the name "resembling the reply
+  (resemblance, not use)".
+
+First evidence, two Zai sessions belled from claude-16 with small real
+checks (packets in `web/scopes/packets/`), fixtures
+`invoke-1792122022238-15098-437a4a50` (zai-1) and
+`invoke-1792122022748-15099-8635690e` (zai-2):
+
+| seat | calls | memories reached | echoed in the reply | named in the reply |
+|---|---|---|---|---|
+| zai-1 (/tmp checkouts) | 3 | 4 | 0 | 0; the reply says none applied |
+| zai-2 (park protocol) | 3 | 18 | 3 | 3, by name |
+
+zai-2's reply used three memories (verify-running-before-parking,
+park-deadlines-budget-the-acceptance-run, seat-bellbacks-look-like-mine)
+and reported the record's disagreements with README-park.md. zai-1's two
+`m40_find` calls (["tmp" "worktrees"], ["zone-health"]) returned no
+memory: the store found hits, none of them memories. The /tmp rule lives
+in CLAUDE.md and the zone-health check, not in any memory; the four
+memories `m40_state` named for "tmp" were adjacent facts, and the reply
+said so rather than citing them. The live check found 1654 checkouts
+under /tmp, nearly all throwaway fixture repos.
+
+Limits seen: `m40_state` for a common term returned 12k characters and the
+round record cut it at 8192; 象's analysis of a Zai reply has no proforma
+marks, so the reply has no act spans and echoes anchor on raw offsets; Zai
+seats write no context-retrieval evidence, so the pattern layer is empty
+for them.
+
+Next: the over-time view, one row per turn across a session and one column
+per memory that ever reached, each cell retrieved-only, reached or echoed,
+with said/unsaid/again from `m40_history` along the column.
