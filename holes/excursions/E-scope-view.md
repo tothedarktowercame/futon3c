@@ -305,6 +305,37 @@ under test, `node --check`, the fixture sha from the rebuilt page, and a
 rebuilt page published beside the old one for Joe to look at. Packet:
 `PACKET-adapter-three-d-mark7-wiring.md`.
 
+**(d) reviewed, accepted** (futon6 a811d6efa, codex-23, five files:
+`render_scope_margin.py`, `plates.js`, `plates_view.js` (new), `margin.css`,
+the test; nothing in futon3c; the stranger's dirty files left uncommitted).
+Record: the diff removes `INK`, `color`, `plate` and the C/M/Y controls
+and select from plates.js and keeps placement (lines 26-139 untouched),
+`quotes`, `proofs`, `refused`, `carvedAt`, `show`, `litEdge`, `m7span`,
+`m7units` and `ctl.t`; only the terms checkbox repaints now, and the
+banner inputs no longer do. `assemble` emits the blocks in the order
+m7-data, margin.js, m7-source, plates.js, m7-scopes, then one module of
+scopes.js followed by plates_view.js, with `<` escaped in all three JSON
+blocks; `read_scopes_renderer` raises FileNotFoundError when scopes.js is
+missing. plates_view.js anchors `window.m7units` under `segments[0].id`,
+shows s1-term, s3, s4, strips the view's `title` after each paint (the
+checkbox listener in scopes.js repaints at the target before the change
+event reaches the host, so the strip runs after the paint), and closes the
+legend `details`. Test adequacy: the assemble test pins the block order by
+six markers, JSON round-trip equality for all three blocks, `<` absence,
+`backgroundColor` absence in the real plates.js (a file read, not a
+stub), and the missing-renderer bad case. Spot checks run here: pytest 8
+passed from the repo venv; `node --check` on plates.js and on the inlined
+module; the published page's m7-scopes block parses equal to the fixture
+and the adapter gives `d6b429c5…` from it. One finding, fixed in futon6
+847f85c: the packet told the builder to copy `[data-span].lit` under
+`.m7-plates`, but the units live in the paper's `article`, so the outline
+that lights every unit sharing a hovered span never reached them. The
+rule is now unscoped, the page rebuilt from the run (same sha) and
+republished at `wip/mark7-0708.2185-margin-scopes.html`; the old
+`mark7-0708.2185-margin.html` is untouched (2026-10-01). Not measured, no
+browser here: first-render timing with 3253 S1 spans, and the look of the
+cyan at full and half weight beside the term underlines.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw
