@@ -230,6 +230,43 @@ replacing its children, and an anchored segment still gets an empty
 `article` with its label in the main column. Neither is wrong for mark7;
 the second may want hiding once the page is wired.
 
+**(b) reviewed, accepted** (futon6 43bebf7b3, futon3c fdf16e61d, codex-23;
+the adapter and its test in futon6, the fixture alone in futon3c; the
+stranger's dirty files were left uncommitted). The fixture regenerates to
+the same SHA-256 from both the published page and the run's
+typeset-preview copy (the two pages differ outside the data blocks).
+Counts: 3253 marks, 122 nodes, 136 scopes, as the summary says; the 85
+edges are the 54 proof edges opened out one per premise. `[9553,9588)` is
+"Let $\ck$ be an accessible category" and `[9276,9299)` is "accessible
+\r\ncategories"; no span leaves the text, no id repeats, every edge end
+resolves, and the legend defines every kind, relation and label with no
+entry unused. 245 S1 marks are ungrounded at weight 0.5; 109 S4 scopes
+come from lines at 0.6 and 27 from a quoted span at 1.0. The audit in
+`test_scopes.mjs` passes on it (run here: the job's tool events carry no
+command text). Test adequacy: the bad case pins the range check, which
+also refuses an empty span, the case adapter two's audit let through. One
+gap, fixed in futon6 5131c71: the quoted-span path was unpinned, so an
+adapter that ignored `span` and used `lines` would have passed; the hand
+fixture's scope now covers the words "quoted scope" at `[34,46)` and the
+test pins the range and both weights. The legend-coverage assertion is
+true by construction (the adapter writes a legend entry for every kind it
+emits); the guard that matters is the glossary lookup, which raises on an
+unknown kind. Relations define themselves: `iatc_json.RELATIONS` (line
+29) lists names without meanings, as the reply said.
+
+Two things the data cannot yet say, both ink rules of plates.js, so (c)
+becomes a data packet and the wiring moves to (d). S1 is one layer of
+3253 spans across four groups (term 2072, region 621, clause 500,
+structure 60) where plates.js shows one group at a time through a select;
+the view's only visibility control is the layer toggle, so the groups
+become layers, as the drop-in section already says. And the faint shading
+of a proof body (0.3), a refused proof (0.12) and a carved region (0.3,
+or 0.14 inside a proof) was left out of (b) as a region effect; but
+`mixInk` takes the maximum weight per ink, so faint spans beneath strong
+ones give plates.js's else-if chain exactly, and one inker on
+`style.backgroundColor` is better than two. Packet:
+`PACKET-adapter-three-c-mark7-layers.md`.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw
