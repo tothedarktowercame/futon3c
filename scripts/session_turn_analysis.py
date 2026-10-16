@@ -40,8 +40,25 @@ def required_text(value, field):
     return value
 
 
+def acceptance_contract():
+    """Producer-visible rules derived beside the authoritative validator."""
+    return {
+        "schema": "wm/handoff-contract-v1",
+        "id": "wm/selected-target-reading-analysis",
+        "version": 1,
+        "response": {
+            "required": ["labeller", "reusable_cues", "rnode_cues", "sentences"],
+            "relation_vocabulary": sorted(ROLES),
+            "offset_unit": "unicode-codepoint",
+            "sentence_coverage": "exactly-one-entry-per-request-sentence",
+        },
+        "validator": {"id": "wm/session-turn-analysis", "version": 2},
+    }
+
+
 def template(request):
-    return {"labeller": "", "reusable_cues": [], "rnode_cues": [], "sentences": [
+    return {"acceptance_contract": acceptance_contract(),
+        "labeller": "", "reusable_cues": [], "rnode_cues": [], "sentences": [
         {"id": sentence["id"], "fragments": [], "unresolved_reason": ""}
         for sentence in request["sentences"]],
         "fragment_shape": {"start": 0, "end": 0, "text": "exact source fragment",
