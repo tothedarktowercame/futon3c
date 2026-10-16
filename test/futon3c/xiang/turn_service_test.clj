@@ -266,6 +266,26 @@
     (is (= "failed" (get-in (svc/turn-view (:svc h) id) [:record :analysis_status])))
     (is (= "failed" (:analysis_status (ts/read-record store id))))))
 
+(deftest reading-a-turn-behind-a-quota-failure-benches-and-fails-over
+  ;; 2026-10-16: the reap on read passed no :agent, so a Kimi 403 settled the
+  ;; turn as failed and the pool was never benched; every turn from 04:52Z to
+  ;; 05:49Z went to 象-1 and failed the same way while 象-sonnet sat idle.
+  (let [h (harness)
+        {:keys [id]} (turn! h {:dispatch :now})
+        store (get-in (:svc h) [:config :store])]
+    (swap! (:jobs h) assoc "job-1"
+           {:state "failed" :agent-id "象-1"
+            :events [{:type "prompt" :text "Requisition: interpret operator turn"}
+                     {:type "failed" :code "invoke-error"
+                      :message "{\"message\":\"HTTP 403\",\"body\":{\"error\":{\"message\":\"You've reached your monthly usage limit for this billing cycle.\"}}}"}
+                     {:type "delivery-recorded" :status "delivery-failed" :note "caller-not-a-registered-seat"}]})
+    (svc/turn-view (:svc h) id)
+    (is (every? #(svc/benched? (:svc h) %) ["象-1" "象-2" "象-3" "象-4"]) "the read benches the pool")
+    (is (= "象-sonnet" (:agent-id (second @(:bells h)))) "and the alternate takes the turn")
+    (let [rec (ts/read-record store id)]
+      (is (= "requested" (:analysis_status rec)))
+      (is (= "job-2" (get-in rec [:analysis_dispatch :job_id]))))))
+
 (deftest a-seat-out-of-usage-is-benched-and-the-turn-goes-elsewhere
   (let [h (harness)
         {:keys [id]} (turn! h {:dispatch :now})]

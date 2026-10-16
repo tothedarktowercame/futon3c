@@ -1141,6 +1141,12 @@
           (let [job (try ((cfg svc :job-status) job-id)
                          (catch Exception e {:unreachable (.getMessage e)}))
                 {:keys [outcome state reason]} (tr/job-outcome job)
+                ;; A reap on read (`turn-view`) carries no :agent, and the
+                ;; quota branch below needs one: without it a Kimi 403 was
+                ;; written as a plain failure and the pool never benched
+                ;; (fourteen turns, 2026-10-16 04:52-05:49Z). The job knows
+                ;; the seat it went to.
+                agent (or agent (some-> (tr/g job :agent-id) str))
                 late-tries (cfg svc :reap-late-tries)
                 tries (or tries (+ 3 late-tries))]
             (case outcome
