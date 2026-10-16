@@ -1164,3 +1164,40 @@
       (is (= :analyzed (:outcome (svc/reap! (:svc h) id {}))))
       (is (some? (:ports (ts/read-record store id))) "ports computed at reap")
       (is (some #{(str "e-xiang-turn-" id)} @appended) "the settled turn is written as evidence"))))
+
+(deftest a-published-reading-with-a-stale-flag-is-flagged-at-reap-and-settles-silently-after
+  ;; Live 2026-10-16: nine turns had the analysis file but the flag still
+  ;; `requested`. Every GET of the turn view reaped them again (the Emacs
+  ;; poll, every 20 s), each reap re-settled, each settle appended a
+  ;; duplicate evidence entry and fired the turn listeners, and the frames
+  ;; cache rebuilt back to back.
+  (let [appended (atom []) events (atom [])
+        h (harness {:evidence! (fn [e]
+                                 (let [dup? (some #{(:evidence-id e)} @appended)]
+                                   (swap! appended conj (:evidence-id e))
+                                   (if dup? {:ok true :idempotent? true} {:ok true})))})
+        {:keys [id record]} (turn! h {:dispatch :none})
+        store (get-in (:svc h) [:config :store])]
+    (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+    ;; The seat was asked (the live records carried `requested` and a job id)
+    ;; and complete() wrote the file and, this time, not the flag.
+    (ts/update-record! store id #(assoc % :analysis_status "requested"))
+    (spit (ts/analysis-path store id) (json/write-str (assoc (analysis-for record) :status "analyzed")))
+    (reset! (:scheduled h) [])
+    (svc/add-turn-listener! ::test #(swap! events conj (:event %)))
+    (try
+      (is (= "requested" (:analysis_status (ts/read-record store id))))
+      (is (= {:outcome :analyzed :status "analyzed"} (svc/reap! (:svc h) id {})))
+      (while (seq @(:scheduled h)) (run-next! h))
+      (is (= "analyzed" (:analysis_status (ts/read-record store id)))
+          "the reap writes the flag the script omitted")
+      (is (= [:reading :settled] @events))
+      (is (= 1 (count @appended)))
+      ;; A second reap (forced; the view no longer reaps a flagged record)
+      ;; re-settles the same reading: the append is the idempotent duplicate
+      ;; and no listener hears of it.
+      (is (= :analyzed (:outcome (svc/reap! (:svc h) id {}))))
+      (while (seq @(:scheduled h)) (run-next! h))
+      (is (= [:reading :settled] @events) "a repeat settle of the same reading is silent")
+      (is (= 2 (count @appended)))
+      (finally (svc/remove-turn-listener! ::test)))))

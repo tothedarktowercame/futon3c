@@ -389,6 +389,18 @@
          vec
          turn-acts/session-acts)))
 
+(defonce ^:private !announced-readings (atom {}))
+
+(defn- reading-changed?
+  "True the first time ID is settled with READING under HOW in this JVM.
+   A repeat settle (2026-10-16: the reap on every read of a record whose
+   flag stayed `requested`, nine turns every 20 s) announces nothing: the
+   listeners rebuild what they show from it, and nothing changed."
+  [id reading how]
+  (let [sig (hash [how reading])
+        [old _] (swap-vals! !announced-readings assoc id sig)]
+    (not= (get old id) sig)))
+
 (defn- settle-evidence!
   "Write settled turn ID as evidence, off the caller's path. The packet
    should carry both the reading and the happened summary, so a turn whose
@@ -399,13 +411,17 @@
    When the packet is complete (reading and happened both present, in
    either arrival order) the turn's ports are (re)computed alongside it."
   [svc id reading how]
-  (notify-turn! svc {:event :reading :id id :how how})
+  (when (reading-changed? id reading how)
+    (notify-turn! svc {:event :reading :id id :how how}))
   (let [store (cfg svc :store)
         write! (fn []
                  ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-                  #(do (append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
-                                         (cfg svc :store-busy-delays))
-                       (notify-turn! svc {:event :settled :id id :how how}))))]
+                  #(let [r (append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
+                                             (cfg svc :store-busy-delays))]
+                     ;; A duplicate append (the same settled packet written
+                     ;; again) changed nothing a listener could show.
+                     (when-not (or (:idempotent? r) (= :duplicate-id (:error/code r)))
+                       (notify-turn! svc {:event :settled :id id :how how})))))]
     ;; The scope edges do not wait for the happened summary: they are a
     ;; projection of the reading and the marked replies, both final once the
     ;; turn is analyzed, and their readers (the REPL overlay, the brief) want
@@ -1151,6 +1167,13 @@
       (or (ts/analysis-published? store id)
           (not (contains? #{nil "requested"} (:analysis_status record))))
       (do (when (ts/analysis-published? store id)
+            ;; The seat's complete() wrote the analysis file but, for nine
+            ;; 2026-10-16 turns, not the flag. Every reader of a `requested`
+            ;; record reaps it (turn-view), so without the flag the reap,
+            ;; the settle and its evidence write repeat on every poll.
+            (when (contains? #{nil "requested"} (:analysis_status record))
+              (try (ts/update-record! store id #(assoc % :analysis_status "analyzed"))
+                   (catch Exception _ nil)))
             (handle-analyzed! svc id)
             ;; The 象 seats publish with session_turn_analysis.py, which
             ;; writes the analysis and the flag itself and never calls
@@ -1160,7 +1183,7 @@
             ;; 2026-10-04 00:10 until this fix). Idempotent: the entry id
             ;; is deterministic and ports are recomputed whole.
             (settle-evidence! svc id (or (ts/read-analysis store id) {}) :analyzed))
-          {:outcome :analyzed :status (:analysis_status record)})
+          {:outcome :analyzed :status (:analysis_status (or (ts/read-record store id) record))})
 
       :else
       (let [job-id (get-in record [:analysis_dispatch :job_id])]
