@@ -14,6 +14,37 @@ export function readyFrames(frames, keepPending = false) {
         end--;
     return frames.slice(0, end);
 }
+export function parseStreamEvent(name, data) {
+    if (name !== "frames" && name !== "status")
+        return { kind: "ignore" };
+    try {
+        const value = JSON.parse(data);
+        if (name === "frames")
+            return {
+                kind: "frames",
+                frames: Array.isArray(value.frames) ? value.frames : [],
+                version: typeof value.version === "number" ? value.version : null,
+            };
+        const allowed = ["building", "rebuild-failed", "reconnecting", "live"];
+        const lastError = value["last-error"];
+        const detail = lastError?.reason ?? lastError?.err;
+        return { kind: "status", status: {
+                state: allowed.includes(String(value.state)) ? value.state : "rebuild-failed",
+                ...(detail === undefined ? {} : { detail: String(detail) }),
+            } };
+    }
+    catch (_error) {
+        return { kind: "status", status: { state: "rebuild-failed", detail: `bad event: ${data.slice(0, 80)}` } };
+    }
+}
+export function receiveFrames(state, incoming) {
+    if (!incoming.length && state.frames.length)
+        return state;
+    const frames = readyFrames(incoming, true);
+    const newest = Math.max(0, frames.length - 1);
+    const wasNewest = state.current >= state.frames.length - 1;
+    return { frames, current: wasNewest ? newest : Math.max(0, Math.min(state.current, newest)) };
+}
 const short = (value, n = 8) => typeof value === "string" ? value.slice(0, n) : "?";
 const shown = (value, fallback = "?") => value === undefined || value === null ? fallback : String(value);
 export function cuePieces(text, cues) {
@@ -160,15 +191,14 @@ function add(parent, tag, cls, text) {
     return node;
 }
 /** opts.frame: 1-based frame to open on; absent means the newest frame in
- * live mode and the first in fixture mode. opts.pollMs: in live mode, refetch
- * this often while the page is visible (0 or absent: only on `g`). A reader on
- * the newest frame follows the newest after a refresh; one reading back stays
- * put, as the Emacs stepper does after a reload. */
+ * live mode and the first in fixture mode. A reader on the newest frame
+ * follows pushed frames; one reading back stays put. */
 export function renderStepper(initial, host, opts = {}) {
     const clamp = (i) => Math.max(0, Math.min(i, Math.max(0, frames.length - 1)));
     let frames = readyFrames(initial, !!opts.live);
     let current = clamp(opts.frame ? opts.frame - 1 : opts.live ? frames.length - 1 : 0);
     let refreshed = "";
+    let streamState = opts.live ? "" : " · fixture";
     let busy = false;
     const status = add(host, "div", "stepper-status");
     const body = add(host, "main", "stepper-frame");
@@ -188,15 +218,23 @@ export function renderStepper(initial, host, opts = {}) {
             history.replaceState(null, "", url);
         }
     };
+    const updateStatus = () => {
+        if (!frames.length)
+            status.textContent = `frame 0/0${refreshed}${streamState}`;
+        else {
+            const model = frameModel(frames[current]);
+            status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status}${refreshed}${streamState}`;
+        }
+    };
     const draw = () => {
         body.textContent = "";
         if (!frames.length) {
-            status.textContent = "frame 0/0";
+            updateStatus();
             add(body, "p", "", "No operator-turn frames.");
             return;
         }
         const model = frameModel(frames[current]);
-        status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status} · ${opts.live ? "live" : "fixture"}${refreshed}`;
+        updateStatus();
         const said = add(body, "section");
         const saidHeading = add(said, "h2");
         const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");
@@ -237,9 +275,9 @@ export function renderStepper(initial, host, opts = {}) {
             return;
         busy = true;
         try {
-            const onNewest = current >= frames.length - 1;
-            frames = readyFrames(await opts.refetch(), true);
-            current = onNewest ? frames.length - 1 : clamp(current);
+            const received = receiveFrames({ frames, current }, await opts.refetch());
+            frames = received.frames;
+            current = received.current;
             refreshed = ` · refreshed ${new Date().toISOString().slice(11, 19)}Z`;
             draw();
         }
@@ -250,10 +288,6 @@ export function renderStepper(initial, host, opts = {}) {
             busy = false;
         }
     };
-    if (opts.live && opts.refetch && (opts.pollMs || 0) > 0) {
-        setInterval(() => { if (typeof document === "undefined" || !document.hidden)
-            void refresh(); }, opts.pollMs);
-    }
     window.addEventListener("keydown", async (event) => {
         if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target?.tagName))
             return;
@@ -269,5 +303,21 @@ export function renderStepper(initial, host, opts = {}) {
             await refresh();
     });
     draw();
+    const unsubscribe = opts.live && opts.subscribe ? opts.subscribe({
+        onFrames: incoming => {
+            const received = receiveFrames({ frames, current }, incoming);
+            frames = received.frames;
+            current = received.current;
+            refreshed = ` · pushed ${new Date().toISOString().slice(11, 19)}Z`;
+            draw();
+        },
+        onStatus: next => {
+            streamState = next.state === "rebuild-failed"
+                ? ` · rebuild failed${next.detail ? `: ${next.detail}` : ""}`
+                : ` · ${next.state}`;
+            updateStatus();
+        },
+    }) : undefined;
+    void unsubscribe;
     return { goTo, next, prev, refresh, index: () => current, count: () => frames.length };
 }

@@ -30,6 +30,14 @@ export interface FrameModel {
   patterns: string[]; happened: string[]; ports: string; memory: string[];
   session: string;
 }
+export interface StreamStatus {
+  state: "building" | "rebuild-failed" | "reconnecting" | "live";
+  detail?: string;
+}
+export type ParsedStreamEvent =
+  | {kind: "frames"; frames: Frame[]; version: number | null}
+  | {kind: "status"; status: StreamStatus}
+  | {kind: "ignore"};
 
 const MEMORY_ABSENT = "no recorded memory call for this turn (nothing reached it that the record can show)";
 export const PARSE_PENDING = "no reading yet — 象 has not read this turn; what has happened so far is under HAPPENED";
@@ -46,6 +54,37 @@ export function readyFrames(frames: Frame[], keepPending = false): Frame[] {
   let end = frames.length;
   while (end > 0 && !READ_STATUSES.includes(frames[end - 1].parse?.status || "")) end--;
   return frames.slice(0, end);
+}
+
+export function parseStreamEvent(name: string, data: string): ParsedStreamEvent {
+  if (name !== "frames" && name !== "status") return {kind: "ignore"};
+  try {
+    const value = JSON.parse(data) as Record<string, unknown>;
+    if (name === "frames") return {
+      kind: "frames",
+      frames: Array.isArray(value.frames) ? value.frames as Frame[] : [],
+      version: typeof value.version === "number" ? value.version : null,
+    };
+    const allowed = ["building", "rebuild-failed", "reconnecting", "live"];
+    const lastError = value["last-error"] as Record<string, unknown> | undefined;
+    const detail = lastError?.reason ?? lastError?.err;
+    return {kind: "status", status: {
+      state: allowed.includes(String(value.state)) ? value.state as StreamStatus["state"] : "rebuild-failed",
+      ...(detail === undefined ? {} : {detail: String(detail)}),
+    }};
+  } catch (_error) {
+    return {kind: "status", status: {state: "rebuild-failed", detail: `bad event: ${data.slice(0, 80)}`}};
+  }
+}
+
+export function receiveFrames(
+  state: {frames: Frame[]; current: number}, incoming: Frame[],
+): {frames: Frame[]; current: number} {
+  if (!incoming.length && state.frames.length) return state;
+  const frames = readyFrames(incoming, true);
+  const newest = Math.max(0, frames.length - 1);
+  const wasNewest = state.current >= state.frames.length - 1;
+  return {frames, current: wasNewest ? newest : Math.max(0, Math.min(state.current, newest))};
 }
 
 const short = (value: unknown, n = 8): string => typeof value === "string" ? value.slice(0, n) : "?";
@@ -188,17 +227,20 @@ function add<K extends keyof HTMLElementTagNameMap>(parent: HTMLElement, tag: K,
 }
 
 /** opts.frame: 1-based frame to open on; absent means the newest frame in
- * live mode and the first in fixture mode. opts.pollMs: in live mode, refetch
- * this often while the page is visible (0 or absent: only on `g`). A reader on
- * the newest frame follows the newest after a refresh; one reading back stays
- * put, as the Emacs stepper does after a reload. */
+ * live mode and the first in fixture mode. A reader on the newest frame
+ * follows pushed frames; one reading back stays put. */
 export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
-  frame?: number; live?: boolean; refetch?: () => Promise<Frame[]>; pollMs?: number;
+  frame?: number; live?: boolean; refetch?: () => Promise<Frame[]>;
+  subscribe?: (handlers: {
+    onFrames: (frames: Frame[]) => void;
+    onStatus: (status: StreamStatus) => void;
+  }) => () => void;
 } = {}): {goTo(i: number): void; next(): void; prev(): void; refresh(): Promise<void>; index(): number; count(): number} {
   const clamp = (i: number): number => Math.max(0, Math.min(i, Math.max(0, frames.length - 1)));
   let frames = readyFrames(initial, !!opts.live);
   let current = clamp(opts.frame ? opts.frame - 1 : opts.live ? frames.length - 1 : 0);
   let refreshed = "";
+  let streamState = opts.live ? "" : " · fixture";
   let busy = false;
   const status = add(host, "div", "stepper-status");
   const body = add(host, "main", "stepper-frame");
@@ -218,11 +260,18 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
       history.replaceState(null, "", url);
     }
   };
+  const updateStatus = (): void => {
+    if (!frames.length) status.textContent = `frame 0/0${refreshed}${streamState}`;
+    else {
+      const model = frameModel(frames[current]);
+      status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status}${refreshed}${streamState}`;
+    }
+  };
   const draw = (): void => {
     body.textContent = "";
-    if (!frames.length) { status.textContent = "frame 0/0"; add(body, "p", "", "No operator-turn frames."); return; }
+    if (!frames.length) { updateStatus(); add(body, "p", "", "No operator-turn frames."); return; }
     const model = frameModel(frames[current]);
-    status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status} · ${opts.live ? "live" : "fixture"}${refreshed}`;
+    updateStatus();
     const said = add(body, "section");
     const saidHeading = add(said, "h2");
     const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");
@@ -253,17 +302,14 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
     if (busy) return;
     busy = true;
     try {
-      const onNewest = current >= frames.length - 1;
-      frames = readyFrames(await opts.refetch(), true);
-      current = onNewest ? frames.length - 1 : clamp(current);
+      const received = receiveFrames({frames, current}, await opts.refetch());
+      frames = received.frames;
+      current = received.current;
       refreshed = ` · refreshed ${new Date().toISOString().slice(11, 19)}Z`;
       draw();
     } catch (error) { status.textContent += ` · refresh failed: ${String(error)}`; }
     finally { busy = false; }
   };
-  if (opts.live && opts.refetch && (opts.pollMs || 0) > 0) {
-    setInterval(() => { if (typeof document === "undefined" || !document.hidden) void refresh(); }, opts.pollMs);
-  }
   window.addEventListener("keydown", async event => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) return;
     if (event.key === "n" || event.key === "ArrowRight") next();
@@ -273,5 +319,21 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
     else if (event.key === "g") await refresh();
   });
   draw();
+  const unsubscribe = opts.live && opts.subscribe ? opts.subscribe({
+    onFrames: incoming => {
+      const received = receiveFrames({frames, current}, incoming);
+      frames = received.frames;
+      current = received.current;
+      refreshed = ` · pushed ${new Date().toISOString().slice(11, 19)}Z`;
+      draw();
+    },
+    onStatus: next => {
+      streamState = next.state === "rebuild-failed"
+        ? ` · rebuild failed${next.detail ? `: ${next.detail}` : ""}`
+        : ` · ${next.state}`;
+      updateStatus();
+    },
+  }) : undefined;
+  void unsubscribe;
   return {goTo, next, prev, refresh, index: () => current, count: () => frames.length};
 }

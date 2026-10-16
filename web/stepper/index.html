@@ -15,12 +15,12 @@
 </head>
 <body>
   <h1>象 stepper</h1>
-  <p class="help">n / → next · p / ← previous · Home / End · g refetch.
+  <p class="help">n / → next · p / ← previous · Home / End · g re-read.
     Live: <code>?agent=claude-16</code> (the seat's current session, from the roster) or <code>?session=&lt;id&gt;</code>;
-    opens on the newest turn and refetches every <code>poll</code> seconds (default 30, <code>poll=0</code> to stop). Without either, a fixture.</p>
+    opens on the newest turn and follows the session live; <code>g</code> re-reads the cache once. Without either, a fixture.</p>
   <div id="stepper">Loading…</div>
   <script type="module">
-    import {renderStepper} from './stepper.js';
+    import {parseStreamEvent, renderStepper} from './stepper.js';
     const params = new URLSearchParams(location.search);
     // Default base: this page's directory, where the zone site forwards
     // api/alpha/xiang/* and api/alpha/agents to the Agency. On the box:
@@ -53,8 +53,19 @@
       if (!session && agent) session = await resolveAgent(agent);
       const frames = await load(); host.textContent = '';
       const frame = params.get('frame') ? Number(params.get('frame')) : undefined;
-      const pollMs = 1000 * Number(params.get('poll') ?? '30');
-      renderStepper(frames, host, {frame, live: !!session, refetch: load, pollMs});
+      const subscribe = session ? ({onFrames, onStatus}) => {
+        const source = new EventSource(`${base}/api/alpha/xiang/frames/stream?session=${encodeURIComponent(session)}&limit=${encodeURIComponent(limit)}`);
+        const relay = event => {
+          const parsed = parseStreamEvent(event.type, event.data);
+          if (parsed.kind === 'frames') onFrames(parsed.frames);
+          else if (parsed.kind === 'status') onStatus(parsed.status);
+        };
+        for (const name of ['frames', 'status', 'hello']) source.addEventListener(name, relay);
+        source.onopen = () => onStatus({state: 'live'});
+        source.onerror = () => onStatus({state: 'reconnecting'});
+        return () => source.close();
+      } : undefined;
+      renderStepper(frames, host, {frame, live: !!session, refetch: load, subscribe});
     } catch (error) {
       host.textContent = `Could not load frames: ${error}`;
     }
