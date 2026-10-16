@@ -76,9 +76,11 @@
   to codex-68 on 2026-10-15 after the debugger readiness repair (`OK please
   try 1 click now, we'll see whether it can go end-to-end`), plus five ordinary
   clicks authorized directly by Joe to codex-68 on 2026-10-16 for the live
-  post-Q7--Q10 run-and-repair sequence. Joe additionally required a designated,
+  post-Q7--Q10 run-and-repair sequence, plus one ordinary click authorized
+  directly by Joe to codex-68 on 2026-10-16 for the live selected-target
+  author-contact proof. Joe additionally required a designated,
   freshness-checked WM cast rather than opportunistic roster reuse."
-  67)
+  68)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
