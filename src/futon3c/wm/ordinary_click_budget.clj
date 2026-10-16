@@ -87,8 +87,9 @@
   consolidated-handoff verification click authorized directly by Joe, plus
   one explicit repair-loop click authorized directly by Joe after the live
   excerpt-boundary repair, plus one post-loop-repair debugger click authorized
-  directly by Joe."
-  75)
+  directly by Joe, plus one post-handoff-format-audit debugger click authorized
+  directly by Joe on 2026-10-16."
+  76)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
