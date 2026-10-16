@@ -1123,6 +1123,14 @@
 (def ^:private transcript-text-cap 4096)
 (def ^:private transcript-args-cap 2048)
 (def ^:private transcript-preview-cap 240)
+(def ^:private transcript-memory-result-cap 8192)
+
+(def ^:private memory-read-tool-names
+  "minus40 reads whose full result text is kept on the round record: the
+   240-char preview drops every memory name past the first two or three, and
+   the scope view (holes/excursions/E-scope-view.md) reads the names back to
+   say which memories reached the turn."
+  #{"m40_asof" "m40_state" "m40_history" "m40_find" "m40_near" "sorry_list"})
 
 (defn- transcript-truncate [s cap]
   (let [s (str s)]
@@ -1610,6 +1618,9 @@ CALLS contains maps of tool name, arguments, and result digest."
             (cond-> {:tool (:name detail)
                      :args (transcript-truncate (pr-str (:input detail)) transcript-args-cap)
                      :result (transcript-digest (get-in ex [:message :content]))}
+              (and (not error?) (contains? memory-read-tool-names (:name detail)))
+              (assoc :result-text (transcript-truncate (get-in ex [:message :content])
+                                                       transcript-memory-result-cap))
               error? (assoc :error? true
                             :error-text (transcript-truncate
                                          (str (or (:error result-map) "unknown error"))

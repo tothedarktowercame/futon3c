@@ -415,6 +415,28 @@
       (is (= :shape (get-in call [:refusal :invariant/violation :kind])))
       (is (= reason (get-in call [:refusal :invariant/violation :reason]))))))
 
+(deftest minus40-read-results-are-kept-in-full-on-the-round-record
+  ;; m40_find lists one memory per line; at 240 chars the preview keeps two
+  ;; or three of ten. The scope view reads the names back from :result-text.
+  (let [lines (for [i (range 10)] (str "memory-number-" i "  cc:-home-joe\n    line about " i))
+        m40-content (json/generate-string {:ok true :result (str/join "\n" lines)})
+        file-content (apply str (repeat 600 "x"))
+        calls (#'zai/transcript-calls
+               [{:name "m40_find" :input {:terms ["scope"]}}
+                {:name "read_file" :input {:path "/x"}}
+                {:name "m40_state" :input {:date "2026-10-16"}}]
+               [{:error? false :message {:content m40-content}}
+                {:error? false :message {:content file-content}}
+                {:error? true :result {:ok false :error "m40: boom"}
+                 :message {:content "{\"ok\":false}"}}])
+        [find-call read-call failed-call] calls]
+    (is (str/includes? (get-in find-call [:result :preview]) "…[+"))
+    (is (= m40-content (:result-text find-call)))
+    (is (str/includes? (:result-text find-call) "memory-number-9"))
+    (is (not (contains? read-call :result-text)))
+    (is (not (contains? failed-call :result-text)))
+    (is (= "m40: boom" (:error-text failed-call)))))
+
 (deftest memory-read-is-registered-and-dispatched-with-the-evidence-store
   (let [specs (#'zai/openai-tools :full)
         spec (some #(when (= "memory_read" (get-in % [:function :name])) %)
