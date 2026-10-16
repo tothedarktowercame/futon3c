@@ -195,6 +195,23 @@ the text end, an unknown segment and a ghost edge destination, but an empty
 span (`start == end`) passes it. The test now pins span count = cues drawn,
 so a whole-fragment span would fail.
 
+### Adapter three — dispatched 2026-10-16
+
+Split in three, with a review between each. (a) Anchored text in the
+renderer, to codex-23 who built it: `renderScopes(data, host, {anchored})`
+inks units `{e, a, b}` the host has placed, through a pure `inkUnits`
+tested without a DOM (`web/scopes/packets/PACKET-adapter-three-a-anchored-host.md`).
+(b) The mark7 page's data as a fixture, to codex-68: a pure
+`scopes_data(payload, source)` in futon6 beside `render_scope_margin.py`,
+S1 marks on cyan at half weight when ungrounded, S3 node quotes on magenta
+with proof edges labelled by warrant, S4 scopes on yellow from the quoted
+span or the line range; written to `fixtures/mark7-0708.2185.json` and
+audited by the same test (`PACKET-adapter-three-b-mark7-fixture.md`). (c)
+Wiring: plates.js keeps its first half (placement) and hands the units to
+the view; written once (a) and (b) are reviewed. Proof-body shading and
+the mock-verdict re-selection stay in the page, as the drop-in section
+says.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw
