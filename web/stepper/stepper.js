@@ -178,7 +178,7 @@ export function renderStepper(initial, host, opts = {}) {
             return;
         }
         const model = frameModel(frames[current]);
-        status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status}`;
+        status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status} · ${opts.live ? "live" : "fixture"}`;
         const said = add(body, "section");
         const saidHeading = add(said, "h2");
         const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");

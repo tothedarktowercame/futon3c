@@ -204,7 +204,7 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
     body.textContent = "";
     if (!frames.length) { status.textContent = "frame 0/0"; add(body, "p", "", "No operator-turn frames."); return; }
     const model = frameModel(frames[current]);
-    status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status}`;
+    status.textContent = `frame ${current + 1}/${frames.length} · ${short(model.session)} · ${model.status} · ${opts.live ? "live" : "fixture"}`;
     const said = add(body, "section");
     const saidHeading = add(said, "h2");
     const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");
