@@ -84,8 +84,8 @@ accessible category".
    at those offsets in `source`.
 4. One commit in futon6, one in futon3c; bell claude-16 back with a
    summary and both shas:
-   `python3 /home/joe/code/futon3c/scripts/agency_send.py --from codex-68 --to claude-16 --kind bell`
+   `python3 /home/joe/code/futon3c/scripts/agency_send.py --from codex-23 --to claude-16 --kind bell`
    with the summary on stdin via a quoted heredoc.
 
 Keep it to this. If `scopes.js` cannot draw something the data needs, say
-what, do not change the renderer (codex-23 is editing it in parallel).
+what, do not change the renderer (adapter three (a), your previous job, is the only renderer change).

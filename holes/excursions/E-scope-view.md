@@ -201,7 +201,8 @@ Split in three, with a review between each. (a) Anchored text in the
 renderer, to codex-23 who built it: `renderScopes(data, host, {anchored})`
 inks units `{e, a, b}` the host has placed, through a pure `inkUnits`
 tested without a DOM (`web/scopes/packets/PACKET-adapter-three-a-anchored-host.md`).
-(b) The mark7 page's data as a fixture, to codex-68: a pure
+(b) The mark7 page's data as a fixture, queued on codex-23 after (a)
+(codex-68 declined it: its session holds a War Machine repair token): a pure
 `scopes_data(payload, source)` in futon6 beside `render_scope_margin.py`,
 S1 marks on cyan at half weight when ungrounded, S3 node quotes on magenta
 with proof edges labelled by warrant, S4 scopes on yellow from the quoted
