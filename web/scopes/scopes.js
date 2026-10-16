@@ -1,3 +1,18 @@
+/** The span with the smallest extent, ties to the earliest start; undefined when empty. */
+export function smallestSpan(spans) {
+    let best;
+    for (const span of spans) {
+        if (!best) {
+            best = span;
+            continue;
+        }
+        const size = span.end - span.start;
+        const bestSize = best.end - best.start;
+        if (size < bestSize || (size === bestSize && span.start < best.start))
+            best = span;
+    }
+    return best;
+}
 /** Split text at all active span boundaries, using Unicode code-point offsets. */
 export function splitPieces(text, spans) {
     const points = Array.from(text);
@@ -179,10 +194,17 @@ export function renderScopes(data, host, opts = {}) {
         }).join("\n");
     }
     function bindSpanInteraction(node, spanIds) {
-        node.title = readout(spanIds.map((id) => spanById.get(id))
-            .filter((span) => span !== undefined));
-        node.onmouseenter = () => spanIds.forEach((id) => setLit(id, true));
-        node.onmouseleave = () => spanIds.forEach((id) => setLit(id, false));
+        const spans = spanIds.map((id) => spanById.get(id))
+            .filter((span) => span !== undefined);
+        node.title = readout(spans);
+        // Hovering text lights only the smallest span around it: the clause or
+        // binder, whose extent the page does not otherwise show. The enclosing
+        // spans stay reachable from their notes and the readout.
+        const hovered = smallestSpan(spans);
+        node.onmouseenter = () => { if (hovered)
+            setLit(hovered.id, true); };
+        node.onmouseleave = () => { if (hovered)
+            setLit(hovered.id, false); };
         node.onclick = () => spanIds.forEach((id) => setLit(id, true));
     }
     function paintAnchored(segment, visibleSpans) {

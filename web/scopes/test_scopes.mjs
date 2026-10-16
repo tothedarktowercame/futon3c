@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { auditScopeData, inkUnits, mixInk, splitPieces } from "./scopes.js";
+import { auditScopeData, inkUnits, mixInk, smallestSpan, splitPieces } from "./scopes.js";
 import { auditGridData, tallyGrid } from "./grid.js";
 
 const fixture = JSON.parse(await readFile(
@@ -69,6 +69,36 @@ assert.equal(mixInk([
   { id: "m", seg: "s", start: 0, end: 1, layer: "m", kind: "k", weight: 1 },
 ], [{ id: "c", name: "c", ink: "c" }, { id: "m", name: "m", ink: "m" }]),
 "rgb(0, 0, 255)");
+
+// Hovering a word lights only the smallest span around it. A term inside a
+// clause inside a section lights the term, not the section whose outline the
+// page already shows. Ties go to the earliest start; no spans, no hover.
+const nested = [
+  { id: "section", seg: "s", start: 0, end: 3000, layer: "s4", kind: "k", weight: 1 },
+  { id: "clause", seg: "s", start: 100, end: 140, layer: "s2", kind: "k", weight: 1 },
+  { id: "term", seg: "s", start: 120, end: 125, layer: "s1", kind: "k", weight: 1 },
+];
+assert.equal(smallestSpan(nested)?.id, "term");
+assert.equal(smallestSpan([nested[0], nested[1]])?.id, "clause");
+assert.equal(smallestSpan([
+  { id: "late", seg: "s", start: 10, end: 15, layer: "s1", kind: "k", weight: 1 },
+  { id: "early", seg: "s", start: 5, end: 10, layer: "s1", kind: "k", weight: 1 },
+])?.id, "early");
+assert.equal(smallestSpan([]), undefined);
+// On the layered mark7 page, the smallest span over a piece is a real
+// narrowing: a term sits inside a clause inside a section, and the section is
+// at least ten times the term. Without that, hover narrowing would change nothing.
+const mark7 = JSON.parse(await readFile(
+  new URL("./fixtures/mark7-0708.2185.json", import.meta.url), "utf8"));
+const mark7SpanById = new Map(mark7.spans.map((span) => [span.id, span]));
+const nestedPieces = mark7.segments.flatMap((segment) => splitPieces(segment.text,
+  mark7.spans.filter((span) => span.seg === segment.id)))
+  .map((piece) => piece.spanIds.map((id) => mark7SpanById.get(id)))
+  .filter((spans) => spans.length > 1);
+assert(nestedPieces.some((spans) => {
+  const sizes = spans.map((span) => span.end - span.start);
+  return Math.max(...sizes) >= 10 * Math.min(...sizes);
+}), "mark7 has a piece whose spans differ tenfold in extent, so hover narrowing changes what lights");
 
 const unitLayers = [
   { id: "cyan", name: "cyan", ink: "c" },
