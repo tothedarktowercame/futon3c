@@ -12252,6 +12252,29 @@
           (.setDaemon true)))))
     (.setRemoveOnCancelPolicy true)))
 
+(def ^:private async-channel-key-field
+  ;; http-kit 2.8.1 never runs an HTTP channel's :on-close when the client
+  ;; disconnects. decodeHttp builds a fresh AsyncChannel per request and hands
+  ;; it to the handler, but the selection key's attachment keeps the channel
+  ;; made at accept; closeKey's clientClose therefore reaches a channel with
+  ;; no handler. (Probe 2026-10-16: the key's attachment channel was not
+  ;; identical to the handler's; a manual clientClose on the handler's channel
+  ;; fired; a server-side hk/close fires.) So the keepalive tick reads the
+  ;; channel's key through reflection and closes a dead channel itself, which
+  ;; runs :on-close and the cleanup there.
+  (delay (try (doto (.getDeclaredField org.httpkit.server.AsyncChannel "key")
+                (.setAccessible true))
+              (catch Throwable _ nil))))
+
+(defn- async-channel-dead?
+  "True when CHANNEL's socket is gone although http-kit still reports it open.
+   False when the key is valid or when the reflection is unavailable."
+  [channel]
+  (if-let [^java.lang.reflect.Field f @async-channel-key-field]
+    (try (not (.isValid ^java.nio.channels.SelectionKey (.get f channel)))
+         (catch Throwable _ false))
+    false))
+
 (defn- handle-xiang-frames-stream [request _config]
   (let [params (parse-query-params request)
         session (get params "session")
@@ -12299,7 +12322,9 @@
             (reset! !keepalive
                     (.scheduleAtFixedRate
                      frames-stream-keepalive-executor
-                     ^Runnable #(hk/send! channel (frames-stream/keepalive) false)
+                     ^Runnable #(if (async-channel-dead? channel)
+                                  (hk/close channel)
+                                  (hk/send! channel (frames-stream/keepalive) false))
                      25 25 TimeUnit/SECONDS))
             (when @!closed (cleanup!)))})))))
 

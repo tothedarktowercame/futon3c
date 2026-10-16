@@ -55,6 +55,23 @@
     (is (= 400 status))
     (is (= "bad-session" (:reason body)))))
 
+(deftest dead-channel-detection-reads-the-selection-key
+  ;; http-kit 2.8.1 never calls :on-close for a client-closed HTTP channel
+  ;; (see async-channel-key-field in http.clj); the keepalive tick relies on
+  ;; this check instead, so pin that the reflection finds the key.
+  (let [selector (java.nio.channels.Selector/open)
+        pipe (java.nio.channels.Pipe/open)
+        source (doto (.source pipe) (.configureBlocking false))
+        key (.register source selector java.nio.channels.SelectionKey/OP_READ)
+        channel (org.httpkit.server.AsyncChannel. key nil)
+        dead? #'http/async-channel-dead?]
+    (try
+      (is (false? (dead? channel)))
+      (.cancel key)
+      (is (true? (dead? channel)))
+      (finally
+        (.close source) (.close (.sink pipe)) (.close selector)))))
+
 (deftest stream-route-refuses-a-missing-session-before-upgrade
   (let [resp ((handler) {:request-method :get
                          :uri "/api/alpha/xiang/frames/stream"})
