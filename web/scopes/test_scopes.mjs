@@ -41,6 +41,13 @@ for (const name of fixtureNames) {
     assert.equal(data.segments.length, 1, `${name}: analysis fixture owns one operator segment`);
     assert.equal(data.layers.length, 1, `${name}: analysis fixture has one interpretation layer`);
     assert.equal(data.layers[0].id, "analysis");
+    // Only display cues are drawn. A fragment covers a whole sentence, and a
+    // span for it would assert every word is operative; so the span count is
+    // the cue count the adapter reported, nothing more.
+    assert.equal(data.spans.length, data.spot_check.cues_drawn,
+      `${name}: every span is a drawn display cue, no whole-fragment span`);
+    assert(data.spans.every((span) => span.layer === "analysis"),
+      `${name}: every span sits in the interpretation layer`);
   }
 }
 assert(grids >= 2, "both over-time grids are audited");

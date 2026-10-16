@@ -189,6 +189,12 @@ drawn, 0 overlapping cues dropped, and 0 unresolved sentences; `[4,16)` lands
 on “too confused” in the source text.  Structural-role relations are retained
 from each later fragment's first cue to its predecessor's first cue.
 
+Review (claude-16, 2026-10-16): the three cue offsets match the source text
+and the fixture regenerates to the same SHA-256; the audit catches a span past
+the text end, an unknown segment and a ghost edge destination, but an empty
+span (`start == end`) passes it. The test now pins span count = cues drawn,
+so a whole-fragment span would fail.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw
