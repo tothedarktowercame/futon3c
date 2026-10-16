@@ -267,6 +267,44 @@ ones give plates.js's else-if chain exactly, and one inker on
 `style.backgroundColor` is better than two. Packet:
 `PACKET-adapter-three-c-mark7-layers.md`.
 
+**(c) reviewed, accepted** (futon6 a878e2b26, futon3c 44d8762c2, codex-23;
+adapter and test in futon6, fixture alone in futon3c; the stranger's golden
+json still uncommitted). The fixture regenerates to the same SHA-256
+(`d6b429c5…`) from the published page and from a page rebuilt from the run
+(`render_scope_margin.py ~/runs/mark7master-20260921 0708.2185 <typeset dir>`,
+0.2 s). Layers in order: s1-term 2072, s1-clause 500, s1-region 621,
+s1-structure 60, all cyan; s3 136 (122 node quotes, 14 proof bodies at
+0.3); s4 163 (136 scopes, 27 carved at 0.3, of which 1 in-proof at 0.14,
+and that one lies inside a proof body). Every node quote lies inside its
+own proof's body. No refused proof in this run; the hand fixture has one
+at 0.12 and the test pins it, with the keys the page constructor writes
+(`id`, `lo`, `hi`, `status`, `why`, render_scope_margin.py line 377).
+Legend defines proof-body, and carved/<type> for the four types from
+`glossary["This page"]`; nothing unused; `omitted_region_effects` is
+gone. The bad case is in the test: a carved type with no "This page"
+entry raises. `test_scopes.mjs` passes over the fixture (run here; the
+reply showed no node run). Two things the data now says that plates.js
+never did: the structure group is a layer (the select never offered it),
+and all four S1 groups can be on at once.
+
+**(d) is the wiring.** Decisions taken in the packet rather than left to
+the builder: scopes.js is read from the futon3c checkout at build time
+(`futon6_config.sibling("futon3c")`) and inlined as one `<script
+type="module">` with the wiring after it, so the page stays one file and
+runs with no server; module scripts are deferred, so it runs after
+plates.js has placed the units. The scopes data is embedded as a third
+JSON block, `m7-scopes`, built by `scopes_data` in the same process. The
+anchored segment's `article` is hidden by CSS: it is not empty, it holds
+one note per visible span (2072 for s1-term alone), and the page's own
+readout says more. The `title` tooltip the view sets on each unit
+duplicates that readout and is removed after each paint. The mock toggle
+no longer changes the ink (plates.js re-selected node quotes by mock
+verdict); the readout still reports the verdicts, and the banner says
+so. No browser runs on this host, so the acceptance is page assembly
+under test, `node --check`, the fixture sha from the rebuilt page, and a
+rebuilt page published beside the old one for Joe to look at. Packet:
+`PACKET-adapter-three-d-mark7-wiring.md`.
+
 ## Draft comment for issue 7
 
 > Would this cover what you have in mind? We have three readers that draw
