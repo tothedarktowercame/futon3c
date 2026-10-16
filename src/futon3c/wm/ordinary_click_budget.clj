@@ -89,8 +89,10 @@
   excerpt-boundary repair, plus one post-loop-repair debugger click authorized
   directly by Joe, plus one post-handoff-format-audit debugger click authorized
   directly by Joe on 2026-10-16, plus one post-handoff-index debugger click
-  authorized directly by Joe on 2026-10-16."
-  77)
+  authorized directly by Joe on 2026-10-16, plus one post-boundary-repair
+  debugger click authorized directly by Joe on 2026-10-16
+  (\"OK, let's run one click now\")."
+  78)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
