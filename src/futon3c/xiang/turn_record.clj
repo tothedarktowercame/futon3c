@@ -1185,6 +1185,18 @@
     (g job :unreachable) {:outcome :unreachable :reason (str (g job :unreachable))}
     :else
     (let [state (str/lower-case (str (or (g job :state) (g job :status) "")))
+          ;; The public job view shows a finished job whose result has not
+          ;; reached its caller as "delivering", whatever it finished as. A
+          ;; turn-capture job killed by a JVM restart stays there for good
+          ;; (nobody takes its delivery), so read what it finished as from
+          ;; its last terminal event; otherwise it reaps as :running forever.
+          state (if (= "delivering" state)
+                  (or (->> (g job :events)
+                           (keep #(let [t (str/lower-case (str (g % :type)))]
+                                    (when (contains? (conj terminal-bad "done") t) t)))
+                           last)
+                      state)
+                  state)
           executed (g (g job :execution) :executed)
           reason (job-reason job)]
       (cond

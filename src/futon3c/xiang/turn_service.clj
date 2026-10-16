@@ -1225,7 +1225,18 @@
    :analysis :candidates :notices}. :notices are the fixed withdrawal notice
    lines a REPL would have shown, derived from withdrawal_effects."
   [svc id]
-  (let [store (cfg svc :store)]
+  (let [store (cfg svc :store)
+        record (ts/read-record store id)]
+    ;; A record still `requested` with a job id is reaped once here, with no
+    ;; follow-up scheduled. Scheduled reaps live in memory and a JVM restart
+    ;; drops them, which left four 2026-10-16 turns `requested` behind dead
+    ;; jobs while Emacs polled them 225 times; asking settles them instead.
+    (when (and record
+               (contains? #{nil "requested"} (:analysis_status record))
+               (get-in record [:analysis_dispatch :job_id]))
+      (try (reap! svc id {:tries 1})
+           (catch Throwable t
+             (set-health! svc :failing (str id ": reap on read threw " (.getMessage t))))))
     (when-let [record (ts/read-record store id)]
       {:id id
        :record record

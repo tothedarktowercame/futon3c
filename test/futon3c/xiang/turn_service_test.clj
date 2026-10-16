@@ -252,6 +252,20 @@
         (is (= :unreachable (:outcome (svc/reap! (:svc h) id {}))))
         (is (= "requested" (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id))))))))
 
+(deftest reading-a-turn-settles-it-behind-a-dead-job
+  ;; 2026-10-16: a restart dropped the scheduled reaps and left the jobs
+  ;; "delivering"; the records stayed requested while Emacs polled them.
+  (let [h (harness)
+        {:keys [id]} (turn! h {:dispatch :now})
+        store (get-in (:svc h) [:config :store])]
+    (swap! (:jobs h) assoc "job-1" {:state "running"})
+    (is (= "requested" (get-in (svc/turn-view (:svc h) id) [:record :analysis_status])))
+    (is (= [180] (delays h)) "a read of a running job schedules nothing more")
+    (swap! (:jobs h) assoc "job-1" {:state "delivering" :terminal-code "worker-lost-on-restart"
+                                    :events [{:type "running"} {:type "failed" :code "worker-lost-on-restart"}]})
+    (is (= "failed" (get-in (svc/turn-view (:svc h) id) [:record :analysis_status])))
+    (is (= "failed" (:analysis_status (ts/read-record store id))))))
+
 (deftest a-seat-out-of-usage-is-benched-and-the-turn-goes-elsewhere
   (let [h (harness)
         {:keys [id]} (turn! h {:dispatch :now})]

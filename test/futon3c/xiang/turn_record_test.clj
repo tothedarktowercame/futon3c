@@ -229,6 +229,14 @@
   (is (= :failed (:outcome (tr/job-outcome {:state "error" :events []}))))
   (is (= :refused (:outcome (tr/job-outcome {:state "cancelled"}))))
   (is (= "terminal: boom" (:reason (tr/job-outcome {:state "failed" :events [{:type "terminal" :error "boom"}]}))))
+  (testing "a delivering job reads as what its last terminal event says"
+    (is (= {:outcome :failed :state "failed" :reason "failed: recovered on startup"}
+           (tr/job-outcome {:state "delivering" :terminal-code "worker-lost-on-restart"
+                            :events [{:type "running"}
+                                     {:type "failed" :code "worker-lost-on-restart" :message "recovered on startup"}]})))
+    (is (= :running (:outcome (tr/job-outcome {:state "delivering" :execution {:executed true}
+                                                :events [{:type "running"} {:type "done"}]}))))
+    (is (= :running (:outcome (tr/job-outcome {:state "delivering" :events []})))))
   (is (tr/quota-failure? "refusal: usage limit reached"))
   (is (tr/quota-failure? "HTTP 429"))
   (is (not (tr/quota-failure? "no requisition")))
