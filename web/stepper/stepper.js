@@ -309,6 +309,7 @@ export function renderStepper(initial, host, opts = {}) {
             frames = received.frames;
             current = received.current;
             refreshed = ` · pushed ${new Date().toISOString().slice(11, 19)}Z`;
+            streamState = " · live"; // a frame set arriving ends "building" and "rebuild failed"
             draw();
         },
         onStatus: next => {
