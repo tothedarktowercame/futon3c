@@ -21,7 +21,9 @@ Frame shape:
               "proposed_by_parent": {"<parent or (none)>":
                                      [{"id","title","fragment"}]}},
  "happened": [non-operator rows with at in [turn.at, next-turn.at), sorted,
-              each {"at","type","summary"}]}
+              each {"at","type","summary"}],
+ "ports":  {closed_this_turn, still_open} when the record carries them,
+ "record": {"id","turn_id","agent_id","session_id"} when a record was joined}
 """
 
 import argparse
@@ -229,7 +231,7 @@ def merge_xiang_readings(analyses, readings, session_id):
     only exist as files, are kept); otherwise a new entry is indexed under
     the same keys a file entry would be.
     """
-    for body in readings.values():
+    for record_id, body in readings.items():
         record = body["record"]
         entry = analyses["by_evidence_id"].get(record.get("evidence_id"))
         if entry is None:
@@ -240,7 +242,8 @@ def merge_xiang_readings(analyses, readings, session_id):
         if entry is not None:
             entry["analysis"] = body["reading"]
             continue
-        entry = {"record": record, "analysis": body["reading"], "candidates": []}
+        entry = {"record": record, "analysis": body["reading"], "candidates": [],
+                 "id": record_id}
         if record.get("evidence_id"):
             analyses["by_evidence_id"][record["evidence_id"]] = entry
         if record.get("turn_id"):
@@ -656,6 +659,19 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         # without them stays byte-identical.
         if entry is not None and entry["record"].get("ports"):
             frames[-1]["ports"] = entry["record"]["ports"]
+        # record: the 象 turn record this frame was joined to, so a viewer can
+        # reach the record's own pages (scope view ?turn=<turn_id>).  Absent
+        # when the frame has no record.  The id is the file's stem, or the
+        # record id the futon1b reading was indexed under.
+        if entry is not None:
+            rec = entry["record"]
+            path = entry.get("path")
+            frames[-1]["record"] = {
+                "id": entry.get("id") or (os.path.basename(path)[:-len(".json")] if path else None),
+                "turn_id": rec.get("turn_id"),
+                "agent_id": rec.get("agent_id"),
+                "session_id": rec.get("session_id"),
+            }
     return frames
 
 
