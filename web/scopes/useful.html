@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>One memory, followed through four dates</title>
+  <style>
+    :root { color-scheme: light; font: 15px/1.5 system-ui, sans-serif; }
+    body { margin: 0; background: #f5f4ef; color: #222; }
+    main { max-width: 62rem; margin: auto; padding: 1.25rem 1.25rem 4rem; }
+    h1 { font-size: 1.35rem; margin: 0 0 .4rem; } h2 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
+    .lede { color: #444; margin: 0 0 1.4rem; }
+    .row { background: white; border: 1px solid #ccc; padding: .9rem 1rem; margin: 0 0 1rem; display: grid; grid-template-columns: minmax(0, 3fr) minmax(14rem, 1.3fr); gap: 1.2rem; }
+    .row h2 { margin: 0 0 .5rem; grid-column: 1 / -1; }
+    .row h2 .when { font: .8rem ui-monospace, monospace; color: #555; margin-left: .6rem; font-weight: 400; }
+    .what { border-left: 3px solid #0645ad; padding-left: .8rem; font-size: .9rem; }
+    .what.bad { border-color: #a21; } .what.good { border-color: #0a7; } .what.pending { border-color: #bbb; color: #666; }
+    .what strong { display: block; margin-bottom: .3rem; }
+    blockquote { margin: .5rem 0; padding: .4rem .8rem; background: #faf9f4; border-left: 3px solid #ddd; font-size: .9rem; }
+    blockquote cite { display: block; font-size: .75rem; color: #666; margin-top: .3rem; font-style: normal; font-family: ui-monospace, monospace; }
+    pre { background: #fafafa; border: 1px solid #e3e3e3; padding: .5rem .7rem; font: .78rem/1.4 ui-monospace, monospace; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: .4rem 0; }
+    code { font: .85em ui-monospace, monospace; background: #f0efe9; padding: 0 .2em; }
+    pre code { background: none; padding: 0; }
+    details summary { cursor: pointer; color: #0645ad; font-size: .85rem; }
+    .conflict { color: #a21; font-weight: 700; }
+    .thin { font-size: .85rem; color: #555; }
+    table { border-collapse: collapse; font-size: .85rem; background: white; }
+    td, th { border: 1px solid #ddd; padding: .25rem .5rem; text-align: left; vertical-align: top; }
+    @media (max-width: 800px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>One memory, followed through four dates</h1>
+  <p class="lede">The <a href="index.html?session=zai-1">grid</a> shows which memories reached which turns of a Zai session.
+  This page takes one of those memories, <code>never-git-stash-in-shared-futon-trees</code>, and lays out
+  what happened on each date it mattered: twice it did not reach the seat at work and the thing it warns of happened;
+  on 2026-10-16 it reached a seat through the store. Every quotation is from a record on this host; the commands that
+  produced each are at the foot of the page.</p>
+
+  <h2>What the memory is about, as it stands today</h2>
+  <p>The futon3c checkout that the live JVM, the Agency and Joe's Emacs all run from carries two stash entries that
+  codex seats left on 2026-09-01 and that nobody has dropped since:</p>
+<pre>$ git -C /home/joe/code/futon3c stash list --format='%gd %H %ci'
+stash@{0} 04a4318822a1aed82c0c7890c83f2a6b3f135150 2026-09-01 19:14:56 +0000
+stash@{1} be3c176efd9db3b07b52da31f52c42966e14dd4d 2026-09-01 18:22:02 +0000</pre>
+  <p>A seat that has just committed a fix and wants to run the new test against the code before the fix reaches for
+  <code>git stash push -- &lt;file&gt;; test; git stash pop</code>. The path is already committed, so the push saves
+  nothing and prints nothing under <code>-q</code>; the pop then applies <code>stash@{0}</code>, the codex entry, to
+  the shared tree. This is what that pop does at today's master, reproduced at 06:10Z on 2026-10-16 in a throwaway
+  <code>git clone --shared</code> of the repository with a copy of <code>stash@{0}</code> stored in it, so the live checkout
+  was never touched:</p>
+<pre>HEAD 4de74c1ae == live master 4de74c1ae
+$ git stash pop
+error: could not restore untracked files from stash
+Changes to be committed:
+	modified:   emacs/claude-repl.el
+	modified:   emacs/zai-repl.el
+Unmerged paths:
+	<span class="conflict">both modified:   emacs/agent-chat.el</span>
+	<span class="conflict">both modified:   emacs/codex-repl.el</span>
+	<span class="conflict">both modified:   holes/labs/M-apm-demonstration/frame-park-decisions.edn</span>
+	<span class="conflict">both modified:   test/futon3c/transport/http_test.clj</span>
+The stash entry is kept in case you need it again.
+
+$ grep -l '^&lt;&lt;&lt;&lt;&lt;&lt;&lt;' $(git status --porcelain | awk '{print $2}')
+test/futon3c/transport/http_test.clj
+emacs/codex-repl.el
+emacs/agent-chat.el
+holes/labs/M-apm-demonstration/frame-park-decisions.edn</pre>
+  <p>Four files are left with conflict markers. Two of them, <code>emacs/agent-chat.el</code> and
+  <code>emacs/codex-repl.el</code>, are the agent REPL code that Emacs loads from this checkout. One,
+  <code>frame-park-decisions.edn</code>, is the file the APM coordinator read every tick during the
+  jit-all-open-v3 campaign. The entry itself is six weeks stale and nine of its untracked files already exist, so the
+  pop half-fails and leaves the tree in the state above. The memory's alternative is one command that cannot reach the
+  stash stack: <code>git show &lt;sha&gt;^:&lt;path&gt; &gt; &lt;path&gt;</code>, run, <code>git checkout HEAD -- &lt;path&gt;</code>.</p>
+
+  <section class="row">
+    <h2>First time<span class="when">2026-09-09 04:12Z, seat working from the voxterm project</span></h2>
+    <div>
+      <p>The seat popped the codex entry into the live tree. The memory file was written eighteen minutes into the
+      clean-up and is the primary record; the session transcript for that morning is not on this host.</p>
+      <blockquote>On 2026-09-09 that put conflict markers into <code>holes/labs/M-apm-demonstration/frame-park-decisions.edn</code>.
+      The APM coordinator reads that file every tick, so within about a minute the jit-all-open-v3 regulator went
+      <code>:failed</code> with <code>:problem-queue-park-decision-read-failed</code> ("Map literal must contain an even
+      number of forms") and the campaign stopped until the file was restored and the coordinator resumed.
+      <cite>~/.claude/projects/-home-joe-code-voxterm/memory/never-git-stash-in-shared-futon-trees.md, mtime 2026-09-09 04:12:24Z</cite></blockquote>
+      <p>The coordinator's own record agrees. The reliability audit of frames f200 to f218, run two days later, lists the
+      regulator's failures in order; the fifth is this one:</p>
+      <blockquote><code>{:path [0 :regulator/failures 4 :result :error/code], :value :problem-queue-park-decision-read-failed}
+      {:path [0 :regulator/failures 4 :result :finding :exception/message], :value "Map literal must contain an even number of forms"}</code>
+      <cite>futon3c holes/labs/M-apm-demonstration/analysis/f200-f218-reliability-audit-2026-09-11/census.edn</cite></blockquote>
+      <p>What memory held the day before:</p>
+<pre>$ python3 scripts/m40.py asof 2026-09-08 stash shared
+As of 2026-09-08, 0 facts in 0 memories matching stash shared:</pre>
+    </div>
+    <div class="what bad"><strong>Nothing to reach</strong>
+      No memory about the stash stack existed. Cost: a running campaign's regulator failed on a file with conflict markers
+      and the campaign stood still until a person restored the file. The lesson was written down in one project's memory
+      directory.</div>
+  </section>
+
+  <section class="row">
+    <h2>Second time, same entry<span class="when">2026-09-30 16:11Z, seat working from /home/joe/code</span></h2>
+    <div>
+      <p>Three weeks later a seat in a different Claude project did the same thing in the same checkout, and
+      <code>stash@{0}</code> was still the same codex entry. Its memory, written afterwards in that project's directory:</p>
+      <blockquote><strong>Why:</strong> on 2026-09-30 the file was already committed, so <code>git stash</code> saved nothing,
+      and <code>git stash pop</code> then applied a preserved stash from 2026-09-01 (codex/http-test-ledger-isolation) onto
+      futon3c master: four live <code>emacs/*.el</code> files modified and two files left with conflicts. Recovered with
+      <code>git checkout HEAD -- &lt;the six files&gt;</code>; the stash entry survived because the pop failed.
+      <cite>~/.claude/projects/-home-joe-code/memory/no-git-stash-in-shared-checkout.md, mtime 2026-09-30 16:11:39Z</cite></blockquote>
+      <p>The 09-09 memory existed that morning. The store, asked what was said as of that date, finds it:</p>
+<pre>$ python3 scripts/m40.py asof 2026-09-30 stash shared
+never-git-stash-in-shared-futon-trees
+  said 2026-09-09: "Never `git stash` in a shared futon tree; a no-op stash push followed by pop applies
+                    a stranger's old stash entry. Use `git show &lt;sha&gt;^:&lt;path&gt; &gt; &lt;path&gt;` to test pre-fix code."
+  said 2026-09-09: **How to apply:** to run tests against pre-fix code, check the old blob out by path instead …</pre>
+      <p>But on 2026-09-30 there was no store. Each Claude project reads only its own memory directory, and the seat at
+      work was reading <code>-home-joe-code</code>, not <code>-home-joe-code-voxterm</code>. The first minus40 commit is dated
+      2026-10-09. The one record of the lesson was on the same disk, in a directory the seat never opened.</p>
+    </div>
+    <div class="what bad"><strong>Existed, not reached</strong>
+      The same six files were applied to the live tree, two of them with conflicts, and were restored by hand. A second
+      memory was written saying the same thing in different words. This row is the price of a memory that is recorded
+      but does not reach the seat that needs it.</div>
+  </section>
+
+  <section class="row">
+    <h2>Reached<span class="when">2026-10-16 03:53Z, zai-1, turn-7pVUkq</span></h2>
+    <div>
+      <p>Both memory files, from both project directories, now sit in one store, and the Zai seats call it as tools.
+      Asked about amending and stashing in shared trees, zai-1 made three calls in its first round:</p>
+<pre>m40_find  {:terms ["amend" "shared"]}
+m40_find  {:terms ["stash" "shared"]}
+m40_state {:date "2026-10-16", :terms ["amend"]}</pre>
+      <p>and its reply carries both memories, with the dates and the alternative command:</p>
+      <blockquote>Its stash twin <strong>never-git-stash-in-shared-futon-trees</strong> (cc voxterm) explains why: the stash stack
+      is shared with every other agent, so <code>pop</code> can apply a stranger's preserved entry;
+      <strong>no-git-stash-in-shared-checkout</strong> (cc /home/joe/code) records the 2026-09-30 incident where stash saved
+      nothing and pop applied a 2026-09-01 codex entry, and prescribes <code>git show &lt;sha&gt;:path &gt; /tmp/...</code> instead.
+      <cite>Agency job invoke-1792122812004-15112-6f64d143, result; 象 record turn-7pVUkq; grid row 2026-10-16T03:53:32Z</cite></blockquote>
+      <p class="thin">The prompt for this turn was a requisitioned check from claude-16, not work the seat was doing for
+      its own reasons. So this row shows that the two memories reach a seat as one answer; it does not by itself show that
+      reaching changed anything. That is what the next row is for.</p>
+    </div>
+    <div class="what good"><strong>Reached, across projects</strong>
+      The lesson written in one project directory on 09-09 and the one written in another on 09-30 arrive together, in one
+      call, in a seat that belongs to neither. This is the cell the grid paints.</div>
+  </section>
+
+  <section class="row" id="live-check">
+    <h2>Same task, with and without the store<span class="when">2026-10-16 06:27Z, dispatched; results below</span></h2>
+    <div>
+      <p>A real review task, the kind that produced both incidents: commit 67dc57602 (this morning's failover fix) claims
+      its new test "fails on the pre-fix code, passes here". Two idle seats were asked, with the same packet, to verify
+      that independently: run the test namespace against the source before the fix and at the fix, in a worktree detached
+      at 67dc57602 under <code>~/worktrees/futon3c/</code>, and leave the worktree clean. The worktree shares the
+      repository's <code>.git</code>, so it shares the stash stack: a stash pop there applies the same codex entry, into the
+      worktree rather than the live checkout. The packet does not mention stash, memory, or the alternative.</p>
+      <table>
+        <tr><th>Seat</th><th>Memory tools</th><th>Job</th></tr>
+        <tr><td>zai-1</td><td>m40 tools in the harness</td><td><code>invoke-1792131271931-15168-9eba5669</code></td></tr>
+        <tr><td>codex-68</td><td>none</td><td><code>invoke-1792131272674-15169-7b033592</code></td></tr>
+      </table>
+      <div id="live-check-results">
+        <p class="thin">Results pending at the time this page was written. They are filled in from the two job records
+        when they land: the commands each seat ran, in order; whether zai-1's turn-round evidence shows a minus40 call;
+        whether either used <code>git stash</code>; and the test outcomes.</p>
+      </div>
+    </div>
+    <div class="what pending" id="live-check-verdict"><strong>Pending</strong>
+      This cell is written from the records once both seats answer. One run each; it is one observation, not a measurement.</div>
+  </section>
+
+  <h2>What "useful" means on this page</h2>
+  <p>Not that the memory was retrieved, and not that the reply mentions it. On 09-09 and 09-30 the memory's absence from
+  the seat's context cost a stopped campaign and a hand restore of the live Emacs code. Today the same pop leaves four
+  files with conflict markers. A seat that reaches the memory before testing pre-fix code runs one <code>git show</code>
+  instead, and the stash stack is never touched. The grid shows whether the memory reached; this page shows what reaching
+  it is worth in this one case, dated and quoted.</p>
+
+  <h2>Where this is thin</h2>
+  <ul class="thin">
+    <li>The 09-09 and 09-30 session transcripts are not on this host; the memory files written within minutes, and for 09-09
+    the coordinator census, are the records.</li>
+    <li>The two memories prescribe slightly different recipes (overwrite the path in place and check out HEAD after, or
+    write to a temp path and point the test at it). <code>m40 state</code> gives the 09-30 wording as the latest; the store
+    does not list them as a contradiction, and they are not one.</li>
+    <li>The live check is one run per seat.</li>
+  </ul>
+
+  <h2>Commands behind each quotation</h2>
+<pre>cd ~/code/minus40
+python3 scripts/m40.py asof 2026-09-08 stash shared
+python3 scripts/m40.py asof 2026-09-30 stash shared
+python3 scripts/m40.py history stash shared
+python3 scripts/m40.py state 2026-10-16 stash
+git -C ~/code/futon3c stash list --format='%gd %H %ci'
+git -C ~/code/futon3c stash show --stat 'stash@{0}'
+curl -s localhost:7070/api/alpha/invoke/jobs/invoke-1792122812004-15112-6f64d143
+curl -s localhost:7070/api/alpha/xiang/turns/turn-7pVUkq
+# the reproduction, in a throwaway shared clone, never the live checkout:
+S0=$(git -C ~/code/futon3c rev-parse 'stash@{0}'); D=$(mktemp -d)
+git clone -q --shared --no-checkout ~/code/futon3c $D/futon3c && cd $D/futon3c
+git checkout -q master && git stash store -m copy $S0 && git stash pop; git status --porcelain</pre>
+</main>
+</body>
+</html>
