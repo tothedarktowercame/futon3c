@@ -110,6 +110,16 @@ told to do, which no flat memory directory would ever surface.
     EDGE claude-16-turn-168-f-s2-0 within claude-16-turn-168-f-s1-1   rule R3  (the proposal sits inside the ask)
     EDGE claude-16-turn-168-r-0..4 within claude-16-turn-168-f-s2-0   rule R3  (every reply paragraph sits inside the proposal)
 
+After the failover fix in section E, the same route on your demo-request
+turn, read by 象-sonnet at 06:01Z:
+
+    {"ok": true, "turn": "claude-16-turn-181", "rules-version": "2026-10-15.2"}
+    ACT  turn-181-f-s1-0  ask-action      "I'd like to see some actual demos of the M-象-2000 and Minus40°DB work working."
+    ACT  turn-181-f-s2-0  report-problem  "Supposedly we were mining scopes "like futon6" and I have yet to see that."
+    ACT  turn-181-f-s3-0  report-problem  "I have yet to see any evidence of anything useful done at all with Minus40°DB in…"
+    EDGE turn-181-f-s2-0 within turn-181-f-s1-0   R3  (the first complaint sits inside the ask)
+    EDGE turn-181-f-s3-0 within turn-181-f-s2-0   R3  (the second sits inside the first)
+
 These are the classical rules R1/R3/R4/R5 distilled from the Zai labelling
 (section C), applied by `scope_rules.clj` when a turn settles. The same edges
 are what `xiang-scope-overlay.el` paints in your REPL buffer (loaded in your
@@ -209,14 +219,22 @@ mark7 views 404'd there).
 
 ## E. What is not working, found while doing this
 
-1. **Your turns since 2026-10-15 19:11Z are not being interpreted.** The
-   ledger shows your last three turns as "not yet interpreted"; the records
+1. **Your turns since 2026-10-15 19:11Z were not being interpreted.** The
+   ledger showed your last three turns as "not yet interpreted"; the records
    carry `analysis_status: failed` with Kimi's HTTP 403 "monthly usage
-   limit". The analysis pool in your Emacs is the four 象-N seats, all
-   Kimi-backed. So B1 works on turn 168 (analysed 10-15) and nothing newer.
-   Zai's five-hour window is at 1% and its month at 44%. The fix is to point
-   `session-mode-analysis-pool` at Zai seats, or to let the pool fall through
-   to one when Kimi answers 403; see the status report for what was done.
+   limit". The analysis pool is the four 象-N seats, all Kimi-backed, and
+   the alternate 象-sonnet (Claude) was idle. The JVM has a failover for
+   exactly this (bench the pool, send the turn to the alternate), and it
+   fired once at 03:25Z. It did not fire for the fourteen turns from 04:52Z
+   to 05:49Z because the read-time reap added in a7978107e (04:14Z today)
+   calls `reap!` with no `:agent`, and the quota branch requires one, so a
+   403 fell through to the plain "failed" branch. Fix 67dc57602: the reap
+   takes the seat from the job's `agent-id`; a test built against the
+   pre-fix code fails there and passes with the fix (60 tests, 331
+   assertions). Reloaded into the running JVM from master at 05:59Z; the
+   pool benched; the four failed turns (including this one, turn-AGhASK)
+   retried on 象-sonnet (jobs …03e7b0be, …af3b63d6, …127fb4ca, …6ac3d9eb).
+   Until Kimi's month resets, every operator turn goes to 象-sonnet.
 2. **Nothing reads the mined edges yet.** The brief and the graph still glob
    sidecars (section C).
 3. **`m40.py near` needs the futon3a venv** (A6); the walkthrough step that
