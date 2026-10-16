@@ -517,3 +517,24 @@ whole, and that is a fact about the store, not a gap in the view; it stays
 exercised only by the renderer test. Nothing is being retracted to make
 the cell show. A third consulting turn per seat would add rows of the same
 kinds already shown and is not being requisitioned for its own sake.
+
+**Looked at on a screen (2026-10-16, headless Chromium).** Joe: the scopes
+page "looks about the same as the one without -scopes". That is the pass
+condition for a drop-in replacement, and it should have been said when the
+page was published. The old page's own script already printed the three
+C/M/Y plates; the new page prints the same plates through the shared
+scope-view module. Rendered both at 1600px with the Playwright Chromium
+under `~/.cache/ms-playwright` (driven from
+`excitement-to-evidence/node_modules`; the earlier "no browser here" was
+wrong): old page 3654 of 4326 units tinted, new page 3641, load 3.2 s
+against 3.7 s. What does differ on screen: (1) a `Layers` fieldset with six
+checkboxes replaces the C/M/Y row and the S1 select, so the three other S1
+layers (clauses, environments and displays, structure) can be shown together
+rather than one at a time; (2) inks are at full weight (pure cyan where the
+old page used a pale tint), and the old two-tone legend entries (grounded vs
+found no meaning, quoted vs inside a proof) now appear only as the 0.5 and
+0.3 weights; (3) hovering a word outlines every word that shares one of its
+spans: hovering "There" in the introduction outlined 552 words, the whole
+leaf-section scope, where the old page lit only the margin note; (4) the
+mixed-colour legend is replaced by a collapsed `Legend` listing span kinds.
+Screenshots in `~/notes/mark7-scopes/`.
