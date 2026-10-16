@@ -45,12 +45,34 @@ def acceptance_contract():
     return {
         "schema": "wm/handoff-contract-v1",
         "id": "wm/selected-target-reading-analysis",
-        "version": 1,
+        "version": 2,
         "response": {
             "required": ["labeller", "reusable_cues", "rnode_cues", "sentences"],
             "relation_vocabulary": sorted(ROLES),
             "offset_unit": "unicode-codepoint",
             "sentence_coverage": "exactly-one-entry-per-request-sentence",
+            # These are not prompt advice.  They are the limits enforced by
+            # validate(), published here so a producer can satisfy the same
+            # contract the consumer will later apply.
+            "display_cues": {
+                "required_per_fragment_or_explain": "no_surface_cue",
+                "inside_interpretation_span": True,
+                "max_words_per_cue": 8,
+                "max_characters_per_cue": 80,
+                "newlines_allowed": False,
+                "long_sentence_threshold_words": 8,
+                "max_covered_words": {
+                    "formula": "max(floor(sentence_words / 2), min_cue_words)",
+                    "min_cue_words": MIN_CUE_WORDS,
+                    "counting_unit": "words",
+                    "applies_across_all_fragments_in_sentence": True,
+                },
+            },
+            "intent_label": {"pattern": "^[a-z][a-z0-9_-]*$"},
+            "pattern_references": {
+                "must_exist_in": str(LIBRARY),
+                "declaration_must_match_id": True,
+            },
         },
         "validator": {"id": "wm/session-turn-analysis", "version": 2},
     }

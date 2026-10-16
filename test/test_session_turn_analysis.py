@@ -21,6 +21,22 @@ class ValidationTest(unittest.TestCase):
         self.data = {"labeller": "test-agent", "sentences": [
             {"id": "s1", "fragments": [self.fragment], "unresolved_reason": ""}]}
 
+    def test_acceptance_contract_discloses_enforced_display_cue_budget(self):
+        contract = analysis.acceptance_contract()
+        self.assertEqual(contract["version"], 2)
+        response = contract["response"]
+        cues = response["display_cues"]
+        self.assertEqual(cues["max_words_per_cue"], 8)
+        self.assertEqual(cues["max_characters_per_cue"], 80)
+        self.assertEqual(cues["long_sentence_threshold_words"], 8)
+        self.assertEqual(
+            cues["max_covered_words"]["formula"],
+            "max(floor(sentence_words / 2), min_cue_words)")
+        self.assertEqual(cues["max_covered_words"]["min_cue_words"],
+                         analysis.MIN_CUE_WORDS)
+        self.assertTrue(
+            cues["max_covered_words"]["applies_across_all_fragments_in_sentence"])
+
     def test_exact_unicode_span_and_real_pattern(self):
         self.request["interpretation_version"] = 3
         self.request["vocabulary_version"] = 3
