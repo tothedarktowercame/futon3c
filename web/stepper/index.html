@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>象 stepper</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#242424;background:#f5f4ed} body{max-width:76rem;margin:0 auto;padding:1rem}
+    #stepper{background:#fff;border:1px solid #ccc;padding:1rem}.stepper-status{position:sticky;top:0;background:#242424;color:#fff;padding:.45rem .7rem;font:600 .9rem ui-monospace,monospace}
+    .stepper-frame{max-width:70rem}.stepper-frame section{border-bottom:1px solid #ddd;padding:.65rem 0}.stepper-frame h2,.said-link,.stepper-frame>section>span:first-child{font-size:.9rem;font-weight:700;color:#333}
+    .said-link{color:#0645ad}.said-text{white-space:pre-wrap}.stepper-section,.parse-line{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,monospace;margin:.25rem 0}
+    .parse-cue{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:purple;text-decoration-thickness:1.5px}.parse-sources{padding-left:1.5rem;color:#555}.provisional{color:#777;font-style:italic}.provisional .parse-head{color:#777}
+    .stepper-footer{margin-top:.8rem;color:#666;font-size:.8rem}.help{color:#555;font-size:.82rem;margin:.3rem 0 1rem}
+  </style>
+</head>
+<body>
+  <h1>象 stepper</h1>
+  <p class="help">n / → next · p / ← previous · Home / End · g refetch</p>
+  <div id="stepper">Loading…</div>
+  <script type="module">
+    import {renderStepper} from './stepper.js';
+    const params = new URLSearchParams(location.search);
+    const session = params.get('session');
+    const base = (params.get('base') || location.origin).replace(/\/$/, '');
+    const limit = params.get('limit') || '60';
+    const host = document.querySelector('#stepper');
+    async function load() {
+      const url = session
+        ? `${base}/api/alpha/xiang/frames?session=${encodeURIComponent(session)}&limit=${encodeURIComponent(limit)}`
+        : './fixtures/frames-claude-16-00e653e3.json';
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const value = await response.json();
+      if (session && !value.ok) throw new Error(value.reason || 'frames endpoint returned ok:false');
+      return session ? value.frames : value;
+    }
+    try {
+      const frames = await load(); host.textContent = '';
+      renderStepper(frames, host, {frame: Number(params.get('frame') || 1), live: !!session, refetch: load});
+    } catch (error) {
+      host.textContent = `Could not load frames: ${error}`;
+    }
+  </script>
+</body>
+</html>
