@@ -917,6 +917,21 @@ So the view is updated per event, incrementally (one session's contribution
 recomputed, the aggregate re-summed), never on a timer. Non-goal: no other
 session's content is pushed; zoom levels 2–3 are one line each.
 
+**Turn finalisation as a JVM event (Joe 22:0xZ: "I really like everything to
+be event driven"; futon3c 90eb10194).** `futon3c.agency.turn-events`: a turn
+is final when its finalising row is appended, either an agent's final reply
+segment (Emacs claude-repl) or a Zai/Kimi turn's final `turn-round` (zai_api
+now writes exactly one per turn, including the interrupted, wall-clock and
+max-rounds exits, with `:stop`). `boundary/append!`, the single choke point,
+raises `:turn-final` in two phases: `:pre`, synchronously just before the row
+is stored (observe-only, fast; errors swallowed), and `:post`, async after.
+馬 (`futon3c.xiang.ma-observer`) subscribes to `:post`; the 20 s polling
+watcher is retired. FUTON's view stays on 象's `:reading`/`:settled` events
+plus 馬's card posts. First live run (22:14Z): a zai-1 S2 turn finalised →
+馬 74 s → progress promoted → auto-continued to episode 4 of
+`invoke-…881a972e`, whose turn-start injects the progress memory first.
+`:pre` has no subscriber yet.
+
 **Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
