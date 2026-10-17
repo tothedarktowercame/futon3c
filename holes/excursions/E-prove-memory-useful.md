@@ -885,6 +885,19 @@ status intact (10.4 s, the first ranking after new facts embeds them).
 Acceptance (c), a live auto-continued turn, waits for the next truncated
 episode.
 
+**Joe (21:4xZ), on cross-session awareness: zoom control, not a hive mind.**
+Pushing other threads into a session indiscriminately is a mistake (Mastra
+made it and deprecated it); it turns agents into a hive mind and confuses
+the user. Context engineering is still useful given a sense of zoom: for a
+related mission that covers distinct material, do not inject its content;
+say "this related mission uses a similar pattern" and offer it as
+inspiration, the way minus40 takes inspiration from Mastra and ZeroDB.
+Proposed zoom levels (not built): same lemma or leaf → content (the
+progress memory, as now); same mission, other agents → one card line each
+(who, purpose), never their logs; related mission sharing a pattern this
+turn retrieved → one pointer line naming the mission and the pattern; else
+nothing.
+
 **Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
