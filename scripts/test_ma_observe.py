@@ -52,5 +52,68 @@ class CardTest(unittest.TestCase):
         self.assertIn("<agent-card>", sp)
 
 
+# The exact bad cases from zai-5's t95J03 run, 2026-10-17.
+S2_PACKET = ("--- CURRENT TURN ---\nSurface: bell\nFrom: zai-5\n---\n\nFrom zai-5: prove ONE lemma.\n\n"
+             "THIS JOB: P = t95J03, NAME = t95J03_torus_bridge (leaf S2, LIBRARY-sized).")
+S2_TRUNCATED_REPLY = ("For injectivity the essential facts: phi(z) determines z. ... "
+                      "z = (rho^2/l^2)(x',y') where ... wait |(x',y')| = rho^2/l. Hmm no:")
+
+
+class HarnessTest(unittest.TestCase):
+    def test_truncated_s2_episode_has_no_verdict(self):
+        self.assertIsNone(ma.verdict(S2_TRUNCATED_REPLY))
+        self.assertIsNone(ma.verdict("once this is PROVED we can splice ... not yet PROVED"))
+        self.assertEqual(ma.verdict("...\nPROVED. area 86 lines, 5 failed compiles"), "proved")
+        self.assertEqual(ma.verdict("PARTIAL: remaining goal injectivity"), "partial")
+
+    def test_leaf_and_progress_lines_carry_the_lemma_name_first(self):
+        packet = ma.packet_body(S2_PACKET)
+        self.assertEqual(ma.leaf_of(packet), ("t95J03", "t95J03_torus_bridge"))
+        obs = ("Date: Oct 17, 2026\n"
+               "* 🔴 (9:02 PM) Task: prove lemma t95J03_torus_bridge — final reply must state PROVED/PARTIAL\n"
+               "* 🟡 (21:04) route: l1 chart c(z)=|z|n(arg z)\n* 🔴 remaining: injectivity")
+        lines = ma.progress_lines("t95J03", "t95J03_torus_bridge", "zai-1", "invoke-1", "without a verdict", obs, "2026-10-17T21:30Z")
+        self.assertTrue(lines[0].startswith("t95J03 leaf (t95J03_torus_bridge) progress"))
+        self.assertEqual(lines[1:], ["🟡 (21:04) route: l1 chart c(z)=|z|n(arg z)", "🔴 remaining: injectivity"])
+        self.assertFalse(any("Task" in l or "\n" in l for l in lines))
+        self.assertEqual(ma.memory_name("t95J03_torus_bridge"), "t95j03-torus-bridge-progress")
+
+    def test_name_slot_finds_the_promoted_line_for_the_next_packet(self):
+        sys.path.insert(0, os.path.expanduser("~/code/minus40/scripts"))
+        import inject
+        head = ma.progress_lines("t95J03", "t95J03_torus_bridge", "zai-1", "invoke-1", "without a verdict", "* 🟡 route", "t")[0]
+        facts = [{"memory": "cc:ma/t95j03-torus-bridge-progress", "text": head},
+                 {"memory": "cc:zai-1/t95j03-c5", "text": "t95J03 leaf C5 (isKSheeted_comp_homeomorph)"}]
+        self.assertEqual(inject.name_hits(ma.packet_body(S2_PACKET), facts),
+                         {"cc:ma/t95j03-torus-bridge-progress": "t95J03_torus_bridge"})
+
+    def test_continuation_keeps_lineage_and_stops_after_max(self):
+        inner = ma.packet_body(S2_PACKET)
+        cont = ma.continuation_packet(inner, "invoke-root", 2, "t95j03-torus-bridge-progress")
+        m = ma.CONT_HEAD.match(cont)
+        self.assertEqual((m.group(1), m.group(2)), ("2", "invoke-root"))  # not "invoke-root." (the full stop)
+        self.assertEqual(ma.leaf_of(cont.split("\n\n", 1)[1]), ("t95J03", "t95J03_torus_bridge"))
+        turn = {"evidence/at": "2026-10-17T21:00:00Z", "evidence/type": "coordination",
+                "evidence/body": {"event": "turn-start", "dispatch-id": "invoke-4",
+                                  "prompt": ma.continuation_packet(inner, "invoke-root", 1 + ma.MAX_CONTINUE, "m")}}
+        with mock.patch.object(ma, "job_of", return_value={"state": "done", "result": S2_TRUNCATED_REPLY}), \
+             mock.patch.object(ma, "continue_agents", return_value={"zai-1"}), \
+             mock.patch.object(ma, "send_bell") as bell:
+            out = ma.after_harness_turn("zai-1", "s", turn, "* 🟡 x", [turn], log=lambda *_: None, dry_run=True)
+        self.assertEqual(out["promoted"], "cc:ma/t95j03-torus-bridge-progress")
+        self.assertIsNone(out["continued"])
+        bell.assert_not_called()
+
+    def test_proved_turn_is_neither_promoted_nor_continued(self):
+        turn = {"evidence/at": "t", "evidence/body": {"event": "turn-start", "dispatch-id": "j", "prompt": S2_PACKET}}
+        with mock.patch.object(ma, "job_of", return_value={"state": "done", "result": "PROVED, 40 lines"}):
+            out = ma.after_harness_turn("zai-1", "s", turn, "* ✅", [turn], log=lambda *_: None, dry_run=True)
+        self.assertEqual((out["promoted"], out["continued"]), (None, None))
+
+    def test_harness_prompt_forbids_restating_the_packet(self):
+        self.assertIn("Do NOT restate it", ma.system_prompt(harness=True))
+        self.assertNotIn("Do NOT restate it", ma.system_prompt())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -59,11 +59,16 @@ After </observations>, output <agent-card>{json}</agent-card> with exactly these
 You will be given the previous card. Copy every item that still holds VERBATIM (exact same words), drop items that no longer hold, add new ones. At most 6 items per list."""
 
 
-def system_prompt():
-    text = open(PROMPT_FILE, encoding="utf-8").read()
+HARNESS_INSTRUCTION = """The first User message in the history is a TASK PACKET that the assistant will receive again, word for word, on every attempt. Do NOT restate it: no rules, file paths, commands, tool hints, checker conditions or reply format, and no "User assigned task ..." observation beyond one short line naming the task. Observe only what the assistant itself derived, tried and learned in this turn, how far it got, and exactly what remains. Keep mathematical and code content precise, with the formulas: definitions and maps it constructed, identities it verified, lemma names that closed goals, routes that dead-ended and why."""
+
+
+def system_prompt(harness=False):
+    with open(PROMPT_FILE, encoding="utf-8") as fh:
+        text = fh.read()
     text = text.split("\n\n", 1)[1] if text.startswith("# ") else text
     # buildObserverSystemPrompt(false, instruction): Mastra's own slot
-    return text + "\n\n=== CUSTOM INSTRUCTIONS ===\n\n" + CARD_INSTRUCTION
+    extra = CARD_INSTRUCTION + ("\n\n" + HARNESS_INSTRUCTION if harness else "")
+    return text + "\n\n=== CUSTOM INSTRUCTIONS ===\n\n" + extra
 
 
 def is_observation(row):
@@ -361,15 +366,26 @@ def observe_session(session, agent="", dry_run=False, log=print):
         end = tf.at_key(turns[i + 1]) if i + 1 < len(turns) else None
         if t.get("evidence/id") in done:
             continue
-        if not any(tf.is_final_reply(r) or tf.body_of(r).get("event") == "turn-round"
-                   for r in rows if tf.at_key(r) > start and (end is None or tf.at_key(r) < end)):
+        if tf.is_harness_turn_start(t):
+            # a Zai/Kimi turn is finished when its job is: there is no
+            # final-reply row, only rounds
+            if job_of(tf.body_of(t).get("dispatch-id") or "").get("state") not in ("done", "failed", "timed-out"):
+                continue
+        elif not any(tf.is_final_reply(r)
+                     for r in rows if tf.at_key(r) > start and (end is None or tf.at_key(r) < end)):
             continue                                   # no reply yet
-        if end is None and not any(tf.is_final_reply(r) for r in rows if tf.at_key(r) > start):
-            continue                                   # harness turn still running
         todo.append((t, start, end))
     written = 0
     for t, start, end in todo[-MAX_BACKLOG:]:
         msgs = [("user", t.get("evidence/at"), turn_text(t))] + window_messages(rows, start, end)
+        harness = tf.is_harness_turn_start(t)
+        if harness:
+            # the seat's final text is in the job record; add it unless the
+            # last round already carries it
+            job = job_of(tf.body_of(t).get("dispatch-id") or "")
+            final = job_text(job).strip()
+            if final and not any(final[-300:] in m[2] for m in msgs[1:]):
+                msgs.append(("assistant", job.get("finished-at") or msgs[-1][1], final[-6000:]))
         msgs = cap_window(msgs)
         model_view = None
         if previous_card:
@@ -382,13 +398,18 @@ def observe_session(session, agent="", dry_run=False, log=print):
             log(user[:3000])
             continue
         t0 = time.time()
-        raw, usage = call_model(system_prompt(), user)
+        raw, usage = call_model(system_prompt(harness), user)
         row = observation_row(session, agent, t, raw, usage, time.time() - t0, len(msgs))
         post_evidence(row)
         card = build_card(agent, session, rows, row["body"]["observations"], parse_card(raw), previous_card)
         post_evidence(card_row(session, agent, t, card, row["body"]["at"]))
         previous_card = card
         previous += "\n" + row["body"]["observations"]
+        if harness:
+            try:
+                after_harness_turn(agent, session, t, row["body"]["observations"], rows, log)
+            except Exception as exc:  # promotion never blocks observation
+                log("馬 after-turn %s: %s: %s" % (agent, type(exc).__name__, exc))
         written += 1
         log("馬 %s %s: %d messages, %.0fs, %s tokens" % (
             agent or session[:8], t.get("evidence/id"), len(msgs), time.time() - t0,
@@ -396,6 +417,161 @@ def observe_session(session, agent="", dry_run=False, log=print):
     if written:
         refresh_frames(session)
     return written
+
+
+# ---------------------------------------------------------------------------
+# Harness seats (Zai, Kimi): progress promotion and auto-continue
+# (zai-5's t95J03 experiment, Joe's go 2026-10-17).  A long leaf's route was
+# derived four times and lost four times: it lived only in truncated
+# episodes' narration.  Now a turn that ends without PROVED has 馬's
+# observation asserted as a minus40 memory named for the lemma, whose first
+# line carries the lemma name (inject.py's exact-name slots deliver it first
+# on any packet naming the lemma); a turn that ends with no verdict at all
+# is continued with the same packet, at most MAX_CONTINUE times per chain.
+
+CONTINUE_FILE = os.path.expanduser(os.environ.get("MA_CONTINUE_FILE", "~/code/data/minus40/ma-continue.txt"))
+M40_MCP = os.path.expanduser("~/code/minus40/scripts/m40_mcp.py")
+AGENCY_SEND = os.path.join(HERE, "agency_send.py")
+MEMORY_PROJECT = "ma"           # ~/.claude/projects/ma/memory: 馬's own memories
+MAX_CONTINUE = 3
+CONTINUE_WITHIN_S = 1800        # never continue a turn that finished longer ago
+PROMOTE_CHARS = 1300
+ENVELOPE = re.compile(r"\A\s*--- CURRENT TURN ---\n.*?^---[ \t]*$\n?", re.S | re.M)
+CONT_HEAD = re.compile(r"\A\s*CONTINUATION \(auto, 馬\): episode (\d+) of (\S+?)\.(?:\s|$)")
+
+
+def packet_body(prompt):
+    return ENVELOPE.sub("", prompt or "", count=1).strip()
+
+
+def leaf_of(packet):
+    """(problem, lemma) from a leaf packet's 'P = ..., NAME = ...' line."""
+    name = re.search(r"\bNAME\s*=\s*([A-Za-z][A-Za-z0-9_']*)", packet or "")
+    prob = re.search(r"\bP\s*=\s*([A-Za-z0-9]+)", packet or "")
+    return (prob.group(1) if prob else None, name.group(1) if name else None)
+
+
+def verdict(reply):
+    """'proved', 'partial' or None (the episode ended without a verdict).
+    Only the end of the reply counts: narration says 'once PROVED' too."""
+    tail = (reply or "")[-2000:]
+    if re.search(r"\b(not|n't|never)\s+(yet\s+)?PROVED\b", tail, re.I):
+        proved = False
+    else:
+        proved = bool(re.search(r"\bPROVED\b", tail))
+    if proved:
+        return "proved"
+    if re.search(r"\bPARTIAL\b", tail):
+        return "partial"
+    return None
+
+
+def job_of(dispatch_id):
+    try:
+        return get_json("/api/alpha/invoke/jobs/" + urllib.parse.quote(dispatch_id)).get("job") or {}
+    except Exception:
+        return {}
+
+
+def job_text(job):
+    r = job.get("result")
+    return r if isinstance(r, str) else (r or {}).get("text") or ""
+
+
+def progress_lines(problem, lemma, agent, dispatch, ended, observations, now):
+    """A head line carrying the lemma name, then one line per observation
+    (the task restatement dropped: the packet carries it)."""
+    items = [re.sub(r"^\s*[*>-]+\s*", "", l).strip() for l in (observations or "").splitlines()]
+    items = [i for i in items if i and not i.startswith("Date:")
+             and not re.match(r"^\W*(\([^)]*\))?\s*Task\b", i)]
+    head = "%s leaf (%s) progress %s (馬 from %s %s; episode ended %s):" % (
+        problem or "?", lemma, now, agent, dispatch, ended)
+    return [head] + [i[:PROMOTE_CHARS].replace("\n", " ") for i in items]
+
+
+def memory_name(lemma):
+    return re.sub(r"[^a-z0-9]+", "-", lemma.lower()).strip("-") + "-progress"
+
+
+def assert_memory(name, line, hook):
+    args = {"project": MEMORY_PROJECT, "name": name, "line": line, "hook": hook}
+    r = subprocess.run(["python3", "-I", M40_MCP, "--call", "memory_assert", json.dumps(args, ensure_ascii=False)],
+                       capture_output=True, text=True, timeout=120)
+    if r.returncode:
+        raise RuntimeError("memory_assert: %s" % (r.stdout or r.stderr).strip()[:300])
+    return r.stdout.strip()
+
+
+def continue_agents():
+    try:
+        return {l.strip() for l in open(CONTINUE_FILE, encoding="utf-8") if l.strip() and not l.startswith("#")}
+    except OSError:
+        return set()
+
+
+def continuation_packet(packet, root, episode, memory):
+    return ("CONTINUATION (auto, 馬): episode %d of %s. The previous episode ended without "
+            "PROVED or PARTIAL. Your progress so far was banked as the minus40 memory %s, "
+            "injected above: start from it, do not re-derive what it records.\n\n%s"
+            % (episode, root, memory, packet))
+
+
+def send_bell(agent, text):
+    r = subprocess.run(["python3", AGENCY_SEND, "--from", "ma-continue", "--to", agent,
+                        "--kind", "bell", "--mode", "work"], input=text, capture_output=True,
+                       text=True, timeout=60)
+    last = (r.stdout or "").strip().splitlines()[-1:] or ["{}"]
+    return json.loads(last[0]).get("job-id")
+
+
+def after_harness_turn(agent, session, turn_row, observation, rows, log=print, dry_run=False):
+    """Promote and, when the episode ended with no verdict, continue."""
+    b = tf.body_of(turn_row)
+    dispatch = b.get("dispatch-id")
+    packet = packet_body(b.get("prompt"))
+    m = CONT_HEAD.match(packet)
+    root, episode = (m.group(2), int(m.group(1))) if m else (dispatch, 1)
+    inner = packet.split("\n\n", 1)[1] if m else packet
+    problem, lemma = leaf_of(inner)
+    job = job_of(dispatch) if dispatch else {}
+    ended = verdict(job_text(job))
+    out = {"lemma": lemma, "verdict": ended, "promoted": None, "continued": None}
+    if not lemma or ended == "proved":
+        return out
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    name = memory_name(lemma)
+    lines = progress_lines(problem, lemma, agent, dispatch, ended or "without a verdict", observation, now)
+    if not dry_run:
+        for line in lines:
+            assert_memory(name, line, ("%s progress (馬, auto)" % lemma)[:79])
+    out["promoted"] = "cc:%s/%s" % (MEMORY_PROJECT, name)
+    log("馬 promoted %s (%s)" % (out["promoted"], ended or "no verdict"))
+    if ended is None and agent in continue_agents() and episode < 1 + MAX_CONTINUE:
+        finished = parse_at(job.get("finished-at") or job.get("completed-at") or turn_row.get("evidence/at"))
+        latest = max((tf.at_key(r) for r in rows if tf.is_harness_turn_start(r)), default="")
+        fresh = (datetime.datetime.utcnow() - finished).total_seconds() < CONTINUE_WITHIN_S
+        if tf.at_key(turn_row) == latest and fresh:
+            text = continuation_packet(inner, root, episode + 1, name)
+            new_job = None if dry_run else send_bell(agent, text)
+            out["continued"] = {"root": root, "from": dispatch, "to": new_job, "episode": episode + 1}
+            if not dry_run:
+                post_evidence(continue_row(session, agent, out["continued"], out["promoted"]))
+            log("馬 continued %s: episode %d of %s -> %s" % (agent, episode + 1, root, new_job))
+    return out
+
+
+def continue_row(session, agent, cont, memory):
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"subject": {"ref/type": "session", "ref/id": session},
+            "type": "coordination", "claim-type": "observation", "author": "馬",
+            "origin": {"kind": "agent", "actor": "馬", "writer": "futon3c/scripts/ma_observe.py",
+                       "attributed-author": "馬", "authorization": "unknown",
+                       "basis": "write-time", "recorded-at": now},
+            "session-id": session,
+            "body": {"event": "auto-continue", "agent": agent, "root-dispatch": cont["root"],
+                     "from-dispatch": cont["from"], "to-dispatch": cont["to"],
+                     "episode": cont["episode"], "progress-memory": memory, "at": now},
+            "tags": ["ma-continue"]}
 
 
 def enabled_agents():
