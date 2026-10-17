@@ -96,8 +96,11 @@
   (\"OK please run 1 click with the debugger attached to catch any error\"), plus
   one timing-instrumented debugger click authorized directly by Joe on
   2026-10-17 after the inner-cascade-reconstruction replay
-  (\"OK, it sounds like one more click is warranted\")."
-  80)
+  (\"OK, it sounds like one more click is warranted\"), plus one further
+  debugger-attached click authorized directly by Joe on 2026-10-17 to test
+  live execution and the premise that the debugger does not introduce an
+  unnecessary hang."
+  81)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
