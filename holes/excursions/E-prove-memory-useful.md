@@ -355,7 +355,7 @@ useful", and the page should say exactly that.
 | 4 | G3 memory layer in frames (re-scoped: reads `memory-call` rows) | claude-3 (owner), codex-23 | **done** 2026-10-17 02:00Z, see below; live on the page |
 | 5a | G4 for Claude seats: the SessionStart brief records what it injected | claude-3, codex-23 | **done** 2026-10-17 02:10Z, see below; no live frame yet |
 | 5 | G4 injection for Zai seats | packet | not started |
-| 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
+| 6 | G6 task bank, baselines first | claude-3 | **first run done** 2026-10-17 04:35Z: 3 of 5 tasks with a failing baseline and a passing informed run; see "G6, first run" |
 | 7 | G7 derivation | packet | not started |
 | 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live, 401 without the site password as intended |
 | 9 | G9 reply alignment | claude-16 | done 2026-10-16 23:02Z, live on the page |
@@ -534,6 +534,58 @@ check `GET /api/alpha/evidence?tag=memory-injected` and that seat's frames.
 Where this leaves the proof: for Claude seats, delivery is now on record
 both ways, by the seat's choice (G5/G3) and by the harness (the brief).
 Effect (G6) is untouched.
+
+## G6, first run (claude-3, 2026-10-17 04:26Z to 04:36Z)
+
+Joe (04:23Z): "you can run G6 if there is sufficient usage available". Zai
+quota at the start: 38% of the 5-hour window, 52% of the month. Bank and
+pass rules, fixed before any run: `holes/excursions/G6-task-bank/`
+(`RULES.md`, `T1.md`..`T5.md`, the informed packets `T*-informed.md`).
+Every task is plan-only: the seat writes a command or a Lean statement and
+runs nothing. Job ids: `~/notes/g6-runs-2026-10-17.txt`.
+
+Arms. Baseline: a Zai seat as it stands, with the minus40 tools and the
+standing instruction to call `m40_find`; using them is the seat's choice.
+Informed: zai-2, the same packet preceded by the deciding memory's file text
+under "minus40 memories injected before round 1 for this task", which is
+what G4 would put there. The memory was picked by hand, so the informed arm
+measures the effect of delivery, not retrieval. A Zai seat's memory mode is
+fixed when the seat is made (`:memory-mode`, `zai_api.clj`), so a seat with
+no store at all was not available without registering a new one.
+
+| task | deciding memory | baseline (seat, job) | informed (zai-2, job) | counts? |
+|---|---|---|---|---|
+| T1 dispatch a bell that does the work | agency-send-mode-brief-trap | **fail**: no `--mode work` (zai-1, `invoke-1792211185257-16134-2e0746cd`) | **pass**: `--mode work`, cites the memory (`invoke-1792211300154-16146-959aa0bf`) | yes: today's server still classifies that packet text as `brief` (`invoke-job-mode`, http.clj 1441) |
+| T2 kill `widget_probe.py` from run_shell | pkill-f-self-match | **pass**: `pkill -f '[w]idget_probe.py'` (zai-1, `invoke-1792211185899-16135-68770c36`) | not run | dropped: baseline passes from the model's own knowledge (nothing in zai-1's session carried it) |
+| T3 run the invoke-activity tests | invoke-ledger-test-clobber | zai-1 passed (`…93da310f`), but from an `m40_state` result of 10-16 03:40Z still in its session, so it was not uninformed; clean seat zai-5 **fail** (`invoke-1792211299269-16145-268dcdc0`) | **pass**: temp `FUTON3C_INVOKE_JOBS_FILE` and queue path (`invoke-1792211362127-16154-d4496e68`) | **no**: the `:test` alias sets `-Dfuton3c.test-run=true` and since cd33eebd2 that redirects the ledger and queue itself, so the baseline command is safe today. The memory is partly out of date as a rule; the informed seat read that from the memory and kept the override as a precaution |
+| T4 check a `^:slow` test passes | slow-tagged-tests-hide | **fail**: plain `-M:test`, which excludes it; claims `Ran 1 test` would prove execution (zai-1, `invoke-1792211187279-16137-fa659d77`) | **pass**: `-M:test:test-all … -i :slow` (`invoke-1792211304344-16147-7a38fa83`) | yes, softer: the baseline says a zero-test run would surface, so the cost is a wasted run, unless the zero is misread |
+| T5 state C^∞ in Lean | lean-top-is-analytic | **fail**: `ContDiff ℝ ⊤ f`, glossed as smooth (zai-1, `invoke-1792211187922-16138-94cffd79`) | **pass**, after a first block that still said `⊤`, corrected in the same reply to `ContDiff ℝ ∞ f` (`invoke-1792211310409-16148-eec299b0`) | yes: this is the 10-13 defect that made closed APM problems vacuous |
+
+Result: three tasks (T1, T4, T5) where the seat as it stands does the wrong
+thing and the same packet with the memory delivered does the right thing,
+with the memory as the only difference in the packet. One task dropped on a
+passing baseline (T2), one dropped because the code has since made the rule
+unnecessary (T3).
+
+What the baseline seats did with the store: zai-1 made **no tool calls at
+all** on its five turns (about 7 s each), and zai-5 none on its one, under
+the standing instruction to call `m40_find` first. So on these tasks the
+opt-in store delivered nothing, and injection is what made the difference.
+
+Limits, said plainly. One run per arm per task; the two arms are different
+seats with different histories (zai-2 had one earlier "--mode work" in its
+session; checked, none of the other four facts); the informed seat was
+handed the right memory, so retrieval is untested; T5's informed answer
+first repeated the wrong form. This shows that delivered memory changes the
+action on three real failure modes. It does not show that a harness picking
+memories from the packet text would pick these, which is G4 proper for Zai
+seats: derive find terms from the packet, inject the hits, rerun T1, T4 and
+T5 with no hand-picking.
+
+Found on the way: the 04:23Z brief for claude-3 lists claude-3's own
+report and propose paragraphs as "Open asks with no answer linked"
+(`brief.py` `open_asks`); an agent's paragraph is not an ask to that agent.
+Not fixed yet.
 
 ## Cross-links
 
