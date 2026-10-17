@@ -629,6 +629,33 @@
   "Indirect the process boundary so unit tests never start minus40 or its model."
   (fn [argv] (apply shell/sh argv)))
 
+(def ^:private inject-command
+  ["timeout" "--signal=TERM" "20s" "python3" "-I"
+   "/home/joe/code/minus40/scripts/inject.py"])
+
+(def ^:private inject-shell
+  "Indirect the injection process boundary so unit tests never start it."
+  (fn [argv input] (apply shell/sh (concat argv [:in input]))))
+
+(defn- injected-memory
+  [agent-id prompt]
+  (let [started (System/nanoTime)]
+    (try
+      (let [{:keys [exit out]} (inject-shell (conj inject-command "--agent" (str agent-id))
+                                             (str prompt))
+            response (when (zero? exit) (json/parse-string out true))
+            block (when (:enabled response) (:block response))
+            elapsed-ms (or (:elapsed-ms response)
+                           (quot (- (System/nanoTime) started) 1000000))]
+        (if (str/blank? block)
+          {:block "" :injected [] :injected-ms elapsed-ms}
+          {:block block
+           :injected (mapv :id (:memories response))
+           :injected-ms elapsed-ms}))
+      (catch Throwable _
+        {:block "" :injected []
+         :injected-ms (quot (- (System/nanoTime) started) 1000000)}))))
+
 (defn- m40-call
   [tool-name args]
   (let [{:keys [exit out err]}
@@ -1256,14 +1283,17 @@
                          body)})
 
 (defn- persist-turn-start!
-  "Persist the exact model-facing PROMPT before a ZAI/ZAIF turn begins."
-  [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition]}]
+  "Persist the original turn PROMPT and its pre-round injection receipt."
+  [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition
+           injected injected-ms]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-start
      :body {:prompt (str prompt)
+            :injected (vec (or injected []))
+            :injected-ms (or injected-ms 0)
             :requisition requisition
             :prompt-chars (count (str prompt))
             ;; Explicit join: Agency dispatch id -> this generated turn id.
@@ -2323,17 +2353,26 @@ CALLS contains maps of tool name, arguments, and result digest."
           ;; now owns the conversation.
           (when job-target
             (reset! !context-target job-target))
-          (persist-turn-start! {:evidence-store evidence-store
-                                :agent-id agent-id
-                                :sid sid
-                                :dispatch-id dispatch-id
-                                :turn-id turn-id
-                                :profile profile*
-                                :prompt prompt*
-                                :requisition (when admission
-                                               (select-keys admission
-                                                            [:reason :target :purpose]))})
-          (swap! !messages conj {:role "user" :content (str prompt*)}))
+          (let [{:keys [block injected injected-ms]}
+                (if (and (= :full memory-mode) (not continuation?))
+                  (injected-memory agent-id prompt*)
+                  {:block "" :injected [] :injected-ms 0})
+                prompt-with-memory (if (str/blank? block)
+                                     prompt*
+                                     (str block "\n\n" prompt*))]
+            (persist-turn-start! {:evidence-store evidence-store
+                                  :agent-id agent-id
+                                  :sid sid
+                                  :dispatch-id dispatch-id
+                                  :turn-id turn-id
+                                  :profile profile*
+                                  :prompt prompt*
+                                  :injected injected
+                                  :injected-ms injected-ms
+                                  :requisition (when admission
+                                                 (select-keys admission
+                                                              [:reason :target :purpose]))})
+            (swap! !messages conj {:role "user" :content (str prompt-with-memory)})))
         (invoke-controls/register!
          agent-id interrupt-token
          {:interrupt!

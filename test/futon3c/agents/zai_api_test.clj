@@ -617,3 +617,76 @@
   (is (nil? (zai/add-usage nil nil)))
   (is (= {:cost/input-tokens 5 :cost/source :zai :cost/calls 1}
          (zai/add-usage nil {:cost/input-tokens 5 :cost/source :zai}))))
+
+(defn- turn-start-body [store]
+  (some (fn [id]
+          (let [body (get-in @store [:entries id :evidence/body])]
+            (when (= :turn-start (:event body)) body)))
+        (:order @store)))
+
+(deftest new-full-memory-turn-injects-before-round-one
+  (let [store (atom {:entries {} :order []})
+        calls (atom [])
+        messages (atom nil)
+        invoke (make-invoke {:memory-mode :full :evidence-store store})
+        response {:enabled true
+                  :memories [{:id "cc:-home-joe/agency-send-mode-brief-trap"
+                              :score 0.5276}]
+                  :block "minus40 memories injected before round 1\nFACT"
+                  :elapsed-ms 17}]
+    (with-redefs-fn
+      {#'zai/inject-shell
+       (fn [argv input]
+         (swap! calls conj [argv input])
+         {:exit 0 :out (json/generate-string response) :err ""})
+       #'zai/chat! (fn [_ _ ms] (reset! messages ms) (text-response "done"))
+       #'memory-backend/boot-packet-string (constantly "")
+       #'memory-backend/rehydration-string (constantly "")}
+      (fn []
+        (is (= "done" (:result (invoke "review this packet" nil))))
+        (is (= "minus40 memories injected before round 1\nFACT\n\nreview this packet"
+               (get-in @messages [(dec (count @messages)) :content])))
+        (is (not (str/includes? (get-in @messages [0 :content]) "FACT")))
+        (is (= ["timeout" "--signal=TERM" "20s" "python3" "-I"
+                "/home/joe/code/minus40/scripts/inject.py"
+                "--agent" "zai-test"]
+               (first (first @calls))))
+        (is (= "review this packet" (second (first @calls))))
+        (is (= ["cc:-home-joe/agency-send-mode-brief-trap"]
+               (:injected (turn-start-body store))))
+        (is (= 17 (:injected-ms (turn-start-body store))))
+        (is (= "review this packet" (:prompt (turn-start-body store))))))))
+
+(deftest injection-is-typed-absent-and-never-fails-a-turn
+  (doseq [{:keys [label memory-mode context shell-result expected-calls]}
+          [{:label "disabled seat" :memory-mode :files
+            :shell-result (AssertionError. "must not call") :expected-calls 0}
+           {:label "no-memory seat" :memory-mode :none
+            :shell-result (AssertionError. "must not call") :expected-calls 0}
+           {:label "continuation" :memory-mode :full
+            :context {:caller "auto-bellback"}
+            :shell-result (AssertionError. "must not call") :expected-calls 0}
+           {:label "non-zero exit" :memory-mode :full
+            :shell-result {:exit 1 :out "" :err "failed"} :expected-calls 1}
+           {:label "timeout" :memory-mode :full
+            :shell-result {:exit 124 :out "" :err "timed out"} :expected-calls 1}]]
+    (let [store (atom {:entries {} :order []})
+          calls (atom 0)
+          messages (atom nil)
+          invoke (make-invoke {:memory-mode memory-mode :evidence-store store})]
+      (with-redefs-fn
+        {#'zai/inject-shell
+         (fn [_ _]
+           (swap! calls inc)
+           (if (instance? Throwable shell-result)
+             (throw shell-result)
+             shell-result))
+         #'zai/chat! (fn [_ _ ms] (reset! messages ms) (text-response "done"))
+         #'memory-backend/boot-packet-string (constantly "")
+         #'memory-backend/rehydration-string (constantly "")}
+        (fn []
+          (is (= "done" (:result (invoke "plain packet" nil context))) label)
+          (is (= expected-calls @calls) label)
+          (is (= "plain packet" (get-in @messages [(dec (count @messages)) :content])) label)
+          (is (= [] (:injected (turn-start-body store))) label)
+          (is (number? (:injected-ms (turn-start-body store))) label))))))
