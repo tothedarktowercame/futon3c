@@ -749,6 +749,83 @@ is the working mitigation), and auto-bellbacks can arrive hours late (job
 id, not arrival time, identifies the episode).
 
 
+## Mastra as a comparison, and an Observer (馬) as 象-sonnet's counterpart (claude-3, 2026-10-17)
+
+Joe (evening): compare minus40 with Mastra by wiring Mastra's memory up as an
+alternative recall source and studying its outputs, as 象 studies the
+operator's inputs. Work in `~/code/mastra-recall` (its own repo; nothing
+live touched; `README.md` there has the tables).
+
+**Recall, same memories, no agents run.** The 2,164 in-force minus40 facts
+(351 memories), loaded into Mastra memory (@mastra/memory 1.38, LibSQL,
+FastEmbed bge-small): one thread per memory, one message per fact. Ten
+packets with known deciding memories (G6 T1–T5, t95J03 leaves 1–5):
+
+| recall | hits |
+|---|---|
+| Mastra default semantic recall (topK 4, whole packet as query) | 2 of 10 (T3, T5) |
+| minus40 query construction over Mastra's store (`harness.mjs`) | 7 of 10 |
+| minus40 inject.py 328af2f | 8 of 10 (in-sample: tuned on these packets except T2/T3) |
+
+On every leaf packet Mastra's default recalls the same two process memories:
+the job boilerplate decides, the failure inject.py had before f5efd04. With
+our query construction in front, Mastra's store nearly matches ours; the one
+remaining difference (T1) is the embedder. **The gain this week is query
+construction, which is harness work; on this test neither store adds
+anything over the other.** Neither finds T2 or T4.
+
+**Observational memory, one pass.** Mastra's Observer (its system prompt,
+`buildObserverPrompt`, `parseObserverOutput`; Zai glm-5.3 behind it) over
+zai-1's leaf-4 trailbreaker episode (25 messages, 28k chars): 17 s, 15.6k
+tokens, six dated observations carrying the same route and API pitfalls as
+the memory the seat wrote, plus the task, the outcome (✅ PROVED, 4 failed
+compiles) and one fact the seat did not bank (IsKSheetedCover has three
+fields, ConstructionTargets/CoveringDegree.lean:25), which the C6
+trailbreaker later relearned.
+
+How OM works: an Observer turns raw history into dated, prioritised notes
+(🔴 🟡 🟢, ✅ for finished work) at 30k tokens of history; a Reflector
+rewrites the whole log at 40k; optional retrieval mode keeps each
+observation group linked to the raw messages behind it, with a recall tool.
+Mastra deprecated sharing observations across threads (prompt caching, and
+agents continuing other threads' work); cross-thread memory is to be a
+separate "Knowledge" layer.
+
+**Joe's reading (2026-10-17):**
+- The Observer is the counterpart of 象-sonnet: 象 reads the operator's
+  turns, an Observer (馬?) would read the whole exchange, agent included.
+  It is what the Zai Scribe experiments with APM were reaching for.
+- The aim was to do this pass *classically*, without an LLM, once scope
+  mining over enough real sessions shows what to look for. That has not
+  happened yet, and the scope mining has not convinced. Mastra gives a
+  working model of the LLM version, so: experiments, not an LLM on every
+  turn forever. Running 象 and another LLM on every turn is not wanted as
+  the end state.
+- The stepper (e.g. `?agent=claude-16`) shows far more open ports than
+  anyone wants addressed, unless there is evidence that they are real
+  technical debt.
+- Mastra's "Knowledge" layer is, roughly, our substrate-2: we built the
+  knowledge layer before the layers that feed it.
+
+**Where Mastra suggests something for minus40:**
+1. Harness-side writing: the write-side counterpart of G4 injection. Seats
+   bank memories only when the packet says so, and bank less than they
+   learn.
+2. ✅ as a typed completion signal, which also bears on the open-ports
+   problem: a port with a later ✅ observation covering it is closed by
+   evidence.
+3. Observation groups linked to their source messages; minus40 has evidence
+   ids and could show them on every injected memory.
+4. Where not to follow: the Reflector overwrites; minus40 keeps dated
+   history (proof point 5 must show that is worth having).
+
+**Proposed experiments (not started):** run the Observer offline over a
+sample of finished sessions, not live on every turn, and use its output two
+ways: (a) as the labels the classical pass needs, so scope mining has
+targets, measured by how much of the Observer's output a classical
+extractor recovers; (b) on one leaf pair whose trailbreaker is told not to
+bank memories, so only Observer-written memory can reach the follower.
+
 ## Cross-links
 
 - [E-cool-memories](E-cool-memories.md): the store, its laws, the Lean checks.
