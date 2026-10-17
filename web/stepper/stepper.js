@@ -201,6 +201,17 @@ export function answeredLines(frame) {
         out.push(`not lined up with any sentence: ${loose.map(label).join(", ")}`);
     return out;
 }
+/** 馬's observation, or nothing (the section is shown only for observed sessions). */
+export function observedLines(frame) {
+    const o = frame.observed;
+    if (!o || !o.observations)
+        return [];
+    const out = [`馬 at ${shown(o.at)} · ${shown(o.model)}${o.seconds ? ` · ${o.seconds} s` : ""}`];
+    out.push(...o.observations.split("\n"));
+    if (o.current_task)
+        out.push("", "current task:", ...o.current_task.split("\n"));
+    return out;
+}
 export function frameModel(frame) {
     const status = frame.parse?.status || "missing";
     const provisional = status === "drafted-provisional";
@@ -222,6 +233,7 @@ export function frameModel(frame) {
         happened: happened.length ? happened : ["(nothing between this turn and the next)"],
         ports: portsText(frame), memory: memoryLines(frame),
         answered: answeredLines(frame),
+        observed: observedLines(frame),
         session: frame.record?.session_id || "?",
     };
 }
@@ -301,6 +313,8 @@ export function renderStepper(initial, host, opts = {}) {
             add(row, "div", "parse-sources", `(${line.sources})`);
         }
         section("ANSWERED", model.answered);
+        if (model.observed.length)
+            section("OBSERVED (馬)", model.observed);
         section("PATTERNS", model.patterns);
         section("HAPPENED", model.happened);
         if (model.ports)

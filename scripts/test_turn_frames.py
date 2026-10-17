@@ -292,6 +292,21 @@ class TurnFramesTest(unittest.TestCase):
         self.assertNotIn("memory", frames[1])        # injected [] is no memory
         self.assertNotIn("reply", frames[1])         # no round yet
 
+    def test_observation_joins_its_turn_and_stays_out_of_happened(self):
+        def ts(eid, at, tid):
+            return {"evidence/id": eid, "evidence/type": "coordination", "evidence/at": at,
+                    "evidence/body": {"event": "turn-start", "prompt": "p", "turn-id": tid,
+                                      "dispatch-id": "invoke-" + tid}}
+        obs = {"evidence/id": "e-ob", "evidence/type": "coordination",
+               "evidence/at": "2026-10-17T04:01:30Z",
+               "evidence/body": {"event": "observation", "turn-evidence-id": "e-ts1",
+                                 "observations": "* ✅ done", "model": "glm"}}
+        rows = [ts("e-ts1", "2026-10-17T04:00:00Z", "t1"), ts("e-ts2", "2026-10-17T04:01:00Z", "t2"), obs]
+        frames = tf.build_frames(rows, {}, session_id="s")
+        self.assertEqual(frames[0]["observed"]["observations"], "* ✅ done")
+        self.assertNotIn("observed", frames[1])
+        self.assertEqual(frames[1]["happened"], [])
+
     def test_frame_without_memory_call_has_no_memory_key(self):
         self.assertNotIn("memory", self.build()[0])
 

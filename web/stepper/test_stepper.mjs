@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {
-  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cuePieces,
+  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cuePieces, observedLines,
   frameModel, happenedDetail, parseStreamEvent, portsAge, readyFrames, receiveFrames,
 } from "./stepper.js";
 
@@ -16,6 +16,10 @@ assert.equal(readyFrames([...fixture, missing]).length, fixture.length);
 // live mode keeps the current (unread) turn and names the pending reading
 assert.equal(readyFrames([...fixture, missing], true).length, fixture.length + 1);
 assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
+// 馬's observation is its own section, absent when there is none
+assert.deepEqual(observedLines({observed: {at: "t", model: "m", observations: "* 🔴 a\n* ✅ b", current_task: "- x"}}),
+  ["馬 at t · m", "* 🔴 a", "* ✅ b", "", "current task:", "- x"]);
+assert.deepEqual(observedLines({}), []);
 // a harness seat's unmarked reply is shown whole
 assert.deepEqual(answeredLines({reply: {at: "t", paragraphs: [], text: "line one\nline two"}}).slice(1),
   ["the reply carries no marks, so nothing can be lined up", "line one", "line two"]);

@@ -21,6 +21,8 @@ Frame shape:
  "patterns": {"matched": [...], "rejected": [...],
               "proposed_by_parent": {"<parent or (none)>":
                                      [{"id","title","fragment"}]}},
+ "observed": 馬's observation of the exchange after this turn
+             (ma_observe.py), when there is one.
  "happened": [non-operator rows with at in [turn.at, next-turn.at), sorted,
               each {"at","type","summary"}],
  "ports":  {closed_this_turn, still_open} when the record carries them,
@@ -711,6 +713,19 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             if k < len(starts):
                 injected_at.setdefault(k, []).append(r)
 
+    # 馬 (scripts/ma_observe.py): one observation row per turn, keyed to the
+    # operator turn's evidence id; it lands after the reply, i.e. in the
+    # next turn's window, so it is joined by key and kept out of HAPPENED.
+    observed_by_turn = {}
+    for r in rows:
+        ob = body_of(r)
+        if ob.get("event") == "observation" and ob.get("turn-evidence-id"):
+            observed_by_turn[ob["turn-evidence-id"]] = {
+                "at": r.get("evidence/at"), "evidence_id": r.get("evidence/id"),
+                "observations": ob.get("observations"),
+                "current_task": ob.get("current-task"),
+                "model": ob.get("model"), "seconds": ob.get("seconds")}
+
     frames = []
     facts_by_text = None
     facts_warning = False
@@ -845,7 +860,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         happened = []
         memory_rows = []
         for r in rows:
-            if operator_turn(r):
+            if operator_turn(r) or body_of(r).get("event") == "observation":
                 continue
             at = at_key(r)
             if at < start:
@@ -882,6 +897,8 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
+        if eid in observed_by_turn:
+            frames[-1]["observed"] = observed_by_turn[eid]
         injected = list(b.get("injected") or []) if is_harness_turn_start(turn) else []
         for r in injected_at.get(first + i, []):
             for mid in body_of(r).get("memories") or []:
