@@ -831,6 +831,21 @@ observations: faithful, one transcription slip (a commit sha copied as
 `59c3c666` for `59c3c5666`), which argues for keeping the source link. Cost
 7.8k and 13.2k tokens, 23 s and 71 s.
 
+**Joe (20:5xZ): 馬 keeps a reduced view, not an endless log** — a card per
+agent updated each 象 round, settled information floating to the top, like
+Cascade Live; a stepper view becomes a sub-selection of Cascade Live, the
+"sports analytics" of coding; and the memory system is ultimately about
+*Joe's* model of the codebase and its development, the agent memories being
+instruments for that. Built (futon3c c56f83027): one `agent-card` row per
+turn. SETTLED: engaged work (agent-clock, roster mission), ✅ work done,
+commits, substrate-2 patterns linked to the mission. STANDING (馬, through
+Mastra's custom-instruction slot, carried verbatim and counted "held N"):
+purpose, packet vs purpose, open threads, repair, ramifications; patterns 象
+matched more than once. FRESH: this turn's ✅ and 🔴. Not modelled:
+institutions (no such entity in substrate-2). Watcher bug found on enabling
+claude-16 and fixed (13376aee1): the per-pass cap let it walk back through
+history, 9 old turns, ~120k tokens.
+
 **Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
