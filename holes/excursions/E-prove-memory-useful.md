@@ -667,6 +667,56 @@ zai-1..5 (zai-6's instructed-only uses need `--agents zai-6`), so the
 old table's "0 unprompted" was in fact "0 uses with no instruction
 anywhere", which is what it now says.
 
+## Effect on real proof work: the t95J03 / t98A01 experiment (proposed protocol, 2026-10-17)
+
+Joe's proposal (2026-10-17): prove blueprint problems with and without
+memories saved in between, from a git checkpoint, and see whether total run
+time is shaved. Verified facts on disk:
+
+- The blueprints exist and were **never dispatched**: `faaf89e31` (claude-14,
+  2026-10-16, branch `lemmas`) — t95J03, 14 leaves (statement unchanged,
+  S²-torus bridge LIBRARY-sized); t98A01, 12 leaves + 1 LIBRARY (UCT ℤ→ℚ,
+  to split in 3 before dispatch). QUEUE says "No dispatch (Joe: blueprints
+  only)". t98A01 was graded faithful and admitted 2026-10-16.
+- The unit of work is the **leaf job**: `~/notes/packets/lemmas/` job packet
+  to a lemma-N seat, one lemma per seat, `lemmatool check` on return.
+- Because nothing was run, **the first run is the baseline** — there is no
+  earlier timing to compare against. "Run again" therefore means: run once
+  (baseline), distill memories from that run, reset to the checkpoint, run
+  again with the memories delivered.
+
+Protocol (single variable = the memories):
+
+1. **Baseline.** Dispatch t95J03's 14 leaves to lemma seats from the
+   checkpoint `faaf89e31` (worktree `~/worktrees/apm-lean/lemmas`, fresh
+   `lemmatool make` files). Measure per leaf and total: wall-clock, invoke
+   rounds and tool-events, failed `lake env lean` attempts, PARTIAL rate.
+2. **Distill.** From the baseline, save memories that are **facts about the
+   workspace and Mathlib, never the proof text** — which Mathlib lemma
+   closed which goal shape, which route dead-ended and why, which
+   ConstructionTargets module already carries the needed construction. A
+   memory that paraphrases the proof would make effect trivially true and
+   meaningless; that rule is the experiment's honesty clause.
+3. **Rerun.** `git checkout faaf89e31` (this removes run 1's splices, banked
+   modules and proved leaf files), `lemmatool make` the leaves afresh, reset
+   each seat's session, dispatch the same leaves with the same packet text
+   **plus the memory block**. Delivery channel: the memory block goes at the
+   top of the job packet (packet-level injection), and the dispatch records
+   `injected [ids]` — G4 harness injection covers Zai seats only, not the
+   codex lemma seats; extending it there is a separate piece.
+4. **Read-out.** Time shaved is the headline, but the per-leaf table is the
+   evidence: the claim "memory changed the action" is supported where the
+   informed seat's failed-attempt count drops on the leaves whose baseline
+   failures the memories explain, and not elsewhere. One run each direction,
+   two problems, one model — the same smallness caveat as G6, at larger
+   scale.
+
+Cost: roughly 2× a problem-closing round (t97J04's 23 leaves took a day;
+t91A02's 7 took 1.5 h). Open before dispatch: Joe's go (the 10-16 "blueprints
+only" hold and the Codex-usage question it came from), and whether claude-14
+runs the loop with me supplying the memory discipline, or the leaf jobs are
+re-pointed at this excursion.
+
 ## Cross-links
 
 - [E-cool-memories](E-cool-memories.md): the store, its laws, the Lean checks.
