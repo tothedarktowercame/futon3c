@@ -352,7 +352,7 @@ useful", and the page should say exactly that.
 | 1 | G1 use-rate script | claude-16 | done, table above; re-run 10-17 unchanged; its reading corrected (see G12) |
 | 2 | G2 frames route + stepper page, cache, stream | claude-16 (route, reviews), codex-23 (page, cache, stream) | done and live: route 550620a99, page 7bff1dc7f, cache 5b74bb283 + ab0d78f04, stream af8d2cfa7 + 33c2d52a3, page subscribes df9baa88d + fca3a3b88, settle-once 7811c49fc; published copy matches HEAD; by-eye check and scope-view live mode open |
 | 3 | G5 Claude tool trace rows | claude-3 (owner), codex-23 | **done** 2026-10-17 01:45Z, see "G3's premise, and G5 first" |
-| 4 | G3 memory layer in frames (re-scoped: reads `memory-call` rows) | packet | next |
+| 4 | G3 memory layer in frames (re-scoped: reads `memory-call` rows) | claude-3 (owner), codex-23 | **done** 2026-10-17 02:00Z, see below; live on the page |
 | 5 | G4 injection for Zai seats | packet after 3 and 4 | not started |
 | 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
 | 7 | G7 derivation | packet | not started |
@@ -475,6 +475,33 @@ Next, G3 re-scoped: `turn_frames.py` fills `frame.memory` from the
 `trace_for`), names by `memories_named`. Then the SessionStart brief
 (`minus40/scripts/brief.py`) as an `injected` row: it already puts memories
 into a Claude seat's context before round 1, and nothing records it.
+
+G3, done: `turn_frames.py` gives a frame `memory {calls [{tool args at
+error evidence-id reached [{name project}]}]}` from the `memory-call` rows in
+the same window pass that fills HAPPENED, names by `memories_named`; a frame
+with none has no `memory` key; the page prints `name (project)` (codex-23,
+0441b280f, job `invoke-1792201240021-16040-0cf3f33d`, packet
+`web/stepper/PACKET-frames-memory.md`). The tests pin the window: a second
+call after the next operator turn lands on the next frame.
+
+Review fix 664c3a7c3 (claude-3). codex-23 also added
+`add_missing_operator_rows`, run on every session, because claude-3's own
+session had no operator chat-turn row in the store: Joe's first turn there
+was recorded only as `invoke-start`, so the session had no frames. As
+written it backfilled every 象 record of the session, and on claude-16's
+session that added 33 frames (7 bell jobs, 25 Matrix proof-critic moves
+whose records say origin `operator`, and claude-16's own first turn),
+shifting every window. It now backfills only records with surface `typed`
+and origin operator (or neither field, as old records have): claude-16's
+session goes 81 → 82 frames (its turn 1, which the store lacked) with the
+other 81 byte-identical to before. Test added. Open: why the store has no
+operator chat-turn row for that turn is not investigated.
+
+Live: after `invalidate!` on session `ff41903c-…`, the cached GET answers
+`claude-3-turn-1` with `m40_find` and 9 reached. `stepper.js` published to
+`/var/www/zone.hyperreal.enterprises/wip/stepper/` (index.html unchanged).
+**This is the first frame on record whose MEMORY section says something.**
+It shows delivery by the seat's own choice; it is not a usefulness result.
 
 ## Cross-links
 
