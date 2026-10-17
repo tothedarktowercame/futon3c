@@ -858,6 +858,33 @@ read from `/cascade-real/graph` at load and on each pushed update. First
 live slice: E-prove-memory-useful has no linked patterns, and of this
 turn's patterns only one (象's) is linked to any mission.
 
+**馬 for the Zai seats: progress promotion and auto-continue (Joe's go via
+zai-5, 2026-10-17 21:3xZ).** zai-5's S-leaf 2 (t95J03_torus_bridge) hit a
+wall: the route was derived four times and lost four times, living only in
+truncated episodes' narration, with 0 memory calls. Built (futon3c
+73bba932d, fabd361bc; minus40 a949cf5, b68c852):
+1. 馬 observes every finished zai-1/zai-2 turn (finished = the job is done).
+2. A turn that ends without PROVED has its observation asserted as
+   `cc:ma/<lemma>-progress`: a head line carrying the lemma name, then one
+   line per observation, the task restatement dropped. inject.py's exact-name
+   slot delivers it first, and that memory gets 2,500 chars (head line plus
+   newest end when over).
+3. A turn that ends with no verdict (neither PROVED nor PARTIAL), on an agent
+   in `~/code/data/minus40/ma-continue.txt`, is re-sent with the same packet
+   under `CONTINUATION (auto, 馬): episode N of <root>.`: at most 3 per chain,
+   only the session's latest turn, finished within 30 min, started after the
+   list last changed; an `auto-continue` evidence row records root, from, to.
+   Done in the watcher, not zai_api: no JVM change.
+4. For harness turns the Observer is told not to restate the packet.
+
+Live check on the real bad case (zai-1's S2 episode, invoke-…16326):
+observation keeps one task line and the full derivation (ℓ¹ chart, edge
+identities, Lean plan, status); promoted memory found by `m40_find
+t95J03_torus_bridge`; the S2 packet injects it first with the Lean plan and
+status intact (10.4 s, the first ranking after new facts embeds them).
+Acceptance (c), a live auto-continued turn, waits for the next truncated
+episode.
+
 **Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
