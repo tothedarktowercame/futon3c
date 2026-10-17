@@ -353,7 +353,8 @@ useful", and the page should say exactly that.
 | 2 | G2 frames route + stepper page, cache, stream | claude-16 (route, reviews), codex-23 (page, cache, stream) | done and live: route 550620a99, page 7bff1dc7f, cache 5b74bb283 + ab0d78f04, stream af8d2cfa7 + 33c2d52a3, page subscribes df9baa88d + fca3a3b88, settle-once 7811c49fc; published copy matches HEAD; by-eye check and scope-view live mode open |
 | 3 | G5 Claude tool trace rows | claude-3 (owner), codex-23 | **done** 2026-10-17 01:45Z, see "G3's premise, and G5 first" |
 | 4 | G3 memory layer in frames (re-scoped: reads `memory-call` rows) | claude-3 (owner), codex-23 | **done** 2026-10-17 02:00Z, see below; live on the page |
-| 5 | G4 injection for Zai seats | packet after 3 and 4 | not started |
+| 5a | G4 for Claude seats: the SessionStart brief records what it injected | claude-3, codex-23 | **done** 2026-10-17 02:10Z, see below; no live frame yet |
+| 5 | G4 injection for Zai seats | packet | not started |
 | 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
 | 7 | G7 derivation | packet | not started |
 | 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live, 401 without the site password as intended |
@@ -502,6 +503,37 @@ Live: after `invalidate!` on session `ff41903c-…`, the cached GET answers
 `/var/www/zone.hyperreal.enterprises/wip/stepper/` (index.html unchanged).
 **This is the first frame on record whose MEMORY section says something.**
 It shows delivery by the seat's own choice; it is not a usefulness result.
+
+## The brief as delivery (G4, Claude half, 2026-10-17)
+
+`minus40/scripts/brief.py` (SessionStart, enabled for "all") already put
+memory facts into every Claude seat's context before round 1, unasked; that
+is delivery by the harness, but only a file under `briefs/` said so. Now it
+posts one `memory-injected` row (tags `memory-injected minus40`, body
+`{event hook source memories asks brief-text at}`), where `memories` are the
+ids of memories with at least one line that survived `cap()` (codex-23,
+minus40 26dab14, job `invoke-1792201568328-16045-96c5f3f5`, packet
+`web/stepper/PACKET-brief-injected-row.md`; tests include a section dropped
+by `cap()` whose memory must be absent). Review fix bfa21fe (claude-3): the
+first version took 1 s of the brief's 3 s read budget for the POST, so on a
+slow store the brief itself would have lost facts to make room for its
+record; the reads have their 3 s again and the POST its own 1 s after (under
+the hook's 5 s timeout).
+
+Reader, c6b9bcb28 (claude-3): `turn_frames.py` puts a row's `memories` on
+the first frame starting at or after it, as `memory.injected`, which the
+page already prints as "injected before round 1: …". A resume or compact
+brief inside a turn's window goes to the next turn, since that is the turn
+it is context for. Test added.
+
+Not yet seen live: the only row on record is codex-23's test session
+(`brief-injected-test-2026-10-17`, 2 memories, 11 asks), which has no
+operator turn. The first Claude seat started after 01:48Z will produce one;
+check `GET /api/alpha/evidence?tag=memory-injected` and that seat's frames.
+
+Where this leaves the proof: for Claude seats, delivery is now on record
+both ways, by the seat's choice (G5/G3) and by the harness (the brief).
+Effect (G6) is untouched.
 
 ## Cross-links
 
