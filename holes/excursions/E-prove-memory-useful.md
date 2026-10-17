@@ -351,8 +351,8 @@ useful", and the page should say exactly that.
 |---|---|---|---|
 | 1 | G1 use-rate script | claude-16 | done, table above; re-run 10-17 unchanged; its reading corrected (see G12) |
 | 2 | G2 frames route + stepper page, cache, stream | claude-16 (route, reviews), codex-23 (page, cache, stream) | done and live: route 550620a99, page 7bff1dc7f, cache 5b74bb283 + ab0d78f04, stream af8d2cfa7 + 33c2d52a3, page subscribes df9baa88d + fca3a3b88, settle-once 7811c49fc; published copy matches HEAD; by-eye check and scope-view live mode open |
-| 3 | G3 memory layer in frames | **next packet**, unassigned | not started; the one that makes MEMORY say something |
-| 4 | G5 Claude/Codex tool trace rows | packet, unassigned | not started |
+| 3 | G5 Claude tool trace rows | claude-3 (owner), codex-23 | **done** 2026-10-17 01:45Z, see "G3's premise, and G5 first" |
+| 4 | G3 memory layer in frames (re-scoped: reads `memory-call` rows) | packet | next |
 | 5 | G4 injection for Zai seats | packet after 3 and 4 | not started |
 | 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
 | 7 | G7 derivation | packet | not started |
@@ -437,6 +437,44 @@ codex-68's E-implementing-G-over-cascades and is not ours to use.
 **Advice channel.** claude-16 stays on the roster; bell it with
 `--from <your-id>` and it will answer in a later turn. Joe's words on the
 handoff: "keeping you on tap to offer advice".
+
+## G3's premise, and G5 first (claude-3, 2026-10-17)
+
+Joe handed the excursion to claude-3 at 01:35Z. The checkpoint's G3
+acceptance cannot pass: `turn_frames.py` on zai-1's session
+`zai-c02b13ca-b1db-4357-8f76-b6f9382b7a1f` prints `[]`. Frames are built
+from operator chat-turn rows (`is_operator_turn`), and a Zai session has
+none: 1,052 `turn-round`, 48 `turn-start`, 48 `clock-decision`, 34
+`turn-commits`. The stepper shows Joe's turns on Claude and Codex seats, and
+until today those seats recorded no minus40 call (the PostToolUse matcher
+was `Write|Edit|Bash`, so `mcp__minus40__*` calls never reached a hook). So
+the first row MEMORY can show had to come from a Claude seat, and G5 went
+first.
+
+G5, done: `minus40/scripts/call_hook.py` (codex-23, 057b776, job
+`invoke-1792201063414-16034-3fa64b61`, packet
+`web/stepper/PACKET-memory-call-rows.md`; review fix 0d51885, by claude-3:
+a bare MCP content-part list was JSON-encoded instead of read as text, now
+tested). Registered in `~/.claude/settings.json` (matcher
+`mcp__minus40__.*`, backup `settings.json.before-call-hook-20261017`). It
+posts one coordination row per call, tags `memory-call minus40`, body
+`{event tool args result-text error? at}`. It does not parse names: the
+reader applies `scope_view_data.memories_named` to `result-text`, so there
+is one parser. Live check: claude-3's `m40_find ["bellback" "park"]` in
+session `ff41903c-6510-4c5e-a293-01324d39fb45` wrote
+`e-6ea042af-b894-47f4-a367-490471906e1e` (author claude-3); `memories_named`
+reads 9 names from it, the 9 the store reported.
+
+What the review checked: the diff; that the tests pin the shape, the no-op
+for other tools, the 20,000-char cap with suffix, exit 0 with one log line
+when Agency is down, and `error?`; one bad case built (a bare list response)
+that the original code got wrong.
+
+Next, G3 re-scoped: `turn_frames.py` fills `frame.memory` from the
+`memory-call` rows inside a frame's window (and, for a Zai-seat record,
+`trace_for`), names by `memories_named`. Then the SessionStart brief
+(`minus40/scripts/brief.py`) as an `injected` row: it already puts memories
+into a Claude seat's context before round 1, and nothing records it.
 
 ## Cross-links
 
