@@ -898,6 +898,25 @@ progress memory, as now); same mission, other agents → one card line each
 turn retrieved → one pointer line naming the mission and the pattern; else
 nothing.
 
+**What real-time inference FUTON's view supports (written 2026-10-17, after
+Joe: "the '30 minutes' is symptomatic of the problem that we haven't written
+down yet what real-time inference this is supposed to support").**
+
+At every turn t of agent a in session s, FUTON (馬 speaking for it) answers:
+
+| | question | inputs | ready by |
+|---|---|---|---|
+| Q1 | what work is this turn on? | the clock edge (Cascade Live lineage); 象's reading of t | t is recorded (`:recorded`) |
+| Q2 | what does FUTON know that bears on it, at each zoom? same work → content; same mission → one line per other agent (their 馬 purpose); related missions → a pointer naming the shared pattern | Q1; t's patterns (retrieved, 象-matched); other agents' latest cards; mission → pattern links | 象's reading of t lands (`:reading`) |
+| Q3 | what does t teach the links? t's patterns are evidence that s's mission uses them | t's patterns; Q1 | same event |
+| Q4 | what is a's state now? (the card) | 馬's observation of t | 馬's pass after a's reply |
+
+Deadline: each answer is current before turn t+1 starts, because that is when
+an injection would use it, and within seconds of the event for the stepper.
+So the view is updated per event, incrementally (one session's contribution
+recomputed, the aggregate re-summed), never on a timer. Non-goal: no other
+session's content is pushed; zoom levels 2–3 are one line each.
+
 **Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
