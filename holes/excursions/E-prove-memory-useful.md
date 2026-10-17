@@ -717,6 +717,19 @@ only" hold and the Codex-usage question it came from), and whether claude-14
 runs the loop with me supplying the memory discipline, or the leaf jobs are
 re-pointed at this excursion.
 
+**Decided (Joe, 2026-10-17 05:30Z):** leaf work on Zai seats, zai-5
+dispatches, leaf by leaf — each leaf run twice: a trailbreaker seat, then a
+fresh seat with the trailbreaker's newly banked memories in the store (both
+may use memories; the banked-in-between is the only difference). Zai usage
+48% weekly. `futon6/scripts/lean_retrieval.py` / `align_informal_lean.py`
+(retrieval of proved Lean declarations by mathematical meaning) are offered
+to the seats in the packet. Run log:
+`~/notes/packets/memory-effect/RUN-LOG.md`; leaf 1
+(t95J03_componentFiberCard_eq_index) dispatched to zai-1 (rebuilt with
+injection wiring, session reset) 05:35:50Z, job
+`invoke-1792215360712-16203-943b78b8`; its turn-start shows
+`injected-ms 5703` and three baseline memories — delivery recorded.
+
 ## Cross-links
 
 - [E-cool-memories](E-cool-memories.md): the store, its laws, the Lean checks.
