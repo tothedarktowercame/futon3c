@@ -93,8 +93,11 @@
   debugger click authorized directly by Joe on 2026-10-16
   (\"OK, let's run one click now\"), plus one debugger-attached live-readiness
   click authorized directly by Joe on 2026-10-17
-  (\"OK please run 1 click with the debugger attached to catch any error\")."
-  79)
+  (\"OK please run 1 click with the debugger attached to catch any error\"), plus
+  one timing-instrumented debugger click authorized directly by Joe on
+  2026-10-17 after the inner-cascade-reconstruction replay
+  (\"OK, it sounds like one more click is warranted\")."
+  80)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
