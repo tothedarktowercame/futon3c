@@ -157,8 +157,11 @@ function memoryLines(frame) {
     const out = [];
     for (const call of frame.memory.calls || []) {
         const args = typeof call.args === "string" ? call.args : JSON.stringify(call.args ?? {});
-        out.push(`${shown(call.round)}  ${shown(call.tool)}  ${args}`);
-        out.push(`  reached: ${(call.reached || []).length ? (call.reached || []).join(", ") : "(none)"}`);
+        const prefix = call.round === undefined ? "" : `${shown(call.round)}  `;
+        out.push(`${prefix}${shown(call.tool)}  ${args}${call.error ? "  [error]" : ""}`);
+        const reached = (call.reached || []).map(item => typeof item === "string" ? item
+            : `${shown(item.name)}${item.project ? ` (${item.project})` : ""}`);
+        out.push(`  reached: ${reached.length ? reached.join(", ") : "(none)"}`);
     }
     if ((frame.memory.injected || []).length)
         out.push(`injected before round 1: ${frame.memory.injected.join(", ")}`);

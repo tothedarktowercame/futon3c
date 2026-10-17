@@ -217,6 +217,49 @@ class TurnFramesTest(unittest.TestCase):
         self.assertIn("promise/park-made", types1)
         self.assertIn("interpretation/negation", types1)
 
+    def test_memory_calls_use_the_same_frame_window(self):
+        rows = fixture_rows()
+        find_text = ("2 memories match bellback park (index as of now; 2 hits checked by the store):\n"
+                     "bellback-park  cc:-home-joe\n"
+                     "reader-run-path  cc:-home-joe-code-futon3c  (2 versions)\n")
+        rows.extend([
+            {"evidence/id": "e-memory-1", "evidence/type": "coordination",
+             "evidence/at": "2026-09-29T10:40:00Z",
+             "evidence/body": {"event": "memory-call", "tool": "m40_find",
+                               "args": {"terms": ["bellback", "park"]},
+                               "result-text": find_text, "error?": False,
+                               "at": "2026-09-29T10:40:00Z"}},
+            {"evidence/id": "e-memory-2", "evidence/type": "coordination",
+             "evidence/at": "2026-09-29T11:01:00Z",
+             "evidence/body": {"event": "memory-call", "tool": "m40_find",
+                               "args": {"terms": ["later"]},
+                               "result-text": find_text, "error?": False,
+                               "at": "2026-09-29T11:01:00Z"}},
+        ])
+        analyses = tf.load_analyses(SID, analysis_dir=self.dir)
+        frames = tf.build_frames(rows, analyses, session_id=SID)
+        first = frames[0]["memory"]["calls"][0]
+        self.assertEqual(first["tool"], "m40_find")
+        self.assertEqual(first["evidence-id"], "e-memory-1")
+        self.assertEqual(first["reached"], [
+            {"name": "bellback-park", "project": "cc:-home-joe"},
+            {"name": "reader-run-path", "project": "cc:-home-joe-code-futon3c"},
+        ])
+        self.assertEqual([c["evidence-id"] for c in frames[1]["memory"]["calls"]],
+                         ["e-memory-2"])
+
+    def test_frame_without_memory_call_has_no_memory_key(self):
+        self.assertNotIn("memory", self.build()[0])
+
+    def test_file_operator_turn_is_added_when_store_only_has_tool_rows(self):
+        analyses = tf.load_analyses(SID, analysis_dir=self.dir)
+        tool_row = {"evidence/id": "e-memory", "evidence/type": "coordination",
+                    "evidence/at": "2026-09-29T10:40:00Z",
+                    "evidence/body": {"event": "memory-call"}}
+        merged = tf.add_missing_operator_rows([tool_row], analyses, SID)
+        self.assertEqual(len([row for row in merged if tf.is_operator_turn(row)]), 2)
+        self.assertIs(merged[0], tool_row)
+
     def test_turn_commits_summary_keeps_repo_author_subject(self):
         frames = self.build()
         c = [h for h in frames[0]["happened"]

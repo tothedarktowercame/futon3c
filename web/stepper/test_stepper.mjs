@@ -44,6 +44,15 @@ assert.equal(frameModel(noPorts).ports, "");
 assert.deepEqual(frameModel(noPorts).memory,
   ["no recorded memory call for this turn (nothing reached it that the record can show)"]);
 for (const frame of fixture) assert.doesNotThrow(() => frameModel(frame));
+const withMemory = structuredClone(fixture[0]);
+withMemory.memory = {calls: [{tool: "m40_find", args: {terms: ["park"]}, reached: [
+  {name: "bellback-park", project: "cc:-home-joe"},
+  {name: "reader-run-path", project: null},
+]}]};
+assert.deepEqual(frameModel(withMemory).memory, [
+  'm40_find  {"terms":["park"]}',
+  "  reached: bellback-park (cc:-home-joe), reader-run-path",
+]);
 
 const plusOne = [...fixture, structuredClone(fixture.at(-1))];
 assert.equal(receiveFrames({frames: fixture, current: fixture.length - 1}, plusOne).current, fixture.length);

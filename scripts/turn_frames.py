@@ -45,6 +45,11 @@ import sys
 import urllib.parse
 import urllib.request
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+from scope_view_data import m40_facts, memories_named
+
 DEFAULT_BASE = "http://localhost:7073"
 ANALYSIS_DIR = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
 FETCH_TIMEOUT = 20          # seconds; bounds one HTTP call so the stepper
@@ -289,6 +294,33 @@ def rows_from_analyses(analyses, session_id):
                                   "text": record.get("source_text")
                                           or record.get("original_text")}})
     return rows
+
+
+def add_missing_operator_rows(rows, analyses, session_id):
+    """Add file-backed operator turns absent from the evidence response.
+
+    Agent-chat records and Agency evidence are written independently.  A
+    session may therefore have its tool rows in the store while its operator
+    chat-turn exists only in the durable turn record.  Match by evidence id,
+    turn id, or source text so a present store row is never duplicated.
+    """
+    known_ids, known_turns, known_texts = set(), set(), set()
+    for row in rows:
+        if not is_operator_turn(row):
+            continue
+        known_ids.add(row.get("evidence/id"))
+        body = body_of(row)
+        known_turns.add(body.get("turn-id"))
+        known_texts.add((body.get("text") or "").strip())
+    out = list(rows)
+    for row in rows_from_analyses(analyses, session_id):
+        body = body_of(row)
+        if (row.get("evidence/id") in known_ids
+                or body.get("turn-id") in known_turns
+                or (body.get("text") or "").strip() in known_texts):
+            continue
+        out.append(row)
+    return out
 
 
 def at_key(row):
@@ -633,6 +665,8 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
     first = len(all_turns) - len(turns)
 
     frames = []
+    facts_by_text = None
+    facts_warning = False
     for i, turn in enumerate(turns):
         start = at_key(turn)
         end = at_key(all_turns[first + i + 1]) if first + i + 1 < len(all_turns) else None
@@ -756,6 +790,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
 
         # happened rows: everything that is not an operator turn in the window
         happened = []
+        memory_rows = []
         for r in rows:
             if operator_turn(r):
                 continue
@@ -767,6 +802,10 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             happened.append({"at": r.get("evidence/at"),
                              "type": r.get("evidence/type"),
                              "summary": summarize_row(r)})
+            rb = body_of(r)
+            if (r.get("evidence/type") == "coordination"
+                    and rb.get("event") == "memory-call"):
+                memory_rows.append((r, rb))
         # rows is already in at_key order, so happened is too
 
         frames.append({
@@ -780,6 +819,33 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
+        if memory_rows:
+            calls = []
+            for row, call in memory_rows:
+                tool = call.get("tool")
+                error = bool(call.get("error?"))
+                if tool == "m40_state" and facts_by_text is None:
+                    try:
+                        facts_by_text = {fact["text"]: fact for fact in m40_facts()}
+                    except Exception as exc:
+                        facts_by_text = {}
+                        if not facts_warning:
+                            print("turn_frames: memory facts unavailable; "
+                                  "m40_state reached names omitted (%s)" % exc,
+                                  file=sys.stderr)
+                            facts_warning = True
+                named = [] if error else memories_named(
+                    tool, call.get("result-text") or "", facts_by_text or {})
+                calls.append({
+                    "tool": tool,
+                    "args": call.get("args"),
+                    "at": call.get("at") or row.get("evidence/at"),
+                    "error": error,
+                    "evidence-id": row.get("evidence/id"),
+                    "reached": [{"name": name, "project": project}
+                                for name, project in named],
+                })
+            frames[-1]["memory"] = {"calls": calls}
         # ports (HAPPENED / DIDN'T HAPPEN acts) ride the record; a frame
         # without them stays byte-identical.
         if entry is not None and entry["record"].get("ports"):
@@ -852,6 +918,8 @@ def main(argv=None):
     merge_xiang_readings(analyses, readings, args.session_id)
     if rows is None:
         rows = rows_from_analyses(analyses, args.session_id)
+    else:
+        rows = add_missing_operator_rows(rows, analyses, args.session_id)
 
     frames = build_frames(rows, analyses, session_id=args.session_id,
                           operator_rules=load_operators(),

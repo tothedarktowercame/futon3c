@@ -6,7 +6,12 @@ export interface Fragment {
 export interface Commit { repo?: string; sha?: string; author?: string; subject?: string }
 export interface HappenedRow { at?: string; type?: string; summary?: Record<string, unknown> }
 export interface PortAct { kind?: string; text?: string; since?: string }
-export interface MemoryCall { round?: number | string; tool?: string; args?: unknown; reached?: string[] }
+export interface MemoryReached { name?: string; project?: string | null }
+export interface MemoryCall {
+  round?: number | string; tool?: string; args?: unknown;
+  at?: string; error?: boolean; "evidence-id"?: string;
+  reached?: (string | MemoryReached)[];
+}
 export interface ReplyParagraph {
   mark?: string; intent?: string; target?: string | null; quoted?: boolean; body?: string; answers?: string[];
 }
@@ -201,8 +206,11 @@ function memoryLines(frame: Frame): string[] {
   const out: string[] = [];
   for (const call of frame.memory.calls || []) {
     const args = typeof call.args === "string" ? call.args : JSON.stringify(call.args ?? {});
-    out.push(`${shown(call.round)}  ${shown(call.tool)}  ${args}`);
-    out.push(`  reached: ${(call.reached || []).length ? (call.reached || []).join(", ") : "(none)"}`);
+    const prefix = call.round === undefined ? "" : `${shown(call.round)}  `;
+    out.push(`${prefix}${shown(call.tool)}  ${args}${call.error ? "  [error]" : ""}`);
+    const reached = (call.reached || []).map(item => typeof item === "string" ? item
+      : `${shown(item.name)}${item.project ? ` (${item.project})` : ""}`);
+    out.push(`  reached: ${reached.length ? reached.join(", ") : "(none)"}`);
   }
   if ((frame.memory.injected || []).length) out.push(`injected before round 1: ${frame.memory.injected!.join(", ")}`);
   return out.length ? out : ["(no memory events recorded)"];
