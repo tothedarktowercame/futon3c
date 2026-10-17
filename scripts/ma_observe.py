@@ -43,7 +43,7 @@ PROMPT_FILE = os.path.join(HERE, "ma", "observer-system-prompt.txt")
 PROMPT_VERSION = "mastra-memory-1.38.0"
 ZAI_URL = "https://api.z.ai/api/coding/paas/v4/chat/completions"
 MODEL = os.environ.get("MA_MODEL", "glm-5.3")
-MAX_BACKLOG = 2          # a new or restarted watcher does not backfill history
+MAX_BACKLOG = 2          # a session with no observation yet starts at its newest turns
 WINDOW_CHARS = 40000     # cap on one turn's window sent to the model
 PREVIOUS_CHARS = 12000   # cap on the previous observations passed back in
 POLL_S = 20
@@ -197,8 +197,15 @@ def observe_session(session, agent="", dry_run=False, log=print):
     turns = [r for r in rows if tf.is_operator_turn(r) or tf.is_harness_turn_start(r)]
     done = {tf.body_of(r).get("turn-evidence-id") for r in rows if is_observation(r)}
     previous = "\n".join(tf.body_of(r).get("observations") or "" for r in rows if is_observation(r))
+    # Only turns after the newest observed one: a watcher never walks back
+    # through history (2026-10-17: the per-pass cap alone let each pass take
+    # the next two older turns, 9 old turns before it was stopped).
+    observed_at = [tf.at_key(t) for t in turns if t.get("evidence/id") in done]
+    floor = max(observed_at) if observed_at else None
     todo = []
     for i, t in enumerate(turns):
+        if floor is not None and tf.at_key(t) <= floor:
+            continue
         start = tf.at_key(t)
         end = tf.at_key(turns[i + 1]) if i + 1 < len(turns) else None
         if t.get("evidence/id") in done:
