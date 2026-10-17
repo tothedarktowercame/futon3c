@@ -679,18 +679,23 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
     turns = all_turns[-limit:] if limit else all_turns
     first = len(all_turns) - len(turns)
 
-    # A SessionStart brief (minus40 brief.py, a memory-injected row) is in
-    # the seat's context before the next operator turn is answered, so it
-    # belongs to the first frame starting at or after it, not to the window
-    # it falls in (at session start there is no earlier window at all).
+    # A SessionStart brief (minus40 brief.py, a memory-injected row) is
+    # context for the next answer the seat gives. Before the first turn, that
+    # is turn 1. Inside a turn's window, it is that turn if the seat has not
+    # yet replied to it (a pouch resumed to answer the turn fires the brief
+    # seconds after the turn is recorded: claude-3 turn 5, 2026-10-17), else
+    # the next turn (a compact after the reply).
     starts = [at_key(t) for t in all_turns]
+    replies = [at_key(r) for r in rows if is_final_reply(r)]
     injected_at = {}
     for r in rows:
         if (r.get("evidence/type") == "coordination"
                 and body_of(r).get("event") == "memory-injected"):
             at = at_key(r)
-            k = next((j for j, st in enumerate(starts) if st >= at), None)
-            if k is not None:
+            k = next((j for j, st in enumerate(starts) if st > at), len(starts))
+            if k > 0 and not any(starts[k - 1] <= ra < at for ra in replies):
+                k -= 1
+            if k < len(starts):
                 injected_at.setdefault(k, []).append(r)
 
     frames = []
