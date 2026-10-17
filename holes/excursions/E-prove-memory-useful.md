@@ -1,7 +1,11 @@
 # E-prove-memory-useful: making the memory's usefulness something you can see live
 
-Date: 2026-10-16. Owner: claude-16. Status: building, piece by piece (table at
-the end). Joe (2026-10-16): "start by porting the 象 stepper display to
+Date: 2026-10-16; updated 2026-10-17. Owner: claude-16 until the handoff
+below; Joe (2026-10-17 01:25Z) is handing the excursion to an Opus agent with
+claude-16 on tap for advice. Status: the display is live and pushed; nothing
+yet fills its MEMORY section; usefulness is unproved (the **Checkpoint**
+section near the end says exactly where the work stands and what the next
+owner picks up). Joe (2026-10-16): "start by porting the 象 stepper display to
 TypeScript/HTML and address the gaps that are needed to offer proof points
 live."
 
@@ -76,6 +80,32 @@ use it; no turn used it unprompted. The per-turn records are in the
 For Claude and Codex seats run from Emacs there is no `turn-round`
 evidence at all, so the script cannot count them. That is gap G5 below.
 
+**Re-run 2026-10-17T01:28Z** (`~/notes/memory-use-rate-2026-10-17.txt`): the
+table above is unchanged, row for row. Two things the re-run showed that the
+first run did not:
+
+- The script's default seat list is `zai-1..zai-5`, so **zai-6** (codex-68's
+  seat for E-implementing-G-over-cascades, running since 2026-10-16 23:56Z)
+  is not in the table. With `--agents zai-6 --since 2026-10-16`: 13 turns, 5
+  with a minus40 call (one `m40_find`, four `memory_assert` on bell-back
+  turns), all five counted as "unprompted".
+- **"Unprompted" does not mean what the column says.** The Zai harness's
+  system prompt (`src/futon3c/agents/zai_api.clj`, the trial text from
+  2026-10-15) tells every seat: "before starting work that touches a project,
+  service or rule you have not handled this session, call m40_find with its
+  terms ... when you learn a durable fact about this workspace, also assert
+  it with memory_assert". The script's requisition regex reads the packet
+  text only, so a harness-instructed call counts as unprompted. zai-6's own
+  round text for its one `m40_find` says "Check m40 memory first per
+  instructions"; the query was `["G-over-cascades" "executable-cascade"]`
+  and the store answered "0 memories match". So the honest reading of both
+  tables is: every Zai seat has had a standing instruction to consult the
+  store since 10-15; zai-1..5 followed it on 0 of 52 turns, zai-6 on 5 of
+  13; the one find that was not requisitioned by a packet reached nothing.
+  No turn on record has used the store with no instruction anywhere. The
+  column needs renaming and the harness instruction needs counting as a
+  requisition (gap G12).
+
 ## The display: the 象 stepper, ported
 
 The Emacs stepper (`emacs/turn-stepper.el`) shows one frame per operator
@@ -137,14 +167,92 @@ window so far). Live mode refetches every 30 s while the tab is visible
 reading back stays put, as `turn-stepper--index-after-reload` does.
 `?agent=claude-16` resolves the seat's current session from the roster, so
 the link in the WIP index does not go stale when the session changes. Each
-refetch runs `turn_frames.py` (about 6 s of python and futon1b reads for
-this session); if that shows up in the JVM's load the interval goes up.
+refetch ran `turn_frames.py` (about 6 s of python and futon1b reads for
+this session). *Superseded the same afternoon*: the timer is gone, see the
+next section.
 
 One deviation worth knowing: the SAID heading links to the scope view for
 the turn, but `web/scopes/index.html` loads fixtures only, so the link
 works for the turns that have a fixture (`claude-16-turn-162` today) and
 otherwise shows "Could not load scope data". Giving the scope page a live
 mode over `GET /api/alpha/xiang/scopes` is a follow-up under G2.
+
+## The page follows the server: cache and stream (2026-10-16, 16:18Z to 17:10Z)
+
+Joe, on seeing the 30 s refetch: "Reading should happen once, not on demand
+when fetching the URL ... the URL's served contents should be updated by
+push from websocket when the contents are ready rather than on a 30 second
+loop." futon1b is shared by every seat and already busy; a page that
+re-reads the store on a timer turns one viewer into a steady load, and the
+frames change only at moments the JVM already knows (a turn recorded, a
+reading settled). This is now the standing rule for every page or route
+built over futon1b or the turn store: cache in the JVM, rebuild on the
+producing event, serve the cache, push to the browser. Three packets, all to
+codex-23, each reviewed by claude-16 and reloaded from master into the :7070
+JVM:
+
+1. **Frames cache** (`web/stepper/PACKET-frames-cache.md`, job
+   `invoke-1792167486447-15629-0cc1cf80`, commit 5b74bb283).
+   `src/futon3c/xiang/frames_cache.clj` holds one entry per fetched session
+   (`!cache`, with `:frames :version :built-at :last-error`); the first GET
+   runs `turn_frames.py` once and later GETs answer from memory (`cached
+   true`, `elapsed-ms 0`); `turn_service.clj` gained a reload-safe listener
+   registry (`add-turn-listener!`, keyed, run off the turn's path) and the
+   cache rebuilds a session only when a turn is recorded or settled in it; a
+   failed rebuild keeps the last good frames and records the error.
+   Review fix ab0d78f04: watched live, the first build for a session
+   overlapped a turn event, the rebuild ran alongside and wrote the first
+   build's promise back, so every later GET came from a frozen value
+   (version 1 while the atom was at 6). A build in flight now takes a dirty
+   mark and the finished build queues the one follow-up.
+2. **Frames stream** (`PACKET-frames-stream.md`, job
+   `invoke-1792168312385-15645-d7592b24`, commit af8d2cfa7).
+   `GET /api/alpha/xiang/frames/stream?session=S&limit=N` is server-sent
+   events from `src/futon3c/xiang/frames_stream.clj`: `hello`, then
+   `frames` (id = cache version, data = the GET route's object) on connect
+   and on every version change, `status` for `building` or
+   `rebuild-failed`, a keepalive comment every 25 s; `Last-Event-ID` on
+   reconnect suppresses an unchanged resend. SSE rather than a websocket
+   because every websocket upgrade on this JVM goes to the Agency mesh
+   handler before any path is looked at, and SSE passes through the Caddy
+   proxy as it stands. Review fixes: 0fc2a21f2 (a throwing `send!` removes
+   the watch); 33c2d52a3, found live: http-kit 2.8.1 never runs an HTTP
+   channel's `:on-close` when the client disconnects (the selection key's
+   attachment keeps the accept-time channel), so a `curl -m 3` left its watch
+   and keepalive task for 90 s; the keepalive tick now reads the key by
+   reflection and closes the channel when it is invalid.
+3. **The page subscribes** (`PACKET-frames-page.md`, job
+   `invoke-1792170238446-15670-bc02fcd3`, commit df9baa88d). One
+   `EventSource` per live page; the `setInterval` and `?poll=` are gone;
+   `g` re-reads the cache route once. `parseStreamEvent` and the follow-the-
+   newest rule are pure and tested in node. Review fix fca3a3b88: a pushed
+   frame set clears a `building` / `rebuild-failed` status line (untested:
+   `renderStepper` needs a DOM).
+
+Two defects were found only by watching the live JVM after reload, having
+passed 75 green tests and a two-curl check: the frozen-promise race above,
+and 7811c49fc: the cache rebuilt twenty-two times in four minutes with no
+new turn, because nine records had their analysis file but a flag still
+`requested`, so every Emacs poll of the turn view (every 20 s) reaped them
+again and each reap re-settled, appending a duplicate evidence entry and
+firing the listeners. `reap!` now marks a published record analyzed, and
+`settle-evidence!` announces a reading once. The habit that caught both:
+after a reload, dump the component's atom without bulk fields and count its
+producing events for a minute against what the design says should fire.
+
+A frame is produced only when `emacs/session-turn-analysis.el` POSTs an
+operator turn or the xiang-bells hook records a bell job; a park self-wake
+or parked-resume turn records no turn, so nothing rebuilds or pushes after
+it (a 10-minute watch after a self-wake saw nothing, correctly). To see a
+rebuild and push without faking a turn:
+
+    scripts/proof-eval.sh '(futon3c.xiang.frames-cache/invalidate! "<session>" (#'"'"'futon3c.transport.http/frames-cache-opts))'
+
+(as typed at a bash prompt: the `'"'"'` run puts a literal apostrophe
+inside the single-quoted form, so the JVM sees `(#'futon3c.transport.http/frames-cache-opts)`)
+
+with the page open: the version increments and the page updates in about
+10 s with no GET.
 
 ## Joe's second look (2026-10-16 22:52Z): features, not a surface
 
@@ -174,9 +282,27 @@ hour, each against the record:
   alone) added 1,129 edges (551 next-in-session, 422 rejected-beside, 149
   co-cited, 7 why) and 10 patterns from 1,677 analyses the graph had never
   seen; giant component 734 → 794 of 1,441.
-- **3/2 categories**: nothing in the record stores a pattern or cascade in
-  that form. The notebook's §7 compilation is "finite and Boolean" and runs
-  only there.
+- **3/2 categories**: nothing in the record stored a pattern or cascade in
+  that form at the time of the look. The notebook's §7 compilation is
+  "finite and Boolean" and runs only there. *Since then (23:37Z onward)*:
+  Joe settled CASCADE-SPEC-v3 §2 on turn-zZ52wx (futon2 e5c3a4604): a
+  pattern's square is its four written parts under IF = I1, HOWEVER = I2,
+  BECAUSE = G, THEN = B; an occurrence is the four maps, each a situation
+  element with a source; an unmatched part voids the citation; a square
+  whose texts are not the pattern's parts is refused at the producer.
+  `scripts/occurrence_square.py` (c5157bc33, with
+  `holes/labs/M-象-2000/LAB-2026-10-16-occurrence-squares.md`) emits
+  `:wm/three-halves-square-v1` records from 象 citations and glues
+  occurrences sharing a situation element: four citations gave 2 components,
+  a bag, all four `:valid` under the War Machine's own validator. futon2's
+  parts-check (51eb13f19, codex-2, job `invoke-1792193935835-15912-5c902ffb`)
+  refuses defaulted squares; its first version stringified the part's line
+  vector and accepted any substring, fixed in 38cded186 (object text must
+  equal the whole part after whitespace normalisation, Joe's OK 2026-10-17).
+  The WM side has since installed production cascade square ports (futon2
+  0353002dc, codex-68's lane). What is still not done on the 象 side: nothing
+  writes the four maps at citation time; the four on record were authored by
+  hand for one turn. That producer change is the open end of this bullet.
 - Also: the Emacs stepper refreshes only on `g`; nothing refreshes it when
   a reading lands, so it and the page drift apart until the key is pressed.
 
@@ -188,7 +314,7 @@ the same whether 象 had finished or not. The page now says which.
 | id | gap | packet (one behaviour, one acceptance) |
 |---|---|---|
 | G1 | nobody can see the use rate without counting by hand | **done**: `scripts/memory_use_rate.py`, tests in `scripts/test_memory_use_rate.py` (requisitioned vs unprompted told apart; a turn with no calls counts as a turn; string and map bodies; the regex matches the packet wording and not the word "memory") |
-| G2 | the stepper has no memory section and no web form | **in flight**: route (this excursion's first commit) and `web/stepper/` (codex-23) |
+| G2 | the stepper has no memory section and no web form | **done** as a surface: route 550620a99, page 7bff1dc7f, cache 5b74bb283, stream af8d2cfa7, page subscribes df9baa88d; the MEMORY section exists and prints the absence sentence on every frame until G3/G5 fill it. Open under G2: the page has never been checked by eye in a browser (no browser on the box); `web/scopes/index.html` loads fixtures only, so the SAID link to the scope view works for fixture turns alone; a live mode over `GET /api/alpha/xiang/scopes` is the follow-up |
 | G3 | frames do not carry the memory layer | `turn_frames.py --memory`: for a frame whose session has `turn-round` evidence, add `memory {calls[{round, tool, args, reached[]}]}` using `scope_view_data.trace_for` and `memories_named` (import, do not copy); for a frame with none, leave `memory` absent so the page prints the absence sentence. Acceptance: on `zai-1`'s 2026-10-16 03:40Z turn the frame lists the two `m40_find` calls and the names the grid shows as ●; on a 10-15 turn `memory` is absent. The route passes the flag through. |
 | G4 | delivery is the seat's choice | **Injection for Zai seats.** In the Zai harness, before round 1: take the incoming packet's 象 act reading (acts and pattern ids, as `turn_acts` already types them), derive find terms, run `m40_find`, and put the hits into the system turn as memory segments. Write `injected [names]` on the `turn-start` evidence and a `reached` edge per name on the turn record, so the grid draws ● for a turn with no call. Acceptance: a requisition-free review packet to a Zai seat shows ● in the grid and "injected before round 1: …" in MEMORY; the use-rate table gains an `injected` column and it is non-zero on turns with no `m40_*` call. For Claude seats the equivalent place is the `UserPromptSubmit` hook (`minus40/scripts/brief.py` is the session-start half of this and runs for one seat). |
 | G5 | Claude and Codex seats leave no tool trace the record can join | `minus40/scripts/ingest_hook.py` (PostToolUse) posts, for each `m40_*` call, a `coordination` evidence row `{event "memory-call", tool, args, reached[]}` with the seat's session id and the call time. `turn_frames.py` already puts every non-operator row in the window into HAPPENED, so the stepper shows it with no further change; G3's `memory` reads these rows too. Acceptance: a claude-16 turn that calls `m40_find` shows the call in HAPPENED and in MEMORY; the use-rate script, given `--agents claude-16`, counts it. |
@@ -197,7 +323,8 @@ the same whether 象 had finished or not. The page now says which.
 | G9 | the reply is not lined up with the turn it answers | **done** 2026-10-16 23:02Z (claude-16): `reply` layer in `turn_frames.py`, ANSWERED on the page; tests in both suites |
 | G10 | the pattern graph does not grow with the mined turns | rebuild `mined_pattern_graph.py` on the producing event (a reading landing), write the delta (edges and patterns added by this turn) on the frame as a GRAPH line; promotion of 象-sonnet candidates is a separate decision for Joe |
 | G11 | the Emacs stepper does not follow new readings | `session-turn-analysis.el` calls `turn-stepper-refresh` on a live stepper buffer when a reading or candidates file lands |
-| G8 | the live page cannot be reached from the zone site | **done** 2026-10-16 07:19Z: `/etc/caddy/Caddyfile` forwards GET `/wip/stepper/api/alpha/xiang/*` and `/wip/stepper/api/alpha/agents` to loopback :7070 with the prefix stripped; the page and the routes share basic_auth realm `xiang` (password `~/.xiang-web-password`), under the page's own prefix so the browser sends the credential preemptively (a route outside the prefix gets a bare 401 from the host's poll-401 handler and the fetch never retries). Nothing else on :7070 is reachable: POST to the routes, `bell`, `parked` all 404. Backup `Caddyfile.before-xiang-20261016-071710`. I had marked this Joe's: it was not blocked, joe has sudo and the file carries a dozen agent-made backups. |
+| G12 | the use-rate table calls harness-instructed calls "unprompted" and omits seats | `memory_use_rate.py`: count the Zai system prompt's standing instruction as a requisition (read it from the `turn-start` row if the harness records it there, else from `zai_api.clj` by date), rename the column to say what it measures (followed the standing instruction / packet-requisitioned / neither), default `--agents` to every `zai-*` seat on the roster, and add a `reached` column (names returned) so "called and got nothing" is told apart from "called and read". Acceptance: zai-6's five calls move out of "unprompted"; the 23:56Z find shows `reached 0`. |
+| G8 | the live page cannot be reached from the zone site | **done** 2026-10-16 07:19Z: `/etc/caddy/Caddyfile` forwards GET `/wip/stepper/api/alpha/xiang/*` and `/wip/stepper/api/alpha/agents` to loopback :7070 with the prefix stripped; the page and the routes share basic_auth realm `xiang` (a fresh password was used 07:17Z to 16:07Z and dropped at Joe's request; the page now carries the one site password, `~/.voxterm-web-password`, user `joe`, the same as `/voxterm/`, `/wysiwyg/` and the VNC), under the page's own prefix so the browser sends the credential preemptively (a route outside the prefix gets a bare 401 from the host's poll-401 handler and the fetch never retries). Nothing else on :7070 is reachable: POST to the routes, `bell`, `parked` all 404. Backup `Caddyfile.before-xiang-20261016-071710`. I had marked this Joe's: it was not blocked, joe has sudo and the file carries a dozen agent-made backups. |
 
 Pieces are small on purpose: one file or one behaviour each, a checkpoint
 between discovery and implementation, as the handoff protocol asks.
@@ -220,19 +347,96 @@ useful", and the page should say exactly that.
 
 ## Order of work and status
 
-| piece | gap | owner | status (2026-10-16) |
+| piece | gap | owner | status (2026-10-17 01:30Z) |
 |---|---|---|---|
-| 1 | G1 use-rate script | claude-16 | done, table above |
-| 2 | G2 frames route + stepper page | claude-16 (route), codex-23 (page) | done: route 550620a99 live on :7070; page 7bff1dc7f, published; by-eye check open |
-| 3 | G3 memory layer in frames | next packet | not started |
-| 4 | G5 Claude/Codex tool trace rows | next packet | not started |
+| 1 | G1 use-rate script | claude-16 | done, table above; re-run 10-17 unchanged; its reading corrected (see G12) |
+| 2 | G2 frames route + stepper page, cache, stream | claude-16 (route, reviews), codex-23 (page, cache, stream) | done and live: route 550620a99, page 7bff1dc7f, cache 5b74bb283 + ab0d78f04, stream af8d2cfa7 + 33c2d52a3, page subscribes df9baa88d + fca3a3b88, settle-once 7811c49fc; published copy matches HEAD; by-eye check and scope-view live mode open |
+| 3 | G3 memory layer in frames | **next packet**, unassigned | not started; the one that makes MEMORY say something |
+| 4 | G5 Claude/Codex tool trace rows | packet, unassigned | not started |
 | 5 | G4 injection for Zai seats | packet after 3 and 4 | not started |
 | 6 | G6 task bank, baselines first | packet; needs Zai or Kimi quota | not started |
 | 7 | G7 derivation | packet | not started |
-| 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live |
+| 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live, 401 without the site password as intended |
 | 9 | G9 reply alignment | claude-16 | done 2026-10-16 23:02Z, live on the page |
-| 10 | G10 graph growth per turn | next packet | not started; today's one-off rebuild measured the backlog |
-| 11 | G11 Emacs stepper follows readings | small, claude-16 | not started |
+| 10 | G10 graph growth per turn | packet | not started; the 10-16 one-off rebuild measured the backlog |
+| 11 | G11 Emacs stepper follows readings | small | not started |
+| 12 | G12 use-rate reads the standing instruction | small | named 2026-10-17, not started |
+| — | 象-side occurrence producer (four maps written at citation time) | claude-16, with M-象-2000 | not started; `occurrence_square.py` consumes hand-authored maps today |
+
+## Checkpoint (2026-10-17, at Joe's handoff request of 01:25Z)
+
+This is where the excursion stands, written so the next owner can act on it
+without claude-16's context.
+
+**What is true and checked this hour.**
+
+- `GET localhost:7070/api/alpha/xiang/frames?session=00e653e3-28f7-4add-8304-47ca0475b5c2&limit=3`
+  answers in about 1 ms with `cached true`, version 66, built 01:26:18Z; the
+  newest frame is `claude-16-turn-207`, Joe's handoff turn.
+- `GET .../frames/stream?session=<same>&limit=1` sends `hello`, then
+  `frames` with `id: 66` and the same object. It is the live page's only
+  input after load.
+- Every frame has `turn parse patterns operators happened record`, and
+  `reply` once claude-16's answer to that turn is on record. **No frame has
+  `memory`.** The page's MEMORY section prints the absence sentence on all
+  of them. That is the state of the proof: a display with nothing yet to
+  display.
+- The published page (`/var/www/zone.hyperreal.enterprises/wip/stepper/`)
+  is byte-identical to HEAD (`index.html`, `stepper.js`), and the WIP index
+  card points at `stepper/index.html?agent=claude-16`.
+- `memory_use_rate.py --since 2026-10-14`: 52 turns, 6 using, 0 unprompted
+  for zai-1..5, as on 10-16; the correction in the use-rate section applies.
+
+**What was never checked.** The page by eye in a browser; `fca3a3b88` (DOM
+only). Nobody has yet watched a rebuild and push land in a browser; the
+`invalidate!` recipe above is how to do it.
+
+**The claim the page may make today**, in Joe's terms: the store is correct
+(E-cool-memories), delivery is the seat's choice and seats rarely choose it
+even under a standing instruction, and no effect has been shown. The page
+should say "correct, not shown useful" until G6 has a failing baseline.
+
+**Next packet: G3.** It is the first piece that puts a fact in MEMORY.
+`turn_frames.py --memory` (the route passes the flag): for a frame whose
+session has `turn-round` evidence, add
+`memory {calls [{round tool args reached []}]}` using
+`scope_view_data.trace_for` and `memories_named` (import, do not copy); for
+a frame with none, leave `memory` absent. Acceptance: on zai-1's 2026-10-16
+03:40Z turn the frame lists the two `m40_find` calls and the names the scope
+grid shows as ●; on a 10-15 turn `memory` is absent. The frames cache needs
+no change: it runs the script, so the flag reaches it through
+`frames-cache-opts` in `http.clj`. Then G5, then G4; G6 as soon as a Zai or
+Kimi seat has quota, because nothing above it is a usefulness result.
+
+**Seats.** codex-23 (idle, excursion E-prove-memory-useful) built the page,
+cache and stream and holds that context; codex-2 (idle, same excursion) did
+the futon2 parts-check. Nine codex seats idle at 01:30Z. zai-6 belongs to
+codex-68's E-implementing-G-over-cascades and is not ours to use.
+
+**Rules that bit this excursion, for the next owner.**
+
+1. No polling, no on-demand reads over futon1b: cache in the JVM, rebuild on
+   the producing event, push (Joe, 2026-10-16). Any new route or page here
+   follows the frames cache and stream.
+2. After every reload, watch the live state for a minute (atom dump, event
+   count) before calling a review done; two of this excursion's defects were
+   invisible to green tests.
+3. The :7070 JVM is reloaded only from `/home/joe/code/futon3c` master
+   (`scripts/restore-http-routes.sh`, or `(require 'ns :reload)` via
+   `scripts/proof-eval.sh`); never `load-file` a worktree copy. Reload needs
+   no permission; a restart is Joe's call.
+4. One behaviour per packet, discovery split from implementation, always
+   `--from <your-id>`, quoted heredocs, park on every bell and read the park
+   record back (a `deadline-ms` three orders of magnitude off slipped past
+   once here).
+5. Features, not presentation: before shipping a surface, name the one thing
+   it shows that no existing surface shows. If there is none, build the
+   feature first.
+6. Report with tables (use-rate, pair tables) and the job ids; prose after.
+
+**Advice channel.** claude-16 stays on the roster; bell it with
+`--from <your-id>` and it will answer in a later turn. Joe's words on the
+handoff: "keeping you on tap to offer advice".
 
 ## Cross-links
 
@@ -241,4 +445,6 @@ useful", and the page should say exactly that.
 - `holes/labs/M-象-2000/LAB-2026-10-14-live-memory-check.md`: the stage-by-stage check that found the delivery and brief gaps.
 - `holes/labs/M-象-2000/P23-frontend-port.md`: the first 象 frontend port (turn routes, `packages/xiang-client`); this excursion ports the stepper the same way, server routes first, a pure consumer second.
 - `emacs/turn-stepper.el`: the display being ported; `scripts/turn_frames.py`: the frames.
+- `web/stepper/PACKET-stepper-view.md`, `PACKET-frames-cache.md`, `PACKET-frames-stream.md`, `PACKET-frames-page.md`: the four packets behind the page, in order.
+- `holes/labs/M-象-2000/LAB-2026-10-16-occurrence-squares.md` and `scripts/occurrence_square.py`: the 3/2-category answer to Joe's second look; futon2 `holes/labs/wm-contract/CASCADE-SPEC-v3-draft-2026-10-05.md` §2 for the rule.
 - M-象-2000: the two queries this excursion's G7 serves.
