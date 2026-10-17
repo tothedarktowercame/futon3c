@@ -679,6 +679,20 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
     turns = all_turns[-limit:] if limit else all_turns
     first = len(all_turns) - len(turns)
 
+    # A SessionStart brief (minus40 brief.py, a memory-injected row) is in
+    # the seat's context before the next operator turn is answered, so it
+    # belongs to the first frame starting at or after it, not to the window
+    # it falls in (at session start there is no earlier window at all).
+    starts = [at_key(t) for t in all_turns]
+    injected_at = {}
+    for r in rows:
+        if (r.get("evidence/type") == "coordination"
+                and body_of(r).get("event") == "memory-injected"):
+            at = at_key(r)
+            k = next((j for j, st in enumerate(starts) if st >= at), None)
+            if k is not None:
+                injected_at.setdefault(k, []).append(r)
+
     frames = []
     facts_by_text = None
     facts_warning = False
@@ -834,6 +848,13 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
+        injected = []
+        for r in injected_at.get(first + i, []):
+            for mid in body_of(r).get("memories") or []:
+                if mid not in injected:
+                    injected.append(mid)
+        if injected:
+            frames[-1]["memory"] = {"calls": [], "injected": injected}
         if memory_rows:
             calls = []
             for row, call in memory_rows:
@@ -860,7 +881,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                     "reached": [{"name": name, "project": project}
                                 for name, project in named],
                 })
-            frames[-1]["memory"] = {"calls": calls}
+            frames[-1].setdefault("memory", {})["calls"] = calls
         # ports (HAPPENED / DIDN'T HAPPEN acts) ride the record; a frame
         # without them stays byte-identical.
         if entry is not None and entry["record"].get("ports"):

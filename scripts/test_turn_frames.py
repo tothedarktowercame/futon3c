@@ -248,6 +248,21 @@ class TurnFramesTest(unittest.TestCase):
         self.assertEqual([c["evidence-id"] for c in frames[1]["memory"]["calls"]],
                          ["e-memory-2"])
 
+    def test_injected_brief_goes_on_the_first_frame_after_it(self):
+        rows = fixture_rows()
+        def inj(eid, at, mems):
+            return {"evidence/id": eid, "evidence/type": "coordination", "evidence/at": at,
+                    "evidence/body": {"event": "memory-injected", "hook": "SessionStart",
+                                      "memories": mems}}
+        rows.extend([inj("e-inj-0", "2026-09-29T09:00:00Z", ["cc:-home-joe/a", "cc:-home-joe/b"]),
+                     inj("e-inj-1", "2026-09-29T10:45:00Z", ["cc:-home-joe/c"])])
+        frames = tf.build_frames(rows, tf.load_analyses(SID, analysis_dir=self.dir), session_id=SID)
+        self.assertEqual(frames[0]["memory"], {"calls": [], "injected": ["cc:-home-joe/a", "cc:-home-joe/b"]})
+        # a resume brief inside turn 1's window is context for turn 2, not turn 1
+        self.assertEqual(frames[1]["memory"]["injected"], ["cc:-home-joe/c"])
+        # and HAPPENED still lists it where it happened
+        self.assertIn("coordination", [h["type"] for h in frames[0]["happened"]])
+
     def test_frame_without_memory_call_has_no_memory_key(self):
         self.assertNotIn("memory", self.build()[0])
 
