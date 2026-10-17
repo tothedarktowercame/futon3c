@@ -846,6 +846,18 @@ institutions (no such entity in substrate-2). Watcher bug found on enabling
 claude-16 and fixed (13376aee1): the per-pass cap let it walk back through
 history, 9 old turns, ~120k tokens.
 
+**Joe (21:14Z): mash the stepper up with Cascade Live now, by type.** Agent,
+mission and retrieved patterns (embedding and 象) are type matches for
+Cascade Live's entities; ports and the like are a more ephemeral,
+stigmergic layer, probably not worth persisting into substrate-2 but
+still supporting the session's work, like the extra steps a Lean proof has
+over its informal proof. Built (futon3c f66dc6a6b): CASCADE section per
+frame (agent lineage; engaged work's clusters, arrows, held items, linked
+patterns; each of the turn's patterns with the missions that link it),
+read from `/cascade-real/graph` at load and on each pushed update. First
+live slice: E-prove-memory-useful has no linked patterns, and of this
+turn's patterns only one (象's) is linked to any mission.
+
 **Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
