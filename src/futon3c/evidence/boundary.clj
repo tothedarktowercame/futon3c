@@ -42,7 +42,8 @@
        the same backend.
 
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/)."
-  (:require [futon3c.evidence.backend :as backend]
+  (:require [futon3c.agency.turn-events :as turn-events]
+            [futon3c.evidence.backend :as backend]
             [futon3c.evidence.origin :as origin]
             [futon3c.evidence.invariant :as invariant]
             [futon3c.evidence.subject :as subject]
@@ -270,7 +271,9 @@
                         (str label "=" (pr-str value))))
                     fields))))
 
-(defn append!
+(declare append!)
+
+(defn append-unhooked!
   "Append an evidence entry through the single boundary.
 
    Accepts the same input forms as store/append*: a full EvidenceEntry
@@ -444,3 +447,14 @@
    (append! futon3c.evidence.store/!store entry-or-args)."
   [entry-or-args]
   (append! @(requiring-resolve 'futon3c.evidence.store/!store) entry-or-args))
+
+(defn append!
+  "append-unhooked!, with turn finalisation raised around it: when the row
+   finalises a turn (futon3c.agency.turn-events), :pre listeners run just
+   before the append and :post listeners are queued once it is stored."
+  [evidence-store entry-or-args]
+  (try (turn-events/pre! entry-or-args) (catch Throwable _ nil))
+  (let [result (append-unhooked! evidence-store entry-or-args)]
+    (when (:ok result)
+      (try (turn-events/post! (:entry result)) (catch Throwable _ nil)))
+    result))

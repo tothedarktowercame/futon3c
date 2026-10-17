@@ -367,9 +367,9 @@ def observe_session(session, agent="", dry_run=False, log=print):
         if t.get("evidence/id") in done:
             continue
         if tf.is_harness_turn_start(t):
-            # a Zai/Kimi turn is finished when its job is: there is no
-            # final-reply row, only rounds
-            if job_of(tf.body_of(t).get("dispatch-id") or "").get("state") not in ("done", "failed", "timed-out"):
+            # a Zai/Kimi turn is finished when its final round row is written
+            # (zai_api writes exactly one per turn; it raises :turn-final)
+            if final_round(rows, t, start, end) is None:
                 continue
         elif not any(tf.is_final_reply(r)
                      for r in rows if tf.at_key(r) > start and (end is None or tf.at_key(r) < end)):
@@ -382,10 +382,11 @@ def observe_session(session, agent="", dry_run=False, log=print):
         if harness:
             # the seat's final text is in the job record; add it unless the
             # last round already carries it
-            job = job_of(tf.body_of(t).get("dispatch-id") or "")
-            final = job_text(job).strip()
+            fr = final_round(rows, t, start, end)
+            final = (tf.body_of(fr).get("text") if fr else "") or job_text(job_of(tf.body_of(t).get("dispatch-id") or ""))
+            final = (final or "").strip()
             if final and not any(final[-300:] in m[2] for m in msgs[1:]):
-                msgs.append(("assistant", job.get("finished-at") or msgs[-1][1], final[-6000:]))
+                msgs.append(("assistant", (fr or {}).get("evidence/at") or msgs[-1][1], final[-6000:]))
         msgs = cap_window(msgs)
         model_view = None
         if previous_card:
@@ -471,6 +472,18 @@ def verdict(reply):
     return None
 
 
+def final_round(rows, turn_row, start, end):
+    """The turn's final turn-round row, or None while it is running."""
+    tid = tf.body_of(turn_row).get("turn-id")
+    for r in rows:
+        b = tf.body_of(r)
+        if (b.get("event") == "turn-round" and b.get("final") is True
+                and (b.get("turn-id") == tid or (tid is None and tf.at_key(r) > start
+                                                  and (end is None or tf.at_key(r) < end)))):
+            return r
+    return None
+
+
 def job_of(dispatch_id):
     try:
         return get_json("/api/alpha/invoke/jobs/" + urllib.parse.quote(dispatch_id)).get("job") or {}
@@ -548,8 +561,11 @@ def after_harness_turn(agent, session, turn_row, observation, rows, log=print, d
     root, episode = (m.group(2), int(m.group(1))) if m else (dispatch, 1)
     inner = packet.split("\n\n", 1)[1] if m else packet
     problem, lemma = leaf_of(inner)
+    start = tf.at_key(turn_row)
+    later = [tf.at_key(r) for r in rows if tf.is_harness_turn_start(r) and tf.at_key(r) > start]
+    fr = final_round(rows, turn_row, start, min(later) if later else None)
     job = job_of(dispatch) if dispatch else {}
-    ended = verdict(job_text(job))
+    ended = verdict((tf.body_of(fr).get("text") if fr else "") or job_text(job))
     out = {"lemma": lemma, "verdict": ended, "promoted": None, "continued": None}
     if not lemma or ended == "proved":
         return out
@@ -562,7 +578,7 @@ def after_harness_turn(agent, session, turn_row, observation, rows, log=print, d
     out["promoted"] = "cc:%s/%s" % (MEMORY_PROJECT, name)
     log("馬 promoted %s (%s)" % (out["promoted"], ended or "no verdict"))
     if ended is None and agent in continue_agents() and episode < 1 + MAX_CONTINUE:
-        finished = parse_at(job.get("finished-at") or job.get("completed-at") or turn_row.get("evidence/at"))
+        finished = parse_at((fr or {}).get("evidence/at") or job.get("finished-at") or turn_row.get("evidence/at"))
         latest = max((tf.at_key(r) for r in rows if tf.is_harness_turn_start(r)), default="")
         fresh = (datetime.datetime.utcnow() - finished).total_seconds() < CONTINUE_WITHIN_S
         enabled_at = continue_enabled_at()

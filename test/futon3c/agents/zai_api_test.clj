@@ -3,7 +3,7 @@
             [clojure.java.shell :as shell]
             [clojure.set :as set]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zai-api :as zai]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.peripheral.memory-backend :as memory-backend]
@@ -205,6 +205,33 @@
         (is (= turn-id (get-in round [:evidence/body :turn-id])))
         (is (= true (get-in round [:evidence/body :final])))
         (is (= "proved" (get-in round [:evidence/body :text])))))))
+
+(deftest every-turn-ends-with-exactly-one-final-round
+  ;; The finalising row of a Zai turn (futon3c.agency.turn-events
+  ;; :harness-turn). The bad case: a turn that hits the round cap, like the
+  ;; truncated t95J03 S2 episodes, used to end with no final row at all.
+  (let [finals (fn [store]
+                 (->> (:order @store) (map #(get-in @store [:entries %]))
+                      (filter #(= true (get-in % [:evidence/body :final])))))]
+    (testing "natural completion: one final round, no :stop"
+      (let [store (atom {:entries {} :order []})
+            invoke (make-invoke {:evidence-store store})]
+        (with-redefs [zai/chat! (fn [_ _ _] (text-response "done"))]
+          (invoke "small" nil)
+          (is (= 1 (count (finals store))))
+          (is (nil? (get-in (first (finals store)) [:evidence/body :stop]))))))
+    (testing "round cap: one final round carrying :stop and the result"
+      (let [calls (atom 0)
+            store (atom {:entries {} :order []})
+            invoke (make-invoke {:evidence-store store :auto-continue-max 0})]
+        (with-redefs-fn {#'zai/chat! (fn [_ _ _] (tool-response (swap! calls inc)))
+                         #'zai/execute-tool fake-tool-result}
+          (fn []
+            (invoke "never finish" nil)
+            (is (= 1 (count (finals store))))
+            (is (= "max-tool-rounds" (get-in (first (finals store)) [:evidence/body :stop])))
+            (is (= "[z.ai stopped after maximum tool rounds]"
+                   (get-in (first (finals store)) [:evidence/body :text])))))))))
 
 (deftest final-report-reserve-never-consumes-the-whole-envelope
   ;; e63951e8 sized a flat 5-minute reserve for the student's pinned 60-minute

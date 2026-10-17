@@ -123,6 +123,19 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(out["continued"]["episode"], 2)
         self.assertEqual(out["continued"]["root"], "j")
 
+    def test_verdict_comes_from_the_final_round_before_the_job_is_done(self):
+        # :turn-final fires when the final round row is stored, before the
+        # Agency marks the job done: the job record is still empty then.
+        turn = {"evidence/at": "2026-10-17T22:00:00Z", "evidence/type": "coordination",
+                "evidence/body": {"event": "turn-start", "dispatch-id": "j", "turn-id": "zt1", "prompt": S2_PACKET}}
+        final = {"evidence/at": "2026-10-17T22:05:00Z", "evidence/type": "coordination",
+                 "evidence/body": {"event": "turn-round", "turn-id": "zt1", "final": True, "text": S2_TRUNCATED_REPLY}}
+        with mock.patch.object(ma, "job_of", return_value={}):
+            out = ma.after_harness_turn("zai-1", "s", turn, "* 🟡 x", [turn, final], log=lambda *_: None, dry_run=True)
+        self.assertIsNone(out["verdict"])
+        self.assertEqual(out["promoted"], "cc:ma/t95j03-torus-bridge-progress")
+        self.assertIs(ma.final_round([turn, final], turn, "2026-10-17T22:00:00Z", None), final)
+
     def test_proved_turn_is_neither_promoted_nor_continued(self):
         turn = {"evidence/at": "t", "evidence/body": {"event": "turn-start", "dispatch-id": "j", "prompt": S2_PACKET}}
         with mock.patch.object(ma, "job_of", return_value={"state": "done", "result": "PROVED, 40 lines"}):

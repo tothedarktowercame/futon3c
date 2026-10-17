@@ -1576,17 +1576,18 @@
 (defn- persist-round!
   "Append one durable, turn-addressable round record.
 CALLS contains maps of tool name, arguments, and result digest."
-  [{:keys [evidence-store agent-id sid turn-id profile round text calls final? usage]}]
+  [{:keys [evidence-store agent-id sid turn-id profile round text calls final? usage stop]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-round
-     :body (merge {:round round
-                   :final (boolean final?)
-                   :text (transcript-truncate text transcript-text-cap)
-                   :calls (vec calls)}
-                  usage)})))
+     :body (cond-> (merge {:round round
+                           :final (boolean final?)
+                           :text (transcript-truncate text transcript-text-cap)
+                           :calls (vec calls)}
+                          usage)
+             stop (assoc :stop stop))})))
 
 (defn- sha256-8 [s]
   (let [md (java.security.MessageDigest/getInstance "SHA-256")]
@@ -1909,6 +1910,7 @@ CALLS contains maps of tool name, arguments, and result digest."
   (let [auto-continue-max (configured-auto-continue-max auto-continue-max)
         !turn-usage (atom nil)]
     (with-turn-usage
+    (doto
     (loop [remaining tool-round-budget
            final-text ""
            auto-continues 0
@@ -2075,6 +2077,17 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :calls [] :final? true :usage usage})
                   {:result (if (str/blank? text) final-text text)
                    :session-id sid}))))))))
+      ;; Every turn ends with exactly one final round row: the normal end
+      ;; writes it above; the interrupted, wall-clock and max-rounds exits
+      ;; write it here, with :stop. It is the turn's finalising row
+      ;; (futon3c.agency.turn-events :harness-turn).
+      (as-> r
+        (when (:error r)
+          (persist-round! {:evidence-store (:evidence-store ctx)
+                           :agent-id agent-id :sid sid
+                           :turn-id (:turn-id ctx) :profile (:profile ctx)
+                           :round nil :text (str (:result r))
+                           :calls [] :final? true :stop (:error r)}))))
     @!turn-usage)))
 
 (defn make-invoke-fn
