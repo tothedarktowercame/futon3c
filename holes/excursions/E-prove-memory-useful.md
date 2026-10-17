@@ -354,7 +354,7 @@ useful", and the page should say exactly that.
 | 3 | G5 Claude tool trace rows | claude-3 (owner), codex-23 | **done** 2026-10-17 01:45Z, see "G3's premise, and G5 first" |
 | 4 | G3 memory layer in frames (re-scoped: reads `memory-call` rows) | claude-3 (owner), codex-23 | **done** 2026-10-17 02:00Z, see below; live on the page |
 | 5a | G4 for Claude seats: the SessionStart brief records what it injected | claude-3, codex-23 | **done** 2026-10-17 02:10Z, see below; no live frame yet |
-| 5 | G4 injection for Zai seats | packet | not started |
+| 5 | G4 injection for Zai seats | claude-3, codex-23 (inject.py), codex-2 (wiring) | **live on zai-5 only** 2026-10-17 04:40Z; rerun 2 of 3 pass, see "G4 for Zai seats" |
 | 6 | G6 task bank, baselines first | claude-3 | **first run done** 2026-10-17 04:35Z: 3 of 5 tasks with a failing baseline and a passing informed run; see "G6, first run" |
 | 7 | G7 derivation | packet | not started |
 | 8 | G8 reach | claude-16 | done: `zone.hyperreal.enterprises/wip/stepper/?agent=claude-16` is live, 401 without the site password as intended |
@@ -586,6 +586,64 @@ Found on the way: the 04:23Z brief for claude-3 lists claude-3's own
 report and propose paragraphs as "Open asks with no answer linked"
 (`brief.py` `open_asks`); an agent's paragraph is not an ask to that agent.
 Not fixed yet.
+
+## G4 for Zai seats: injection before round 1 (claude-3, 2026-10-17)
+
+Joe (04:36Z): "OK with G4 for Zai seats". Contract
+`holes/excursions/G4-zai/CONTRACT.md`, two packets in that directory.
+
+- **Selection**, `minus40/scripts/inject.py` (codex-23, 3dbd58a, job
+  `invoke-1792211663005-16159-df253864`): the packet text through the same
+  ranking as `m40_near` (`m40.py near`, futon3a venv, k = 12), collapsed to
+  memories by best score, top 3, rendered as one block of memory file bodies
+  (1,500 chars each, 4,000 in all); opt-in by
+  `~/code/data/minus40/inject-enabled.txt`; about 5 s; any failure gives the
+  empty answer. Review fix e6aff13 (claude-3), found by the first rerun: the
+  harness hands over the whole prompt, and the Agency turn envelope
+  (`Surface: bell … bell/whistle … in-reply-to`) is the same on every bell,
+  so it pulled bell and park memories into every ranking. The envelope is now
+  stripped before ranking. Tested. Nothing else was changed; in particular
+  nothing was tuned for T4.
+- **Wiring**, `zai_api.clj` (codex-2, a35a10d68, job
+  `invoke-1792211663648-16160-88334f0c`): for `:full` seats on a turn whose
+  caller is not a continuation, the block goes before the user message (the
+  system message is untouched); `turn-start` records `:injected [ids]` and
+  `:injected-ms` always (`[]` when nothing went in), and `:prompt` stays the
+  packet as sent. Failure or timeout: the turn goes ahead with `[]`. Tests in
+  `zai_api_test.clj`, kondo and parens clean.
+
+Going live: `(require 'futon3c.agents.zai-api :reload)` from master. A seat's
+turn function is built when the seat is registered, so a reload does not
+reach a running seat; zai-5 was rebuilt with `POST /api/alpha/agents/restore`
+and its session reset (`POST …/zai-5/reset-session`, new session
+`zai-58e0fcdf-…`) so no earlier answer to the tasks was in its context.
+`inject-enabled.txt` lists zai-5 only.
+
+Rerun of the G6 tasks, plain texts (`G6-task-bank/T1.md`, `T4.md`,
+`T5.md`), no hand-picking, sent from the unregistered id `g6-rerun` so no
+bellbacks:
+
+| task | injected (from `turn-start`) | answer | grade | job |
+|---|---|---|---|---|
+| T1 | kimi-unique-requisition, **agency-send-mode-brief-trap**, agency-dispatch-mode-work | `--mode work`, says why | **pass** (baseline fail) | `invoke-1792211965272-16166-50e88e15` |
+| T4 | registering-a-lake-build-warrant, verification-is-registered-not-rerun, runner-probes-need-hermetic-stores | plain `-M:test` | **fail** (deciding memory not picked) | `invoke-1792211965823-16167-8011771f` |
+| T5 | **lean-top-is-analytic**, lean-is-the-source-of-truth-for-port-fixes, exit-criterion-is-not-the-spec | `ContDiff ℝ ∞ f` with `open scoped ContDiff` | **pass** (baseline fail) | `invoke-1792211966218-16168-c5dd9a39` |
+
+The first rerun, before the envelope fix and without a session reset
+(jobs `…3e59b28e`, `…6040e81f`, `…7af0f84c`): T1 injected three bell and
+park memories and failed; T5 passed; T4 failed.
+
+So, on three tasks where the seat as it stands goes wrong: with the harness
+picking memories from the packet by meaning, two are put right, and in both
+the seat's reply names the reason the memory gives. The third fails at
+retrieval: the packet ("acceptance criterion … passes … how you would know it
+was executed") is nearest to the test-registry memories, and nothing in it
+says the test is `^:slow`, which only reading the test file would show.
+Retrieval by the packet text alone cannot find a fact about an object the
+packet only names. One run each, one seat, one model.
+
+Cost: about 5 s per non-continuation turn on an enabled seat. Not enabled:
+every other Zai and Kimi seat (zai-6 and zai-7 belong to other lanes).
 
 ## Cross-links
 
