@@ -74,6 +74,8 @@
         try {
           const r = await fetch(`${base}/api/alpha/cascade-real/graph`);
           if (r.ok) view.setCascade(await r.json());
+          const v = await fetch('./futon-view.json');
+          if (v.ok) view.setView(await v.json());
         } catch (_) { /* the slice is optional; frames still render */ }
       };
       const subscribeWithCascade = subscribe ? ({onFrames, onStatus}) =>

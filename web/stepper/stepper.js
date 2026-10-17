@@ -290,6 +290,61 @@ export function cascadeLines(frame, graph, agentId) {
     }
     return out;
 }
+/** The zoomed injection FUTON (馬 speaking for it) would give this turn, as a
+ * preview: nothing is sent. Same work: content (what was injected). Same
+ * mission, other agents: one card line each, at most 2. Related mission
+ * sharing a pattern this turn retrieved: one pointer line each, at most 2,
+ * naming the pattern, never the mission's material. Else nothing. */
+export function zoomLines(frame, graph, view, agentId) {
+    if (!graph && !view)
+        return [];
+    const agent = agentId || frame.record?.agent_id;
+    const out = [];
+    const injected = frame.memory?.injected || [];
+    out.push("1 · same work → content");
+    out.push(injected.length ? `    injected: ${injected.map(tail).join(", ")}` : "    (nothing injected for this turn)");
+    // the engaged node(s): from the card, else from the agent's clock edge
+    const slugs = new Set(Object.values(frame.card?.settled?.engaged || {}).map(v => slug(String(v))));
+    const mine = agent ? view?.agents?.[agent]?.target : undefined;
+    if (mine)
+        slugs.add(tail(mine));
+    const nodeOf = (t) => slugs.has(tail(t));
+    out.push("2 · same mission, other agents → one line each");
+    const others = Object.entries(view?.agents || {})
+        .filter(([a, v]) => a !== agent && v.target && nodeOf(v.target))
+        .sort((x, y) => (y[1].at || 0) - (x[1].at || 0)).slice(0, 2);
+    if (!others.length)
+        out.push("    (no one else on this work)");
+    for (const [a, v] of others)
+        out.push(`    ${a}: ${v.purpose || "(no 馬 card yet)"}`);
+    out.push("3 · related missions sharing a pattern this turn retrieved → pointer only");
+    const mineP = new Set([
+        ...(frame.retrieved || []).map(r => r.id || ""),
+        ...(frame.patterns?.matched || []).map(m => typeof m === "string" ? m : String(m.id || "")),
+    ].filter(Boolean));
+    const related = new Map();
+    for (const e of graph?.patterns?.edges || [])
+        if (mineP.has(e.pattern) && !nodeOf(e.mission) && e.state === "linked")
+            if (!related.has(e.mission))
+                related.set(e.mission, { p: e.pattern, how: "substrate-2", weight: 100 });
+    for (const [m, rows] of Object.entries(view?.mission_patterns || {})) {
+        if (nodeOf(m))
+            continue;
+        for (const [p, sessions, turns] of rows)
+            if (mineP.has(p) && turns >= 2) {
+                const w = sessions * 10 + turns;
+                const prev = related.get(m);
+                if (!prev || (prev.how !== "substrate-2" && w > prev.weight))
+                    related.set(m, { p, how: `derived, ${sessions} session(s) ${turns} turn(s)`, weight: w });
+            }
+    }
+    const top = [...related].sort((x, y) => y[1].weight - x[1].weight).slice(0, 2);
+    if (!top.length)
+        out.push("    (no related mission shares this turn's patterns)");
+    for (const [m, r] of top)
+        out.push(`    ${tail(m)} also uses ${r.p}  (${r.how})`);
+    return out;
+}
 /** 馬's card, most settled first; empty when the session has none. */
 export function cardLines(frame) {
     const c = frame.card;
@@ -379,6 +434,7 @@ function add(parent, tag, cls, text) {
  * follows pushed frames; one reading back stays put. */
 export function renderStepper(initial, host, opts = {}) {
     let cascade = null;
+    let futonView = null;
     const clamp = (i) => Math.max(0, Math.min(i, Math.max(0, frames.length - 1)));
     let frames = readyFrames(initial, !!opts.live);
     let current = clamp(opts.frame ? opts.frame - 1 : opts.live ? frames.length - 1 : 0);
@@ -425,6 +481,9 @@ export function renderStepper(initial, host, opts = {}) {
         const slice = cascadeLines(frames[current], cascade, opts.agent);
         if (slice.length)
             section("CASCADE (slice of Cascade Live)", slice);
+        const zoom = zoomLines(frames[current], cascade, futonView, opts.agent);
+        if (zoom.length)
+            section(`FUTON'S VIEW (馬) — what a zoomed injection would add to this turn (preview; nothing is sent)`, zoom);
         const said = add(body, "section");
         const saidHeading = add(said, "h2");
         const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");
@@ -515,5 +574,7 @@ export function renderStepper(initial, host, opts = {}) {
     void unsubscribe;
     const setCascade = (graph) => { cascade = graph; if (frames.length)
         draw(); };
-    return { goTo, next, prev, refresh, index: () => current, count: () => frames.length, setCascade };
+    const setView = (view) => { futonView = view; if (frames.length)
+        draw(); };
+    return { goTo, next, prev, refresh, index: () => current, count: () => frames.length, setCascade, setView };
 }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {
-  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cardLines, cascadeLines, cuePieces, observedLines,
+  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cardLines, cascadeLines, zoomLines, cuePieces, observedLines,
   frameModel, happenedDetail, parseStreamEvent, portsAge, readyFrames, receiveFrames,
 } from "./stepper.js";
 
@@ -36,6 +36,23 @@ assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
   assert.ok(l2.some(x => x.startsWith("  also here: zai-5") && x.includes("session abcdefgh")));
   assert.ok(l2.includes("  wants → x-d/mission/m2 :close-hole"));
   assert.ok(l2.includes("    - needs a thing"));
+}
+// FUTON's view: three zoom levels, capped, pointers name the pattern only
+{
+  const graph = {lineage: [], clusters: [], held: [], arrows: [],
+                 patterns: {edges: [{mission: "x-d/mission/far", pattern: "p/a", state: "linked"}]}};
+  const view = {agents: {"claude-3": {target: "x-d/excursion/here", at: 1},
+                         "claude-16": {target: "x-d/excursion/here", at: 2, purpose: "measure delivery"},
+                         "zai-9": {target: "x-d/mission/elsewhere", at: 3, purpose: "unrelated"}},
+                mission_patterns: {"x-d/mission/near": [["p/b", 2, 5, ["embedding"]]], "x-d/excursion/here": [["p/a", 1, 9, ["象"]]]}};
+  const lines = zoomLines({retrieved: [{id: "p/a"}, {id: "p/b"}], memory: {injected: ["cc:-home-joe/m1"]}}, graph, view, "claude-3");
+  assert.ok(lines.includes("    injected: m1"));
+  assert.ok(lines.includes("    claude-16: measure delivery"));
+  assert.ok(!lines.some(l => l.includes("zai-9")));
+  assert.ok(lines.includes("    far also uses p/a  (substrate-2)"));
+  assert.ok(lines.includes("    near also uses p/b  (derived, 2 session(s) 5 turn(s))"));
+  assert.ok(!lines.some(l => l.includes("here also uses")));
+  assert.deepEqual(zoomLines({}, null, null), []);
 }
 // 馬's card: settled first, held counts shown, absent when there is none
 {
