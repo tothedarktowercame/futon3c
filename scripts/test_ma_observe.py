@@ -18,6 +18,10 @@ class CardTest(unittest.TestCase):
         self.assertIsNone(ma.parse_card("<agent-card>not json</agent-card>"))
         self.assertIsNone(ma.parse_card("no card"))
 
+    def test_done_lines_take_the_marker_not_a_mention(self):
+        obs = "* ✅ (1) a\n  * ✅ b\n* 🟡 (2) the ✅ marker means done\n> tiers: ✅ work"
+        self.assertEqual(ma.done_lines(obs), ["✅ (1) a", "✅ b"])
+
     def test_held_counts_verbatim_carries(self):
         first = ma.held(["a", "b"], None)
         second = ma.held(["a", "c"], first)

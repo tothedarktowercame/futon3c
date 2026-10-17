@@ -239,7 +239,13 @@ def xiang_patterns(session):
 
 
 def done_lines(observations):
-    return [l.strip().lstrip("*- ").strip() for l in observations.splitlines() if "✅" in l]
+    """Observations whose marker is ✅ (a line that only mentions ✅ is not)."""
+    out = []
+    for l in observations.splitlines():
+        item = l.strip().lstrip("*-> ").strip()
+        if item.startswith("✅"):
+            out.append(item)
+    return out
 
 
 def held(items, previous):
