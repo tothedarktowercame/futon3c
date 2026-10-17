@@ -819,7 +819,19 @@ separate "Knowledge" layer.
 4. Where not to follow: the Reflector overwrites; minus40 keeps dated
    history (proof point 5 must show that is worth having).
 
-**Proposed experiments (not started):** run the Observer offline over a
+**Joe (20:38Z): not offline; 馬 live in the loop, alongside 象, feeding the
+stepper.** Built the same evening (futon3c 2cd2348b6): `scripts/ma_observe.py`
+runs Mastra's Observer prompt (vendored verbatim) on Zai glm-5.3 over the
+exchange after each operator turn, once the reply has landed, passing the
+session's earlier observations back in; one `observation` evidence row per
+turn, keyed to the turn's evidence id; the stepper shows it as OBSERVED (馬).
+Watcher under bg.py (`bg-1792269818228-55`, opt-in list
+`~/code/data/minus40/ma-enabled.txt`, claude-3 only to start). First two
+observations: faithful, one transcription slip (a commit sha copied as
+`59c3c666` for `59c3c5666`), which argues for keeping the source link. Cost
+7.8k and 13.2k tokens, 23 s and 71 s.
+
+**Earlier proposal (superseded by the live set-up above):** run the Observer offline over a
 sample of finished sessions, not live on every turn, and use its output two
 ways: (a) as the labels the classical pass needs, so scope mining has
 targets, measured by how much of the Observer's output a classical
