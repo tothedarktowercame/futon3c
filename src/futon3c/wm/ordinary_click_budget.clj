@@ -91,8 +91,10 @@
   directly by Joe on 2026-10-16, plus one post-handoff-index debugger click
   authorized directly by Joe on 2026-10-16, plus one post-boundary-repair
   debugger click authorized directly by Joe on 2026-10-16
-  (\"OK, let's run one click now\")."
-  78)
+  (\"OK, let's run one click now\"), plus one debugger-attached live-readiness
+  click authorized directly by Joe on 2026-10-17
+  (\"OK please run 1 click with the debugger attached to catch any error\")."
+  79)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
