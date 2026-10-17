@@ -29,6 +29,13 @@ assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
   assert.ok(lines.includes("  p/x [embedding]: futon-seams"));
   assert.ok(lines.includes("  p/y [象]: no mission links it"));
   assert.deepEqual(cascadeLines({}, null), []);
+  const g2 = {lineage: [{agent: "agent:claude-3", target: "x-d/mission/m", at: 2}, {agent: "agent:zai-5", target: "x-d/mission/m", at: 5, session: "abcdefgh123"}],
+              arrows: [{have: "x-d/mission/m", want: "x-d/mission/m2", "move-class": ":close-hole"}], held: [{held: "h1", mission: "x-d/mission/m", reason: "needs  a  thing"}],
+              clusters: [], patterns: {edges: [{mission: "x-d/mission/m", pattern: "p/z", state: "linked"}]}};
+  const l2 = cascadeLines({card: {settled: {engaged: {"mission-id": "M-m"}}}}, g2, "claude-3");
+  assert.ok(l2.some(x => x.startsWith("  also here: zai-5") && x.includes("session abcdefgh")));
+  assert.ok(l2.includes("  wants → x-d/mission/m2 :close-hole"));
+  assert.ok(l2.includes("    - needs a thing"));
 }
 // 馬's card: settled first, held counts shown, absent when there is none
 {

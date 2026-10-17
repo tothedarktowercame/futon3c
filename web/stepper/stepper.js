@@ -241,12 +241,28 @@ export function cascadeLines(frame, graph, agentId) {
             const clusters = (graph.clusters || []).filter(x => x.mission === node).map(x => x.cluster);
             if (clusters.length)
                 out.push(`  clusters: ${clusters.join(", ")}`);
+            // Related sessions: everyone else clocked on this node, newest first.
+            const others = new Map();
+            for (const r of graph.lineage || [])
+                if (r.target === node && r.agent !== `agent:${agent}`) {
+                    const prev = others.get(r.agent);
+                    if (!prev || (r.at || 0) > prev.at)
+                        others.set(r.agent, { at: r.at || 0, session: r.session });
+                }
+            for (const [a, v] of [...others].sort((x, y) => y[1].at - x[1].at).slice(0, 6))
+                out.push(`  also here: ${a.replace(/^agent:/, "")}${v.at ? `  (${new Date(v.at).toISOString().slice(0, 16)}Z)` : ""}${v.session ? `  session ${v.session.slice(0, 8)}` : ""}`);
+            // Wants: what this node is an arrow towards, and what points at it.
             for (const a of graph.arrows || [])
-                if (a.have === node || a.want === node)
-                    out.push(`  arrow ${a.have} → ${a.want} ${a["move-class"] || ""}`.trimEnd());
-            const held = (graph.held || []).filter(x => x.mission === node).length;
-            if (held)
-                out.push(`  held items: ${held}`);
+                if (a.have === node)
+                    out.push(`  wants → ${a.want} ${a["move-class"] || ""}`.trimEnd());
+            for (const a of graph.arrows || [])
+                if (a.want === node)
+                    out.push(`  wanted by ← ${a.have} ${a["move-class"] || ""}`.trimEnd());
+            const heldItems = (graph.held || []).filter(x => x.mission === node);
+            if (heldItems.length)
+                out.push(`  held items: ${heldItems.length}`);
+            for (const h of heldItems.slice(0, 3))
+                out.push(`    - ${(h.reason || h.held).replace(/\s+/g, " ").slice(0, 140)}`);
             const linked = edges.filter(x => x.mission === node && x.state === "linked").map(x => x.pattern);
             out.push(`  linked patterns: ${linked.length ? linked.slice(0, 8).join(", ") + (linked.length > 8 ? ` … +${linked.length - 8}` : "") : "none"}`);
         }
