@@ -415,6 +415,35 @@ def body_of(row):
     return b if isinstance(b, dict) else {}
 
 
+HEADER_RE = re.compile(r"Prompt: pattern ~(\S+) \(retrieved, score ([0-9.]+)(?:; also ([^\n\"]*))?")
+RETRIEVED_RE = re.compile(r':id "([^"]+)"[^}]*?:score ([0-9.]+)[^}]*?:retrieval-method "([^"]+)"')
+
+
+def retrieved_patterns(row):
+    """Patterns the turn's context retrieval found (futon3a embeddings): the
+    `Prompt: pattern ~x (retrieved ...)` header, recorded as a
+    context-retrieval row whose body arrives as an EDN string."""
+    b = row.get("evidence/body")
+    if isinstance(b, dict):
+        if b.get("event") != "context-retrieval":
+            return []
+        return [{"id": r.get("id"), "score": r.get("score"), "method": r.get("retrieval-method")}
+                for r in b.get("results") or [] if isinstance(r, dict)]
+    if isinstance(b, str) and '"context-retrieval"' in b:
+        return [{"id": i, "score": float(sc), "method": m} for i, sc, m in RETRIEVED_RE.findall(b)]
+    # Fallback: not every turn writes a context-retrieval row, but the
+    # header is in invoke-start's prompt-preview (cut at ~200 chars, so only
+    # complete "also" ids are kept).
+    text = b if isinstance(b, str) else json.dumps(b, ensure_ascii=False) if isinstance(b, dict) else ""
+    m = HEADER_RE.search(text)
+    if not m:
+        return []
+    out = [{"id": m.group(1), "score": float(m.group(2)), "method": "embeddings (prompt header)"}]
+    for also in re.findall(r"([\w.-]+/[\w.-]+)(?=[,)])", m.group(3) or ""):
+        out.append({"id": also, "score": None, "method": "embeddings (prompt header)"})
+    return out
+
+
 def is_operator_turn(row):
     """Operator turn: coordination chat-turn with role user and origin kind
     'operator'. (Real rows also show user turns with origin kind 'harness'
@@ -864,6 +893,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
 
         # happened rows: everything that is not an operator turn in the window
         happened = []
+        retrieved = []
         memory_rows = []
         for r in rows:
             if operator_turn(r) or body_of(r).get("event") in ("observation", "agent-card"):
@@ -873,6 +903,9 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                 continue
             if end is not None and at >= end:
                 continue
+            for hit in retrieved_patterns(r):
+                if hit["id"] and all(hit["id"] != x["id"] for x in retrieved):
+                    retrieved.append(hit)
             happened.append({"at": r.get("evidence/at"),
                              "type": r.get("evidence/type"),
                              "summary": summarize_row(r)})
@@ -907,6 +940,8 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             frames[-1]["observed"] = observed_by_turn[eid]
         if eid in card_by_turn:
             frames[-1]["card"] = card_by_turn[eid]
+        if retrieved:
+            frames[-1]["retrieved"] = retrieved
         injected = list(b.get("injected") or []) if is_harness_turn_start(turn) else []
         for r in injected_at.get(first + i, []):
             for mid in body_of(r).get("memories") or []:

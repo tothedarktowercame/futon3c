@@ -65,7 +65,22 @@
         source.onerror = () => onStatus({state: 'reconnecting'});
         return () => source.close();
       } : undefined;
-      renderStepper(frames, host, {frame, live: !!session, refetch: load, subscribe});
+      // Cascade Live's graph: read at load and again whenever pushed frames
+      // arrive (no timer: the page follows pushes); the stepper shows the
+      // slice of it each frame touches.
+      let view = null;
+      const readCascade = async () => {
+        if (!session || !view) return;
+        try {
+          const r = await fetch(`${base}/api/alpha/cascade-real/graph`);
+          if (r.ok) view.setCascade(await r.json());
+        } catch (_) { /* the slice is optional; frames still render */ }
+      };
+      const subscribeWithCascade = subscribe ? ({onFrames, onStatus}) =>
+        subscribe({onFrames: f => { onFrames(f); readCascade(); }, onStatus}) : undefined;
+      view = renderStepper(frames, host, {frame, live: !!session, refetch: load,
+                                          subscribe: subscribeWithCascade, agent: agent || undefined});
+      readCascade();
     } catch (error) {
       host.textContent = `Could not load frames: ${error}`;
     }

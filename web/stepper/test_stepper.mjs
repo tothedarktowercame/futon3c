@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {
-  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cardLines, cuePieces, observedLines,
+  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cardLines, cascadeLines, cuePieces, observedLines,
   frameModel, happenedDetail, parseStreamEvent, portsAge, readyFrames, receiveFrames,
 } from "./stepper.js";
 
@@ -16,6 +16,20 @@ assert.equal(readyFrames([...fixture, missing]).length, fixture.length);
 // live mode keeps the current (unread) turn and names the pending reading
 assert.equal(readyFrames([...fixture, missing], true).length, fixture.length + 1);
 assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
+// Cascade slice: agent lineage, engaged node, patterns by source with their missions
+{
+  const graph = {lineage: [{agent: "agent:claude-3", target: "futon3c-d/excursion/prove-memory-useful", at: 1}],
+                 clusters: [], held: [], arrows: [],
+                 patterns: {edges: [{mission: "futon3c-d/mission/futon-seams", pattern: "p/x", state: "linked"}]}};
+  const lines = cascadeLines({card: {settled: {engaged: {"mission-id": "M-futon-seams"}}},
+                              retrieved: [{id: "p/x", method: "embeddings"}], patterns: {matched: ["p/y"]}}, graph, "claude-3");
+  assert.equal(lines[0], "agent claude-3: 1 clock edge(s)");
+  assert.ok(lines.includes("engaged futon3c-d/mission/futon-seams"));
+  assert.ok(lines.includes("  linked patterns: p/x"));
+  assert.ok(lines.includes("  p/x [embedding]: futon-seams"));
+  assert.ok(lines.includes("  p/y [象]: no mission links it"));
+  assert.deepEqual(cascadeLines({}, null), []);
+}
 // 馬's card: settled first, held counts shown, absent when there is none
 {
   const lines = cardLines({card: {settled: {engaged: {"excursion-id": "E-x"}, done: ["✅ a"], commits: {count: 2, last: ["abc x"]}},

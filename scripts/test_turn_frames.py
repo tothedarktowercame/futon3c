@@ -307,6 +307,19 @@ class TurnFramesTest(unittest.TestCase):
         self.assertNotIn("observed", frames[1])
         self.assertEqual(frames[1]["happened"], [])
 
+    def test_retrieved_patterns_from_edn_string_body(self):
+        body = ('{"event" "context-retrieval", "results" [{:id "process/watcher", :title "T8", :score 0.4801, '
+                ':rank 1, :retrieval-source "futon3a", :retrieval-method "embeddings"} {:id "sd/observer", '
+                ':title "O", :score 0.47, :rank 2, :retrieval-method "embeddings"}]}')
+        self.assertEqual(tf.retrieved_patterns({"evidence/body": body}),
+                         [{"id": "process/watcher", "score": 0.4801, "method": "embeddings"},
+                          {"id": "sd/observer", "score": 0.47, "method": "embeddings"}])
+        self.assertEqual(tf.retrieved_patterns({"evidence/body": {"event": "chat-turn"}}), [])
+        head = ('{"prompt-preview" "--- CURRENT TURN ---\\nPrompt: pattern ~iching/hexagram-63-jiji '
+                '(retrieved, score 0.4088; also iching/hexagram-46-sheng, iching/he", "event" "invoke-start"}')
+        self.assertEqual([h["id"] for h in tf.retrieved_patterns({"evidence/body": head})],
+                         ["iching/hexagram-63-jiji", "iching/hexagram-46-sheng"])
+
     def test_frame_without_memory_call_has_no_memory_key(self):
         self.assertNotIn("memory", self.build()[0])
 

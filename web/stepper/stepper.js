@@ -201,6 +201,79 @@ export function answeredLines(frame) {
         out.push(`not lined up with any sentence: ${loose.map(label).join(", ")}`);
     return out;
 }
+const slug = (id) => id.toLowerCase().replace(/^[cmet]-/, "");
+const tail = (node) => node.split("/").pop() || node;
+/** The slice of Cascade Live this frame touches, matched by type: the agent
+ * (its lineage), the work it is engaged on (clusters, arrows, held items,
+ * linked patterns) and the turn's patterns (retrieved by embedding, matched
+ * by 象, linked to the mission), each with the missions that link it. The
+ * session-only layers (ports, observations) stay in the stepper. */
+export function cascadeLines(frame, graph, agentId) {
+    if (!graph)
+        return [];
+    const out = [];
+    const agent = agentId || frame.record?.agent_id;
+    const edges = graph.patterns?.edges || [];
+    if (agent) {
+        const rows = (graph.lineage || []).filter(r => r.agent === `agent:${agent}`);
+        const latest = new Map();
+        for (const r of rows)
+            latest.set(r.target, Math.max(latest.get(r.target) || 0, r.at || 0));
+        const targets = [...latest].sort((a, b) => b[1] - a[1]).slice(0, 6);
+        out.push(`agent ${agent}: ${rows.length} clock edge(s)`);
+        for (const [t, at] of targets)
+            out.push(`  → ${t}${at ? `  (${new Date(at).toISOString().slice(0, 16)}Z)` : ""}`);
+    }
+    const engaged = Object.values(frame.card?.settled?.engaged || {}).map(v => slug(String(v)));
+    for (const e of engaged) {
+        const nodes = new Set();
+        for (const x of edges)
+            if (tail(x.mission) === e)
+                nodes.add(x.mission);
+        for (const x of graph.clusters || [])
+            if (tail(x.mission) === e)
+                nodes.add(x.mission);
+        for (const x of graph.lineage || [])
+            if (tail(x.target) === e)
+                nodes.add(x.target);
+        for (const node of nodes) {
+            out.push(`engaged ${node}`);
+            const clusters = (graph.clusters || []).filter(x => x.mission === node).map(x => x.cluster);
+            if (clusters.length)
+                out.push(`  clusters: ${clusters.join(", ")}`);
+            for (const a of graph.arrows || [])
+                if (a.have === node || a.want === node)
+                    out.push(`  arrow ${a.have} → ${a.want} ${a["move-class"] || ""}`.trimEnd());
+            const held = (graph.held || []).filter(x => x.mission === node).length;
+            if (held)
+                out.push(`  held items: ${held}`);
+            const linked = edges.filter(x => x.mission === node && x.state === "linked").map(x => x.pattern);
+            out.push(`  linked patterns: ${linked.length ? linked.slice(0, 8).join(", ") + (linked.length > 8 ? ` … +${linked.length - 8}` : "") : "none"}`);
+        }
+        if (!nodes.size)
+            out.push(`engaged ${e}: not in Cascade Live`);
+    }
+    const sources = new Map();
+    const note = (id, how) => {
+        if (!id)
+            return;
+        const list = sources.get(id) || [];
+        if (!list.includes(how))
+            list.push(how);
+        sources.set(id, list);
+    };
+    for (const r of frame.retrieved || [])
+        note(r.id, r.method?.includes("header") ? "header" : "embedding");
+    for (const m of frame.patterns?.matched || [])
+        note(typeof m === "string" ? m : String(m.id || ""), "象");
+    if (sources.size)
+        out.push("this turn's patterns, and the missions that link them:");
+    for (const [id, how] of sources) {
+        const missions = [...new Set(edges.filter(x => x.pattern === id).map(x => x.mission))];
+        out.push(`  ${id} [${how.join(", ")}]: ${missions.length ? missions.slice(0, 4).map(tail).join(", ") + (missions.length > 4 ? ` … +${missions.length - 4}` : "") : "no mission links it"}`);
+    }
+    return out;
+}
 /** 馬's card, most settled first; empty when the session has none. */
 export function cardLines(frame) {
     const c = frame.card;
@@ -289,6 +362,7 @@ function add(parent, tag, cls, text) {
  * live mode and the first in fixture mode. A reader on the newest frame
  * follows pushed frames; one reading back stays put. */
 export function renderStepper(initial, host, opts = {}) {
+    let cascade = null;
     const clamp = (i) => Math.max(0, Math.min(i, Math.max(0, frames.length - 1)));
     let frames = readyFrames(initial, !!opts.live);
     let current = clamp(opts.frame ? opts.frame - 1 : opts.live ? frames.length - 1 : 0);
@@ -332,6 +406,9 @@ export function renderStepper(initial, host, opts = {}) {
         updateStatus();
         if (model.card.length)
             section(`CARD (馬) — as it stood after this turn`, model.card);
+        const slice = cascadeLines(frames[current], cascade, opts.agent);
+        if (slice.length)
+            section("CASCADE (slice of Cascade Live)", slice);
         const said = add(body, "section");
         const saidHeading = add(said, "h2");
         const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");
@@ -420,5 +497,7 @@ export function renderStepper(initial, host, opts = {}) {
         },
     }) : undefined;
     void unsubscribe;
-    return { goTo, next, prev, refresh, index: () => current, count: () => frames.length };
+    const setCascade = (graph) => { cascade = graph; if (frames.length)
+        draw(); };
+    return { goTo, next, prev, refresh, index: () => current, count: () => frames.length, setCascade };
 }
