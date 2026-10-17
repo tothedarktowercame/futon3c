@@ -361,7 +361,7 @@ useful", and the page should say exactly that.
 | 9 | G9 reply alignment | claude-16 | done 2026-10-16 23:02Z, live on the page |
 | 10 | G10 graph growth per turn | packet | not started; the 10-16 one-off rebuild measured the backlog |
 | 11 | G11 Emacs stepper follows readings | small | not started |
-| 12 | G12 use-rate reads the standing instruction | small | named 2026-10-17, not started |
+| 12 | G12 use-rate reads the standing instruction | zai-5 | **done** 2026-10-17 05:20Z, commit 7e2b9fee6, see below |
 | — | 象-side occurrence producer (four maps written at citation time) | claude-16, with M-象-2000 | not started; `occurrence_square.py` consumes hand-authored maps today |
 
 ## Checkpoint (2026-10-17, at Joe's handoff request of 01:25Z)
@@ -644,6 +644,28 @@ packet only names. One run each, one seat, one model.
 
 Cost: about 5 s per non-continuation turn on an enabled seat. Not enabled:
 every other Zai and Kimi seat (zai-6 and zai-7 belong to other lanes).
+
+## G12: the use-rate table reads the standing instruction (zai-5, 2026-10-17)
+
+`scripts/memory_use_rate.py` (commit 7e2b9fee6) replaces the lying
+"unprompted" column with three: **requisitioned (used)** (the packet asked),
+**instructed (used)** (no ask in the packet but the harness's standing
+instruction was in force, `--standing-since`, default 2026-10-15, `''`
+disables), and **no instruct (used)** (neither — the only column that can
+mean "the seat chose the store"). A new **injected (no call)** column reads
+the `:injected` ids the harness writes on `turn-start` and counts the turns
+where memories were delivered before round 1 and the seat made no m40 call
+of its own; per-turn records carry `injected []` when nothing went in.
+Tests in `scripts/test_memory_use_rate.py` (6, green), including the exact
+G12 case — a packet-silent used turn before vs after the instruction — and
+the injected/unused split.
+
+Live run 2026-10-17 05:20Z (default seats, `--since 2026-10-14`): the
+G4 acceptance shows — zai-5 on 10-17 has 8 turns, **7 injected, 6 with no
+m40 call**; instructed-only use is 0 and no-instruction use is 0 for
+zai-1..5 (zai-6's instructed-only uses need `--agents zai-6`), so the
+old table's "0 unprompted" was in fact "0 uses with no instruction
+anywhere", which is what it now says.
 
 ## Cross-links
 
