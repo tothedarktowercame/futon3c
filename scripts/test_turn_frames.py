@@ -266,6 +266,32 @@ class TurnFramesTest(unittest.TestCase):
         # and HAPPENED still lists it where it happened
         self.assertIn("coordination", [h["type"] for h in frames[0]["happened"]])
 
+    def test_harness_turn_start_is_a_frame(self):
+        find = "1 memories match x (index as of now; 1 hits checked by the store):\nslow-tagged-tests-hide  cc:-home-joe\n"
+        def ts(eid, at, tid, prompt, injected):
+            return {"evidence/id": eid, "evidence/type": "coordination", "evidence/at": at,
+                    "evidence/body": {"event": "turn-start", "prompt": prompt, "turn-id": tid,
+                                      "dispatch-id": "invoke-" + tid, "injected": injected}}
+        def rnd(eid, at, tid, n, text, calls=()):
+            return {"evidence/id": eid, "evidence/type": "coordination", "evidence/at": at,
+                    "evidence/body": {"event": "turn-round", "turn-id": tid, "round": n,
+                                      "text": text, "calls": list(calls)}}
+        rows = [ts("e-ts1", "2026-10-17T04:00:00Z", "t1", "state C^inf", ["cc:-home-joe/lean-top-is-analytic"]),
+                rnd("e-r1", "2026-10-17T04:00:05Z", "t1", 1, "",
+                    [{"tool": "m40_find", "args": {"terms": ["x"]}, "result-text": find}]),
+                rnd("e-r2", "2026-10-17T04:00:09Z", "t1", 2, "ContDiff ℝ ∞ f"),
+                ts("e-ts2", "2026-10-17T04:01:00Z", "t2", "next", [])]
+        frames = tf.build_frames(rows, {}, session_id="zai-s")
+        self.assertEqual(len(frames), 2)
+        f = frames[0]
+        self.assertEqual(f["turn"]["text"], "state C^inf")
+        self.assertEqual(f["memory"]["injected"], ["cc:-home-joe/lean-top-is-analytic"])
+        self.assertEqual(f["memory"]["calls"][0]["reached"],
+                         [{"name": "slow-tagged-tests-hide", "project": "cc:-home-joe"}])
+        self.assertEqual(f["reply"]["text"], "ContDiff ℝ ∞ f")
+        self.assertNotIn("memory", frames[1])        # injected [] is no memory
+        self.assertNotIn("reply", frames[1])         # no round yet
+
     def test_frame_without_memory_call_has_no_memory_key(self):
         self.assertNotIn("memory", self.build()[0])
 

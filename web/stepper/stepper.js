@@ -178,6 +178,8 @@ export function answeredLines(frame) {
     const out = [`reply at ${shown(reply.at)} · ${paras.length} marked paragraph(s)`];
     if (!paras.length) {
         out.push("the reply carries no marks, so nothing can be lined up");
+        if (reply.text)
+            out.push(...reply.text.split("\n"));
         return out;
     }
     const label = (p) => `${shown(p.mark)} ${shown(p.intent)} (${p.quoted ? `"${shown(p.target, "")}"` : shown(p.target, "")})`;

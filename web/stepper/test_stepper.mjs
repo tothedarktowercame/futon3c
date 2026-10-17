@@ -16,6 +16,9 @@ assert.equal(readyFrames([...fixture, missing]).length, fixture.length);
 // live mode keeps the current (unread) turn and names the pending reading
 assert.equal(readyFrames([...fixture, missing], true).length, fixture.length + 1);
 assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
+// a harness seat's unmarked reply is shown whole
+assert.deepEqual(answeredLines({reply: {at: "t", paragraphs: [], text: "line one\nline two"}}).slice(1),
+  ["the reply carries no marks, so nothing can be lined up", "line one", "line two"]);
 assert.equal(frameModel(fixture.at(-1)).parseNote, "");
 
 const unfound = [];

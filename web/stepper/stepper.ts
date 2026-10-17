@@ -18,6 +18,8 @@ export interface ReplyParagraph {
 export interface Reply {
   at?: string; evidence_id?: string; turn_id?: string;
   paragraphs?: ReplyParagraph[]; unanswered?: string[]; unanchored?: number[];
+  /** the reply's text, carried for harness seats (Zai, Kimi), whose replies are unmarked */
+  text?: string;
 }
 export interface Frame {
   turn: { evidence_id?: string; at?: string; text?: string };
@@ -224,7 +226,11 @@ export function answeredLines(frame: Frame): string[] {
   if (!reply) return [REPLY_ABSENT];
   const paras = reply.paragraphs || [];
   const out = [`reply at ${shown(reply.at)} · ${paras.length} marked paragraph(s)`];
-  if (!paras.length) { out.push("the reply carries no marks, so nothing can be lined up"); return out; }
+  if (!paras.length) {
+    out.push("the reply carries no marks, so nothing can be lined up");
+    if (reply.text) out.push(...reply.text.split("\n"));
+    return out;
+  }
   const label = (p: ReplyParagraph): string =>
     `${shown(p.mark)} ${shown(p.intent)} (${p.quoted ? `"${shown(p.target, "")}"` : shown(p.target, "")})`;
   const seen = new Set<string>();

@@ -48,7 +48,7 @@ import urllib.request
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
-from scope_view_data import m40_facts, memories_named
+from scope_view_data import MEMORY_TOOLS, m40_facts, memories_named, result_text
 
 DEFAULT_BASE = "http://localhost:7073"
 ANALYSIS_DIR = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
@@ -426,6 +426,18 @@ def is_operator_turn(row):
     return (row.get("evidence/origin") or {}).get("kind") == "operator"
 
 
+def is_harness_turn_start(row):
+    """A Zai or Kimi seat's turn: the harness's turn-start row
+    (zai_api.clj persist-turn-start!), which carries the prompt as sent, the
+    Agency dispatch id and, since G4, what was injected before round 1.
+    These seats have no chat-turn rows, so without this their sessions had
+    no frames at all."""
+    b = body_of(row)
+    return (row.get("evidence/type") == "coordination"
+            and b.get("event") == "turn-start"
+            and "prompt" in b)
+
+
 def is_legacy_operator_turn(row, accepted_texts, session_id=None):
     """A pre-origin Joe turn explicitly vouched for by a local exact text.
 
@@ -670,6 +682,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
     """Pure frame assembly from evidence rows + loaded analyses."""
     rows = sorted(rows, key=at_key)
     operator_turn = lambda row: (is_operator_turn(row)
+                                 or is_harness_turn_start(row)
                                  or is_legacy_operator_turn(
                                      row, legacy_operator_texts, session_id))
     all_turns = [r for r in rows if operator_turn(r)]
@@ -713,7 +726,13 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         # record's turn_id), then exact source_text match.
         entry = analyses.get("by_evidence_id", {}).get(eid)
         join_key = "evidence_id" if entry else None
-        text = (b.get("text") or "").strip()
+        text = (b.get("text") or b.get("prompt") or "").strip()
+        if entry is None and b.get("dispatch-id"):
+            # a harness turn: 象's record turn_id is the Agency dispatch id
+            entry = analyses.get("by_turn_id", {}).get(
+                (session_id, b.get("dispatch-id")))
+            if entry is not None:
+                join_key = "session_id+dispatch_id"
         if entry is None:
             cand = analyses.get("by_turn_id", {}).get(
                 (session_id, b.get("turn-id")))
@@ -840,12 +859,22 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             if (r.get("evidence/type") == "coordination"
                     and rb.get("event") == "memory-call"):
                 memory_rows.append((r, rb))
+            elif (r.get("evidence/type") == "coordination"
+                    and rb.get("event") == "turn-round"):
+                # a Zai seat's own minus40 calls, recorded per round
+                for c in rb.get("calls") or []:
+                    if c.get("tool") in MEMORY_TOOLS:
+                        memory_rows.append((r, {"tool": c["tool"],
+                                                "args": c.get("args"),
+                                                "result-text": result_text(c),
+                                                "error?": c.get("error?", False),
+                                                "at": r.get("evidence/at")}))
         # rows is already in at_key order, so happened is too
 
         frames.append({
             "turn": {"evidence_id": eid,
                      "at": turn.get("evidence/at"),
-                     "text": b.get("text")},
+                     "text": text or b.get("text")},
             "parse": {"status": status, "fragments": fragments_out},
             "operators": _operators_for(entry, b.get("text"), operator_rules),
             "patterns": {"matched": matched, "rejected": rejected,
@@ -853,7 +882,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
-        injected = []
+        injected = list(b.get("injected") or []) if is_harness_turn_start(turn) else []
         for r in injected_at.get(first + i, []):
             for mid in body_of(r).get("memories") or []:
                 if mid not in injected:
@@ -916,6 +945,24 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             reply.update(align_reply(fragments_out,
                                      rb.get("unified-text") or rb.get("text") or ""))
             frames[-1]["reply"] = reply
+        elif is_harness_turn_start(turn):
+            # a harness seat's answer is its last round's text: no chat-turn
+            # row, no marks, so the text is carried whole for the page
+            last = None
+            for r in rows:
+                rb = body_of(r)
+                if (rb.get("event") == "turn-round"
+                        and rb.get("turn-id") == b.get("turn-id")
+                        and (rb.get("text") or "").strip()):
+                    last = r
+            if last is not None:
+                lb = body_of(last)
+                frames[-1]["reply"] = {"at": last.get("evidence/at"),
+                                       "evidence_id": last.get("evidence/id"),
+                                       "turn_id": b.get("dispatch-id"),
+                                       "paragraphs": [], "unanswered": [],
+                                       "unanchored": [],
+                                       "text": lb.get("text")}
     return frames
 
 
