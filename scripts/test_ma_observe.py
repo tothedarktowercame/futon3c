@@ -1,4 +1,5 @@
 """Tests for ma_observe.py's card logic (no network, no model)."""
+import datetime
 import os
 import sys
 import unittest
@@ -103,6 +104,24 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(out["promoted"], "cc:ma/t95j03-torus-bridge-progress")
         self.assertIsNone(out["continued"])
         bell.assert_not_called()
+
+    def test_turn_from_before_enabling_is_not_continued(self):
+        inner = ma.packet_body(S2_PACKET)
+        turn = {"evidence/at": "2026-10-17T21:00:00Z", "evidence/type": "coordination",
+                "evidence/body": {"event": "turn-start", "dispatch-id": "j", "prompt": S2_PACKET}}
+        recent = (datetime.datetime.utcnow()).strftime("%Y-%m-%dT%H:%M:%SZ")
+        turn["evidence/at"] = recent
+        with mock.patch.object(ma, "job_of", return_value={"state": "done", "result": S2_TRUNCATED_REPLY, "finished-at": recent}), \
+             mock.patch.object(ma, "continue_agents", return_value={"zai-1"}), \
+             mock.patch.object(ma, "continue_enabled_at", return_value="2099-01-01T00:00:00"):
+            out = ma.after_harness_turn("zai-1", "s", turn, "* 🟡 x", [turn], log=lambda *_: None, dry_run=True)
+        self.assertIsNone(out["continued"])
+        with mock.patch.object(ma, "job_of", return_value={"state": "done", "result": S2_TRUNCATED_REPLY, "finished-at": recent}), \
+             mock.patch.object(ma, "continue_agents", return_value={"zai-1"}), \
+             mock.patch.object(ma, "continue_enabled_at", return_value="2000-01-01T00:00:00"):
+            out = ma.after_harness_turn("zai-1", "s", turn, "* 🟡 x", [turn], log=lambda *_: None, dry_run=True)
+        self.assertEqual(out["continued"]["episode"], 2)
+        self.assertEqual(out["continued"]["root"], "j")
 
     def test_proved_turn_is_neither_promoted_nor_continued(self):
         turn = {"evidence/at": "t", "evidence/body": {"event": "turn-start", "dispatch-id": "j", "prompt": S2_PACKET}}

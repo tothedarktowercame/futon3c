@@ -509,6 +509,16 @@ def continue_agents():
         return set()
 
 
+def continue_enabled_at():
+    """Only turns that start after the continue list last changed are
+    continued, so enabling it never resumes old episodes."""
+    try:
+        t = datetime.datetime.fromtimestamp(os.path.getmtime(CONTINUE_FILE), datetime.timezone.utc)
+        return t.strftime("%Y-%m-%dT%H:%M:%S")
+    except OSError:
+        return None
+
+
 def continuation_packet(packet, root, episode, memory):
     return ("CONTINUATION (auto, 馬): episode %d of %s. The previous episode ended without "
             "PROVED or PARTIAL. Your progress so far was banked as the minus40 memory %s, "
@@ -550,7 +560,9 @@ def after_harness_turn(agent, session, turn_row, observation, rows, log=print, d
         finished = parse_at(job.get("finished-at") or job.get("completed-at") or turn_row.get("evidence/at"))
         latest = max((tf.at_key(r) for r in rows if tf.is_harness_turn_start(r)), default="")
         fresh = (datetime.datetime.utcnow() - finished).total_seconds() < CONTINUE_WITHIN_S
-        if tf.at_key(turn_row) == latest and fresh:
+        enabled_at = continue_enabled_at()
+        after_enable = enabled_at is not None and tf.at_key(turn_row) > enabled_at
+        if tf.at_key(turn_row) == latest and fresh and after_enable:
             text = continuation_packet(inner, root, episode + 1, name)
             new_job = None if dry_run else send_bell(agent, text)
             out["continued"] = {"root": root, "from": dispatch, "to": new_job, "episode": episode + 1}
