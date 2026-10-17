@@ -792,6 +792,28 @@
       (swap! !waiters dissoc (:id entry*)))
     entry*))
 
+(defonce ^:private !orphan-handler
+  ;; (fn [entry]) told about an entry drained with no processor: one restored
+  ;; from the durable store after a restart, whose in-memory processor died
+  ;; with the old JVM. The transport registers one that fails the invoke job
+  ;; the entry stood for; without it that job stayed `queued` for good
+  ;; (zai-1, 2026-10-16, E-agency-turn-hardening O2).
+  (atom nil))
+
+(defn set-orphan-handler!
+  "Install F, called with each entry drained without a processor."
+  [f]
+  (reset! !orphan-handler f))
+
+(defn- orphaned-result [entry]
+  (when-let [h @!orphan-handler]
+    (try (h entry)
+         (catch Throwable t
+           (println (str "[turn-queue] orphan handler for " (:id entry) " failed: "
+                         (.getMessage t))))))
+  {:error "turn lost on restart: its processor did not survive"
+   :turn-queue/status :orphaned})
+
 (defn drain!
   "Drain AGENT-ID's FIFO queue using PROCESS-FN, one caller at a time.
    PROCESS-FN receives the persisted entry and returns the invoke result map.
@@ -822,9 +844,15 @@
                     (let [frontier (get-in (snapshot) [:drained-frontier aid] 0)
                           stale? (and (:seq entry) (< (:seq entry) frontier))
                           entry-process-fn (or (get @!processors (:id entry)) process-fn)
-                          result (if stale?
+                          result (cond
+                                   stale?
                                    {:result "[stale turn reconciled]"
                                     :turn-queue/status :stale}
+
+                                   (nil? entry-process-fn)
+                                   (orphaned-result entry)
+
+                                   :else
                                    (try
                                      (entry-process-fn entry)
                                      (catch Throwable t

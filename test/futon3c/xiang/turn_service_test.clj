@@ -335,6 +335,22 @@
       (is (= "requested" (:analysis_status rec)))
       (is (= "job-2" (get-in rec [:analysis_dispatch :job_id]))))))
 
+(deftest the-boot-sweep-settles-requested-turns-behind-dead-jobs
+  ;; E-agency-turn-hardening O3: a turn nobody polls is settled too.
+  (let [h (harness)
+        dead (:id (turn! h {:dispatch :now}))
+        live (:id (turn! h {:dispatch :now :turn-id "claude-17-turn-4"}))
+        store (get-in (:svc h) [:config :store])]
+    (swap! (:jobs h) assoc
+           "job-1" {:state "failed" :terminal-code "worker-lost-on-restart"
+                    :events [{:type "failed" :message "recovered on startup"}]}
+           "job-2" {:state "running"})
+    (reset! (:scheduled h) [])
+    (is (= {:failed 1 :running 1} (svc/sweep-requested! (:svc h))))
+    (is (= "failed" (:analysis_status (ts/read-record store dead))))
+    (is (= "requested" (:analysis_status (ts/read-record store live))))
+    (is (empty? @(:scheduled h)) "a swept running job schedules nothing more")))
+
 (deftest a-seat-out-of-usage-is-benched-and-the-turn-goes-elsewhere
   (let [h (harness)
         {:keys [id]} (turn! h {:dispatch :now})]

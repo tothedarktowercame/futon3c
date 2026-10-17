@@ -599,12 +599,41 @@
       (consume-session-end! svc transition))
     (count pending)))
 
+(declare reap!)
+
+(defn sweep-requested!
+  "Reap once, scheduling nothing more, every `requested` record (newest
+   LIMIT) that names a dispatch job. Scheduled reaps live in memory, so a
+   restart drops them; `turn-view` settles a record somebody asks about, and
+   this settles the rest (E-agency-turn-hardening O3). Returns the outcome
+   counts."
+  [svc & {:keys [limit] :or {limit 500}}]
+  (->> (ts/list-records (cfg svc :store) :limit limit)
+       (keep (fn [{:keys [id record]}]
+               (when (and (contains? #{nil "requested"} (:analysis_status record))
+                          (get-in record [:analysis_dispatch :job_id]))
+                 (try (:outcome (reap! svc id {:tries 1}))
+                      (catch Throwable _ :error)))))
+       frequencies))
+
+(def ^:private boot-sweep-delay-s
+  ;; Late enough that the restored turn queues have drained their orphans
+  ;; (resume-pending-drainers! at boot), so a lost job reads as failed.
+  120)
+
 (defn start!
   "Replay unconsumed registry session-end transitions and subscribe to new
-   durable transitions. Safe to call more than once for one service."
+   durable transitions, and schedule one `sweep-requested!`. Safe to call
+   more than once for one service."
   [svc]
   (when-not (:session-end-listener @(:state svc))
     (replay-session-ends! svc)
+    ((cfg svc :schedule!) boot-sweep-delay-s
+     (fn [] (try (let [counts (sweep-requested! svc)]
+                   (when (seq counts)
+                     (println (str "[xiang] boot sweep of requested turns: " counts))))
+                 (catch Throwable t
+                   (set-health! svc :failing (str "boot sweep threw " (.getMessage t)))))))
     (let [remove! (registry/add-session-end-listener!
                    #(consume-session-end! svc %))]
       (swap! (:state svc) assoc :session-end-listener remove!)))

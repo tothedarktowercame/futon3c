@@ -1744,7 +1744,8 @@
       (deliver-invoke-job-to-inbox! job-id prompt)
       (if (turn-queue/drainer-v2-enabled?)
       (let [r (turn-queue/accept-async!
-               {:to caller :from auto-bellback-caller :surface auto-bellback-caller
+               {:id job-id
+                :to caller :from auto-bellback-caller :surface auto-bellback-caller
                 :prompt prompt
                 :process-fn (fn [_entry]
                               (binding [turn-queue/*drained-by-outer* true]
@@ -1770,10 +1771,21 @@
    deliberately cannot open another order and receives no auto-bellback."
   [{:keys [to text]}]
   (let [request (work-order-bell-request {:to to :text text})
-        job-id (create-invoke-job! request)]
-    (.submit invoke-executor
-             ^Runnable
-             (fn [] (run-invoke-job! (assoc request :job-id job-id))))
+        job-id (create-invoke-job! request)
+        run-job #(run-invoke-job! (assoc request :job-id job-id))]
+    ;; I-1: join the recipient's turn queue like every other ingress. Submitted
+    ;; straight to invoke-executor, a nudge ran beside the REPL turn the
+    ;; operator sent while it ran: two `codex exec resume` on codex-68's thread,
+    ;; and Codex refused the operator's ("already has an active writer",
+    ;; 2026-10-16, E-agency-turn-hardening O1).
+    (if (turn-queue/drainer-v2-enabled?)
+      (turn-queue/accept-async! {:id job-id
+                                 :to (str to) :from "work-orders" :surface "work-orders"
+                                 :prompt text
+                                 :process-fn (fn [_entry]
+                                               (binding [turn-queue/*drained-by-outer* true]
+                                                 (run-job)))})
+      (.submit invoke-executor ^Runnable (fn [] (run-job))))
     job-id))
 
 (def ^:dynamic *enqueue-work-order-bell!* enqueue-work-order-bell!)
@@ -1949,7 +1961,8 @@
             run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
                                              :caller parked-resume-caller :surface parked-resume-caller}))]
         (if (turn-queue/drainer-v2-enabled?)
-          (turn-queue/accept-async! {:to agent :from parked-resume-caller :surface parked-resume-caller
+          (turn-queue/accept-async! {:id job-id
+                                     :to agent :from parked-resume-caller :surface parked-resume-caller
                                      :prompt prompt
                                      :process-fn (fn [_entry]
                                                    (binding [turn-queue/*drained-by-outer* true]
@@ -2802,6 +2815,23 @@
              (= "pending" (get-in job [:delivery :status])))
       (assoc view :state "delivering")
       view)))
+
+(defn fail-orphaned-invoke-job!
+  "Fail the invoke job a processor-less turn-queue entry stood for. Such an
+   entry was restored after a restart; the job it stood for never started,
+   and nothing else would ever move it out of `queued`. No-op for an entry
+   whose id names no open job (REPL turns, compactions, pre-2026-10-17 bells
+   enqueued under a random id)."
+  [entry]
+  (let [job-id (some-> (:id entry) str)
+        job (when job-id (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
+    (when (contains? #{"queued" "activating" "running"} (str (:state job)))
+      (finalize-invoke-job! job-id "failed" "turn-lost-on-restart"
+                            "queued turn's processor did not survive a restart"
+                            {:ok false} nil)
+      job-id)))
+
+(turn-queue/set-orphan-handler! #'fail-orphaned-invoke-job!)
 
 (defn- get-invoke-job
   [job-id]
@@ -6549,7 +6579,8 @@
                       ;; Drainer v2: enqueue to the agent's dedicated drainer thread and
                       ;; return — never hold a shared invoke-executor lane for the turn.
                       (let [r (turn-queue/accept-async!
-                               {:to (str agent-id) :from caller :surface surface :prompt prompt
+                               {:id job-id
+                                :to (str agent-id) :from caller :surface surface :prompt prompt
                                 :process-fn (fn [_entry]
                                               (binding [turn-queue/*drained-by-outer* true]
                                                 (run-job)))

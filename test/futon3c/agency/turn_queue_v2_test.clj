@@ -179,3 +179,22 @@
         (locking lock (.notifyAll lock))
         (.interrupt ^Thread thread)
         (.join ^Thread thread 2000)))))
+
+(deftest an-entry-without-a-processor-is-handed-to-the-orphan-handler
+  ;; E-agency-turn-hardening O2: an entry restored after a restart has no
+  ;; processor. It used to be failed silently (calling nil), leaving the
+  ;; invoke job it stood for `queued` for good.
+  (with-temp-v2
+    (fn []
+      (let [orphans (atom [])
+            handler (var-get (ns-resolve 'futon3c.agency.turn-queue '!orphan-handler))
+            prior @handler]
+        (turn-queue/set-orphan-handler! #(swap! orphans conj (:id %)))
+        (try
+          (turn-queue/accept! {:id "invoke-restored-1" :to "zai-1" :from "turn-capture"
+                               :surface "bell" :prompt "interpret turn-x"})
+          (let [[entry] (turn-queue/drain! "zai-1" nil)]
+            (is (= ["invoke-restored-1"] @orphans))
+            (is (= :failed (:status entry))))
+          (finally (reset! handler prior)))))))
+

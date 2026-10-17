@@ -116,3 +116,45 @@
          (#'http/note-turn-text! "claude-17" "reply to joe" "t3" "operator")
          (#'http/note-turn-text! "claude-17" "nudge answer" "t4" "work-orders")
          (is (= ["t4" "t3"] (map :turn-id (http/recent-agent-turns "claude-17")))))))
+
+(deftest a-work-order-bell-joins-the-recipients-turn-queue
+  ;; E-agency-turn-hardening O1: submitted straight to invoke-executor, a
+  ;; nudge ran beside the operator's REPL turn on the same Codex thread.
+  (let [accepted (atom [])
+        submitted (atom 0)]
+    (with-redefs-fn {#'http/!invoke-jobs-ledger (atom (#'http/default-invoke-jobs-ledger))
+                     #'http/!active-invoke-job-index (atom nil)
+                     #'http/persist-invoke-jobs-ledger! (constantly true)
+                     #'futon3c.agency.turn-queue/drainer-v2-enabled? (constantly true)
+                     #'futon3c.agency.turn-queue/accept-async! (fn [e] (swap! accepted conj e) {:status :accepted})
+                     #'http/invoke-executor (reify java.util.concurrent.ExecutorService
+                                              (^java.util.concurrent.Future submit [_ ^Runnable _]
+                                                (swap! submitted inc) nil))}
+      (fn []
+        (let [job-id (#'http/enqueue-work-order-bell! {:to "codex-68" :text "still open"})]
+          (is (= 0 @submitted) "never on the shared executor")
+          (is (= [["codex-68" job-id "work-orders"]]
+                 (mapv (juxt :to :id :from) @accepted))
+              "queued under its job id, so a restart can fail the job it stood for"))))))
+
+(deftest a-restored-turn-without-processor-fails-its-job
+  ;; E-agency-turn-hardening O2.
+  (with-redefs-fn {#'http/!invoke-jobs-ledger (atom (#'http/default-invoke-jobs-ledger))
+                   #'http/!active-invoke-job-index (atom nil)
+                   #'http/persist-invoke-jobs-ledger! (constantly true)
+                   #'http/read-commission-archive (constantly nil)
+                   #'http/*schedule-work-order-check!* (constantly nil)
+                   #'http/parked-on-notify! (constantly {})
+                   #'http/auto-bellback-enabled? (constantly false)
+                   #'http/inbox-agent? (constantly false)}
+    (fn []
+      (#'http/create-invoke-job! {:requested-job-id "invoke-lost" :agent-id "zai-1"
+                                  :prompt "interpret" :caller "turn-capture" :surface "emacs-repl"
+                                  :mode "work"})
+      (is (= "invoke-lost" (http/fail-orphaned-invoke-job! {:id "invoke-lost"})))
+      (let [job (get-in @@#'http/!invoke-jobs-ledger [:jobs "invoke-lost"])]
+        (is (= "failed" (:state job)))
+        (is (= "turn-lost-on-restart" (:terminal-code job))))
+      (is (nil? (http/fail-orphaned-invoke-job! {:id "invoke-lost"})) "a settled job is left alone")
+      (is (nil? (http/fail-orphaned-invoke-job! {:id "turn-random-uuid"})) "no job, no-op"))))
+
