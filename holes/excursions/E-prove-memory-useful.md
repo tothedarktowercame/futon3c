@@ -730,6 +730,25 @@ injection wiring, session reset) 05:35:50Z, job
 `invoke-1792215360712-16203-943b78b8`; its turn-start shows
 `injected-ms 5703` and three baseline memories — delivery recorded.
 
+**Leaves 1–4 of the Effect experiment are done (2026-10-17, full detail in
+`~/notes/packets/memory-effect/RUN-LOG.md`).** Leaf 1: delivery failed on
+both channels (injection ranking missed; 0 voluntary consultations) — no
+effect claim. Leaf 2 (after claude-3's per-paragraph ranking fix): both
+seats PROVED; still no delivery of the new memory (API-gotcha-shaped
+bodies), no claim. Leaf 3 added one packet sentence — bank memories
+phrased around the lemma name and statement — which fixed delivery with no
+inject.py change (turn-start verified); the memory shaped the follower's
+route but the packet's own hint duplicated it, so no time delta. Leaf 4 ran
+the **hint-free** packet (route only in the store): both seats PROVED
+clean; follower 1m51s / 15 events / 3 failed compiles vs trailbreaker
+3m37s / 23 / 4, and the follower's reply names the memory as its route
+("matched ... verbatim") — effect shown in kind and in time, once, on a
+clean design. Six zai episodes also established the operational facts:
+episodes self-truncate when the seat narrates at length (retry-until-proved
+is the working mitigation), and auto-bellbacks can arrive hours late (job
+id, not arrival time, identifies the episode).
+
+
 ## Cross-links
 
 - [E-cool-memories](E-cool-memories.md): the store, its laws, the Lean checks.
