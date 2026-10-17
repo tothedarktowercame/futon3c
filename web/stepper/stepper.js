@@ -201,6 +201,44 @@ export function answeredLines(frame) {
         out.push(`not lined up with any sentence: ${loose.map(label).join(", ")}`);
     return out;
 }
+/** 馬's card, most settled first; empty when the session has none. */
+export function cardLines(frame) {
+    const c = frame.card;
+    if (!c)
+        return [];
+    const out = [];
+    const held = (i) => `${i.text}${i.held > 1 ? `  (held ${i.held})` : ""}`;
+    const list = (label, items) => {
+        if (items && items.length) {
+            out.push(`  ${label}:`);
+            for (const x of items)
+                out.push(`    - ${x}`);
+        }
+    };
+    const st = c.settled || {}, sd = c.standing || {}, fr = c.fresh || {};
+    out.push("SETTLED");
+    const engaged = Object.entries(st.engaged || {}).map(([k, v]) => `${k} ${v}`).join(" · ");
+    out.push(`  engaged: ${engaged || "(not clocked on anything)"}`);
+    list(`done (${(st.done || []).length})`, st.done);
+    out.push(`  commits: ${st.commits?.count ?? 0}`);
+    for (const x of st.commits?.last || [])
+        out.push(`    ${x}`);
+    list("mission patterns (substrate-2)", st.mission_patterns);
+    out.push("STANDING");
+    if (sd.purpose?.text)
+        out.push(`  purpose: ${held(sd.purpose)}`);
+    if (sd.packet_vs_purpose)
+        out.push(`  packet vs purpose: ${sd.packet_vs_purpose}`);
+    list("open threads", (sd.open_threads || []).map(held));
+    list("repair", (sd.repair || []).map(held));
+    list("ramifications", (sd.ramifications || []).map(held));
+    list("patterns 象 matched more than once", (sd.xiang_patterns || []).map(([p, n]) => `${p} ×${n}`));
+    out.push("FRESH (this turn)");
+    list("done", fr.done);
+    list("problems", fr.problems);
+    out.push("institutions: not modelled yet");
+    return out;
+}
 /** 馬's observation, or nothing (the section is shown only for observed sessions). */
 export function observedLines(frame) {
     const o = frame.observed;
@@ -234,6 +272,7 @@ export function frameModel(frame) {
         ports: portsText(frame), memory: memoryLines(frame),
         answered: answeredLines(frame),
         observed: observedLines(frame),
+        card: cardLines(frame),
         session: frame.record?.session_id || "?",
     };
 }
@@ -291,6 +330,8 @@ export function renderStepper(initial, host, opts = {}) {
         }
         const model = frameModel(frames[current]);
         updateStatus();
+        if (model.card.length)
+            section(`CARD (馬) — as it stood after this turn`, model.card);
         const said = add(body, "section");
         const saidHeading = add(said, "h2");
         const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");

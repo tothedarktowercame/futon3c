@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {
-  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cuePieces, observedLines,
+  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cardLines, cuePieces, observedLines,
   frameModel, happenedDetail, parseStreamEvent, portsAge, readyFrames, receiveFrames,
 } from "./stepper.js";
 
@@ -16,6 +16,18 @@ assert.equal(readyFrames([...fixture, missing]).length, fixture.length);
 // live mode keeps the current (unread) turn and names the pending reading
 assert.equal(readyFrames([...fixture, missing], true).length, fixture.length + 1);
 assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
+// 馬's card: settled first, held counts shown, absent when there is none
+{
+  const lines = cardLines({card: {settled: {engaged: {"excursion-id": "E-x"}, done: ["✅ a"], commits: {count: 2, last: ["abc x"]}},
+                                  standing: {purpose: {text: "p", held: 3}, open_threads: [{text: "t", held: 1}]},
+                                  fresh: {problems: ["🔴 q"]}}});
+  assert.equal(lines[0], "SETTLED");
+  assert.ok(lines.includes("  engaged: excursion-id E-x"));
+  assert.ok(lines.includes("  purpose: p  (held 3)"));
+  assert.ok(lines.includes("    - t"));
+  assert.ok(lines.indexOf("SETTLED") < lines.indexOf("STANDING") && lines.indexOf("STANDING") < lines.indexOf("FRESH (this turn)"));
+  assert.deepEqual(cardLines({}), []);
+}
 // 馬's observation is its own section, absent when there is none
 assert.deepEqual(observedLines({observed: {at: "t", model: "m", observations: "* 🔴 a\n* ✅ b", current_task: "- x"}}),
   ["馬 at t · m", "* 🔴 a", "* ✅ b", "", "current task:", "- x"]);

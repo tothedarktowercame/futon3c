@@ -35,8 +35,20 @@ export interface Frame {
   record?: { id?: string; turn_id?: string; agent_id?: string; session_id?: string };
   memory?: { calls?: MemoryCall[]; injected?: string[] };
   reply?: Reply;
+  /** 馬's agent card as it stood after this turn: SETTLED, STANDING, FRESH */
+  card?: AgentCard;
   /** 馬's observation of the exchange after this turn (ma_observe.py) */
   observed?: { at?: string; observations?: string; current_task?: string; model?: string; seconds?: number };
+}
+
+export interface HeldItem { text: string; held: number }
+export interface AgentCard {
+  at?: string;
+  settled?: { engaged?: Record<string, string>; done?: string[];
+              commits?: { count?: number; last?: string[] }; mission_patterns?: string[] };
+  standing?: { purpose?: HeldItem; packet_vs_purpose?: string | null; xiang_patterns?: [string, number][];
+               open_threads?: HeldItem[]; repair?: HeldItem[]; ramifications?: HeldItem[] };
+  fresh?: { done?: string[]; problems?: string[] };
 }
 
 export interface CuePiece { text: string; cue: boolean }
@@ -47,6 +59,7 @@ export interface FrameModel {
   patterns: string[]; happened: string[]; ports: string; memory: string[];
   answered: string[];
   observed: string[];
+  card: string[];
   session: string;
 }
 export interface StreamStatus {
@@ -251,6 +264,37 @@ export function answeredLines(frame: Frame): string[] {
   return out;
 }
 
+/** 馬's card, most settled first; empty when the session has none. */
+export function cardLines(frame: Frame): string[] {
+  const c = frame.card;
+  if (!c) return [];
+  const out: string[] = [];
+  const held = (i: HeldItem): string => `${i.text}${i.held > 1 ? `  (held ${i.held})` : ""}`;
+  const list = (label: string, items: string[] | undefined): void => {
+    if (items && items.length) { out.push(`  ${label}:`); for (const x of items) out.push(`    - ${x}`); }
+  };
+  const st = c.settled || {}, sd = c.standing || {}, fr = c.fresh || {};
+  out.push("SETTLED");
+  const engaged = Object.entries(st.engaged || {}).map(([k, v]) => `${k} ${v}`).join(" · ");
+  out.push(`  engaged: ${engaged || "(not clocked on anything)"}`);
+  list(`done (${(st.done || []).length})`, st.done);
+  out.push(`  commits: ${st.commits?.count ?? 0}`);
+  for (const x of st.commits?.last || []) out.push(`    ${x}`);
+  list("mission patterns (substrate-2)", st.mission_patterns);
+  out.push("STANDING");
+  if (sd.purpose?.text) out.push(`  purpose: ${held(sd.purpose)}`);
+  if (sd.packet_vs_purpose) out.push(`  packet vs purpose: ${sd.packet_vs_purpose}`);
+  list("open threads", (sd.open_threads || []).map(held));
+  list("repair", (sd.repair || []).map(held));
+  list("ramifications", (sd.ramifications || []).map(held));
+  list("patterns 象 matched more than once", (sd.xiang_patterns || []).map(([p, n]) => `${p} ×${n}`));
+  out.push("FRESH (this turn)");
+  list("done", fr.done);
+  list("problems", fr.problems);
+  out.push("institutions: not modelled yet");
+  return out;
+}
+
 /** 馬's observation, or nothing (the section is shown only for observed sessions). */
 export function observedLines(frame: Frame): string[] {
   const o = frame.observed;
@@ -284,6 +328,7 @@ export function frameModel(frame: Frame): FrameModel {
     ports: portsText(frame), memory: memoryLines(frame),
     answered: answeredLines(frame),
     observed: observedLines(frame),
+    card: cardLines(frame),
     session: frame.record?.session_id || "?",
   };
 }
@@ -342,6 +387,7 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
     if (!frames.length) { updateStatus(); add(body, "p", "", "No operator-turn frames."); return; }
     const model = frameModel(frames[current]);
     updateStatus();
+    if (model.card.length) section(`CARD (馬) — as it stood after this turn`, model.card);
     const said = add(body, "section");
     const saidHeading = add(said, "h2");
     const heading = model.saidHref ? add(saidHeading, "a", "said-link") : add(saidHeading, "span");

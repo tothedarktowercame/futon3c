@@ -726,6 +726,12 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
                 "current_task": ob.get("current-task"),
                 "model": ob.get("model"), "seconds": ob.get("seconds")}
 
+    card_by_turn = {}
+    for r in rows:
+        cb = body_of(r)
+        if cb.get("event") == "agent-card" and cb.get("turn-evidence-id"):
+            card_by_turn[cb["turn-evidence-id"]] = dict(cb.get("card") or {}, at=r.get("evidence/at"))
+
     frames = []
     facts_by_text = None
     facts_warning = False
@@ -860,7 +866,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         happened = []
         memory_rows = []
         for r in rows:
-            if operator_turn(r) or body_of(r).get("event") == "observation":
+            if operator_turn(r) or body_of(r).get("event") in ("observation", "agent-card"):
                 continue
             at = at_key(r)
             if at < start:
@@ -899,6 +905,8 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         })
         if eid in observed_by_turn:
             frames[-1]["observed"] = observed_by_turn[eid]
+        if eid in card_by_turn:
+            frames[-1]["card"] = card_by_turn[eid]
         injected = list(b.get("injected") or []) if is_harness_turn_start(turn) else []
         for r in injected_at.get(first + i, []):
             for mid in body_of(r).get("memories") or []:

@@ -49,9 +49,21 @@ PREVIOUS_CHARS = 12000   # cap on the previous observations passed back in
 POLL_S = 20
 
 
+CARD_INSTRUCTION = """Also maintain the AGENT CARD: the agent's current state, rewritten each time, not appended to.
+After </observations>, output <agent-card>{json}</agent-card> with exactly these keys:
+  "purpose": one sentence, what the agent is trying to achieve now, in its own terms;
+  "packet_vs_purpose": "" when the agent is doing what it was asked, else one sentence on the difference;
+  "open_threads": list of short strings, things started and not finished (asks awaiting the user, bells awaiting replies, claims not yet checked);
+  "repair": list of short strings, recent failures, mistakes or degraded capability, with what was done about each;
+  "ramifications": list of short strings, consequences of this work for other missions, agents or parts of the codebase.
+You will be given the previous card. Copy every item that still holds VERBATIM (exact same words), drop items that no longer hold, add new ones. At most 6 items per list."""
+
+
 def system_prompt():
     text = open(PROMPT_FILE, encoding="utf-8").read()
-    return text.split("\n\n", 1)[1] if text.startswith("# ") else text
+    text = text.split("\n\n", 1)[1] if text.startswith("# ") else text
+    # buildObserverSystemPrompt(false, instruction): Mastra's own slot
+    return text + "\n\n=== CUSTOM INSTRUCTIONS ===\n\n" + CARD_INSTRUCTION
 
 
 def is_observation(row):
@@ -130,8 +142,10 @@ def cap_window(messages):
             for i, (r, a, t) in enumerate(out)]
 
 
-def user_prompt(history, previous):
+def user_prompt(history, previous, previous_card=None):
     parts = ["## New Message History to Observe\n\n" + history + "\n\n---\n"]
+    if previous_card is not None:
+        parts.append("## Previous Agent Card\n\n" + json.dumps(previous_card, ensure_ascii=False, indent=1) + "\n\n---\n")
     if previous:
         parts.append("## Previous Observations\n\n" + previous + "\n\n---\n\n"
                      "Do not repeat these existing observations. Your new observations will be appended to the existing observations.\n")
@@ -155,6 +169,135 @@ def call_model(system, user):
     with urllib.request.urlopen(req, timeout=180) as resp:
         j = json.load(resp)
     return j["choices"][0]["message"]["content"], j.get("usage")
+
+
+LLM_KEYS = ("purpose", "packet_vs_purpose", "open_threads", "repair", "ramifications")
+
+
+def parse_card(raw):
+    text = tag(raw, "agent-card")
+    if not text:
+        return None
+    text = re.sub(r"^```(?:json)?|```$", "", text.strip()).strip()
+    try:
+        card = json.loads(text)
+    except ValueError:
+        return None
+    return {k: card.get(k) for k in LLM_KEYS} if isinstance(card, dict) else None
+
+
+def get_json(path, timeout=10):
+    with urllib.request.urlopen(BASE + path, timeout=timeout) as r:
+        return json.load(r)
+
+
+def clock_of(agent):
+    """The work the agent is clocked on; the roster's mission-id fills in
+    the mission when the clock names only an excursion."""
+    out = {}
+    try:
+        c = get_json("/api/alpha/agent-clock?agent-id=" + urllib.parse.quote(agent))
+        out = {k: c.get(k) for k in ("campaign-id", "mission-id", "excursion-id", "ticket-id") if c.get(k)}
+    except Exception:
+        pass
+    if "mission-id" not in out:
+        try:
+            a = get_json("/api/alpha/agents/" + urllib.parse.quote(agent))
+            mid = ((a.get("agent", a).get("metadata") or {}).get("mission-id"))
+            if mid:
+                out["mission-id (roster)"] = mid
+        except Exception:
+            pass
+    return out
+
+
+def mission_patterns(clock):
+    """Patterns substrate-2 links to the engaged mission (Cascade Live's
+    mission-scope/pattern edges); excursions inherit nothing yet."""
+    try:
+        edges = (get_json("/api/alpha/cascade-real/graph", 30).get("patterns") or {}).get("edges") or []
+    except Exception:
+        return []
+    ids = {re.sub(r"^[cmet]-", "", str(v).lower()) for v in clock.values()}
+    return sorted({e["pattern"] for e in edges
+                   if e.get("state") == "linked" and e.get("mission", "").rsplit("/", 1)[-1] in ids})
+
+
+def xiang_patterns(session):
+    """Patterns 象 matched in this session's turns, with counts."""
+    try:
+        frames = get_json("/api/alpha/xiang/frames?session=%s&limit=400" % session, 60).get("frames") or []
+    except Exception:
+        return {}
+    counts = {}
+    for f in frames:
+        for m in (f.get("patterns") or {}).get("matched") or []:
+            pid = m if isinstance(m, str) else (m.get("id") or m.get("pattern"))
+            if pid:
+                counts[pid] = counts.get(pid, 0) + 1
+    return counts
+
+
+def done_lines(observations):
+    return [l.strip().lstrip("*- ").strip() for l in observations.splitlines() if "✅" in l]
+
+
+def held(items, previous):
+    """Each item with how many passes it has been carried verbatim."""
+    before = {i["text"]: i["held"] for i in (previous or [])}
+    return [{"text": t, "held": before.get(t, 0) + 1} for t in (items or [])]
+
+
+def build_card(agent, session, rows, new_obs, model_card, previous):
+    """Tiers by settledness: SETTLED (recorded facts), STANDING (judgements
+    carried across passes), FRESH (this pass)."""
+    prev = previous or {}
+    commits = [c for r in rows if tf.body_of(r).get("event") == "turn-commits"
+               for c in (tf.body_of(r).get("commits") or [])]
+    earlier = "\n".join(tf.body_of(r).get("observations") or "" for r in rows if is_observation(r))
+    xp = xiang_patterns(session)
+    clock = clock_of(agent) if agent else {}
+    mc = model_card or {k: (prev.get("standing", {}).get(k) or {}) for k in LLM_KEYS}
+    lists = {k: held(mc.get(k) if model_card else [i["text"] for i in prev.get("standing", {}).get(k) or []],
+                     prev.get("standing", {}).get(k)) for k in ("open_threads", "repair", "ramifications")}
+    purpose = (mc.get("purpose") if model_card else (prev.get("standing", {}).get("purpose") or {}).get("text")) or ""
+    prev_purpose = prev.get("standing", {}).get("purpose") or {}
+    return {
+        "settled": {
+            "engaged": clock,
+            "done": done_lines(earlier)[-12:],
+            "commits": {"count": len(commits),
+                        "last": [("%s %s" % (c.get("sha", "")[:9], c.get("subject", ""))).strip()
+                                 if isinstance(c, dict) else str(c) for c in commits[-5:]]},
+            "mission_patterns": mission_patterns(clock) if clock else [],
+        },
+        "standing": {
+            "purpose": {"text": purpose,
+                        "held": prev_purpose.get("held", 0) + 1 if prev_purpose.get("text") == purpose else 1},
+            "packet_vs_purpose": mc.get("packet_vs_purpose") if model_card else prev.get("standing", {}).get("packet_vs_purpose"),
+            "xiang_patterns": sorted(([p, n] for p, n in xp.items() if n >= 2), key=lambda x: -x[1])[:8],
+            **lists,
+        },
+        "fresh": {
+            "done": done_lines(new_obs),
+            "problems": [l.strip().lstrip("*- ").strip() for l in new_obs.splitlines() if "🔴" in l][:6],
+        },
+        "institutions": None,  # no such entity in substrate-2 yet (asked Joe, 2026-10-17)
+    }
+
+
+def card_row(session, agent, turn_row, card, now):
+    return {
+        "subject": {"ref/type": "session", "ref/id": session},
+        "type": "coordination", "claim-type": "observation", "author": "馬",
+        "origin": {"kind": "agent", "actor": "馬", "writer": "futon3c/scripts/ma_observe.py",
+                   "attributed-author": "馬", "authorization": "unknown",
+                   "basis": "write-time", "recorded-at": now},
+        "session-id": session,
+        "body": {"event": "agent-card", "observed-agent": agent,
+                 "turn-evidence-id": turn_row.get("evidence/id"), "card": card, "at": now},
+        "tags": ["ma-card"],
+    }
 
 
 def post_evidence(row):
@@ -197,6 +340,8 @@ def observe_session(session, agent="", dry_run=False, log=print):
     turns = [r for r in rows if tf.is_operator_turn(r) or tf.is_harness_turn_start(r)]
     done = {tf.body_of(r).get("turn-evidence-id") for r in rows if is_observation(r)}
     previous = "\n".join(tf.body_of(r).get("observations") or "" for r in rows if is_observation(r))
+    cards = [tf.body_of(r).get("card") for r in rows if tf.body_of(r).get("event") == "agent-card"]
+    previous_card = cards[-1] if cards else None
     # Only turns after the newest observed one: a watcher never walks back
     # through history (2026-10-17: the per-pass cap alone let each pass take
     # the next two older turns, 9 old turns before it was stopped).
@@ -220,7 +365,13 @@ def observe_session(session, agent="", dry_run=False, log=print):
     for t, start, end in todo[-MAX_BACKLOG:]:
         msgs = [("user", t.get("evidence/at"), turn_text(t))] + window_messages(rows, start, end)
         msgs = cap_window(msgs)
-        user = user_prompt(format_history(msgs), previous[-PREVIOUS_CHARS:])
+        model_view = None
+        if previous_card:
+            st = previous_card.get("standing", {})
+            model_view = {"purpose": (st.get("purpose") or {}).get("text"),
+                          "packet_vs_purpose": st.get("packet_vs_purpose"),
+                          **{k: [i["text"] for i in st.get(k) or []] for k in ("open_threads", "repair", "ramifications")}}
+        user = user_prompt(format_history(msgs), previous[-PREVIOUS_CHARS:], model_view)
         if dry_run:
             log(user[:3000])
             continue
@@ -228,6 +379,9 @@ def observe_session(session, agent="", dry_run=False, log=print):
         raw, usage = call_model(system_prompt(), user)
         row = observation_row(session, agent, t, raw, usage, time.time() - t0, len(msgs))
         post_evidence(row)
+        card = build_card(agent, session, rows, row["body"]["observations"], parse_card(raw), previous_card)
+        post_evidence(card_row(session, agent, t, card, row["body"]["at"]))
+        previous_card = card
         previous += "\n" + row["body"]["observations"]
         written += 1
         log("馬 %s %s: %d messages, %.0fs, %s tokens" % (
