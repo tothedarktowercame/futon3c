@@ -312,6 +312,21 @@ def add_missing_operator_rows(rows, analyses, session_id):
         body = body_of(row)
         known_turns.add(body.get("turn-id"))
         known_texts.add((body.get("text") or "").strip())
+    # Only turns the operator typed: a bell job (origin agent) or a Matrix
+    # proof-dialogue move (surface "matrix (...)", origin recorded as
+    # operator) is not a stepper frame, and adding one splits the windows
+    # of the real turns around it (33 extra frames on claude-16's session,
+    # 2026-10-17 review). Older records carry neither field and are kept,
+    # as the files-only fallback keeps them.
+    def operator_origin(entry):
+        record = entry["record"]
+        origin = record.get("origin")
+        if isinstance(origin, dict):
+            origin = origin.get("kind")
+        return (origin in (None, "operator")
+                and record.get("surface") in (None, "typed"))
+    analyses = {key: {k: e for k, e in entries.items() if operator_origin(e)}
+                for key, entries in analyses.items()}
     out = list(rows)
     for row in rows_from_analyses(analyses, session_id):
         body = body_of(row)

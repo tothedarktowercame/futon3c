@@ -260,6 +260,17 @@ class TurnFramesTest(unittest.TestCase):
         self.assertEqual(len([row for row in merged if tf.is_operator_turn(row)]), 2)
         self.assertIs(merged[0], tool_row)
 
+    def test_file_turn_not_typed_by_the_operator_is_not_added(self):
+        self._write("turn-CCCCCC.json", {"session_id": SID, "turn_id": "invoke-1-2-abc",
+                                         "origin": "agent", "source_text": "a bell"})
+        self._write("turn-DDDDDD.json", {"session_id": SID, "turn_id": "matrix:proof-critic-1",
+                                         "origin": "operator", "surface": "matrix (!room)",
+                                         "source_text": "[proof | m0004]"})
+        analyses = tf.load_analyses(SID, analysis_dir=self.dir)
+        merged = tf.add_missing_operator_rows([], analyses, SID)
+        self.assertEqual(sorted(tf.body_of(r)["turn-id"] for r in merged),
+                         ["agent-turn-1", "agent-turn-2"])
+
     def test_turn_commits_summary_keeps_repo_author_subject(self):
         frames = self.build()
         c = [h for h in frames[0]["happened"]
