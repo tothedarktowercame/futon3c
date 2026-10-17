@@ -7,7 +7,11 @@ Derives what substrate-2 does not record directly:
                       Live's clock lineage), aggregated over sessions;
   agent   -> card     the latest 馬 agent card of each clocked session.
 
-  futon_view.py [--out PATH] [--publish]
+  futon_view.py [--session SID ...] [--out PATH] [--publish]
+
+Per event (a turn's 象 reading, a 馬 card), one session's contribution is
+recomputed and the aggregate re-summed; with no --session (or no saved
+state) every clocked session is recomputed.
 
 Frames are built in-process (turn_frames.build_frames), not through the
 JVM's frames cache, so a run does not load every session into the server.
@@ -65,34 +69,46 @@ def session_patterns(session):
     return out, card
 
 
-def build(log=print):
-    graph = get_json("/api/alpha/cascade-real/graph")
-    lineage = [r for r in graph.get("lineage") or [] if r.get("session")]
+STATE = os.path.expanduser("~/code/data/futon3c/futon-view-sessions.json")
+
+
+def session_entry(session, clock_row):
+    pats, card = session_patterns(session)
+    st = ((card or {}).get("card") or {}).get("standing") or {}
+    return {"target": (clock_row or {}).get("target"),
+            "agent": ((clock_row or {}).get("agent") or "").replace("agent:", "") or None,
+            "at": (clock_row or {}).get("at") or 0,
+            "purpose": (st.get("purpose") or {}).get("text") or None,
+            "patterns": {p: {"turns": v["turns"], "sources": sorted(v["sources"])} for p, v in pats.items()}}
+
+
+def clock_rows():
+    """Newest clock edge per session, from Cascade Live's lineage."""
     by_session = {}
-    for r in lineage:                      # newest clock edge per session
-        if r["session"] not in by_session or (r.get("at") or 0) > (by_session[r["session"]].get("at") or 0):
-            by_session[r["session"]] = r
+    for r in get_json("/api/alpha/cascade-real/graph").get("lineage") or []:
+        sid = r.get("session")
+        if sid and (sid not in by_session or (r.get("at") or 0) > (by_session[sid].get("at") or 0)):
+            by_session[sid] = r
+    return by_session
+
+
+def aggregate(sessions):
+    """Re-sum the per-session contributions (cheap: no fetches)."""
     links = collections.defaultdict(lambda: collections.defaultdict(lambda: {"sessions": 0, "turns": 0, "sources": set()}))
     agents = {}
-    for session, r in by_session.items():
-        try:
-            pats, card = session_patterns(session)
-        except Exception as exc:
-            log("futon_view: %s: %s" % (session[:12], exc))
-            continue
-        for pid, v in pats.items():
-            cell = links[r["target"]][pid]
-            cell["sessions"] += 1
-            cell["turns"] += v["turns"]
-            cell["sources"] |= v["sources"]
-        agent = r["agent"].replace("agent:", "")
-        if agent not in agents or (r.get("at") or 0) > agents[agent]["at"]:
-            st = ((card or {}).get("card") or {}).get("standing") or {}
-            agents[agent] = {"session": session, "target": r["target"], "at": r.get("at") or 0,
-                             "purpose": (st.get("purpose") or {}).get("text") or None}
+    for sid, e in sessions.items():
+        if e.get("target"):
+            for p, v in (e.get("patterns") or {}).items():
+                cell = links[e["target"]][p]
+                cell["sessions"] += 1
+                cell["turns"] += v["turns"]
+                cell["sources"] |= set(v["sources"])
+        a = e.get("agent")
+        if a and (a not in agents or e["at"] > agents[a]["at"]):
+            agents[a] = {"session": sid, "target": e.get("target"), "at": e["at"], "purpose": e.get("purpose")}
     return {
         "built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "sessions": len(by_session),
+        "sessions": len(sessions),
         "mission_patterns": {t: sorted(([p, c["sessions"], c["turns"], sorted(c["sources"])] for p, c in ps.items()),
                                        key=lambda x: (-x[1], -x[2], x[0]))
                              for t, ps in links.items()},
@@ -100,17 +116,54 @@ def build(log=print):
     }
 
 
+def load_state():
+    try:
+        with open(STATE, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def save_json(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(value, fh, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def update(sessions_to_refresh=None, log=print):
+    """Refresh the named sessions' contributions (all clocked sessions when
+    None or when there is no state yet) and return the aggregate."""
+    clocks = clock_rows()
+    state = load_state()
+    if state is None or sessions_to_refresh is None:
+        state, todo = {}, list(clocks)
+    else:
+        todo = list(sessions_to_refresh)
+    for sid in todo:
+        try:
+            state[sid] = session_entry(sid, clocks.get(sid))
+        except Exception as exc:
+            log("futon_view: %s: %s" % (sid[:12], exc))
+    for sid, r in clocks.items():          # a clock edge may have moved
+        if sid in state:
+            state[sid]["target"] = r.get("target")
+            state[sid]["at"] = r.get("at") or 0
+            state[sid]["agent"] = (r.get("agent") or "").replace("agent:", "") or state[sid].get("agent")
+    save_json(STATE, state)
+    return aggregate(state)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--publish", action="store_true")
+    ap.add_argument("--session", action="append",
+                    help="refresh only this session's contribution (repeatable); default: all")
     args = ap.parse_args(argv)
-    view = build()
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    tmp = args.out + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(view, fh, ensure_ascii=False)
-    os.replace(tmp, args.out)
+    view = update(args.session)
+    save_json(args.out, view)
     if args.publish:
         shutil.copyfile(args.out, PUBLISH + ".tmp")
         os.replace(PUBLISH + ".tmp", PUBLISH)

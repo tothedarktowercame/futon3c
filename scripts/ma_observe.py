@@ -403,6 +403,11 @@ def observe_session(session, agent="", dry_run=False, log=print):
         post_evidence(row)
         card = build_card(agent, session, rows, row["body"]["observations"], parse_card(raw), previous_card)
         post_evidence(card_row(session, agent, t, card, row["body"]["at"]))
+        if not dry_run:
+            try:
+                refresh_view(session)
+            except Exception as exc:
+                log("futon_view %s: %s" % (session[:8], exc))
         previous_card = card
         previous += "\n" + row["body"]["observations"]
         if harness:
@@ -600,25 +605,15 @@ def session_of(agent):
     return a.get("session-id")
 
 
-VIEW_EVERY_S = 1800
-
-
-def refresh_view():
-    """FUTON's view (futon_view.py) for the stepper's zoom preview."""
-    r = subprocess.run(["python3", "-I", os.path.join(HERE, "futon_view.py"), "--publish"],
-                       capture_output=True, text=True, timeout=900)
-    print((r.stdout or r.stderr).strip().splitlines()[-1:] or ["futon_view: no output"], flush=True)
+def refresh_view(session):
+    """FUTON's view for SESSION, after a 馬 card (Q4); the JVM listener
+    futon3c.xiang.futon-view covers 象's readings (Q1-Q3)."""
+    subprocess.run(["python3", "-I", os.path.join(HERE, "futon_view.py"), "--session", session, "--publish"],
+                   capture_output=True, text=True, timeout=120)
 
 
 def watch():
-    last_view = 0.0
     while True:
-        if time.time() - last_view > VIEW_EVERY_S:
-            last_view = time.time()
-            try:
-                refresh_view()
-            except Exception as exc:
-                print("futon_view: %s: %s" % (type(exc).__name__, exc), file=sys.stderr, flush=True)
         for agent in enabled_agents():
             try:
                 sid = session_of(agent)

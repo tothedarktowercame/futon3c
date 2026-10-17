@@ -79,6 +79,7 @@
             [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.xiang.turn-service :as xiang-turns]
             [futon3c.xiang.frames-cache :as frames-cache]
+            [futon3c.xiang.futon-view]
             [futon3c.xiang.frames-stream :as frames-stream]
             [futon3c.xiang.turn-store :as xiang-store]
             [futon3c.xiang.turn-record :as xiang-record]
