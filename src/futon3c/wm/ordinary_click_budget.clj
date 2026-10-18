@@ -101,8 +101,10 @@
   live execution and the premise that the debugger does not introduce an
   unnecessary hang, plus five readiness-campaign clicks authorized directly
   by Joe on 2026-10-17, to be spent one at a time with inspection and logged
-  repairs between them."
-  86)
+  repairs between them. These are followed by five sequel-readiness clicks authorized directly by
+  Joe on 2026-10-18, run one at a time with debugger repairs and recorded in
+  TN-war-machine-readiness-oct-18-2026.md."
+  91)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
