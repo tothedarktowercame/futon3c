@@ -1,0 +1,9 @@
+;; Point FUTON3C_WM_CAST_CONFIG at a copy of this file.
+;; Stable role identity is independent of backend; the click runner resets all
+;; three sessions through Agency before every click.
+[{:id "wm-author" :role "war-machine-author"
+  :backend :zai :model "glm-4.7"}
+ {:id "wm-reviewer" :role "war-machine-reviewer"
+  :backend :claude :model "claude-sonnet-4-5-20250929"}
+ {:id "wm-repair-reviewer" :role "war-machine-repair-reviewer"
+  :backend :kimi}]
