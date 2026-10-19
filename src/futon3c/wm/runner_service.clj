@@ -772,6 +772,15 @@
     (cond-> {:click-id click-id
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
+             ;; META arbitration can consume a click before the ordinary
+             ;; runner mints a run id.  Retain its terminal disposition rather
+             ;; than collapsing every such result to `outcome :unknown`.
+             :runtime-disposition
+             (select-keys result [:status :reason :route
+                                  :ordinary-selection-called?
+                                  :injury-id :repair-id :attempt
+                                  :diagnosis-observation
+                                  :acceptance-observation])
              :binding-status (:binding-status binding)
              :run-id-observation (:run-id-observation binding)
              :run-record-status (:run-record-status binding)

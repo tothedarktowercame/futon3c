@@ -314,7 +314,11 @@
             :transition :end
             :attempt-id "attempt-test"
             :outcome :grounded-change})
-          {:attempt-id "attempt-test" :outcome :grounded-change})
+          {:attempt-id "attempt-test" :outcome :grounded-change
+           :status :refused
+           :reason :meta-self-heal/acceptance-transaction-unadmitted
+           :route :dedicated-meta-self-heal
+           :ordinary-selection-called? false})
         select (fn [request]
                  (reset! selection-request request)
                  {:selected-policy-id "pi-test"})
@@ -381,12 +385,17 @@
                               ^Instant active-at)))
           (is (= {:attempt-id "attempt-test"
                   :outcome :grounded-change
+                  :runtime-disposition
+                  {:status :refused
+                   :reason :meta-self-heal/acceptance-transaction-unadmitted
+                   :route :dedicated-meta-self-heal
+                   :ordinary-selection-called? false}
                   :binding-status :absent
                   :run-id-observation
                   {:status :absent :reason :runner-did-not-return-run-id}
                   :run-record-status :absent}
                  (select-keys (:last-result closed)
-                              [:attempt-id :outcome :binding-status
+                              [:attempt-id :outcome :runtime-disposition :binding-status
                                :run-id-observation :run-record-status]))))))))
 
 (deftest service-source-has-no-process-spawn-surface
