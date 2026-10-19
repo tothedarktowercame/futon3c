@@ -24,7 +24,7 @@ class GiantCorroborationTest(unittest.TestCase):
         rows = census.classify_authored_edges(edges, {"a/x", "b/y", "c/z"}, evidence)
         self.assertEqual(["corroborated", "uncorroborated", "no-evidence"],
                          [row["status"] for row in rows])
-        self.assertEqual({"co-cited": ["turn-1"]}, rows[0]["evidence"])
+        self.assertEqual({"co-cited": ["batch/turn-1"]}, rows[0]["evidence"])
         self.assertEqual({}, rows[1]["evidence"])
 
     def test_bridge_detaches_known_piece(self):

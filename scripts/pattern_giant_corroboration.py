@@ -134,8 +134,11 @@ def turn_id(evidence):
     if evidence.get("run"):
         return str(evidence["run"])
     at = evidence.get("at", "")
-    first = at.split(" -> ", 1)[0]
-    return pathlib.Path(first).name.replace(".json.analysis.json", "") or at
+    first = pathlib.PurePosixPath(at.split(" -> ", 1)[0])
+    # Keep the batch directory: bare names like claude-13-turn-1 recur
+    # across batches.
+    name = first.name.replace(".json.analysis.json", "")
+    return (first.parent / name).as_posix() if first.parent.name else name or at
 
 
 def use_index(mined_graph):
@@ -196,6 +199,9 @@ def report(rows, all_nodes, output, metadata, unresolved, cited_count):
     bad_bridges = [r for r in giant_rows
                    if tuple(sorted((r["a"], r["b"]))) in bridge_map
                    and r["status"] != "corroborated"]
+    # A bridge authored twice (e.g. @references one way, @see-also back) is
+    # one bridge but two rows; count pairs for the headline.
+    bad_bridge_pairs = {frozenset((r["a"], r["b"])) for r in bad_bridges}
     by_directive = collections.Counter(r["directive"] for r in giant_rows)
     by_status_directive = collections.Counter((r["directive"], r["status"]) for r in giant_rows)
     component_count = len(components(all_graph))
@@ -268,9 +274,10 @@ def report(rows, all_nodes, output, metadata, unresolved, cited_count):
               "## Headline", "",
               "- Giant size under corroborated-only authored edges: **%d**" % len(corroborated_giant),
               "- Bridges in the authored giant: **%d**" % len(bridge_map),
-              "- Uncorroborated/no-evidence bridges: **%d**" % len(bad_bridges), ""]
+              "- Uncorroborated/no-evidence bridges: **%d** (%d authored rows)" %
+              (len(bad_bridge_pairs), len(bad_bridges)), ""]
     pathlib.Path(output).write_text("\n".join(lines), encoding="utf-8")
-    return len(giant), len(corroborated_giant), len(bridge_map), len(bad_bridges), giant_rows
+    return len(giant), len(corroborated_giant), len(bridge_map), len(bad_bridge_pairs), giant_rows
 
 
 def main():
