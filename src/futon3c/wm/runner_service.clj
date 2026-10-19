@@ -12,6 +12,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.test-registry.local-port]
             [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
+            [futon3c.wm.meta-self-heal-adapters :as self-heal-adapters]
             [futon3c.wm.run4-historical-projection :as run4-historical]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
   (:import [java.time Instant]
@@ -63,6 +64,32 @@
   (atom nil))
 
 (defonce ^:private acceptance-lock (Object.))
+(defonce ^:private !post-release-retries (atom clojure.lang.PersistentQueue/EMPTY))
+
+(declare click!)
+
+(defn- enqueue-post-release-retry! [request]
+  (swap! !post-release-retries conj request)
+  request)
+
+(defn- configure-self-heal-ports [opts]
+  (if (:self-heal-concrete-ports? opts)
+    opts
+    (let [base (assoc opts
+                      :meta-injury-ledger-path
+                      (or (:meta-injury-ledger-path opts)
+                          "/home/joe/code/futon2/data/wm-meta-injuries/ledger.edn")
+                      :meta-repair-transaction-path
+                      (or (:meta-repair-transaction-path opts)
+                          "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn")
+                      :queue-retry-fn enqueue-post-release-retry!)
+          resolved (self-heal-adapters/ports base)]
+      (if (= :ready (:status resolved))
+        (merge base (select-keys resolved [:agency-invoke-fn :repair-enact-fn
+                                           :repair-retry-fn])
+               {:self-heal-concrete-ports? true
+                :self-heal-serving-readiness (:readiness resolved)})
+        (assoc base :self-heal-serving-readiness resolved)))))
 
 (def ^:dynamic *click-acceptance-dir*
   "/home/joe/code/futon3c/data/wm-click-acceptances")
@@ -261,7 +288,8 @@
 
 (defn- configured-runner-opts
   [opts]
-  (let [bound-opts (machinery-cohort/apply-binding opts)]
+  (let [bound-opts (-> opts machinery-cohort/apply-binding
+                       configure-self-heal-ports)]
     (try
       (if-let [config-fn (*resolve-var*
                           'futon2.aif.full-loop-runner/config)]
@@ -823,7 +851,7 @@
     (remove-watch @stops-var [::pre-admission-stop click-id])))
 
 (defn- close-click!
-  [agent-id click-id result]
+  [agent-id click-id result opts]
   (let [fallback-attempt-id (:attempt-id @!status)
         summary (result-summary click-id result fallback-attempt-id)]
     (swap! !status
@@ -843,7 +871,24 @@
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
     (flush)
     (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
-                       (assoc summary :click-id click-id))))
+                       (assoc summary :click-id click-id))
+    ;; The parent is now durably complete and :running? is false. Only here may
+    ;; an enacted META retry become a child click; this avoids recursive
+    ;; single-flight acquisition from inside the parent opportunity.
+    (when-let [retry (peek @!post-release-retries)]
+      (swap! !post-release-retries pop)
+      (future
+        (try
+          (click! (-> opts
+                      (dissoc :ordinary-click/issue! :idempotency-key)
+                      (assoc :accepted-click-id (:retry-click retry)
+                             :idempotency-key (str "meta-retry/" (:retry-click retry))
+                             :acceptance-payload retry
+                             :meta-repair-retry (select-keys retry
+                                                             [:injury-id :repair-id
+                                                              :attempt :patch-sha :retry-click]))))
+          (catch Throwable t
+            (println "[wm-self-heal] queued retry launch failed" (ex-message t))))))))
 
 (defn- fail-click!
   [agent-id click-id throwable]
@@ -903,7 +948,7 @@
                               {:status 409
                                :error :wm-click-cast-not-admitted
                                :outcome (:outcome result)})))
-          (close-click! agent-id click-id result)))
+          (close-click! agent-id click-id result configured)))
       (catch Throwable throwable
         (deliver admission
                  (if (or (realized? admission)
@@ -972,7 +1017,18 @@
             (let [current @!status]
               (if (:running? current)
                 {:rejected :already-running :click-id (:click-id current)}
-                (let [click-id (str "wm-click-" (UUID/randomUUID))
+                (let [requested-click-id (:accepted-click-id opts)
+                      _ (when (and requested-click-id
+                                   (not (nonblank-string? requested-click-id)))
+                          (throw (ex-info "WM retry click identity is invalid"
+                                          {:status 400 :error :wm-click-id-invalid})))
+                      click-id (or requested-click-id
+                                   (str "wm-click-" (UUID/randomUUID)))
+                      _ (when (and requested-click-id
+                                   (not= :not-found (:status (click-status click-id))))
+                          (throw (ex-info "WM retry click identity already exists"
+                                          {:status 409 :error :wm-click-id-conflict
+                                           :click-id click-id})))
               started-at (str (Instant/now))
               next-status (assoc current
                                  :running? true
