@@ -37,13 +37,17 @@ REPOS = [os.path.expanduser("~/code/" + r) for r in (
 
 @functools.lru_cache(maxsize=None)
 def commit_agent(sha):
-    """The Agent-Id trailer of SHA in the first repo that has it, '' if unsigned,
-    None if no repo has it."""
+    """(agent ids, dispatcher ids) from SHA's trailers in the first repo that
+    has it; None if no repo has it.  Same rule as the turn service
+    (filter-turn-commits): a commit is the turn's if an Agent-Id is the turn's
+    agent or a Dispatched-By ("agent" or "agent/session") names it."""
     for r in REPOS:
-        out = subprocess.run(["git", "-C", r, "log", "-1", "--format=%(trailers:key=Agent-Id,valueonly)", sha],
+        out = subprocess.run(["git", "-C", r, "log", "-1",
+                              "--format=%(trailers:key=Agent-Id,valueonly)%x00%(trailers:key=Dispatched-By,valueonly)", sha],
                              capture_output=True, text=True)
         if out.returncode == 0:
-            return out.stdout.strip()
+            ids, _, disp = out.stdout.partition("\0")
+            return (frozenset(ids.split()), frozenset(d.split("/")[0] for d in disp.split()))
     return None
 
 
@@ -76,8 +80,8 @@ def stages(rec, now):
     for c in commits:
         sha = c["id"].rsplit("-c-", 1)[-1]
         who = commit_agent(sha)
-        ids = set(who.split()) if who else set()
-        if ids and rec.get("agent_id") not in ids:
+        ids, disp = who if who else (frozenset(), frozenset())
+        if ids and rec.get("agent_id") not in ids | disp:
             foreign.append("%s is %s's" % (sha, "/".join(sorted(ids))))
     f = {
         "origin": origin,
