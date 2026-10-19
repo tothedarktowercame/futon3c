@@ -38,8 +38,9 @@
     {:op :publish :agent a :evidence e}  {:op :read :agent b :evidence e}
     {:op :spawn :agent a}  {:op :transport/create :agent a}   ; unlawful
   The mapping from the invoke-jobs ledger (`:bellback-of`, turn-queue
-  accept!/drain!) onto these shapes is not written yet; see the mission's
-  skeleton use-case section."
+  accept!/drain!) onto these shapes is
+  `futon3c.diagramprover.skeleton.ledger/ledger->events`
+  (job/turn -> ring/deliver/reply, :state riding on the reply)."
   (:require [futon3c.diagramprover.causal.dag :as dag]
             [futon3c.diagramprover.causal.identify :as identify]
             [futon3c.diagramprover.graph :as graph]

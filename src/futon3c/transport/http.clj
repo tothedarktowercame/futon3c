@@ -78,6 +78,7 @@
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.turn-notice :as turn-notice]
             [futon3c.xiang.turn-service :as xiang-turns]
+            [futon3c.diagramprover.skeleton.ledger :as diagram-ledger]
             [futon3c.xiang.frames-cache :as frames-cache]
             [futon3c.xiang.futon-view]
             [futon3c.xiang.ma-observer]
@@ -11978,6 +11979,35 @@
           (xiang-turns/start! built)
           (do (xiang-turns/stop! built) @!xiang-turn-service)))))
 
+(defn- handle-diagram-dispatch
+  "GET /api/alpha/diagram/dispatch?hours=H (default 3, cap 24) — the
+  cross-agent dispatch window as checked string-diagram data (lanes, bells,
+  open bells, crossings, law report) for the voxterm Diagram tab."
+  [request config]
+  (let [params (parse-query-params request)
+        hours (max 0.1 (min 24 (or (some-> (get params "hours") parse-double) 3)))
+        to (java.time.Instant/now)
+        from (.minusSeconds to (long (* hours 3600)))
+        from-str (str from)
+        since? (fn [s] (try (pos? (compare (str s) from-str))
+                            (catch Exception _ true)))
+        jobs (->> (recent-invoke-jobs 2000)
+                  (filterv #(since? (or (:created-at %)
+                                        (some-> (:events %) first :at))))
+                  (mapv #(select-keys % [:job-id :caller :agent-id :state
+                                         :created-at :started-at :finished-at
+                                         :events])))
+        svc (try (xiang-turn-service config) (catch Exception _ nil))
+        turns (if svc
+                (->> (xiang-store/list-records (get-in svc [:config :store]) :limit 1000)
+                     (filterv #(since? (get-in % [:record :created_at])))
+                     (mapv (fn [{:keys [id record]}]
+                             {:id (str id)
+                              :record (select-keys record [:turn_id :agent_id
+                                                            :created_at :reply_at])})))
+                [])]
+    (json-response 200 (diagram-ledger/dispatch-response jobs turns from to))))
+
 (defn- xiang-turn-summary [{:keys [id record]}]
   {:id id
    :turn-id (:turn_id record)
@@ -12391,6 +12421,9 @@
 
       (and (= :get method) (= "/api/alpha/xiang/frames/stream" uri))
       (handle-xiang-frames-stream request config)
+
+      (and (= :get method) (= "/api/alpha/diagram/dispatch" uri))
+      (handle-diagram-dispatch request config)
 
       (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
       (let [params (parse-query-params request)]
