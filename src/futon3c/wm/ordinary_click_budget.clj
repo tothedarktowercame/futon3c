@@ -129,8 +129,12 @@
   on 2026-10-19 at 17:23Z for the working loop (one click, one bounded repair
   per class of stop, independent review, then the next): \"ok I authorize up
   to 5 clicks to proceed in the way you described, fixing each class of error
-  that is revealed\""
-  123)
+  that is revealed\", plus five clicks authorized directly by Joe to claude-5
+  on 2026-10-19 at about 20:30Z, after click wm-click-c78d0f27's masked
+  prepare refusal was found and fixed (futon2 df2209a33, futon3c ddb3fcb79):
+  \"we can do 5 more as long as progress is being made. if you found the
+  fix, claude-2 could help formalise that as a proof\""
+  128)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
