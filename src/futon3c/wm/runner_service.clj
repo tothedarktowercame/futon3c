@@ -188,6 +188,20 @@
                          :label (str "publish WM report card " run-id)
                          :dir "/home/joe/code/p4ng"})))
 
+(def ^:private route-check-script "/home/joe/code/futon2/scripts/wm_route_check.py")
+
+(defn- shell-quote [s] (str "'" (str/replace (str s) "'" "'\\''") "'"))
+
+(def ^:dynamic *launch-route-check!*
+  "Injection seam for the durable, non-blocking L2 route certificate launch
+  (futon2 scripts/wm_route_check.py writes <binding>.route.edn)."
+  (fn [binding-path click-id]
+    (bg-process/launch! {:cmd (str "python3 -I " route-check-script
+                                   " --binding " (shell-quote binding-path))
+                         :agent-id war-machine-agent-id
+                         :label (str "route check " click-id)
+                         :dir "/home/joe/code/futon2"})))
+
 (defn status
   "Return the current click service status."
   []
@@ -774,6 +788,27 @@
                     :message (or (ex-message throwable)
                                  (.getName (class throwable)))}))))))
 
+(defn launch-route-check-after-close!
+  "Launch the L2 route certificate for every closed click, refused or not
+  (unlike the report card, which needs a verified run record). Never awaited.
+  A launch failure is written to <binding>.route.edn in the script's own
+  sidecar shape; the click binding itself is never rewritten."
+  [binding]
+  (try
+    (let [launch (*launch-route-check!* (:path binding) (:click/id binding))]
+      (assoc binding :route-check
+             {:status :launched
+              :job (select-keys launch [:id :pid :out-file :started-at])}))
+    (catch Throwable throwable
+      (let [failure {:click/id (:click/id binding) :verdict :not-checked
+                     :reason "launch-failed"
+                     :error-class (.getName (class throwable))
+                     :message (or (ex-message throwable) (.getName (class throwable)))
+                     :checked-at (str (Instant/now))}]
+        (try (spit (str (:path binding) ".route.edn") (str (pr-str failure) "\n"))
+             (catch Throwable _ nil))
+        (assoc binding :route-check (assoc failure :status :failed))))))
+
 (defn- result-summary
   [click-id result fallback-attempt-id]
   (let [binding (persist-click-run-binding! click-id result)
@@ -790,7 +825,10 @@
                             :reason :report-card-binding-update-failed
                             :error-class (.getName (class throwable))
                             :message (or (ex-message throwable)
-                                         (.getName (class throwable)))})))]
+                                         (.getName (class throwable)))})))
+        ;; L2: the route certificate covers refused clicks too, so it is a
+        ;; sibling of the report-card hook, not inside it.
+        binding (launch-route-check-after-close! binding)]
     (cond-> {:click-id click-id
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
@@ -821,7 +859,10 @@
       (assoc :duplicate-of-clicks (:duplicate-of-clicks binding))
 
       (:report-card binding)
-      (assoc :report-card (:report-card binding)))))
+      (assoc :report-card (:report-card binding))
+
+      (:route-check binding)
+      (assoc :route-check (:route-check binding)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Park signals. An agent waiting on a click parks on these dep ids instead of

@@ -46,7 +46,9 @@
                        (make-array java.nio.file.attribute.FileAttribute 0))))]
     (binding [service/*click-run-binding-dir* binding-dir
               service/*click-acceptance-dir* (str binding-dir "/acceptances")
-              budget/*ledger-path* (str binding-dir "/ordinary.jsonl")]
+              budget/*ledger-path* (str binding-dir "/ordinary.jsonl")
+              ;; Never launch the real route-check script from a unit test.
+              service/*launch-route-check!* (fn [_ _] {:id "bg-fixture"})]
       (try
         (f)
         (finally
@@ -867,6 +869,66 @@
         (is (= before (slurp (:path close-binding))))
         (is (= :reviewer-falsifier-failed (:outcome (edn/read-string before))))
         (is (= :failed (get-in sidecar [:report-card :status])))))))
+
+(def ^:private click4-refusal
+  "Click 4 (wm-click-fca1c921) disposition: route! refused, no run id."
+  {:status :refused :reason :meta-self-heal/production-config-required
+   :route :dedicated-meta-self-heal :ordinary-selection-called? false
+   :absent-terms [:acceptance-test]})
+
+(defn- summarize [click-id result]
+  (#'service/result-summary click-id result "attempt-fallback"))
+
+(deftest route-check-launches-for-refused-click-4-binding
+  ;; Click 4 (wm-click-fca1c921): :binding-status :absent, which the
+  ;; report-card hook skips; the route check is for exactly this binding.
+  (let [calls (atom [])]
+    (binding [service/*launch-route-check!*
+              (fn [path click-id] (swap! calls conj [path click-id]) {:id "bg-test" :pid 42})]
+      (let [summary (summarize "click-4" click4-refusal)
+            binding-path (:run-binding summary)]
+        (is (= [[binding-path "click-4"]] @calls))
+        (is (= :absent (:binding-status summary)))
+        (is (= {:status :launched :job {:id "bg-test" :pid 42}} (:route-check summary)))
+        (is (not (.exists (io/file (str binding-path ".route.edn"))))
+            "the hook returns before the script writes any sidecar: it is never awaited")))))
+
+(deftest route-check-launches-for-verified-click-2-binding-beside-report-card
+  ;; Click 2 (wm-click-6cdf2a7c) closed with a verified run record.
+  (let [dir service/*click-run-binding-dir*
+        record (.getAbsolutePath (io/file dir "tick-run-record-run-2.edn"))
+        _ (spit record (pr-str {:run/id "run-2" :click/id "click-2"}))
+        calls (atom []) launched (atom [])]
+    (binding [service/*generate-report-card!* (fn [_] {:html "card.html"})
+              service/*launch-report-card-publish!*
+              (fn [run-id] (swap! launched conj run-id) {:id "bg-card" :pid 41})
+              service/*launch-route-check!*
+              (fn [path click-id] (swap! calls conj [path click-id]) {:id "bg-test" :pid 42})]
+      (let [summary (summarize "click-2" {:run/id "run-2" :run-record record :outcome :abstained})]
+        (is (= :verified (:binding-status summary)))
+        (is (= [[(:run-binding summary) "click-2"]] @calls))
+        (is (= ["run-2"] @launched) "the report-card hook still runs")
+        (is (= :launched (get-in summary [:route-check :status])))))))
+
+(deftest route-check-launch-failure-is-isolated-from-click-3-outcome
+  ;; Click 3 (wm-click-2b1d568c) shape: refused at route!; the launch throws.
+  (binding [service/*launch-route-check!*
+            (fn [_ _] (throw (ex-info "launcher down" {})))]
+    (let [refusal (assoc click4-refusal :outcome :refused
+                         :absent-terms [:acceptance-run-port :diagnosis-evidence :acceptance-test])
+          summary (summarize "click-3" refusal)
+          binding-path (:run-binding summary)
+          binding-bytes (slurp binding-path)
+          sidecar (edn/read-string (slurp (str binding-path ".route.edn")))]
+      (is (= :refused (:outcome summary)) "the click outcome survives the failed launch")
+      (is (= {:click/id "click-3" :verdict :not-checked :reason "launch-failed"}
+             (select-keys sidecar [:click/id :verdict :reason])))
+      (is (= :failed (get-in summary [:route-check :status])))
+      (is (= :refused (:outcome (edn/read-string binding-bytes))))
+      (is (nil? (:route-check (edn/read-string binding-bytes)))
+          "the click binding is not rewritten with the failure")
+      (service/launch-route-check-after-close! {:path binding-path :click/id "click-3"})
+      (is (= binding-bytes (slurp binding-path)) "byte-identical after a second failed launch"))))
 
 (deftest active-self-heal-missing-authority-refuses-before-ration-callback
   (let [issued (atom 0)
