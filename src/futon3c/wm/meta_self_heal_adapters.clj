@@ -175,15 +175,26 @@
 (defn- safe-test-id [test-id]
   (str/replace test-id #"[^A-Za-z0-9._-]" "-"))
 
-(defn- acceptance-summary [output]
+(defn- acceptance-summary
+  "The reviewer reads this line. F14 (off-click replay 3, 2026-10-19): a test
+   that does not compile produced a summary that was the bounded runner's
+   own correlation line, so the reviewer could not see the syntax error.
+   Order: the clojure.test summary lines; else the first failure line
+   (Syntax error, Exception, FAIL in, ERROR in, Execution error); else the
+   last non-blank line that is not the runner's correlation line."
+  [output]
   (let [lines (str/split-lines output)
+        runner-noise? #(str/starts-with? % "bounded-test failure/resource correlation")
         test-summary (->> lines
                           (filter #(or (re-find #"^Ran [0-9]+ tests" %)
                                        (re-find #"^[0-9]+ failures, [0-9]+ errors" %)))
-                          (str/join "\n"))]
-    (if (seq test-summary)
-      test-summary
-      (str/trim (or (last (remove str/blank? lines)) "")))))
+                          (str/join "\n"))
+        failure-line (first (filter #(re-find #"^(Syntax error|Execution error|Exception|FAIL in|ERROR in)" %)
+                                    lines))]
+    (cond
+      (seq test-summary) test-summary
+      failure-line (str/trim failure-line)
+      :else (str/trim (or (last (remove #(or (str/blank? %) (runner-noise? %)) lines)) "")))))
 
 (defn- admissible-acceptance-command? [command]
   (and (vector? command)

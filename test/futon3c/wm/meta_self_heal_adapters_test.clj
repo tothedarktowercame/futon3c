@@ -141,6 +141,14 @@
                 (str "retained unit(s):\n" units)))))
       (testing "last nonblank output line is intact"
         (is (= "ok" (#'sut/acceptance-summary "\n ok\n\n"))))
+      (testing "a compile error is the summary, not the runner's correlation line (F14)"
+        (is (= "Syntax error compiling at (futon2/aif/x_test.clj:40:19)."
+               (#'sut/acceptance-summary
+                (str "Syntax error compiling at (futon2/aif/x_test.clj:40:19).\n"
+                     "Unable to resolve namespace: x-test\n\n"
+                     "bounded-test failure/resource correlation: command-exit=1 resource-status=:clean\n"))))
+        (is (= "ok" (#'sut/acceptance-summary
+                     "ok\nbounded-test failure/resource correlation: command-exit=1\n"))))
       (testing "only clojure.test namespace/optional-var commands are admitted"
         (doseq [command [["clojure" "-M:test" "-e" "(println 1)"]
                          ["clojure" "-M:test" "-n" "bad namespace"]]]
