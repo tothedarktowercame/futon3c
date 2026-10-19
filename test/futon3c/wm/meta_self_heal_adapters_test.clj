@@ -245,7 +245,7 @@
                ":terminal-routing-entrypoint"
                "{:role" ":var" ":file" "repo-relative"
                "/home/joe/code/futon2"
-               "found by reading" "do not execute commands"
+               "found by reading" "read-only shell commands" "nothing that runs code or writes"
                "typed refusal" "never invented"
                "Do not select ordinary work" "claim a repair"
                "Return exactly one EDN map and no prose"

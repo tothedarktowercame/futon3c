@@ -135,7 +135,7 @@
   :production-functions, which the acceptance prompt refers to by that name."
   [operation request]
   (str "Dedicated META " (name operation) ". Return exactly one EDN map and no prose. "
-       "Do not select ordinary work, execute any command, or claim a repair. "
+       "Do not select ordinary work, run tests, builds or code, write any file, or claim a repair. "
        (case operation
          :diagnosis
          (str "Success must be {:status :succeeded :diagnosis <map>}, where the map includes :classification, "
@@ -143,7 +143,8 @@
               ":production-functions, a vector of {:role <keyword> :var \"<ns>/<fn>\" :file \"<repo-relative path>\"}. "
               ":production-functions must contain at least one entry for each of the roles :selection-entrypoint, "
               ":required-loop-node-evaluator and :terminal-routing-entrypoint. Each :var must be a real, callable function "
-              "that you found by reading the repository at /home/joe/code/futon2 (you may read files; do not execute commands), "
+              "that you found by reading the repository at /home/joe/code/futon2 (read-only shell commands on that repository, "
+              "such as cat, sed -n, grep, ls, git show and git grep, are allowed and expected; nothing that runs code or writes), "
               "and :file is the repo-relative path of the file that defines it. These are the functions the acceptance test "
               "will exercise. A function you cannot find must be reported in a typed refusal "
               "({:status :failed :kind :production-function-identity-absent ...}), never invented. "
