@@ -95,36 +95,46 @@
                      [:payload :reason]))))))
 
 (deftest acceptance-run-is-bounded-pinned-and-shell-free
+  "The exit, output, and pin assertions exercise a real systemd transient unit
+   through bounded_test_job.py. Grammar refusals are pure and launch no unit."
   (let [root (.toString (java.nio.file.Files/createTempDirectory
                          "acceptance-repo" (make-array java.nio.file.attribute.FileAttribute 0)))
         logs (.toString (java.nio.file.Files/createTempDirectory
                          "acceptance-logs" (make-array java.nio.file.attribute.FileAttribute 0)))
-        fixture (io/file root "clojure-fixture")
         port (fn [timeout-ms request]
                (#'sut/run-acceptance! timeout-ms request))]
-    (spit fixture (str "#!/bin/sh\n"
-                       "if [ \"$1\" = sleep ]; then sleep 30; fi\n"
-                       "printf 'ok\\n'\n"
-                       "exit 1\n"))
-    (.setExecutable fixture true)
+    (.mkdirs (io/file root "test/fixture"))
+    (spit (io/file root ".gitignore") ".cpcache/\n")
+    (spit (io/file root "deps.edn")
+          "{:paths [\"test\"] :aliases {:test {:extra-deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}} :main-opts [\"-m\" \"cognitect.test-runner\"]}}}\n")
+    (spit (io/file root "test/fixture/acceptance_test.clj")
+          "(ns fixture.acceptance-test (:require [clojure.test :refer [deftest is]]))\n(deftest fails (println \"ok\") (is false))\n")
+    (doseq [args [["init" "-q"] ["config" "user.email" "wm@test"]
+                  ["config" "user.name" "WM"] ["add" "."]
+                  ["commit" "-qm" "fixture"]]]
+      (apply clojure.java.shell/sh "git" "-C" root args))
     (binding [sut/*acceptance-repository* root
-              sut/*acceptance-runs-root* logs
-              sut/*clojure-executable* (.getCanonicalPath fixture)]
+              sut/*acceptance-runs-root* logs]
       (testing "nonzero exit and full-output pin"
-        (let [result (port 30000 {:id "fails" :command ["clojure" "fail"]})]
+        (let [result (port 60000 {:id "fails" :command ["clojure" "-M:test" "-n"
+                                                          "fixture.acceptance-test"]})
+              path (get-in result [:run-pin :path])
+              bytes (when path (.getBytes (slurp path) "UTF-8"))]
           (is (= [:ran :failed 1] ((juxt :status :outcome :exit) result)))
-          (is (= "ok" (:summary result)))
+          (is (str/includes? (:summary result) "1 failures, 0 errors"))
           ;; The production root is futon2/data/wm-meta-injuries/acceptance-runs;
           ;; this binding proves the hermetic test redirects every written log.
-          (is (.startsWith (get-in result [:run-pin :path]) logs))
-          (is (re-matches #"[0-9a-f]{64}" (get-in result [:run-pin :sha256])))))
-      (testing "timeout"
-        (is (= [:ran :errored -1]
-               ((juxt :status :outcome :exit)
-                (port 20 {:id "timeout" :command ["clojure" "sleep"]})))))
-      (testing "shell metacharacters are refused before launch"
-        (is (= {:status :failed :reason :acceptance-command-shell-metacharacter}
-               (port 1000 {:id "unsafe" :command ["clojure" "-M" "-e" "(println 1); rm -rf x"]})))))))
+          (is (.startsWith path logs))
+          (is (= (#'sut/hex-sha256 bytes) (get-in result [:run-pin :sha256])))))
+      (testing "last nonblank output line is intact"
+        (is (= "ok" (#'sut/acceptance-summary "\n ok\n\n"))))
+      (testing "only clojure.test namespace/optional-var commands are admitted"
+        (doseq [command [["clojure" "-M:test" "-e" "(println 1)"]
+                         ["clojure" "-M:test" "-n" "bad namespace"]]]
+          (is (= {:status :failed
+                  :reason :meta-self-heal/acceptance-command-not-admissible
+                  :command command}
+                 (port 1000 {:id "unsafe" :command command}))))))))
 
 (deftest acceptance-review-prompt-describes-pre-repair-result
   (let [prompt (#'sut/producer-prompt :acceptance-review {:result {:status :ran}})]

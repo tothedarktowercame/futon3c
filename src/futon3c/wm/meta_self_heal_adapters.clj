@@ -4,15 +4,15 @@
    The adapters deliberately expose readiness separately from execution.  A
    caller can therefore prove the exact cast/repository/reload configuration
    without dispatching an agent or accepting a click."
-  (:require [clojure.edn :as edn]
+  (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
   (:import (java.security MessageDigest)
-           (java.time Instant)
-           (java.util.concurrent TimeUnit)))
+           (java.time Instant)))
 
 (def default-cast
   {:author "wm-author" :reviewer "wm-reviewer"
@@ -21,9 +21,10 @@
 (def ^:dynamic *acceptance-repository* default-repository)
 (def ^:dynamic *acceptance-runs-root*
   "/home/joe/code/futon2/data/wm-meta-injuries/acceptance-runs")
-(def ^:dynamic *clojure-executable* "clojure")
 (def ^:private default-acceptance-timeout-ms (* 15 60 1000))
-(def ^:private shell-metacharacters #"[;&|`$<>\n\r]")
+(def ^:private bounded-test-dir "/tmp/futon-bounded-tests")
+(def ^:private bounded-test-runner "/home/joe/code/futon3c/scripts/bounded_test_job.py")
+(def ^:private command-name-pattern #"(?!-)[A-Za-z0-9._-]+")
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- available-seat-state? [status]
@@ -174,7 +175,71 @@
                           (str/join "\n"))]
     (if (seq test-summary)
       test-summary
-      (or (last (remove str/blank? lines)) ""))))
+      (str/trim (or (last (remove str/blank? lines)) "")))))
+
+(defn- admissible-acceptance-command? [command]
+  (and (vector? command)
+       (every? string? command)
+       (= ["clojure" "-M:test" "-n"] (subvec command 0 (min 3 (count command))))
+       (or (and (= 4 (count command))
+                (re-matches command-name-pattern (nth command 3)))
+           (and (= 6 (count command))
+                (= "-v" (nth command 4))
+                (re-matches command-name-pattern (nth command 3))
+                (re-matches command-name-pattern (nth command 5))))))
+
+(defn- write-run-result [id output-file output outcome exit]
+  (let [instant (str/replace (str (Instant/now)) #"[:.]" "-")
+        log-file (io/file *acceptance-runs-root*
+                          (str (safe-test-id id) "-" instant ".log"))
+        bytes (.getBytes output "UTF-8")]
+    (.mkdirs (.getParentFile log-file))
+    (with-open [stream (io/output-stream log-file)] (.write stream bytes))
+    (when (and output-file (.exists (io/file output-file)))
+      (.delete (io/file output-file)))
+    {:status :ran :outcome outcome :exit exit
+     :summary (acceptance-summary output)
+     :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}}))
+
+(defn- launch-bounded-acceptance! [timeout-ms id command]
+  (let [job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))
+        unit (str job-id ".service")
+        receipt-file (str bounded-test-dir "/" job-id ".receipt.json")
+        output-file (str *acceptance-runs-root* "/." job-id ".pending.log")
+        timeout-seconds (max 1 (long (Math/ceil (/ timeout-ms 1000.0))))
+        command-text (str/join " " command)
+        launch ["systemd-run" "--user" (str "--unit=" unit)
+                "--slice=futon-testing.slice" "--property=TasksMax=1280"
+                (str "--property=RuntimeMaxSec=" timeout-seconds "s")
+                "--property=KillMode=control-group" "python3" bounded-test-runner
+                "--receipt" receipt-file "--output" output-file
+                "--cwd" *acceptance-repository* command-text]
+        _receipt-dir (.mkdirs (io/file bounded-test-dir))
+        _output-dir (.mkdirs (io/file *acceptance-runs-root*))
+        submitted (apply shell/sh launch)]
+    (if-not (zero? (:exit submitted))
+      {:status :failed :reason :meta-self-heal/acceptance-unit-launch-failed}
+      (let [deadline (+ (System/currentTimeMillis) timeout-ms)
+            receipt (loop []
+                      (cond
+                        (.isFile (io/file receipt-file))
+                        (json/read-str (slurp receipt-file) :key-fn keyword)
+                        (< (System/currentTimeMillis) deadline)
+                        (do (Thread/sleep 100) (recur))
+                        :else nil))]
+        (if receipt
+          (let [output (if (.isFile (io/file output-file)) (slurp output-file) "")
+                exit (long (or (:inner-exit receipt) -1))
+                outcome (cond
+                          (zero? (long (or (:outer-exit receipt) 125))) :passed
+                          (= "test-failure" (:reason receipt)) :failed
+                          :else :errored)]
+            (.delete (io/file receipt-file))
+            (write-run-result id output-file output outcome exit))
+          (let [_ (shell/sh "systemctl" "--user" "stop" unit)
+                summary (str "bounded unit " job-id " did not finish within "
+                             timeout-seconds "s")]
+            (write-run-result id output-file (str summary "\n") :errored -1)))))))
 
 (defn- run-acceptance!
   "Bounded, argv-only acceptance runner for wm-click-6cdf2a7c. It runs before
@@ -183,35 +248,12 @@
   [timeout-ms {:keys [id command]}]
   (cond
     (not (nonblank? id)) {:status :failed :reason :acceptance-test-id-invalid}
-    (not (and (vector? command) (seq command) (every? string? command)))
-    {:status :failed :reason :acceptance-command-invalid}
-    (not= "clojure" (first command))
-    {:status :failed :reason :acceptance-command-not-clojure}
-    (some #(re-find shell-metacharacters %) command)
-    {:status :failed :reason :acceptance-command-shell-metacharacter}
+    (not (admissible-acceptance-command? command))
+    {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
+     :command command}
     :else
     (try
-      (let [argv (assoc command 0 *clojure-executable*)
-            process (.start (doto (ProcessBuilder. ^java.util.List argv)
-                              (.directory (io/file *acceptance-repository*))
-                              (.redirectErrorStream true)))
-            output-future (future (slurp (.getInputStream process)))
-            finished? (.waitFor process (long timeout-ms) TimeUnit/MILLISECONDS)
-            _ (when-not finished? (.destroyForcibly process))
-            _ (when-not finished? (.waitFor process 10 TimeUnit/SECONDS))
-            output (deref output-future 10000 "[output capture timed out]")
-            exit (if finished? (.exitValue process) -1)
-            instant (str/replace (str (Instant/now)) #"[:.]" "-")
-            log-file (io/file *acceptance-runs-root*
-                              (str (safe-test-id id) "-" instant ".log"))
-            bytes (.getBytes output "UTF-8")]
-        (.mkdirs (.getParentFile log-file))
-        (with-open [stream (io/output-stream log-file)] (.write stream bytes))
-        {:status :ran
-         :outcome (cond (not finished?) :errored (zero? exit) :passed :else :failed)
-         :exit exit
-         :summary (acceptance-summary output)
-         :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}})
+      (launch-bounded-acceptance! timeout-ms id command)
       (catch Throwable t
         {:status :failed :reason :acceptance-runner-error
          :summary (or (.getMessage t) (.getName (class t)))}))))
