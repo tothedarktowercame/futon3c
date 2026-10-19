@@ -75,7 +75,8 @@
         invoke (fn [_ prompt _]
                  (swap! prompts conj prompt)
                  {:ok true :result "{:status :failed :reason :fixture}"})]
-    (with-redefs [reg/get-agent (constantly {:agent/invoke-ready? true
+    (with-redefs [reg/get-agent (constantly {:agent/status :idle
+                                              :agent/invoke-ready? true
                                               :agent/session-id "session-1"})
                   reg/invoke-agent! invoke]
       (#'self-heal-adapters/producer-invoke! "wm-author" :diagnosis request)
@@ -96,6 +97,22 @@
         (is (str/includes? prompt "Do not select ordinary work"))
         (is (str/includes? prompt "execute any command"))
         (is (str/includes? prompt "claim a repair"))))))
+
+(deftest meta-producer-invokes-a-restored-seat-through-its-registered-handler
+  (let [calls (atom [])]
+    (with-redefs [reg/get-agent
+                  (constantly {:agent/status :restored
+                               :agent/invoke-fn (fn [& _])
+                               :agent/session-id nil})
+                  reg/invoke-agent!
+                  (fn [seat prompt opts]
+                    (swap! calls conj [seat prompt opts])
+                    {:ok true :result "{:status :failed :reason :fixture}"})]
+      (is (= {:status :failed :reason :fixture}
+             (#'self-heal-adapters/producer-invoke!
+              "wm-author" :diagnosis {:injury-id "injury-1"}))))
+    (is (= 1 (count @calls)))
+    (is (= "wm-author" (ffirst @calls)))))
 
 (deftest durable-idempotent-acceptance-is-per-click-not-last-result
   (let [release (promise)

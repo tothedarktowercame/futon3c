@@ -136,7 +136,8 @@
   [seat operation request]
   (let [agent (reg/get-agent seat)
         prompt (producer-prompt operation request)
-        result (when (and agent (true? (:agent/invoke-ready? agent)))
+        result (when (and agent (invoke-capable? agent)
+                          (available-seat-state? (:agent/status agent)))
                  (reg/invoke-agent! seat prompt {:mode "work" :caller "war-machine"
                                                   :session-id (:agent/session-id agent)}))
         parsed (when (:ok result) (one-edn-map (:result result)))]
