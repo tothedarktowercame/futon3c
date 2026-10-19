@@ -1430,7 +1430,7 @@
   consumers of :last-error keep working."
   [^Throwable t]
   (let [data (ex-data t)
-        named (select-keys data [:error/type :repo/root :args :exit])]
+        named (select-keys data [:error/type :repo/root :args :exit :record/id])]
     (if (seq named)
       (str (.getMessage t) " " (pr-str named))
       (.getMessage t))))
