@@ -178,7 +178,33 @@
                                          :text "(ns fixture.slow-test (:require [clojure.test :refer [deftest]]))\n(deftest slow (Thread/sleep 30000))\n"}})]
           (is (= [:ran :errored -1 true]
                  ((juxt :status :outcome :exit :source-clean?) result)))
-          (is (not (.exists file))))))))
+          (is (not (.exists file)))))
+      (testing "an absolute :path is refused even when the namespace is sound"
+        (let [derived (io/file root "test/fixture/abs_test.clj")
+              result (port 1000 {:id "abs"
+                                 :command ["clojure" "-M:test" "-n" "fixture.abs-test"]
+                                 :source {:namespace "fixture.abs-test"
+                                          :path "/tmp/elsewhere/abs_test.clj"
+                                          :text "bad"}})]
+          (is (= :meta-self-heal/acceptance-source-path-refused (:reason result)))
+          (is (not (.exists derived)))
+          (is (not (.exists (io/file "/tmp/elsewhere/abs_test.clj"))))))
+      (testing "launch failure still removes the source and the directories it created"
+        (let [deep-dir (io/file root "test/fixture/deep")
+              file (io/file deep-dir "nested_test.clj")
+              result (with-redefs [sut/launch-bounded-acceptance!
+                                   (fn [_ _ _] (throw (ex-info "launcher down" {})))]
+                       (port 1000 {:id "deep"
+                                   :command ["clojure" "-M:test" "-n" "fixture.deep.nested-test"]
+                                   :source {:namespace "fixture.deep.nested-test"
+                                            :path "test/fixture/deep/nested_test.clj"
+                                            :text "(ns fixture.deep.nested-test)\n"}}))]
+          (is (= [:failed :acceptance-runner-error true]
+                 ((juxt :status :reason :source-clean?) result)))
+          (is (not (.exists file)))
+          (is (not (.exists deep-dir)) "the adapter removes the directory it created")
+          (is (.isDirectory (io/file root "test/fixture"))
+              "a directory that existed before is left alone"))))))
 
 (deftest acceptance-review-prompt-describes-pre-repair-result
   (let [prompt (#'sut/producer-prompt :acceptance-review {:result {:status :ran}})]
