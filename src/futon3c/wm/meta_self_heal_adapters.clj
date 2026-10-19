@@ -87,10 +87,27 @@
          (assoc-in acc [:sessions role] (:agent/session-id current)))))
    {:status :reset :cast cast :sessions {}} cast))
 
-(defn- one-edn-map [text]
+(def ^:private response-preview-cap 512)
+
+(defn- response-preview
+  "F18 (click wm-click-8df4e8d2, 2026-10-19, the first click cast on Zai
+   seats): the author's acceptance proposal was refused as
+   :producer-response-malformed and the refusal carried no :detail, so the
+   record could not say whether the seat returned JSON, prose, or a fenced
+   map. A bounded, whitespace-collapsed prefix of the text is retained."
+  [text]
+  (let [s (str/trim (str/replace (str text) #"\s+" " "))]
+    (if (> (count s) response-preview-cap)
+      (str (subs s 0 response-preview-cap) "\u2026")
+      s)))
+
+(defn- one-edn-map
+  "One EDN map, bare or inside a code fence under any tag (F18: a seat that
+   fences its map as ```json still returned the map)."
+  [text]
   (try
     (let [text (str/trim (str text))
-          fenced (re-matches #"(?s)```(?:edn)?\s*(.*?)\s*```" text)
+          fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
           value (edn/read-string (or (second fenced) text))]
       (when (map? value) value))
     (catch Throwable _ nil)))
@@ -213,7 +230,10 @@
                                   :reason :meta-self-heal/producer-invoke-failed
                                   :detail (or (:error result) (:message result))}
                            retry (assoc :transport-retry retry))
-      (not (map? parsed)) {:status :failed :reason :meta-self-heal/producer-response-malformed}
+      (not (map? parsed)) (cond-> {:status :failed
+                                   :reason :meta-self-heal/producer-response-malformed
+                                   :detail (response-preview (:result result))}
+                            retry (assoc :transport-retry retry))
       :else (cond-> parsed retry (assoc :transport-retry retry)))))
 
 (defn- hex-sha256 [^bytes content]

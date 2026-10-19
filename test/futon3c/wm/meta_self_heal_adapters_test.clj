@@ -333,3 +333,25 @@
       (is (= 2 (count @calls)) "exactly one retry")
       (is (str/includes? (:detail result) "429"))
       (is (some? (:transport-retry result))))))
+
+(deftest malformed-producer-response-retains-a-bounded-preview
+  "Click wm-click-8df4e8d2 (2026-10-19, the first click cast on Zai seats):
+   the author's acceptance proposal was refused as
+   :producer-response-malformed with :detail nil, so the record could not say
+   what the seat returned (F18). The refusal now carries a bounded preview of
+   the text, and a map fenced under any tag still reads as the map."
+  (let [run (fn [text]
+              (with-redefs [reg/get-agent (fn [_] ready-agent)
+                            reg/invoke-agent! (fn [_ _ _] {:ok true :result text :session-id "s"})]
+                (#'sut/producer-invoke! "zai-2" :acceptance-proposal {})))]
+    (let [result (run "```json\n{\"status\": \"proposed\"}\n```")]
+      (is (= :meta-self-heal/producer-response-malformed (:reason result)))
+      (is (str/includes? (:detail result) "{\"status\": \"proposed\"}")
+          "the record says what came back"))
+    (let [result (run (apply str "prose " (repeat 2000 "x")))]
+      (is (= :meta-self-heal/producer-response-malformed (:reason result)))
+      (is (<= (count (:detail result)) 520) "the preview is bounded"))
+    (is (= :proposed (:status (run "```json\n{:status :proposed}\n```")))
+        "an EDN map under a json fence tag is the map")
+    (is (= :proposed (:status (run "```edn\n{:status :proposed}\n```"))))
+    (is (= :proposed (:status (run "{:status :proposed}"))))))
