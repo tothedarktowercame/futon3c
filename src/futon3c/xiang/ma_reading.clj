@@ -32,9 +32,11 @@
    (origin \"agent\") are declared and need no reading."
   (:require [cheshire.core :as json]
             [clojure.string :as str]
+            [clojure.java.io :as io]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-service :as turn-service]
-            [futon3c.xiang.turn-store :as ts]))
+            [futon3c.xiang.turn-store :as ts])
+  (:import [java.util.concurrent Executors ExecutorService ThreadFactory]))
 
 (def defaults
   "The 馬 alignment reading's knobs. :seat names the seat to bell;
@@ -130,6 +132,21 @@
       (and (string? by) (contains? para-ids by)) (assoc :by by)
       (string? quote) (assoc :quote quote))))
 
+(def ^:private min-quote-words
+  "A quote of fewer words than this matches almost any reply (\"the\", \"yes\")."
+  3)
+
+(defn quote-holds?
+  "Does QUOTE support VERDICT against REPLY-TEXT?  \"not-answered\" needs no
+  quote.  Every other verdict needs a quote of at least `min-quote-words`
+  words that occurs verbatim in the reply: an empty quote is contained in
+  every text, so it would let the reader certify itself."
+  [verdict quote reply-text]
+  (or (= "not-answered" verdict)
+      (let [q (str/trim (str (or quote "")))]
+        (and (>= (count (re-seq #"\S+" q)) min-quote-words)
+             (str/includes? (str reply-text) q)))))
+
 (defn model-pass
   "Pass 2: one bounded bell to the seat for OPEN acts.  Returns
   {:seat … :entries […] :unanswered n} where entries replace the open
@@ -180,7 +197,9 @@
                                 (let [v (get by-act (:act entry))]
                                   (cond
                                     (nil? v) (unread entry "no model verdict")
-                                    (not (str/includes? reply-text (str (or (:quote v) ""))))
+                                    (and (= "answered" (:verdict v)) (nil? (:by v)))
+                                    (unread entry "answered without a paragraph")
+                                    (not (quote-holds? (:verdict v) (:quote v) reply-text))
                                     (unread entry "quote not found")
                                     :else (merge entry v))))
                               open)]
@@ -199,6 +218,8 @@
         paragraphs (paragraphs record)
         {:keys [seat] model-entries :entries}
         (model-pass opts open reply-text paragraphs)
+        marks (into {} (map (juxt :id :mark) paragraphs))
+        model-entries (mapv #(cond-> % (:by %) (assoc :mark (get marks (:by %)))) model-entries)
         by-act (into {} (map (juxt :act identity) model-entries))
         acts (mapv (fn [e] (if-let [m (get by-act (:act e))]
                              (let [m (dissoc m :kind :text)]
@@ -233,14 +254,64 @@
           alignment)))
     (catch Exception _ nil)))
 
+(defonce ^:private ^ExecutorService executor
+  ;; One daemon thread: the model pass can take up to :timeout-ms, and the
+  ;; turn service's scheduler is shared with every other turn listener.
+  (Executors/newSingleThreadExecutor
+   (reify ThreadFactory
+     (newThread [_ r] (doto (Thread. ^Runnable r "ma-reading") (.setDaemon true))))))
+
 (defn start!
   "Register the 馬 listener on turn-service events.  OPTS as per defaults
-  plus :store (turn-store) and :notify! (usually turn-service's notify for
-  the running service).  Re-registering replaces the listener."
+  plus :store (turn-store, or a 0-arg fn returning it, resolved at event
+  time) and :notify! (a 1-arg fn, usually the running service's notify).
+  The reading runs on this namespace's own thread.  Re-registering replaces
+  the listener."
   [{:keys [store notify!] :as opts}]
   (turn-service/add-turn-listener!
    ::ma-reading
    (fn [{:keys [event id]}]
-     (when (and (= :ported event) store id)
-       (align! (assoc opts :notify! notify!) id))))
+     (when (and (= :ported event) id)
+       (.submit executor
+                ^Runnable
+                (fn []
+                  (let [store (if (fn? store) (store) store)]
+                    (when store
+                      (align! (assoc opts :store store :notify! notify!) id))))))))
   nil)
+
+;; ------------------------------------------------------------ live wiring
+
+(defn whistle-ask
+  "The production :ask: a bounded whistle to SEAT through Agency's HTTP API
+  (synchronous, so the request and its answer cannot cross).  Returns the
+  seat's text, or nil on any failure or timeout."
+  [{:keys [seat prompt timeout-ms]}]
+  (try
+    (let [conn (doto ^java.net.HttpURLConnection
+                (.openConnection (java.net.URL. "http://127.0.0.1:7070/api/alpha/whistle"))
+                 (.setRequestMethod "POST")
+                 (.setDoOutput true)
+                 (.setConnectTimeout 5000)
+                 (.setReadTimeout (int (+ (or timeout-ms 60000) 15000)))
+                 (.setRequestProperty "Content-Type" "application/json"))]
+      (with-open [w (io/writer (.getOutputStream conn))]
+        (.write w (json/generate-string {:agent-id seat :prompt prompt
+                                         :timeout-ms (or timeout-ms 60000)
+                                         :caller "ma-reading"})))
+      (let [body (json/parse-string (slurp (.getInputStream conn)) true)]
+        (when (:ok body) (some-> (:response body) str))))
+    (catch Throwable _ nil)))
+
+(defn- live-service []
+  (try (some-> (requiring-resolve 'futon3c.transport.http/xiang-bell-service) deref (apply []))
+       (catch Throwable _ nil)))
+
+(defn start-live!
+  "Wire the listener to the running service: its store and notify are found
+  at event time, so this survives reloads of either namespace."
+  []
+  (start! {:ask whistle-ask
+           :store (fn [] (some-> (live-service) :config :store))
+           :notify! (fn [ev] (when-let [svc (live-service)]
+                               (@#'turn-service/notify-turn! svc ev)))}))

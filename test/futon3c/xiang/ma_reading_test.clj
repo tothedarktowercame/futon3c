@@ -77,6 +77,7 @@
       (is (= "deferred" (:verdict a)))
       (is (= "claude-3-turn-9-r-1" (:by a)))
       (is (= "deferred to tomorrow" (:quote a)))
+      (is (= "🈝" (:mark a)) "the answering paragraph's mark, for model verdicts too")
       (is (= "model" (:method a))))
     (is (= 1 (:unread (alignment store id))))))
 
@@ -158,7 +159,23 @@
         (let [[_ thunk] (first @scheduled)]
           (swap! scheduled subvec 1)
           (thunk)))
+      ;; the reading runs on ma-reading's own thread: wait for it, bounded
+      (loop [n 0]
+        (when (and (< n 100) (nil? (:alignment (ts/read-record store id))))
+          (Thread/sleep 20)
+          (recur (inc n))))
       (is (map? (:alignment (ts/read-record store id)))
           "the :ported event ran the 馬 reading on the settled turn")
       (is (= 1 (count (filter #(= :aligned (:event %)) @aligned))))
       (finally (svc/remove-turn-listener! ::ma/ma-reading)))))
+
+(deftest a-quote-must-be-real-words-from-the-reply
+  ;; Review (claude-3): an empty quote is contained in every text, so it let a
+  ;; model verdict through unchecked; and "answered" must say by which paragraph.
+  (let [reply "I fixed the stepper display and added the summary line."]
+    (is (ma/quote-holds? "answered" "fixed the stepper display" reply))
+    (is (not (ma/quote-holds? "answered" "" reply)) "empty quote")
+    (is (not (ma/quote-holds? "answered" nil reply)) "missing quote")
+    (is (not (ma/quote-holds? "deferred" "the" reply)) "one word matches anything")
+    (is (not (ma/quote-holds? "answered" "fixed the voxterm display" reply)) "not verbatim")
+    (is (ma/quote-holds? "not-answered" nil reply) "not answered needs no quote")))

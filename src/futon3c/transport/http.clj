@@ -83,6 +83,7 @@
             [futon3c.xiang.futon-view]
             [futon3c.xiang.ma-observer]
             [futon3c.agency.refusal-reset]
+            [futon3c.xiang.ma-reading-live]
             [futon3c.xiang.frames-stream :as frames-stream]
             [futon3c.xiang.turn-store :as xiang-store]
             [futon3c.xiang.turn-record :as xiang-record]
