@@ -114,8 +114,11 @@
   wm-click-fd0b2f60-ad05-4995-b272-db3bb793951b, which has no durable
   click/run binding or terminal run record because it was admitted during the
   campaign stop race. This replacement restores the unspent fifth campaign
-  click; it is not a new grant."
-  101)
+  click; it is not a new grant, plus five further back-to-back clicks
+  authorized directly by Joe to codex-68 on 2026-10-19 to prove the repaired
+  META self-heal route, with an outside repair only if the Algorithm still
+  cannot execute."
+  106)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
