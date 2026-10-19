@@ -392,6 +392,10 @@
         (is (empty? (queued)))))))
 
 (deftest zai-seats-need-no-requisition-and-keep-their-history
+  ;; 2026-10-19: zai seats now carry a default :cap-tokens context policy
+  ;; (128000), so "keep their history" holds while under the cap — these jobs
+  ;; run at 100000 input tokens. Past the cap the seat compacts (see
+  ;; futon3c.agents.zai-api-test); the requisition refusal stays off.
   (let [store (atom {:entries {} :order []})
         invoke (zai/make-invoke-fn {:agent-id "zai-test"
                                     :api-key "test-key"
@@ -399,7 +403,7 @@
                                     :evidence-store store
                                     :memory-mode :none
                                     :cwd "/tmp"})
-        [_ sent] (run-jobs invoke [["first" {} 200000]
-                                   [(req "M-a" "second") {} 200000]])]
+        [_ sent] (run-jobs invoke [["first" {} 100000]
+                                   [(req "M-a" "second") {} 100000]])]
     (is (= [2 4] (mapv count sent)))
     (is (empty? (compactions store)))))

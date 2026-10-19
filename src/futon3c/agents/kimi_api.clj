@@ -48,7 +48,11 @@
    one session across all their dispatches and opened jobs at 166k-335k
    tokens, which exhausted the 5-hour quota twice
    (holes/labs/kimi-5h-limit-2026-09-24.md)."
-  {:cap-tokens 512000})
+  {:cap-tokens 512000
+   ;; zai-api gates the requisition refusal on this flag (2026-10-19): its own
+   ;; default context policy for Zai seats carries only :cap-tokens, so Kimi
+   ;; must opt the gate in explicitly to keep Joe's 2026-09-24 rule.
+   :requisition-gated? true})
 
 (def api-key-hint
   "Kimi API key missing; set KIMI_API_KEY or create ~/.kimikey")

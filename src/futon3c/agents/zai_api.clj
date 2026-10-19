@@ -33,6 +33,25 @@
 
 (def ^:private default-model "glm-5.3")
 
+(def default-context-policy
+  "Default requisition policy for Z.AI seats. Zai seats were long built with
+   NO :context-policy, which left the context gate (context-carry-decision)
+   inert: a conversation grew until the provider refused it (HTTP 400 code
+   1261 \"Prompt exceeds max length\"; zai-7 lost 2026-10-18 04:00Z to
+   2026-10-19 01:5xZ, and mining slice-2 2026-08-12 saw 186 consecutive
+   refusals), after which every turn died at once. The default cap keeps the
+   carried conversation under compaction instead. 128000: no documented
+   context length for glm-5.3 exists anywhere in this repo (checked
+   2026-10-19), so this is a conservative floor, not a measured model limit;
+   override with FUTON3C_ZAI_CONTEXT_CAP or an explicit :context-policy.
+
+   Unlike Kimi's default (kimi-api/default-context-policy), this does NOT
+   set :requisition-gated? — the per-call requisition refusal stays off for
+   Zai seats unless a caller opts in, so the default here changes only
+   context compaction, not admission."
+  {:cap-tokens 128000})
+
+
 (def default-request-timeout-ms
   "Maximum duration of one Z.AI HTTP request. This is not a logical turn bound."
   (* 5 60 1000))
@@ -60,6 +79,12 @@
 (defn- chat-url [base-url]
   (str (str/replace (or base-url default-base-url) #"/+$" "")
        "/chat/completions"))
+
+(defn default-zai-context-cap-tokens
+  "The default :cap-tokens a zai seat gets: FUTON3C_ZAI_CONTEXT_CAP when set
+   (a positive integer), else 128000 (see default-context-policy)."
+  []
+  (or (some-> (getenv "FUTON3C_ZAI_CONTEXT_CAP") parse-long pos?) 128000))
 
 (defn- json-schema
   [props required]
@@ -1573,6 +1598,76 @@
             :summary-error (:error summary-result)
             :dispatch-id (str dispatch-id)}})))
 
+(defn- provider-refused-prompt?
+  "True when ERR is the provider refusing the conversation as too long:
+   HTTP 400 code 1261, \"Prompt exceeds max length\" (zai-7, 2026-10-18;
+   mining slice-2, 2026-08-12)."
+  [err]
+  (boolean
+   (when err
+     (let [s (str/lower-case (str err))]
+       (or (str/includes? s "prompt exceeds max length")
+           (str/includes? s "\"code\":\"1261\"")
+           (str/includes? s "\"code\": \"1261\""))))))
+
+(defn- refusal-recovery-compact!
+  "Recover from a provider prompt-length refusal mid-turn: summarize the
+   carried conversation (a failed summary falls back to a clear, as the
+   pre-turn compaction does), truncate !messages to the system message plus
+   one re-injected user message (the compaction note, any summary, and the
+   turn's own last user message — mid-round refusals must not lose the job),
+   persist a :provider-refused context-compaction row, and return the
+   summary call's usage for the turn total (nil when there was none)."
+  [{:keys [client opts api-key agent-id sid turn-id profile dispatch-id
+           evidence-store !messages !context-tokens !context-target
+           job-target purpose]}]
+  (let [context-target @!context-target
+        carried @!context-tokens
+        last-user (last (filter #(= "user" (:role %)) @!messages))
+        summary-result (try
+                         (report-activity! agent-id
+                                           "compacting context after provider refusal")
+                         (summarize-conversation!
+                          client opts api-key (rest @!messages)
+                          {:agent-id agent-id :reason :provider-refused
+                           :context-target context-target
+                           :job-target job-target})
+                         (catch Throwable t
+                           {:error (.getMessage t)}))
+        note (str "[Context: this seat's earlier conversation was "
+                  (if (:summary summary-result)
+                    "compacted"
+                    (str "cleared (summary failed: "
+                         (:error summary-result) ")"))
+                  " after the provider refused the prompt as too long. "
+                  "For detail, read files, mission_orientation or "
+                  "tool_history.]\n\n")]
+    (swap! !messages
+           (fn [msgs]
+             (vec (concat (take 1 msgs)
+                          (when last-user
+                            [{:role "user"
+                              :content (str note
+                                            (when-let [s (:summary summary-result)]
+                                                              (str "[Summary of the earlier conversation]\n"
+                                                                   s "\n[End of summary]\n\n"))
+                                            (:content last-user))}])))))
+    (reset! !context-tokens nil)
+    (persist-context-compaction!
+     {:evidence-store evidence-store :agent-id agent-id :sid sid
+      :turn-id turn-id :profile profile :dispatch-id dispatch-id
+      :decision {:action :compact :reason :provider-refused}
+      :carried-tokens carried :context-target context-target
+      :job-target job-target :purpose purpose
+      :summary-result summary-result})
+    (sink! agent-id {:type "text"
+                     :text (str "[context "
+                                (if (:summary summary-result)
+                                  "compacted to a summary"
+                                  "cleared")
+                                ": provider-refused, " carried " tokens]")})
+    (:usage summary-result)))
+
 (defn- persist-round!
   "Append one durable, turn-addressable round record.
 CALLS contains maps of tool name, arguments, and result digest."
@@ -2103,7 +2198,15 @@ CALLS contains maps of tool name, arguments, and result digest."
   (when-not evidence-store
     (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
                     {:agent-id agent-id})))
-  (let [memory-domain* (or memory-domain
+  ;; Default context policy (2026-10-19, zai-7's 1261 outage): every zai seat
+  ;; gets a :cap-tokens so the context gate is never inert. An explicit
+  ;; :context-policy from the caller wins key-for-key; FUTON3C_ZAI_CONTEXT_CAP
+  ;; wins over the built-in default but not over an explicit :cap-tokens.
+  (let [context-policy (let [caller-cap (:cap-tokens context-policy)]
+                         (assoc (merge default-context-policy context-policy)
+                                :cap-tokens (or caller-cap
+                                               (default-zai-context-cap-tokens))))
+        memory-domain* (or memory-domain
                            (memory-provisioning/domain-for agent-id)
                            :zaif-work)
         client (HttpClient/newHttpClient)
@@ -2215,9 +2318,14 @@ CALLS contains maps of tool name, arguments, and result digest."
                              clocked-mission :clock-store/current-clock
                              :else :d10/unclocked)
             ;; Requisition gate: the caller names its target in the call.
+            ;; Requisition gate: only for policies that opt in with
+            ;; :requisition-gated? (Kimi seats; Joe's rule 2026-09-24). Zai
+            ;; seats get a default policy for the CONTEXT gate only — turning
+            ;; the requisition refusal on for them would refuse every bell
+            ;; that carries no "Requisition:" line.
             continuation? (contains? continuation-callers
                                      (some-> (:caller invoke-context) str))
-            admission (when context-policy
+            admission (when (:requisition-gated? context-policy)
                         (requisition-decision
                          {:requisition (parse-requisition prompt)
                           :continuation? continuation?}))
@@ -2310,12 +2418,13 @@ CALLS contains maps of tool name, arguments, and result digest."
                         (or @!context-tokens
                             (estimate-context-tokens (rest @!messages))))
               context-target @!context-target
-              decision (when context-policy
-                         (context-carry-decision
-                          context-policy
-                          {:job-target job-target
-                           :carried-tokens carried
-                           :context-target context-target}))
+              ;; context-policy is never nil here: make-invoke-fn merges in
+              ;; default-context-policy, so the gate is always live.
+              decision (context-carry-decision
+                        context-policy
+                        {:job-target job-target
+                         :carried-tokens carried
+                         :context-target context-target})
               compact? (= :compact (:action decision))
               ;; Summary compaction (Joe, 2026-09-24), as Kimi Code's /compact
               ;; does client-side: one call to the same model, then continue
@@ -2402,26 +2511,55 @@ CALLS contains maps of tool name, arguments, and result digest."
         (try
           (update-in-usage
            @!summary-usage
-           (run-tool-rounds! {:client client
-                             :opts opts
-                             :api-key key*
-                             :!messages !messages
-                             :!context-tokens !context-tokens
-                             :backend backend
-                             :tool-opts tool-opts
-                             :agent-id agent-id
-                             :sid sid
-                             :dispatch-id dispatch-id
-                             :mission clocked-mission
-                             :mission-source mission-source
-                             :turn-id turn-id
-                             :deadline-ms deadline-ms
-                             :report-reserve-ms (report-reserve-for call-timeout-ms)
-                             :evidence-store evidence-store
-                             :!repeats !repeats
-                             :!interrupted !interrupted
+           (let [run-ctx {:client client
+                          :opts opts
+                          :api-key key*
+                          :!messages !messages
+                          :!context-tokens !context-tokens
+                          :backend backend
+                          :tool-opts tool-opts
+                          :agent-id agent-id
+                          :sid sid
+                          :dispatch-id dispatch-id
+                          :mission clocked-mission
+                          :mission-source mission-source
+                          :turn-id turn-id
+                          :deadline-ms deadline-ms
+                          :report-reserve-ms (report-reserve-for call-timeout-ms)
+                          :evidence-store evidence-store
+                          :!repeats !repeats
+                          :!interrupted !interrupted
+                          :profile profile*
+                          :zaif-inputs-fn zaif-inputs-fn
+                          :auto-continue-max turn-auto-continue-max}
+                 first-result (run-tool-rounds! run-ctx)]
+             (if-not (provider-refused-prompt? (:error first-result))
+               first-result
+               ;; Provider refused the prompt as too long (1261): compact once
+               ;; and retry once. A second refusal fails the turn naming both
+               ;; attempts (zai-7 2026-10-18: before this, one refusal killed
+               ;; every subsequent turn until a human reset the session).
+               (let [summary-usage
+                     (refusal-recovery-compact!
+                      (assoc run-ctx
                              :profile profile*
-                             :zaif-inputs-fn zaif-inputs-fn
-                             :auto-continue-max turn-auto-continue-max}))
+                             :turn-id turn-id
+                             :!context-target !context-target
+                             :job-target job-target
+                             :purpose purpose))
+                     _ (when summary-usage
+                         (reset! !summary-usage
+                                 (add-usage @!summary-usage summary-usage))
+                         (sink! agent-id (assoc summary-usage :type "usage")))
+                     second-result (run-tool-rounds! run-ctx)]
+                 (if (provider-refused-prompt? (:error second-result))
+                   {:result nil
+                    :session-id sid
+                    :error (str "provider refused the prompt on both attempts "
+                                "(1261 \"Prompt exceeds max length\"); "
+                                "attempt 1: " (:error first-result)
+                                " | attempt 2, after compaction: "
+                                (:error second-result))}
+                   second-result)))))
           (finally
             (invoke-controls/deregister! agent-id interrupt-token))))))))))

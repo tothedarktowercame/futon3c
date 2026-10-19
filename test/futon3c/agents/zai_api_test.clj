@@ -717,3 +717,71 @@
           (is (= "plain packet" (get-in @messages [(dec (count @messages)) :content])) label)
           (is (= [] (:injected (turn-start-body store))) label)
           (is (number? (:injected-ms (turn-start-body store))) label))))))
+
+;;; --- Default context policy and 1261 prompt-length recovery (2026-10-19) ---
+
+(defn- compaction-rows
+  [store]
+  (->> (:order @store) (map #(get-in @store [:entries %]))
+       (filter #(= :context-compaction (get-in % [:evidence/body :event])))))
+
+(defn- refusal-response
+  []
+  {:error {:message "HTTP 400"
+           :body {:error {:code "1261"
+                          :message "Prompt exceeds max length"}}}})
+
+(deftest seat-without-explicit-policy-compacts-past-the-default-cap
+  ;; Before 2026-10-19 a zai seat built with no :context-policy never
+  ;; compacted: the gate was inert and the conversation grew until the
+  ;; provider refused it (zai-7, 2026-10-18).
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})]
+    (with-redefs [zai/chat! (fn [_client opts _messages]
+                              (if (:no-tools? opts)
+                                (text-response "summary of the earlier work")
+                                (text-response-with-usage
+                                 "done" {:prompt_tokens 200000
+                                         :completion_tokens 100
+                                         :total_tokens 200100})))]
+      (is (= "done" (:result (invoke "first job" nil))))
+      (is (= "done" (:result (invoke "second job" nil))))
+      (let [rows (compaction-rows store)]
+        (is (= 1 (count rows)))
+        (is (= :over-cap (get-in (first rows) [:evidence/body :reason])))
+        (is (= :summary (get-in (first rows) [:evidence/body :method])))))))
+
+(deftest provider-refusal-compacts-and-one-retry-succeeds
+  (let [store (atom {:entries {} :order []})
+        calls (atom 0)
+        invoke (make-invoke {:evidence-store store})]
+    (with-redefs [zai/chat! (fn [_client opts _messages]
+                              (let [n (swap! calls inc)]
+                                (if (and (= 1 n) (not (:no-tools? opts)))
+                                  (refusal-response)
+                                  (if (:no-tools? opts)
+                                    (text-response "summary of the earlier work")
+                                    (text-response "recovered")))))]
+      (let [resp (invoke "big job" nil)]
+        (is (= "recovered" (:result resp)))
+        (is (nil? (:error resp)))
+        (let [rows (compaction-rows store)]
+          (is (= 1 (count rows)))
+          (is (= :provider-refused (get-in (first rows) [:evidence/body :reason]))))))))
+
+(deftest provider-refusal-twice-fails-naming-both-attempts
+  (let [store (atom {:entries {} :order []})
+        calls (atom 0)
+        invoke (make-invoke {:evidence-store store})]
+    (with-redefs [zai/chat! (fn [_client _opts _messages]
+                              (swap! calls inc)
+                              (refusal-response))]
+      (let [resp (invoke "doomed job" nil)]
+        (is (nil? (:result resp)))
+        (is (str/includes? (:error resp) "both attempts"))
+        ;; exactly two model-turn attempts (plus the one summary call)
+        (is (= 3 @calls))
+        (let [rows (compaction-rows store)]
+          (is (= 1 (count rows)))
+          (is (= :provider-refused (get-in (first rows) [:evidence/body :reason])))
+          (is (= :clear (get-in (first rows) [:evidence/body :method]))))))))
