@@ -62,6 +62,32 @@
 
 (defn- delays [h] (mapv first @(:scheduled h)))
 
+(defn- git!
+  [repo & args]
+  (let [p (.start (doto (ProcessBuilder. (vec (cons "git" args)))
+                    (.directory (io/file repo))))
+        out (slurp (.getInputStream p))
+        err (slurp (.getErrorStream p))]
+    (when-not (zero? (.waitFor p))
+      (throw (ex-info "git failed" {:args args :err err})))
+    (str/trim out)))
+
+(defn- own-commit-repo
+  "A temp git repo whose one commit is AGENT's own work (Agent-Id trailer);
+  [repo-path full-sha]. The happened note's commits are credited to the turn
+  only when their trailers say so (turn-service-commits-test covers the rest)."
+  [agent]
+  (let [d (.toFile (java.nio.file.Files/createTempDirectory
+                    "xiang-cmt-" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (git! d "init" "-q")
+    (git! d "config" "user.email" "t@example.com")
+    (git! d "config" "user.name" "t")
+    (spit (io/file d "f.txt") "base\n")
+    (git! d "add" ".")
+    [(str d) (do (git! d "commit" "-q" "-m" "fix" (str "--trailer=Agent-Id=" agent))
+                 (git! d "rev-parse" "HEAD"))]))
+
+
 (defn- turn! [h & [opts]]
   (svc/record-turn! (:svc h) (merge {:text "Please continue. I withdraw that pattern."
                                      :agent-id "claude-17" :session-id "sess-1" :turn-id "claude-17-turn-3"
@@ -111,12 +137,14 @@
 
 (deftest a-turn-is-recorded-at-send-and-dispatched-at-reply-end
   (let [h (harness)
+        [repo-path own-sha] (own-commit-repo "claude-17")
         {:keys [id dispatch record]} (turn! h)]
     (is (= :pending dispatch))
     (is (= "requested" (:analysis_status record)))
     (is (empty? @(:bells h)))
     (let [result (svc/attach-happened! (:svc h) id {:reply "line1\nline2\nline3\nline4\nline5\nline6"
-                                                    :commits [{:repo "futon3c" :sha "abc123def456" :subject "fix"
+                                                    :commits [{:repo "futon3c" :repo-path repo-path
+                                                               :sha own-sha :subject "fix"
                                                                :numstat "3\t1\tfoo.clj\n-\t-\tbin.png\n"}]})]
       (is (:dispatched result))
       (is (= "job-1" (:job-id result)))
@@ -132,7 +160,8 @@
         (is (= "1970-01-01T00:16:40Z" (:reply_at stored)))
         (is (str/includes? (:happened_summary stored) "line5"))
         (is (not (str/includes? (:happened_summary stored) "line6")))
-        (is (str/includes? (:happened_summary stored) "- futon3c abc123de fix (+3 -1 over 2 files)")))
+        (is (str/includes? (:happened_summary stored)
+                           (str "- futon3c " (subs own-sha 0 8) " fix (+3 -1 over 2 files)"))))
       (is (= [180] (delays h)) "the first reap waits reap-after"))))
 
 (deftest happened-preserves-an-explicit-reply-time

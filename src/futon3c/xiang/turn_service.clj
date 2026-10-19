@@ -274,6 +274,68 @@
         (str head " (+" a " -" r " over " f " files)"))
       head)))
 
+(defn commit-trailers
+  "The git trailers of commit SHA in REPO-PATH as a map of lowercased key to
+  trimmed value (\"agent-id\" \"codex-6\"), {} when the commit carries none,
+  nil when git cannot read the commit (no repo, bad sha). Only trailers, so
+  a forged body line never impersonates one."
+  [repo-path sha]
+  (try
+    (let [p (.start (doto (ProcessBuilder. ["git" "log" "-1" "--format=%(trailers:only)" (str sha)])
+                      (.directory (java.io.File. (str repo-path)))
+                      (.redirectErrorStream false)))
+          out (slurp (.getInputStream p))]
+      (when (zero? (.waitFor p))
+        (into {} (keep (fn [line]
+                         (when-let [[_ k v] (re-matches #"([A-Za-z0-9_-]+):[ ]?(.*)" (str/trim line))]
+                           [(str/lower-case k) (str/trim v)]))
+                       (str/split-lines out)))))
+    (catch Exception _ nil)))
+
+(defn- placeholder-session? [sid]
+  (or (str/blank? (str sid)) (= "pending" (str sid))
+      (str/includes? (str sid) "(awaiting session)")))
+
+(defn- own-commit?
+  "Do TRAILERS credit the commit to this turn's AGENT (or its SESSION)?
+  Own hand: Agent-Id matches. Same session: Agent-Session matches. Work the
+  agent dispatched: Dispatched-By names it (the stepper's rewind counts
+  dispatched work as the turn's)."
+  [agent session trailers]
+  (boolean
+   (when (seq trailers)
+     (or (and agent (= (get trailers "agent-id") (str agent)))
+         (and session (not (placeholder-session? session))
+              (= (get trailers "agent-session") (str session)))
+         (and agent (= (get trailers "dispatched-by") (str agent)))))))
+
+(defn filter-turn-commits
+  "Split the happened note's COMMITS into the ones the turn's agent made and
+  the rest. A commit is kept only when its trailers say so; a commit with no
+  trailer (an operator at a terminal) or another seat's is dropped from the
+  turn's acts and returned under :excluded with its sha and a reason, so
+  nothing disappears silently. Unreadable commits (no repo-path, git error)
+  are excluded as :trailers-unreadable, never kept on trust."
+  [agent session commits]
+  (reduce (fn [acc c]
+            (let [sha (str (:sha c))]
+              (if (str/blank? sha)
+                acc
+                (let [trailers (when (:repo-path c) (commit-trailers (:repo-path c) sha))]
+                  (cond
+                    (nil? trailers)
+                    (update acc :excluded conj {:sha sha :reason :trailers-unreadable})
+                    (empty? trailers)
+                    (update acc :excluded conj {:sha sha :reason :no-trailers})
+                    (own-commit? agent session trailers)
+                    (update acc :commits conj c)
+                    :else
+                    (update acc :excluded conj
+                            {:sha sha :reason :another-seat
+                             :agent-id (get trailers "agent-id")})))))) 
+          {:commits [] :excluded []}
+          (or commits [])))
+
 (defn happened-summary
   "The \"What the agent did\" block: the first five reply lines and one line
    per commit (capped). COMMITS may carry :numstat already, or :repo-path so
@@ -888,6 +950,19 @@
                   (when-not (placeholder? sid)
                     (try (ts/update-record! store id #(assoc % :session_id sid))
                          (catch Exception _ nil)))))))
+        ;; Whose work is this turn's? The Emacs note lists every commit made
+        ;; in any repo while the turn ran; only the ones whose trailers credit
+        ;; them to the turn's agent become acts. Foreign and unsigned commits
+        ;; are kept on the record under :commits_excluded, never dropped
+        ;; silently. (The session fix above ran first, so a first turn's
+        ;; session is real here.)
+        current (ts/read-record store id)
+        {:keys [commits excluded]}
+        (if (map? happened)
+          (filter-turn-commits (:agent_id current) (:session_id current)
+                               (:commits happened))
+          {:commits nil :excluded []})
+        happened (if (map? happened) (assoc happened :commits commits) happened)
         summary (try (cond (string? happened) happened
                            (map? happened) (happened-summary (:reply happened) (:commits happened))
                            :else nil)
@@ -899,7 +974,8 @@
     (when summary
       (try (ts/update-record! store id #(cond-> (assoc % :happened_summary summary)
                                           reply? (assoc :reply_text reply
-                                                        :reply_at reply-at)))
+                                                        :reply_at reply-at)
+                                          (seq excluded) (assoc :commits_excluded (vec excluded))))
            (catch Exception _ nil)))
     (let [record (ts/read-record store id)
           status (:analysis_status record)]
