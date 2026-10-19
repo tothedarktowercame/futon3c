@@ -565,8 +565,8 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
   const footer = add(host, "footer", "stepper-footer", "rewind: Emacs only");
   void footer;
 
-  const section = (title: string, lines: string[], pre = true): HTMLElement => {
-    const sectionNode = add(body, "section");
+  const section = (title: string, lines: string[], pre = true, parent: HTMLElement = body): HTMLElement => {
+    const sectionNode = add(parent, "section");
     add(sectionNode, "h2", "", title);
     const content = add(sectionNode, pre ? "pre" : "div", "stepper-section");
     content.textContent = lines.join("\n");
@@ -590,9 +590,6 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
     if (!frames.length) { updateStatus(); add(body, "p", "", "No operator-turn frames."); return; }
     const model = frameModel(frames[current]);
     updateStatus();
-    if (model.card.length) section(`CARD (馬) — as it stood after this turn`, model.card);
-    const slice = cascadeLines(frames[current], cascade, opts.agent);
-    if (slice.length) section("CASCADE (slice of Cascade Live)", slice);
     const zoom = zoomLines(frames[current], cascade, futonView, opts.agent);
     if (zoom.length) section(`FUTON'S VIEW (馬) — what a zoomed injection would add to this turn (preview; nothing is sent)`, zoom);
     const said = add(body, "section");
@@ -618,6 +615,16 @@ export function renderStepper(initial: Frame[], host: HTMLElement, opts: {
     section("HAPPENED", model.happened);
     if (model.ports) section("PORTS", model.ports.split("\n"));
     section("MEMORY", model.memory);
+    // 馬's card and the Cascade slice describe the session, not this turn
+    // (Joe, 2026-10-19: they got in the way of reading the turn), so they
+    // sit last, folded.
+    const slice = cascadeLines(frames[current], cascade, opts.agent);
+    if (model.card.length || slice.length) {
+      const background = add(body, "details", "stepper-background");
+      add(background, "summary", "", "BACKGROUND (馬's card, Cascade slice) — the session, not this turn");
+      if (model.card.length) section(`CARD (馬) — as it stood after this turn`, model.card, true, background);
+      if (slice.length) section("CASCADE (slice of Cascade Live)", slice, true, background);
+    }
     updateUrl();
   };
   const goTo = (i: number): void => { current = clamp(i); draw(); };
