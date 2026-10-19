@@ -17,6 +17,8 @@
 (def default-repository "/home/joe/code/futon2")
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
+(defn- available-seat-state? [status]
+  (contains? #{:idle :restored "idle" "restored"} status))
 (defn- git [repo & args]
   (let [{:keys [exit out err]} (apply shell/sh "git" "-C" repo args)]
     {:ok? (zero? exit) :out (str/trim out) :err (str/trim err)}))
@@ -33,7 +35,7 @@
         defects (cond-> []
                   (not= 3 (count (set seats))) (conj :cast-not-distinct)
                   (not-every? #(and % (true? (:agent/invoke-ready? %))
-                                    (contains? #{:idle :restored} (:agent/status %)))
+                                    (available-seat-state? (:agent/status %)))
                               (vals records))
                   (conj :cast-not-ready)
                   (not (.isDirectory (io/file repo))) (conj :repository-unreadable)
