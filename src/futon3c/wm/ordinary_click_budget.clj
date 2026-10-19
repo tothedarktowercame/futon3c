@@ -117,8 +117,16 @@
   click; it is not a new grant, plus five further back-to-back clicks
   authorized directly by Joe to codex-68 on 2026-10-19 to prove the repaired
   META self-heal route, with an outside repair only if the Algorithm still
-  cannot execute."
-  111)
+  cannot execute, plus one click authorized directly by Joe to codex-1 on
+  2026-10-19: \"ok run 1 click to see how far it gets\", following the
+  outer-policy provider and equal-minimum selection repairs, plus one click
+  in Joe's measured-frontier repair packet relayed by claude-5 on 2026-10-19
+  (Agency invoke-1792396784770-17217-0962b0d7), after a serving-JVM probe,
+  plus five back-to-back debugger-attached clicks authorized directly by Joe
+  to codex-1 on 2026-10-19: \"we can run 5 back to back now. please use the
+  debugger to catch any errors that dont immediately lead to the self-heal
+  algorithm running.\""
+  118)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
