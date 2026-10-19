@@ -48,7 +48,12 @@
    :ask nil
    :timeout-ms 60000})
 
-(def ^:private verdicts #{"answered" "deferred" "declined" "not-answered"})
+(def ^:private verdicts
+  ;; "noted": a statement (a report, an explanation) the reply takes into
+  ;; account without answering it. Joe, 2026-10-19: whether an act is
+  ;; answered, not answered or noted is for the reading to say, not its kind.
+  ;; Like every verdict but not-answered, it needs a verbatim quote.
+  #{"answered" "noted" "deferred" "declined" "not-answered"})
 
 ;; ------------------------------------------------------------------ passes
 
@@ -176,11 +181,14 @@
                          (mapv #(select-keys % [:id :mark :text]) paragraphs) true)
                         "\n\nAnswer with strict JSON only, an array with one object per "
                         "operator act:\n"
-                        "[{\"act\": \"<act-id>\", \"verdict\": \"answered\"|\"deferred\"|"
+                        "[{\"act\": \"<act-id>\", \"verdict\": \"answered\"|\"noted\"|\"deferred\"|"
                         "\"declined\"|\"not-answered\", \"by\": \"<reply-act-id or null>\", "
                         "\"quote\": \"<exact words from the reply>\"}]\n"
                         "Use \"by\" only for the paragraph that answers it; \"quote\" must "
-                        "be verbatim words from the reply text.")
+                        "be verbatim words from the reply text. Use \"noted\" for a statement "
+                        "(a report, an explanation) the reply takes into account without "
+                        "answering it, quoting where it does; use \"not-answered\" for an act "
+                        "the reply neither answers nor takes into account.")
             reply (try (ask {:seat seat :prompt prompt :timeout-ms timeout-ms})
                        (catch Exception _ nil))
             verdicts* (when (string? reply) (extract-json-array reply))]

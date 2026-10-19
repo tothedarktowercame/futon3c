@@ -369,7 +369,7 @@ or empty."
       "…")))
 
 (defconst turn-stepper--verdict-glyphs
-  '(("answered" . "✓") ("deferred" . "→") ("declined" . "✗")
+  '(("answered" . "✓") ("noted" . "·") ("deferred" . "→") ("declined" . "✗")
     ("not-answered" . "?") ("unread" . "•"))
   "Glyph per alignment verdict; unknown verdicts show themselves.")
 
@@ -404,7 +404,7 @@ frame carries no alignment (the section then stays away, like PORTS)."
                       (if (> n 0)
                           (format ", %d %s" n (if (equal v "not-answered") "not answered" v))
                         "")))
-                  '("deferred" "declined" "not-answered" "unread") ""))
+                  '("noted" "deferred" "declined" "not-answered" "unread") ""))
            (summary (format "%d asked, %d answered (%d by quote, %d by model)%s"
                             (length acts) (length answered) by-quote by-model rest)))
       (concat

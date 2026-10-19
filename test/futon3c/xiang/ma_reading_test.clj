@@ -179,3 +179,17 @@
     (is (not (ma/quote-holds? "deferred" "the" reply)) "one word matches anything")
     (is (not (ma/quote-holds? "answered" "fixed the voxterm display" reply)) "not verbatim")
     (is (ma/quote-holds? "not-answered" nil reply) "not answered needs no quote")))
+
+(deftest noted-is-a-verdict-and-needs-its-quote
+  ;; Joe, 2026-10-19: answered, not answered or noted is for the reading to say.
+  (let [[store id] (record!)
+        ok (str "[{\"act\": \"claude-3-turn-9-f-s1-1\", \"verdict\": \"noted\", "
+                "\"by\": \"claude-3-turn-9-r-1\", \"quote\": \"deferred to tomorrow\"}]")]
+    (ma/align! {:store store :ask (constantly ok)} id)
+    (is (= "noted" (:verdict (by-act store id "claude-3-turn-9-f-s1-1")))))
+  (let [[store id] (record!)
+        no-quote (str "[{\"act\": \"claude-3-turn-9-f-s1-1\", \"verdict\": \"noted\", "
+                      "\"by\": null, \"quote\": \"\"}]")]
+    (ma/align! {:store store :ask (constantly no-quote)} id)
+    (is (= "unread" (:verdict (by-act store id "claude-3-turn-9-f-s1-1")))
+        "noted without evidence is not accepted")))

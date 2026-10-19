@@ -241,7 +241,7 @@ function patternLines(frame: Frame): string[] {
 export const ALIGNMENT_UNREAD = "not read yet";
 
 const VERDICT_GLYPHS: Record<string, string> = {
-  "answered": "✓", "deferred": "→", "declined": "✗", "not-answered": "?", "unread": "•",
+  "answered": "✓", "noted": "·", "deferred": "→", "declined": "✗", "not-answered": "?", "unread": "•",
 };
 
 function firstWords(text: string | null | undefined, words = 7): string {
@@ -263,7 +263,7 @@ export function alignmentLines(frame: Frame): string[] {
   // Each verdict counted on its own: a deferred or unread act is not "not
   // answered", and the per-act verdicts, not the top-level field, are counted.
   const count = (v: string) => acts.filter(a => a.verdict === v).length;
-  const rest = (["deferred", "declined", "not-answered", "unread"] as const)
+  const rest = (["noted", "deferred", "declined", "not-answered", "unread"] as const)
     .map(v => [count(v), v === "not-answered" ? "not answered" : v] as const)
     .filter(([n]) => n > 0).map(([n, label]) => `, ${n} ${label}`).join("");
   const lines = [`${acts.length} asked, ${answered.length} answered `
