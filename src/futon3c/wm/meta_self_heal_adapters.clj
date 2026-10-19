@@ -102,14 +102,17 @@
       s)))
 
 (defn- one-edn-map
-  "One EDN map, bare or inside a code fence under any tag (F18: a seat that
-   fences its map as ```json still returned the map)."
+  "One EDN map, bare or inside a code fence under any alphabetic tag (F18: a
+   seat that fences its map as ```json still returned the map). The map must
+   carry at least one keyword key: JSON with unquoted values, such as
+   {\"x\": 1}, reads as EDN with string keys and keyword values and is not a
+   map the caller can act on (claude-2's review of ca2fa4074, 2026-10-19)."
   [text]
   (try
     (let [text (str/trim (str text))
           fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
           value (edn/read-string (or (second fenced) text))]
-      (when (map? value) value))
+      (when (and (map? value) (some keyword? (keys value))) value))
     (catch Throwable _ nil)))
 
 (def ^:dynamic *rate-limit-backoff-ms*

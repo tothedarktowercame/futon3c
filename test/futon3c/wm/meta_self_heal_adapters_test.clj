@@ -350,8 +350,36 @@
           "the record says what came back"))
     (let [result (run (apply str "prose " (repeat 2000 "x")))]
       (is (= :meta-self-heal/producer-response-malformed (:reason result)))
+      (is (str/starts-with? (str (:detail result)) "prose x")
+          "the preview is present, not nil or empty")
       (is (<= (count (:detail result)) 520) "the preview is bounded"))
+    (let [result (run "Here is the map:\n```edn\n{:status :proposed}\n```")]
+      (is (= :meta-self-heal/producer-response-malformed (:reason result))
+          "prose before the fence is still refused")
+      (is (str/includes? (:detail result) "Here is the map:")
+          "and the preview shows the prose that caused it"))
+    (let [result (run "```json\n{\"x\": 1, \"y\": true}\n```")]
+      (is (= :meta-self-heal/producer-response-malformed (:reason result))
+          "JSON with unquoted values reads as string-keyed EDN; not a map the caller can act on")
+      (is (str/includes? (:detail result) "\"x\": 1")))
     (is (= :proposed (:status (run "```json\n{:status :proposed}\n```")))
         "an EDN map under a json fence tag is the map")
     (is (= :proposed (:status (run "```edn\n{:status :proposed}\n```"))))
     (is (= :proposed (:status (run "{:status :proposed}"))))))
+
+(deftest malformed-producer-response-keeps-the-rate-limit-retry-mark
+  "A seat that was rate-limited once and then answered with prose: the
+   malformed refusal must still say the invoke was retried (claude-2's review
+   of ca2fa4074: the :transport-retry assoc on this branch was untested)."
+  (let [calls (atom 0)]
+    (binding [sut/*rate-limit-backoff-ms* 0]
+      (with-redefs [reg/get-agent (fn [_] ready-agent)
+                    reg/invoke-agent! (fn [_ _ _]
+                                        (if (= 1 (swap! calls inc))
+                                          {:ok false :error "Exit 1: last status: 429 Too Many Requests"}
+                                          {:ok true :result "no map here" :session-id "s"}))]
+        (let [result (#'sut/producer-invoke! "zai-2" :acceptance-proposal {})]
+          (is (= :meta-self-heal/producer-response-malformed (:reason result)))
+          (is (= 2 @calls))
+          (is (some? (:transport-retry result)) "the retry is recorded on the malformed branch")
+          (is (str/includes? (:detail result) "no map here")))))))
