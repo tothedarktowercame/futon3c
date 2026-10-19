@@ -241,13 +241,24 @@
      :summary (acceptance-summary output)
      :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}}))
 
+(defn executed-command
+  "F13 (off-click replay 3, 2026-10-19): the admitted command is the
+   proposal's declaration, [\"clojure\" \"-M:test\" \"-n\" ns (\"-v\" var)].
+   futon2's :test alias carries cognitect.test-runner as a dependency but has
+   no :main-opts, so that argv run verbatim fails before any test loads
+   (\"-n (No such file or directory)\"). The port owns the real invocation:
+   the runner main is inserted; the declared namespace and var are used as
+   admitted, never re-parsed from text."
+  [command]
+  (into ["clojure" "-M:test" "-m" "cognitect.test-runner"] (subvec command 2)))
+
 (defn- launch-bounded-acceptance! [timeout-ms id command]
   (let [job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))
         unit (str job-id ".service")
         receipt-file (str bounded-test-dir "/" job-id ".receipt.json")
         output-file (str *acceptance-runs-root* "/." job-id ".pending.log")
         timeout-seconds (max 1 (long (Math/ceil (/ timeout-ms 1000.0))))
-        command-text (str/join " " command)
+        command-text (str/join " " (executed-command command))
         ;; --collect: a unit that exits nonzero (the expected result of a
         ;; test that pins an injury) is unloaded instead of retained as
         ;; "loaded failed" for every admission attempt (codex-2 review of

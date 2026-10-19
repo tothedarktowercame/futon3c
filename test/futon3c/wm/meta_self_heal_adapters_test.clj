@@ -105,7 +105,7 @@
                (#'sut/run-acceptance! timeout-ms request))]
     (spit (io/file root ".gitignore") ".cpcache/\n")
     (spit (io/file root "deps.edn")
-          "{:paths [\"test\"] :aliases {:test {:extra-deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}} :main-opts [\"-m\" \"cognitect.test-runner\"]}}}\n")
+          "{:paths [\"test\"] :aliases {:test {:extra-deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}}}}}\n")
     (doseq [args [["init" "-q"] ["config" "user.email" "wm@test"]
                   ["config" "user.name" "WM"] ["add" "."]
                   ["commit" "-qm" "fixture"]]]
@@ -205,6 +205,14 @@
           (is (not (.exists deep-dir)) "the adapter removes the directory it created")
           (is (.isDirectory (io/file root "test/fixture"))
               "a directory that existed before is left alone"))))))
+
+(deftest executed-command-inserts-the-test-runner-main
+  "F13: futon2's :test alias has no :main-opts; the fixture repo above now
+   mirrors that shape, so the real-unit test exercises this composition."
+  (is (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"]
+         (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"])))
+  (is (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"]
+         (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))))
 
 (deftest acceptance-review-prompt-describes-pre-repair-result
   (let [prompt (#'sut/producer-prompt :acceptance-review {:result {:status :ran}})]
