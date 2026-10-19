@@ -104,7 +104,7 @@
                (#'sut/run-acceptance! timeout-ms request))]
     (spit fixture (str "#!/bin/sh\n"
                        "if [ \"$1\" = sleep ]; then sleep 30; fi\n"
-                       "printf 'Ran 1 tests containing 1 assertions.\\n1 failures, 0 errors.\\n'\n"
+                       "printf 'ok\\n'\n"
                        "exit 1\n"))
     (.setExecutable fixture true)
     (binding [sut/*acceptance-repository* root
@@ -113,7 +113,9 @@
       (testing "nonzero exit and full-output pin"
         (let [result (port 30000 {:id "fails" :command ["clojure" "fail"]})]
           (is (= [:ran :failed 1] ((juxt :status :outcome :exit) result)))
-          (is (re-find #"Ran 1 tests" (:summary result)))
+          (is (= "ok" (:summary result)))
+          ;; The production root is futon2/data/wm-meta-injuries/acceptance-runs;
+          ;; this binding proves the hermetic test redirects every written log.
           (is (.startsWith (get-in result [:run-pin :path]) logs))
           (is (re-matches #"[0-9a-f]{64}" (get-in result [:run-pin :sha256])))))
       (testing "timeout"

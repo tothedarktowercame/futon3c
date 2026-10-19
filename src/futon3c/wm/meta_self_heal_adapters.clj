@@ -20,7 +20,7 @@
 (def default-repository "/home/joe/code/futon2")
 (def ^:dynamic *acceptance-repository* default-repository)
 (def ^:dynamic *acceptance-runs-root*
-  "/home/joe/code/futon3c/data/wm-meta-injuries/acceptance-runs")
+  "/home/joe/code/futon2/data/wm-meta-injuries/acceptance-runs")
 (def ^:dynamic *clojure-executable* "clojure")
 (def ^:private default-acceptance-timeout-ms (* 15 60 1000))
 (def ^:private shell-metacharacters #"[;&|`$<>\n\r]")
@@ -171,9 +171,10 @@
         test-summary (->> lines
                           (filter #(or (re-find #"^Ran [0-9]+ tests" %)
                                        (re-find #"^[0-9]+ failures, [0-9]+ errors" %)))
-                          (str/join "\n"))
-        tail (subs output (max 0 (- (count output) 4000)))]
-    (str (when (seq test-summary) (str test-summary "\n")) tail)))
+                          (str/join "\n"))]
+    (if (seq test-summary)
+      test-summary
+      (or (last (remove str/blank? lines)) ""))))
 
 (defn- run-acceptance!
   "Bounded, argv-only acceptance runner for wm-click-6cdf2a7c. It runs before
