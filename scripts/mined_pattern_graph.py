@@ -40,9 +40,12 @@ import glob
 import json
 import os
 import re
+import subprocess
+import tempfile
 
 KINDS = ["why", "how", "used-together", "co-cited", "rejected-beside", "next-in-session"]
 DEFAULT_DIFFS = "/home/joe/code/storage/operator-turns/pattern-graph-diffs/applied"
+DEFAULT_FUTON2 = "/home/joe/code/futon2"
 
 
 def library_ids(lib):
@@ -232,6 +235,26 @@ def build_graph(batches, live, library, diffs=None):
             "edges": sorted(merged.values(), key=lambda e: (e["kind"], e["a"], e["b"]))}
 
 
+def publish_graph(graph, root, futon2_root):
+    """Ask futon2's validated publisher to atomically select a new generation."""
+    fd, temporary = tempfile.mkstemp(prefix=".mined-pattern-graph-", suffix=".json",
+                                     dir=os.path.dirname(os.path.abspath(root)) or None)
+    try:
+        with os.fdopen(fd, "w") as handle:
+            json.dump(graph, handle, indent=1)
+        result = subprocess.run(
+            ["clojure", "-M", "scripts/publish_pattern_graph.clj", temporary, root],
+            cwd=futon2_root, text=True, capture_output=True)
+        if result.returncode:
+            raise RuntimeError("pattern graph publication failed: " + result.stderr[-1000:])
+        return result.stdout.strip()
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--batches", default="/home/joe/code/storage/operator-turns/batches")
@@ -239,6 +262,10 @@ def main():
                     help="live turn analysis directory; pass an empty path to disable")
     ap.add_argument("--library", default="/home/joe/code/futon3/library")
     ap.add_argument("--out", default="/home/joe/code/storage/operator-turns/mined-pattern-graph.json")
+    ap.add_argument("--futon2-root", default=DEFAULT_FUTON2,
+                    help="checkout containing scripts/publish_pattern_graph.clj")
+    ap.add_argument("--raw-out", action="store_true",
+                    help="write an unpinned fixture only; never use for the pinned reader")
     ap.add_argument("--diffs", default=DEFAULT_DIFFS,
                     help="directory of inspected, manually applied pattern graph diffs")
     args = ap.parse_args()
@@ -254,9 +281,13 @@ def main():
           f"{xiang['components'] or 'none'}; giant component 1; "
           f"in giant: {str(xiang['in_giant_component']).lower()}; "
           f"patterns {len(xiang['patterns'])}")
-    with open(args.out, "w") as fh:
-        json.dump(graph, fh, indent=1)
-    print(f"wrote {args.out}")
+    if args.raw_out:
+        with open(args.out, "w") as fh:
+            json.dump(graph, fh, indent=1)
+        print(f"wrote unpinned fixture {args.out}")
+    else:
+        print(publish_graph(graph, args.out, args.futon2_root))
+        print(f"published {args.out}")
 
 
 if __name__ == "__main__":

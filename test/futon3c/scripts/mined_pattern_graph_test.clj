@@ -18,7 +18,8 @@
              "--live" live-dir
              "--library" (fixture-path "library")
              "--diffs" diffs
-             "--out" (.getPath out-file))))
+             "--out" (.getPath out-file)
+             "--raw-out")))
 
 (defn- read-json [file]
   (json/read-value (slurp file) json/keyword-keys-object-mapper))
