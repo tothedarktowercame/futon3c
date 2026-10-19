@@ -140,6 +140,15 @@ them out of the windowed poll response.")
 (defvar-local agent-follow--progress-jobs nil
   "Job-ids currently running that drive the progress line.")
 
+(defvar-local agent-follow--history-pending nil
+  "Non-nil from enable until `agent-follow--mark-history-seen' has answered.
+The poll timer starts at once on enable and its first poll races the
+history mark; whichever curl returns first wins. When the poll won, every
+finished job in the window rendered from seq 1 as if new (codex-1,
+2026-10-19: a five-minute-old bell replayed in full under Joe's latest
+turn after he re-enabled the mode). While this is set, finished jobs are
+recorded as seen without being inserted; running jobs still render.")
+
 (defun agent-follow--agency-url ()
   "Base URL of the Agency server."
   (string-remove-suffix
@@ -271,8 +280,11 @@ Never touches the progress line while the REPL streams its own turn."
                (new-events (seq-filter
                             (lambda (e) (> (or (alist-get 'seq e) 0) last-seen))
                             events))
-               (lines (apply #'append
-                             (mapcar #'agent-follow--event-lines new-events)))
+               ;; history not yet marked: a finished job is history, not news
+               (lines (unless (and agent-follow--history-pending
+                                   (member state '("done" "failed")))
+                        (apply #'append
+                               (mapcar #'agent-follow--event-lines new-events))))
                (max-seq (apply #'max last-seen
                                (mapcar (lambda (e) (or (alist-get 'seq e) 0))
                                        events))))
@@ -512,6 +524,7 @@ jobs still in flight plus anything new."
                                                    events))
                                     agent-follow--seen)))))
                  (error nil))
+               (setq agent-follow--history-pending nil)
                (agent-follow--start-timer)))))))))
 
 (defun agent-follow--start-timer ()
@@ -564,6 +577,7 @@ pushes them out of the poll window — until done or quiet past
           (setq agent-follow--seen (make-hash-table :test 'equal))
           (setq agent-follow--live-jobs (make-hash-table :test 'equal))
           (setq agent-follow--progress-jobs nil)
+          (setq agent-follow--history-pending t)
           ;; Marker-line highlighting via font-lock (insert-time face
           ;; properties get stripped by refontification).
           (font-lock-add-keywords

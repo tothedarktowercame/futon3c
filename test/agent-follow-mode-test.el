@@ -125,3 +125,42 @@ a failed one that went quiet does not."
                  (state . "failed") (events . (((seq . 1) (type . "accepted"))))))))
       (should (> (gethash "job-queued" agent-follow--live-jobs) stale))
       (should (= (gethash "job-failed" agent-follow--live-jobs) stale)))))
+
+(ert-deftest agent-follow-history-pending-marks-finished-jobs-without-rendering ()
+  "Until the enable-time history mark has answered, a finished job is recorded
+as seen and not inserted; a running job still renders."
+  (with-temp-buffer
+    (let ((agent-follow--agent-id "codex-1")
+          (agent-follow--seen (make-hash-table :test 'equal))
+          (agent-follow--live-jobs (make-hash-table :test 'equal))
+          (agent-follow--progress-jobs nil)
+          (agent-follow--history-pending t)
+          (agent-follow-include-own t)
+          inserted)
+      (cl-letf (((symbol-function 'agent-follow--insert-message)
+                 (lambda (name _lines) (push name inserted)))
+                ((symbol-function 'agent-chat-update-progress) (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-remove-thinking) (lambda (&rest _) nil)))
+        (agent-follow--render-jobs
+         (list '((job-id . "old-bell") (agent-id . "codex-1") (caller . "claude-5")
+                 (state . "done")
+                 (events . (((seq . 1) (type . "text") (text . "hello"))
+                            ((seq . 2) (type . "done")))))
+               '((job-id . "live-bell") (agent-id . "codex-1") (caller . "claude-4")
+                 (state . "running")
+                 (events . (((seq . 1) (type . "text") (text . "working"))))))))
+      (should (equal '("codex-1⇐claude-4") inserted))
+      (should (= 2 (gethash "old-bell" agent-follow--seen)))
+      ;; once history is marked, the same finished job is simply already seen
+      (setq agent-follow--history-pending nil)
+      (setq inserted nil)
+      (cl-letf (((symbol-function 'agent-follow--insert-message)
+                 (lambda (name _lines) (push name inserted)))
+                ((symbol-function 'agent-chat-update-progress) (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-remove-thinking) (lambda (&rest _) nil)))
+        (agent-follow--render-jobs
+         (list '((job-id . "old-bell") (agent-id . "codex-1") (caller . "claude-5")
+                 (state . "done")
+                 (events . (((seq . 1) (type . "text") (text . "hello"))
+                            ((seq . 2) (type . "done"))))))))
+      (should (null inserted)))))
