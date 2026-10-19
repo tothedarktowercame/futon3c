@@ -597,6 +597,10 @@
           (not= click-id (:click/id run-record)) :identity-mismatch
           :else :present)
         dir (io/file *click-run-binding-dir*)
+        runtime-disposition (select-keys result [:status :reason :route
+                                                 :ordinary-selection-called?
+                                                 :absent-terms :before-ration-spend?
+                                                 :injury-id :repair-id :attempt])
         duplicate-clicks (existing-run-id-clicks dir click-id run-id)
         binding-status
         (cond
@@ -621,6 +625,14 @@
                         :recorded-at (str (Instant/now))}
                  run-record-path
                  (assoc :run-record run-record-path)
+
+                 ;; F7 (2026-10-19): a click that META arbitration refused before
+                 ;; a run id has its disposition only in the serving process's
+                 ;; last-result; the binding is its one durable record, so the
+                 ;; disposition is retained here too (click wm-click-576d3263
+                 ;; could not be witnessed from its binding).
+                 (seq runtime-disposition)
+                 (assoc :runtime-disposition runtime-disposition)
 
                  ;; PROOF-2b ⟨0⟩0: the receipt's digest, copied verbatim from
                  ;; the run record the click already persisted (the runner

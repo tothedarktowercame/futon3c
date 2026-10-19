@@ -396,7 +396,17 @@
                   :run-record-status :absent}
                  (select-keys (:last-result closed)
                               [:attempt-id :outcome :runtime-disposition :binding-status
-                               :run-id-observation :run-record-status]))))))))
+                               :run-id-observation :run-record-status])))
+          ;; F7: the refused click's disposition is retained in its durable
+          ;; binding, not only in the serving last-result.
+          (let [binding-file (io/file service/*click-run-binding-dir*
+                                      (str "click-run-binding-" (:click-id first-body) ".edn"))]
+            (is (.exists binding-file))
+            (is (= {:status :refused
+                    :reason :meta-self-heal/acceptance-transaction-unadmitted
+                    :route :dedicated-meta-self-heal
+                    :ordinary-selection-called? false}
+                   (:runtime-disposition (edn/read-string (slurp binding-file)))))))))))
 
 (deftest service-source-has-no-process-spawn-surface
   (let [source (slurp
