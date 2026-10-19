@@ -98,3 +98,19 @@
                :created-at (at "07:00:00")}
               {:job-id "j-no-time" :caller "a" :agent-id "b" :state "done"}]]
     (is (= [] (ledger/ledger->events jobs [])))))
+
+(deftest a-bell-recorded-as-a-turn-is-not-a-second-bell
+  ;; The 象 store records agent bells too (origin "agent", turn id = job id).
+  ;; Mapped as operator turns they duplicated every bell (claude-3's review,
+  ;; 2026-10-19: a live hour went unlawful on that alone).
+  (let [jobs [{:job-id "j-ab" :caller "agent-a" :agent-id "agent-b" :state "done"
+               :created-at (at "00:00:00") :started-at (at "00:01:00") :finished-at (at "00:05:00")}]
+        turns [{:id "t-op" :record {:turn_id "agent-b-turn-1" :agent_id "agent-b" :origin "operator"
+                                    :created_at (at "00:06:00") :reply_at (at "00:07:00")}}
+               {:id "t-bell" :record {:turn_id "j-ab" :agent_id "agent-b" :origin "agent"
+                                      :created_at (at "00:00:00")}}
+               {:id "t-end" :record {:turn_id "agent-b-session-end" :agent_id "agent-b" :origin "system"
+                                     :created_at (at "00:08:00")}}]
+        rings (filter #(= :ring (:op %)) (ledger/ledger->events jobs turns))]
+    (is (= ["j-ab" "agent-b-turn-1"] (map :id rings)) "one ring per bell, plus the operator turn")
+    (is (= ["agent-a" "joe"] (map :from rings)))))

@@ -111,7 +111,14 @@
   Jobs/turns missing the fields a bell needs (no id, no target, no ring
   time) are dropped, not guessed at."
   [jobs turns]
-  (let [raw (concat (mapcat job-events jobs) (mapcat turn-events turns))
+  (let [;; Only operator turns are rings from joe. The 象 store also records
+        ;; agent bells (origin "agent", turn id = the job id) and session
+        ;; ends (origin "system"); the job ledger already carries the bells,
+        ;; so counting them again here duplicated every bell (claude-3's
+        ;; review, 2026-10-19: 33 linearity and 18 signature findings in a
+        ;; live hour, all from that). A record with no origin is kept.
+        turns (filter #(contains? #{nil "operator"} (get-in % [:record :origin])) turns)
+        raw (concat (mapcat job-events jobs) (mapcat turn-events turns))
         ordered (sort-by rank raw)]
     (vec (concat (registrations ordered) ordered))))
 

@@ -12004,7 +12004,7 @@
                      (filterv #(since? (get-in % [:record :created_at])))
                      (mapv (fn [{:keys [id record]}]
                              {:id (str id)
-                              :record (select-keys record [:turn_id :agent_id
+                              :record (select-keys record [:turn_id :agent_id :origin
                                                             :created_at :reply_at])})))
                 [])]
     (json-response 200 (diagram-ledger/dispatch-response jobs turns from to))))
@@ -12423,8 +12423,6 @@
       (and (= :get method) (= "/api/alpha/xiang/frames/stream" uri))
       (handle-xiang-frames-stream request config)
 
-      (and (= :get method) (= "/api/alpha/diagram/dispatch" uri))
-      (handle-diagram-dispatch request config)
 
       (and (= :get method) (= "/api/alpha/xiang/agreement" uri))
       (let [params (parse-query-params request)]
@@ -12464,6 +12462,10 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; Not under /api/alpha/xiang/: handle-xiang only sees that prefix.
+      (and (= :get method) (= "/api/alpha/diagram/dispatch" uri))
+      (handle-diagram-dispatch request config)
+
       (and (= :get method) (= "/api/alpha/obligations" uri))
       (let [params (parse-query-params request)
             agent (get params "agent")
