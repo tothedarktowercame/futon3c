@@ -237,8 +237,9 @@ def build_graph(batches, live, library, diffs=None):
 
 def publish_graph(graph, root, futon2_root):
     """Ask futon2's validated publisher to atomically select a new generation."""
+    root = os.path.abspath(root)
     fd, temporary = tempfile.mkstemp(prefix=".mined-pattern-graph-", suffix=".json",
-                                     dir=os.path.dirname(os.path.abspath(root)) or None)
+                                     dir=os.path.dirname(root) or None)
     try:
         with os.fdopen(fd, "w") as handle:
             json.dump(graph, handle, indent=1)
@@ -246,7 +247,8 @@ def publish_graph(graph, root, futon2_root):
             ["clojure", "-M", "scripts/publish_pattern_graph.clj", temporary, root],
             cwd=futon2_root, text=True, capture_output=True)
         if result.returncode:
-            raise RuntimeError("pattern graph publication failed: " + result.stderr[-1000:])
+            detail = "\n".join(part for part in (result.stdout[-1000:], result.stderr[-1000:]) if part)
+            raise RuntimeError("pattern graph publication failed: " + detail)
         return result.stdout.strip()
     finally:
         try:
