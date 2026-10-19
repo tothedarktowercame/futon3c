@@ -133,7 +133,10 @@
          :diagnosis
          "Success must be {:status :succeeded :diagnosis <map>}. A refusal/failure must be typed. "
          :acceptance-proposal
-         "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value>}}. The specification is not run and is not accepted. "
+         (str "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value> "
+              ":source {:namespace <namespace-string> :path <test/... .clj> :text <complete-file-text>}}}. "
+              "The source must be a complete clojure.test file that pins the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named by the diagnosis, with no stubs. "
+              "The command must be [\"clojure\" \"-M:test\" \"-n\" <that-namespace>] optionally followed by [\"-v\" <var>]. The specification is not run and is not accepted. ")
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
               "Admit it if it pins the injury (fails for the injury's reason) and is the right test for the repair; refuse with a typed reason otherwise. "
@@ -187,6 +190,38 @@
                 (= "-v" (nth command 4))
                 (re-matches command-name-pattern (nth command 3))
                 (re-matches command-name-pattern (nth command 5))))))
+
+(defn- source-location [{:keys [namespace path text]}]
+  (let [segments (when (string? namespace) (str/split namespace #"\." -1))
+        valid? (and (seq segments)
+                    (every? #(and (re-matches command-name-pattern %)
+                                  (not (#{"." ".."} %)))
+                            segments))
+        derived (when valid?
+                  (str "test/"
+                       (str/join "/" (map #(str/replace % "-" "_") segments))
+                       ".clj"))
+        test-root (.getCanonicalFile (io/file *acceptance-repository* "test"))
+        file (when derived (.getCanonicalFile (io/file *acceptance-repository* derived)))
+        confined? (and file
+                       (.startsWith (.toPath file) (.toPath test-root))
+                       (not= file test-root))]
+    (when (and confined? (= derived path) (string? text))
+      {:file file :test-root test-root :derived derived :text text})))
+
+(defn- create-parent-dirs! [^java.io.File parent]
+  (let [missing (loop [dir parent acc []]
+                  (if (.exists dir)
+                    acc
+                    (recur (.getParentFile dir) (conj acc dir))))]
+    (.mkdirs parent)
+    missing))
+
+(defn- remove-materialized! [^java.io.File file created-dirs]
+  (when (.exists file) (.delete file))
+  (doseq [^java.io.File dir created-dirs]
+    (when (and (.isDirectory dir) (empty? (.listFiles dir)))
+      (.delete dir))))
 
 (defn- write-run-result [id output-file output outcome exit]
   (let [instant (str/replace (str (Instant/now)) #"[:.]" "-")
@@ -249,18 +284,33 @@
   "Bounded, argv-only acceptance runner for wm-click-6cdf2a7c. It runs before
    review and records evidence; it neither interprets :expected nor claims
    acceptance."
-  [timeout-ms {:keys [id command]}]
-  (cond
+  [timeout-ms {:keys [id command source]}]
+  (let [location (source-location source)]
+    (cond
+    (not location)
+    {:status :failed :reason :meta-self-heal/acceptance-source-path-refused}
+    (.exists ^java.io.File (:file location))
+    {:status :failed :reason :meta-self-heal/acceptance-source-path-refused}
     (not (nonblank? id)) {:status :failed :reason :acceptance-test-id-invalid}
     (not (admissible-acceptance-command? command))
     {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
      :command command}
+    (not= (:namespace source) (nth command 3))
+    {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
+     :command command}
     :else
-    (try
-      (launch-bounded-acceptance! timeout-ms id command)
-      (catch Throwable t
-        {:status :failed :reason :acceptance-runner-error
-         :summary (or (.getMessage t) (.getName (class t)))}))))
+    (let [file ^java.io.File (:file location)
+          created-dirs (create-parent-dirs! (.getParentFile file))
+          result (atom nil)]
+      (try
+        (spit file (:text location))
+        (reset! result (launch-bounded-acceptance! timeout-ms id command))
+        (catch Throwable t
+          (reset! result {:status :failed :reason :acceptance-runner-error
+                          :summary (or (.getMessage t) (.getName (class t))) }))
+        (finally
+          (remove-materialized! file created-dirs)))
+      (assoc @result :source-clean? (not (.exists file)))))))
 
 (defn enact!
   "Verify the reviewed patch is canonical HEAD, then reload only its changed

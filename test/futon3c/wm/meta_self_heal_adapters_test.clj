@@ -103,12 +103,9 @@
                          "acceptance-logs" (make-array java.nio.file.attribute.FileAttribute 0)))
         port (fn [timeout-ms request]
                (#'sut/run-acceptance! timeout-ms request))]
-    (.mkdirs (io/file root "test/fixture"))
     (spit (io/file root ".gitignore") ".cpcache/\n")
     (spit (io/file root "deps.edn")
           "{:paths [\"test\"] :aliases {:test {:extra-deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}} :main-opts [\"-m\" \"cognitect.test-runner\"]}}}\n")
-    (spit (io/file root "test/fixture/acceptance_test.clj")
-          "(ns fixture.acceptance-test (:require [clojure.test :refer [deftest is]]))\n(deftest fails (println \"ok\") (is false))\n")
     (doseq [args [["init" "-q"] ["config" "user.email" "wm@test"]
                   ["config" "user.name" "WM"] ["add" "."]
                   ["commit" "-qm" "fixture"]]]
@@ -116,11 +113,19 @@
     (binding [sut/*acceptance-repository* root
               sut/*acceptance-runs-root* logs]
       (testing "nonzero exit and full-output pin"
-        (let [result (port 60000 {:id "fails" :command ["clojure" "-M:test" "-n"
-                                                          "fixture.acceptance-test"]})
+        (let [source-text "(ns fixture.acceptance-test (:require [clojure.test :refer [deftest is]]))\n(deftest fails (println \"ok\") (is false))\n"
+              source {:namespace "fixture.acceptance-test"
+                      :path "test/fixture/acceptance_test.clj"
+                      :text source-text}
+              materialized (io/file root (:path source))
+              result (port 60000 {:id "fails" :command ["clojure" "-M:test" "-n"
+                                                          "fixture.acceptance-test"]
+                                  :source source})
               path (get-in result [:run-pin :path])
               bytes (when path (.getBytes (slurp path) "UTF-8"))]
           (is (= [:ran :failed 1] ((juxt :status :outcome :exit) result)))
+          (is (true? (:source-clean? result)))
+          (is (not (.exists materialized)))
           (is (str/includes? (:summary result) "1 failures, 0 errors"))
           ;; The production root is futon2/data/wm-meta-injuries/acceptance-runs;
           ;; this binding proves the hermetic test redirects every written log.
@@ -142,7 +147,38 @@
           (is (= {:status :failed
                   :reason :meta-self-heal/acceptance-command-not-admissible
                   :command command}
-                 (port 1000 {:id "unsafe" :command command}))))))))
+                 (port 1000 {:id "unsafe" :command command
+                             :source {:namespace "fixture.acceptance-test"
+                                      :path "test/fixture/acceptance_test.clj"
+                                      :text "source"}})))))
+      (testing "an existing source is refused and untouched"
+        (let [file (io/file root "test/fixture/existing_test.clj")
+              original (.getBytes "original bytes\n" "UTF-8")
+              _ (.mkdirs (.getParentFile file))
+              _ (with-open [out (io/output-stream file)] (.write out original))
+              result (port 1000 {:id "existing"
+                                 :command ["clojure" "-M:test" "-n" "fixture.existing-test"]
+                                 :source {:namespace "fixture.existing-test"
+                                          :path "test/fixture/existing_test.clj"
+                                          :text "replacement"}})]
+          (is (= :meta-self-heal/acceptance-source-path-refused (:reason result)))
+          (is (= (seq original) (seq (.getBytes (slurp file) "UTF-8"))))))
+      (testing "a namespace-derived path outside test is refused"
+        (is (= :meta-self-heal/acceptance-source-path-refused
+               (:reason (port 1000 {:id "escape"
+                                    :command ["clojure" "-M:test" "-n" "../x"]
+                                    :source {:namespace "../x"
+                                             :path "../x.clj" :text "bad"}})))))
+      (testing "timeout removes materialized source"
+        (let [file (io/file root "test/fixture/slow_test.clj")
+              result (port 200 {:id "slow"
+                                :command ["clojure" "-M:test" "-n" "fixture.slow-test"]
+                                :source {:namespace "fixture.slow-test"
+                                         :path "test/fixture/slow_test.clj"
+                                         :text "(ns fixture.slow-test (:require [clojure.test :refer [deftest]]))\n(deftest slow (Thread/sleep 30000))\n"}})]
+          (is (= [:ran :errored -1 true]
+                 ((juxt :status :outcome :exit :source-clean?) result)))
+          (is (not (.exists file))))))))
 
 (deftest acceptance-review-prompt-describes-pre-repair-result
   (let [prompt (#'sut/producer-prompt :acceptance-review {:result {:status :ran}})]
@@ -150,3 +186,10 @@
     (is (str/includes? prompt "result is in :result"))
     (is (str/includes? prompt "fails for the injury's reason"))
     (is (str/includes? prompt "Return exactly one EDN map and no prose"))))
+
+(deftest acceptance-proposal-prompt-requires-complete-source
+  (let [prompt (#'sut/producer-prompt :acceptance-proposal {:diagnosis {:status :present}})]
+    (is (str/includes? prompt ":source {:namespace"))
+    (is (str/includes? prompt "complete clojure.test file"))
+    (is (str/includes? prompt "real production functions"))
+    (is (str/includes? prompt "with no stubs"))))
