@@ -790,6 +790,9 @@
                                                         (assoc :mark operator-mark)))
                                                     (:still-open ports))
                                   :inferred (:inferred ports)})))
+      ;; 馬 alignment (futon3c.xiang.ma-reading) listens for this: ports are
+      ;; computed and stored, so the turn is ready to be read agent-reply-side.
+      (notify-turn! svc {:event :ported :id id})
      (catch Exception e
        (let [reason (if (= :unknown-turn (:reason (ex-data e)))
                       "no-acts"

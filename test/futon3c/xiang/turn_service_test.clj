@@ -121,7 +121,7 @@
     (try
       (svc/publish-analysis! (:svc h) id (analysis-for record) {})
       (while (seq @(:scheduled h)) (run-next! h))
-      (is (= [:reading :settled] @events))
+      (is (= [:reading :settled :ported] @events))
       (finally (svc/remove-turn-listener! ::test)))))
 
 (deftest throwing-turn-listener-never-fails-recording
@@ -1236,13 +1236,14 @@
       (while (seq @(:scheduled h)) (run-next! h))
       (is (= "analyzed" (:analysis_status (ts/read-record store id)))
           "the reap writes the flag the script omitted")
-      (is (= [:reading :settled] @events))
+      (is (= [:reading :settled :ported] @events))
       (is (= 1 (count @appended)))
       ;; A second reap (forced; the view no longer reaps a flagged record)
       ;; re-settles the same reading: the append is the idempotent duplicate
       ;; and no listener hears of it.
       (is (= :analyzed (:outcome (svc/reap! (:svc h) id {}))))
       (while (seq @(:scheduled h)) (run-next! h))
-      (is (= [:reading :settled] @events) "a repeat settle of the same reading is silent")
+      (is (= [:reading :settled :ported :ported] @events)
+          "a repeat settle of the same reading is silent (its :ported is the 馬 trigger re-running)")
       (is (= 2 (count @appended)))
       (finally (svc/remove-turn-listener! ::test)))))
