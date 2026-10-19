@@ -158,7 +158,12 @@
         parsed (when (:ok result) (one-edn-map (:result result)))]
     (cond
       (not agent) {:status :failed :reason :meta-self-heal/producer-seat-unavailable}
-      (not (:ok result)) {:status :failed :reason :meta-self-heal/producer-invoke-failed}
+      ;; F9 (click wm-click-2b1d568c, 2026-10-19): the transport's own error
+      ;; ("Exit 1: exceeded retry limit, last status: 429 Too Many Requests")
+      ;; was dropped here, so the record could not say the seat was
+      ;; rate-limited; it is retained verbatim as :detail.
+      (not (:ok result)) {:status :failed :reason :meta-self-heal/producer-invoke-failed
+                          :detail (or (:error result) (:message result))}
       (not (map? parsed)) {:status :failed :reason :meta-self-heal/producer-response-malformed}
       :else parsed)))
 
