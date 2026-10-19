@@ -9,12 +9,21 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
-            [futon3c.wm.code-identity :as code-identity]))
+            [futon3c.wm.code-identity :as code-identity])
+  (:import (java.security MessageDigest)
+           (java.time Instant)
+           (java.util.concurrent TimeUnit)))
 
 (def default-cast
   {:author "wm-author" :reviewer "wm-reviewer"
    :repair-reviewer "wm-repair-reviewer"})
 (def default-repository "/home/joe/code/futon2")
+(def ^:dynamic *acceptance-repository* default-repository)
+(def ^:dynamic *acceptance-runs-root*
+  "/home/joe/code/futon3c/data/wm-meta-injuries/acceptance-runs")
+(def ^:dynamic *clojure-executable* "clojure")
+(def ^:private default-acceptance-timeout-ms (* 15 60 1000))
+(def ^:private shell-metacharacters #"[;&|`$<>\n\r]")
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- available-seat-state? [status]
@@ -125,7 +134,9 @@
          :acceptance-proposal
          "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value>}}. The specification is not run and is not accepted. "
          :acceptance-review
-         "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test ...}, echoing those five exact request values. A refusal/failure must be typed. "
+         (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
+              "Admit it if it pins the injury (fails for the injury's reason) and is the right test for the repair; refuse with a typed reason otherwise. "
+              "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test ...}, echoing those five exact request values. A refusal/failure must be typed. ")
          "Unknown producer operation; return typed refusal. ")
        "Bind every returned identity and pin to this request.\n\n" (pr-str request)))
 
@@ -146,6 +157,63 @@
       (not (:ok result)) {:status :failed :reason :meta-self-heal/producer-invoke-failed}
       (not (map? parsed)) {:status :failed :reason :meta-self-heal/producer-response-malformed}
       :else parsed)))
+
+(defn- hex-sha256 [^bytes content]
+  (format "%064x" (java.math.BigInteger. 1
+                                          (.digest (doto (MessageDigest/getInstance "SHA-256")
+                                                     (.update content))))))
+
+(defn- safe-test-id [test-id]
+  (str/replace test-id #"[^A-Za-z0-9._-]" "-"))
+
+(defn- acceptance-summary [output]
+  (let [lines (str/split-lines output)
+        test-summary (->> lines
+                          (filter #(or (re-find #"^Ran [0-9]+ tests" %)
+                                       (re-find #"^[0-9]+ failures, [0-9]+ errors" %)))
+                          (str/join "\n"))
+        tail (subs output (max 0 (- (count output) 4000)))]
+    (str (when (seq test-summary) (str test-summary "\n")) tail)))
+
+(defn- run-acceptance!
+  "Bounded, argv-only acceptance runner for wm-click-6cdf2a7c. It runs before
+   review and records evidence; it neither interprets :expected nor claims
+   acceptance."
+  [timeout-ms {:keys [id command]}]
+  (cond
+    (not (nonblank? id)) {:status :failed :reason :acceptance-test-id-invalid}
+    (not (and (vector? command) (seq command) (every? string? command)))
+    {:status :failed :reason :acceptance-command-invalid}
+    (not= "clojure" (first command))
+    {:status :failed :reason :acceptance-command-not-clojure}
+    (some #(re-find shell-metacharacters %) command)
+    {:status :failed :reason :acceptance-command-shell-metacharacter}
+    :else
+    (try
+      (let [argv (assoc command 0 *clojure-executable*)
+            process (.start (doto (ProcessBuilder. ^java.util.List argv)
+                              (.directory (io/file *acceptance-repository*))
+                              (.redirectErrorStream true)))
+            output-future (future (slurp (.getInputStream process)))
+            finished? (.waitFor process (long timeout-ms) TimeUnit/MILLISECONDS)
+            _ (when-not finished? (.destroyForcibly process))
+            _ (when-not finished? (.waitFor process 10 TimeUnit/SECONDS))
+            output (deref output-future 10000 "[output capture timed out]")
+            exit (if finished? (.exitValue process) -1)
+            instant (str/replace (str (Instant/now)) #"[:.]" "-")
+            log-file (io/file *acceptance-runs-root*
+                              (str (safe-test-id id) "-" instant ".log"))
+            bytes (.getBytes output "UTF-8")]
+        (.mkdirs (.getParentFile log-file))
+        (with-open [stream (io/output-stream log-file)] (.write stream bytes))
+        {:status :ran
+         :outcome (cond (not finished?) :errored (zero? exit) :passed :else :failed)
+         :exit exit
+         :summary (acceptance-summary output)
+         :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}})
+      (catch Throwable t
+        {:status :failed :reason :acceptance-runner-error
+         :summary (or (.getMessage t) (.getName (class t)))}))))
 
 (defn enact!
   "Verify the reviewed patch is canonical HEAD, then reload only its changed
@@ -181,6 +249,10 @@
        :agency-invoke-fn agency-invoke!
        :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
        :meta-acceptance-fn #(producer-invoke! (:author (:cast ready)) :acceptance-proposal %)
+       :meta-acceptance-run-fn #(run-acceptance!
+                                 (or (:meta-acceptance-timeout-ms opts)
+                                     default-acceptance-timeout-ms)
+                                 %)
        :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) :acceptance-review %)
        :repair-enact-fn enact!
        :repair-retry-fn
