@@ -783,6 +783,7 @@
              :runtime-disposition
              (select-keys result [:status :reason :route
                                   :ordinary-selection-called?
+                                  :absent-terms :before-ration-spend?
                                   :injury-id :repair-id :attempt
                                   :diagnosis-observation
                                   :acceptance-observation])
