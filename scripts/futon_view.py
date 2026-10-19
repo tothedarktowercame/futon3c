@@ -165,12 +165,18 @@ def with_jobs(agents, newest_job):
     return agents
 
 
+def current_job(jobs):
+    """The newest job that is real work: an automated bellback only reports
+    that some other job finished, so it says nothing about the seat's task."""
+    return next((j for j in jobs if j.get("caller") != "auto-bellback"), None)
+
+
 def newest_job(agent):
     try:
-        jobs = get_json("/api/alpha/invoke/jobs?limit=1&agent=" + urllib.parse.quote(agent), 10).get("jobs") or []
+        jobs = get_json("/api/alpha/invoke/jobs?limit=10&agent=" + urllib.parse.quote(agent), 10).get("jobs") or []
     except Exception:
         return None
-    return jobs[0] if jobs else None
+    return current_job(jobs)
 
 
 def load_state():

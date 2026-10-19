@@ -59,5 +59,14 @@ class PurposeSince(unittest.TestCase):
         self.assertIsNone(fv.purpose_since([]))
 
 
+class CurrentJobTest(unittest.TestCase):
+    def test_skips_auto_bellback(self):
+        jobs = [{"caller": "auto-bellback", "job-id": "a"}, {"caller": "claude-4", "job-id": "b"}]
+        self.assertEqual(fv.current_job(jobs)["job-id"], "b")
+
+    def test_only_bellbacks(self):
+        self.assertIsNone(fv.current_job([{"caller": "auto-bellback"}]))
+
+
 if __name__ == "__main__":
     unittest.main()
