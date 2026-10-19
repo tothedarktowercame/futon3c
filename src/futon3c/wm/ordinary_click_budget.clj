@@ -125,8 +125,12 @@
   plus five back-to-back debugger-attached clicks authorized directly by Joe
   to codex-1 on 2026-10-19: \"we can run 5 back to back now. please use the
   debugger to catch any errors that dont immediately lead to the self-heal
-  algorithm running.\""
-  118)
+  algorithm running.\", plus five clicks authorized directly by Joe to claude-5
+  on 2026-10-19 at 17:23Z for the working loop (one click, one bounded repair
+  per class of stop, independent review, then the next): \"ok I authorize up
+  to 5 clicks to proceed in the way you described, fixing each class of error
+  that is revealed\""
+  123)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
