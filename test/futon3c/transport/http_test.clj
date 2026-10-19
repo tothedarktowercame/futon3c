@@ -3704,18 +3704,24 @@
                      :segment/basis {:evidence-ref "e-test" :scope {}}})})
       (binding [prompt-line/*turn-record-store* store]
         (let [header (#'http/wrap-surface-header "body" "emacs-repl" "joe"
-                      "claude-17" nil "sess-1" "turn-http1")]
+                      "claude-17" nil "sess-1"
+                      {:turn-record-id "turn-http1" :job-id "invoke-1"})]
           (is (str/includes? header "pattern ~p9")
               "the rendered header shows the fake pattern segment")
-          (is (= ["~p9"] (:proposed_patterns (turn-store/read-record store "turn-http1")))
-              "and it was written onto exactly that turn record")
-          (is (= "2026-10-19T10:00:00Z"
-                 (:proposed_patterns_at (turn-store/read-record store "turn-http1"))))
-          ;; No id: no write path at all — the header renders the same way.
+          (is (= [{:patterns ["~p9"] :at "2026-10-19T10:00:00Z" :job_id "invoke-1"}]
+                 (:proposed_patterns (turn-store/read-record store "turn-http1")))
+              "and it was written onto exactly that turn record, with the job id")
+          ;; No record id: no write path at all.
           (#'http/wrap-surface-header "body" "emacs-repl" "joe"
-                                      "claude-17" nil "sess-1" nil)
-          (is (= ["~p9"] (:proposed_patterns (turn-store/read-record store "turn-http1"))))))
+                                      "claude-17" nil "sess-1" {:job-id "invoke-2"})
+          (is (= 1 (count (:proposed_patterns (turn-store/read-record store "turn-http1")))))))
       (finally
         (prompt-line/reset-registry!)
         (doseq [p saved-providers] (prompt-line/register-provider! p))
         (delete-temp-tree! dir)))))
+
+(deftest invoke-body-turn-record-id-is-read-from-either-key-form
+  (is (= "turn-abc123" (#'http/payload-turn-record-id {:turn-record-id "turn-abc123"})))
+  (is (= "turn-abc123" (#'http/payload-turn-record-id {"turn-record-id" "turn-abc123"})))
+  (is (nil? (#'http/payload-turn-record-id {:turn-id "invoke-1"}))
+      "turn-id is the job id and is never read as a record id"))

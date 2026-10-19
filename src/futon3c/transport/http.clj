@@ -5305,10 +5305,16 @@
     (str "pattern " value " (retrieved, score " score tail ")")
     (str "pattern " value (when-not (str/blank? header) (str " (" header ")")))))
 
+(defn- payload-turn-record-id
+  "The optional 象 turn-record id on an invoke body (form turn-XXXXXX, from
+   POST /api/alpha/xiang/turns). Not turn-id: that is the job id."
+  [payload]
+  (some-> (or (:turn-record-id payload) (get payload "turn-record-id")) str))
+
 (defn- prompt-facts-line
   ([agent-id session-id surface]
    (prompt-facts-line agent-id session-id surface nil))
-  ([agent-id session-id surface turn-record-id]
+  ([agent-id session-id surface {:keys [turn-record-id job-id]}]
    (when (and (not (str/blank? (str agent-id)))
              (not (str/blank? (str session-id)))
              (not (prompt-line/analysis-seat? agent-id)))
@@ -5317,7 +5323,8 @@
                                  (cond-> {:agent-id (str agent-id)
                                           :session-id (str session-id)
                                           :surface surface}
-                                   turn-record-id (assoc :turn-record-id (str turn-record-id)))))
+                                   turn-record-id (assoc :turn-record-id (str turn-record-id)
+                                                         :job-id (some-> job-id str)))))
             facts (mapv (fn [{:segment/keys [id header] :as segment}]
                           (if (= :pattern id)
                             (pattern-prompt-fact segment)
@@ -5332,7 +5339,9 @@
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
    This ensures the agent sees a consistent, unambiguous surface declaration
    on every turn — even when session history has messages from other surfaces.
-   Also includes the agent's pattern backpack if any patterns are active."
+   Also includes the agent's pattern backpack if any patterns are active.
+   RENDER-TARGET, when given, is {:turn-record-id :job-id}: the prompt-line
+   render appends its pattern set and the job id to that 象 turn record."
   ([prompt surface caller]
    (wrap-surface-header prompt surface caller nil nil nil))
   ([prompt surface caller agent-id]
@@ -5341,7 +5350,7 @@
    (wrap-surface-header prompt surface caller agent-id thread nil))
   ([prompt surface caller agent-id thread session-id]
    (wrap-surface-header prompt surface caller agent-id thread session-id nil))
-  ([prompt surface caller agent-id thread session-id turn-record-id]
+  ([prompt surface caller agent-id thread session-id render-target]
    (if (and surface (not (str/blank? (str surface))))
      (let [backpack (when agent-id
                       (some-> (get @reg/!registry (str agent-id))
@@ -5366,7 +5375,7 @@
             ;; Caller retained as a legacy alias of From for back-compat with existing parsers.
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
-            (prompt-facts-line agent-id session-id surface turn-record-id)
+            (prompt-facts-line agent-id session-id surface render-target)
             (when-let [notice (turn-notice/take! agent-id session-id)]
               (str (:notice/text notice) "\n"))
             ;; Reply-delivery contract: when the response auto-routes, say so EXPLICITLY
@@ -5477,8 +5486,8 @@
    (wrap-agent-facing-surface prompt surface caller agent-id thread nil))
   ([prompt surface caller agent-id thread session-id]
    (wrap-agent-facing-surface prompt surface caller agent-id thread session-id nil))
-  ([prompt surface caller agent-id thread session-id turn-record-id]
-   (str (wrap-surface-header "" surface caller agent-id thread session-id turn-record-id)
+  ([prompt surface caller agent-id thread session-id render-target]
+   (str (wrap-surface-header "" surface caller agent-id thread session-id render-target)
         (or (surface-projection-block agent-id) "")
         (or (problem-conductor-contract-block agent-id) "")
         prompt)))
@@ -5760,8 +5769,7 @@
         ;; E-象-repl-cycle packet 1b: the 象 turn record this invoke renders
         ;; for (form turn-XXXXXX, from POST /api/alpha/xiang/turns); the
         ;; rendered pattern set is written onto exactly that record.
-        turn-record-id (some-> (or (:turn-record-id payload) (get payload "turn-record-id"))
-                               str)
+        turn-record-id (payload-turn-record-id payload)
         ev-opts (when mission-id [:mission-id mission-id])
         execution-started? (atom false)
         job-id (create-invoke-job! {:evidence-store evidence-store
@@ -5778,7 +5786,8 @@
       (reset! execution-started? true)
       (register-job-worker! job-id (Thread/currentThread) nil)
       (let [session-id (some-> (reg/get-agent (str agent-id)) :agent/session-id)
-            effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id nil session-id turn-record-id)
+            effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id nil session-id
+                                                        {:turn-record-id turn-record-id :job-id job-id})
             ;; Announced jobs reach this direct-invoke boundary from the agent's
             ;; turn drainer. Give them the same ledger observability as bell jobs:
             ;; compose with a stream consumer already installed by another surface,
@@ -6939,10 +6948,11 @@
                   ;; E-象-repl-cycle packet 1b: thread the 象 turn record id
                   ;; (from POST /api/alpha/xiang/turns) into the render that
                   ;; builds this prompt, so its pattern set lands on that record.
-                  turn-record-id (some-> (or (:turn-record-id payload)
-                                             (get payload "turn-record-id"))
-                                         str)
-                  effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id nil session-id turn-record-id)
+                  ;; The stream's turn-id is the queue entry id and *turn-id*:
+                  ;; the job id the boundary's turn row is keyed on.
+                  turn-record-id (payload-turn-record-id payload)
+                  effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id nil session-id
+                                                              {:turn-record-id turn-record-id :job-id turn-id})
                   ;; Terminal done/error emission from an invoke result — shared by the
                   ;; queued (E2) path and the legacy direct path.
                   emit-terminal!

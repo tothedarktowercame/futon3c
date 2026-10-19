@@ -145,27 +145,35 @@
    means the default store (FUTON3C_TURN_ANALYSIS_DIR, else the Emacs dir)."
   nil)
 
+(defonce ^:private write-lock (Object.))
+
 (defn- write-proposed-patterns!
-  "Record onto turn-record ID the pattern segment(s) THIS render produced:
-   :proposed_patterns = the :pattern segments' values in render order (empty
-   vector when the render had none), :proposed_patterns_at = that segment's
-   :observed-at (the render's :rendered-at when there is none). Malformed or
-   unknown id: no write, no error. A failure here must never fail or delay
-   the render (catch, log). Last render for a record wins."
-  [turn-record-id result]
+  "Append THIS render onto turn-record ID's :proposed_patterns, a vector of
+   renders in order, each {:patterns <the :pattern segments' values in render
+   order, [] when none>, :at <that segment's :observed-at, else the render's
+   :rendered-at>, :job_id <the invoke job id, nil when the caller had none>}.
+   A record shown patterns twice (a retry) keeps both renders; the job id says
+   which one the agent acted on. Malformed or unknown id: no write, no error.
+   A failure here must never fail or delay the render (catch, log)."
+  [turn-record-id job-id result]
   (try
     (let [id (some-> turn-record-id str)]
       (when (turn-store/record-id? id)
         (let [store (or *turn-record-store* (turn-store/store))
               pattern-segments (filter #(= :pattern (:segment/id %))
                                        (:segments result))
-              values (vec (keep #(some-> (:segment/value %) str) pattern-segments))
-              at (or (some :segment/observed-at pattern-segments)
-                     (:rendered-at result))]
-          (when (turn-store/read-record store id)
-            (turn-store/update-record! store id
-                                       #(assoc % :proposed_patterns values
-                                                 :proposed_patterns_at at))))))
+              entry {:patterns (vec (keep #(some-> (:segment/value %) str)
+                                          pattern-segments))
+                     :at (or (some :segment/observed-at pattern-segments)
+                             (:rendered-at result))
+                     :job_id (some-> job-id str)}]
+          ;; update-record! is read-then-replace; serialise appends so two
+          ;; renders for one record cannot drop each other's entry.
+          (locking write-lock
+            (when (turn-store/read-record store id)
+              (turn-store/update-record!
+               store id
+               #(update % :proposed_patterns (fnil conj []) entry)))))))
     (catch Throwable t
       (println (str "[prompt-line] proposed_patterns write failed for "
                     (str turn-record-id) ": " (.getMessage t))))))
@@ -180,7 +188,7 @@
     (let [result (render (assoc ctx :agent-id agent :session-id session) @!providers)]
       (swap! !last-renders assoc [agent session] result)
       (when (contains? ctx :turn-record-id)
-        (write-proposed-patterns! (:turn-record-id ctx) result))
+        (write-proposed-patterns! (:turn-record-id ctx) (:job-id ctx) result))
       result)))
 
 (defn last-render [agent-id session-id]

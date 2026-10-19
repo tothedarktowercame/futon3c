@@ -71,36 +71,58 @@
     (is (nil? (prompt-line/last-render "claude-17" "s2")))))
 
 ;; --- turn-record writes (E-象-repl-cycle packet 1b) --------------------------
-;; render! writes the :pattern segment(s) onto the turn record named by
-;; :turn-record-id: the render's own target, never last-render or [agent
-;; session] keying.
+;; render! appends each render's :pattern segment(s) and job id onto the turn
+;; record named by :turn-record-id: the render's own target, never last-render
+;; or [agent session] keying.
 
 (defn- temp-turn-store []
   (let [dir (java.nio.file.Files/createTempDirectory
              "xiang-prompt-record-" (make-array java.nio.file.attribute.FileAttribute 0))]
     (turn-store/store (str dir))))
 
+(defn- renders [store id]
+  (:proposed_patterns (turn-store/read-record store id)))
+
 (deftest turn-record-write-targets-the-render-s-own-record
+  (let [store (temp-turn-store)
+        pattern (atom ["~p1" now])]
+    (turn-store/write-record-id! store "turn-aaaaaa" {:turn_id "t1"})
+    (turn-store/write-record-id! store "turn-bbbbbb" {:turn_id "t2"})
+    (prompt-line/register-provider!
+     (registration :pattern "t" (fn [_] (segment :pattern "t"
+                                                 {:segment/value (first @pattern)
+                                                  :segment/observed-at (second @pattern)}))))
+    (binding [prompt-line/*turn-record-store* store]
+      ;; Same agent, same session, consecutive renders: only the target
+      ;; record id differs (the same-seat mid-turn bell shape).
+      (prompt-line/render! {:agent-id "claude-17" :session-id "s1" :render-at now
+                            :turn-record-id "turn-aaaaaa" :job-id "job-a"})
+      (reset! pattern ["~p2" "2026-09-27T19:59:00Z"])
+      (prompt-line/render! {:agent-id "claude-17" :session-id "s1" :render-at now
+                            :turn-record-id "turn-bbbbbb" :job-id "job-b"}))
+    (is (= [{:patterns ["~p1"] :at now :job_id "job-a"}] (renders store "turn-aaaaaa"))
+        "record A keeps its own render; a later render for B must not touch it")
+    (is (= [{:patterns ["~p2"] :at "2026-09-27T19:59:00Z" :job_id "job-b"}]
+           (renders store "turn-bbbbbb"))
+        ":at is the pattern segment's observed-at, not the render clock")))
+
+(deftest turn-record-re-render-keeps-both-renders-in-order
   (let [store (temp-turn-store)
         pattern (atom "~p1")]
     (turn-store/write-record-id! store "turn-aaaaaa" {:turn_id "t1"})
     (turn-store/write-record-id! store "turn-bbbbbb" {:turn_id "t2"})
     (prompt-line/register-provider!
-     (registration :pattern "t" (fn [_] (segment :pattern "t"
-                                                 {:segment/value @pattern}))))
+     (registration :pattern "t" (fn [_] (segment :pattern "t" {:segment/value @pattern}))))
     (binding [prompt-line/*turn-record-store* store]
-      ;; Same agent, same session, consecutive renders: only the target
-      ;; record id differs (the same-seat mid-turn bell shape).
       (prompt-line/render! {:agent-id "claude-17" :session-id "s1" :render-at now
-                            :turn-record-id "turn-aaaaaa"})
+                            :turn-record-id "turn-aaaaaa" :job-id "job-1"})
       (reset! pattern "~p2")
       (prompt-line/render! {:agent-id "claude-17" :session-id "s1" :render-at now
-                            :turn-record-id "turn-bbbbbb"}))
-    (is (= ["~p1"] (:proposed_patterns (turn-store/read-record store "turn-aaaaaa")))
-        "record A keeps its own render; a later render for B must not touch it")
-    (is (= ["~p2"] (:proposed_patterns (turn-store/read-record store "turn-bbbbbb"))))
-    (is (= now (:proposed_patterns_at (turn-store/read-record store "turn-bbbbbb")))
-        "the pattern segment's observed-at, not the render clock")))
+                            :turn-record-id "turn-aaaaaa" :job-id "job-2"}))
+    (is (= [["~p1"] "job-1" ["~p2"] "job-2"]
+           (mapcat (juxt :patterns :job_id) (renders store "turn-aaaaaa")))
+        "a retry appends; the job id says which render the agent acted on")
+    (is (nil? (renders store "turn-bbbbbb")) "the other record is untouched")))
 
 (deftest turn-record-write-with-no-pattern-segment-is-present-and-empty
   (let [store (temp-turn-store)]
@@ -108,16 +130,16 @@
     (prompt-line/register-provider!
      (registration :first "t" (fn [_] (segment :first "t" {:segment/marker "*"}))))
     (binding [prompt-line/*turn-record-store* store]
-      (prompt-line/render! {:agent-id "claude-17" :session-id "s1" :render-at now
+      (prompt-line/render! {:agent-id "claude-17" :session-id "s1"
+                            :render-at "2026-09-27T20:05:00Z"
                             :turn-record-id "turn-cccccc"}))
-    (let [record (turn-store/read-record store "turn-cccccc")]
-      (is (= [] (:proposed_patterns record))
-          "rendered, no pattern: present and empty, distinct from absent")
-      (is (= now (:proposed_patterns_at record))
-          "no segment: the render's rendered-at"))))
+    (is (= [{:patterns [] :at "2026-09-27T20:05:00Z" :job_id nil}]
+           (renders store "turn-cccccc"))
+        "rendered, no pattern: present with empty patterns, at = rendered-at")))
 
 (deftest turn-record-write-skips-unknown-and-malformed-ids
-  (let [store (temp-turn-store)]
+  (let [store (temp-turn-store)
+        files #(vec (.list (java.io.File. ^String (:dir store))))]
     (prompt-line/register-provider!
      (registration :pattern "t" (fn [_] (segment :pattern "t"
                                                  {:segment/value "~p1"}))))
@@ -125,10 +147,10 @@
       (let [unknown (prompt-line/render! {:agent-id "claude-17" :session-id "s1"
                                           :render-at now :turn-record-id "turn-zzzzzz"})
             malformed (prompt-line/render! {:agent-id "claude-17" :session-id "s1"
-                                            :render-at now :turn-record-id "not an id"})
+                                            :render-at now :turn-record-id "../turn-x"})
             plain (prompt-line/render! {:agent-id "claude-17" :session-id "s1"
                                         :render-at now})]
-        (is (nil? (turn-store/read-record store "turn-zzzzzz")))
+        (is (= [] (files)) "no file of any name was created in the store")
         (is (= (:prompt plain) (:prompt unknown) (:prompt malformed))
             "the render result itself is unchanged by a bad target")
         (is (= (:segments plain) (:segments unknown)))))))
