@@ -534,7 +534,10 @@
     (->> (.listFiles dir)
          (filter #(and (.isFile %)
                        (str/starts-with? (.getName %) "click-run-binding-")
-                       (str/ends-with? (.getName %) ".edn")))
+                       (str/ends-with? (.getName %) ".edn")
+                       ;; L2 route certificates sit beside their binding as
+                       ;; <binding>.route.edn; they are not binding history.
+                       (not (str/ends-with? (.getName %) ".route.edn"))))
          (map (fn [file]
                 (try
                   (edn/read-string (slurp file))

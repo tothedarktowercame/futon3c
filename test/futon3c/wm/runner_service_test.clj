@@ -930,6 +930,18 @@
       (service/launch-route-check-after-close! {:path binding-path :click/id "click-3"})
       (is (= binding-bytes (slurp binding-path)) "byte-identical after a second failed launch"))))
 
+(deftest run-id-uniqueness-scan-ignores-route-sidecars
+  ;; L2b: the route certificate is written as click-run-binding-<id>.edn.route.edn,
+  ;; which the scan's name filter would otherwise read as binding history and
+  ;; throw on when half-written, failing the next click's binding write.
+  (let [dir (io/file service/*click-run-binding-dir*)]
+    (spit (io/file dir "click-run-binding-click-9.edn")
+          (pr-str {:click/id "click-9" :run-id-observation {:value "run-9"}}))
+    (spit (io/file dir "click-run-binding-click-9.edn.route.edn")
+          "{:click/id \"click-9\" :verdict")
+    (is (= ["click-9"] (#'service/existing-run-id-clicks dir "click-10" "run-9"))
+        "the unreadable route sidecar is neither read nor counted")))
+
 (deftest active-self-heal-missing-authority-refuses-before-ration-callback
   (let [issued (atom 0)
         resolver (fn [sym]
