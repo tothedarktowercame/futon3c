@@ -301,8 +301,10 @@
         bound-opts))))
 
 (defn meta-self-heal-preflight!
-  "Refuse an unserviceable active injury before click identity allocation and
-  before the ordinary ration callback can run."
+  "Observe self-heal readiness before ordinary click identity allocation.
+
+  An ordinary route retains F2a's typed dedicated-self-heal absence; actual
+  readiness failures still refuse before the ration callback."
   [opts]
   (let [configured (assoc opts
                           :meta-injury-ledger-path
@@ -310,7 +312,8 @@
                               "/home/joe/code/futon2/data/wm-meta-injuries/ledger.edn")
                           :meta-repair-transaction-path
                           (or (:meta-repair-transaction-path opts)
-                              "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn"))
+                              "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn")
+                          :meta-self-heal/readiness-route :ordinary)
         readiness-fn (try
                        (*resolve-var*
                         'futon2.aif.meta-self-heal-production/production-readiness)
@@ -328,7 +331,9 @@
                        :error (:reason readiness)
                        :before-ration-spend? true
                        :readiness readiness})))
-    configured))
+    (cond-> configured
+      (:self-heal readiness) (assoc :meta-self-heal-readiness
+                                    (:self-heal readiness)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Cast preflight. Failed runs never refund a grant, so the endpoint rejects

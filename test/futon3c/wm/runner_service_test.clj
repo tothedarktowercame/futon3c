@@ -877,3 +877,49 @@
         (is (= :meta-self-heal/production-config-required (:error failure)))
         (is (true? (:before-ration-spend? failure)))
         (is (zero? @issued))))))
+
+(deftest ordinary-click-carries-f2a-self-heal-absence-to-the-runner
+  ;; Historical pin: wm-click-07653f2a was refused before a run id after the
+  ;; 08:19Z active-injury ledger; this is a hermetic F2a result-shape seam.
+  (let [seen (atom nil)
+        run! (fn [opts]
+               (reset! seen opts)
+               {:attempt-id "f2b-ordinary" :outcome :ordinary-selected})
+        base (resolver run! (fn [_] {:selected-policy-id "ordinary-f2b"}))
+        f2a-resolver (fn [sym]
+                       (if (= sym 'futon2.aif.meta-self-heal-production/production-readiness)
+                         (fn [_] {:status :ready
+                                  :self-heal {:status :absent
+                                              :absent-terms [:diagnosis-port
+                                                             :acceptance-proposal-port
+                                                             :acceptance-review-port]}})
+                         (base sym)))]
+    (binding [service/*resolve-var* f2a-resolver]
+      (let [{:keys [click-id status]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :queued status))
+        (is (= :completed (:status (service/await-click! click-id))))
+        (is (= :ordinary (:meta-self-heal/readiness-route @seen)))
+        (is (= {:status :absent
+                :absent-terms [:diagnosis-port
+                               :acceptance-proposal-port
+                               :acceptance-review-port]}
+               (:meta-self-heal-readiness @seen)))))))
+
+(deftest ledger-unreadable-still-refuses-before-ordinary-ration
+  (let [issued (atom 0)
+        resolver (fn [sym]
+                   (case (str sym)
+                     "futon2.aif.full-loop-runner/config" identity
+                     "futon2.aif.meta-self-heal-production/production-readiness"
+                     (fn [_] {:status :refused
+                              :reason :meta-self-heal/ledger-unreadable})
+                     nil))]
+    (binding [service/*resolve-var* resolver]
+      (let [failure (try
+                      (service/click! {:ordinary-click/issue!
+                                       (fn [& _] (swap! issued inc))})
+                      nil
+                      (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+        (is (= 503 (:status failure)))
+        (is (= :meta-self-heal/ledger-unreadable (:error failure)))
+        (is (zero? @issued))))))
