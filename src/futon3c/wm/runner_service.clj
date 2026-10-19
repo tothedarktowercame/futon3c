@@ -270,6 +270,36 @@
       (catch Throwable _
         bound-opts))))
 
+(defn meta-self-heal-preflight!
+  "Refuse an unserviceable active injury before click identity allocation and
+  before the ordinary ration callback can run."
+  [opts]
+  (let [configured (assoc opts
+                          :meta-injury-ledger-path
+                          (or (:meta-injury-ledger-path opts)
+                              "/home/joe/code/futon2/data/wm-meta-injuries/ledger.edn")
+                          :meta-repair-transaction-path
+                          (or (:meta-repair-transaction-path opts)
+                              "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn"))
+        readiness-fn (try
+                       (*resolve-var*
+                        'futon2.aif.meta-self-heal-production/production-readiness)
+                       (catch Throwable _ nil))
+        ;; Hermetic service tests replace *resolve-var* with a deliberately
+        ;; partial resolver. Production's requiring-resolve must find this
+        ;; function; a partial injected resolver may explicitly provide the
+        ;; refusal it wants to exercise.
+        readiness (if readiness-fn
+                    (readiness-fn configured)
+                    {:status :ready :reason :injected-partial-resolver})]
+    (when (= :refused (:status readiness))
+      (throw (ex-info "WM click refused before ration: self-heal is not serviceable"
+                      {:status 503
+                       :error (:reason readiness)
+                       :before-ration-spend? true
+                       :readiness readiness})))
+    configured))
+
 ;; ---------------------------------------------------------------------------
 ;; Cast preflight. Failed runs never refund a grant, so the endpoint rejects
 ;; known-bad casts and the runner owns the issue callback after its fresh,
@@ -921,6 +951,7 @@
   (let [opts (if (:ordinary-click/issue! opts)
                (admit-ordinary-click-trigger! opts)
                opts)
+        opts (meta-self-heal-preflight! (configured-runner-opts opts))
         opts (admit-run-id! opts)
         idem (:idempotency-key opts)
         payload (or (:acceptance-payload opts)

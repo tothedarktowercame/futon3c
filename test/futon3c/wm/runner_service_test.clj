@@ -798,3 +798,23 @@
         (is (= before (slurp (:path close-binding))))
         (is (= :reviewer-falsifier-failed (:outcome (edn/read-string before))))
         (is (= :failed (get-in sidecar [:report-card :status])))))))
+
+(deftest active-self-heal-missing-authority-refuses-before-ration-callback
+  (let [issued (atom 0)
+        resolver (fn [sym]
+                   (case (str sym)
+                     "futon2.aif.full-loop-runner/config" identity
+                     "futon2.aif.meta-self-heal-production/production-readiness"
+                     (fn [_] {:status :refused
+                              :reason :meta-self-heal/production-config-required
+                              :absent-terms [:repair-ports]})
+                     nil))]
+    (binding [service/*resolve-var* resolver]
+      (let [failure (try
+                      (service/click! {:ordinary-click/issue!
+                                       (fn [& _] (swap! issued inc))})
+                      nil
+                      (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+        (is (= :meta-self-heal/production-config-required (:error failure)))
+        (is (true? (:before-ration-spend? failure)))
+        (is (zero? @issued))))))
