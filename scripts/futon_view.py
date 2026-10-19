@@ -23,8 +23,10 @@ import collections
 import datetime
 import json
 import os
+import re
 import shutil
 import sys
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -64,21 +66,39 @@ def session_patterns(session):
                 seen.add(pid)
         for pid in seen:
             out[pid]["turns"] += 1
-    cards = [(tf.at_key(r), tf.body_of(r)) for r in rows if tf.body_of(r).get("event") == "agent-card"]
-    card = max(cards, key=lambda x: x[0])[1] if cards else None
-    return out, card
+    cards = sorted(((tf.at_key(r), tf.body_of(r)) for r in rows if tf.body_of(r).get("event") == "agent-card"),
+                   key=lambda x: x[0])
+    return out, (cards[-1][1] if cards else None), purpose_since(cards)
+
+
+def card_purpose(body):
+    return ((((body or {}).get("card") or {}).get("standing") or {}).get("purpose") or {}).get("text") or None
+
+
+def purpose_since(cards):
+    """When the newest card's purpose was first stated: the earliest card of
+    the unbroken run, ending at the newest, that carries the same text."""
+    if not cards:
+        return None
+    text, since = card_purpose(cards[-1][1]), cards[-1][0]
+    for at, body in reversed(cards[:-1]):
+        if card_purpose(body) != text:
+            break
+        since = at
+    return since
 
 
 STATE = os.path.expanduser("~/code/data/futon3c/futon-view-sessions.json")
 
 
 def session_entry(session, clock_row):
-    pats, card = session_patterns(session)
+    pats, card, purpose_at = session_patterns(session)
     st = ((card or {}).get("card") or {}).get("standing") or {}
     return {"target": (clock_row or {}).get("target"),
             "agent": ((clock_row or {}).get("agent") or "").replace("agent:", "") or None,
             "at": (clock_row or {}).get("at") or 0,
             "purpose": (st.get("purpose") or {}).get("text") or None,
+            "purpose_at": purpose_at,
             "patterns": {p: {"turns": v["turns"], "sources": sorted(v["sources"])} for p, v in pats.items()}}
 
 
@@ -105,7 +125,8 @@ def aggregate(sessions):
                 cell["sources"] |= set(v["sources"])
         a = e.get("agent")
         if a and (a not in agents or e["at"] > agents[a]["at"]):
-            agents[a] = {"session": sid, "target": e.get("target"), "at": e["at"], "purpose": e.get("purpose")}
+            agents[a] = {"session": sid, "target": e.get("target"), "at": e["at"], "purpose": e.get("purpose"),
+                         "purpose_at": e.get("purpose_at")}
     return {
         "built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "sessions": len(sessions),
@@ -114,6 +135,42 @@ def aggregate(sessions):
                              for t, ps in links.items()},
         "agents": agents,
     }
+
+
+PACKET_HEAD = re.compile(r"^From [\w-]+(?: \([^)]*\))?[:.]\s*")
+
+
+def job_line(job):
+    """The agent's newest invoke job as {by, at, state, line}: who sent it,
+    when, and the packet's first line (its "From <id>:" prefix dropped)."""
+    if not job:
+        return None
+    prompt = next((e.get("text") for e in job.get("events") or [] if e.get("type") == "prompt"), "") or ""
+    first = next((l.strip() for l in prompt.splitlines() if l.strip()), "")
+    return {"by": job.get("caller"), "at": job.get("started-at") or job.get("created-at"),
+            "state": job.get("state"), "line": PACKET_HEAD.sub("", first)[:160]}
+
+
+def with_jobs(agents, newest_job):
+    """Attach each agent's current job. A seat keeps one session across jobs,
+    so its last 馬 purpose may describe an earlier job: keep the purpose only
+    when it was first stated after the current job started."""
+    for a, v in agents.items():
+        job = job_line(newest_job(a))
+        since = v.pop("purpose_at", None)
+        if job:
+            v["job"] = job
+            if not (since and job["at"] and since >= tf.at_key({"evidence/at": job["at"]})):
+                v["purpose"] = None
+    return agents
+
+
+def newest_job(agent):
+    try:
+        jobs = get_json("/api/alpha/invoke/jobs?limit=1&agent=" + urllib.parse.quote(agent), 10).get("jobs") or []
+    except Exception:
+        return None
+    return jobs[0] if jobs else None
 
 
 def load_state():
@@ -152,7 +209,9 @@ def update(sessions_to_refresh=None, log=print):
             state[sid]["at"] = r.get("at") or 0
             state[sid]["agent"] = (r.get("agent") or "").replace("agent:", "") or state[sid].get("agent")
     save_json(STATE, state)
-    return aggregate(state)
+    view = aggregate(state)
+    with_jobs(view["agents"], newest_job)
+    return view
 
 
 def main(argv=None):

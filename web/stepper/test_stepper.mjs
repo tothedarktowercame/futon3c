@@ -53,6 +53,12 @@ assert.equal(frameModel(missing).parseNote, PARSE_PENDING);
   assert.ok(lines.includes("    near also uses p/b  (derived, 2 session(s) 5 turn(s))"));
   assert.ok(!lines.some(l => l.includes("here also uses")));
   assert.deepEqual(zoomLines({}, null, null), []);
+  // a current job leads the line; the 馬 purpose follows only when futon_view kept it
+  view.agents["claude-16"].job = {by: "claude-3", at: "2026-10-19T02:08:11.5Z", state: "done", line: "one small job"};
+  const withJob = zoomLines({retrieved: [{id: "p/a"}]}, graph, view, "claude-3");
+  assert.ok(withJob.includes("    claude-16: job from claude-3 02:08Z (done): one small job · 馬: measure delivery"));
+  view.agents["claude-16"].purpose = null;
+  assert.ok(zoomLines({}, graph, view, "claude-3").includes("    claude-16: job from claude-3 02:08Z (done): one small job"));
 }
 // 馬's card: settled first, held counts shown, absent when there is none
 {

@@ -358,8 +358,14 @@ export function zoomLines(frame, graph, view, agentId) {
         .sort((x, y) => (y[1].at || 0) - (x[1].at || 0)).slice(0, 2);
     if (!others.length)
         out.push("    (no one else on this work)");
-    for (const [a, v] of others)
-        out.push(`    ${a}: ${v.purpose || "(no 馬 card yet)"}`);
+    // the agent's current job first: a seat keeps its session across jobs, so a
+    // 馬 purpose is shown only when futon_view.py found it newer than the job
+    for (const [a, v] of others) {
+        const j = v.job;
+        out.push(j ? `    ${a}: job from ${j.by || "?"}${j.at ? ` ${j.at.slice(11, 16)}Z` : ""} (${j.state || "?"}): ${j.line || "(no packet text)"}`
+            + (v.purpose ? ` · 馬: ${v.purpose}` : "")
+            : `    ${a}: ${v.purpose || "(no 馬 card yet)"}`);
+    }
     out.push("3 · related missions sharing a pattern this turn retrieved → pointer only");
     const mineP = new Set([
         ...(frame.retrieved || []).map(r => r.id || ""),
