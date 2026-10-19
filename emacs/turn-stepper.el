@@ -64,6 +64,18 @@ The value is passed to `display-buffer-in-side-window'."
   :type 'number
   :group 'turn-stepper)
 
+(defcustom turn-stepper-follow-active-repl t
+  "When non-nil, a turn recorded in another REPL moves the visible stepper.
+The stepper follows the operator: a turn recorded from a REPL buffer
+other than the stepper's source switches the stepper to that buffer's
+session, exactly as `turn-stepper' run there would (set session and
+source, fetch frames asynchronously, show the newest frame).  When nil,
+the stepper stays on the session and source buffer it was opened on.
+A switch is never made while a frames fetch is running; it happens on
+the next recorded turn instead.  A closed stepper is never reopened."
+  :type 'boolean
+  :group 'turn-stepper)
+
 ;;; ---------------------------------------------------------------- state
 
 (defvar agent-chat--pending-process)
@@ -708,18 +720,37 @@ Move to a newly appended frame only when the reader was on the last frame."
 
 (defun turn-stepper--turn-recorded (path)
   "Read the new frame at PATH asynchronously when its stepper is visible.
+With `turn-stepper-follow-active-repl' on, a turn recorded from a REPL
+buffer other than the stepper's source first switches the visible
+stepper to that buffer's session (an asynchronous refetch), rather than
+appending to the old session's frames.  If a frames fetch is already
+running, no switch is made now; it happens on the next recorded turn.
 Failures are reported once and never escape the process sentinel."
   (let* ((source (current-buffer))
          (buf (get-buffer turn-stepper-buffer-name))
          (session (and (file-readable-p path)
                        (ignore-errors
-                         (alist-get 'session_id (json-read-file path))))))
-    (when (and session buf (get-buffer-window buf t)
-               (not (get-process "turn-stepper-frames"))
-               (not (get-process "turn-stepper-one-record"))
-               (with-current-buffer buf
-                 (and (equal session turn-stepper--session-id)
-                      (eq source turn-stepper--source-buffer))))
+                         (alist-get 'session_id (json-read-file path)))))
+         (fetch-running (or (get-process "turn-stepper-frames")
+                            (get-process "turn-stepper-one-record"))))
+    (cond
+     ;; Follow the operator: a different REPL just recorded a turn, so
+     ;; move the visible stepper onto that REPL's session.
+     ((and turn-stepper-follow-active-repl
+           session buf (get-buffer-window buf t)
+           (buffer-live-p source)
+           (not fetch-running)
+           (with-current-buffer buf
+             (not (and (equal session turn-stepper--session-id)
+                       (eq source turn-stepper--source-buffer)))))
+      (turn-stepper--start-fetch session source))
+     ;; Existing behaviour: append the frame to the visible stepper that
+     ;; reads this session from this very source buffer.
+     ((and session buf (get-buffer-window buf t)
+           (not fetch-running)
+           (with-current-buffer buf
+             (and (equal session turn-stepper--session-id)
+                  (eq source turn-stepper--source-buffer))))
       (let ((output (generate-new-buffer " *turn-stepper-one-record-output*"))
             (stderr (get-buffer-create " *turn-stepper-one-record-stderr*")))
         (make-process
@@ -746,7 +777,7 @@ Failures are reported once and never escape the process sentinel."
                    (error
                     (message "turn-stepper: new-turn frame failed: %s"
                              (error-message-string err))))
-               (when (buffer-live-p output) (kill-buffer output))))))))))
+               (when (buffer-live-p output) (kill-buffer output)))))))))))
 
 (add-hook 'session-mode-turn-recorded-functions #'turn-stepper--turn-recorded)
 
