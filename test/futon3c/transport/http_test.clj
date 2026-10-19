@@ -1743,6 +1743,30 @@
       (is (= "done" (:state job)))
       (is (= "codex-job-1" (:agent-id job))))))
 
+(deftest invoke-jobs-list-filters-by-agent
+  (testing "GET /api/alpha/invoke/jobs?agent=ID windows per agent, not per ledger"
+    ;; The bad case this exists for (2026-10-19): one followed agent's job,
+    ;; then more jobs for other seats than the poll window holds. Unfiltered,
+    ;; the followed job has fallen out of the window; filtered, it is there.
+    (register-mock-agent! "codex-followed" :codex)
+    (register-mock-agent! "codex-noisy" :codex)
+    (let [handler (make-handler)
+          invoke! (fn [aid prompt]
+                    (-> (post handler "/api/alpha/invoke"
+                              (json/generate-string {"agent-id" aid "prompt" prompt}))
+                        parse-body :job-id))
+          followed-job (invoke! "codex-followed" "the bell to follow")
+          _ (dotimes [i 4] (invoke! "codex-noisy" (str "reading job " i)))
+          unfiltered (parse-body (get-req-with-query handler "/api/alpha/invoke/jobs" "limit=3"))
+          filtered (parse-body (get-req-with-query handler "/api/alpha/invoke/jobs"
+                                                   "limit=3&agent=codex-followed"))]
+      (is (string? followed-job))
+      (is (not (contains? (set (map :job-id (:jobs unfiltered))) followed-job))
+          "with a shared window the followed job has already been pushed out")
+      (is (= "codex-followed" (:agent-id filtered)))
+      (is (= [followed-job] (map :job-id (:jobs filtered))))
+      (is (every? #(= "codex-followed" (:agent-id %)) (:jobs filtered))))))
+
 (deftest invoke-job-artifact-ref-preserves-default-futon-matching
   (testing "default futon mode does not treat mfuton gitlab issue URLs as canonical artifact refs"
     (let [handler (make-handler)

@@ -22,6 +22,7 @@
 
 (require 'json)
 (require 'subr-x)
+(require 'url-util)
 
 (defgroup agent-follow nil
   "Replay Agency invoke-job events into agent REPL buffers."
@@ -147,6 +148,19 @@ them out of the windowed poll response.")
        (and (boundp 'agent-chat-agency-base-url) agent-chat-agency-base-url)
        "http://localhost:7070")))
 
+(defun agent-follow--jobs-url (&optional agent-id)
+  "URL of the jobs window this buffer polls: the newest
+`agent-follow-jobs-limit' jobs of AGENT-ID (default `agent-follow--agent-id').
+The window is per agent on purpose: an unfiltered window is shared by every
+seat, and once the 象/馬 reading jobs ran at one a minute a codex-68 bell
+fell out of a 10-job window before it started (2026-10-19)."
+  (let ((aid (or agent-id agent-follow--agent-id)))
+    (format "%s/api/alpha/invoke/jobs?limit=%d%s"
+            (agent-follow--agency-url) agent-follow-jobs-limit
+            (if (and (stringp aid) (not (string-empty-p aid)))
+                (concat "&agent=" (url-hexify-string aid))
+              ""))))
+
 (defun agent-follow--detect-agent-id ()
   "Agent id for the current buffer: the repl's buffer-local id, else
 parse a *foo-repl:AGENT* style buffer name."
@@ -237,6 +251,10 @@ Never touches the progress line while the REPL streams its own turn."
         (unless agent-follow--progress-jobs
           (agent-chat-remove-thinking))))))
 
+(defun agent-follow--open-state-p (state)
+  "Non-nil when the ledger STATE says the job has not ended."
+  (member state '("announced" "accepted" "queued" "activating" "running")))
+
 (defun agent-follow--render-jobs (jobs)
   "Render new events from JOBS (a list of job alists) into this buffer."
   (dolist (job (reverse jobs)) ; oldest first
@@ -267,11 +285,15 @@ Never touches the progress line while the REPL streams its own turn."
           (puthash job-id max-seq agent-follow--seen)
           ;; Pin any job still emitting events, whatever its state — the cap
           ;; marks jobs "failed" while the lane keeps working. Unpin on done.
+          ;; A job the ledger itself calls open (accepted, queued, running)
+          ;; stays pinned while silent: a bell that waited 16 min in the
+          ;; queue emitted nothing, lost its pin at 15 min, and then ran
+          ;; unseen (codex-68, 2026-10-19).
           (when agent-follow--live-jobs
             (cond
              ((equal state "done")
               (remhash job-id agent-follow--live-jobs))
-             (new-events
+             ((or new-events (agent-follow--open-state-p state))
               (puthash job-id (float-time) agent-follow--live-jobs))))
           (agent-follow--update-progress
            job-id caller (equal state "running")
@@ -410,10 +432,8 @@ by this poll, so a lost sentinel cannot wedge the buffer indefinitely."
                 agent-follow--last-poll-at (float-time)))
         (let (outbuf)
           (condition-case err
-              (let* ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
-                                  (with-current-buffer buffer
-                                    (agent-follow--agency-url))
-                                  agent-follow-jobs-limit))
+              (let* ((url (with-current-buffer buffer
+                            (agent-follow--jobs-url)))
                      (_ (setq outbuf
                               (generate-new-buffer " *agent-follow*")))
                      (process
@@ -445,8 +465,7 @@ by this poll, so a lost sentinel cannot wedge the buffer indefinitely."
 (defun agent-follow--mark-history-seen ()
   "Mark all finished jobs as fully seen so enabling the mode replays only
 jobs still in flight plus anything new."
-  (let ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
-                     (agent-follow--agency-url) agent-follow-jobs-limit))
+  (let ((url (agent-follow--jobs-url))
         (buffer (current-buffer)))
     (make-process
      :name "agent-follow-init"

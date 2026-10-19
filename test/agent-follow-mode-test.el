@@ -87,3 +87,41 @@
 
 (provide 'agent-follow-mode-test)
 ;;; agent-follow-mode-test.el ends here
+
+(ert-deftest agent-follow-jobs-url-is-per-agent ()
+  (with-temp-buffer
+    (let ((agent-follow--agent-id "codex-68")
+          (agent-follow-jobs-limit 10))
+      (cl-letf (((symbol-function 'agent-follow--agency-url)
+                 (lambda () "http://agency.test")))
+        (should (equal (agent-follow--jobs-url)
+                       "http://agency.test/api/alpha/invoke/jobs?limit=10&agent=codex-68"))
+        (should (equal (agent-follow--jobs-url "象-sonnet")
+                       (concat "http://agency.test/api/alpha/invoke/jobs?limit=10&agent="
+                               (url-hexify-string "象-sonnet"))))))))
+
+(ert-deftest agent-follow-pin-survives-silence-while-job-open ()
+  "A queued job that emits nothing for longer than the grace keeps its pin;
+a failed one that went quiet does not."
+  (with-temp-buffer
+    (let ((agent-follow--agent-id "codex-68")
+          (agent-follow--seen (make-hash-table :test 'equal))
+          (agent-follow--live-jobs (make-hash-table :test 'equal))
+          (agent-follow--progress-jobs nil)
+          (agent-follow-include-own t)
+          (stale (- (float-time) 2000)))
+      (puthash "job-queued" 1 agent-follow--seen)
+      (puthash "job-failed" 1 agent-follow--seen)
+      (puthash "job-queued" stale agent-follow--live-jobs)
+      (puthash "job-failed" stale agent-follow--live-jobs)
+      (cl-letf (((symbol-function 'agent-follow--insert-message)
+                 (lambda (&rest _) (ert-fail "nothing new to render")))
+                ((symbol-function 'agent-chat-update-progress) (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-remove-thinking) (lambda (&rest _) nil)))
+        (agent-follow--render-jobs
+         (list '((job-id . "job-queued") (agent-id . "codex-68") (caller . "wm-click-loop")
+                 (state . "queued") (events . (((seq . 1) (type . "accepted")))))
+               '((job-id . "job-failed") (agent-id . "codex-68") (caller . "wm-click-loop")
+                 (state . "failed") (events . (((seq . 1) (type . "accepted"))))))))
+      (should (> (gethash "job-queued" agent-follow--live-jobs) stale))
+      (should (= (gethash "job-failed" agent-follow--live-jobs) stale)))))

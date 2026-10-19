@@ -2844,14 +2844,23 @@
   (get-in @!invoke-jobs-ledger [:jobs (str job-id)]))
 
 (defn- recent-invoke-jobs
-  [limit]
-  (ensure-invoke-jobs-ledger!)
-  (let [ledger @!invoke-jobs-ledger
-        ids (take-last (max 1 (int limit)) (:job-order ledger))]
-    (->> ids
-         reverse
-         (map #(get-in ledger [:jobs %]))
-         (remove nil?))))
+  "Newest LIMIT jobs, newest first. With AGENT-ID, the newest LIMIT jobs OF
+   THAT AGENT: the unfiltered window is shared by every seat, and once the
+   象/馬 reading jobs ran at one a minute a codex-68 bell fell out of a
+   10-job window before it started, so the operator's follow-mode never saw
+   it run (2026-10-19)."
+  ([limit] (recent-invoke-jobs limit nil))
+  ([limit agent-id]
+   (ensure-invoke-jobs-ledger!)
+   (let [ledger @!invoke-jobs-ledger
+         aid (some-> agent-id str str/trim not-empty)
+         jobs (->> (:job-order ledger)
+                   (map #(get-in ledger [:jobs %]))
+                   (remove nil?))
+         jobs (if aid
+                (filter #(= aid (str (:agent-id %))) jobs)
+                jobs)]
+     (reverse (take-last (max 1 (int limit)) jobs)))))
 
 (defn- ms-setting
   "Raw millisecond setting for NAME: a System property first (settable on a
@@ -7433,15 +7442,18 @@
     (json-response 200 (assoc graph :ok true))))
 
 (defn- handle-invoke-jobs
-  "GET /api/alpha/invoke/jobs?limit=N — list recent invoke jobs."
+  "GET /api/alpha/invoke/jobs?limit=N[&agent=ID] — list recent invoke jobs,
+   optionally only those addressed to agent ID (the window is then per agent)."
   [request]
   (let [params (parse-query-params request)
         limit (or (parse-int (get params "limit")) 20)
-        jobs (->> (recent-invoke-jobs limit)
+        agent-id (some-> (get params "agent") str str/trim not-empty)
+        jobs (->> (recent-invoke-jobs limit agent-id)
                   (mapv invoke-job-public-view))]
-    (json-response 200 {:ok true
-                        :count (count jobs)
-                        :jobs jobs})))
+    (json-response 200 (cond-> {:ok true
+                                :count (count jobs)
+                                :jobs jobs}
+                         agent-id (assoc :agent-id agent-id)))))
 
 (defn- handle-invoke-job
   "GET /api/alpha/invoke/jobs/:id — return one invoke-job snapshot."
