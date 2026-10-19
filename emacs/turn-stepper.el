@@ -685,7 +685,8 @@ current frame on screen instead of a loading message.  TRIES is how many
 more times a failure is retried (default `turn-stepper-reload-retries')."
   (unless quiet
     (turn-stepper--loading-buffer session-id source))
-  (let* ((output (generate-new-buffer " *turn-stepper-output*"))
+  (let* ((started (current-time))
+         (output (generate-new-buffer " *turn-stepper-output*"))
          (proc
           (make-process
            :name "turn-stepper-frames"
@@ -704,10 +705,14 @@ more times a failure is retried (default `turn-stepper-reload-retries')."
                                 (turn-stepper--ready-frames
                                  (turn-stepper--parse-frames (buffer-string))))))
                          (puthash session-id frames turn-stepper--cache)
+                         (setq turn-stepper--fetched-at started)
                          (turn-stepper--open session-id source
                                              (turn-stepper--index-after-reload
                                               session-id (length frames))
-                                             quiet))
+                                             quiet)
+                         ;; An update skipped while this fetch ran: catch up now.
+                         (when turn-stepper--dirty
+                           (run-at-time 0 nil #'turn-stepper--reconcile)))
                      (progn
                        (let ((left (if tries tries turn-stepper-reload-retries)))
                          (message "turn-stepper: reload failed (%s); frames kept%s"
@@ -732,6 +737,53 @@ more times a failure is retried (default `turn-stepper-reload-retries')."
                    (kill-buffer output))))))))
     proc))
 
+(defvar turn-stepper--dirty nil
+  "Non-nil when a turn was recorded or a reading landed while a fetch was
+running, so its update was skipped: the next fetch's end fetches again.")
+
+(defvar turn-stepper--fetched-at nil
+  "When the last successful frames fetch started (a Lisp time value).")
+
+(defcustom turn-stepper-reconcile-interval 20
+  "Seconds between checks that a visible stepper matches the turn records.
+A check refetches (about 1 s of python) only when the record store changed
+since the last fetch, or an update was skipped while a fetch ran: the
+per-event updates alone could miss a turn and never catch up (Joe,
+2026-10-19: the Emacs stepper sat one turn behind the web page).  0 or nil
+turns the check off."
+  :type '(choice (const :tag "Off" nil) integer)
+  :group 'turn-stepper)
+
+(defun turn-stepper--store-changed-since (time)
+  "Has the turn-record store changed since TIME?  The store writes each
+record by atomic rename, so the directory's own mtime moves on every write."
+  (let ((dir (expand-file-name "~/.emacs-graph/session-turn-analysis")))
+    (or (null time)
+        (let ((m (file-attribute-modification-time (file-attributes dir))))
+          (and m (time-less-p time m))))))
+
+(defun turn-stepper--reconcile ()
+  "Refetch a visible, idle stepper whose frames may be stale."
+  (let ((buf (get-buffer turn-stepper-buffer-name)))
+    (when (and buf (get-buffer-window buf t)
+               (not (get-process "turn-stepper-frames"))
+               (not (get-process "turn-stepper-one-record")))
+      (with-current-buffer buf
+        (when (and turn-stepper--session-id
+                   (or turn-stepper--dirty
+                       (turn-stepper--store-changed-since turn-stepper--fetched-at)))
+          (setq turn-stepper--dirty nil)
+          (turn-stepper--start-fetch turn-stepper--session-id
+                                     turn-stepper--source-buffer t))))))
+
+(defvar turn-stepper--reconcile-timer nil)
+(when (timerp turn-stepper--reconcile-timer)
+  (cancel-timer turn-stepper--reconcile-timer))
+(setq turn-stepper--reconcile-timer
+      (and turn-stepper-reconcile-interval (> turn-stepper-reconcile-interval 0)
+           (run-at-time turn-stepper-reconcile-interval turn-stepper-reconcile-interval
+                        #'turn-stepper--reconcile)))
+
 (defun turn-stepper--index-after-reload (session-id count)
   "Frame to show after a reload giving COUNT frames for SESSION-ID.
 The newest frame, unless the stepper is on an older frame of the same
@@ -755,9 +807,10 @@ a closed stepper stays closed."
                        (alist-get 'session_id
                                   (json-read-file path)))))
         (with-current-buffer buf
-          (when (and session (equal session turn-stepper--session-id)
-                     (not (get-process "turn-stepper-frames")))
-            (turn-stepper--start-fetch session turn-stepper--source-buffer t)))))))
+          (when (and session (equal session turn-stepper--session-id))
+            (if (get-process "turn-stepper-frames")
+                (setq turn-stepper--dirty t)
+              (turn-stepper--start-fetch session turn-stepper--source-buffer t))))))))
 
 (add-hook 'session-mode-analysis-landed-functions #'turn-stepper--reading-landed)
 
@@ -806,6 +859,10 @@ Failures are reported once and never escape the process sentinel."
          (fetch-running (or (get-process "turn-stepper-frames")
                             (get-process "turn-stepper-one-record"))))
     (cond
+     ;; A fetch is running: this turn's update would be lost, so note it;
+     ;; the running fetch's end (or the next reconcile) catches up.
+     ((and fetch-running session buf (get-buffer-window buf t))
+      (setq turn-stepper--dirty t))
      ;; Follow the operator: a different REPL just recorded a turn, so
      ;; move the visible stepper onto that REPL's session.
      ((and turn-stepper-follow-active-repl
