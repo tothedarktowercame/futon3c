@@ -107,16 +107,26 @@
       :else {:status (:status parsed) :payload (:payload parsed)
              :session-id (:session-id result) :job-id job-id})))
 
+(defn- producer-prompt [operation request]
+  (str "Dedicated META " (name operation) ". Return exactly one EDN map and no prose. "
+       "Do not select ordinary work, execute any command, or claim a repair. "
+       (case operation
+         :diagnosis
+         "Success must be {:status :succeeded :diagnosis <map>}. A refusal/failure must be typed. "
+         :acceptance-proposal
+         "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value>}}. The specification is not run and is not accepted. "
+         :acceptance-review
+         "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test ...}, echoing those five exact request values. A refusal/failure must be typed. "
+         "Unknown producer operation; return typed refusal. ")
+       "Bind every returned identity and pin to this request.\n\n" (pr-str request)))
+
 (defn- producer-invoke!
   "Serving adapter for evidence production/admission, separate from repair
   execution.  It returns only the typed map the futon2 producer expects; it
   never executes a proposed acceptance command."
   [seat operation request]
   (let [agent (reg/get-agent seat)
-        prompt (str "Dedicated META " operation ". Return exactly one EDN map; "
-                    "do not select ordinary work, execute commands, or claim a repair. "
-                    "Bind every returned identity and pin to this request.\n\n"
-                    (pr-str request))
+        prompt (producer-prompt operation request)
         result (when (and agent (true? (:agent/invoke-ready? agent)))
                  (reg/invoke-agent! seat prompt {:mode "work" :caller "war-machine"
                                                   :session-id (:agent/session-id agent)}))
@@ -159,9 +169,9 @@
     (if-not (= :ready (:status ready)) ready
       {:status :ready :readiness ready
        :agency-invoke-fn agency-invoke!
-       :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) "diagnosis" %)
-       :meta-acceptance-fn #(producer-invoke! (:author (:cast ready)) "acceptance proposal" %)
-       :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) "acceptance review" %)
+       :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
+       :meta-acceptance-fn #(producer-invoke! (:author (:cast ready)) :acceptance-proposal %)
+       :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) :acceptance-review %)
        :repair-enact-fn enact!
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]

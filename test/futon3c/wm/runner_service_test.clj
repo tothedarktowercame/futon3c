@@ -8,6 +8,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]
             [futon3c.wm.runner-service :as service]
+            [futon3c.wm.meta-self-heal-adapters :as self-heal-adapters]
             [futon3c.wm.ordinary-click-budget :as budget]
             [futon3c.wm.machinery-execution-cohort :as cohort])
   (:import [java.time Instant]))
@@ -63,6 +64,38 @@
   (json/parse-string (:body response) true))
 
 (declare resolver)
+
+(deftest meta-producer-prompts-declare-operation-specific-edn-contracts
+  (let [prompts (atom [])
+        request {:injury-id "injury-1"
+                 :source-record-pin {:path "source.edn" :sha256 (apply str (repeat 64 "a"))}
+                 :diagnosis-evidence-pin {:path "diagnosis.edn" :sha256 (apply str (repeat 64 "b"))}
+                 :proposal-evidence-pin {:path "proposal.edn" :sha256 (apply str (repeat 64 "c"))}
+                 :acceptance-test {:id "case" :command ["not-run"] :expected :observed}}
+        invoke (fn [_ prompt _]
+                 (swap! prompts conj prompt)
+                 {:ok true :result "{:status :failed :reason :fixture}"})]
+    (with-redefs [reg/get-agent (constantly {:agent/invoke-ready? true
+                                              :agent/session-id "session-1"})
+                  reg/invoke-agent! invoke]
+      (#'self-heal-adapters/producer-invoke! "wm-author" :diagnosis request)
+      (#'self-heal-adapters/producer-invoke! "wm-author" :acceptance-proposal request)
+      (#'self-heal-adapters/producer-invoke! "wm-reviewer" :acceptance-review request))
+    (let [[diagnosis proposal review] @prompts]
+      (is (str/includes? diagnosis ":status :succeeded"))
+      (is (str/includes? diagnosis ":diagnosis"))
+      (is (str/includes? proposal ":status :proposed"))
+      (is (str/includes? proposal ":acceptance-test"))
+      (is (str/includes? proposal ":command"))
+      (is (str/includes? proposal ":expected"))
+      (is (str/includes? review ":status :accepted"))
+      (doseq [key [":injury-id" ":source-record-pin" ":diagnosis-evidence-pin"
+                   ":proposal-evidence-pin" ":acceptance-test"]]
+        (is (str/includes? review key)))
+      (doseq [prompt @prompts]
+        (is (str/includes? prompt "Do not select ordinary work"))
+        (is (str/includes? prompt "execute any command"))
+        (is (str/includes? prompt "claim a repair"))))))
 
 (deftest durable-idempotent-acceptance-is-per-click-not-last-result
   (let [release (promise)
