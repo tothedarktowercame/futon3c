@@ -283,3 +283,34 @@ them, and the alternate takes over."
     (should (session-mode--analysis-benched-p "象-2"))
     (should (equal "象-sonnet" (session-mode--analysis-seat)))
     (should (equal "象-sonnet" (session-mode--analysis-other-seat "象-1")))))
+
+;;; Codex reply capture (2026-10-19): a Codex REPL turn's reply text must
+;;; reach the happened payload like a Claude turn's does.  The capture hook
+;;; lives on codex-repl--emit-assistant-turn-evidence!, the emitter every
+;;  codex reply path funnels through (streamed and unstreamed).
+(ert-deftest session-turn-analysis-test-codex-reply-reaches-dispatch ()
+  "A codex-repl assistant emit feeds the pending turn's reply text.
+Fails when nothing bridges codex-repl--emit-assistant-turn-evidence! to
+session-mode--note-reply-segment: the turn then dispatches with reply nil."
+  (require 'codex-repl)
+  (let ((dispatched nil))
+    (with-temp-buffer
+      (setq-local session-mode--reply-pending-path "/tmp/fake-codex-turn.json"
+                  session-mode--turn-reply-text nil
+                  session-mode--turn-commits-seen nil)
+      (cl-letf (((symbol-function 'codex-repl--emit-turn-evidence!)
+                 (lambda (&rest _) nil))      ; no network in tests
+                ((symbol-function 'session-mode--dispatch-analysis-after-reply)
+                 (lambda (_path response) (push response dispatched)))
+                ((symbol-function 'session-mode--display-analysis)
+                 (lambda (&rest _) nil)))
+        ;; what the codex reply paths (streamed line 4532, unstreamed 3875) call:
+        (codex-repl--emit-assistant-turn-evidence! "REPLY line1\nREPLY line2")
+        (session-mode--on-turn-finished))
+      (should (equal dispatched '("REPLY line1\nREPLY line2"))))))
+
+(ert-deftest session-turn-analysis-test-codex-emitter-is-advised ()
+  "The bridge is installed by loading session-turn-analysis with codex-repl."
+  (require 'codex-repl)
+  (should (advice-member-p 'session-mode--note-reply-segment
+                           'codex-repl--emit-assistant-turn-evidence!)))

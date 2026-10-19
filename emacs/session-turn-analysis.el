@@ -1678,12 +1678,22 @@ happened summary still reads the first lines."
   (setq session-mode--turn-reply-text nil
         session-mode--turn-commits-seen nil))
 
+(defun session-mode--capture-reply-via (emitter)
+  "Advise EMITTER so its TEXT argument feeds the pending turn's reply.
+EMITTER is a symbol whose function takes the reply TEXT as its first
+argument; every reply path of a seat funnels through one such emitter."
+  (advice-add emitter :before #'session-mode--note-reply-segment))
+
 (with-eval-after-load 'agent-chat
   (advice-add 'agent-chat-finish-turn-commits :around #'session-mode--note-turn-commits)
   (advice-add 'agent-chat-finish-turn! :after #'session-mode--on-turn-finished))
 (with-eval-after-load 'claude-repl
-  (advice-add 'claude-repl--emit-assistant-segment-evidence! :before
-              #'session-mode--note-reply-segment))
+  (session-mode--capture-reply-via 'claude-repl--emit-assistant-segment-evidence!))
+(with-eval-after-load 'codex-repl
+  ;; Codex reply paths (streamed and unstreamed) both funnel through this
+  ;; emitter; without the bridge a Codex turn dispatches to 象 with reply ""
+  ;; and its reply acts/ports cannot be computed.
+  (session-mode--capture-reply-via 'codex-repl--emit-assistant-turn-evidence!))
 
 (defun session-mode--turn-commits-snapshot ()
   "Commits made since turn start, computed from `agent-chat--turn-git-heads'.
