@@ -125,7 +125,15 @@
           ;; The production root is futon2/data/wm-meta-injuries/acceptance-runs;
           ;; this binding proves the hermetic test redirects every written log.
           (is (.startsWith path logs))
-          (is (= (#'sut/hex-sha256 bytes) (get-in result [:run-pin :sha256])))))
+          (is (= (#'sut/hex-sha256 bytes) (get-in result [:run-pin :sha256])))
+          ;; The failed transient unit must not be retained: a pinning test
+          ;; exits nonzero on every real admission, and a retained unit per
+          ;; attempt is a leak (codex-2, review of 21057475f).
+          (let [units (:out (clojure.java.shell/sh "systemctl" "--user" "list-units"
+                                                   "--all" "--plain" "--no-pager"
+                                                   "wm-acceptance-fails-*"))]
+            (is (not (str/includes? units "wm-acceptance-fails-"))
+                (str "retained unit(s):\n" units)))))
       (testing "last nonblank output line is intact"
         (is (= "ok" (#'sut/acceptance-summary "\n ok\n\n"))))
       (testing "only clojure.test namespace/optional-var commands are admitted"

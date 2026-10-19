@@ -208,7 +208,11 @@
         output-file (str *acceptance-runs-root* "/." job-id ".pending.log")
         timeout-seconds (max 1 (long (Math/ceil (/ timeout-ms 1000.0))))
         command-text (str/join " " command)
-        launch ["systemd-run" "--user" (str "--unit=" unit)
+        ;; --collect: a unit that exits nonzero (the expected result of a
+        ;; test that pins an injury) is unloaded instead of retained as
+        ;; "loaded failed" for every admission attempt (codex-2 review of
+        ;; 21057475f: three retained units after one test).
+        launch ["systemd-run" "--user" "--collect" (str "--unit=" unit)
                 "--slice=futon-testing.slice" "--property=TasksMax=1280"
                 (str "--property=RuntimeMaxSec=" timeout-seconds "s")
                 "--property=KillMode=control-group" "python3" bounded-test-runner
