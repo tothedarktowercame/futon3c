@@ -55,7 +55,8 @@ After </observations>, output <agent-card>{json}</agent-card> with exactly these
   "packet_vs_purpose": "" when the agent is doing what it was asked, else one sentence on the difference;
   "open_threads": list of short strings, things started and not finished (asks awaiting the user, bells awaiting replies, claims not yet checked);
   "repair": list of short strings, recent failures, mistakes or degraded capability, with what was done about each;
-  "ramifications": list of short strings, consequences of this work for other missions, agents or parts of the codebase.
+  "ramifications": list of short strings, consequences of this work for other missions, agents or parts of the codebase;
+  "work": which piece of KNOWN WORK the operator's turn addresses: {"item": "<exact text of ONE item from the Known Work list>", "quote": "<a short phrase copied word for word from the operator's message>"}, or {"none": "<a few words saying why>"} when it addresses none of them.
 You will be given the previous card. Copy every item that still holds VERBATIM (exact same words), drop items that no longer hold, add new ones. At most 6 items per list."""
 
 
@@ -147,8 +148,10 @@ def cap_window(messages):
             for i, (r, a, t) in enumerate(out)]
 
 
-def user_prompt(history, previous, previous_card=None):
+def user_prompt(history, previous, previous_card=None, known=None):
     parts = ["## New Message History to Observe\n\n" + history + "\n\n---\n"]
+    if known:
+        parts.append("## Known Work\n\n" + "\n".join("- " + k for k in known) + "\n\n---\n")
     if previous_card is not None:
         parts.append("## Previous Agent Card\n\n" + json.dumps(previous_card, ensure_ascii=False, indent=1) + "\n\n---\n")
     if previous:
@@ -176,7 +179,7 @@ def call_model(system, user):
     return j["choices"][0]["message"]["content"], j.get("usage")
 
 
-LLM_KEYS = ("purpose", "packet_vs_purpose", "open_threads", "repair", "ramifications")
+LLM_KEYS = ("purpose", "packet_vs_purpose", "open_threads", "repair", "ramifications", "work")
 
 
 def parse_card(raw):
@@ -259,7 +262,48 @@ def held(items, previous):
     return [{"text": t, "held": before.get(t, 0) + 1} for t in (items or [])]
 
 
-def build_card(agent, session, rows, new_obs, model_card, previous):
+def known_work(clock, previous_card):
+    """The work the next turn could plausibly address: clocked ids, the
+    previous card's purpose, and its open threads and repairs."""
+    out = []
+    st = (previous_card or {}).get("standing", {})
+    if st.get("purpose", {}).get("text"):
+        out.append(st["purpose"]["text"])
+    out += [i["text"] for i in st.get("open_threads") or []]
+    out += [i["text"] for i in st.get("repair") or []]
+    out += [v for v in (clock or {}).values()]
+    seen, uniq = set(), []
+    for x in out:
+        x = str(x).strip()
+        if x and x not in seen:
+            seen.add(x)
+            uniq.append(x)
+    return uniq
+
+
+def check_work(work, known, operator_text):
+    """Check the model's work record. Reject, never drop, so a card always
+    says which piece of work the turn was claimed to address and whether
+    that claim survived checking."""
+    def rejected(why):
+        return {"rejected": why, **(work if isinstance(work, dict) else {"work": work})}
+    if not isinstance(work, dict) or not work:
+        return rejected("no work record")
+    if "none" in work:
+        reason = str(work.get("none") or "").strip()
+        return {"none": reason} if reason else rejected("no work record")
+    item, quote = work.get("item"), work.get("quote")
+    if item not in (known or []):
+        return rejected("item not on card")
+    if not isinstance(quote, str) or not quote.strip():
+        return rejected("quote not in turn")
+    squash = lambda s: re.sub(r"\s+", " ", s)
+    if squash(quote) not in squash(operator_text or ""):
+        return rejected("quote not in turn")
+    return {"item": item, "quote": quote}
+
+
+def build_card(agent, session, rows, new_obs, model_card, previous, work=None):
     """Tiers by settledness: SETTLED (recorded facts), STANDING (judgements
     carried across passes), FRESH (this pass)."""
     prev = previous or {}
@@ -292,6 +336,7 @@ def build_card(agent, session, rows, new_obs, model_card, previous):
         "fresh": {
             "done": done_lines(new_obs),
             "problems": [l.strip().lstrip("*- ").strip() for l in new_obs.splitlines() if "🔴" in l][:6],
+            **({"work": work} if work is not None else {}),
         },
         "institutions": None,  # no such entity in substrate-2 yet (asked Joe, 2026-10-17)
     }
@@ -394,15 +439,22 @@ def observe_session(session, agent="", dry_run=False, log=print):
             model_view = {"purpose": (st.get("purpose") or {}).get("text"),
                           "packet_vs_purpose": st.get("packet_vs_purpose"),
                           **{k: [i["text"] for i in st.get(k) or []] for k in ("open_threads", "repair", "ramifications")}}
-        user = user_prompt(format_history(msgs), previous[-PREVIOUS_CHARS:], model_view)
+        user = user_prompt(format_history(msgs), previous[-PREVIOUS_CHARS:], model_view,
+                           known=known_work(clock_of(agent) if agent else {}, previous_card))
         if dry_run:
             log(user[:3000])
+            known_sec = re.search(r"## Known Work\n.*?\n---", user, re.S)
+            if known_sec:
+                log("\n" + known_sec.group(0))
             continue
         t0 = time.time()
         raw, usage = call_model(system_prompt(harness), user)
         row = observation_row(session, agent, t, raw, usage, time.time() - t0, len(msgs))
         post_evidence(row)
-        card = build_card(agent, session, rows, row["body"]["observations"], parse_card(raw), previous_card)
+        mc = parse_card(raw)
+        known = known_work(clock_of(agent) if agent else {}, previous_card)
+        card = build_card(agent, session, rows, row["body"]["observations"], mc, previous_card,
+                          work=check_work((mc or {}).get("work"), known, turn_text(t)))
         post_evidence(card_row(session, agent, t, card, row["body"]["at"]))
         if not dry_run:
             try:

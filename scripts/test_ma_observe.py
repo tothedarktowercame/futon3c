@@ -60,6 +60,63 @@ S2_TRUNCATED_REPLY = ("For injectivity the essential facts: phi(z) determines z.
                       "z = (rho^2/l^2)(x',y') where ... wait |(x',y')| = rho^2/l. Hmm no:")
 
 
+
+class WorkRecordTest(unittest.TestCase):
+    KNOWN = ["E-prove-memory-useful", "close the stepper gap", "fix the prompt race"]
+    TEXT = ("Please keep going with the work.\nThe stepper window\nis stuck at frame 34.")
+
+    def test_known_work_dedupes_and_includes_ids_purpose_threads_repair(self):
+        prev = {"standing": {"purpose": {"text": "close the stepper gap"},
+                             "open_threads": [{"text": "awaiting Joe on quota"}, {"text": ""}],
+                             "repair": [{"text": "awaiting Joe on quota"}]}}
+        self.assertEqual(ma.known_work({"excursion-id": "E-prove-memory-useful"}, prev),
+                         ["close the stepper gap", "awaiting Joe on quota", "E-prove-memory-useful"])
+
+    def test_check_work_accepts_exact_item_and_verbatim_quote(self):
+        r = ma.check_work({"item": "close the stepper gap",
+                           "quote": "The stepper window"}, self.KNOWN, self.TEXT)
+        self.assertEqual(r, {"item": "close the stepper gap", "quote": "The stepper window"})
+
+    def test_check_work_rejects_paraphrased_item(self):
+        # one word changed: not exactly on the card
+        r = ma.check_work({"item": "close the stepper gaps", "quote": "stuck at frame 34"},
+                          self.KNOWN, self.TEXT)
+        self.assertEqual(r["rejected"], "item not on card")
+
+    def test_check_work_rejects_quote_with_one_word_changed(self):
+        r = ma.check_work({"item": "close the stepper gap", "quote": "stuck at frame 35"},
+                          self.KNOWN, self.TEXT)
+        self.assertEqual(r["rejected"], "quote not in turn")
+
+    def test_check_work_accepts_line_break_for_space(self):
+        r = ma.check_work({"item": "close the stepper gap",
+                           "quote": "The stepper window is stuck"}, self.KNOWN, self.TEXT)
+        self.assertIn("item", r)
+
+    def test_check_work_accepts_none_with_reason_and_rejects_bad_records(self):
+        self.assertEqual(ma.check_work({"none": "general chat"}, self.KNOWN, self.TEXT),
+                         {"none": "general chat"})
+        self.assertEqual(ma.check_work({"none": ""}, self.KNOWN, self.TEXT)["rejected"], "no work record")
+        self.assertEqual(ma.check_work({}, self.KNOWN, self.TEXT)["rejected"], "no work record")
+        self.assertEqual(ma.check_work("work", self.KNOWN, self.TEXT)["rejected"], "no work record")
+        self.assertEqual(ma.check_work({"item": "close the stepper gap"}, self.KNOWN, self.TEXT)
+                         ["rejected"], "quote not in turn")
+
+    def test_parse_card_keeps_work(self):
+        raw = '<agent-card>{"purpose": "p", "work": {"item": "x", "quote": "y"}}</agent-card>'
+        self.assertEqual(ma.parse_card(raw)["work"], {"item": "x", "quote": "y"})
+
+    def test_build_card_puts_checked_work_in_fresh(self):
+        rows = [{"evidence/body": {"event": "observation", "observations": ""}}]
+        with mock.patch.object(ma, "xiang_patterns", return_value={}), \
+             mock.patch.object(ma, "clock_of", return_value={}), \
+             mock.patch.object(ma, "mission_patterns", return_value=[]):
+            card = ma.build_card("a", "s", rows, "", None, None,
+                                 work={"item": "close the stepper gap", "quote": "The stepper window"})
+        self.assertEqual(card["fresh"]["work"],
+                         {"item": "close the stepper gap", "quote": "The stepper window"})
+
+
 class HarnessTest(unittest.TestCase):
     def test_truncated_s2_episode_has_no_verdict(self):
         self.assertIsNone(ma.verdict(S2_TRUNCATED_REPLY))
