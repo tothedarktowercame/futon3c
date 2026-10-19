@@ -735,7 +735,7 @@ stepper; switching back shows it again."
          (text (turn-stepper--render-frame frame 0 1 "s")))
     (should (string-match-p "ALIGNMENT (馬)" text))
     (should (string-match-p
-             "4 asked, 2 answered (1 by quote, 1 by model), 2 not answered · 2 unread"
+             "4 asked, 2 answered (1 by quote, 1 by model), 1 not answered, 1 unread"
              text))
     (should (string-match-p
              (regexp-quote "✓ ask-action \"Please fix the stepper display for the…\" → ㊢ \"done; the alignment row renders one line…\"  [quote]")

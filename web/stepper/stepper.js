@@ -155,10 +155,14 @@ export function alignmentLines(frame) {
     const answered = acts.filter(a => a.verdict === "answered");
     const byQuote = answered.filter(a => a.method === "quote").length;
     const byModel = answered.filter(a => a.method === "model").length;
-    const summary = `${acts.length} asked, ${answered.length} answered `
-        + `(${byQuote} by quote, ${byModel} by model), ${acts.length - answered.length} not answered`;
-    const unread = alignment.unread || 0;
-    const lines = [unread > 0 ? `${summary} · ${unread} unread` : summary];
+    // Each verdict counted on its own: a deferred or unread act is not "not
+    // answered", and the per-act verdicts, not the top-level field, are counted.
+    const count = (v) => acts.filter(a => a.verdict === v).length;
+    const rest = ["deferred", "declined", "not-answered", "unread"]
+        .map(v => [count(v), v === "not-answered" ? "not answered" : v])
+        .filter(([n]) => n > 0).map(([n, label]) => `, ${n} ${label}`).join("");
+    const lines = [`${acts.length} asked, ${answered.length} answered `
+            + `(${byQuote} by quote, ${byModel} by model)${rest}`];
     for (const act of acts) {
         let line = `${VERDICT_GLYPHS[act.verdict || ""] || shown(act.verdict, "?")} `
             + `${shown(act.kind)} "${firstWords(act.text)}"`;

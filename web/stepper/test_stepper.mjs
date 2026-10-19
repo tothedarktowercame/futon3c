@@ -188,7 +188,7 @@ assert.equal(frameModel(stillReading).patterns[0], PATTERNS_PENDING);
   };
   const model = frameModel(withAlignment);
   assert.equal(model.alignmentTitle, "ALIGNMENT (馬-sonnet)");
-  assert.equal(model.alignment[0], "4 asked, 2 answered (1 by quote, 1 by model), 2 not answered · 2 unread");
+  assert.equal(model.alignment[0], "4 asked, 2 answered (1 by quote, 1 by model), 1 not answered, 1 unread");
   assert.equal(model.alignment[1],
     '✓ ask-action "Please fix the stepper display for the…" → ㊢ "done; the alignment row renders one line…"  [quote]');
   assert.equal(model.alignment[2],

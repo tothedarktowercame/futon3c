@@ -395,11 +395,18 @@ frame carries no alignment (the section then stays away, like PORTS)."
                                          answered)))
            (by-model (length (seq-filter (lambda (a) (equal (turn-stepper--aget 'method a) "model"))
                                          answered)))
-           (unread (or (turn-stepper--aget 'unread alignment) 0))
-           (summary (format "%d asked, %d answered (%d by quote, %d by model), %d not answered%s"
-                            (length acts) (length answered) by-quote by-model
-                            (- (length acts) (length answered))
-                            (if (> unread 0) (format " · %d unread" unread) ""))))
+           ;; Each verdict counted on its own: a deferred or unread act is
+           ;; not "not answered"; the per-act verdicts are what is counted.
+           (rest (mapconcat
+                  (lambda (v)
+                    (let ((n (seq-count (lambda (a) (equal (turn-stepper--aget 'verdict a) v))
+                                        acts)))
+                      (if (> n 0)
+                          (format ", %d %s" n (if (equal v "not-answered") "not answered" v))
+                        "")))
+                  '("deferred" "declined" "not-answered" "unread") ""))
+           (summary (format "%d asked, %d answered (%d by quote, %d by model)%s"
+                            (length acts) (length answered) by-quote by-model rest)))
       (concat
        "\n\n"
        (propertize "ALIGNMENT (馬)\n" 'face '(:weight bold))
