@@ -2745,7 +2745,7 @@ not mis-attributed to the human operator.")
 
 (defvar-local agent-chat--queued-operator-turns nil
   "FIFO of turns captured while another turn is in flight.
-Operator turns queue here behind an in-flight unsolicited turn, and unsolicited
+Operator turns queue here behind any in-flight turn, and unsolicited
 turns queue here behind an in-flight operator turn — each entry keeps its own
 :speaker and :origin so nothing is mis-attributed when it drains.")
 
@@ -2767,7 +2767,7 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
                                                        (agent-turn-origin-decide origin speaker))))))))
 
 (defun agent-chat--queue-operator-turn (call-async-fn agent-name hooks)
-  "Queue current input as an operator turn behind an in-flight unsolicited turn."
+  "Queue current input as an operator turn behind an in-flight turn."
   (let ((text (buffer-substring-no-properties
                (marker-position agent-chat--input-start)
                (point-max))))
@@ -2775,7 +2775,7 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
       (delete-region (marker-position agent-chat--input-start) (point-max))
       (agent-chat--queue-turn call-async-fn agent-name hooks
                               (string-trim text) "joe" 'operator)
-      (message "%s queued until the background turn finishes"
+      (message "%s queued behind the current turn"
                (capitalize agent-name)))))
 
 (defun agent-chat--drain-queued-operator-turns ()
@@ -3129,10 +3129,14 @@ additionally posted to the evidence HTTP endpoint."
     (user-error "No agent-chat prompt here — switch to an initialized REPL buffer"))
   (agent-chat--repair-input-properties!)
   (if (process-live-p agent-chat--pending-process)
-      (if (eq agent-chat--pending-turn-origin 'unsolicited)
-          (agent-chat--queue-operator-turn call-async-fn agent-name hooks)
-        (user-error "%s is still responding; wait for current turn to finish"
-                    (capitalize agent-name)))
+      ;; Unified queueing (Joe, 2026-10-19): operator input queues behind any
+      ;; in-flight turn, not only a background/unsolicited one. The refusal
+      ;; ("still responding") previously made claude-vs-codex behavior feel
+      ;; arbitrary because Claude seats are usually busy on unsolicited turns
+      ;; (which already queued) while Codex seats were busy on operator turns
+      ;; (which were refused). Execution stays serialized: the drain only
+      ;; starts the next queued turn after agent-chat--finish-pending-turn.
+      (agent-chat--queue-operator-turn call-async-fn agent-name hooks)
     (let ((text (buffer-substring-no-properties
                  (marker-position agent-chat--input-start)
                  (point-max))))
