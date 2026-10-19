@@ -513,7 +513,11 @@ export function frameModel(frame: Frame): FrameModel {
   return {
     status, at: frame.turn?.at || "?",
     said: frame.turn?.text || "(no text)",
-    saidHref: frame.record?.turn_id ? `../scopes/index.html?turn=${encodeURIComponent(frame.record.turn_id)}` : undefined,
+    // No link: the scopes page reads only its static fixtures (five turns),
+    // so for a live turn it showed "Could not load scope data: 404" -- and in
+    // voxterm's Frames tab a tap while scrolling replaced the stepper with it
+    // (Joe, 2026-10-19). The per-turn view is the Diagram tab's Turn view.
+    saidHref: undefined,
     operators: operatorLines(frame),
     parseNote: provisional ? "小象, provisional — 象's reading pending" : READ_STATUSES.includes(status) ? "" : PARSE_PENDING,
     parse, patterns: patternLines(frame),
