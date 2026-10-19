@@ -72,7 +72,20 @@
   (swap! !post-release-retries conj request)
   request)
 
-(defn- configure-self-heal-ports [opts]
+(defn- fill-absent
+  "Add each identity the caller did not supply. An explicit cast, session or
+   worktree in the click options wins; only nil or missing keys are filled."
+  [opts identities]
+  (reduce-kv (fn [m k v] (if (some? (get m k)) m (assoc m k v)))
+             opts identities))
+
+(defn- configure-self-heal-ports
+  "Click wm-click-c78d0f27 (2026-10-19): the adapter has always resolved the
+   cast and repository, but only the port functions were forwarded, so the
+   work order reached coordinator/prepare without sessions or a worktree and
+   every self-heal click refused there. The identities are forwarded with the
+   ports."
+  [opts]
   (if (:self-heal-concrete-ports? opts)
     opts
     (let [base (assoc opts
@@ -89,11 +102,12 @@
         ;; :meta-acceptance-run-fn since F4b, and readiness requires it since
         ;; F4a; it has to be forwarded here or every self-heal click refuses
         ;; :acceptance-run-port.
-        (merge base (select-keys resolved [:agency-invoke-fn :repair-enact-fn
-                                           :repair-retry-fn :meta-diagnosis-fn
-                                           :meta-acceptance-fn
-                                           :meta-acceptance-review-fn
-                                           :meta-acceptance-run-fn])
+        (merge (fill-absent base (:work-order-identities resolved))
+               (select-keys resolved [:agency-invoke-fn :repair-enact-fn
+                                      :repair-retry-fn :meta-diagnosis-fn
+                                      :meta-acceptance-fn
+                                      :meta-acceptance-review-fn
+                                      :meta-acceptance-run-fn])
                {:self-heal-concrete-ports? true
                 :self-heal-serving-readiness (:readiness resolved)})
         (assoc base :self-heal-serving-readiness resolved)))))
@@ -622,7 +636,11 @@
         runtime-disposition (select-keys result [:status :reason :route
                                                  :ordinary-selection-called?
                                                  :absent-terms :before-ration-spend?
-                                                 :injury-id :repair-id :attempt])
+                                                 :injury-id :repair-id :attempt
+                                                 ;; what a binding refusal
+                                                 ;; mismatched, or why prepare
+                                                 ;; refused (click c78d0f27)
+                                                 :expected :actual :defects :prepare])
         duplicate-clicks (existing-run-id-clicks dir click-id run-id)
         binding-status
         (cond

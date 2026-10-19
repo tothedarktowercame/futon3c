@@ -1029,3 +1029,31 @@
     (is (every? fn? (map configured [:meta-diagnosis-fn :meta-acceptance-fn
                                      :meta-acceptance-review-fn :agency-invoke-fn
                                      :repair-enact-fn :repair-retry-fn])))))
+
+(deftest configured-self-heal-ports-forward-the-work-order-identities
+  "Click wm-click-c78d0f27 (2026-10-19): the adapter resolved the cast and
+   repository but the service forwarded only the port functions, so the work
+   order reached prepare without sessions or a worktree. The identities ride
+   with the ports; an explicit value in the click options wins and only nil
+   or absent keys are filled."
+  (let [identities {:author "wm-author" :reviewer "wm-reviewer"
+                    :repair-reviewer "wm-repair-reviewer"
+                    :author-session "wm-author/s1" :reviewer-session "wm-reviewer/s2"
+                    :repair-reviewer-session "wm-repair-reviewer/s3"
+                    :target-repository "/repo" :target-worktree "/repo"}
+        resolved {:status :ready
+                  :readiness {:status :ready :defects []}
+                  :work-order-identities identities
+                  :agency-invoke-fn identity :repair-enact-fn identity
+                  :repair-retry-fn identity :meta-diagnosis-fn identity
+                  :meta-acceptance-fn identity :meta-acceptance-review-fn identity
+                  :meta-acceptance-run-fn identity}
+        configured (with-redefs [futon3c.wm.meta-self-heal-adapters/ports
+                                 (fn [_] resolved)]
+                     (#'service/configure-self-heal-ports
+                      {:author "codex-9" :target-worktree nil}))]
+    (is (true? (:self-heal-concrete-ports? configured)))
+    (is (= "codex-9" (:author configured)) "an explicit cast seat wins")
+    (is (= "/repo" (:target-worktree configured)) "a nil key is filled")
+    (is (= (dissoc identities :author)
+           (select-keys configured (keys (dissoc identities :author)))))))

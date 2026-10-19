@@ -1,8 +1,11 @@
 (ns futon3c.wm.meta-self-heal-adapters-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell]
             [clojure.string :as str]
+            [futon2.aif.meta-repair-coordinator :as coordinator]
+            [futon2.aif.meta-self-heal-harness :as harness]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.meta-self-heal-adapters :as sut]))
 
@@ -251,3 +254,49 @@
                "Return exactly one EDN map and no prose"
                "Bind every returned identity and pin to this request"]]
       (is (str/includes? prompt s) s))))
+
+(deftest work-order-identities-complete-the-production-work-order
+  "Click wm-click-c78d0f27 (2026-10-19): the service forwarded only port
+   functions, so coordinator/prepare saw no sessions and no worktree and
+   refused :work-order/invalid on every self-heal click. With the runtime's
+   two inputs (diagnosis pin, acceptance test) plus the identities the
+   adapter now supplies, the real prepare succeeds; without the identities it
+   refuses exactly as the click did."
+  (let [root (.toString (java.nio.file.Files/createTempDirectory
+                         "meta-adapters-identities"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        ;; the harness reads its campaign fixture relative to futon2's root
+        env (with-redefs [harness/campaign-cause
+                          (fn []
+                            (->> (edn/read-string
+                                  (slurp (str "/home/joe/code/futon2/test/fixtures/"
+                                              "meta-self-heal/campaign-2026-10-19.edn")))
+                                 (filter #(= :fold-output-invalid
+                                             (get-in % [:record :failure :kind])))
+                                 first))]
+              (harness/prepare-environment! root))
+        runtime-inputs (select-keys (harness/work-order-options env)
+                                    [:diagnosis-evidence-pin :acceptance-test])
+        ready {:cast sut/default-cast :repository (:repo env)}
+        identities (sut/work-order-identities ready)
+        again (sut/work-order-identities ready)
+        sessions (map identities [:author-session :reviewer-session
+                                  :repair-reviewer-session])
+        prepared (coordinator/prepare (:durable env) (merge runtime-inputs identities))
+        refused (coordinator/prepare (:durable env) runtime-inputs)]
+    (is (= :prepared (:status prepared)))
+    (is (= :valid (:status (coordinator/verify-work-order (:work-order prepared)))))
+    (is (= sut/default-cast (select-keys identities [:author :reviewer :repair-reviewer])))
+    (is (= 3 (count (set sessions))) "one distinct claim session per seat")
+    (is (every? (fn [[session-key role]]
+                  (str/starts-with? (identities session-key)
+                                    (str (get sut/default-cast role) "/")))
+                {:author-session :author :reviewer-session :reviewer
+                 :repair-reviewer-session :repair-reviewer})
+        "each claim session is named under its seat")
+    (is (not= sessions (map again [:author-session :reviewer-session
+                                   :repair-reviewer-session]))
+        "sessions are fresh per call, so a later claim never reuses them")
+    (is (= (:repo env) (:target-repository identities) (:target-worktree identities)))
+    (is (= :refused (:status refused)))
+    (is (= [:work-order/invalid] (:defects refused)))))

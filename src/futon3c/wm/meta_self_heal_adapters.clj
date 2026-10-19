@@ -380,6 +380,32 @@
          :payload {:patch-sha patch :retry-click retry-click
                    :integration-commit head :reload-receipt receipts}}))))
 
+(defn work-order-identities
+  "The caller-supplied identities coordinator/prepare needs on its work order,
+   taken from a ready readiness receipt: the three cast seats, one fresh
+   distinct claim session per seat, and the target repository and worktree.
+
+   The sessions are claim identities, not Agency session ids: reset-session!
+   leaves a seat's session nil until its next invoke mints one, and
+   agency-invoke! resets the seat and records the session it actually got in
+   the phase receipt (:agency-session-id). The ledger requires each claim's
+   sessions to be non-blank, distinct, and unused by any earlier claim; a
+   per-click UUID under the seat name satisfies that without touching any
+   seat. Click wm-click-c78d0f27 (2026-10-19) refused because no production
+   code supplied these five fields, so prepare refused on every self-heal
+   click."
+  [ready]
+  (let [cast (:cast ready)
+        repo (:repository ready)
+        claim-session (fn [seat] (str seat "/" (java.util.UUID/randomUUID)))]
+    {:author (:author cast) :reviewer (:reviewer cast)
+     :repair-reviewer (:repair-reviewer cast)
+     :author-session (claim-session (:author cast))
+     :reviewer-session (claim-session (:reviewer cast))
+     :repair-reviewer-session (claim-session (:repair-reviewer cast))
+     :target-repository repo
+     :target-worktree repo}))
+
 (defn ports
   "Resolve concrete ports after a successful readiness check. Retry only
    persists/enqueues; the supplied service callback runs it after release."
@@ -387,6 +413,7 @@
   (let [ready (readiness opts)]
     (if-not (= :ready (:status ready)) ready
       {:status :ready :readiness ready
+       :work-order-identities (work-order-identities ready)
        :agency-invoke-fn agency-invoke!
        :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
        :meta-acceptance-fn #(producer-invoke! (:author (:cast ready)) :acceptance-proposal %)
