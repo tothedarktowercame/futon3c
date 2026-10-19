@@ -36,8 +36,21 @@
       if (!response.ok) throw new Error(`roster: ${response.status} ${response.statusText}`);
       const roster = (await response.json()).agents || {};
       const entry = roster[id];
-      if (!entry || !entry['session-id']) throw new Error(`${id} is not on the roster, or has no session`);
-      return entry['session-id'];
+      if (!entry) return {missing: `${id} is not on the roster`};
+      // A fresh seat has no session-id until its first turn finishes (the
+      // roster learns it from that turn), so this is usually a wait, not a fault.
+      if (!entry['session-id']) return {missing: `${id} has no session yet (first turn still running?)`};
+      return {session: entry['session-id']};
+    }
+    async function waitForSession(id) {
+      // Retry rather than fail: the page is often opened (by voxterm's Frames
+      // tab) during a new seat's first turn, and is not reloaded afterwards.
+      for (;;) {
+        const r = await resolveAgent(id);
+        if (r.session) return r.session;
+        host.textContent = `${r.missing}; checking again every 5 s…`;
+        await new Promise(done => setTimeout(done, 5000));
+      }
     }
     async function load() {
       const url = session
@@ -50,7 +63,7 @@
       return session ? value.frames : value;
     }
     try {
-      if (!session && agent) session = await resolveAgent(agent);
+      if (!session && agent) session = await waitForSession(agent);
       const frames = await load(); host.textContent = '';
       const frame = params.get('frame') ? Number(params.get('frame')) : undefined;
       const subscribe = session ? ({onFrames, onStatus}) => {
