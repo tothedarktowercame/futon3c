@@ -28,6 +28,8 @@
             [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.xiang.turn-store :as turn-store]
             [clojure.java.io :as io]
             [clojure.string :as str])
   (:import [java.nio.charset StandardCharsets]
@@ -3680,3 +3682,40 @@
       (is (= "M-象-2000" (get-in (roster "codex-70") [:agent/metadata :mission-id])))
       (is (= "/x" (get-in (roster "codex-70") [:agent/metadata :cwd])) "metadata is merged, not replaced")
       (is (nil? (roster "nobody"))))))
+
+;; --- turn-record-id threads from the invoke body to the render --------------
+;; E-象-repl-cycle packet 1b: a body carrying turn-record-id reaches
+;; prompt-line/render!, whose write lands on exactly that record. Fake
+;; providers; the real provider registry is restored after.
+
+(deftest invoke-body-turn-record-id-reaches-the-render
+  (let [saved-providers (prompt-line/providers)
+        dir (Files/createTempDirectory "xiang-http-record-"
+                                       (make-array FileAttribute 0))
+        store (turn-store/store (str dir))]
+    (try
+      (turn-store/write-record-id! store "turn-http1" {:turn_id "t1"})
+      (prompt-line/reset-registry!)
+      (prompt-line/register-provider!
+       {:segment/id :pattern :provider "test" :budget-ms 100
+        :fn (fn [_] {:segment/id :pattern :segment/provider "test"
+                     :segment/value "~p9"
+                     :segment/observed-at "2026-10-19T10:00:00Z"
+                     :segment/basis {:evidence-ref "e-test" :scope {}}})})
+      (binding [prompt-line/*turn-record-store* store]
+        (let [header (#'http/wrap-surface-header "body" "emacs-repl" "joe"
+                      "claude-17" nil "sess-1" "turn-http1")]
+          (is (str/includes? header "pattern ~p9")
+              "the rendered header shows the fake pattern segment")
+          (is (= ["~p9"] (:proposed_patterns (turn-store/read-record store "turn-http1")))
+              "and it was written onto exactly that turn record")
+          (is (= "2026-10-19T10:00:00Z"
+                 (:proposed_patterns_at (turn-store/read-record store "turn-http1"))))
+          ;; No id: no write path at all — the header renders the same way.
+          (#'http/wrap-surface-header "body" "emacs-repl" "joe"
+                                      "claude-17" nil "sess-1" nil)
+          (is (= ["~p9"] (:proposed_patterns (turn-store/read-record store "turn-http1"))))))
+      (finally
+        (prompt-line/reset-registry!)
+        (doseq [p saved-providers] (prompt-line/register-provider! p))
+        (delete-temp-tree! dir)))))

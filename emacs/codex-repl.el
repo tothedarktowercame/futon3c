@@ -3938,6 +3938,9 @@ CALLBACK receives the final response text."
                         :prompt ,text
                         :surface "emacs-repl"
                         :caller ,(agent-turn-origin-caller))
+                      (when-let ((record-id (and (fboundp 'session-mode--pending-turn-record-id)
+                                         (session-mode--pending-turn-record-id))))
+                        `(:turn-record-id ,record-id))
                       (when-let ((clock-id (codex-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *codex-repl-stream*"))

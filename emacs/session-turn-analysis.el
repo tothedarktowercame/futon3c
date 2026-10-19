@@ -1638,6 +1638,17 @@ Never includes diff text."
 A streamed turn emits its turn-commits (which clears the heads) before
 the turn ends, so the summary reads them from here.")
 
+(defun session-mode--pending-turn-record-id ()
+  "The record id of this buffer's pending operator turn (the path's base
+name without .json), or nil when no turn is pending. The REPL invoke
+builders send it as turn-record-id so the JVM writes the rendered pattern
+set onto exactly that record (E-象-repl-cycle packet 1b)."
+  (when (and (boundp 'session-mode--reply-pending-path)
+             (stringp session-mode--reply-pending-path))
+    (let ((base (file-name-nondirectory session-mode--reply-pending-path)))
+      (when (string-suffix-p ".json" base)
+        (string-remove-suffix ".json" base)))))
+
 (defun session-mode--dispatch-pending-turn (response)
   "Send the pending turn, if any, to 象 with a summary built from RESPONSE.
 Runs at most once per turn: from the reply callback (unstreamed replies)

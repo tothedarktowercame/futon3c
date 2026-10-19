@@ -411,6 +411,9 @@ the id is display-only, so a failed read must never break buffer setup."
                         :surface "emacs-repl"
                         :timeout-ms ,zai-repl-turn-timeout-ms
                         :caller ,(agent-turn-origin-caller))
+                      (when-let ((record-id (and (fboundp 'session-mode--pending-turn-record-id)
+                                         (session-mode--pending-turn-record-id))))
+                        `(:turn-record-id ,record-id))
                       (when-let ((clock-id (zai-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *zai-repl-stream*"))

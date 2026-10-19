@@ -1,6 +1,7 @@
 (ns futon3c.agency.prompt-line
   "Bounded, inspectable composition of prompt-line segments."
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [futon3c.xiang.turn-store :as turn-store])
   (:import [java.time Instant]
            [java.util.concurrent Callable Executors TimeUnit TimeoutException ExecutionException]))
 
@@ -139,6 +140,36 @@
         (doseq [[_ _ job] jobs] (when-not (.isDone job) (.cancel job true)))
         (.shutdownNow pool)))))
 
+(def ^:dynamic *turn-record-store*
+  "Seam: the turn-record store render! writes proposed_patterns onto. Nil
+   means the default store (FUTON3C_TURN_ANALYSIS_DIR, else the Emacs dir)."
+  nil)
+
+(defn- write-proposed-patterns!
+  "Record onto turn-record ID the pattern segment(s) THIS render produced:
+   :proposed_patterns = the :pattern segments' values in render order (empty
+   vector when the render had none), :proposed_patterns_at = that segment's
+   :observed-at (the render's :rendered-at when there is none). Malformed or
+   unknown id: no write, no error. A failure here must never fail or delay
+   the render (catch, log). Last render for a record wins."
+  [turn-record-id result]
+  (try
+    (let [id (some-> turn-record-id str)]
+      (when (turn-store/record-id? id)
+        (let [store (or *turn-record-store* (turn-store/store))
+              pattern-segments (filter #(= :pattern (:segment/id %))
+                                       (:segments result))
+              values (vec (keep #(some-> (:segment/value %) str) pattern-segments))
+              at (or (some :segment/observed-at pattern-segments)
+                     (:rendered-at result))]
+          (when (turn-store/read-record store id)
+            (turn-store/update-record! store id
+                                       #(assoc % :proposed_patterns values
+                                                 :proposed_patterns_at at))))))
+    (catch Throwable t
+      (println (str "[prompt-line] proposed_patterns write failed for "
+                    (str turn-record-id) ": " (.getMessage t))))))
+
 (defn render!
   [ctx]
   (let [agent (some-> (:agent-id ctx) str)
@@ -148,6 +179,8 @@
                       {:error/code :missing-identity})))
     (let [result (render (assoc ctx :agent-id agent :session-id session) @!providers)]
       (swap! !last-renders assoc [agent session] result)
+      (when (contains? ctx :turn-record-id)
+        (write-proposed-patterns! (:turn-record-id ctx) result))
       result)))
 
 (defn last-render [agent-id session-id]
