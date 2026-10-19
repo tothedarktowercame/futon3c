@@ -10095,8 +10095,17 @@
                           (if commissioned?
                             'futon3c.wm.r10-click-adapter/commissioned-click!
                             'futon3c.wm.runner-service/click!))
-                  base-opts (assoc (merge legacy-opts (:opts prepared))
+              base-opts (assoc (merge legacy-opts (:opts prepared))
                                    :issuer-provenance issuer-provenance)
+                  base-opts (cond-> base-opts
+                              (nonblank-string? (:idempotency-key payload))
+                              (assoc :idempotency-key (:idempotency-key payload))
+                              ordinary?
+                              (assoc :acceptance-payload
+                                     (select-keys payload
+                                                  [:author :reviewer :repair-reviewer
+                                                   :run-id :trigger :measured-acquisition
+                                                   :flight-edn :issuing-caller])))
                   ;; Ordinary clicks without an explicit cast acquire one
                   ;; from the live Agency roster before their ration is
                   ;; consumed. Keep that exact resolved cast through
@@ -10150,11 +10159,13 @@
                                                         :accepted-triggers])})))))))
 
 (defn- handle-wm-click-status
-  []
+  [request]
   (try
     (json-response
      200
-     ((requiring-resolve 'futon3c.wm.runner-service/status)))
+     (if-let [click-id (get (parse-query-params request) "click-id")]
+       ((requiring-resolve 'futon3c.wm.runner-service/click-status) click-id)
+       ((requiring-resolve 'futon3c.wm.runner-service/status))))
     (catch Throwable throwable
       (json-response 500
                      {:error "wm-click-status-failed"
@@ -12884,7 +12895,7 @@
       (handle-wm-run4-series-step request config)
 
       (and (= :get method) (= "/api/alpha/wm/click" uri))
-      (handle-wm-click-status)
+      (handle-wm-click-status request)
 
       (and (= :get method) (= "/api/alpha/wm/meta-preview" uri))
       (handle-meta-preview)

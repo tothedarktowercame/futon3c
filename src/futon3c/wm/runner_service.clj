@@ -62,6 +62,49 @@
   ;; unwinding; that must not erase the only join handle for the actual thread.
   (atom nil))
 
+(defonce ^:private acceptance-lock (Object.))
+
+(def ^:dynamic *click-acceptance-dir*
+  "/home/joe/code/futon3c/data/wm-click-acceptances")
+
+(defn- acceptance-file [click-id]
+  (io/file *click-acceptance-dir*
+           (str "click-" (str/replace (str click-id) #"[^A-Za-z0-9._-]" "_") ".edn")))
+
+(defn- idempotency-file [key]
+  (io/file *click-acceptance-dir* "idempotency" (str (digest/sha256 key) ".edn")))
+
+(defn- atomic-edn! [target value]
+  (let [target (io/file target)
+        tmp (io/file (.getParentFile target)
+                     (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))]
+    (io/make-parents target)
+    (try
+      (with-open [out (java.io.FileOutputStream. tmp)]
+        (.write out (.getBytes (str (pr-str value) "\n") "UTF-8"))
+        (.sync (.getFD out)))
+      (Files/move (.toPath tmp) (.toPath target)
+                  (into-array StandardCopyOption
+                              [StandardCopyOption/ATOMIC_MOVE
+                               StandardCopyOption/REPLACE_EXISTING]))
+      value
+      (finally (Files/deleteIfExists (.toPath tmp))))))
+
+(defn click-status
+  "Read the durable state of exactly CLICK-ID. Never consults :last-result."
+  [click-id]
+  (let [file (acceptance-file click-id)]
+    (if (.exists file)
+      (try (edn/read-string (slurp file))
+           (catch Throwable t
+             {:schema :wm/click-state-v1 :click-id click-id :status :invalid
+              :reason :click-state-unreadable :message (ex-message t)}))
+      {:schema :wm/click-state-v1 :click-id click-id :status :not-found})))
+
+(defn- persist-click-state! [click-id f]
+  (locking acceptance-lock
+    (atomic-edn! (acceptance-file click-id) (f (click-status click-id)))))
+
 (def ^:dynamic *click-run-binding-dir*
   "/home/joe/code/futon3c/data/wm-click-run-bindings")
 
@@ -764,6 +807,9 @@
                       :registry-publication {:status :pending :stage :close})
                current)))
     (publish-registry! click-id :close #(report-idle! agent-id))
+    (persist-click-state! click-id
+                          #(assoc % :status :completed :completed-at (str (Instant/now))
+                                  :result summary))
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
     (flush)
     (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
@@ -787,6 +833,9 @@
                       :registry-publication {:status :pending :stage :failure})
                current)))
     (publish-registry! click-id :failure #(report-idle! agent-id))
+    (persist-click-state! click-id
+                          #(assoc % :status :failed :completed-at (str (Instant/now))
+                                  :result (dissoc summary :error-data)))
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
     (flush)
     (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
@@ -796,10 +845,12 @@
                                   :error-kind (some-> summary :error-data :error))))))
 
 (defn- run-click!
-  [click-id started-at opts completion admission]
+  [click-id opts completion admission]
   (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
     (try
       (install-debugger-park-signal!)
+      (persist-click-state! click-id #(assoc % :status :running
+                                             :running-at (str (Instant/now))))
       (watch-pre-admission-stop! click-id admission)
       (let [configured (configured-runner-opts opts)
             run! (*resolve-var*
@@ -813,12 +864,8 @@
                        :strategic-selection-invoke-fn
                        in-process-selection))
               (:ordinary-click/issue! opts)
-              (assoc :readiness-admitted-fn
-                     (fn []
-                       ((:ordinary-click/issue! opts) click-id started-at)
-                       (deliver admission :admitted))))]
-        (when-not (:ordinary-click/issue! opts)
-          (deliver admission :admitted))
+              (assoc :readiness-admitted-fn #(deliver admission :admitted)))]
+        (when-not (:ordinary-click/issue! opts) (deliver admission :admitted))
         (let [result (run! runner-opts)]
           (when-not (realized? admission)
             (deliver admission
@@ -863,7 +910,8 @@
 (defn click!
   "Start one in-process duration click.
 
-   Returns {:click-id ... :started-at ...} when accepted. While a click is
+   Returns {:click-id ... :started-at ... :status :queued} immediately after
+   durable acceptance. While a click is
    running, returns {:rejected :already-running :click-id ...} without
    starting another thread."
   [opts]
@@ -873,13 +921,27 @@
   (let [opts (if (:ordinary-click/issue! opts)
                (admit-ordinary-click-trigger! opts)
                opts)
-        opts (admit-run-id! opts)]
-    (loop []
-      (let [current @!status]
-        (if (:running? current)
-          {:rejected :already-running
-           :click-id (:click-id current)}
-          (let [click-id (str "wm-click-" (UUID/randomUUID))
+        opts (admit-run-id! opts)
+        idem (:idempotency-key opts)
+        payload (or (:acceptance-payload opts)
+                    (dissoc opts :ordinary-click/issue! :phase-log-fn))
+        payload-sha (digest/sha256 (pr-str payload))]
+    (locking acceptance-lock
+      (let [idem-file (when (nonblank-string? idem) (idempotency-file idem))
+            prior (when (and idem-file (.exists idem-file))
+                    (edn/read-string (slurp idem-file)))]
+        (if prior
+          (if (= payload-sha (:payload-sha256 prior))
+            (select-keys (click-status (:click-id prior))
+                         [:click-id :started-at :status])
+            (throw (ex-info "WM click idempotency key reused with conflicting payload"
+                            {:status 409 :error :wm-click-idempotency-conflict
+                             :idempotency-key idem :click-id (:click-id prior)})))
+          (loop []
+            (let [current @!status]
+              (if (:running? current)
+                {:rejected :already-running :click-id (:click-id current)}
+                (let [click-id (str "wm-click-" (UUID/randomUUID))
               started-at (str (Instant/now))
               next-status (assoc current
                                  :running? true
@@ -888,31 +950,39 @@
                                  :attempt-id nil
                                  :started-at started-at
                                  :registry-publication nil)]
-          (if-not (compare-and-set! !status current next-status)
-            (recur)
-            (let [completion (promise)
+                  (if-not (compare-and-set! !status current next-status)
+                    (recur)
+                    (let [completion (promise)
                   admission (promise)
+                  accepted {:schema :wm/click-state-v1 :click-id click-id
+                            :status :queued :started-at started-at
+                            :idempotency-key idem :payload-sha256 payload-sha}
+                  _ (atomic-edn! (acceptance-file click-id) accepted)
+                  _ (when idem-file
+                      (atomic-edn! idem-file
+                                   {:schema :wm/click-idempotency-v1
+                                    :idempotency-key idem :payload-sha256 payload-sha
+                                    :click-id click-id :accepted-at started-at}))
+                  _ (when-let [issue! (:ordinary-click/issue! opts)]
+                      (try
+                        (issue! click-id started-at)
+                        (catch Throwable t
+                          (atomic-edn! (acceptance-file click-id)
+                                       (assoc accepted :status :refused
+                                              :refused-at (str (Instant/now))
+                                              :reason (or (:error (ex-data t))
+                                                          :ration-charge-failed)))
+                          (compare-and-set! !status next-status current)
+                          (throw t))))
                   _ (reset! !completion {:click-id click-id
                                          :completion completion})
-                  runnable (bound-fn [] (run-click! click-id started-at opts completion admission))
+                  runnable (bound-fn [] (run-click! click-id opts completion admission))
                   thread (Thread. ^Runnable runnable "wm-runner-click")]
               (swap! !completion assoc :thread thread)
               (.setDaemon thread true)
-              (try
-                (.start thread)
-                (let [pending (Object.)
-                      admitted (deref admission *admission-wait-ms* pending)]
-                  (cond
-                    (identical? pending admitted)
-                    {:click-id click-id :started-at started-at
-                     :admission :admission-pending
-                     :admission-wait-ms *admission-wait-ms*}
-                    (instance? Throwable admitted) (throw admitted)
-                    (map? admitted)
-                    (assoc admitted
-                           :click-id click-id :started-at started-at
-                           :admission :pending-debugger-restart)
-                    :else {:click-id click-id :started-at started-at}))
+                      (try
+                        (.start thread)
+                        (select-keys accepted [:click-id :started-at :status])
                 (catch Throwable throwable
                   ;; A pre-admission refusal was already closed by the worker;
                   ;; only a failure to start the worker belongs to this path.
@@ -925,4 +995,4 @@
                       (finally
                         (deliver completion {:status :start-failed
                                              :click-id click-id}))))
-                    (throw throwable)))))))))))
+                          (throw throwable))))))))))))))

@@ -44,6 +44,7 @@
                        "wm-click-bindings-test-"
                        (make-array java.nio.file.attribute.FileAttribute 0))))]
     (binding [service/*click-run-binding-dir* binding-dir
+              service/*click-acceptance-dir* (str binding-dir "/acceptances")
               budget/*ledger-path* (str binding-dir "/ordinary.jsonl")]
       (try
         (f)
@@ -60,6 +61,60 @@
 
 (defn- response-body [response]
   (json/parse-string (:body response) true))
+
+(declare resolver)
+
+(deftest durable-idempotent-acceptance-is-per-click-not-last-result
+  (let [release (promise)
+        entered (promise)
+        charges (atom 0)
+        run! (fn [_] (deliver entered true) @release
+               {:attempt-id "slow" :outcome :grounded-change})
+        opts {:wm-agent-id scratch-agent-id
+              :idempotency-key "request-1"
+              :acceptance-payload {:cast ["wm-author" "wm-reviewer"]}
+              :ordinary-click/issue! (fn [_ _] (swap! charges inc))}]
+    (binding [service/*resolve-var* (resolver run! (constantly {:selected-policy-id "unused"}))]
+      (let [accepted (service/click! opts)
+            _ (is (= true (deref entered 1000 false)))
+            retry (service/click! opts)
+            click-id (:click-id accepted)]
+        (is (= :queued (:status accepted)))
+        (is (= click-id (:click-id retry)))
+        (is (= 1 @charges))
+        (is (contains? #{:queued :running} (:status (service/click-status click-id))))
+        ;; A stale singleton result for another click cannot satisfy this query.
+        (swap! service/!status assoc :last-result {:click-id "older" :outcome :grounded-change})
+        (is (= click-id (:click-id (service/click-status click-id))))
+        (let [conflict (try (service/click! (assoc opts :acceptance-payload {:different true})) nil
+                            (catch clojure.lang.ExceptionInfo t t))]
+          (is (= :wm-click-idempotency-conflict (:error (ex-data conflict))))
+          (is (= 1 @charges)))
+        (is (= :timed-out (:status (service/await-click! click-id 1))))
+        (deliver release true)
+        (is (= :completed (:status (service/await-click! click-id))))
+        (is (= :completed (:status (service/click-status click-id))))))))
+
+(deftest http-lost-response-retry-and-per-click-query
+  (let [release (promise)
+        run! (fn [_] @release {:attempt-id "http-slow" :outcome :grounded-change})
+        h (handler)
+        request {:request-method :post :uri "/api/alpha/wm/click"
+                 :body (json/generate-string
+                        {:author "zai-2" :reviewer "codex-2" :repair-reviewer "codex-1"
+                         :idempotency-key "lost-http-response"})}]
+    (binding [service/*resolve-var* (resolver run! (constantly {:selected-policy-id "unused"}))]
+      (let [first (response-body (h request))
+            retry (response-body (h request))
+            click-id (:click-id first)
+            queried (response-body
+                     (h {:request-method :get :uri "/api/alpha/wm/click"
+                         :query-string (str "click-id=" click-id)}))]
+        (is (= click-id (:click-id retry)))
+        (is (= click-id (:click-id queried)))
+        (is (contains? #{"queued" "running"} (:status queried)))
+        (deliver release true)
+        (is (= :completed (:status (service/await-click! click-id))))))))
 
 (defn- wait-until
   [predicate timeout-ms]
@@ -298,12 +353,9 @@
               (case sym
                 futon2.aif.full-loop-runner/config identity
                 (throw (ex-info "runner unavailable" {:symbol sym}))))]
-    (let [failure (try (service/click! {:wm-agent-id scratch-agent-id}) nil
-                       (catch clojure.lang.ExceptionInfo throwable throwable))
-          click-id (:click-id (service/status))]
-      (is (= :wm-click-cast-not-admitted (:error (ex-data failure))))
-      (is (= 409 (:status (ex-data failure))))
-      (is (instance? clojure.lang.ExceptionInfo (.getCause failure)))
+    (let [accepted (service/click! {:wm-agent-id scratch-agent-id})
+          click-id (:click-id accepted)]
+      (is (= :queued (:status accepted)))
       (is (wait-until #(false? (:running? (service/status))) 5000))
       (is (= :completed (:status (service/await-click! click-id))))
       (is (= :service-failed
@@ -562,12 +614,9 @@
                 (case sym
                   futon2.aif.full-loop-runner/config identity
                   (throw throwable)))]
-      (let [failure (try (service/click! {:wm-agent-id scratch-agent-id}) nil
-                         (catch clojure.lang.ExceptionInfo failure failure))
-            click-id (:click-id (service/status))]
-        (is (= :wm-click-cast-not-admitted (:error (ex-data failure))))
-        (is (= 409 (:status (ex-data failure))))
-        (is (= throwable (.getCause failure)))
+      (let [accepted (service/click! {:wm-agent-id scratch-agent-id})
+            click-id (:click-id accepted)]
+        (is (= :queued (:status accepted)))
         (is (= :completed (:status (service/await-click! click-id))))
         (let [summary (:last-result (service/status))]
           (is (= :service-failed (:outcome summary)))
@@ -597,7 +646,7 @@
 (def ^:private park-cast
   {:author "zai-2" :reviewer "codex-2" :repair-reviewer "codex-1"})
 
-(deftest bounded-pre-admission-wait-leaves-click-running-and-observable
+(deftest durable-acceptance-does-not-wait-for-runner-readiness
   (let [release (promise)
         entered (promise)
         issued (atom 0)
@@ -617,11 +666,10 @@
                     (assoc park-cast :ordinary-click/issue!
                            (fn [& _] (swap! issued inc))))]
         (is (= true (deref entered 1000 false)))
-        (is (= :admission-pending (:admission answer)))
-        (is (= 20 (:admission-wait-ms answer)))
+        (is (= :queued (:status answer)))
         (is (= (:click-id answer) (:click-id (service/status))))
         (is (true? (:running? (service/status))))
-        (is (zero? @issued) "a pending admission has not spent the ration")
+        (is (= 1 @issued) "durable acceptance charges the ration exactly once")
         (deliver release true)
         (is (= :completed (:status (service/await-click! (:click-id answer)))))
         (is (= :incomplete (get-in (service/status) [:last-result :outcome])))))))
@@ -670,7 +718,7 @@
               :has-stop-value? false}
              (second (first @signals)))))))
 
-(deftest pre-admission-debugger-stop-releases-the-click-caller
+(deftest debugger-stop-is-queryable-after-immediate-acceptance
   ;; The ration admission is a runner phase (futon2, 2026-10-09), so an
   ;; attached debugger can stop before admission. click! must answer with the
   ;; stop rather than hold its caller until a restart.
@@ -690,9 +738,8 @@
                                           :ordinary-click/issue! (fn [& _]))))
                           5000 ::blocked)]
         (is (not= ::blocked answer))
-        (is (= :pending-debugger-restart (:admission answer)))
-        (is (= {:run-id "run-adm" :phase :admission :condition {:kind :ex-info}}
-               (:debugger-stop answer)))
+        (is (= :queued (:status answer)))
+        (is (= (:click-id answer) (:click-id (service/click-status (:click-id answer)))))
         (deliver release true)
         (service/await-click! (:click-id answer))
         (is (empty? (filter #(and (vector? %) (= ::service/pre-admission-stop (first %)))

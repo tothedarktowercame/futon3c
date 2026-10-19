@@ -55,7 +55,11 @@ invoke-ready).
 - **Clicks (M-omni-wm-runner, 2026-07-26):** clicks run IN-PROCESS in the
   serving JVM — `POST :7070/api/alpha/wm/click` with
   `{"author":..., "reviewer":..., "repair-reviewer":...}`; poll
-  `GET :7070/api/alpha/wm/click` for `{running? phase attempt-id last-result}`.
+  `GET :7070/api/alpha/wm/click?click-id=<id>` for that click's durable
+  queued/running/completed/failed state. POST accepts an `idempotency-key`;
+  retrying the same request returns the same click, while conflicting reuse is
+  refused. The unscoped GET remains an apparatus projection only and its
+  mutable `last-result` is never acceptance/completion authority.
   Single-flight: a second POST while one runs returns 409 with the active
   click id. Status is registry-direct (the `*agents*` war-machine row is
   synchronous — no freshness gap). **Do NOT launch `clojure -M:wm-full-loop`
