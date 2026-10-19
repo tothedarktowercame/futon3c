@@ -107,6 +107,26 @@
       :else {:status (:status parsed) :payload (:payload parsed)
              :session-id (:session-id result) :job-id job-id})))
 
+(defn- producer-invoke!
+  "Serving adapter for evidence production/admission, separate from repair
+  execution.  It returns only the typed map the futon2 producer expects; it
+  never executes a proposed acceptance command."
+  [seat operation request]
+  (let [agent (reg/get-agent seat)
+        prompt (str "Dedicated META " operation ". Return exactly one EDN map; "
+                    "do not select ordinary work, execute commands, or claim a repair. "
+                    "Bind every returned identity and pin to this request.\n\n"
+                    (pr-str request))
+        result (when (and agent (true? (:agent/invoke-ready? agent)))
+                 (reg/invoke-agent! seat prompt {:mode "work" :caller "war-machine"
+                                                  :session-id (:agent/session-id agent)}))
+        parsed (when (:ok result) (one-edn-map (:result result)))]
+    (cond
+      (not agent) {:status :failed :reason :meta-self-heal/producer-seat-unavailable}
+      (not (:ok result)) {:status :failed :reason :meta-self-heal/producer-invoke-failed}
+      (not (map? parsed)) {:status :failed :reason :meta-self-heal/producer-response-malformed}
+      :else parsed)))
+
 (defn enact!
   "Verify the reviewed patch is canonical HEAD, then reload only its changed
    Clojure sources through the serving JVM's recorded reload authority."
@@ -139,6 +159,9 @@
     (if-not (= :ready (:status ready)) ready
       {:status :ready :readiness ready
        :agency-invoke-fn agency-invoke!
+       :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) "diagnosis" %)
+       :meta-acceptance-fn #(producer-invoke! (:author (:cast ready)) "acceptance proposal" %)
+       :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) "acceptance review" %)
        :repair-enact-fn enact!
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]

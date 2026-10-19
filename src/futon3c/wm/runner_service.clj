@@ -86,7 +86,9 @@
           resolved (self-heal-adapters/ports base)]
       (if (= :ready (:status resolved))
         (merge base (select-keys resolved [:agency-invoke-fn :repair-enact-fn
-                                           :repair-retry-fn])
+                                           :repair-retry-fn :meta-diagnosis-fn
+                                           :meta-acceptance-fn
+                                           :meta-acceptance-review-fn])
                {:self-heal-concrete-ports? true
                 :self-heal-serving-readiness (:readiness resolved)})
         (assoc base :self-heal-serving-readiness resolved)))))
@@ -996,8 +998,11 @@
   (let [opts (if (:ordinary-click/issue! opts)
                (admit-ordinary-click-trigger! opts)
                opts)
-        opts (meta-self-heal-preflight! (configured-runner-opts opts))
+        ;; Caller-controlled identity is syntactic admission, not a repair
+        ;; authority.  Reject malformed identity before any ledger/port
+        ;; preflight can obscure the request's own error.
         opts (admit-run-id! opts)
+        opts (meta-self-heal-preflight! (configured-runner-opts opts))
         idem (:idempotency-key opts)
         payload (or (:acceptance-payload opts)
                     (dissoc opts :ordinary-click/issue! :phase-log-fn))
