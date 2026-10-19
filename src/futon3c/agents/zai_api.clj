@@ -84,7 +84,8 @@
   "The default :cap-tokens a zai seat gets: FUTON3C_ZAI_CONTEXT_CAP when set
    (a positive integer), else 128000 (see default-context-policy)."
   []
-  (or (some-> (getenv "FUTON3C_ZAI_CONTEXT_CAP") parse-long pos?) 128000))
+  (let [n (some-> (getenv "FUTON3C_ZAI_CONTEXT_CAP") str/trim parse-long)]
+    (if (and n (pos? n)) n 128000)))
 
 (defn- json-schema
   [props required]

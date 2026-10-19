@@ -785,3 +785,12 @@
           (is (= 1 (count rows)))
           (is (= :provider-refused (get-in (first rows) [:evidence/body :reason])))
           (is (= :clear (get-in (first rows) [:evidence/body :method]))))))))
+
+(deftest context-cap-env-override-is-a-number
+  ;; Review fix: (some-> ... parse-long pos?) returned true, not the cap.
+  (with-redefs [zai/getenv (fn [k] (when (= k "FUTON3C_ZAI_CONTEXT_CAP") " 90000 "))]
+    (is (= 90000 (zai/default-zai-context-cap-tokens))))
+  (with-redefs [zai/getenv (fn [k] (when (= k "FUTON3C_ZAI_CONTEXT_CAP") "-5"))]
+    (is (= 128000 (zai/default-zai-context-cap-tokens))))
+  (with-redefs [zai/getenv (fn [_] nil)]
+    (is (= 128000 (zai/default-zai-context-cap-tokens)))))
