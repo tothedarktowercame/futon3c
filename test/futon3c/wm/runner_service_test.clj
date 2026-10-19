@@ -933,3 +933,25 @@
         (is (= 503 (:status failure)))
         (is (= :meta-self-heal/ledger-unreadable (:error failure)))
         (is (zero? @issued))))))
+
+(deftest configured-self-heal-ports-forward-the-acceptance-run-fn
+  "F8 (click wm-click-2b1d568c, 2026-10-19): the adapter has supplied
+   :meta-acceptance-run-fn since F4b and readiness has required it since F4a,
+   but the service forwarded a fixed key list that omitted it, so every
+   self-heal click refused :acceptance-run-port."
+  (let [run-fn (fn [_] {:status :ran})
+        resolved {:status :ready
+                  :readiness {:status :ready :defects []}
+                  :agency-invoke-fn identity :repair-enact-fn identity
+                  :repair-retry-fn identity :meta-diagnosis-fn identity
+                  :meta-acceptance-fn identity :meta-acceptance-review-fn identity
+                  :meta-acceptance-run-fn run-fn}
+        configured (with-redefs [futon3c.wm.meta-self-heal-adapters/ports
+                                 (fn [_] resolved)]
+                     (#'service/configure-self-heal-ports {}))]
+    (is (true? (:self-heal-concrete-ports? configured)))
+    (is (= run-fn (:meta-acceptance-run-fn configured))
+        "the run port reaches the runtime options")
+    (is (every? fn? (map configured [:meta-diagnosis-fn :meta-acceptance-fn
+                                     :meta-acceptance-review-fn :agency-invoke-fn
+                                     :repair-enact-fn :repair-retry-fn])))))

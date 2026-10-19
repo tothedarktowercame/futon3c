@@ -85,10 +85,15 @@
                       :queue-retry-fn enqueue-post-release-retry!)
           resolved (self-heal-adapters/ports base)]
       (if (= :ready (:status resolved))
+        ;; F8 (click wm-click-2b1d568c, 2026-10-19): the adapter supplies
+        ;; :meta-acceptance-run-fn since F4b, and readiness requires it since
+        ;; F4a; it has to be forwarded here or every self-heal click refuses
+        ;; :acceptance-run-port.
         (merge base (select-keys resolved [:agency-invoke-fn :repair-enact-fn
                                            :repair-retry-fn :meta-diagnosis-fn
                                            :meta-acceptance-fn
-                                           :meta-acceptance-review-fn])
+                                           :meta-acceptance-review-fn
+                                           :meta-acceptance-run-fn])
                {:self-heal-concrete-ports? true
                 :self-heal-serving-readiness (:readiness resolved)})
         (assoc base :self-heal-serving-readiness resolved)))))
