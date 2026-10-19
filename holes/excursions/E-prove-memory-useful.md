@@ -939,6 +939,107 @@ targets, measured by how much of the Observer's output a classical
 extractor recovers; (b) on one leaf pair whose trailbreaker is told not to
 bank memories, so only Observer-written memory can reach the follower.
 
+## Checkpoint (2026-10-19 ~05:45Z, written before a possible Zone restart)
+
+Written at Joe's request so the work can be picked up after a reboot without
+claude-3's context. Everything named here is committed on futon3c master
+(local; master is 417 commits ahead of origin and nothing below is pushed)
+or lives under `~/notes/`, which a reboot does not clear.
+
+**Where usefulness stands.** The 10-17 01:25Z checkpoint said "correct, not
+shown useful". That is no longer the whole claim:
+
+- G6 (task bank): 3 of 5 tasks fail without the memory and pass with it
+  delivered (section "G6, first run").
+- The effect experiment on t95J03 (Joe's design, zai-1/zai-2 as
+  trailbreaker and follower, zai-5 dispatching). The section above records
+  leaves 1 to 4; the rest is only in `~/notes/packets/memory-effect/RUN-LOG.md`
+  until now:
+
+| leaf | trailbreaker | follower | delivery (injected #1) | effect |
+|---|---|---|---|---|
+| 4 (C5) | zai-1 3m37s, 23 events | zai-2 1m51s, 15 events | yes | first hint-free pair with a shorter follower and a reply naming the memory |
+| 5 (C6) | zai-1 3m06s | zai-2 2m05s (rerun) | failed on the first try (twin-leaf collision); passed after the name-match selection, minus40 328af2f | follower faster |
+| 6 (C7), roles swapped | zai-2 1m49s + 34 s fix | zai-1 8m48s | yes | first negative pair: the follower was slower, so part of the earlier speed-up came from the seat (zai-2), not the memory |
+| 7 (C3, S-leaf 1) | zai-1 21m32s (one truncated turn) | zai-2 11m37s (one truncated turn, one rejected file, one fix) | yes | faster, but at this size the repair turns are as large as the difference |
+| S2 (torus bridge, library-sized) | four episodes, file never changed | none | progress memory injected #1 each time | wall: the seat would not write its plan into the file |
+| S2, upgraded loop | zai-1, 21:52 to 23:56Z, 4 episodes chained by auto-continue (last one 100 min, 1471 lines) | none | 馬-promoted progress injected #1 each episode | **PROVED**, checker PASS, axioms clean; `t95J03-S2-proved.lean` |
+
+  Eight of t95J03's 14 leaves plus S2 are proved. What made S2 go was the
+  plan being written into the seat area as comments **by hand** (claude-3,
+  from the 27-version progress memory). The proposal from the run log is
+  still open: 馬 writes the promoted plan into the file between episodes.
+  It needs Joe's go. Nothing has been built for it.
+
+- What the effect rows do and do not show: delivery now works (injection
+  plus name-match selection); a time effect appears on small leaves but
+  leaf 6 shows the seat is a confound, so the claim is "the follower uses
+  the route and says so", not "the memory makes the follower faster". On
+  the large leaf, memory carried progress across episodes, and the file was
+  the missing piece.
+
+**What changed 10-18 and 10-19 (all live in :7070 unless marked).**
+
+- 馬 cards. A card now carries a checked `work` record: which known-work item
+  the operator's turn addresses, with an exact quote, rejected if not
+  verbatim (86b557928). A new harness packet no longer inherits the
+  previous packet's purpose on a reused Zai session (8bb7f1877); this was
+  showing zai-1's 10-17 torus-bridge purpose on unrelated jobs.
+- FUTON's view ("same mission, other agents") shows each seat's current
+  invoke job, skipping auto-bellbacks, and the 馬 purpose only when it was
+  stated after that job began (b74f84dbb, 0afe3afdf).
+- Stepper: 馬's card and the Cascade slice moved to the bottom and folded
+  (2b22d9980); the Emacs stepper follows the active REPL (7b0511295) and
+  catches up when it falls behind the record store (969de94d6). This
+  closes G11's symptom from the other side: the stepper reconciles every
+  20 s rather than being called on each reading.
+- 馬 alignment reading: for each operator act, a verdict on what the reply
+  did with it (answered / noted / not answered), each but not-answered
+  backed by a verbatim quote of at least 3 words; classical pass first,
+  then 馬-sonnet by a bounded whistle (22d392416, 36aa9e574, 5e1325c18). The
+  stepper shows it as ALIGNMENT (4ea19fa03).
+- Zai seats refused with HTTP 400 code 1261 ("Prompt exceeds max length"):
+  zai-7 lost every turn from 10-18 04:00Z until claude-3 reset its session.
+  Seats now get a default context cap and compact-and-retry once
+  (ff8ea7cc5, needs seats rebuilt to take effect), and a turn-final
+  listener resets a refused seat's session once (08a37d1b0, live). This
+  matters for the effect experiment: a refused seat looks like a slow one.
+
+**Where the work goes next: E-象-repl-cycle.** Agreed with Joe on 10-19:
+each turn is Read (象 proposes patterns), Evaluate (the agent works), Print
+(馬 says, per proposed pattern, used / didn't-apply / missed), Loop (Joe's
+next turn gives the outcome). That turns "was the memory useful" into a
+per-turn, per-pattern record, labelled by the operator's next turn rather
+than by 馬. Its build order is in `E-象-repl-cycle.md`. State:
+
+- 1a (discovery, zai-1, `~/notes/packets/2026-10-19-repl-cycle-1a.md`):
+  the turn record is written before the prompt is rendered, and the
+  pattern provider's cache is keyed per seat, so reading it at turn end
+  could attach another turn's patterns. zai-1 stopped there, as asked.
+- 1b (record the proposed set at render time): zai-1's 1dd0e687e, plus
+  claude-3's review fixes 6e85aa497 (every render kept, each with
+  `{patterns, at, job_id}`; appends locked). Tests green in the touched
+  namespaces. **Committed, not loaded.** Loading needs
+  `scripts/restore-http-routes.sh` (reloads `futon3c.transport.http` and
+  prompt-line from master). After a JVM restart it is in automatically.
+  Then check that a fresh Claude REPL turn's record gets a
+  `proposed_patterns` entry with the right job id.
+- Open risk, from reading only: if a reply never clears
+  `session-mode--reply-pending-path` in Emacs, the next send carries the
+  previous turn's record id, and its patterns land on the wrong record.
+  Check it on the first live turns after loading.
+- Next packet: 1 (Print), 馬 adds the per-pattern verdict to its card. Not
+  started.
+
+**After a restart, in order.** (1) Check the :7070 log for the
+`ma-reading-live` and `refusal-reset` listeners being required from
+http.clj (they are, so they should come up). (2) Re-register 馬-sonnet if
+the roster lost it (claude, sonnet, cwd `storage/operator-turns`); without
+it the alignment reading runs its classical pass only and says so.
+(3) Re-register zai-1/zai-2 if needed; `~/code/data/minus40/ma-continue.txt`
+still lists them for auto-continue. (4) Make one REPL turn and look for
+`proposed_patterns` on its record.
+
 ## Cross-links
 
 - [E-cool-memories](E-cool-memories.md): the store, its laws, the Lean checks.
@@ -949,3 +1050,5 @@ bank memories, so only Observer-written memory can reach the follower.
 - `web/stepper/PACKET-stepper-view.md`, `PACKET-frames-cache.md`, `PACKET-frames-stream.md`, `PACKET-frames-page.md`: the four packets behind the page, in order.
 - `holes/labs/M-象-2000/LAB-2026-10-16-occurrence-squares.md` and `scripts/occurrence_square.py`: the 3/2-category answer to Joe's second look; futon2 `holes/labs/wm-contract/CASCADE-SPEC-v3-draft-2026-10-05.md` §2 for the rule.
 - M-象-2000: the two queries this excursion's G7 serves.
+- [E-象-repl-cycle](E-象-repl-cycle.md): the per-turn Read/Evaluate/Print/Loop record this excursion continues into.
+- `~/notes/packets/memory-effect/RUN-LOG.md`: the effect experiment, leaf by leaf, with job ids; proofs archived beside it.
