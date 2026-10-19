@@ -2,7 +2,7 @@
 
 | input sha256 | futon3 HEAD | script sha256 | run date |
 | --- | --- | --- | --- |
-| 9992e2c62e41453d9ae33ba6c660b20195c91006759c84a3154af858436612e5 | 6899c80349a9851fb80e9e17763f0083552eeea9 | 4b661b39b214c8ce9eb2ff9b01dcb052d212612a81d1bdf8c422d5ce6f639c98 | 2026-10-19 |
+| 9992e2c62e41453d9ae33ba6c660b20195c91006759c84a3154af858436612e5 | 6899c80349a9851fb80e9e17763f0083552eeea9 | 9f08c6d46acba76e79fd0ccd1e8675c17ec77de488128c64e7e4e6953c5b6e4e | 2026-10-19 |
 
 The input SHA was verified before parsing. Only use-derived mined kinds (`co-cited`, `rejected-beside`, `next-in-session`, `used-together`) can corroborate; mined `why`/`how` edges are excluded to avoid circular evidence. The citation audit contains **475** distinct cited patterns.
 
@@ -671,3 +671,18 @@ This run has 1456 library nodes (-30 against Claude-5), 2472 authored edge recor
 - Giant size under corroborated-only authored edges: **7**
 - Bridges in the authored giant: **120**
 - Uncorroborated/no-evidence bridges: **117** (118 authored rows)
+
+## (e) Without next-in-session
+
+`next-in-session` only records that two patterns were cited in consecutive turns. Here it is dropped: only `co-cited`, `rejected-beside` and `used-together` can corroborate. The authored giant and its bridges are unchanged (they do not depend on evidence).
+
+| measure | value |
+| --- | ---: |
+| corroborated edges in giant | 29 |
+| uncorroborated | 558 |
+| no-evidence | 1515 |
+| largest corroborated component | 5 |
+| components of size ≥ 2 under corroborated edges | 15 |
+| bridges with no use evidence | 118 of 120 |
+
+Bridges still corroborated: `agent/handoff-preserves-context` — `agent/student-dispatch`, `math-strategy/plan-first-attempt` — `translation/revise-the-source-under-pressure`.

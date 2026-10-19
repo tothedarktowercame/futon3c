@@ -27,6 +27,17 @@ class GiantCorroborationTest(unittest.TestCase):
         self.assertEqual({"co-cited": ["batch/turn-1"]}, rows[0]["evidence"])
         self.assertEqual({}, rows[1]["evidence"])
 
+    def test_next_in_session_can_be_excluded(self):
+        mined = {"edges": [{"a": "a/x", "b": "b/y", "kind": "next-in-session",
+                            "evidence": [{"at": "batch/turn-2.json.analysis.json"}]}]}
+        edge = [{"a": "a/x", "b": "b/y", "directive": "references"}]
+        cited = {"a/x", "b/y"}
+        full = census.classify_authored_edges(edge, cited, census.use_index(mined))
+        strong = census.classify_authored_edges(
+            edge, cited, census.use_index(mined, census.USE_KINDS - {"next-in-session"}))
+        self.assertEqual("corroborated", full[0]["status"])
+        self.assertEqual("uncorroborated", strong[0]["status"])
+
     def test_bridge_detaches_known_piece(self):
         graph = census.adjacency({"a/x", "b/y", "c/z", "d/q"}, [
             {"a": "a/x", "b": "b/y"}, {"a": "b/y", "b": "c/z"},

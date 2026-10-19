@@ -141,11 +141,11 @@ def turn_id(evidence):
     return (first.parent / name).as_posix() if first.parent.name else name or at
 
 
-def use_index(mined_graph):
+def use_index(mined_graph, kinds=USE_KINDS):
     answer = collections.defaultdict(lambda: collections.defaultdict(set))
     for edge in mined_graph.get("edges", []):
         kind = edge.get("kind")
-        if kind not in USE_KINDS:
+        if kind not in kinds:
             continue
         key = tuple(sorted((edge["a"], edge["b"])))
         for evidence in edge.get("evidence", []):
@@ -167,6 +167,85 @@ def classify_authored_edges(edges, cited, evidence):
             row.update(status="uncorroborated", evidence={})
         result.append(row)
     return result
+
+
+def commit_lane(sha, library):
+    """Return (lane, subject) for an authoring commit.
+
+    The lane is the commit's Agent-Id trailer.  Commits made before the
+    signing hook (2026-09-30) carry none; they are labelled by author name,
+    so an unsigned lane is visible as such rather than guessed.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(pathlib.Path(library).parent), "show", "-s",
+         "--format=%(trailers:key=Agent-Id,valueonly,separator=%x2C)%x00%an%x00%s", sha],
+        text=True, capture_output=True, check=True).stdout.strip("\n")
+    agent, author, subject = out.split("\0", 2)
+    agent = agent.strip()
+    return (agent if agent else "unsigned (%s)" % author), subject.strip()
+
+
+def detached_piece(graph, a, b):
+    after = components(graph, skip_edge=frozenset((a, b)))
+    return sorted(min(after, key=len))
+
+
+def editorial(rows, giant, bridge_map, library, path, title):
+    """Write one entry per weak bridge pair, in the H5a form: the edge, the
+    directive(s) that author it, who authored it and when, what detaches."""
+    graph = adjacency(giant, [r for r in rows if r["a"] in giant and r["b"] in giant])
+    pairs = collections.defaultdict(list)
+    for r in rows:
+        key = tuple(sorted((r["a"], r["b"])))
+        if key in bridge_map and r["status"] != "corroborated":
+            pairs[key].append(r)
+    lanes = {}
+    lines = ["# " + title, "",
+             "Each entry is an authored edge whose removal splits the authored giant and "
+             "which has no use evidence. These are editorial proposals for Joe: the "
+             "flexiarg file is the source of truth and no seat edits it.", "",
+             "| # | edge | directive @ file:line | authored (sha, date, lane) | commit subject | detached piece |",
+             "| ---: | --- | --- | --- | --- | --- |"]
+    for n, (key, authored) in enumerate(sorted(pairs.items(), key=lambda kv: (-bridge_map[kv[0]]["detached-size"], kv[0])), 1):
+        piece = detached_piece(graph, *key)
+        shown = ", ".join("`%s`" % x for x in piece[:8]) + (" … (+%d)" % (len(piece) - 8) if len(piece) > 8 else "")
+        for i, r in enumerate(sorted(authored, key=lambda r: (r["file"], r["line"]))):
+            sha = r["authored-sha"]
+            if sha not in lanes:
+                lanes[sha] = commit_lane(sha, library)
+            lane, subject = lanes[sha]
+            lines.append("| %s | %s | %s @ `%s:%d` | `%s`, %s, %s | %s | %s |" % (
+                n if i == 0 else "", "`%s` → `%s`" % (r["a"], r["b"]), r["directive"], r["file"], r["line"],
+                sha[:8], r["authored-date"], lane, subject.replace("|", "\\|"),
+                ("%d: %s" % (len(piece), shown)) if i == 0 else "″"))
+    pathlib.Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return len(pairs)
+
+
+def strong_section(classified_strong, giant, bridge_map_all):
+    """Rerun (b) and (d) using only co-cited/rejected-beside/used-together."""
+    giant_rows = [r for r in classified_strong if r["a"] in giant and r["b"] in giant]
+    status = collections.Counter(r["status"] for r in giant_rows)
+    corr = [r for r in giant_rows if r["status"] == "corroborated"]
+    comps = components(adjacency(giant, corr))
+    weak = {tuple(sorted((r["a"], r["b"]))) for r in giant_rows
+            if tuple(sorted((r["a"], r["b"]))) in bridge_map_all and r["status"] != "corroborated"}
+    lines = ["## (e) Without next-in-session", "",
+             "`next-in-session` only records that two patterns were cited in consecutive turns. "
+             "Here it is dropped: only `co-cited`, `rejected-beside` and `used-together` can corroborate. "
+             "The authored giant and its bridges are unchanged (they do not depend on evidence).", "",
+             "| measure | value |", "| --- | ---: |",
+             "| corroborated edges in giant | %d |" % status["corroborated"],
+             "| uncorroborated | %d |" % status["uncorroborated"],
+             "| no-evidence | %d |" % status["no-evidence"],
+             "| largest corroborated component | %d |" % (len(comps[0]) if comps else 0),
+             "| components of size ≥ 2 under corroborated edges | %d |" % sum(len(c) >= 2 for c in comps),
+             "| bridges with no use evidence | %d of %d |" % (len(weak), len(bridge_map_all)), ""]
+    corr_bridges = sorted(k for k in bridge_map_all if k not in weak)
+    lines.append("Bridges still corroborated: " +
+                 (", ".join("`%s` — `%s`" % k for k in corr_bridges) or "none") + ".")
+    lines.append("")
+    return lines, len(comps[0]) if comps else 0, len(weak)
 
 
 def cited_patterns(path):
@@ -277,7 +356,7 @@ def report(rows, all_nodes, output, metadata, unresolved, cited_count):
               "- Uncorroborated/no-evidence bridges: **%d** (%d authored rows)" %
               (len(bad_bridge_pairs), len(bad_bridges)), ""]
     pathlib.Path(output).write_text("\n".join(lines), encoding="utf-8")
-    return len(giant), len(corroborated_giant), len(bridge_map), len(bad_bridge_pairs), giant_rows
+    return len(giant), len(corroborated_giant), len(bridge_map), len(bad_bridge_pairs), giant_rows, giant, bridge_map
 
 
 def main():
@@ -299,8 +378,18 @@ def main():
                 "futon3-head": subprocess.check_output(["git", "-C", str(pathlib.Path(args.library).parent), "rev-parse", "HEAD"], text=True).strip(),
                 "script-sha256": sha256(__file__),
                 "run-date": dt.datetime.now(dt.timezone.utc).date().isoformat()}
-    _, corroborated, bridges, weak_bridges, giant_rows = report(classified, nodes, out / "REPORT.md", metadata, unresolved, len(cited))
+    _, corroborated, bridges, weak_bridges, giant_rows, giant, bridge_map = report(
+        classified, nodes, out / "REPORT.md", metadata, unresolved, len(cited))
     tsv(giant_rows, out / "edges.tsv")
+    strong = classify_authored_edges(authored, cited, use_index(mined_graph, USE_KINDS - {"next-in-session"}))
+    extra, strong_giant, strong_weak = strong_section(strong, giant, bridge_map)
+    with open(out / "REPORT.md", "a", encoding="utf-8") as handle:
+        handle.write("\n" + "\n".join(extra))
+    editorial(classified, giant, bridge_map, args.library, out / "EDITORIAL.md",
+              "Editorial list: authored bridges with no use evidence")
+    editorial(strong, giant, bridge_map, args.library, out / "EDITORIAL-strong.md",
+              "Editorial list: authored bridges with no use evidence (next-in-session excluded)")
+    print("strong: corroborated_giant=%d weak_bridges=%d" % (strong_giant, strong_weak))
     print("corroborated_giant=%d bridges=%d uncorroborated_or_no_evidence_bridges=%d" %
           (corroborated, bridges, weak_bridges))
 
