@@ -199,6 +199,24 @@ class HarnessTest(unittest.TestCase):
             out = ma.after_harness_turn("zai-1", "s", turn, "* ✅", [turn], log=lambda *_: None, dry_run=True)
         self.assertEqual((out["promoted"], out["continued"]), (None, None))
 
+    def test_new_packet_does_not_inherit_the_last_purpose(self):
+        prev = {"standing": {"purpose": {"text": "Prove t95J03_torus_bridge", "held": 5},
+                             "packet_vs_purpose": "", "open_threads": [{"text": "await review", "held": 1}]}}
+        def start(prompt):
+            return {"evidence/type": "coordination",
+                    "evidence/body": {"event": "turn-start", "dispatch-id": "invoke-9", "prompt": prompt}}
+        new = ma.carried(prev, start(S2_PACKET.replace("t95J03_torus_bridge", "t95J03_other")))
+        self.assertNotIn("Prove t95J03_torus_bridge", ma.known_work({}, new))
+        self.assertIn("await review", ma.known_work({}, new))
+        with mock.patch.object(ma, "xiang_patterns", return_value={}), \
+             mock.patch.object(ma, "clock_of", return_value={}):
+            card = ma.build_card("zai-1", "s", [], "", None, new)   # model card failed to parse
+        self.assertEqual(card["standing"]["purpose"], {"text": "", "held": 1})
+        cont = start(ma.continuation_packet(ma.packet_body(S2_PACKET), "invoke-root", 2, "m"))
+        self.assertIs(ma.carried(prev, cont), prev)
+        operator = {"evidence/type": "chat-turn", "evidence/body": {"role": "user", "text": "go on"}}
+        self.assertIs(ma.carried(prev, operator), prev)
+
     def test_harness_prompt_forbids_restating_the_packet(self):
         self.assertIn("Do NOT restate it", ma.system_prompt(harness=True))
         self.assertNotIn("Do NOT restate it", ma.system_prompt())

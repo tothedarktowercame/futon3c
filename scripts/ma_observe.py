@@ -281,6 +281,24 @@ def known_work(clock, previous_card):
     return uniq
 
 
+def fresh_packet(turn_row):
+    """A Zai/Kimi turn that is not a 馬 continuation starts a new packet."""
+    return (tf.is_harness_turn_start(turn_row)
+            and not CONT_HEAD.match(packet_body(tf.body_of(turn_row).get("prompt"))))
+
+
+def carried(previous_card, turn_row):
+    """The previous card as the next pass sees it. A new packet does not
+    inherit the last packet's purpose (2026-10-19: zai-1's reused session
+    offered "Prove t95J03_torus_bridge" as the purpose of later packets)."""
+    if not previous_card or not fresh_packet(turn_row):
+        return previous_card
+    st = dict(previous_card.get("standing") or {})
+    st.pop("purpose", None)
+    st.pop("packet_vs_purpose", None)
+    return {**previous_card, "standing": st}
+
+
 def check_work(work, known, operator_text):
     """Check the model's work record. Reject, never drop, so a card always
     says which piece of work the turn was claimed to address and whether
@@ -433,14 +451,15 @@ def observe_session(session, agent="", dry_run=False, log=print):
             if final and not any(final[-300:] in m[2] for m in msgs[1:]):
                 msgs.append(("assistant", (fr or {}).get("evidence/at") or msgs[-1][1], final[-6000:]))
         msgs = cap_window(msgs)
+        base = carried(previous_card, t)
         model_view = None
-        if previous_card:
-            st = previous_card.get("standing", {})
+        if base:
+            st = base.get("standing", {})
             model_view = {"purpose": (st.get("purpose") or {}).get("text"),
                           "packet_vs_purpose": st.get("packet_vs_purpose"),
                           **{k: [i["text"] for i in st.get(k) or []] for k in ("open_threads", "repair", "ramifications")}}
         user = user_prompt(format_history(msgs), previous[-PREVIOUS_CHARS:], model_view,
-                           known=known_work(clock_of(agent) if agent else {}, previous_card))
+                           known=known_work(clock_of(agent) if agent else {}, base))
         if dry_run:
             log(user[:3000])
             known_sec = re.search(r"## Known Work\n.*?\n---", user, re.S)
@@ -452,8 +471,8 @@ def observe_session(session, agent="", dry_run=False, log=print):
         row = observation_row(session, agent, t, raw, usage, time.time() - t0, len(msgs))
         post_evidence(row)
         mc = parse_card(raw)
-        known = known_work(clock_of(agent) if agent else {}, previous_card)
-        card = build_card(agent, session, rows, row["body"]["observations"], mc, previous_card,
+        known = known_work(clock_of(agent) if agent else {}, base)
+        card = build_card(agent, session, rows, row["body"]["observations"], mc, base,
                           work=check_work((mc or {}).get("work"), known, turn_text(t)))
         post_evidence(card_row(session, agent, t, card, row["body"]["at"]))
         if not dry_run:
