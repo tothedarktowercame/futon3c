@@ -300,3 +300,36 @@
     (is (= (:repo env) (:target-repository identities) (:target-worktree identities)))
     (is (= :refused (:status refused)))
     (is (= [:work-order/invalid] (:defects refused)))))
+
+(deftest producer-invoke-retries-once-after-a-provider-rate-limit
+  "Clicks wm-click-36b47627 and wm-click-fdc08aea (2026-10-19): each was spent
+   on a 429 at the review invoke seconds after the author invoke, while the
+   same seat answered a probe three minutes later. One retry after a backoff;
+   any other failure is returned as it is; a second 429 is the failure."
+  (let [calls (atom [])
+        rate-limited {:ok false :error "Exit 1: exceeded retry limit, last status: 429 Too Many Requests"}
+        ok {:ok true :result "{:status :accepted}" :session-id "s"}
+        run (fn [responses]
+              (reset! calls [])
+              (let [queue (atom responses)]
+                (binding [sut/*rate-limit-backoff-ms* 0]
+                  (with-redefs [reg/get-agent (fn [_] ready-agent)
+                                reg/invoke-agent! (fn [seat _ _]
+                                                    (swap! calls conj seat)
+                                                    (let [r (first @queue)]
+                                                      (swap! queue rest) r))]
+                    (#'sut/producer-invoke! "wm-reviewer" :acceptance-review {})))))]
+    (let [result (run [rate-limited ok])]
+      (is (= :accepted (:status result)) "the retry's answer is the producer's answer")
+      (is (= 2 (count @calls)))
+      (is (= 0 (get-in result [:transport-retry :after-ms])))
+      (is (str/includes? (get-in result [:transport-retry :first-error]) "429")))
+    (let [result (run [{:ok false :error "Exit 1: codex invocation failed"} ok])]
+      (is (= :meta-self-heal/producer-invoke-failed (:reason result)))
+      (is (= 1 (count @calls)) "a failure that is not a rate limit is not retried")
+      (is (nil? (:transport-retry result))))
+    (let [result (run [rate-limited rate-limited ok])]
+      (is (= :meta-self-heal/producer-invoke-failed (:reason result)))
+      (is (= 2 (count @calls)) "exactly one retry")
+      (is (str/includes? (:detail result) "429"))
+      (is (some? (:transport-retry result))))))

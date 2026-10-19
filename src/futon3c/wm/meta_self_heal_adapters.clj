@@ -95,6 +95,34 @@
       (when (map? value) value))
     (catch Throwable _ nil)))
 
+(def ^:dynamic *rate-limit-backoff-ms*
+  "Wait before the one retry of a seat invoke the provider rate-limited."
+  90000)
+
+(defn- rate-limited-error? [result]
+  (let [message (str (or (:error result) (:message result)))]
+    (boolean (re-find #"\b429\b|Too Many Requests|rate.?limit" message))))
+
+(defn- invoke-with-rate-limit-retry!
+  "Invoke SEAT once; if the transport reports a provider rate limit, wait
+   *rate-limit-backoff-ms* and invoke once more. Clicks wm-click-36b47627 and
+   wm-click-fdc08aea (2026-10-19, 20:43Z and 20:50Z) were each spent on a
+   429 at the review invoke seconds after the author invoke, while a one-word
+   probe of the same seat answered three minutes later: the limit is a burst,
+   and the CLI's own retries are too quick to outlast it. Any other failure
+   is returned as it is. A retried result carries :rate-limit-retry."
+  [seat prompt options]
+  (let [first-result (reg/invoke-agent! seat prompt options)]
+    (if (and (not (:ok first-result)) (rate-limited-error? first-result))
+      (let [first-error (str (or (:error first-result) (:message first-result)))]
+        (println (str "[wm-self-heal] " seat " rate-limited; one retry after "
+                      *rate-limit-backoff-ms* " ms: " first-error))
+        (Thread/sleep *rate-limit-backoff-ms*)
+        (assoc (reg/invoke-agent! seat prompt options)
+               :rate-limit-retry {:after-ms *rate-limit-backoff-ms*
+                                  :first-error first-error}))
+      first-result)))
+
 (defn agency-invoke!
   "Synchronous Agency port used inside the already-checkpointed coordinator.
    The prompt requires a single EDN result so phase evidence is machine typed."
@@ -104,9 +132,9 @@
                     "Execute only the sealed request and return exactly one EDN map "
                     "with :status and :payload (no prose).\n\n" (pr-str request))
         result (when (:ok reset)
-                 (reg/invoke-agent! seat prompt
-                                    {:mode "work" :caller "war-machine"
-                                     :session-id session-id}))
+                 (invoke-with-rate-limit-retry! seat prompt
+                                                {:mode "work" :caller "war-machine"
+                                                 :session-id session-id}))
         parsed (when (:ok result) (one-edn-map (:result result)))
         job-id (or (get-in result [:invoke-meta :job-id]) (:job-id parsed))]
     (cond
@@ -170,19 +198,23 @@
         prompt (producer-prompt operation request)
         result (when (and agent (invoke-capable? agent)
                           (available-seat-state? (:agent/status agent)))
-                 (reg/invoke-agent! seat prompt {:mode "work" :caller "war-machine"
-                                                  :session-id (:agent/session-id agent)}))
-        parsed (when (:ok result) (one-edn-map (:result result)))]
+                 (invoke-with-rate-limit-retry!
+                  seat prompt {:mode "work" :caller "war-machine"
+                               :session-id (:agent/session-id agent)}))
+        parsed (when (:ok result) (one-edn-map (:result result)))
+        retry (:rate-limit-retry result)]
     (cond
       (not agent) {:status :failed :reason :meta-self-heal/producer-seat-unavailable}
       ;; F9 (click wm-click-2b1d568c, 2026-10-19): the transport's own error
       ;; ("Exit 1: exceeded retry limit, last status: 429 Too Many Requests")
       ;; was dropped here, so the record could not say the seat was
       ;; rate-limited; it is retained verbatim as :detail.
-      (not (:ok result)) {:status :failed :reason :meta-self-heal/producer-invoke-failed
-                          :detail (or (:error result) (:message result))}
+      (not (:ok result)) (cond-> {:status :failed
+                                  :reason :meta-self-heal/producer-invoke-failed
+                                  :detail (or (:error result) (:message result))}
+                           retry (assoc :transport-retry retry))
       (not (map? parsed)) {:status :failed :reason :meta-self-heal/producer-response-malformed}
-      :else parsed)))
+      :else (cond-> parsed retry (assoc :transport-retry retry)))))
 
 (defn- hex-sha256 [^bytes content]
   (format "%064x" (java.math.BigInteger. 1
