@@ -126,16 +126,32 @@
       :else {:status (:status parsed) :payload (:payload parsed)
              :session-id (:session-id result) :job-id job-id})))
 
-(defn- producer-prompt [operation request]
+(defn- producer-prompt
+  "Prompt text for one META producer operation.  F11b (click
+  wm-click-fca1c921, 2026-10-19): the diagnosis prompt used to be one
+  sentence and never asked for callable production functions, so the author
+  seat refused with :production-function-identity-absent after the
+  acceptance prompt demanded a test over them.  The diagnosis now carries
+  :production-functions, which the acceptance prompt refers to by that name."
+  [operation request]
   (str "Dedicated META " (name operation) ". Return exactly one EDN map and no prose. "
        "Do not select ordinary work, execute any command, or claim a repair. "
        (case operation
          :diagnosis
-         "Success must be {:status :succeeded :diagnosis <map>}. A refusal/failure must be typed. "
+         (str "Success must be {:status :succeeded :diagnosis <map>}, where the map includes :classification, "
+              ":primary-cause (the stage, the condition, and the affected nodes with reasons), and "
+              ":production-functions, a vector of {:role <keyword> :var \"<ns>/<fn>\" :file \"<repo-relative path>\"}. "
+              ":production-functions must contain at least one entry for each of the roles :selection-entrypoint, "
+              ":required-loop-node-evaluator and :terminal-routing-entrypoint. Each :var must be a real, callable function "
+              "that you found by reading the repository at /home/joe/code/futon2 (you may read files; do not execute commands), "
+              "and :file is the repo-relative path of the file that defines it. These are the functions the acceptance test "
+              "will exercise. A function you cannot find must be reported in a typed refusal "
+              "({:status :failed :kind :production-function-identity-absent ...}), never invented. "
+              "A refusal/failure must be typed. ")
          :acceptance-proposal
          (str "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value> "
               ":source {:namespace <namespace-string> :path <test/... .clj> :text <complete-file-text>}}}. "
-              "The source must be a complete clojure.test file that pins the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named by the diagnosis, with no stubs. "
+              "The source must be a complete clojure.test file that pins the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named in the diagnosis's :production-functions, with no stubs. "
               "The command must be [\"clojure\" \"-M:test\" \"-n\" <that-namespace>] optionally followed by [\"-v\" <var>]. The specification is not run and is not accepted. ")
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "

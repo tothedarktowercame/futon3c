@@ -234,4 +234,20 @@
     (is (str/includes? prompt ":source {:namespace"))
     (is (str/includes? prompt "complete clojure.test file"))
     (is (str/includes? prompt "real production functions"))
-    (is (str/includes? prompt "with no stubs"))))
+    (is (str/includes? prompt "with no stubs"))
+    (is (str/includes? prompt ":production-functions"))))
+
+(deftest diagnosis-prompt-requires-production-functions
+  ;; F11b, click wm-click-fca1c921
+  (let [prompt (#'sut/producer-prompt :diagnosis {:injury {:id "injury/x"}})]
+    (doseq [s [":classification" ":primary-cause" ":production-functions"
+               ":selection-entrypoint" ":required-loop-node-evaluator"
+               ":terminal-routing-entrypoint"
+               "{:role" ":var" ":file" "repo-relative"
+               "/home/joe/code/futon2"
+               "found by reading" "do not execute commands"
+               "typed refusal" "never invented"
+               "Do not select ordinary work" "claim a repair"
+               "Return exactly one EDN map and no prose"
+               "Bind every returned identity and pin to this request"]]
+      (is (str/includes? prompt s) s))))
