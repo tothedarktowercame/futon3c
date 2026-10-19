@@ -135,6 +135,45 @@ function patternLines(frame) {
     out.push(`rejected: ${(p.rejected || []).length}`);
     return out;
 }
+export const ALIGNMENT_UNREAD = "not read yet";
+const VERDICT_GLYPHS = {
+    "answered": "✓", "deferred": "→", "declined": "✗", "not-answered": "?", "unread": "•",
+};
+function firstWords(text, words = 7) {
+    const list = String(text ?? "").trim().split(/\s+/).filter(Boolean);
+    return list.length ? list.slice(0, words).join(" ") + (list.length > words ? "…" : "") : "…";
+}
+/** The ALIGNMENT section: a summary line, then one line per operator act —
+ * verdict glyph, kind and first words, and for answered acts the reply
+ * paragraph's mark and quoted words, with the method in brackets. A frame
+ * without the field reads "not read yet", never nothing. */
+export function alignmentLines(frame) {
+    const alignment = frame.alignment;
+    const acts = alignment?.acts || [];
+    if (!alignment || !acts.length)
+        return [ALIGNMENT_UNREAD];
+    const answered = acts.filter(a => a.verdict === "answered");
+    const byQuote = answered.filter(a => a.method === "quote").length;
+    const byModel = answered.filter(a => a.method === "model").length;
+    const summary = `${acts.length} asked, ${answered.length} answered `
+        + `(${byQuote} by quote, ${byModel} by model), ${acts.length - answered.length} not answered`;
+    const unread = alignment.unread || 0;
+    const lines = [unread > 0 ? `${summary} · ${unread} unread` : summary];
+    for (const act of acts) {
+        let line = `${VERDICT_GLYPHS[act.verdict || ""] || shown(act.verdict, "?")} `
+            + `${shown(act.kind)} "${firstWords(act.text)}"`;
+        if (act.verdict === "answered")
+            line += ` → ${act.mark ? act.mark : "—"} "${firstWords(act.quote)}"`;
+        if (act.method)
+            line += `  [${act.method}]`;
+        lines.push(line);
+    }
+    return lines;
+}
+function alignmentTitle(frame) {
+    const seat = frame.alignment?.seat;
+    return `ALIGNMENT (${seat ? seat : "馬"})`;
+}
 function portsText(frame) {
     if (!frame.ports)
         return "";
@@ -415,6 +454,7 @@ export function frameModel(frame) {
         happened: happened.length ? happened : ["(nothing between this turn and the next)"],
         ports: portsText(frame), memory: memoryLines(frame),
         answered: answeredLines(frame),
+        alignmentTitle: alignmentTitle(frame), alignment: alignmentLines(frame),
         observed: observedLines(frame),
         card: cardLines(frame),
         session: frame.record?.session_id || "?",
@@ -506,6 +546,7 @@ export function renderStepper(initial, host, opts = {}) {
             add(row, "div", "parse-sources", `(${line.sources})`);
         }
         section("ANSWERED", model.answered);
+        section(model.alignmentTitle, model.alignment);
         if (model.observed.length)
             section("OBSERVED (馬)", model.observed);
         section("PATTERNS", model.patterns);

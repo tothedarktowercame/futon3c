@@ -360,6 +360,70 @@ or empty."
                        (or (turn-stepper--aget (quote text) a) "")))
              open "\n"))))))))
 
+(defun turn-stepper--first-words (text n)
+  "The first N whitespace words of TEXT, ellipsized; \"…\" when empty."
+  (let* ((trimmed (split-string (or (and text (format "%s" text)) "") "[ \f\t\n\r\v]+" t)))
+    (if trimmed
+        (concat (string-join (seq-take trimmed n) " ")
+                (when (> (length trimmed) n) "…"))
+      "…")))
+
+(defconst turn-stepper--verdict-glyphs
+  '(("answered" . "✓") ("deferred" . "→") ("declined" . "✗")
+    ("not-answered" . "?") ("unread" . "•"))
+  "Glyph per alignment verdict; unknown verdicts show themselves.")
+
+(defun turn-stepper--alignment-glyph (verdict)
+  (or (cdr (assoc verdict turn-stepper--verdict-glyphs))
+      (if (or (null verdict) (string= verdict "")) "?" verdict)))
+
+(defun turn-stepper--render-alignment (alignment)
+  "Render the frame's ALIGNMENT (馬's reading of the operator turn) as a
+section: a summary line, then one line per act — verdict glyph, kind and
+first words, and for answered acts the reply paragraph's mark and quoted
+words, with the method in brackets.  Returns the empty string when the
+frame carries no alignment (the section then stays away, like PORTS)."
+  (if (not (and alignment (listp alignment)))
+      (concat "\n\n"
+              (propertize "ALIGNMENT (馬)\n" 'face '(:weight bold))
+              "  not read yet")
+    (let* ((acts (append (turn-stepper--aget 'acts alignment) nil))
+           (answered (seq-filter (lambda (a) (string= (or (turn-stepper--aget 'verdict a) "")
+                                                      "answered"))
+                                 acts))
+           (by-quote (length (seq-filter (lambda (a) (equal (turn-stepper--aget 'method a) "quote"))
+                                         answered)))
+           (by-model (length (seq-filter (lambda (a) (equal (turn-stepper--aget 'method a) "model"))
+                                         answered)))
+           (unread (or (turn-stepper--aget 'unread alignment) 0))
+           (summary (format "%d asked, %d answered (%d by quote, %d by model), %d not answered%s"
+                            (length acts) (length answered) by-quote by-model
+                            (- (length acts) (length answered))
+                            (if (> unread 0) (format " · %d unread" unread) ""))))
+      (concat
+       "\n\n"
+       (propertize "ALIGNMENT (馬)\n" 'face '(:weight bold))
+       (string-join (cons summary
+                          (mapcar
+                           (lambda (a)
+                             (let* ((verdict (or (turn-stepper--aget 'verdict a) ""))
+                                    (line (format "%s %s \"%s\""
+                                                  (turn-stepper--alignment-glyph verdict)
+                                                  (or (turn-stepper--aget 'kind a) "?")
+                                                  (turn-stepper--first-words
+                                                   (turn-stepper--aget 'text a) 7)))
+                                    (line (if (string= verdict "answered")
+                                              (concat line
+                                                      (format " → %s \"%s\""
+                                                              (or (turn-stepper--aget 'mark a) "—")
+                                                              (turn-stepper--first-words
+                                                               (turn-stepper--aget 'quote a) 7)))
+                                            line))
+                                    (method (turn-stepper--aget 'method a)))
+                               (if method (concat line (format "  [%s]" method)) line)))
+                           acts))
+                   "\n")))))
+
 (defun turn-stepper--render-frame (frame _index _count _session-id)
   "Render FRAME (alist) as display text.
 _INDEX, _COUNT and _SESSION-ID are accepted for callers that track
@@ -389,6 +453,7 @@ carries that information."
        "  (nothing between this turn and the next)")
      (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
                                  (turn-stepper--aget 'at turn))
+     (turn-stepper--render-alignment (turn-stepper--aget 'alignment frame))
      "\n")))
 
 ;;; ---------------------------------------------------------------- mode

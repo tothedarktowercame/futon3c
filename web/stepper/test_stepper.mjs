@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {
-  PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, answeredLines, cardLines, cascadeLines, zoomLines, cuePieces, observedLines,
+  ALIGNMENT_UNREAD, PARSE_PENDING, PATTERNS_NONE_READ, PATTERNS_PENDING, REPLY_ABSENT, alignmentLines, answeredLines, cardLines, cascadeLines, zoomLines, cuePieces, observedLines,
   frameModel, happenedDetail, parseStreamEvent, portsAge, readyFrames, receiveFrames,
 } from "./stepper.js";
 
@@ -168,6 +168,38 @@ assert.equal(frameModel(noneRead).patterns.at(-1), "rejected: 3");
 const stillReading = structuredClone(noneRead);
 stillReading.parse.status = "missing"; stillReading.patterns = {matched: [], rejected: []};
 assert.equal(frameModel(stillReading).patterns[0], PATTERNS_PENDING);
+
+// ALIGNMENT: the 馬 reading of the operator turn — one line per act plus a
+// summary; absent reads "not read yet", never nothing.
+{
+  const withAlignment = structuredClone(fixture[0]);
+  withAlignment.alignment = {
+    version: 1, at: "2026-10-19T09:00:00Z", seat: "馬-sonnet", unread: 2,
+    acts: [
+      {act: "t9-f-s1-0", kind: "ask-action", text: "Please fix the stepper display for the alignment row",
+       verdict: "answered", by: "t9-r-0", mark: "㊢", quote: "done; the alignment row renders one line per act for the turn", method: "quote"},
+      {act: "t9-f-s2-0", kind: "ask-action", text: "and add a summary line at the top",
+       verdict: "answered", by: "t9-r-1", mark: "㊢", quote: "summary counts asked, answered and by which method", method: "model"},
+      {act: "t9-f-s3-0", kind: "ask-action", text: "keep the fixtures honest",
+       verdict: "not-answered", by: null, mark: null, quote: null, method: null},
+      {act: "t9-f-s4-0", kind: "offer", text: "Reply yes 1 or yes 2 to pick the glyph set",
+       verdict: "unread", by: null, mark: null, quote: null, method: null},
+    ],
+  };
+  const model = frameModel(withAlignment);
+  assert.equal(model.alignmentTitle, "ALIGNMENT (馬-sonnet)");
+  assert.equal(model.alignment[0], "4 asked, 2 answered (1 by quote, 1 by model), 2 not answered · 2 unread");
+  assert.equal(model.alignment[1],
+    '✓ ask-action "Please fix the stepper display for the…" → ㊢ "done; the alignment row renders one line…"  [quote]');
+  assert.equal(model.alignment[2],
+    '✓ ask-action "and add a summary line at the…" → ㊢ "summary counts asked, answered and by which…"  [model]');
+  assert.equal(model.alignment[3], '? ask-action "keep the fixtures honest"');
+  assert.equal(model.alignment[4], '• offer "Reply yes 1 or yes 2 to…"');
+  const notRead = structuredClone(fixture[0]);
+  assert.deepEqual(alignmentLines(notRead), [ALIGNMENT_UNREAD]);
+  assert.equal(frameModel(notRead).alignmentTitle, "ALIGNMENT (馬)");
+  assert.equal(frameModel(notRead).alignment[0], ALIGNMENT_UNREAD);
+}
 
 const compiled = await readFile(new URL("./stepper.js", import.meta.url), "utf8");
 const page = await readFile(new URL("./index.html", import.meta.url), "utf8");

@@ -26,6 +26,10 @@ Frame shape:
  "happened": [non-operator rows with at in [turn.at, next-turn.at), sorted,
               each {"at","type","summary"}],
  "ports":  {closed_this_turn, still_open} when the record carries them,
+ "alignment": 馬's alignment reading of the operator turn, when the record
+              carries it: {version, at, seat, acts: [{act, kind, text,
+              verdict, by, mark, quote, method}], unread} — the M1 packet's
+              record.alignment, passed through untouched,
  "record": {"id","turn_id","agent_id","session_id"} when a record was joined,
  "reply":  the agent's reply to this turn, lined up against the parse:
            {"at", "evidence_id", "turn_id",
@@ -980,6 +984,10 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         # without them stays byte-identical.
         if entry is not None and entry["record"].get("ports"):
             frames[-1]["ports"] = entry["record"]["ports"]
+        # alignment (馬's reading of the operator turn, the M1 packet) rides
+        # the record like ports; a frame without it stays byte-identical.
+        if entry is not None and entry["record"].get("alignment"):
+            frames[-1]["alignment"] = entry["record"]["alignment"]
         # record: the 象 turn record this frame was joined to, so a viewer can
         # reach the record's own pages (scope view ?turn=<turn_id>).  Absent
         # when the frame has no record.  The id is the file's stem, or the
