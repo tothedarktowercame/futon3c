@@ -19,6 +19,13 @@
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- available-seat-state? [status]
   (contains? #{:idle :restored "idle" "restored"} status))
+(defn- invoke-capable? [agent]
+  ;; get-agent returns the stored record, whereas the HTTP projection derives
+  ;; :invoke-ready? from its registered local/WS route.  The dedicated WM
+  ;; seats are local handlers, so their stored invoke function is the exact
+  ;; authority the adapter will call after a restart.
+  (or (true? (:agent/invoke-ready? agent))
+      (ifn? (:agent/invoke-fn agent))))
 (defn- git [repo & args]
   (let [{:keys [exit out err]} (apply shell/sh "git" "-C" repo args)]
     {:ok? (zero? exit) :out (str/trim out) :err (str/trim err)}))
@@ -34,7 +41,7 @@
         tracked (git repo "status" "--porcelain" "--untracked-files=no")
         defects (cond-> []
                   (not= 3 (count (set seats))) (conj :cast-not-distinct)
-                  (not-every? #(and % (true? (:agent/invoke-ready? %))
+                  (not-every? #(and % (invoke-capable? %)
                                     (available-seat-state? (:agent/status %)))
                               (vals records))
                   (conj :cast-not-ready)

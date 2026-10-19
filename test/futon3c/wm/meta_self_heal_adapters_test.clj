@@ -44,6 +44,23 @@
     (is (= :ready (:status result)))
     (is (empty? (:defects result)))))
 
+(deftest restored-stored-agent-uses-registered-local-invoke-authority
+  (let [result (with-redefs [reg/get-agent
+                             (fn [_] {:agent/status :restored
+                                      :agent/invoke-fn (fn [& _])})
+                             clojure.java.shell/sh
+                             (fn [& args]
+                               {:exit 0
+                                :out (if (some #{"status"} args) "" "clean-head\n")
+                                :err ""})]
+                 (sut/readiness
+                  {:target-repository "/home/joe/code/futon2"
+                   :meta-injury-ledger-path "/tmp/ledger.edn"
+                   :meta-repair-transaction-path "/tmp/tx.edn"
+                   :queue-retry-fn identity}))]
+    (is (= :ready (:status result)))
+    (is (empty? (:defects result)))))
+
 (deftest missing-queue-or-unready-seat-refuses-without-effects
   (with-redefs [reg/get-agent (fn [seat]
                                 (assoc ready-agent :agent/status
