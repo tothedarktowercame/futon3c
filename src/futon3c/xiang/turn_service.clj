@@ -276,9 +276,11 @@
 
 (defn commit-trailers
   "The git trailers of commit SHA in REPO-PATH as a map of lowercased key to
-  trimmed value (\"agent-id\" \"codex-6\"), {} when the commit carries none,
-  nil when git cannot read the commit (no repo, bad sha). Only trailers, so
-  a forged body line never impersonates one."
+  the set of its trimmed values ({\"agent-id\" #{\"codex-6\" \"codex-68\"}}: a
+  key can repeat, and commits do repeat Agent-Id, Agent-Session and
+  Dispatched-By), {} when the commit carries none, nil when git cannot read
+  the commit (no repo, bad sha). Only trailers, so a forged body line never
+  impersonates one."
   [repo-path sha]
   (try
     (let [p (.start (doto (ProcessBuilder. ["git" "log" "-1" "--format=%(trailers:only)" (str sha)])
@@ -286,10 +288,11 @@
                       (.redirectErrorStream false)))
           out (slurp (.getInputStream p))]
       (when (zero? (.waitFor p))
-        (into {} (keep (fn [line]
-                         (when-let [[_ k v] (re-matches #"([A-Za-z0-9_-]+):[ ]?(.*)" (str/trim line))]
-                           [(str/lower-case k) (str/trim v)]))
-                       (str/split-lines out)))))
+        (reduce (fn [m line]
+                  (if-let [[_ k v] (re-matches #"([A-Za-z0-9_-]+):[ ]?(.*)" (str/trim line))]
+                    (update m (str/lower-case k) (fnil conj #{}) (str/trim v))
+                    m))
+                {} (str/split-lines out))))
     (catch Exception _ nil)))
 
 (defn- placeholder-session? [sid]
@@ -298,16 +301,19 @@
 
 (defn- own-commit?
   "Do TRAILERS credit the commit to this turn's AGENT (or its SESSION)?
-  Own hand: Agent-Id matches. Same session: Agent-Session matches. Work the
-  agent dispatched: Dispatched-By names it (the stepper's rewind counts
-  dispatched work as the turn's)."
+  Own hand: an Agent-Id matches. Same session: an Agent-Session matches. Work
+  the agent dispatched: a Dispatched-By names it, as \"agent\" or in the hook's
+  usual \"agent/session\" form (the stepper's rewind counts dispatched work as
+  the turn's)."
   [agent session trailers]
-  (boolean
-   (when (seq trailers)
-     (or (and agent (= (get trailers "agent-id") (str agent)))
-         (and session (not (placeholder-session? session))
-              (= (get trailers "agent-session") (str session)))
-         (and agent (= (get trailers "dispatched-by") (str agent)))))))
+  (let [agent (some-> agent str)
+        dispatcher? (fn [v] (or (= v agent) (str/starts-with? v (str agent "/"))))]
+    (boolean
+     (when (seq trailers)
+       (or (and agent (contains? (get trailers "agent-id") agent))
+           (and session (not (placeholder-session? session))
+                (contains? (get trailers "agent-session") (str session)))
+           (and agent (some dispatcher? (get trailers "dispatched-by"))))))))
 
 (defn filter-turn-commits
   "Split the happened note's COMMITS into the ones the turn's agent made and
@@ -332,7 +338,7 @@
                     :else
                     (update acc :excluded conj
                             {:sha sha :reason :another-seat
-                             :agent-id (get trailers "agent-id")})))))) 
+                             :agent-id (str/join "/" (sort (get trailers "agent-id")))}))))))
           {:commits [] :excluded []}
           (or commits [])))
 

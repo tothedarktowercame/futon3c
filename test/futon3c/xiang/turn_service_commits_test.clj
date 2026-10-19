@@ -34,7 +34,8 @@
     d))
 
 (defn- commit!
-  "Commit MSG in REPO with TRAILERS {key val}; returns the full sha."
+  "Commit MSG in REPO with TRAILERS, a map or a seq of [key val] pairs (a
+  seq can repeat a key, as real commits do); returns the full sha."
   [repo msg trailers]
   (spit (io/file repo "f.txt") (str (rand) "\n"))
   (git! repo "add" ".")
@@ -118,3 +119,29 @@
           "the session's hand and dispatched work are credited")
       (is (= [[other-session-sha "another-seat"]]
              (mapv (juxt :sha :reason) (:commits_excluded stored)))))))
+
+(deftest real-trailer-forms-repeated-keys-and-agent-slash-session
+  ;; The prepare-commit-msg hook writes Dispatched-By as "agent/session", and
+  ;; commits repeat keys (two Agent-Id lines on codex-6/codex-68 commits, two
+  ;; Agent-Session lines on zai-1's). Both must still credit the right turn.
+  (let [repo (temp-repo)
+        dispatched-sha (commit! repo "zai work for claude-17"
+                                [["Agent-Id" "zai-6"] ["Agent-Session" "zai-x"]
+                                 ["Dispatched-By" "claude-17/sess-1"]])
+        repeated-sha (commit! repo "two ids" [["Agent-Id" "codex-6"] ["Agent-Id" "claude-17"]])
+        prefix-sha (commit! repo "not a prefix match" [["Dispatched-By" "claude-170/sess-2"]])
+        h (harness)
+        {:keys [id]} (turn! h)]
+    (svc/attach-happened!
+     (:svc h) id
+     {:reply "done"
+      :commits (mapv (fn [[sha subject]]
+                       {:repo "tmp" :repo-path (str repo) :sha sha :subject subject})
+                     [[dispatched-sha "zai work for claude-17"]
+                      [repeated-sha "two ids"]
+                      [prefix-sha "not a prefix match"]])})
+    (let [stored (ts/read-record (get-in (:svc h) [:config :store]) id)
+          acts (turn-acts/happened-commits (:happened_summary stored))]
+      (is (= #{(subs dispatched-sha 0 8) (subs repeated-sha 0 8)} (set (map :sha acts))))
+      (is (= [prefix-sha] (mapv :sha (:commits_excluded stored)))
+          "claude-170 is not claude-17"))))
