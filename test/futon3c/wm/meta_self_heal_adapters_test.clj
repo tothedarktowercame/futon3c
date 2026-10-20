@@ -28,7 +28,13 @@
       ;; A naive suffix form could confuse a hyphen-bearing repair id with
       ;; an attempt/ordinal tail; the separate wm-requeue namespace cannot.
       (is (not= (sut/retry-click-id "repair-1" 1 1)
-                (sut/retry-click-id "repair-1--requeue" 11 0)))))
+                (sut/retry-click-id "repair-1--requeue" 11 0)))
+      ;; The pair that actually collides under the naive suffix form
+      ;; wm-retry-<repair-id>-<attempt>-<ordinal>: both would read
+      ;; "wm-retry-repair-1-1-1". Review 2026-10-20: the pair above stays
+      ;; distinct under that form, so it did not pin the scheme.
+      (is (not= (sut/retry-click-id "repair-1" 1 1)
+                (sut/retry-click-id "repair-1-1" 1 0)))))
   (testing "invalid ordinals fail at the public boundary"
     (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 -1)))
     (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 1.5)))))
