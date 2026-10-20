@@ -87,19 +87,35 @@
          (assoc-in acc [:sessions role] (:agent/session-id current)))))
    {:status :reset :cast cast :sessions {}} cast))
 
-(def ^:private response-preview-cap 512)
+(def ^:private response-preview-head 384)
+(def ^:private response-preview-tail 128)
 
 (defn- response-preview
   "F18 (click wm-click-8df4e8d2, 2026-10-19, the first click cast on Zai
    seats): the author's acceptance proposal was refused as
    :producer-response-malformed and the refusal carried no :detail, so the
    record could not say whether the seat returned JSON, prose, or a fenced
-   map. A bounded, whitespace-collapsed prefix of the text is retained."
+   map. A bounded, whitespace-collapsed head and tail of the text are retained."
   [text]
   (let [s (str/trim (str/replace (str text) #"\s+" " "))]
-    (if (> (count s) response-preview-cap)
-      (str (subs s 0 response-preview-cap) "\u2026")
+    (if (> (count s) (+ response-preview-head response-preview-tail))
+      (str (subs s 0 response-preview-head) "\u2026"
+           (subs s (- (count s) response-preview-tail)))
       s)))
+
+(defn- edn-type [value]
+  (cond
+    (nil? value) "nil"
+    (map? value) "map"
+    (vector? value) "vector"
+    (set? value) "set"
+    (sequential? value) "sequence"
+    (keyword? value) "keyword"
+    (symbol? value) "symbol"
+    (string? value) "string"
+    (number? value) "number"
+    (boolean? value) "boolean"
+    :else (.getSimpleName (class value))))
 
 (defn- one-edn-map
   "One EDN map, bare or inside a code fence under any alphabetic tag (F18: a
@@ -112,8 +128,12 @@
     (let [text (str/trim (str text))
           fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
           value (edn/read-string (or (second fenced) text))]
-      (when (and (map? value) (some keyword? (keys value))) value))
-    (catch Throwable _ nil)))
+      (if (and (map? value) (some keyword? (keys value)))
+        {:value value}
+        {:read-error (str "read a " (edn-type value)
+                          ", not a map with keyword keys")}))
+    (catch Throwable t
+      {:read-error (or (ex-message t) (.getName (class t)))})))
 
 (def ^:dynamic *rate-limit-backoff-ms*
   "Wait before the one retry of a seat invoke the provider rate-limited."
@@ -155,7 +175,8 @@
                  (invoke-with-rate-limit-retry! seat prompt
                                                 {:mode "work" :caller "war-machine"
                                                  :session-id session-id}))
-        parsed (when (:ok result) (one-edn-map (:result result)))
+        parsed-result (when (:ok result) (one-edn-map (:result result)))
+        parsed (:value parsed-result)
         job-id (or (get-in result [:invoke-meta :job-id]) (:job-id parsed))]
     (cond
       (not (:ok reset)) {:status :failed :payload {:reason :agency-session-reset-failed
@@ -216,28 +237,52 @@
   [seat operation request]
   (let [agent (reg/get-agent seat)
         prompt (producer-prompt operation request)
+        options (when agent {:mode "work" :caller "war-machine"
+                             :session-id (:agent/session-id agent)})
         result (when (and agent (invoke-capable? agent)
                           (available-seat-state? (:agent/status agent)))
-                 (invoke-with-rate-limit-retry!
-                  seat prompt {:mode "work" :caller "war-machine"
-                               :session-id (:agent/session-id agent)}))
-        parsed (when (:ok result) (one-edn-map (:result result)))
-        retry (:rate-limit-retry result)]
+                 (invoke-with-rate-limit-retry! seat prompt options))
+        first-read (when (:ok result) (one-edn-map (:result result)))
+        first-preview (when (:ok result) (response-preview (:result result)))
+        read-retry (when (and (:ok result) (:read-error first-read))
+                     {:first-error (:read-error first-read)
+                      :first-preview first-preview})
+        complaint (when read-retry
+                    (str "\n\nYour previous answer did not read as one EDN map ("
+                         (:first-error read-retry)
+                         "). Return the same map, complete and balanced, as one EDN map and nothing else."))
+        second-result (when read-retry
+                        (invoke-with-rate-limit-retry! seat (str prompt complaint) options))
+        final-result (or second-result result)
+        final-read (if second-result
+                     (when (:ok second-result) (one-edn-map (:result second-result)))
+                     first-read)
+        parsed (:value final-read)
+        transport-retry (or (:rate-limit-retry result)
+                            (:rate-limit-retry second-result))]
     (cond
       (not agent) {:status :failed :reason :meta-self-heal/producer-seat-unavailable}
       ;; F9 (click wm-click-2b1d568c, 2026-10-19): the transport's own error
       ;; ("Exit 1: exceeded retry limit, last status: 429 Too Many Requests")
       ;; was dropped here, so the record could not say the seat was
       ;; rate-limited; it is retained verbatim as :detail.
-      (not (:ok result)) (cond-> {:status :failed
-                                  :reason :meta-self-heal/producer-invoke-failed
-                                  :detail (or (:error result) (:message result))}
-                           retry (assoc :transport-retry retry))
+      (not (:ok final-result)) (cond-> {:status :failed
+                                        :reason :meta-self-heal/producer-invoke-failed
+                                        :detail (or (:error final-result)
+                                                    (:message final-result))}
+                                 read-retry (assoc :read-retry read-retry)
+                                 transport-retry
+                                 (assoc :transport-retry transport-retry))
       (not (map? parsed)) (cond-> {:status :failed
                                    :reason :meta-self-heal/producer-response-malformed
-                                   :detail (response-preview (:result result))}
-                            retry (assoc :transport-retry retry))
-      :else (cond-> parsed retry (assoc :transport-retry retry)))))
+                                   :read-error (:read-error final-read)
+                                   :detail (response-preview (:result final-result))}
+                            read-retry (assoc :read-retry read-retry)
+                            transport-retry
+                            (assoc :transport-retry transport-retry))
+      :else (cond-> parsed
+              read-retry (assoc :read-retry read-retry)
+              transport-retry (assoc :transport-retry transport-retry)))))
 
 (defn- hex-sha256 [^bytes content]
   (format "%064x" (java.math.BigInteger. 1

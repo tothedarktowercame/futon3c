@@ -462,6 +462,78 @@
                                           {:ok true :result "no map here" :session-id "s"}))]
         (let [result (#'sut/producer-invoke! "zai-2" :acceptance-proposal {})]
           (is (= :meta-self-heal/producer-response-malformed (:reason result)))
-          (is (= 2 @calls))
+          (is (= 3 @calls) "one transport retry and one reader-informed re-ask")
           (is (some? (:transport-retry result)) "the retry is recorded on the malformed branch")
           (is (str/includes? (:detail result) "no map here")))))))
+
+(deftest malformed-producer-answer-is-reasked-once-with-reader-evidence
+  (let [live-answer (slurp
+                     "test/resources/wm/zai2-acceptance-proposal-unbalanced-2026-10-20.txt")
+        balanced (pr-str
+                  {:status :proposed
+                   :acceptance-test
+                   {:id "x" :command ["clojure"] :expected :passed
+                    :source {:namespace "n" :path "test/n.clj" :text "t"}}})
+        run (fn [responses]
+              (let [queue (atom responses)
+                    calls (atom [])]
+                (binding [sut/*rate-limit-backoff-ms* 0]
+                  (with-redefs [reg/get-agent (fn [_] ready-agent)
+                                reg/invoke-agent!
+                                (fn [seat prompt options]
+                                  (swap! calls conj {:seat seat :prompt prompt
+                                                     :options options})
+                                  (let [response (first @queue)]
+                                    (swap! queue rest)
+                                    response))]
+                    {:result (#'sut/producer-invoke!
+                              "zai-2" :acceptance-proposal {})
+                     :calls @calls}))))]
+    (testing "the committed malformed answer is repaired by one informed re-ask"
+      (let [{:keys [result calls]}
+            (run [{:ok true :result live-answer :session-id "s"}
+                  {:ok true :result balanced :session-id "s"}])
+            retry (:read-retry result)
+            second-prompt (:prompt (second calls))]
+        (is (= :proposed (:status result)))
+        (is (= 2 (count calls)))
+        (is (str/includes? (:first-error retry) "EOF while reading"))
+        (is (string? (:first-preview retry)))
+        (is (str/ends-with?
+             second-prompt
+             (str "Your previous answer did not read as one EDN map ("
+                  (:first-error retry)
+                  "). Return the same map, complete and balanced, as one EDN map and nothing else.")))
+        (is (str/includes? second-prompt "EOF while reading"))))
+
+    (testing "a second malformed answer is refused with both attempts recorded"
+      (let [second-answer (str "prose " (apply str (repeat 900 "x"))
+                               " SECOND-ANSWER-TAIL")
+            {:keys [result calls]}
+            (run [{:ok true :result live-answer :session-id "s"}
+                  {:ok true :result second-answer :session-id "s"}])]
+        (is (= :meta-self-heal/producer-response-malformed (:reason result)))
+        (is (= 2 (count calls)) "exactly one reader-informed re-ask")
+        (is (string? (:read-error result))
+            "deleting the final :read-error association makes this fail")
+        (is (some? (:read-retry result)))
+        (is (str/includes? (:detail result) "SECOND-ANSWER-TAIL"))))
+
+    (testing "a readable non-map also receives the one re-ask"
+      (let [{:keys [result calls]}
+            (run [{:ok true :result "prose answer" :session-id "s"}
+                  {:ok true :result balanced :session-id "s"}])]
+        (is (= :proposed (:status result)))
+        (is (= 2 (count calls)))
+        (is (str/includes? (get-in result [:read-retry :first-error])
+                           "read a symbol"))))
+
+    (testing "transport retry and read retry survive together"
+      (let [{:keys [result calls]}
+            (run [{:ok false :error "429 Too Many Requests"}
+                  {:ok true :result live-answer :session-id "s"}
+                  {:ok true :result balanced :session-id "s"}])]
+        (is (= :proposed (:status result)))
+        (is (= 3 (count calls)))
+        (is (some? (:transport-retry result)))
+        (is (some? (:read-retry result)))))))
