@@ -810,8 +810,12 @@
                                  (.getName (class throwable)))}))))))
 
 (defn launch-route-check-after-close!
-  "Launch the L2 route certificate for every closed click, refused or not
-  (unlike the report card, which needs a verified run record). Never awaited.
+  "Launch the L2 route certificate after the click-state is durably completed,
+  because the checker pins that record. Every closed click is covered, refused
+  or not (unlike the report card, which needs a verified run record). Never awaited.
+  If publish-registry! throws, close-click! deliberately reaches neither the
+  completed-state write nor this launch; the close binding still exists but its
+  route certificate is absent.
   A launch failure is written to <binding>.route.edn in the script's own
   sidecar shape; the click binding itself is never rewritten."
   [binding]
@@ -847,9 +851,7 @@
                             :error-class (.getName (class throwable))
                             :message (or (ex-message throwable)
                                          (.getName (class throwable)))})))
-        ;; L2: the route certificate covers refused clicks too, so it is a
-        ;; sibling of the report-card hook, not inside it.
-        binding (launch-route-check-after-close! binding)]
+        ]
     (cond-> {:click-id click-id
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
@@ -880,10 +882,7 @@
       (assoc :duplicate-of-clicks (:duplicate-of-clicks binding))
 
       (:report-card binding)
-      (assoc :report-card (:report-card binding))
-
-      (:route-check binding)
-      (assoc :route-check (:route-check binding)))))
+      (assoc :report-card (:report-card binding)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Park signals. An agent waiting on a click parks on these dep ids instead of
@@ -964,10 +963,18 @@
     (persist-click-state! click-id
                           #(assoc % :status :completed :completed-at (str (Instant/now))
                                   :result summary))
-    (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
-    (flush)
-    (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
-                       (assoc summary :click-id click-id))
+    (let [route-check (:route-check
+                       (launch-route-check-after-close!
+                        {:path (:run-binding summary) :click/id click-id}))]
+      (swap! !status
+             (fn [current]
+               (if (= click-id (:click-id current))
+                 (assoc-in current [:last-result :route-check] route-check)
+                 current)))
+      (println "[wm-click]" (pr-str (assoc summary :click-id click-id :route-check route-check)))
+      (flush)
+      (signal-park-deps! [click-end-dep (str click-end-dep "/" click-id)]
+                         (assoc summary :click-id click-id :route-check route-check)))
     ;; The parent is now durably complete and :running? is false. Only here may
     ;; an enacted META retry become a child click; this avoids recursive
     ;; single-flight acquisition from inside the parent opportunity.

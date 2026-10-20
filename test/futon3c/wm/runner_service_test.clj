@@ -147,6 +147,28 @@
         (is (= :completed (:status (service/await-click! click-id))))
         (is (= :completed (:status (service/click-status click-id))))))))
 
+(deftest route-check-launch-sees-the-completed-click-state-and-never-rewrites-it
+  (let [seen (atom nil)
+        run! (fn [_] {:attempt-id "route-after-close" :outcome :grounded-change})
+        opts {:wm-agent-id scratch-agent-id
+              :idempotency-key "route-after-close"
+              :acceptance-payload {:cast ["wm-author" "wm-reviewer"]}
+              :ordinary-click/issue! (fn [& _] nil)}]
+    (binding [service/*resolve-var* (resolver run! (constantly {:selected-policy-id "unused"}))
+              service/*launch-route-check!*
+              (fn [_ click-id]
+                (let [bytes (slurp (#'service/acceptance-file click-id))]
+                  (reset! seen {:bytes bytes :state (edn/read-string bytes)})
+                  {:id "bg-route" :pid 42}) )]
+      (let [click-id (:click-id (service/click! opts))]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (let [after (slurp (#'service/acceptance-file click-id))]
+          (is (= :completed (get-in @seen [:state :status])))
+          (is (= after (:bytes @seen)) "the checker saw the one completed write")
+          (is (not (contains? (get-in @seen [:state :result]) :route-check)))
+          (is (= {:status :launched :job {:id "bg-route" :pid 42}}
+                 (get-in (service/status) [:last-result :route-check]))))))))
+
 (deftest http-lost-response-retry-and-per-click-query
   (let [release (promise)
         run! (fn [_] @release {:attempt-id "http-slow" :outcome :grounded-change})
@@ -887,9 +909,9 @@
               (fn [path click-id] (swap! calls conj [path click-id]) {:id "bg-test" :pid 42})]
       (let [summary (summarize "click-4" click4-refusal)
             binding-path (:run-binding summary)]
-        (is (= [[binding-path "click-4"]] @calls))
+        (is (empty? @calls))
         (is (= :absent (:binding-status summary)))
-        (is (= {:status :launched :job {:id "bg-test" :pid 42}} (:route-check summary)))
+        (is (nil? (:route-check summary)))
         (is (not (.exists (io/file (str binding-path ".route.edn"))))
             "the hook returns before the script writes any sidecar: it is never awaited")))))
 
@@ -906,9 +928,9 @@
               (fn [path click-id] (swap! calls conj [path click-id]) {:id "bg-test" :pid 42})]
       (let [summary (summarize "click-2" {:run/id "run-2" :run-record record :outcome :abstained})]
         (is (= :verified (:binding-status summary)))
-        (is (= [[(:run-binding summary) "click-2"]] @calls))
+        (is (empty? @calls))
         (is (= ["run-2"] @launched) "the report-card hook still runs")
-        (is (= :launched (get-in summary [:route-check :status])))))))
+        (is (nil? (:route-check summary)))))))
 
 (deftest route-check-launch-failure-is-isolated-from-click-3-outcome
   ;; Click 3 (wm-click-2b1d568c) shape: refused at route!; the launch throws.
@@ -919,11 +941,12 @@
           summary (summarize "click-3" refusal)
           binding-path (:run-binding summary)
           binding-bytes (slurp binding-path)
+          launched (service/launch-route-check-after-close! {:path binding-path :click/id "click-3"})
           sidecar (edn/read-string (slurp (str binding-path ".route.edn")))]
       (is (= :refused (:outcome summary)) "the click outcome survives the failed launch")
       (is (= {:click/id "click-3" :verdict :not-checked :reason "launch-failed"}
              (select-keys sidecar [:click/id :verdict :reason])))
-      (is (= :failed (get-in summary [:route-check :status])))
+      (is (= :failed (get-in launched [:route-check :status])))
       (is (= :refused (:outcome (edn/read-string binding-bytes))))
       (is (nil? (:route-check (edn/read-string binding-bytes)))
           "the click binding is not rewritten with the failure")
