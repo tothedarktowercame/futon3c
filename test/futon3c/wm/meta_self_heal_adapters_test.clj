@@ -525,10 +525,15 @@
       (is (str/starts-with? (str (:detail result)) "prose x")
           "the preview is present, not nil or empty")
       (is (<= (count (:detail result)) 520) "the preview is bounded"))
-    (let [result (run "Here is the map:\n```edn\n{:status :proposed}\n```")]
+    ;; F25 (click 7, 2026-10-20): a seat harness's final-report reserve forces
+    ;; prose before the one machine answer, so prose before a trailing fence
+    ;; reads the fence. Prose after the fence is still refused.
+    (is (= :proposed (:status (run "Here is the map:\n```edn\n{:status :proposed}\n```")))
+        "prose before a trailing fence reads the fence")
+    (let [result (run "```edn\n{:status :proposed}\n```\nHere is the map.")]
       (is (= :meta-self-heal/producer-response-malformed (:reason result))
-          "prose before the fence is still refused")
-      (is (str/includes? (:detail result) "Here is the map:")
+          "prose after the fence is still refused")
+      (is (str/includes? (:detail result) "Here is the map.")
           "and the preview shows the prose that caused it"))
     (let [result (run "```json\n{\"x\": 1, \"y\": true}\n```")]
       (is (= :meta-self-heal/producer-response-malformed (:reason result))
