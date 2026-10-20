@@ -314,10 +314,13 @@
                                                          (min 2000 (count (str (:result result)))))}}
       (not (nonblank? (:session-id result)))
       {:status :failed :payload {:reason :agency-session-missing}}
-      (or (not (nonblank? job-id)) (= (:old-session-id reset) (:session-id result)))
-      {:status :failed :payload {:reason :agency-session-or-job-not-fresh}}
+      (= (:old-session-id reset) (:session-id result))
+      {:status :failed :payload {:reason :agency-session-not-fresh}}
       :else {:status (:status parsed) :payload (:payload parsed)
-             :session-id (:session-id result) :job-id job-id})))
+             :session-id (:session-id result)
+             :job-id (if (nonblank? job-id)
+                       job-id
+                       {:status :absent :reason :seat-mints-no-job})})))
 
 (defn- producer-prompt
   "Prompt text for one META producer operation.  F11b (click

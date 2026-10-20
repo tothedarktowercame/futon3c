@@ -254,6 +254,45 @@
                (get-in result [:payload :reason])))
         (is (= "done" (get-in result [:payload :response-preview])))))))
 
+(deftest author-session-freshness-does-not-require-an-agency-job
+  ;; Live pin: evidence e-715f3041-3eff-44b4-8377-97cfd5c9663a from
+  ;; click wm-click-dfc7501c attempt 2, copied verbatim from futon1b :7073.
+  (let [answer (slurp "test/futon3c/wm/fixtures/click-10-attempt-2-author-answer.edn")
+        parsed (edn/read-string answer)
+        old-session "zai-5d88ef02-8503-4035-9ef6-93adb416beee"
+        fresh-session "zai-281d9c55-3125-480d-89c3-7a98a01ec6d0"
+        invoke (fn [session extras]
+                 (with-redefs [reg/reset-session! (fn [_]
+                                                    {:ok true
+                                                     :old-session-id old-session})
+                               reg/invoke-agent! (fn [& _]
+                                                   (merge {:ok true
+                                                           :result answer
+                                                           :session-id session}
+                                                          extras))]
+                   (sut/agency-invoke! {:seat "zai-2"
+                                        :session-id "declared"
+                                        :request {:phase :author}})))]
+    (testing "a fresh Zai session succeeds with typed job absence"
+      (let [result (invoke fresh-session {})]
+        (is (= :succeeded (:status result))
+            "the old job-id requirement refused this live answer")
+        (is (= (get-in parsed [:payload :patch-sha])
+               (get-in result [:payload :patch-sha])))
+        (is (= fresh-session (:session-id result)))
+        (is (= {:status :absent :reason :seat-mints-no-job}
+               (:job-id result)))))
+
+    (testing "the check still refuses a reused session"
+      (is (= {:status :failed
+              :payload {:reason :agency-session-not-fresh}}
+             (invoke old-session {}))))
+
+    (testing "a transport job id remains a string"
+      (is (= "invoke-x"
+             (:job-id (invoke fresh-session
+                              {:invoke-meta {:job-id "invoke-x"}})))))))
+
 (deftest author-final-report-is-retained-and-author-prompt-states-contract
   ;; Live pin. test/resources/wm/click-7-author-final-report.md is zai-2's
   ;; final answer as click-7 author (click wm-click-25cd3682, 2026-10-20,
