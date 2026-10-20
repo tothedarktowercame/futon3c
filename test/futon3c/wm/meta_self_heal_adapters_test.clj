@@ -697,6 +697,18 @@
         (is (= (remove-at click-4-source 135 86) repaired))
         (is (= :readable (:status (#'sut/source-read-result repaired))))))
 
+    (testing "a position whose character is not the named delimiter is not edited"
+      ;; F23 review: the reader's position is trusted only when the character
+      ;; there is the delimiter it named.
+      (with-redefs [sut/remove-source-character
+                    (fn [source _ _] {:source (subs source 1) :removed (subs source 0 1)})]
+        (let [{:keys [result calls]}
+              (run [{:ok true :result (proposal click-4-source) :session-id "s"}
+                    {:ok true :result (proposal balanced-source) :session-id "s"}])]
+          (is (= 2 (count calls)))
+          (is (nil? (:source-repair result)))
+          (is (= 135 (get-in result [:source-retry :first-line]))))))
+
     (testing "click 5 mid-file repair leaves every later line intact"
       (let [{:keys [result calls]}
             (run [{:ok true :result (proposal click-5-source) :session-id "s"}])

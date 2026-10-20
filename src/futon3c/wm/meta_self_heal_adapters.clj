@@ -356,7 +356,13 @@
       (let [line (:line read-result)
             col (dec (:col read-result))
             removal (remove-source-character source line col)
-            candidate-read (when removal (source-read-once (:source removal)))]
+            ;; F23 review (claude-5): the character removed must be the one
+            ;; delimiter the reader named; any other position falls back to
+            ;; F22's re-ask rather than editing the author's text.
+            named-delimiter (second (re-find #"Unmatched delimiter: (.)"
+                                             (:error read-result)))
+            candidate-read (when (and removal (= named-delimiter (:removed removal)))
+                             (source-read-once (:source removal)))]
         (if (= :readable (:status candidate-read))
           {:status :repaired
            :source (:source removal)
