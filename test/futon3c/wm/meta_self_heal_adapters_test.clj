@@ -556,6 +556,95 @@
         (is (some? (:transport-retry result)))
         (is (some? (:read-retry result)))))))
 
+(deftest acceptance-proposal-source-is-read-before-review
+  (let [click-4-source (slurp
+                        "test/resources/wm/click-4-acceptance-test-surplus-paren.clj")
+        balanced-source "(ns proposed.acceptance-test)\n(deftest reads (is true))"
+        proposal (fn [source]
+                   (pr-str {:status :proposed
+                            :acceptance-test
+                            {:id "source-read" :command ["clojure"] :expected :passed
+                             :source {:namespace "proposed.acceptance-test"
+                                      :path "test/proposed/acceptance_test.clj"
+                                      :text source}}}))
+        run (fn [operation responses]
+              (let [queue (atom responses)
+                    calls (atom [])]
+                (binding [sut/*rate-limit-backoff-ms* 0]
+                  (with-redefs [reg/get-agent (fn [_] ready-agent)
+                                reg/invoke-agent!
+                                (fn [seat prompt options]
+                                  (swap! calls conj {:seat seat :prompt prompt
+                                                     :options options})
+                                  (let [response (first @queue)]
+                                    (swap! queue rest)
+                                    response))]
+                    {:result (#'sut/producer-invoke! "zai-2" operation {})
+                     :calls @calls}))))]
+    (testing "click 4 source gets an informed retry with the exact reader position"
+      (let [{:keys [result calls]}
+            (run :acceptance-proposal
+                 [{:ok true :result (proposal click-4-source) :session-id "s"}
+                  {:ok true :result (proposal balanced-source) :session-id "s"}])
+            retry (:source-retry result)]
+        (is (= :proposed (:status result)))
+        (is (= 135 (:first-line retry)))
+        (is (= 87 (:first-col retry)))
+        (is (str/includes? (:first-error retry) "Unmatched delimiter"))
+        (is (= balanced-source (get-in result [:acceptance-test :source :text])))
+        (is (nil? (:source-read-error result)))
+        (is (= 2 (count calls)))
+        (is (str/includes? (:prompt (second calls))
+                           "Your test source does not read:"))
+        (is (str/includes? (:prompt (second calls)) "at 135:87"))))
+
+    (testing "a second unreadable source is retained for admission and review"
+      (let [{:keys [result calls]}
+            (run :acceptance-proposal
+                 [{:ok true :result (proposal click-4-source) :session-id "s"}
+                  {:ok true :result (proposal "(ns still.bad))") :session-id "s"}])]
+        (is (= :proposed (:status result)))
+        (is (some? (:source-retry result)))
+        (is (str/includes? (:source-read-error result) "Unmatched delimiter"))
+        (is (re-find #" at [0-9]+:[0-9]+$" (:source-read-error result)))
+        (is (= 2 (count calls)))))
+
+    (testing "readable source passes with one invoke"
+      (let [{:keys [result calls]}
+            (run :acceptance-proposal
+                 [{:ok true :result (proposal balanced-source) :session-id "s"}])]
+        (is (= :proposed (:status result)))
+        (is (nil? (:source-retry result)))
+        (is (= 1 (count calls)))))
+
+    (testing "an unterminated source string receives the same informed retry"
+      (let [{:keys [result calls]}
+            (run :acceptance-proposal
+                 [{:ok true :result (proposal "(def x \"unterminated") :session-id "s"}
+                  {:ok true :result (proposal balanced-source) :session-id "s"}])]
+        (is (= :proposed (:status result)))
+        (is (str/includes? (get-in result [:source-retry :first-error])
+                           "EOF while reading string"))
+        (is (= 2 (count calls)))))
+
+    (testing "acceptance review source is not read"
+      (let [review (pr-str {:status :accepted
+                            :acceptance-test {:source {:text click-4-source}}})
+            {:keys [result calls]}
+            (run :acceptance-review [{:ok true :result review :session-id "s"}])]
+        (is (= :accepted (:status result)))
+        (is (nil? (:source-retry result)))
+        (is (= 1 (count calls)))))
+
+    (testing "absent and non-string source are left to downstream admission"
+      (doseq [answer [(pr-str {:status :proposed :acceptance-test {}})
+                      (proposal 42)]]
+        (let [{:keys [result calls]}
+              (run :acceptance-proposal [{:ok true :result answer :session-id "s"}])]
+          (is (= :proposed (:status result)))
+          (is (nil? (:source-retry result)))
+          (is (= 1 (count calls))))))))
+
 (deftest eof-brace-count-ignores-strings-and-remains-total
   (let [balanced (#'sut/one-edn-map "{:a \"}{\"}")
         unbalanced-string (#'sut/one-edn-map "{:a \"x")

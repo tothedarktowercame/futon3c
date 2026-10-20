@@ -307,6 +307,40 @@
          "Unknown producer operation; return typed refusal. ")
        "Bind every returned identity and pin to this request.\n\n" (pr-str request)))
 
+(defn- source-read-result [source]
+  (let [namespace-symbol (gensym "futon3c.wm.source-read-")]
+    (create-ns namespace-symbol)
+    (try
+      (binding [*ns* (the-ns namespace-symbol)
+                *read-eval* false]
+        (let [reader (clojure.lang.LineNumberingPushbackReader.
+                      (java.io.StringReader. source))]
+          (try
+            (loop []
+              (let [form (read {:eof ::eof :read-cond :allow} reader)]
+                (if (= ::eof form)
+                  {:status :readable}
+                  (recur))))
+            (catch Throwable t
+              (let [data (ex-data t)
+                    line (or (:clojure.error/line data) (.getLineNumber reader))
+                    col (or (:clojure.error/column data) (.getColumnNumber reader))
+                    message (or (ex-message t) (.getName (class t)))]
+                {:status :unreadable
+                 :error message
+                 :line line
+                 :col col
+                 :formatted-error (str message " at " line ":" col)})))))
+      (finally
+        (remove-ns namespace-symbol)))))
+
+(defn- proposed-source-read [operation parsed]
+  (let [source (get-in parsed [:acceptance-test :source :text])]
+    (when (and (= :acceptance-proposal operation)
+               (= :proposed (:status parsed))
+               (string? source))
+      (source-read-result source))))
+
 (defn- producer-invoke!
   "Serving adapter for evidence production/admission, separate from repair
   execution.  It returns only the typed map the futon2 producer expects; it
@@ -328,16 +362,40 @@
                     (str "\n\nYour previous answer did not read as one EDN map ("
                          (:first-error read-retry)
                          "). Return the same map, complete and balanced, as one EDN map and nothing else."))
-        second-result (when read-retry
-                        (invoke-with-rate-limit-retry! seat (str prompt complaint) options))
-        final-result (or second-result result)
-        final-read (if second-result
-                     (when (:ok second-result) (one-edn-map (:result second-result)))
+        read-second-result (when read-retry
+                             (invoke-with-rate-limit-retry! seat (str prompt complaint) options))
+        envelope-result (or read-second-result result)
+        envelope-read (if read-second-result
+                        (when (:ok read-second-result) (one-edn-map (:result read-second-result)))
                      first-read)
+        envelope-parsed (:value envelope-read)
+        first-source-read (proposed-source-read operation envelope-parsed)
+        source-retry (when (= :unreadable (:status first-source-read))
+                       {:first-error (:error first-source-read)
+                        :first-line (:line first-source-read)
+                        :first-col (:col first-source-read)})
+        source-complaint (when source-retry
+                           (str "\n\nYour test source does not read: "
+                                (:first-error source-retry) " at "
+                                (:first-line source-retry) ":" (:first-col source-retry)
+                                ". Return the same map with the source complete and balanced, as one EDN map and nothing else."))
+        source-second-result (when source-retry
+                               (invoke-with-rate-limit-retry! seat
+                                                              (str prompt source-complaint)
+                                                              options))
+        final-result (or source-second-result envelope-result)
+        final-read (if source-second-result
+                     (when (:ok source-second-result) (one-edn-map (:result source-second-result)))
+                     envelope-read)
         parsed (:value final-read)
+        final-source-read (proposed-source-read operation parsed)
+        source-read-error (when (and source-retry
+                                     (= :unreadable (:status final-source-read)))
+                            (:formatted-error final-source-read))
         read-repair (:read-repair final-read)
         transport-retry (or (:rate-limit-retry result)
-                            (:rate-limit-retry second-result))]
+                            (:rate-limit-retry read-second-result)
+                            (:rate-limit-retry source-second-result))]
     (cond
       (not agent) {:status :failed :reason :meta-self-heal/producer-seat-unavailable}
       ;; F9 (click wm-click-2b1d568c, 2026-10-19): the transport's own error
@@ -350,6 +408,8 @@
                                                     (:message final-result))}
                                  read-retry (assoc :read-retry read-retry)
                                  read-repair (assoc :read-repair read-repair)
+                                 source-retry (assoc :source-retry source-retry)
+                                 source-read-error (assoc :source-read-error source-read-error)
                                  transport-retry
                                  (assoc :transport-retry transport-retry))
       (not (map? parsed)) (cond-> {:status :failed
@@ -358,11 +418,15 @@
                                    :detail (response-preview (:result final-result))}
                             read-retry (assoc :read-retry read-retry)
                             read-repair (assoc :read-repair read-repair)
+                            source-retry (assoc :source-retry source-retry)
+                            source-read-error (assoc :source-read-error source-read-error)
                             transport-retry
                             (assoc :transport-retry transport-retry))
       :else (cond-> parsed
               read-retry (assoc :read-retry read-retry)
               read-repair (assoc :read-repair read-repair)
+              source-retry (assoc :source-retry source-retry)
+              source-read-error (assoc :source-read-error source-read-error)
               transport-retry (assoc :transport-retry transport-retry)))))
 
 (defn- hex-sha256 [^bytes content]
