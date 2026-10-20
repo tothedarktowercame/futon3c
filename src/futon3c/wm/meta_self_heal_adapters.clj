@@ -492,16 +492,21 @@
                                  %)
        :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) :acceptance-review %)
        :repair-enact-fn enact!
+       :retry-click-id-fn retry-click-id
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]
-         ((:queue-retry-fn opts)
-          {:repair-id (:repair-id work-order)
-           :injury-id (:injury-id work-order)
-           :attempt (:attempt work-order)
-           :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
-           :retry-click (get-in request [:transaction :receipts 2 :payload :retry-click])
-           :request request})
-         {:status :queued
-          :payload {:repair-id (:repair-id work-order)
-                    :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
-                    :retry-click (get-in request [:transaction :receipts 2 :payload :retry-click])}})})))
+         (let [retry-click (or (:retry-click request)
+                               (get-in request [:transaction :receipts 2 :payload :retry-click]))]
+           ((:queue-retry-fn opts)
+            (cond-> {:repair-id (:repair-id work-order)
+                     :injury-id (:injury-id work-order)
+                     :attempt (:attempt work-order)
+                     :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                     :retry-click retry-click
+                     :request request}
+              (contains? request :requeue-ordinal)
+              (assoc :requeue-ordinal (:requeue-ordinal request))))
+           {:status :queued
+            :payload {:repair-id (:repair-id work-order)
+                      :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                      :retry-click retry-click}}))})))

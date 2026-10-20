@@ -13,6 +13,35 @@
 (def ready-agent
   {:agent/status :idle :agent/invoke-ready? true :agent/session-id nil})
 
+(deftest retry-port-prefers-coordinator-click-and-exposes-id-minting
+  (let [queued (atom [])
+        ports (with-redefs [sut/readiness (constantly {:status :ready})]
+                (sut/ports {:queue-retry-fn #(swap! queued conj %)}))
+        retry! (:repair-retry-fn ports)
+        work-order {:repair-id "repair/x" :injury-id "injury/x" :attempt 1}
+        enact-click "wm-retry-enact-receipt-1"
+        base {:work-order work-order
+              :transaction {:receipts [{:payload {:patch-sha "patch"}}
+                                       {}
+                                       {:payload {:retry-click enact-click}}]}}]
+    (testing "coordinator-supplied requeue identity wins and carries its ordinal"
+      (let [result (retry! (assoc base :retry-click "wm-requeue-1-1-repair/x"
+                                  :requeue-ordinal 1))
+            queued-request (peek @queued)]
+        (is (= "wm-requeue-1-1-repair/x" (:retry-click queued-request)))
+        (is (= 1 (:requeue-ordinal queued-request)))
+        (is (= "wm-requeue-1-1-repair/x" (get-in result [:payload :retry-click])))))
+    (testing "legacy enact receipt remains the fallback"
+      (let [result (retry! base)
+            queued-request (peek @queued)]
+        (is (= enact-click (:retry-click queued-request)))
+        (is (not (contains? queued-request :requeue-ordinal)))
+        (is (= enact-click (get-in result [:payload :retry-click])))))
+    (testing "the coordinator receives the actual public id minting function"
+      (is (identical? sut/retry-click-id (:retry-click-id-fn ports)))
+      (is (= (sut/retry-click-id "repair/x" 1 1)
+             ((:retry-click-id-fn ports) "repair/x" 1 1))))))
+
 (deftest retry-click-identities-preserve-legacy-and-separate-requeues
   "No live record carried a wm-retry id on 2026-10-20. Ordinal zero is pinned
   to the literal historical A:432 form rather than a live capture."
