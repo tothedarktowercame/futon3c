@@ -1128,3 +1128,36 @@
       (is (= {:status :proposed} (:value trailing))
           "a map followed by trailing prose is the map, as before F21 (no re-ask)")
       (is (nil? (:read-repair trailing))))))
+
+(deftest enact-reload-receipts-seal-into-the-port-receipt
+  ;; F39, the finding of click wm-click-96850427 (2026-10-20 19:37Z): with the
+  ;; real loader, enact! succeeded and the port receipt could not be sealed,
+  ;; because load-file-recorded! returned the loaded Var and enact! put it in
+  ;; :reload-receipts. This test does not stub the loader: the fixture repo is
+  ;; bound as the canonical root, and the seal is the coordinator's own.
+  (let [{:keys [root patch]} (enact-fixture-repo)
+        work-order {:injury-id "injury/f39" :repair-id "repair-alpha" :attempt 1
+                    :target-repository root}
+        request {:work-order work-order :phase :enact
+                 :predecessor-pin {:path "p" :sha256 (apply str (repeat 64 "b"))}
+                 :transaction {:receipts [{:payload {:patch-sha patch}}]}}
+        _ (code-identity/reset-for-test!)
+        result (binding [code-identity/*futon2-root* root]
+                 (sut/enact! request))
+        payload (:payload result)
+        seal (fn [p]
+               (coordinator/seal-port-receipt
+                {:phase :enact :injury-id (:injury-id work-order)
+                 :repair-id (:repair-id work-order) :attempt (:attempt work-order)
+                 :predecessor-pin (:predecessor-pin request)
+                 :status (:status result) :payload (assoc p :adapter "wm-repair-reviewer")}))]
+    (is (= :succeeded (:status result)) (pr-str result))
+    (is (= 1 (count (:reload-receipts payload))))
+    (is (every? map? (:reload-receipts payload)))
+    (is (every? #(and (= "src/fixture/retry.clj" (:path %)) (true? (:stable? %))
+                      (false? (:dirty? %)) (string? (:content-sha256 %)))
+                (:reload-receipts payload)))
+    (is (map? (:receipt-pin (seal payload))) "the real payload seals")
+    ;; The pre-F39 shape, a Var in the payload, is what the click produced.
+    (is (thrown-with-msg? Exception #"Unsupported action identity value"
+                          (seal (assoc payload :reload-receipts [#'clojure.core/map]))))))

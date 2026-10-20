@@ -59,8 +59,8 @@
       (throw (ex-info "reload source is not a readable canonical Futon2 file" before)))
     (when (:dirty? before)
       (throw (ex-info "refusing to reload Futon2 from a dirty repository" before)))
-    (let [value (load-file path)
-          after (measure-file path)
+    (load-file path)
+    (let [after (measure-file path)
           stable? (= before after)
           record (assoc before :schema schema-version :loaded-at (str (Instant/now))
                         :stable? stable? :serving-pid
@@ -69,7 +69,12 @@
         (throw (ex-info "reload source or repository basis changed during load"
                         {:before before :after after})))
       (swap! !reloads assoc (:path before) record)
-      value)))
+      ;; F39 (click wm-click-96850427, 2026-10-20): return the reload record,
+      ;; not the value of load-file. That value is the file's last Var, and
+      ;; enact! put it in the port receipt's payload, where identity/digest
+      ;; refuses it ("Unsupported action identity value"), so a correct enact
+      ;; ended the click as :coordinator/port-threw. No caller used the value.
+      record)))
 
 (defn status []
   (let [record (get @!reloads production-runner)

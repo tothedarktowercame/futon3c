@@ -39,8 +39,12 @@
   (let [{:keys [root source]} (fixture-repo)]
     (binding [identity/*futon2-root* (.getPath root)]
       (testing "clean canonical source records the loaded identity"
-        (identity/load-file-recorded! (.getPath source))
-        (let [record (:identity (identity/status))]
+        (let [returned (identity/load-file-recorded! (.getPath source))
+              record (:identity (identity/status))]
+          ;; F39: the loader returns the record it kept, never the loaded Var.
+          (is (map? returned))
+          (is (not (var? returned)))
+          (is (= record returned))
           (is (= :available (:availability (identity/status))))
           (is (false? (:dirty? record)))
           (is (true? (:stable? record)))
