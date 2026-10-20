@@ -133,8 +133,12 @@
   on 2026-10-19 at about 20:30Z, after click wm-click-c78d0f27's masked
   prepare refusal was found and fixed (futon2 df2209a33, futon3c ddb3fcb79):
   \"we can do 5 more as long as progress is being made. if you found the
-  fix, claude-2 could help formalise that as a proof\""
-  128)
+  fix, claude-2 could help formalise that as a proof\", plus ten clicks
+  authorized directly by Joe to claude-5 on 2026-10-20 at about 12:35Z for the
+  self-heal retry route's first live run (enact, retry, re-queues to the typed
+  abandonment), item 1 of DECISIONS-FOR-JOE-2026-10-20.md, after M10b-4
+  (futon2 b5dd9269c) and Lean rev 11 landed: \"click budget of 10 allocated\""
+  138)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
