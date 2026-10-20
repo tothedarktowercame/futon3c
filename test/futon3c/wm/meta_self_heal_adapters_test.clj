@@ -312,7 +312,11 @@
     (is (str/includes? prompt "run before any repair, in the canonical checkout"))
     (is (str/includes? prompt "result is in :result"))
     (is (str/includes? prompt "fails for the injury's reason"))
-    (is (str/includes? prompt "Return exactly one EDN map and no prose"))))
+    (is (str/includes? prompt "Return exactly one EDN map and no prose"))
+    ;; F24a: the reviewer echoes the test's identity, not its source.
+    (is (str/includes? prompt ":acceptance-test {:id ... :command ... :expected ...}"))
+    (is (str/includes? prompt "Do not echo the test source"))
+    (is (not (str/includes? prompt "echoing those five exact request values")))))
 
 (deftest acceptance-proposal-prompt-requires-complete-source
   (let [prompt (#'sut/producer-prompt :acceptance-proposal {:diagnosis {:status :present}})]

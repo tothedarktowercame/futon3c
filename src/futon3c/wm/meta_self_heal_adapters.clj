@@ -303,7 +303,10 @@
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
               "Admit it if it pins the injury (fails for the injury's reason) and is the right test for the repair; refuse with a typed reason otherwise. "
-              "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test ...}, echoing those five exact request values. A refusal/failure must be typed. ")
+              "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test {:id ... :command ... :expected ...}}, "
+              "echoing those request values exactly. Do not echo the test source: the proposal pin identifies it "
+              "(F24a, click wm-click-a8f4dea6, 2026-10-20: the reviewer's first yes left the 4 KB source out and was refused as an identity mismatch). "
+              "A refusal/failure must be typed. ")
          "Unknown producer operation; return typed refusal. ")
        "Bind every returned identity and pin to this request.\n\n" (pr-str request)))
 
