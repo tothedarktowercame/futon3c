@@ -581,10 +581,11 @@
                                     response))]
                     {:result (#'sut/producer-invoke! "zai-2" operation {})
                      :calls @calls}))))]
-    (testing "click 4 source gets an informed retry with the exact reader position"
+    (testing "two surplus delimiters get an informed retry at the original position"
       (let [{:keys [result calls]}
             (run :acceptance-proposal
-                 [{:ok true :result (proposal click-4-source) :session-id "s"}
+                 [{:ok true :result (proposal (str/replace click-4-source #"\n$" ")\n"))
+                   :session-id "s"}
                   {:ok true :result (proposal balanced-source) :session-id "s"}])
             retry (:source-retry result)]
         (is (= :proposed (:status result)))
@@ -601,8 +602,10 @@
     (testing "a second unreadable source is retained for admission and review"
       (let [{:keys [result calls]}
             (run :acceptance-proposal
-                 [{:ok true :result (proposal click-4-source) :session-id "s"}
-                  {:ok true :result (proposal "(ns still.bad))") :session-id "s"}])]
+                 [{:ok true
+                   :result (proposal (str/replace click-4-source #"\n$" ")\n"))
+                   :session-id "s"}
+                  {:ok true :result (proposal "(ns still.bad)))") :session-id "s"}])]
         (is (= :proposed (:status result)))
         (is (some? (:source-retry result)))
         (is (str/includes? (:source-read-error result) "Unmatched delimiter"))
@@ -644,6 +647,90 @@
           (is (= :proposed (:status result)))
           (is (nil? (:source-retry result)))
           (is (= 1 (count calls))))))))
+
+(deftest acceptance-source-removes-one-surplus-delimiter-at-reader-position
+  (let [click-4-source (slurp
+                        "test/resources/wm/click-4-acceptance-test-surplus-paren.clj")
+        click-5-source (slurp
+                        "test/resources/wm/click-5-acceptance-test-surplus-paren-mid-file.clj")
+        balanced-source "(ns proposed.acceptance-test)\n(deftest reads (is true))"
+        proposal (fn [source]
+                   (pr-str {:status :proposed
+                            :acceptance-test
+                            {:id "source-repair" :command ["clojure"] :expected :passed
+                             :source {:namespace "proposed.acceptance-test"
+                                      :path "test/proposed/acceptance_test.clj"
+                                      :text source}}}))
+        run (fn [responses]
+              (let [queue (atom responses)
+                    calls (atom [])]
+                (binding [sut/*rate-limit-backoff-ms* 0]
+                  (with-redefs [reg/get-agent (fn [_] ready-agent)
+                                reg/invoke-agent!
+                                (fn [seat prompt options]
+                                  (swap! calls conj {:seat seat :prompt prompt
+                                                     :options options})
+                                  (let [response (first @queue)]
+                                    (swap! queue rest)
+                                    response))]
+                    {:result (#'sut/producer-invoke!
+                              "zai-2" :acceptance-proposal {})
+                     :calls @calls}))))
+        remove-at (fn [source line col]
+                    (let [lines (str/split source #"\n" -1)
+                          line-index (dec line)]
+                      (str/join "\n"
+                                (update lines line-index
+                                        (fn [line-text]
+                                          (str (subs line-text 0 (dec col))
+                                               (subs line-text col)))))))]
+    (testing "click 4 is repaired at the reader's position without a re-ask"
+      (let [{:keys [result calls]}
+            (run [{:ok true :result (proposal click-4-source) :session-id "s"}])
+            repaired (get-in result [:acceptance-test :source :text])]
+        (is (= 1 (count calls)))
+        (is (nil? (:source-retry result)))
+        (is (= {:removed ")" :line 135 :col 86}
+               (select-keys (:source-repair result) [:removed :line :col])))
+        (is (str/includes? (get-in result [:source-repair :error])
+                           "Unmatched delimiter"))
+        (is (= (remove-at click-4-source 135 86) repaired))
+        (is (= :readable (:status (#'sut/source-read-result repaired))))))
+
+    (testing "click 5 mid-file repair leaves every later line intact"
+      (let [{:keys [result calls]}
+            (run [{:ok true :result (proposal click-5-source) :session-id "s"}])
+            repaired (get-in result [:acceptance-test :source :text])]
+        (is (= 1 (count calls)))
+        (is (= {:removed ")" :line 115 :col 87}
+               (select-keys (:source-repair result) [:removed :line :col])))
+        (is (= (remove-at click-5-source 115 87) repaired))
+        (is (= (drop 115 (str/split-lines click-5-source))
+               (drop 115 (str/split-lines repaired)))
+            "t4 and all text after repaired line 115 survive unchanged")
+        (is (str/includes? repaired "(deftest t4-terminal-routing-injured-vs-repaired"))
+        (is (= :readable (:status (#'sut/source-read-result repaired))))))
+
+    (testing "a brace deficit is not repaired and receives the F22 re-ask"
+      (let [deficit (str/replace click-4-source #"\)\)\n$" "\n")
+            {:keys [result calls]}
+            (run [{:ok true :result (proposal deficit) :session-id "s"}
+                  {:ok true :result (proposal balanced-source) :session-id "s"}])]
+        (is (= 2 (count calls)))
+        (is (str/includes? (get-in result [:source-retry :first-error])
+                           "EOF while reading"))
+        (is (nil? (:source-repair result)))))
+
+    (testing "a repaired second answer retains both source attempt records"
+      (let [deficit (str/replace click-4-source #"\)\)\n$" "\n")
+            {:keys [result calls]}
+            (run [{:ok true :result (proposal deficit) :session-id "s"}
+                  {:ok true :result (proposal click-4-source) :session-id "s"}])]
+        (is (= 2 (count calls)))
+        (is (some? (:source-retry result)))
+        (is (= {:removed ")" :line 135 :col 86}
+               (select-keys (:source-repair result) [:removed :line :col])))
+        (is (nil? (:source-read-error result)))))))
 
 (deftest eof-brace-count-ignores-strings-and-remains-total
   (let [balanced (#'sut/one-edn-map "{:a \"}{\"}")

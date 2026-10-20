@@ -307,7 +307,7 @@
          "Unknown producer operation; return typed refusal. ")
        "Bind every returned identity and pin to this request.\n\n" (pr-str request)))
 
-(defn- source-read-result [source]
+(defn- source-read-once [source]
   (let [namespace-symbol (gensym "futon3c.wm.source-read-")]
     (create-ns namespace-symbol)
     (try
@@ -333,6 +333,39 @@
                  :formatted-error (str message " at " line ":" col)})))))
       (finally
         (remove-ns namespace-symbol)))))
+
+(defn- remove-source-character [source line col]
+  (let [line-start (loop [index 0
+                          remaining-line line]
+                     (cond
+                       (= remaining-line 1) index
+                       (>= index (count source)) nil
+                       (= \newline (.charAt source index))
+                       (recur (inc index) (dec remaining-line))
+                       :else
+                       (recur (inc index) remaining-line)))
+        index (when line-start (+ line-start (dec col)))]
+    (when (and index (< index (count source)) (pos? line) (pos? col))
+      {:source (str (subs source 0 index) (subs source (inc index)))
+       :removed (str (.charAt source index))})))
+
+(defn- source-read-result [source]
+  (let [read-result (source-read-once source)]
+    (if (and (= :unreadable (:status read-result))
+             (str/includes? (:error read-result) "Unmatched delimiter"))
+      (let [line (:line read-result)
+            col (dec (:col read-result))
+            removal (remove-source-character source line col)
+            candidate-read (when removal (source-read-once (:source removal)))]
+        (if (= :readable (:status candidate-read))
+          {:status :repaired
+           :source (:source removal)
+           :source-repair {:removed (:removed removal)
+                           :line line
+                           :col col
+                           :error (:error read-result)}}
+          read-result))
+      read-result)))
 
 (defn- proposed-source-read [operation parsed]
   (let [source (get-in parsed [:acceptance-test :source :text])]
@@ -370,6 +403,10 @@
                      first-read)
         envelope-parsed (:value envelope-read)
         first-source-read (proposed-source-read operation envelope-parsed)
+        envelope-parsed (if (= :repaired (:status first-source-read))
+                          (assoc-in envelope-parsed [:acceptance-test :source :text]
+                                    (:source first-source-read))
+                          envelope-parsed)
         source-retry (when (= :unreadable (:status first-source-read))
                        {:first-error (:error first-source-read)
                         :first-line (:line first-source-read)
@@ -387,11 +424,18 @@
         final-read (if source-second-result
                      (when (:ok source-second-result) (one-edn-map (:result source-second-result)))
                      envelope-read)
-        parsed (:value final-read)
-        final-source-read (proposed-source-read operation parsed)
+        parsed (if source-second-result (:value final-read) envelope-parsed)
+        final-source-read (if source-second-result
+                            (proposed-source-read operation parsed)
+                            first-source-read)
+        parsed (if (= :repaired (:status final-source-read))
+                 (assoc-in parsed [:acceptance-test :source :text]
+                           (:source final-source-read))
+                 parsed)
         source-read-error (when (and source-retry
                                      (= :unreadable (:status final-source-read)))
                             (:formatted-error final-source-read))
+        source-repair (:source-repair final-source-read)
         read-repair (:read-repair final-read)
         transport-retry (or (:rate-limit-retry result)
                             (:rate-limit-retry read-second-result)
@@ -410,6 +454,7 @@
                                  read-repair (assoc :read-repair read-repair)
                                  source-retry (assoc :source-retry source-retry)
                                  source-read-error (assoc :source-read-error source-read-error)
+                                 source-repair (assoc :source-repair source-repair)
                                  transport-retry
                                  (assoc :transport-retry transport-retry))
       (not (map? parsed)) (cond-> {:status :failed
@@ -420,6 +465,7 @@
                             read-repair (assoc :read-repair read-repair)
                             source-retry (assoc :source-retry source-retry)
                             source-read-error (assoc :source-read-error source-read-error)
+                            source-repair (assoc :source-repair source-repair)
                             transport-retry
                             (assoc :transport-retry transport-retry))
       :else (cond-> parsed
@@ -427,6 +473,7 @@
               read-repair (assoc :read-repair read-repair)
               source-retry (assoc :source-retry source-retry)
               source-read-error (assoc :source-read-error source-read-error)
+              source-repair (assoc :source-repair source-repair)
               transport-retry (assoc :transport-retry transport-retry)))))
 
 (defn- hex-sha256 [^bytes content]
