@@ -273,6 +273,7 @@
   [{:keys [seat session-id request]}]
   (let [reset (reg/reset-session! seat)
         author? (= :author (:phase request))
+        review? (= :review (:phase request))
         acceptance-command (or (get-in request [:work-order :acceptance-test :command])
                                (get-in request [:acceptance-test :command]))
         author-contract
@@ -286,10 +287,26 @@
                "{:status :succeeded :payload {:patch-sha \"<40-hex sha of the commit in :worktree>\" :worktree \"<path>\"}}. "
                "If that cannot be done, answer {:status :failed :payload {:reason <typed reason>}} or {:status :rejected :payload {:reason <typed reason>}}. "
                "Any other status is refused. The final answer must be that one EDN map and nothing else."))
+        review-contract
+        (when review?
+          (let [patch (or (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                          "<patch-sha absent from the transaction>")
+                worktree (get-in request [:work-order :target-worktree])]
+            (str "\n\nReviewer answer contract: the commit under review is " patch
+                 " in " worktree ". Read `git show " patch
+                 "` and the work order's acceptance test; run the work order's :acceptance-test :command from "
+                 worktree
+                 (when acceptance-command (str " (" (pr-str acceptance-command) ")"))
+                 "; run clj-kondo on the files that commit changed. Do not commit, amend, reset or stash anything. "
+                 "If the repair is sound and the acceptance command passes, answer exactly "
+                 "{:status :succeeded :payload {:patch-sha \"" patch
+                 "\" :reviewer-sha \"<40-hex sha of HEAD in " worktree
+                 " when you reviewed>\"}}. Otherwise answer {:status :rejected :payload {:reason <typed reason> :patch-sha \""
+                 patch "\"}}. Any other status is refused. The final answer must be that one EDN map and nothing else.")))
         prompt (str "Dedicated META self-heal phase. Do not select ordinary work. "
                     "Execute only the sealed request and return exactly one EDN map "
                     "with :status and :payload (no prose)."
-                    author-contract "\n\n" (pr-str request))
+                    author-contract review-contract "\n\n" (pr-str request))
         result (when (:ok reset)
                  (invoke-with-rate-limit-retry! seat prompt
                                                 {:mode "work" :caller "war-machine"

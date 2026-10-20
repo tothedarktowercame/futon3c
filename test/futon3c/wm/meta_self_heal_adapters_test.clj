@@ -254,6 +254,43 @@
                (get-in result [:payload :reason])))
         (is (= "done" (get-in result [:payload :response-preview])))))))
 
+(deftest agency-review-prompt-states-the-sealed-reviewer-answer-contract
+  (let [prompt (atom nil)
+        patch "b463d85cca1eedd975639c22747dda63f4629974"
+        request {:phase :review
+                 :work-order {:target-worktree "/home/joe/code/futon2"
+                              :acceptance-test {:command ["clojure" "-M:test" "-n" "focused"]}}
+                 :transaction {:receipts [{:payload {:patch-sha patch}}]}}
+        invoke (fn [_ captured _]
+                 (reset! prompt captured)
+                 {:ok true
+                  :result (str "{:status :succeeded :payload {:patch-sha \"" patch
+                               "\" :reviewer-sha \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}")
+                  :session-id "fresh-review-session"})]
+    (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                  reg/invoke-agent! invoke]
+      (sut/agency-invoke! {:seat "zai-3" :session-id "declared" :request request}))
+    (doseq [text ["Reviewer answer contract" patch "/home/joe/code/futon2"
+                  "[\"clojure\" \"-M:test\" \"-n\" \"focused\"]"
+                  ":reviewer-sha" "{:status :rejected"]]
+      (is (str/includes? @prompt text)))
+    ;; The author and reviewer contracts are mutually exclusive.
+    (reset! prompt nil)
+    (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                  reg/invoke-agent! invoke]
+      (sut/agency-invoke! {:seat "zai-2" :session-id "declared"
+                           :request (assoc request :phase :author)}))
+    (is (str/includes? @prompt "Author answer contract"))
+    (is (not (str/includes? @prompt "Reviewer answer contract")))
+    ;; An absent author receipt is named honestly instead of throwing while
+    ;; building the review prompt.
+    (reset! prompt nil)
+    (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                  reg/invoke-agent! invoke]
+      (sut/agency-invoke! {:seat "zai-3" :session-id "declared"
+                           :request (assoc request :transaction {:receipts []})}))
+    (is (str/includes? @prompt "<patch-sha absent from the transaction>"))))
+
 (deftest author-session-freshness-does-not-require-an-agency-job
   ;; Live pin: evidence e-715f3041-3eff-44b4-8377-97cfd5c9663a from
   ;; click wm-click-dfc7501c attempt 2, copied verbatim from futon1b :7073.
