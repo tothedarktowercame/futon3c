@@ -634,6 +634,10 @@
           :else :present)
         dir (io/file *click-run-binding-dir*)
         runtime-disposition (select-keys result [:status :reason :route
+                                                 ;; :phase: where the
+                                                 ;; coordinator stopped (M4a,
+                                                 ;; futon2 dfe565350)
+                                                 :phase
                                                  :ordinary-selection-called?
                                                  :absent-terms :before-ration-spend?
                                                  :injury-id :repair-id :attempt
