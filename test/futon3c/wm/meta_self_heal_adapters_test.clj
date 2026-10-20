@@ -380,6 +380,7 @@
                   "[\"clojure\" \"-M:test\" \"-n\" \"focused\"]"
                   ":reviewer-sha" "{:status :rejected"]]
       (is (str/includes? @prompt text)))
+    (is (not (str/includes? @prompt "Author answer contract")))
     ;; The author and reviewer contracts are mutually exclusive.
     (reset! prompt nil)
     (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
