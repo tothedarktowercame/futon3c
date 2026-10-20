@@ -942,6 +942,7 @@
           binding-path (:run-binding summary)
           binding-bytes (slurp binding-path)
           launched (service/launch-route-check-after-close! {:path binding-path :click/id "click-3"})
+          bytes-after-launch (slurp binding-path)
           sidecar (edn/read-string (slurp (str binding-path ".route.edn")))]
       (is (= :refused (:outcome summary)) "the click outcome survives the failed launch")
       (is (= {:click/id "click-3" :verdict :not-checked :reason "launch-failed"}
@@ -950,6 +951,8 @@
       (is (= :refused (:outcome (edn/read-string binding-bytes))))
       (is (nil? (:route-check (edn/read-string binding-bytes)))
           "the click binding is not rewritten with the failure")
+      (is (= binding-bytes bytes-after-launch)
+          "the failed launch changed no byte of the close binding")
       (service/launch-route-check-after-close! {:path binding-path :click/id "click-3"})
       (is (= binding-bytes (slurp binding-path)) "byte-identical after a second failed launch"))))
 

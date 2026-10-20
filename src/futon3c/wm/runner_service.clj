@@ -850,8 +850,7 @@
                             :reason :report-card-binding-update-failed
                             :error-class (.getName (class throwable))
                             :message (or (ex-message throwable)
-                                         (.getName (class throwable)))})))
-        ]
+                                         (.getName (class throwable)))})))]
     (cond-> {:click-id click-id
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
