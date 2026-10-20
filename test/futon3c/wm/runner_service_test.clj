@@ -344,7 +344,14 @@
            :status :refused
            :reason :meta-self-heal/acceptance-transaction-unadmitted
            :route :dedicated-meta-self-heal
-           :ordinary-selection-called? false})
+           :ordinary-selection-called? false
+           :attempt 3
+           :continued-from [{:attempt 2 :reason :author-failed
+                             :transaction-retired
+                             {:path "fixture/transaction.edn.attempt-2.retired.edn"
+                              :attempt 2}}]
+           :continuation {:status :not-continued :reason :injury-not-active}
+           :carried-bindings {:source :carried-transaction}})
         select (fn [request]
                  (reset! selection-request request)
                  {:selected-policy-id "pi-test"})
@@ -415,7 +422,14 @@
                   {:status :refused
                    :reason :meta-self-heal/acceptance-transaction-unadmitted
                    :route :dedicated-meta-self-heal
-                   :ordinary-selection-called? false}
+                   :ordinary-selection-called? false
+                   :attempt 3
+                   :continued-from [{:attempt 2 :reason :author-failed
+                                     :transaction-retired
+                                     {:path "fixture/transaction.edn.attempt-2.retired.edn"
+                                      :attempt 2}}]
+                   :continuation {:status :not-continued :reason :injury-not-active}
+                   :carried-bindings {:source :carried-transaction}}
                   :binding-status :absent
                   :run-id-observation
                   {:status :absent :reason :runner-did-not-return-run-id}
@@ -431,7 +445,14 @@
             (is (= {:status :refused
                     :reason :meta-self-heal/acceptance-transaction-unadmitted
                     :route :dedicated-meta-self-heal
-                    :ordinary-selection-called? false}
+                    :ordinary-selection-called? false
+                    :attempt 3
+                    :continued-from [{:attempt 2 :reason :author-failed
+                                      :transaction-retired
+                                      {:path "fixture/transaction.edn.attempt-2.retired.edn"
+                                       :attempt 2}}]
+                    :continuation {:status :not-continued :reason :injury-not-active}
+                    :carried-bindings {:source :carried-transaction}}
                    (:runtime-disposition (edn/read-string (slurp binding-file)))))))))))
 
 (deftest service-source-has-no-process-spawn-surface
@@ -549,6 +570,8 @@
                  (select-keys record
                               [:click/id :binding-status :run-id-observation])))
           (is (not (contains? last-result :run/id)))
+          (is (not (contains? (:runtime-disposition last-result) :continued-from)))
+          (is (not (contains? (:runtime-disposition record) :continued-from)))
           (is (not (contains? record :run-id-status))))))))
 
 (deftest pre-rename-binding-failure-is-absent-and-service-failed

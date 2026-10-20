@@ -647,6 +647,10 @@
                                                  :ordinary-selection-called?
                                                  :absent-terms :before-ration-spend?
                                                  :injury-id :repair-id :attempt
+                                                 ;; F34: a self-heal click can carry more than
+                                                 ;; its terminal attempt; retain prior attempts,
+                                                 ;; the loop's stop observation, and bindings.
+                                                 :continued-from :continuation :carried-bindings
                                                  ;; what a binding refusal
                                                  ;; mismatched, or why prepare
                                                  ;; refused (click c78d0f27)
@@ -872,6 +876,7 @@
                                   :ordinary-selection-called?
                                   :absent-terms :before-ration-spend?
                                   :injury-id :repair-id :attempt
+                                  :continued-from :continuation :carried-bindings
                                   :diagnosis-observation
                                   :acceptance-observation])
              :binding-status (:binding-status binding)
