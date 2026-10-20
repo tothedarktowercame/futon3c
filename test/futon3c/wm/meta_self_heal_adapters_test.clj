@@ -175,9 +175,95 @@
   (testing "prose cannot become repair evidence"
     (with-redefs [reg/reset-session! (fn [_] {:ok true})
                   reg/invoke-agent! (fn [& _] {:ok true :result "done" :session-id "fresh"})]
-      (is (= :agency-response-not-one-edn-map
-             (get-in (sut/agency-invoke! {:seat "wm-author" :request {}})
-                     [:payload :reason]))))))
+      (let [result (sut/agency-invoke! {:seat "wm-author" :request {}})]
+        (is (= :agency-response-not-one-edn-map
+               (get-in result [:payload :reason])))
+        (is (= "done" (get-in result [:payload :response-preview])))))))
+
+(deftest author-final-report-is-retained-and-author-prompt-states-contract
+  ;; Live pin. test/resources/wm/click-7-author-final-report.md is zai-2's
+  ;; final answer as click-7 author (click wm-click-25cd3682, 2026-10-20,
+  ;; evidence e-5f26ac11-5166-4421-b789-0b72e4ff6874), 4135 characters,
+  ;; recovered verbatim from the seat's in-memory history: the evidence
+  ;; store's copy stops at 4096 characters. The harness forced a prose
+  ;; final report; the one code fence that follows is never closed and
+  ;; its map carries one surplus `]`. The reader refuses it, and F25 puts
+  ;; the first 2000 characters of the answer on the refusal.
+  (let [report (slurp "test/resources/wm/click-7-author-final-report.md")
+        parsed (#'sut/one-edn-map report)
+        ;; Authored, not live: the same answer with its fence closed and the
+        ;; surplus `]` removed, so that the status the author chose parses.
+        authored (str (str/replace report "]}]}" "]}}") "\n```")]
+    (testing "the live click-7 report is refused: its fence never closes"
+      (is (= 4135 (count report)))
+      (is (str/ends-with? report "\"changes not yet committed\"]}]}"))
+      (is (nil? (:value parsed)))
+      (is (= "read a symbol, not a map with keyword keys" (:read-error parsed))))
+
+    (testing "with the fence closed, the trailing fence is the machine answer"
+      (is (= :incomplete-blocking-commit-and-baseline
+             (get-in (#'sut/one-edn-map authored) [:value :status])))
+      (is (nil? (:value (#'sut/one-edn-map (str authored "\nmore prose"))))
+          "a fence followed by prose is not accepted as the answer"))
+
+    (testing "the live refusal retains the first 2000 characters"
+      (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                    reg/invoke-agent!
+                    (fn [& _]
+                      {:ok true :result report :session-id "fresh"
+                       :invoke-meta {:job-id "click-7-job"}})]
+        (let [result (sut/agency-invoke!
+                      {:seat "wm-author" :session-id "declared"
+                       :request {:phase :author}})]
+          (is (= :failed (:status result)))
+          (is (= {:reason :agency-response-not-one-edn-map
+                  :response-preview (subs report 0 2000)}
+                 (:payload result))))))
+
+    (testing "invalid author status retains its status and the first 2000 characters"
+      (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                    reg/invoke-agent!
+                    (fn [& _]
+                      {:ok true :result authored :session-id "fresh"
+                       :invoke-meta {:job-id "click-7-job"}})]
+        (let [result (sut/agency-invoke!
+                      {:seat "wm-author" :session-id "declared"
+                       :request {:phase :author}})]
+          (is (= :failed (:status result)))
+          (is (= {:reason :agency-response-status-invalid
+                  :status :incomplete-blocking-commit-and-baseline
+                  :response-preview (subs authored 0 2000)}
+                 (:payload result))))))
+
+    (testing "only the author phase receives commit and bounded-test instructions"
+      (let [prompts (atom [])
+            command ["clojure" "-M:test" "-n"
+                     "futon2.aif.meta-loop-node-injury-acceptance-test"]
+            invoke (fn [phase]
+                     (with-redefs [reg/reset-session!
+                                   (fn [_] {:ok true :old-session-id "old"})
+                                   reg/invoke-agent!
+                                   (fn [_ prompt _]
+                                     (swap! prompts conj prompt)
+                                     {:ok true
+                                      :result "{:status :failed :payload {:reason :fixture}}"
+                                      :session-id "fresh"
+                                      :invoke-meta {:job-id (str (name phase) "-job")}})]
+                       (sut/agency-invoke!
+                        {:seat "wm-author" :session-id "declared"
+                         :request {:phase phase
+                                   :work-order {:target-worktree "/worktree"
+                                                :acceptance-test {:command command}}}})))]
+        (invoke :author)
+        (invoke :reviewer)
+        (let [[author-prompt reviewer-prompt] @prompts]
+          (is (str/includes? author-prompt ":patch-sha"))
+          (is (str/includes? author-prompt ":worktree"))
+          (is (str/includes? author-prompt (pr-str command)))
+          (is (str/includes? author-prompt "git status"))
+          (is (str/includes? author-prompt "futon2.aif.full-loop-runner-test"))
+          (is (str/includes? author-prompt "futon2.aif.selection-failure-retention-test"))
+          (is (not (str/includes? reviewer-prompt ":patch-sha"))))))))
 
 (deftest acceptance-run-is-bounded-pinned-and-shell-free
   "The exit, output, and pin assertions exercise a real systemd transient unit

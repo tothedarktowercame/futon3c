@@ -179,7 +179,10 @@
    map the caller can act on (claude-2's review of ca2fa4074, 2026-10-19)."
   [text]
   (let [text (str/trim (str text))
-        fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
+        ;; A seat harness may force a prose final report followed by its one
+        ;; machine result. The fence is usable only when it ends the answer;
+        ;; prose after the closing fence remains a malformed response.
+        fenced (re-matches #"(?s).*?```[A-Za-z]*\s*(.*?)\s*```\s*" text)
         reader-text (or (second fenced) text)]
     (try
       ;; First form only, as before F21: a map followed by trailing prose is
@@ -245,9 +248,24 @@
    The prompt requires a single EDN result so phase evidence is machine typed."
   [{:keys [seat session-id request]}]
   (let [reset (reg/reset-session! seat)
+        author? (= :author (:phase request))
+        acceptance-command (or (get-in request [:work-order :acceptance-test :command])
+                               (get-in request [:acceptance-test :command]))
+        author-contract
+        (when author?
+          (str "\n\nAuthor answer contract: commit the completed repair in :target-worktree before answering. "
+               "Read git status and git diff first; the worktree may contain uncommitted work from an earlier attempt of this same :repair-id, and passing work must be kept. "
+               "Run the work order's :acceptance-test :command from :target-worktree"
+               (when acceptance-command (str " (" (pr-str acceptance-command) ")"))
+               ", plus the test namespaces for files you changed. Do not run futon2.aif.full-loop-runner-test or futon2.aif.selection-failure-retention-test; they drive the live stack. "
+               "As soon as the acceptance command passes, commit and answer exactly "
+               "{:status :succeeded :payload {:patch-sha \"<40-hex sha of the commit in :worktree>\" :worktree \"<path>\"}}. "
+               "If that cannot be done, answer {:status :failed :payload {:reason <typed reason>}} or {:status :rejected :payload {:reason <typed reason>}}. "
+               "Any other status is refused. The final answer must be that one EDN map and nothing else."))
         prompt (str "Dedicated META self-heal phase. Do not select ordinary work. "
                     "Execute only the sealed request and return exactly one EDN map "
-                    "with :status and :payload (no prose).\n\n" (pr-str request))
+                    "with :status and :payload (no prose)."
+                    author-contract "\n\n" (pr-str request))
         result (when (:ok reset)
                  (invoke-with-rate-limit-retry! seat prompt
                                                 {:mode "work" :caller "war-machine"
@@ -261,10 +279,15 @@
       (not (:ok result)) {:status :failed :payload {:reason :agency-invoke-failed
                                                      :response result}}
       (not (and parsed (map? (:payload parsed))))
-      {:status :failed :payload {:reason :agency-response-not-one-edn-map}
+      {:status :failed :payload {:reason :agency-response-not-one-edn-map
+                                 :response-preview (subs (str (:result result)) 0
+                                                         (min 2000 (count (str (:result result))))) }
        :session-id (:session-id result)}
       (not (#{:succeeded :failed :rejected} (:status parsed)))
-      {:status :failed :payload {:reason :agency-response-status-invalid}}
+      {:status :failed :payload {:reason :agency-response-status-invalid
+                                 :status (:status parsed)
+                                 :response-preview (subs (str (:result result)) 0
+                                                         (min 2000 (count (str (:result result)))))}}
       (not (nonblank? (:session-id result)))
       {:status :failed :payload {:reason :agency-session-missing}}
       (or (not (nonblank? job-id)) (= (:old-session-id reset) (:session-id result)))
