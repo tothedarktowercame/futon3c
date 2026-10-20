@@ -739,15 +739,15 @@
     (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id)))
 
 (defn enact!
-  "Verify the reviewed patch is canonical HEAD, then reload only its changed
+  "Verify the reviewed patch is integrated on canonical HEAD, then reload only its changed
    Clojure sources through the serving JVM's recorded reload authority."
   [{:keys [work-order] :as request}]
   (let [repo (:target-repository work-order)
         patch (get-in request [:transaction :receipts 0 :payload :patch-sha])
         patch (or patch (:patch-sha request))
         head (:out (git repo "rev-parse" "HEAD"))]
-    (if-not (= patch head)
-      {:status :failed :payload {:reason :patch-not-canonical-head
+    (if-not (:ok? (git repo "merge-base" "--is-ancestor" patch "HEAD"))
+      {:status :failed :payload {:reason :patch-not-on-canonical-branch
                                  :patch-sha patch :canonical-head head}}
       (let [parent (:out (git repo "rev-parse" (str patch "^")))
             changed (:out (git repo "diff" "--name-only" parent patch))
@@ -760,7 +760,7 @@
                                         (:attempt work-order) 0)]
         {:status :succeeded
          :payload {:patch-sha patch :retry-click retry-click
-                   :integration-commit head :reload-receipt receipts}}))))
+                   :integration-commit head :reload-receipts receipts}}))))
 
 (defn work-order-identities
   "The caller-supplied identities coordinator/prepare needs on its work order,
