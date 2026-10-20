@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell]
             [clojure.string :as str]
+            [futon2.aif.meta-injury-ledger :as ledger]
             [futon2.aif.meta-repair-coordinator :as coordinator]
             [futon2.aif.meta-self-heal-harness :as harness]
             [futon3c.agency.registry :as reg]
@@ -167,6 +168,111 @@
     (is (= :succeeded (:status result)))
     (is (= (sut/retry-click-id "repair-alpha" 1 0)
            (get-in result [:payload :retry-click])))))
+
+(defn- enact-fixture-repo
+  "A repository with a seed commit and one patch commit touching src/fixture/retry.clj.
+   Returns the root, the patch sha and a git runner."
+  []
+  (let [root (.toString (java.nio.file.Files/createTempDirectory
+                         "meta-adapters-enact" (make-array java.nio.file.attribute.FileAttribute 0)))
+        sh (fn [& args]
+             (let [result (apply clojure.java.shell/sh "git" "-C" root args)]
+               (assert (zero? (:exit result)) (:err result))
+               (str/trim (:out result))))]
+    (sh "init" "-q")
+    (sh "config" "user.email" "wm@test")
+    (sh "config" "user.name" "WM")
+    (spit (io/file root "seed") "seed\n")
+    (sh "add" "seed")
+    (sh "commit" "-qm" "seed")
+    (let [source (io/file root "src/fixture/retry.clj")]
+      (.mkdirs (.getParentFile source))
+      (spit source "(ns fixture.retry)\n"))
+    (sh "add" "src/fixture/retry.clj")
+    (sh "commit" "-qm" "patch")
+    {:root root :patch (sh "rev-parse" "HEAD") :sh sh}))
+
+(defn- enact-with [root patch]
+  (with-redefs [code-identity/load-file-recorded!
+                (fn [path] {:status :loaded :path path})]
+    (sut/enact! {:work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root}
+                 :transaction {:receipts [{:payload {:patch-sha patch}}]}})))
+
+(deftest enact-accepts-a-patch-integrated-below-head
+  ;; F37 (claude-5 review tests, 2026-10-20): the repair for injury d755c886 is
+  ;; futon2 main b463d85cc and main took unrelated commits after it; the old
+  ;; (= patch head) test refused that as :patch-not-canonical-head.
+  (let [{:keys [root patch sh]} (enact-fixture-repo)]
+    (spit (io/file root "notes.txt") "later\n")
+    (sh "add" "notes.txt")
+    (sh "commit" "-qm" "unrelated commit after the patch")
+    (let [head (sh "rev-parse" "HEAD")
+          result (enact-with root patch)
+          payload (:payload result)]
+      (is (not= patch head) "the fixture must put the patch below HEAD")
+      (is (= :succeeded (:status result)) (pr-str result))
+      (is (= patch (:patch-sha payload)))
+      (is (= head (:integration-commit payload)))
+      (is (= [{:status :loaded :path (str root "/src/fixture/retry.clj")}]
+             (:reload-receipts payload))
+          "only the patch's own source files are reloaded")
+      (is (not (contains? payload :reload-receipt))
+          "the singular key would be copied onto the :enacted ledger entry"))))
+
+(deftest enact-refuses-a-patch-off-the-canonical-branch
+  (let [{:keys [root patch sh]} (enact-fixture-repo)
+        canonical (sh "rev-parse" "--abbrev-ref" "HEAD")]
+    (sh "checkout" "-q" "-b" "other")
+    (spit (io/file root "src/fixture/other.clj") "(ns fixture.other)\n")
+    (sh "add" "src/fixture/other.clj")
+    (sh "commit" "-qm" "off-branch commit")
+    (let [other (sh "rev-parse" "HEAD")
+          _ (sh "checkout" "-q" canonical)
+          result (enact-with root other)]
+      (is (= :failed (:status result)))
+      (is (= :patch-not-on-canonical-branch (get-in result [:payload :reason])))
+      (is (= other (get-in result [:payload :patch-sha])))
+      (is (= patch (get-in result [:payload :canonical-head]))))))
+
+(deftest enact-payload-seals-into-an-enacted-ledger-entry
+  ;; The live pin of the Lean rev 25 prediction (enactEvidence_beforeF37Refused):
+  ;; the coordinator copies (select-keys payload [:reload-receipt :integration-commit])
+  ;; onto the :enacted entry, and the ledger admits exactly one of the two.
+  (let [{:keys [root patch]} (enact-fixture-repo)
+        payload (:payload (enact-with root patch))
+        injury "injury/f37-enact-evidence"
+        repair "repair/f37-enact-evidence"
+        pin {:path "meta-injury-records/f37.edn" :sha256 (apply str (repeat 64 "a"))}
+        append (fn [history entry]
+                 (let [result (ledger/append-transition history entry)]
+                   (is (= :appended (:status result)) (pr-str result))
+                   (:ledger result)))
+        reviewed (-> ledger/empty-ledger
+                     (append {:injury-id injury :state :open :attempt 1
+                              :cause-record-pin pin :failure-stage :construction
+                              :failure-kind :cascade-construction-failed
+                              :detected-click "click-f37-detected"})
+                     (append {:injury-id injury :state :claimed :attempt 1 :repair-id repair
+                              :algorithm "dedicated-meta-self-heal"
+                              :author-session "author/f37" :reviewer-session "reviewer/f37"})
+                     (append {:injury-id injury :state :authored :attempt 1 :repair-id repair
+                              :patch-sha patch :worktree root})
+                     (append {:injury-id injury :state :reviewed :attempt 1 :repair-id repair
+                              :verdict :approved :reviewer-sha patch
+                              :reviewer-session "reviewer/f37"}))
+        enacted-entry (fn [enact-payload]
+                        (merge {:injury-id injury :state :enacted :attempt 1 :repair-id repair
+                                :retry-click (:retry-click payload)}
+                               (select-keys enact-payload [:reload-receipt :integration-commit])))
+        admitted (ledger/append-transition reviewed (enacted-entry payload))
+        old-shape (ledger/append-transition
+                   reviewed (enacted-entry {:integration-commit (:integration-commit payload)
+                                            :reload-receipt (:reload-receipts payload)}))]
+    (is (= :appended (:status admitted)) (pr-str admitted))
+    (is (= :valid (:status (ledger/validate-ledger (:ledger admitted)))))
+    (is (= :refused (:status old-shape)))
+    (is (some #{:enactment/evidence} (:defects old-shape))
+        "the pre-F37 payload shape is refused by the ledger")))
 
 (deftest readiness-is-read-only-and-names-concrete-authorities
   (let [root (.toString (java.nio.file.Files/createTempDirectory
