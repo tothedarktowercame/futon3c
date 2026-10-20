@@ -544,7 +544,7 @@
         (is (= :proposed (:status result)))
         (is (= 2 (count calls)))
         (is (str/includes? (get-in result [:read-retry :first-error])
-                           "read more than one EDN form"))))
+                           "read a symbol"))))
 
     (testing "transport retry and read retry survive together"
       (let [{:keys [result calls]}
@@ -577,11 +577,15 @@
       (is (= 2 (get-in escaped [:read-repair :appended]))))
     (is (nil? (:read-repair unbalanced-string))
         "a brace appended inside an unterminated string is not a repair")
-    (is (string? (:read-error surplus)))
+    (is (= {:a 1} (:value surplus)) "a surplus brace after the map is trailing text, read as before")
     (is (nil? (:read-repair surplus)) "a surplus brace is never changed")
     (is (= {:a {:b 1}} (:value deficit-two)))
     (is (= 2 (get-in deficit-two [:read-repair :appended])))
     (is (str/includes? (:read-error repaired-vector) "read a vector"))
     (is (nil? (:read-repair repaired-vector)))
     (is (str/includes? (:read-error repaired-string-key-map) "read a map"))
-    (is (nil? (:read-repair repaired-string-key-map)))))
+    (is (nil? (:read-repair repaired-string-key-map)))
+    (let [trailing (#'sut/one-edn-map "{:status :proposed}\n\nNote: balanced.")]
+      (is (= {:status :proposed} (:value trailing))
+          "a map followed by trailing prose is the map, as before F21 (no re-ask)")
+      (is (nil? (:read-repair trailing))))))

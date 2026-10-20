@@ -182,7 +182,10 @@
         fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
         reader-text (or (second fenced) text)]
     (try
-      (let [value (read-one-edn reader-text)]
+      ;; First form only, as before F21: a map followed by trailing prose is
+      ;; the map. read-one-edn's one-form check guards the repair candidate,
+      ;; where an appended brace must not close a second form.
+      (let [value (edn/read-string reader-text)]
         (if (keyword-keyed-map? value)
           {:value value}
           {:read-error (wrong-edn-shape value)}))
