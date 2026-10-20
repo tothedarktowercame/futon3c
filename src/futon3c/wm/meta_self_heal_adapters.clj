@@ -117,6 +117,36 @@
     (boolean? value) "boolean"
     :else (.getSimpleName (class value))))
 
+(defn- braces-outside-strings [text]
+  (loop [chars (seq (str text))
+         in-string? false
+         escaped? false
+         opened 0
+         closed 0]
+    (if-let [ch (first chars)]
+      (cond
+        escaped?
+        (recur (next chars) in-string? false opened closed)
+
+        (and in-string? (= ch \\))
+        (recur (next chars) true true opened closed)
+
+        (= ch \")
+        (recur (next chars) (not in-string?) false opened closed)
+
+        in-string?
+        (recur (next chars) true false opened closed)
+
+        (= ch \{)
+        (recur (next chars) false false (inc opened) closed)
+
+        (= ch \})
+        (recur (next chars) false false opened (inc closed))
+
+        :else
+        (recur (next chars) false false opened closed))
+      {:opened opened :closed closed})))
+
 (defn- one-edn-map
   "One EDN map, bare or inside a code fence under any alphabetic tag (F18: a
    seat that fences its map as ```json still returned the map). The map must
@@ -124,16 +154,23 @@
    {\"x\": 1}, reads as EDN with string keys and keyword values and is not a
    map the caller can act on (claude-2's review of ca2fa4074, 2026-10-19)."
   [text]
-  (try
-    (let [text (str/trim (str text))
-          fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
-          value (edn/read-string (or (second fenced) text))]
-      (if (and (map? value) (some keyword? (keys value)))
-        {:value value}
-        {:read-error (str "read a " (edn-type value)
-                          ", not a map with keyword keys")}))
-    (catch Throwable t
-      {:read-error (or (ex-message t) (.getName (class t)))})))
+  (let [text (str/trim (str text))
+        fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
+        reader-text (or (second fenced) text)]
+    (try
+      (let [value (edn/read-string reader-text)]
+        (if (and (map? value) (some keyword? (keys value)))
+          {:value value}
+          {:read-error (str "read a " (edn-type value)
+                            ", not a map with keyword keys")}))
+      (catch Throwable t
+        (let [message (or (ex-message t) (.getName (class t)))]
+          {:read-error
+           (if (str/includes? message "EOF while reading")
+             (let [{:keys [opened closed]} (braces-outside-strings reader-text)]
+               (str message "; " opened " `{` opened, " closed
+                    " `}` closed outside strings"))
+             message)})))))
 
 (def ^:dynamic *rate-limit-backoff-ms*
   "Wait before the one retry of a seat invoke the provider rate-limited."

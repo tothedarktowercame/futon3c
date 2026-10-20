@@ -498,13 +498,19 @@
         (is (= :proposed (:status result)))
         (is (= 2 (count calls)))
         (is (str/includes? (:first-error retry) "EOF while reading"))
+        (is (str/includes? (:first-error retry)
+                           "3 `{` opened, 2 `}` closed outside strings")
+            "the committed answer's missing closing brace is counted")
         (is (string? (:first-preview retry)))
         (is (str/ends-with?
              second-prompt
              (str "Your previous answer did not read as one EDN map ("
                   (:first-error retry)
                   "). Return the same map, complete and balanced, as one EDN map and nothing else.")))
-        (is (str/includes? second-prompt "EOF while reading"))))
+        (is (str/includes? second-prompt "EOF while reading"))
+        (is (str/includes? second-prompt
+                           "3 `{` opened, 2 `}` closed outside strings")
+            "the reader's brace count reaches the re-ask unchanged")))
 
     (testing "a second malformed answer is refused with both attempts recorded"
       (let [second-answer (str "prose " (apply str (repeat 900 "x"))
@@ -537,3 +543,13 @@
         (is (= 3 (count calls)))
         (is (some? (:transport-retry result)))
         (is (some? (:read-retry result)))))))
+
+(deftest eof-brace-count-ignores-strings-and-remains-total
+  (let [balanced (#'sut/one-edn-map "{:a \"}{\"}")
+        unbalanced-string (#'sut/one-edn-map "{:a \"x")]
+    (is (= {:a "}{"} (:value balanced))
+        "braces inside a balanced string do not affect reading")
+    (is (nil? (:read-error balanced)))
+    (is (str/includes? (:read-error unbalanced-string) "EOF while reading"))
+    (is (str/includes? (:read-error unbalanced-string) "outside strings")
+        "an unbalanced string produces a counted EOF result rather than throwing")))
