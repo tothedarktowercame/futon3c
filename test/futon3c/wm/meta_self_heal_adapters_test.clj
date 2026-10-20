@@ -7,10 +7,57 @@
             [futon2.aif.meta-repair-coordinator :as coordinator]
             [futon2.aif.meta-self-heal-harness :as harness]
             [futon3c.agency.registry :as reg]
+            [futon3c.wm.code-identity :as code-identity]
             [futon3c.wm.meta-self-heal-adapters :as sut]))
 
 (def ready-agent
   {:agent/status :idle :agent/invoke-ready? true :agent/session-id nil})
+
+(deftest retry-click-identities-preserve-legacy-and-separate-requeues
+  "No live record carried a wm-retry id on 2026-10-20. Ordinal zero is pinned
+  to the literal historical A:432 form rather than a live capture."
+  (testing "ordinal zero preserves existing receipts"
+    (is (= "wm-retry-repair-alpha-1"
+           (sut/retry-click-id "repair-alpha" 1 0))))
+  (testing "each re-queue gets a fresh id, including against another attempt"
+    (let [ids [(sut/retry-click-id "repair-alpha" 1 0)
+               (sut/retry-click-id "repair-alpha" 1 1)
+               (sut/retry-click-id "repair-alpha" 1 2)
+               (sut/retry-click-id "repair-alpha" 2 0)]]
+      (is (= 4 (count (set ids))))
+      ;; A naive suffix form could confuse a hyphen-bearing repair id with
+      ;; an attempt/ordinal tail; the separate wm-requeue namespace cannot.
+      (is (not= (sut/retry-click-id "repair-1" 1 1)
+                (sut/retry-click-id "repair-1--requeue" 11 0)))))
+  (testing "invalid ordinals fail at the public boundary"
+    (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 -1)))
+    (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 1.5)))))
+
+(deftest enact-mints-the-legacy-ordinal-zero-retry-id
+  (let [root (.toString (java.nio.file.Files/createTempDirectory
+                         "meta-adapters-enact" (make-array java.nio.file.attribute.FileAttribute 0)))
+        sh #(apply clojure.java.shell/sh "git" "-C" root %)
+        _ (sh ["init" "-q"])
+        _ (sh ["config" "user.email" "wm@test"])
+        _ (sh ["config" "user.name" "WM"])
+        _ (spit (io/file root "seed") "seed\n")
+        _ (sh ["add" "seed"])
+        _ (sh ["commit" "-qm" "seed"])
+        source (io/file root "src/fixture/retry.clj")
+        _ (.mkdirs (.getParentFile source))
+        _ (spit source "(ns fixture.retry)\n")
+        _ (sh ["add" "src/fixture/retry.clj"])
+        _ (sh ["commit" "-qm" "patch"])
+        patch (:out (sh ["rev-parse" "HEAD"]))
+        work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root}
+        request {:work-order work-order
+                 :transaction {:receipts [{:payload {:patch-sha (str/trim patch)}}]}}
+        result (with-redefs [code-identity/load-file-recorded!
+                             (fn [path] {:status :loaded :path path})]
+                 (sut/enact! request))]
+    (is (= :succeeded (:status result)))
+    (is (= (sut/retry-click-id "repair-alpha" 1 0)
+           (get-in result [:payload :retry-click])))))
 
 (deftest readiness-is-read-only-and-names-concrete-authorities
   (let [root (.toString (java.nio.file.Files/createTempDirectory

@@ -411,6 +411,20 @@
           (remove-materialized! file created-dirs)))
       (assoc @result :source-clean? (not (.exists file)))))))
 
+(defn retry-click-id
+  "Return the child-click identity for REPAIR-ID, ATTEMPT, and re-queue ordinal.
+
+  Ordinal zero preserves the historical `wm-retry-<repair-id>-<attempt>`
+  receipt form. Positive ordinals use the disjoint `wm-requeue-<ordinal>-<attempt>-<repair-id>`
+  namespace, so no re-queued id can equal any legacy retry id even when a
+  repair id itself contains hyphens or digits."
+  [repair-id attempt requeue-ordinal]
+  (assert (and (integer? requeue-ordinal) (not (neg? requeue-ordinal)))
+          "re-queue ordinal must be a non-negative integer")
+  (if (zero? requeue-ordinal)
+    (str "wm-retry-" repair-id "-" attempt)
+    (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id)))
+
 (defn enact!
   "Verify the reviewed patch is canonical HEAD, then reload only its changed
    Clojure sources through the serving JVM's recorded reload authority."
@@ -429,8 +443,8 @@
                             (str/split-lines changed))
             receipts (mapv #(code-identity/load-file-recorded!
                              (str repo "/" %)) sources)
-            retry-click (str "wm-retry-" (:repair-id work-order) "-"
-                             (:attempt work-order))]
+            retry-click (retry-click-id (:repair-id work-order)
+                                        (:attempt work-order) 0)]
         {:status :succeeded
          :payload {:patch-sha patch :retry-click retry-click
                    :integration-commit head :reload-receipt receipts}}))))
