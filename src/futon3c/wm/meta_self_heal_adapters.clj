@@ -117,6 +117,30 @@
     (boolean? value) "boolean"
     :else (.getSimpleName (class value))))
 
+(defn- keyword-keyed-map? [value]
+  (and (map? value) (some keyword? (keys value))))
+
+(defn- wrong-edn-shape [value]
+  (str "read a " (edn-type value) ", not a map with keyword keys"))
+
+(def ^:private edn-eof (Object.))
+
+(defn- read-one-edn [text]
+  (let [reader (java.io.PushbackReader. (java.io.StringReader. text))
+        value (edn/read {:eof edn-eof} reader)
+        trailing (edn/read {:eof edn-eof} reader)]
+    (when-not (identical? edn-eof trailing)
+      (throw (ex-info "read more than one EDN form" {:first-value value})))
+    value))
+
+(defn- read-repair-candidate [text]
+  (try
+    {:value (read-one-edn text)}
+    (catch clojure.lang.ExceptionInfo e
+      (when (contains? (ex-data e) :first-value)
+        {:value (:first-value (ex-data e))}))
+    (catch Throwable _ nil)))
+
 (defn- braces-outside-strings [text]
   (loop [chars (seq (str text))
          in-string? false
@@ -158,19 +182,32 @@
         fenced (re-matches #"(?s)```[A-Za-z]*\s*(.*?)\s*```" text)
         reader-text (or (second fenced) text)]
     (try
-      (let [value (edn/read-string reader-text)]
-        (if (and (map? value) (some keyword? (keys value)))
+      (let [value (read-one-edn reader-text)]
+        (if (keyword-keyed-map? value)
           {:value value}
-          {:read-error (str "read a " (edn-type value)
-                            ", not a map with keyword keys")}))
+          {:read-error (wrong-edn-shape value)}))
       (catch Throwable t
-        (let [message (or (ex-message t) (.getName (class t)))]
-          {:read-error
-           (if (str/includes? message "EOF while reading")
-             (let [{:keys [opened closed]} (braces-outside-strings reader-text)]
-               (str message "; " opened " `{` opened, " closed
-                    " `}` closed outside strings"))
-             message)})))))
+        (let [message (or (ex-message t) (.getName (class t)))
+              eof? (str/includes? message "EOF while reading")
+              {:keys [opened closed]} (when eof?
+                                        (braces-outside-strings reader-text))
+              counted-error (if eof?
+                              (str message "; " opened " `{` opened, " closed
+                                   " `}` closed outside strings")
+                              message)
+              deficit (when eof? (- opened closed))
+              repair (when (and deficit (pos? deficit))
+                       (read-repair-candidate
+                        (str reader-text (apply str (repeat deficit "}")))))]
+          (cond
+            (and repair (keyword-keyed-map? (:value repair)))
+            (assoc repair :read-repair {:appended deficit :error counted-error})
+
+            repair
+            {:read-error (wrong-edn-shape (:value repair))}
+
+            :else
+            {:read-error counted-error}))))))
 
 (def ^:dynamic *rate-limit-backoff-ms*
   "Wait before the one retry of a seat invoke the provider rate-limited."
@@ -295,6 +332,7 @@
                      (when (:ok second-result) (one-edn-map (:result second-result)))
                      first-read)
         parsed (:value final-read)
+        read-repair (:read-repair final-read)
         transport-retry (or (:rate-limit-retry result)
                             (:rate-limit-retry second-result))]
     (cond
@@ -308,6 +346,7 @@
                                         :detail (or (:error final-result)
                                                     (:message final-result))}
                                  read-retry (assoc :read-retry read-retry)
+                                 read-repair (assoc :read-repair read-repair)
                                  transport-retry
                                  (assoc :transport-retry transport-retry))
       (not (map? parsed)) (cond-> {:status :failed
@@ -315,10 +354,12 @@
                                    :read-error (:read-error final-read)
                                    :detail (response-preview (:result final-result))}
                             read-retry (assoc :read-retry read-retry)
+                            read-repair (assoc :read-repair read-repair)
                             transport-retry
                             (assoc :transport-retry transport-retry))
       :else (cond-> parsed
               read-retry (assoc :read-retry read-retry)
+              read-repair (assoc :read-repair read-repair)
               transport-retry (assoc :transport-retry transport-retry)))))
 
 (defn- hex-sha256 [^bytes content]

@@ -474,6 +474,7 @@
                    :acceptance-test
                    {:id "x" :command ["clojure"] :expected :passed
                     :source {:namespace "n" :path "test/n.clj" :text "t"}}})
+        unrepairable "{:status :proposed :note \"unterminated"
         run (fn [responses]
               (let [queue (atom responses)
                     calls (atom [])]
@@ -489,9 +490,9 @@
                     {:result (#'sut/producer-invoke!
                               "zai-2" :acceptance-proposal {})
                      :calls @calls}))))]
-    (testing "the committed malformed answer is repaired by one informed re-ask"
+    (testing "an unterminated string receives one informed re-ask"
       (let [{:keys [result calls]}
-            (run [{:ok true :result live-answer :session-id "s"}
+            (run [{:ok true :result unrepairable :session-id "s"}
                   {:ok true :result balanced :session-id "s"}])
             retry (:read-retry result)
             second-prompt (:prompt (second calls))]
@@ -499,8 +500,7 @@
         (is (= 2 (count calls)))
         (is (str/includes? (:first-error retry) "EOF while reading"))
         (is (str/includes? (:first-error retry)
-                           "3 `{` opened, 2 `}` closed outside strings")
-            "the committed answer's missing closing brace is counted")
+                           "1 `{` opened, 0 `}` closed outside strings"))
         (is (string? (:first-preview retry)))
         (is (str/ends-with?
              second-prompt
@@ -509,14 +509,26 @@
                   "). Return the same map, complete and balanced, as one EDN map and nothing else.")))
         (is (str/includes? second-prompt "EOF while reading"))
         (is (str/includes? second-prompt
-                           "3 `{` opened, 2 `}` closed outside strings")
+                           "1 `{` opened, 0 `}` closed outside strings")
             "the reader's brace count reaches the re-ask unchanged")))
+
+    (testing "the committed one-brace-short answer is repaired without a re-ask"
+      (let [parsed (#'sut/one-edn-map live-answer)
+            {:keys [result calls]}
+            (run [{:ok true :result live-answer :session-id "s"}])]
+        (is (= :proposed (get-in parsed [:value :status])))
+        (is (= 1 (get-in parsed [:read-repair :appended])))
+        (is (str/includes? (get-in parsed [:read-repair :error])
+                           "3 `{` opened, 2 `}` closed outside strings"))
+        (is (= :proposed (:status result)))
+        (is (= 1 (count calls)) "a successful read repair sends no re-ask")
+        (is (= (:read-repair parsed) (:read-repair result)))))
 
     (testing "a second malformed answer is refused with both attempts recorded"
       (let [second-answer (str "prose " (apply str (repeat 900 "x"))
                                " SECOND-ANSWER-TAIL")
             {:keys [result calls]}
-            (run [{:ok true :result live-answer :session-id "s"}
+            (run [{:ok true :result unrepairable :session-id "s"}
                   {:ok true :result second-answer :session-id "s"}])]
         (is (= :meta-self-heal/producer-response-malformed (:reason result)))
         (is (= 2 (count calls)) "exactly one reader-informed re-ask")
@@ -532,12 +544,12 @@
         (is (= :proposed (:status result)))
         (is (= 2 (count calls)))
         (is (str/includes? (get-in result [:read-retry :first-error])
-                           "read a symbol"))))
+                           "read more than one EDN form"))))
 
     (testing "transport retry and read retry survive together"
       (let [{:keys [result calls]}
             (run [{:ok false :error "429 Too Many Requests"}
-                  {:ok true :result live-answer :session-id "s"}
+                  {:ok true :result unrepairable :session-id "s"}
                   {:ok true :result balanced :session-id "s"}])]
         (is (= :proposed (:status result)))
         (is (= 3 (count calls)))
@@ -546,7 +558,11 @@
 
 (deftest eof-brace-count-ignores-strings-and-remains-total
   (let [balanced (#'sut/one-edn-map "{:a \"}{\"}")
-        unbalanced-string (#'sut/one-edn-map "{:a \"x")]
+        unbalanced-string (#'sut/one-edn-map "{:a \"x")
+        surplus (#'sut/one-edn-map "{:a 1}}")
+        deficit-two (#'sut/one-edn-map "{:a {:b 1")
+        repaired-vector (#'sut/one-edn-map "[:a]\n{")
+        repaired-string-key-map (#'sut/one-edn-map "{\"a\" {")]
     (is (= {:a "}{"} (:value balanced))
         "braces inside a balanced string do not affect reading")
     (is (nil? (:read-error balanced)))
@@ -554,6 +570,18 @@
     (is (str/includes? (:read-error unbalanced-string)
                        "1 `{` opened, 0 `}` closed outside strings")
         "an unbalanced string produces a counted EOF result rather than throwing")
-    (is (str/includes? (:read-error (#'sut/one-edn-map "{:a \"\\\"}\" :b {"))
-                       "2 `{` opened, 0 `}` closed outside strings")
-        "an escaped quote does not end the string, so its brace is not counted")))
+    (let [escaped (#'sut/one-edn-map "{:a \"\\\"}\" :b {")]
+      (is (str/includes? (get-in escaped [:read-repair :error])
+                         "2 `{` opened, 0 `}` closed outside strings")
+          "an escaped quote does not end the string, so its brace is not counted")
+      (is (= 2 (get-in escaped [:read-repair :appended]))))
+    (is (nil? (:read-repair unbalanced-string))
+        "a brace appended inside an unterminated string is not a repair")
+    (is (string? (:read-error surplus)))
+    (is (nil? (:read-repair surplus)) "a surplus brace is never changed")
+    (is (= {:a {:b 1}} (:value deficit-two)))
+    (is (= 2 (get-in deficit-two [:read-repair :appended])))
+    (is (str/includes? (:read-error repaired-vector) "read a vector"))
+    (is (nil? (:read-repair repaired-vector)))
+    (is (str/includes? (:read-error repaired-string-key-map) "read a map"))
+    (is (nil? (:read-repair repaired-string-key-map)))))
