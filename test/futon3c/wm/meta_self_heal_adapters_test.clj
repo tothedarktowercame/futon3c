@@ -13,6 +13,80 @@
 (def ready-agent
   {:agent/status :idle :agent/invoke-ready? true :agent/session-id nil})
 
+(defn- committed-readiness-repository []
+  (let [repo (.toString
+              (java.nio.file.Files/createTempDirectory
+               "self-heal-readiness" (make-array java.nio.file.attribute.FileAttribute 0)))
+        tracked (io/file repo "tracked.txt")]
+    (spit tracked "committed\n")
+    (doseq [args [["init" "-q"]
+                  ["config" "user.email" "wm@test"]
+                  ["config" "user.name" "WM"]
+                  ["add" "tracked.txt"]
+                  ["commit" "-qm" "fixture"]]]
+      (let [result (apply clojure.java.shell/sh "git" "-C" repo args)]
+        (assert (zero? (:exit result)) (:err result))))
+    {:repo repo :tracked tracked}))
+
+(defn- readiness-options [repo transaction-path]
+  {:target-repository repo
+   :meta-injury-ledger-path "/isolated/ledger.edn"
+   :meta-repair-transaction-path transaction-path
+   :queue-retry-fn identity})
+
+(defn- ready-readiness [opts]
+  (with-redefs [reg/get-agent (fn [_] ready-agent)]
+    (sut/readiness opts)))
+
+(deftest authored-transaction-owns-tracked-worktree-dirt
+  (let [{:keys [repo tracked]} (committed-readiness-repository)
+        transaction "test/resources/wm/click-7-transaction.edn"
+        _ (spit tracked "author repair\n")
+        result (ready-readiness (readiness-options repo transaction))
+        observation (first (:observations result))]
+    (is (= :ready (:status result)))
+    (is (not (some #{:tracked-worktree-dirty} (:defects result))))
+    (is (= :tracked-worktree-dirty (:kind observation)))
+    (is (= {:injury-id "injury/d755c886a22d6fc8c04db7fada64089e07157f62"
+            :repair-id "repair/239cf98836afc977cd589141c224ec3f4bca83dc"
+            :attempt 1}
+           (:owned-by observation)))
+    (is (some #(str/includes? % "tracked.txt") (:paths observation)))))
+
+(deftest dirty-worktree-without-transaction-is-refused-with-paths
+  (let [{:keys [repo tracked]} (committed-readiness-repository)
+        _ (spit tracked "unowned\n")
+        missing (str repo "/missing-transaction.edn")
+        result (ready-readiness (readiness-options repo missing))]
+    (is (= :refused (:status result)))
+    (is (= [:tracked-worktree-dirty] (:defects result)))
+    (is (some #(str/includes? % "tracked.txt")
+              (:tracked-worktree-paths result)))
+    (is (nil? (:observations result)))))
+
+(deftest work-order-without-author-receipt-does-not-own-dirt
+  (let [{:keys [repo tracked]} (committed-readiness-repository)
+        fixture (edn/read-string
+                 (slurp "test/resources/wm/click-7-transaction.edn"))
+        transaction (io/file repo "authored-without-receipts.edn")
+        _ (spit transaction (pr-str (dissoc fixture :receipts)))
+        _ (spit tracked "not yet authored\n")
+        result (ready-readiness
+                (readiness-options repo (.getPath transaction)))]
+    (is (= :refused (:status result)))
+    (is (= [:tracked-worktree-dirty] (:defects result)))
+    (is (some #(str/includes? % "tracked.txt")
+              (:tracked-worktree-paths result)))))
+
+(deftest clean-worktree-does-not-report-owned-dirt
+  (let [{:keys [repo]} (committed-readiness-repository)
+        result (ready-readiness
+                (readiness-options repo
+                                   "test/resources/wm/click-7-transaction.edn"))]
+    (is (= :ready (:status result)))
+    (is (nil? (:observations result)))
+    (is (nil? (:tracked-worktree-paths result)))))
+
 (deftest retry-port-prefers-coordinator-click-and-exposes-id-minting
   (let [queued (atom [])
         ports (with-redefs [sut/readiness (constantly {:status :ready})]

@@ -40,6 +40,12 @@
   (let [{:keys [exit out err]} (apply shell/sh "git" "-C" repo args)]
     {:ok? (zero? exit) :out (str/trim out) :err (str/trim err)}))
 
+(defn- read-repair-transaction [path]
+  (when (nonblank? path)
+    (try
+      (edn/read-string (slurp path))
+      (catch Throwable _ nil))))
+
 (defn readiness
   "Read-only readiness receipt.  It names every resolved authority and never
    resets a session, dispatches work, reloads code, or queues a click."
@@ -49,6 +55,20 @@
         repo (or (:target-repository opts) default-repository)
         records (into {} (map (fn [seat] [seat (reg/get-agent seat)]) seats))
         tracked (git repo "status" "--porcelain" "--untracked-files=no")
+        tracked-paths (when (and (:ok? tracked) (seq (:out tracked)))
+                        (vec (str/split-lines (:out tracked))))
+        transaction (when (seq tracked-paths)
+                      (read-repair-transaction
+                       (:meta-repair-transaction-path opts)))
+        work-order (:work-order transaction)
+        dirt-owned? (and (map? work-order)
+                         (some #(= :author (:phase %)) (:receipts transaction)))
+        observations (cond-> []
+                       dirt-owned?
+                       (conj {:kind :tracked-worktree-dirty
+                              :owned-by (select-keys work-order
+                                                     [:injury-id :repair-id :attempt])
+                              :paths tracked-paths}))
         defects (cond-> []
                   (not= 3 (count (set seats))) (conj :cast-not-distinct)
                   (not-every? #(and % (invoke-capable? %)
@@ -56,23 +76,27 @@
                               (vals records))
                   (conj :cast-not-ready)
                   (not (.isDirectory (io/file repo))) (conj :repository-unreadable)
-                  (or (not (:ok? tracked)) (seq (:out tracked)))
+                  (or (not (:ok? tracked))
+                      (and (seq tracked-paths) (not dirt-owned?)))
                   (conj :tracked-worktree-dirty)
                   (not (nonblank? (:meta-injury-ledger-path opts)))
                   (conj :injury-ledger-path)
                   (not (nonblank? (:meta-repair-transaction-path opts)))
                   (conj :transaction-path)
                   (not (ifn? (:queue-retry-fn opts))) (conj :queued-retry-authority))]
-    {:schema :wm/meta-self-heal-serving-readiness-v1
-     :status (if (seq defects) :refused :ready)
-     :defects defects :cast cast :repository repo
-     :tracked-head (:out (git repo "rev-parse" "HEAD"))
-     :ledger-path (:meta-injury-ledger-path opts)
-     :transaction-path (:meta-repair-transaction-path opts)
-     :dispatch :futon3c.agency.registry/invoke-agent!
-     :session-reset :futon3c.agency.registry/reset-session!
-     :reload :futon3c.wm.code-identity/load-file-recorded!
-     :retry :queued-after-parent-release}))
+    (cond-> {:schema :wm/meta-self-heal-serving-readiness-v1
+             :status (if (seq defects) :refused :ready)
+             :defects defects :cast cast :repository repo
+             :tracked-head (:out (git repo "rev-parse" "HEAD"))
+             :ledger-path (:meta-injury-ledger-path opts)
+             :transaction-path (:meta-repair-transaction-path opts)
+             :dispatch :futon3c.agency.registry/invoke-agent!
+             :session-reset :futon3c.agency.registry/reset-session!
+             :reload :futon3c.wm.code-identity/load-file-recorded!
+             :retry :queued-after-parent-release}
+      (seq observations) (assoc :observations observations)
+      (and (seq tracked-paths) (not dirt-owned?))
+      (assoc :tracked-worktree-paths tracked-paths))))
 
 (defn reset-cast!
   "Reset exactly the explicit three-seat cast and return the fresh session ids."
