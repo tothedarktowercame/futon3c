@@ -137,8 +137,11 @@
   authorized directly by Joe to claude-5 on 2026-10-20 at about 12:35Z for the
   self-heal retry route's first live run (enact, retry, re-queues to the typed
   abandonment), item 1 of DECISIONS-FOR-JOE-2026-10-20.md, after M10b-4
-  (futon2 b5dd9269c) and Lean rev 11 landed: \"click budget of 10 allocated\""
-  138)
+  (futon2 b5dd9269c) and Lean rev 11 landed: \"click budget of 10 allocated\",
+  plus ten clicks authorized directly by Joe to claude-5 on 2026-10-20 at
+  about 18:39Z, after M23L (darktower 87784b4534, Lean rev 24) was accepted
+  and the alignment regenerated (futon2 38419663c): \"10 more clicks granted\""
+  148)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
