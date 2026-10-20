@@ -103,11 +103,17 @@
         ;; F4a; it has to be forwarded here or every self-heal click refuses
         ;; :acceptance-run-port.
         (merge (fill-absent base (:work-order-identities resolved))
+               ;; M10b-3 (2026-10-20): the adapter also exposes
+               ;; :retry-click-id-fn, the minting function the futon2
+               ;; coordinator needs to re-queue an inconclusive retry under a
+               ;; fresh click id. Forward it or every requeue refuses
+               ;; :coordinator/retry-click-id-unavailable.
                (select-keys resolved [:agency-invoke-fn :repair-enact-fn
                                       :repair-retry-fn :meta-diagnosis-fn
                                       :meta-acceptance-fn
                                       :meta-acceptance-review-fn
-                                      :meta-acceptance-run-fn])
+                                      :meta-acceptance-run-fn
+                                      :retry-click-id-fn])
                {:self-heal-concrete-ports? true
                 :self-heal-serving-readiness (:readiness resolved)})
         (assoc base :self-heal-serving-readiness resolved)))))

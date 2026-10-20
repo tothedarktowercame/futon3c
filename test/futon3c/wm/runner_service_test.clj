@@ -97,7 +97,9 @@
         (is (str/includes? review key)))
       (doseq [prompt @prompts]
         (is (str/includes? prompt "Do not select ordinary work"))
-        (is (str/includes? prompt "execute any command"))
+        ;; F15 (claude-5, fd12530c8, 2026-10-19) reworded the prohibition to
+        ;; "run tests, builds or code"; this assertion was left on the old text.
+        (is (str/includes? prompt "run tests, builds or code"))
         (is (str/includes? prompt "claim a repair"))))))
 
 (deftest meta-producer-invokes-a-restored-seat-through-its-registered-handler
@@ -1040,18 +1042,22 @@
    but the service forwarded a fixed key list that omitted it, so every
    self-heal click refused :acceptance-run-port."
   (let [run-fn (fn [_] {:status :ran})
+        id-fn (fn [repair-id attempt ordinal] (str repair-id attempt ordinal))
         resolved {:status :ready
                   :readiness {:status :ready :defects []}
                   :agency-invoke-fn identity :repair-enact-fn identity
                   :repair-retry-fn identity :meta-diagnosis-fn identity
                   :meta-acceptance-fn identity :meta-acceptance-review-fn identity
-                  :meta-acceptance-run-fn run-fn}
+                  :meta-acceptance-run-fn run-fn
+                  :retry-click-id-fn id-fn}
         configured (with-redefs [futon3c.wm.meta-self-heal-adapters/ports
                                  (fn [_] resolved)]
                      (#'service/configure-self-heal-ports {}))]
     (is (true? (:self-heal-concrete-ports? configured)))
     (is (= run-fn (:meta-acceptance-run-fn configured))
         "the run port reaches the runtime options")
+    (is (identical? id-fn (:retry-click-id-fn configured))
+        "M10b-3: the retry click minting function reaches the runtime options")
     (is (every? fn? (map configured [:meta-diagnosis-fn :meta-acceptance-fn
                                      :meta-acceptance-review-fn :agency-invoke-fn
                                      :repair-enact-fn :repair-retry-fn])))))
