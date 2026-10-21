@@ -145,7 +145,8 @@
    :writes [[:scoring {:record :selection-certificate}]]}
   {:box/id :r20-class-preference :box/kind :row
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "class-preference-row"}
-   :record-aliases {:selection-certificate ["decision"]}
+   :record-aliases {:selection-certificate ["decision"]
+                    :class-step [{:element-of "(:steps entry)"}]}
    :reads [[:scoring {:record :selection-certificate}]
            [:steps {:record :selection-certificate}]
            [:prediction {:record :class-step}]]
@@ -214,10 +215,6 @@
    :box/id :class-score-candidate :field [:prediction :class-step] :role :reads
    :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"
           :var "score-candidate"}}
-  {:finding :declaration-without-occurrence
-   :box/id :r20-class-preference :field [:prediction :class-step] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj"
-          :var "class-preference-row"}}
   {:finding :declaration-without-occurrence
    :box/id :class-score-candidate :field [:risk :class-step] :role :reads
    :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"

@@ -162,3 +162,42 @@
   (is (seq (findings "(defn f [] {:beta 1})" :beta {})))
   (is (zero? (:reads (wiring/field-usage
                       "(defn f [m] (unknown-binding [{:keys [beta]} m] beta))" :beta)))))
+
+;; ---------------------------------------------------------------------------
+;; S5e: an explicit element alias is scoped to one declared collection mapper.
+
+(def element-field [:f {:record :record}])
+(defn- element-findings [source collection]
+  (findings source element-field
+            {:record-aliases {:record [{:element-of collection}]}}))
+(defn- element-missing? [source collection]
+  (some #(= :declaration-without-occurrence (:finding %))
+        (element-findings source collection)))
+
+(deftest element-alias-can-supply-one-positional-helper-argument
+  (is (empty? (element-findings
+               "(defn helper [ignored p] (:f p)) (defn f [items x] (mapv #(helper x %) items))"
+               "items"))))
+
+(deftest element-alias-requires-the-exact-collection-and-its-own-anonymous-fn
+  (testing "(b) the same helper shape over another collection names no record"
+    (is (element-missing?
+         "(defn helper [ignored p] (:f p)) (defn f [items other x] (mapv #(helper x %) other))"
+         "items")))
+  (testing "(c) a separate #() cannot borrow the first mapper's element alias"
+    (is (element-missing?
+         "(defn helper [ignored p] (:f p)) (defn f [items other x] (mapv identity items) (mapv #(helper x %) other))"
+         "items")))
+  (testing "(d) destructuring does not establish an element alias"
+    (is (element-missing?
+         "(defn f [items] (mapv (fn [{:keys [f]}] f) items))"
+         "items")))
+  (testing "(e) only the listed mapper calls introduce an element alias"
+    (is (element-missing?
+         "(defn helper [ignored p] (:f p)) (defn f [items x] (foo #(helper x %) items))"
+         "items"))))
+
+(deftest element-alias-allows-a-direct-keyword-read
+  (is (empty? (element-findings
+               "(defn f [items] (mapv (fn [x] (:f x)) items))"
+               "items"))))

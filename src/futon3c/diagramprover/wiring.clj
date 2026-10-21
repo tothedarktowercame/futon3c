@@ -388,7 +388,7 @@
 ;; when some box at the site scopes a field to r (:scoped in `site-cfg`), and
 ;; only to r; a nested literal under a key no box scopes is not attributed.
 
-(declare return-maps)
+(declare return-maps element-alias-direct-reads element-alias-contexts element-alias-for-call?)
 
 (defn- literal-of
   "The map literal NODE stands for under ENV: itself, the let-bound literal it
@@ -730,9 +730,16 @@
   shares the site, because the aliases are names in that site's text."
   [boxes]
   {:aliases (reduce (fn [m b]
-                      (reduce (fn [m [r names]] (update m r (fnil into #{}) names))
+                      (reduce (fn [m [r names]]
+                                (update m r (fnil into #{}) (filter string? names)))
                               m (:record-aliases b)))
                     {} boxes)
+   :element-aliases (reduce (fn [m b]
+                              (reduce (fn [m [r names]]
+                                        (update m r (fnil into #{})
+                                                (keep :element-of (filter map? names))))
+                                      m (:record-aliases b)))
+                            {} boxes)
    :return-paths (apply merge (map :return-paths boxes))
    :returns (set (keep :returns-record boxes))
    :scoped (set (keep vertex-record (mapcat #(concat (entries % :reads) (entries % :writes)) boxes)))})
@@ -1056,7 +1063,8 @@
                                            (conditional-return-analysis text (:var cfg) field cfg))) {})
         binding-uses (merge-with into (binding-reads forms field (cands) cfg)
                                  (keyed-path-reads forms field cfg)
-                                 (anonymous-select-keys-reads forms field cfg))
+                                 (anonymous-select-keys-reads forms field cfg)
+                                 (element-alias-direct-reads text forms field cfg))
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
                                  :else true))]
@@ -1190,6 +1198,85 @@
   (and (<= (:start outer) (:start inner)) (<= (:end inner) (:end outer))))
 
 (defn- record-names [r aliases] (conj (get aliases r #{}) (name r)))
+
+(def ^:private element-alias-fns #{"map" "mapv" "keep" "filterv" "filter"
+                                   "remove" "mapcat" "run!" "some" "every?"})
+
+(defn- normal-form-text [text node]
+  (some-> (subs text (:start node) (:end node)) (str/replace #"\s+" "")))
+
+(defn- element-parameter
+  "The sole plain element parameter of FN-NODE, or nil. `#()` has `%`/`%1`;
+  `(fn [x] ...)` has its sole vector parameter. Destructuring never aliases."
+  [fn-node]
+  (cond
+    (= :fn (:kind fn-node))
+    (let [tokens (filter #(= :token (:kind %)) (:children fn-node))]
+      (some #(let [token (token-text %)]
+               (when (#{"%" "%1"} token) token))
+            tokens))
+    (and (= :list (:kind fn-node)) (= "fn" (head-text fn-node)))
+    (let [[_ params] (:children fn-node)]
+      (when (and (= :vector (:kind params)) (= 1 (count (:children params)))
+                 (plain-symbol? (first (:children params))))
+        (token-text (first (:children params)))))))
+
+(defn- element-alias-contexts
+  "The exact anonymous functions whose element is a declared record alias.
+  Collection membership is text-equality after whitespace normalisation; no
+  element type is inferred from the collection expression."
+  [text forms {:keys [element-aliases]}]
+  (vec
+   (mapcat
+    (fn [[node _]]
+      (let [kids (:children node) h (head-text node)]
+        (when (and (contains? element-alias-fns h) (= 3 (count kids)))
+          (let [fn-node (second kids)
+                coll (nth kids 2)
+                parameter (element-parameter fn-node)
+                coll-text (normal-form-text text coll)
+                records (set (for [[record sources] element-aliases
+                                   :when (contains? (set (map #(str/replace % #"\s+" "") sources))
+                                                    coll-text)]
+                               record))]
+            (when (and parameter (seq records))
+              [{:fn fn-node :parameter parameter :records records}])))))
+    (mapcat #(walk-nodes % []) forms))))
+
+(defn- element-alias-for-call?
+  [contexts call arg]
+  (some (fn [{:keys [fn parameter records]}]
+          (and (= parameter (token-text arg))
+               (contains-node? fn call)
+               ;; The nearest anonymous function is the declared mapper; a
+               ;; nested #() gets its own %, never this alias.
+               (let [nested (last (filter #(or (= :fn (:kind %))
+                                              (and (= :list (:kind %)) (= "fn" (head-text %))))
+                                           (map first (walk-nodes fn []))))]
+                 (or (nil? nested) (contains-node? nested call)))
+               records))
+        contexts))
+
+(defn- element-alias-direct-reads
+  "Start offsets of direct keyword/get reads inside a declared element mapper.
+  Helper calls are intentionally left to delegated-read?."
+  [text forms field cfg]
+  (let [found (volatile! {})]
+    (doseq [{:keys [fn parameter records]} (element-alias-contexts text forms cfg)]
+      (letfn [(walk [node]
+                (let [kids (:children node) h (head-text node)]
+                  (when (and (= (str field) h) (= parameter (token-text (second kids))))
+                    (vswap! found update (:start (first kids)) (fnil into #{}) records))
+                  (when (and (= "get" h) (= parameter (token-text (second kids)))
+                             (= (str field) (token-text (nth kids 2 nil))))
+                    (vswap! found update (:start (nth kids 2)) (fnil into #{}) records))
+                  (doseq [child kids
+                          :when (not (and (not= child fn)
+                                          (or (= :fn (:kind child))
+                                              (and (= :list (:kind child)) (= "fn" (head-text child))))))]
+                    (walk child))))]
+        (walk fn)))
+    @found))
 
 (defn- return-leaves
   "The forms in return position of NODE, any kind (a call, a symbol, a literal);
@@ -2006,11 +2093,12 @@
                                 [(token-text (second (:children form))) form]))
           names (record-names record (:aliases cfg))
           site-forms (:forms (parse-forms text))
+          element-contexts (element-alias-contexts text site-forms cfg)
           rebound (rebound-receivers site-forms)]
       (boolean
        (some
         (fn [[call _]]
-          (when (and (= :list (:kind call))
+          (when (and (#{:list :fn} (:kind call))
                      (string? (head-text call))
                      (not (str/includes? (head-text call) "/"))
                      (not-any? #(binds-symbol? % (head-text call)) site-forms))
@@ -2029,7 +2117,9 @@
                        (some
                         (fn [[arg param]]
                           (when (and (plain-symbol? arg) (not (contains? rebound (:start arg)))
-                                     (contains? names (token-text arg))
+                                     (or (contains? names (token-text arg))
+                                         (contains? (or (element-alias-for-call? element-contexts call arg) #{})
+                                                    record))
                                      (plain-symbol? param))
                             (let [body-text (str/join "\n" (map #(subs source (:start %) (:end %)) body))]
                               (pos? (:reads (field-usage* body-text (vertex-field vertex)
