@@ -13,6 +13,12 @@
   [:candidates {:record :precision-family}] :receipt/frozen-policy-family
   [:missing {:record :absent-row}] :hole/required-fields
   [:target-class {:record :class-model}] :receipt/target-classification
+  [:class-preference {:record :class-model}] :quantity/preference-schedule
+  [:prediction {:record :class-step}] :quantity/predicted-class-distribution
+  [:risk {:record :class-step}] :quantity/class-risk
+  [:steps {:record :class-score-certificate}] :receipt/class-score-steps
+  [:steps {:record :selection-certificate}] :receipt/class-score-steps
+  [:controller-score {:record :ranked-candidate}] :quantity/expected-free-energy
   [:scoring {:record :selection-certificate}] :receipt/scoring
   [:focus-receipt {:record :selection-certificate}] :receipt/focus
   [:roles {:record :participants}] :receipt/participant-roles
@@ -36,6 +42,18 @@
   {:status :absent :note "the absent-row producer records literal missing fields without a run/click identity"}
   [:target-class {:record :class-model}]
   {:status :absent :note "target-class is retained in the observation model without run/click identity"}
+  [:class-preference {:record :class-model}]
+  {:status :absent :note "class preference is a constant model schedule without run/click identity"}
+  [:prediction {:record :class-step}]
+  {:status :absent :note "per-tau predicted class distributions carry no run/click identity"}
+  [:risk {:record :class-step}]
+  {:status :absent :note "per-tau class risk carries no run/click identity"}
+  [:steps {:record :class-score-certificate}]
+  {:status :absent :note "the candidate class-score steps carry no run/click identity"}
+  [:steps {:record :selection-certificate}]
+  {:status :absent :note "selection retains class-score steps without a run/click identity"}
+  [:controller-score {:record :ranked-candidate}]
+  {:status :absent :note "the ranked candidate controller score carries no run/click identity"}
   [:scoring {:record :selection-certificate}]
   {:status :absent :note "scoring entries retain candidate ids and scorer data, but no run/click id"}
   [:focus-receipt {:record :selection-certificate}]
@@ -68,7 +86,9 @@
    :writes [[:update {:record :precision-carry}]]}
   {:box/id :selection-candidate :box/kind :producer
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-candidate"}
+   :record-aliases {:ranked-candidate ["entry"]}
    :returns-record :selection-candidate
+   :reads [[:controller-score {:record :ranked-candidate}]]
    :writes [[:habit {:record :selection-candidate}]
             [:g {:record :selection-candidate}]]}
   {:box/id :precision-family :box/kind :producer
@@ -96,7 +116,28 @@
   {:box/id :class-emission-model :box/kind :producer
    :site {:file "futon2/src/futon2/aif/cascade_shape_g.clj" :var "class-emission-model"}
    :returns-record :class-model
-   :writes [[:target-class {:record :class-model}]]}
+   :writes [[:target-class {:record :class-model}]
+            [:class-preference {:record :class-model}]]}
+  {:box/id :class-prediction-and-risk :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/observation_model.clj" :var "evaluate"}
+   :record-aliases {:class-model ["model"]}
+   :returns-record :class-step
+   :reads [[:class-preference {:record :class-model}]]
+   :writes [[:prediction {:record :class-step}]
+            [:risk {:record :class-step}]]}
+  {:box/id :class-score-candidate :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"
+          :var "score-candidate"}
+   :returns-record :ranked-candidate
+   :reads [[:prediction {:record :class-step}]
+           [:risk {:record :class-step}]]
+   :writes [[:steps {:record :class-score-certificate}]
+            [:controller-score {:record :ranked-candidate}]]}
+  {:box/id :selection-class-score-retention :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}
+   :returns-record :selection-certificate
+   :reads [[:steps {:record :class-score-certificate}]]
+   :writes [[:steps {:record :selection-certificate}]]}
   {:box/id :phase8-class-scorer :box/kind :producer
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}
    :returns-record :selection-certificate
@@ -105,7 +146,9 @@
   {:box/id :r20-class-preference :box/kind :row
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "class-preference-row"}
    :record-aliases {:selection-certificate ["decision"]}
-   :reads [[:scoring {:record :selection-certificate}]]
+   :reads [[:scoring {:record :selection-certificate}]
+           [:steps {:record :selection-certificate}]
+           [:prediction {:record :class-step}]]
    }
 
   {:box/id :focus-receipt-builder :box/kind :producer
@@ -172,4 +215,45 @@
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}
   {:finding :declaration-without-occurrence
    :box/id :focus-receipt-builder :field [:target-class :class-model] :role :reads
-   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "attach"}}]}
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "attach"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-prediction-and-risk :field [:class-preference :class-model]
+   :role :reads
+   :site {:file "futon2/src/futon2/aif/observation_model.clj" :var "evaluate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-prediction-and-risk :field [:prediction :class-step]
+   :role :writes
+   :site {:file "futon2/src/futon2/aif/observation_model.clj" :var "evaluate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-score-candidate :field [:prediction :class-step] :role :reads
+   :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"
+          :var "score-candidate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-class-preference :field [:prediction :class-step] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj"
+          :var "class-preference-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-prediction-and-risk :field [:risk :class-step] :role :writes
+   :site {:file "futon2/src/futon2/aif/observation_model.clj" :var "evaluate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-score-candidate :field [:risk :class-step] :role :reads
+   :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"
+          :var "score-candidate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-score-candidate :field [:steps :class-score-certificate]
+   :role :writes
+   :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"
+          :var "score-candidate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :selection-class-score-retention
+   :field [:steps :class-score-certificate] :role :reads
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :selection-class-score-retention
+   :field [:steps :selection-certificate] :role :writes
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-class-preference :field [:steps :selection-certificate]
+   :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj"
+          :var "class-preference-row"}}]}
