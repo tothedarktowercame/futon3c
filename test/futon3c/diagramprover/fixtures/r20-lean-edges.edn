@@ -1,0 +1,33 @@
+;; Temporary W1 fixture transcribed from DarkTower.WarMachine.R20Witness.lean.
+;; X1 owns the production r20-lean-edges.edn and replaces this fixture at merge.
+{:edges
+ [{:edge :selectionToPrecisionHabit
+   :quantity :quantity/policy-prior
+   :carriers [:receipt/frozen-policy-family]
+   :source-sites ["futon2/src/futon2/aif/policy.clj#selection-candidate"]
+   :target-sites ["futon2/src/futon2/aif/policy_precision_carry.clj#advance"]}
+  {:edge :selectionToPrecisionG
+   :quantity :quantity/expected-free-energy
+   :carriers [:receipt/frozen-policy-family]
+   :source-sites ["futon2/src/futon2/aif/policy.clj#selection-candidate"]
+   :target-sites ["futon2/src/futon2/aif/policy_precision_carry.clj#advance"]}
+  {:edge :inferenceToPrecisionF
+   :quantity :quantity/free-energy
+   :carriers []
+   :source-sites ["futon2/src/futon2/aif/policy_precision_carry.clj#retrospective-f"]
+   :target-sites ["futon2/src/futon2/aif/policy_precision_carry.clj#advance"]}
+  {:edge :strategicFocusToClassPreference
+   :quantity :quantity/preference
+   :carriers []
+   :source-sites ["futon2/src/futon2/aif/wm/apparatus_certificates.clj#strategic-focus-row"]
+   :target-sites ["futon2/src/futon2/aif/wm/apparatus_certificates.clj#class-preference-row"]}
+  {:edge :selectionToClassPreference
+   :quantity :quantity/predicted-class-distribution
+   :carriers []
+   :source-sites ["futon2/src/futon2/aif/policy.clj#selection-certificate"]
+   :target-sites ["futon2/src/futon2/aif/wm/apparatus_certificates.clj#class-preference-row"]}
+  {:edge :classPreferenceToSelectionG
+   :quantity :quantity/preference-schedule
+   :carriers []
+   :source-sites ["futon2/src/futon2/aif/wm/apparatus_certificates.clj#class-preference-row"]
+   :target-sites ["futon2/src/futon2/aif/policy.clj#selection-candidate"]}]}
