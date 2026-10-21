@@ -533,12 +533,14 @@
       (if f (effects (last kids)) {:ok? false :why :wrapper-definition-missing}))))
 
 (defn sealed-return-attributions
-  "Attribute a returned seal(merge ...) field from source, without evaluating it.
+  "Attribute a returned seal(merge ...) or seal(cond-> literal ...) field from source, without evaluating it.
   Only a locally defined seal with a proved assoc/dissoc body is understood.
   Merge operands must all resolve to literal maps; last operand wins. Optional
   :binding demands that the winner came from that binding (a losing binding
   gets :merge-source-overwritten). Unknown wrappers/operands refuse typed.
-  Held branches through a local function remain unsupported, explicitly."
+  A cond-> contributes only its unconditional base literal; conditionally assoced
+  keys remain unsupported. Held branches through a local function remain
+  unsupported, explicitly."
   ([source var field] (sealed-return-attributions source var field {}))
   ([source var field {:keys [binding]}]
    (let [effects (seal-effects source)
@@ -549,6 +551,7 @@
                      (when (= :map (:kind init)) init))))
              (at-seal [node env]
                (let [arg (second (:children node))
+                     h (head-text arg)
                      operands (rest (:children arg))
                      lits (mapv #(literal % env) operands)
                      winners (reduce (fn [m [i operand lit]]
@@ -558,14 +561,24 @@
                                                          :key-start (:start k)}))
                                                m (partition 2 (:children lit))))
                                      {} (map vector (range) operands lits))
-                     winner (get winners field)]
+                     base (when (= "cond->" h) (literal (second (:children arg)) env))
+                     base-winner (when base
+                                   (some (fn [[k _]]
+                                           (when (= field (key->record k))
+                                             {:key-start (:start k)}))
+                                         (pairs-of base)))
+                     winner (if (= "cond->" h) base-winner (get winners field))]
                  (cond
                    (not (:ok? effects)) effects
-                   (not= "merge" (head-text arg)) {:ok? false :why :wrapper-argument-not-merge}
-                   (some nil? lits) {:ok? false :why :merge-operand-unknown}
+                   (and (not= "merge" h) (not= "cond->" h)) {:ok? false :why :wrapper-argument-not-merge}
+                   (and (= "merge" h) (some nil? lits)) {:ok? false :why :merge-operand-unknown}
+                   (and (= "cond->" h) (nil? base)) {:ok? false :why :cond-threaded-base-unknown}
                    ((:drops effects) field) {:ok? false :why :wrapper-drops-field :field field}
                    ((:overwrites effects) field) {:ok? false :why :wrapper-overwrites-field :field field}
-                   (nil? winner) {:ok? false :why :merge-field-absent :field field}
+                   (nil? winner) {:ok? false :why (if (= "cond->" h)
+                                                     :cond-threaded-field-absent
+                                                     :merge-field-absent)
+                                      :field field}
                    (and binding (not= binding (:binding winner)))
                    (assoc winner :ok? false :why :merge-source-overwritten :field field)
                    :else (assoc winner :ok? true :field field :wrapper "seal" :preserved? true
@@ -790,6 +803,49 @@
       (doseq [form forms] (walk form))
       @found)))
 
+(defn- anonymous-select-keys-reads
+  "Scoped reads in a narrow collection transformer: `(mapv #(select-keys %
+  [:a]) candidates)` (or an explicit one-argument fn) reads :a from the
+  record named by the collection alias. The selector must use its sole
+  parameter as select-keys' receiver; arbitrary closures and transforms are
+  deliberately not attributed."
+  [forms field cfg]
+  (let [found (volatile! {})
+        aliases (:aliases cfg)
+        records-for (fn [coll]
+                      (set (for [[record names] aliases
+                                 :when (contains? names (token-text coll))]
+                             record)))
+        selector (fn [f]
+                   (cond
+                     (= :fn (:kind f))
+                     (let [[head receiver keys] (:children f)]
+                       (when (= "select-keys" (token-text head)) ["%" receiver keys]))
+                     (and (= :list (:kind f)) (= "fn" (head-text f)))
+                     (let [[_ params body] (:children f)
+                           parameter (when (and (= :vector (:kind params))
+                                                (= 1 (count (:children params))))
+                                       (token-text (first (:children params))))
+                           [head receiver keys] (:children body)]
+                       (when (and parameter (= "select-keys" (token-text head)))
+                         [parameter receiver keys]))))]
+    (letfn [(walk [node]
+              (when-not (quoted-form? node)
+                (let [kids (:children node)
+                      h (head-text node)]
+                  (when (and (#{"map" "mapv" "keep" "filterv" "filter"} h)
+                             (= 3 (count kids)))
+                    (let [[parameter receiver keys] (selector (second kids))
+                          records (records-for (nth kids 2))]
+                      (when (and (= parameter (token-text receiver))
+                                 (= :vector (:kind keys)) (seq records))
+                        (doseq [key (:children keys)
+                                :when (= field (key->record key))]
+                          (vswap! found update (:start key) (fnil into #{}) records)))))
+                  (doseq [child kids] (walk child)))))]
+      (doseq [form forms] (walk form))
+      @found)))
+
 (defn- binding-reads
   "Positions reading FIELD in actual binding patterns, with their record
   attribution. Data maps with a :keys entry are not bindings. Supports
@@ -887,7 +943,8 @@
                              (into {} (map (juxt :key-start identity)
                                            (conditional-return-analysis text (:var cfg) field cfg))) {})
         binding-uses (merge-with into (binding-reads forms field (cands) cfg)
-                                 (keyed-path-reads forms field cfg))
+                                 (keyed-path-reads forms field cfg)
+                                 (anonymous-select-keys-reads forms field cfg))
         counts? (fn [attr] (cond only-record (contains? attr only-record)
                                  not-records (empty? attr)
                                  :else true))]

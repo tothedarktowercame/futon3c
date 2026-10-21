@@ -151,15 +151,6 @@
    :field [:missing :absent-row]
    :writers [:constant-absent-row]}
   {:finding :declaration-without-occurrence
-   :box/id :precision-family :field [:habit :selection-candidate] :role :reads
-   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}}
-  {:finding :declaration-without-occurrence
-   :box/id :precision-family :field [:g :selection-candidate] :role :reads
-   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}}
-  {:finding :declaration-without-occurrence
-   :box/id :precision-family :field [:candidates :precision-family] :role :writes
-   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}}
-  {:finding :declaration-without-occurrence
    :box/id :phase8-scorer-f :field [:f-consumed :phase8-scorer]
    :role :writes
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}

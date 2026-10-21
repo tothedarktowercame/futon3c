@@ -8,7 +8,7 @@
   (:import [java.security MessageDigest]))
 
 (def map-path "holes/labs/M-wm-wiring/r20-field-flow.edn")
-(def map-sha256 "4c985644074add5153237ed8395a21361eaed3a67a92fa5f17040e4d6adda02f")
+(def map-sha256 "efb5b1720e86c5c85f370844e3460173982e9f8921476b15c448962c3f7ecffc")
 (def repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"})
 
 (defn- sha256 [path]
@@ -74,13 +74,29 @@
         scorer-findings (report (materialise changed) changed)]
     (is (not-any? #(contains? true-edge [(:box/id %) (:field %) (:role %)]) findings)
         "the true retrospective-F write/read pair has site evidence")
-    (is (= 10 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
+    (is (= 7 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
         "the other S4b declarations remain findings")
     (is (some #(and (= :declaration-without-occurrence (:finding %))
                     (= :precision-carry-advance (:box/id %))
                     (= [:f-consumed :phase8-scorer] (:field %)))
               scorer-findings)
         "the planted scorer-F read remains distinguishable from the true F edge")))
+
+(deftest precision-family-g-read-disappears-when-the-pinned-selector-omits-g
+  (let [s (spec)
+        root (materialise s)
+        file (io/file root "futon2/src/futon2/aif/policy_precision_carry.clj")
+        source (slurp file)]
+    (is (str/includes? source "(select-keys % [:id :g :habit])"))
+    (spit file (str/replace source
+                            "(select-keys % [:id :g :habit])"
+                            "(select-keys % [:id :habit])"))
+    (is (some #(and (= :declaration-without-occurrence (:finding %))
+                    (= :precision-family (:box/id %))
+                    (= [:g :selection-candidate] (:field %))
+                    (= :reads (:role %)))
+              (report root s))
+        "the G read needs the selected candidate key at the family site")))
 
 (deftest one-authority-per-field
   (is (= [] (wiring/multiply-written (wiring/ingest (spec))))))

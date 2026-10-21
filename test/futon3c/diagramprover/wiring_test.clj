@@ -616,3 +616,53 @@
         {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
        [:f :record])
       "the for rebinds v, so the outer {:f 1} is not the entry value"))
+
+;; ---------------------------------------------------------------------------
+;; S4e: the frozen precision family reads candidate E/G in a narrow
+;; collection transformer and returns its carrier through seal(cond-> ...).
+
+(defn- family-box [source]
+  (temporary-conformance
+   source
+   {:box/id :family :record-aliases {:selection-candidate ["candidates"]}
+    :returns-record :precision-family
+    :reads [[:habit {:record :selection-candidate}]
+            [:g {:record :selection-candidate}]]
+    :writes [[:candidates {:record :precision-family}]]}))
+
+(deftest family-select-keys-over-an-alias-reads-only-its-listed-keys
+  (let [findings (family-box
+                  "(defn seal [x] (assoc x :seal true))\n(defn entry [candidates] (seal (cond-> {:candidates (mapv #(select-keys % [:id :g]) candidates)} true (assoc :tag :x))))")]
+    (is (declared-without? findings [:habit :selection-candidate])
+        "(a) omitted :habit remains a declaration without occurrence")
+    (is (not (declared-without? findings [:g :selection-candidate])))))
+
+(deftest family-select-keys-requires-the-declared-alias-and-parameter-receiver
+  (testing "(b) a non-alias collection gives no scoped candidate read"
+    (let [findings (family-box
+                    "(defn seal [x] (assoc x :seal true))\n(defn entry [other] (seal (cond-> {:candidates (mapv #(select-keys % [:id :g :habit]) other)} true (assoc :tag :x))))")]
+      (is (declared-without? findings [:g :selection-candidate]))
+      (is (declared-without? findings [:habit :selection-candidate]))))
+  (testing "(c) a selector receiver other than % is not attributed"
+    (let [findings (family-box
+                    "(defn seal [x] (assoc x :seal true))\n(defn entry [candidates other] (seal (cond-> {:candidates (mapv #(select-keys other [:id :g :habit]) candidates)} true (assoc :tag :x))))")]
+      (is (declared-without? findings [:g :selection-candidate]))
+      (is (declared-without? findings [:habit :selection-candidate])))))
+
+(deftest sealed-cond-threaded-return-owns-only-the-unconditional-base-map
+  (testing "the returned base literal is a precision-family carrier write"
+    (is (not (declared-without?
+              (family-box
+               "(defn seal [x] (assoc x :seal true))\n(defn entry [candidates] (seal (cond-> {:candidates (mapv #(select-keys % [:id :g :habit]) candidates)} true (assoc :tag :x))))")
+              [:candidates :precision-family]))))
+  (testing "(d) a seal(cond-> ...) before a non-return has no ownership"
+    (is (declared-without?
+         (family-box
+          "(defn seal [x] (assoc x :seal true))\n(defn entry [candidates] (seal (cond-> {:candidates candidates} true (assoc :tag :x))) nil)")
+         [:candidates :precision-family])))
+  (testing "(e) a conditionally assoced carrier remains unconfirmed"
+    (let [source "(defn seal [x] (assoc x :seal true))\n(defn entry [v t] (seal (cond-> {:x 1} t (assoc :candidates v))) )"
+          findings (family-box source)
+          attribution (first (wiring/sealed-return-attributions source "entry" :candidates))]
+      (is (declared-without? findings [:candidates :precision-family]))
+      (is (= :cond-threaded-field-absent (:why attribution))))))
