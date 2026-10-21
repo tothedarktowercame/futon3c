@@ -750,25 +750,27 @@
      merge/into/conj and the key-value pairs of a returned assoc; or a scoped
      literal nested under it or under a let-bound literal it returns (see `owner-map`).
   Textual and heuristic like `classify-keyword`; a receiver threaded through
-  -> is not seen (the path form still is). PARENT/IDX/GRAND/GIDX are the
+  -> is not seen (the path form still is). A receiver symbol rebound to some
+  other value (`rebound-receivers`, CFG's :rebound) names no record. PARENT/IDX/GRAND/GIDX are the
   occurrence's enclosing node, its index there, and that node's parent; CFG is
   {:aliases :returns :scoped :owners} (see `site-cfg`, `owner-map`)."
   [parent idx grand gidx candidates cfg]
   (let [gh (when (and grand (#{:list :fn} (:kind grand))) (head-text grand))
-        ph (when (and parent (#{:list :fn} (:kind parent))) (head-text parent))]
+        ph (when (and parent (#{:list :fn} (:kind parent))) (head-text parent))
+        receiver (fn [node] (when-not (contains? (:rebound cfg) (:start node)) (token-text node)))]
     (set
      (for [r candidates
            :let [rkey (str r) rname (name r)]
            :when (or (and (= :vector (:kind parent)) (path-fns gh)
                           (or (and (pos? idx) (= rkey (token-text (first (:children parent)))))
-                              (and (= 2 gidx) (= rname (token-text (nth (:children grand) 1 nil))))))
-                     (and (key-fns ph) (= 2 idx) (= rname (token-text (nth (:children parent) 1 nil))))
+                              (and (= 2 gidx) (= rname (receiver (nth (:children grand) 1 nil))))))
+                     (and (key-fns ph) (= 2 idx) (= rname (receiver (nth (:children parent) 1 nil))))
                      (and (= "update-vals" ph) (= 2 idx)
                           (contains? (conj (get (:aliases cfg) r #{}) rname)
-                                     (token-text (nth (:children parent) 1 nil))))
+                                     (receiver (nth (:children parent) 1 nil))))
                      (and ph (zero? idx)
                           (contains? (conj (get (:aliases cfg) r #{}) rname)
-                                     (token-text (nth (:children parent) 1 nil))))
+                                     (receiver (nth (:children parent) 1 nil))))
                      (and (or (= :map (:kind parent))
                               (and (= "assoc" ph) (<= 2 idx)))
                           (even? idx)
@@ -781,6 +783,95 @@
       (and (= :list (:kind node))
            (#{"quote" "clojure.core/quote"} (head-text node)))))
 
+(defn- plain-symbol? [node]
+  (and (= :token (:kind node))
+       (boolean (re-matches #"[a-zA-Z_*+!?<>=$%][\w*+!?<>=$%.-]*"
+                            (or (token-text node) "")))))
+
+(def ^:private record-preserving-heads
+  #{"assoc" "assoc-in" "update" "update-in" "merge" "dissoc"})
+
+(defn- rebound-receivers
+  "Start offsets of the symbol tokens in FORMS whose text cannot name a record,
+  because the binding they refer to gives the name some other value:
+  (let [r (:inner r)] (:beta r)), an (fn [r] …) or for/doseq binding of r
+  under an outer r, a letfn name, an fn self-name. A binding counts as a
+  rebinding when the name is already bound, or its initializer mentions the
+  name. Exception: a bare symbol bound to the bare name, or to assoc, assoc-in,
+  update, update-in, merge or dissoc of it, is still that record and keeps
+  the outer status. The first binding of a name that does not mention it is where the
+  name is introduced. Binder tokens of a rebinding are included, so its
+  destructuring :as names nothing either. Textual: an if-let's else branch is
+  treated as inside the binding, which can only withhold credit."
+  [forms]
+  (let [dead (volatile! #{})]
+    (letfn [(mentions? [node nm]
+              (or (= nm (token-text node)) (some #(mentions? % nm) (:children node))))
+            (binders [pat]
+              (cond (quoted-form? pat) nil
+                    (plain-symbol? pat) [pat]
+                    :else (mapcat binders (:children pat))))
+            (preserving? [init nm]
+              (or (= nm (token-text init))
+                  (and (= :list (:kind init))
+                       (record-preserving-heads (head-text init))
+                       (= nm (token-text (second (:children init)))))))
+            (rebind [env b]
+              (vswap! dead conj (:start b))
+              (assoc env (:text b) :rebound))
+            (bind [env pat init]
+              (reduce (fn [env b]
+                        (let [nm (:text b)]
+                          (cond (and init (= b pat) (preserving? init nm))
+                                (if (= :rebound (get env nm)) (rebind env b) (assoc env nm :record))
+                                (or (contains? env nm) (and init (mentions? init nm))) (rebind env b)
+                                :else (assoc env nm :record))))
+                      env (binders pat)))
+            (bind-all [env v comprehension?]
+              (reduce (fn [env [pat init]]
+                        (cond (and comprehension? (= ":let" (token-text pat))) (bind-all env init false)
+                              (and comprehension? (#{":when" ":while"} (token-text pat))) (do (visit init env) env)
+                              :else (do (visit init env) (bind env pat init))))
+                      env (partition 2 (:children v))))
+            (arity [env params body]
+              (let [env (bind env params nil)]
+                (doseq [b body] (visit b env))))
+            (arities [env kids]
+              (if (= :vector (:kind (first kids)))
+                (arity env (first kids) (rest kids))
+                (doseq [a kids :when (and (= :list (:kind a)) (not (quoted-form? a))
+                                          (= :vector (:kind (first (:children a)))))]
+                  (arity env (first (:children a)) (rest (:children a))))))
+            (visit [node env]
+              (when-not (quoted-form? node)
+                (let [kids (:children node)
+                      h (when (= :list (:kind node)) (head-text node))]
+                  (cond
+                    (= :token (:kind node))
+                    (when (= :rebound (get env (:text node))) (vswap! dead conj (:start node)))
+                    (and (#{"let" "let*" "loop" "loop*" "if-let" "when-let" "if-some" "when-some"
+                            "with-open" "dotimes" "for" "doseq"} h)
+                         (= :vector (:kind (second kids))))
+                    (let [env (bind-all env (second kids) (contains? #{"for" "doseq"} h))]
+                      (doseq [b (drop 2 kids)] (visit b env)))
+                    (#{"fn" "fn*"} h)
+                    (if (plain-symbol? (second kids))
+                      (arities (rebind env (second kids)) (drop 2 kids))
+                      (arities env (rest kids)))
+                    (#{"defn" "defn-"} h)
+                    (arities env (drop-while #(not (#{:vector :list} (:kind %))) (drop 2 kids)))
+                    (= "defmethod" h) (arities env (drop 3 kids))
+                    (and (= "letfn" h) (= :vector (:kind (second kids))))
+                    (let [specs (filter #(= :list (:kind %)) (:children (second kids)))
+                          env (reduce (fn [env s] (if (plain-symbol? (first (:children s)))
+                                                    (rebind env (first (:children s))) env))
+                                      env specs)]
+                      (doseq [s specs] (arities env (rest (:children s))))
+                      (doseq [b (drop 2 kids)] (visit b env)))
+                    :else (doseq [k kids] (visit k env))))))]
+      (doseq [form forms] (visit form {})))
+    @dead))
+
 (defn- keyed-path-reads
   "Literal get-in paths and keyword-only ->/some-> chains. Each step changes
   the record scope only when that key is itself a declared record scope.
@@ -789,8 +880,9 @@
   (let [found (volatile! {})
         scopes (:scoped cfg)
         records (set (concat scopes (keys (:aliases cfg)) (:returns cfg)))
-        receiver (fn [x] (set (filter #(contains? (conj (get-in cfg [:aliases %] #{}) (name %))
-                                                  (token-text x)) records)))]
+        receiver (fn [x] (set (filter #(and (not (contains? (:rebound cfg) (:start x)))
+                                            (contains? (conj (get-in cfg [:aliases %] #{}) (name %))
+                                                       (token-text x))) records)))]
     (letfn [(path! [base keys]
               (when (and (seq keys) (every? key->record keys))
                 (loop [owners (receiver base) [k & ks] keys]
@@ -829,7 +921,8 @@
         aliases (:aliases cfg)
         records-for (fn [coll]
                       (set (for [[record names] aliases
-                                 :when (contains? names (token-text coll))]
+                                 :when (and (not (contains? (:rebound cfg) (:start coll)))
+                                            (contains? names (token-text coll)))]
                              record)))
         selector (fn [f]
                    (cond
@@ -883,9 +976,10 @@
                   :vector (doseq [child (:children node)] (pattern child nil))
                   :map
                   (let [pairs (partition 2 (:children node))
-                        as-name (some (fn [[k v]] (when (= ":as" (token-text k)) (token-text v))) pairs)
-                        attr (records (remove nil? [as-name (when-not (quoted-form? init)
-                                                             (token-text init))]))]
+                        as-node (some (fn [[k v]] (when (= ":as" (token-text k)) v)) pairs)
+                        attr (records (keep #(when-not (contains? (:rebound cfg) (:start %))
+                                               (token-text %))
+                                            (remove nil? [as-node (when-not (quoted-form? init) init)])))]
                     (doseq [[binding selector] pairs
                             :let [k (token-text binding)]]
                       (cond
@@ -952,7 +1046,9 @@
         uses (volatile! [])
         token-hits (volatile! 0)
         forms (:forms (parse-forms text))
-        cfg (assoc cfg :owners (when (seq (:returns cfg)) (owner-map forms (assoc cfg :field field))))
+        cfg (assoc cfg
+                   :owners (when (seq (:returns cfg)) (owner-map forms (assoc cfg :field field)))
+                   :rebound (rebound-receivers forms))
         cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
         conditional-writes (if (and only-record (:var cfg))
                              (into {} (map (juxt :key-start identity)
@@ -1899,7 +1995,8 @@
   parameter. Only inspect that arity's body, never delegate recursively.
   Qualified calls are excluded: a same-named function in another namespace
   is not evidence about this file's helper, nor is a call to a local that
-  shadows the helper's name. Writes are never inferred."
+  shadows the helper's name, nor an argument symbol rebound to some other
+  value (`rebound-receivers`). Writes are never inferred."
   [source text vertex cfg]
   (when-let [record (vertex-record vertex)]
     (let [definitions (into {} (for [form (:forms (parse-forms source))
@@ -1908,9 +2005,7 @@
                                 [(token-text (second (:children form))) form]))
           names (record-names record (:aliases cfg))
           site-forms (:forms (parse-forms text))
-          plain? #(and (= :token (:kind %))
-                       (boolean (re-matches #"[a-zA-Z_*+!?<>=$%][\w*+!?<>=$%.-]*"
-                                            (or (token-text %) ""))))]
+          rebound (rebound-receivers site-forms)]
       (boolean
        (some
         (fn [[call _]]
@@ -1932,8 +2027,9 @@
                                 (not-any? #(= "&" (token-text %)) ps))
                        (some
                         (fn [[arg param]]
-                          (when (and (plain? arg) (contains? names (token-text arg))
-                                     (plain? param))
+                          (when (and (plain-symbol? arg) (not (contains? rebound (:start arg)))
+                                     (contains? names (token-text arg))
+                                     (plain-symbol? param))
                             (let [body-text (str/join "\n" (map #(subs source (:start %) (:end %)) body))]
                               (pos? (:reads (field-usage* body-text (vertex-field vertex)
                                                         {:only-record (keyword (token-text param))

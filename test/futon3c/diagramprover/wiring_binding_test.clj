@@ -61,6 +61,25 @@
   (is (empty? (findings "(defn h [p] (:beta p)) (defn f [r] (let [g (fn [x] x)] (g r) (h r)))"
                         helper-field helper-opts))))
 
+(deftest a-rebound-record-name-names-no-record
+  (testing "direct reads, delegated arguments and helper bodies"
+    (doseq [source ["(defn f [r] (let [r (:inner r)] (:beta r)))"
+                    "(defn f [r] (let [r (:inner r)] (get r :beta)))"
+                    "(defn f [r] (let [r (:inner r)] (-> r :beta)))"
+                    "(defn f [r] (let [{:keys [beta] :as r} (:inner r)] beta))"
+                    "(defn f [r] (map (fn [r] (:beta r)) (:items r)))"
+                    "(defn f [r] (for [r (:items r)] (:beta r)))"
+                    "(defn h [p] (:beta p)) (defn f [r] (let [r (:inner r)] (h r)))"
+                    "(defn h [p] (let [p (:inner p)] (:beta p))) (defn f [r] (h r))"]]
+      (is (helper-missing? source) source)))
+  (testing "a version of the same record, a first binding, a use outside the scope"
+    (doseq [source ["(defn f [r] (let [r (assoc r :x 1)] (:beta r)))"
+                    "(defn f [r] (loop [r r] (:beta r)))"
+                    "(defn f [st] (let [r (:record st)] (:beta r)))"
+                    "(defn f [r] (let [r (:inner r)] nil) (:beta r))"
+                    "(defn h [p] (:beta p)) (defn f [r] (let [r (merge r {})] (h r)))"]]
+      (is (empty? (findings source helper-field helper-opts)) source))))
+
 (deftest delegated-helper-rejects-nonpositional-parameters-and-writes
   (doseq [source ["(defn h [{:keys [beta]}] beta) (defn f [r] (h r))"
                   "(defn h [& p] (:beta p)) (defn f [r] (h r))"
