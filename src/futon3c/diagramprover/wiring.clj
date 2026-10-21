@@ -538,8 +538,9 @@
   Merge operands must all resolve to literal maps; last operand wins. Optional
   :binding demands that the winner came from that binding (a losing binding
   gets :merge-source-overwritten). Unknown wrappers/operands refuse typed.
-  A cond-> contributes only its unconditional base literal; conditionally assoced
-  keys remain unsupported. Held branches through a local function remain
+  A cond-> contributes only its unconditional base literal, and only when every
+  threaded step is an assoc of other literal keys; conditionally assoced keys
+  remain unsupported. Held branches through a local function remain
   unsupported, explicitly."
   ([source var field] (sealed-return-attributions source var field {}))
   ([source var field {:keys [binding]}]
@@ -567,7 +568,20 @@
                                            (when (= field (key->record k))
                                              {:key-start (:start k)}))
                                          (pairs-of base)))
-                     winner (if (= "cond->" h) base-winner (get winners field))]
+                     winner (if (= "cond->" h) base-winner (get winners field))
+                     ;; Every threaded step must be (assoc :k v ...) with literal
+                     ;; keys other than FIELD; anything else could drop or replace it.
+                     step-why (when (= "cond->" h)
+                                (some (fn [[_ step]]
+                                        (let [keys (take-nth 2 (rest (:children step)))]
+                                          (cond
+                                            (not (and (= :list (:kind step)) (= "assoc" (head-text step))
+                                                      (odd? (count (:children step)))
+                                                      (every? key->record keys)))
+                                            :cond-threaded-step-unknown
+                                            (some #(= field (key->record %)) keys)
+                                            :cond-threaded-step-touches-field)))
+                                      (partition 2 (drop 2 (:children arg)))))]
                  (cond
                    (not (:ok? effects)) effects
                    (and (not= "merge" h) (not= "cond->" h)) {:ok? false :why :wrapper-argument-not-merge}
@@ -579,6 +593,7 @@
                                                      :cond-threaded-field-absent
                                                      :merge-field-absent)
                                       :field field}
+                   step-why {:ok? false :why step-why :field field}
                    (and binding (not= binding (:binding winner)))
                    (assoc winner :ok? false :why :merge-source-overwritten :field field)
                    :else (assoc winner :ok? true :field field :wrapper "seal" :preserved? true

@@ -665,4 +665,12 @@
           findings (family-box source)
           attribution (first (wiring/sealed-return-attributions source "entry" :candidates))]
       (is (declared-without? findings [:candidates :precision-family]))
-      (is (= :cond-threaded-field-absent (:why attribution))))))
+      (is (= :cond-threaded-field-absent (:why attribution)))))
+  (testing "(f) a threaded step that dissocs or replaces the base field refuses"
+    (doseq [step ["(dissoc :candidates)" "(assoc :candidates nil)" "(select-keys [:x])"]
+            :let [source (str "(defn seal [x] (assoc x :seal true))\n(defn entry [candidates t] (seal (cond-> {:candidates candidates} t "
+                              step ")))")]]
+      (is (declared-without? (family-box source) [:candidates :precision-family]) step)
+      (is (#{:cond-threaded-step-unknown :cond-threaded-step-touches-field}
+           (:why (first (wiring/sealed-return-attributions source "entry" :candidates))))
+          step))))
