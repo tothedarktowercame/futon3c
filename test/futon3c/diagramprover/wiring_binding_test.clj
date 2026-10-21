@@ -52,6 +52,15 @@
                                     {:heuristic? true})))
       (finally (.delete file) (.delete other) (.delete dir)))))
 
+(deftest delegated-helper-is-not-a-shadowing-local
+  (doseq [source ["(defn h [p] (:beta p)) (defn f [r] (let [h (fn [x] x)] (h r)))"
+                  "(defn h [p] (:beta p)) (defn f [r] (letfn [(h [x] x)] (h r)))"
+                  "(defn h [p] (:beta p)) (defn f [h r] (h r))"
+                  "(defn h [p] (:beta p)) (defn f [r] ((fn h [x] (h r)) r))"]]
+    (is (helper-missing? source)))
+  (is (empty? (findings "(defn h [p] (:beta p)) (defn f [r] (let [g (fn [x] x)] (g r) (h r)))"
+                        helper-field helper-opts))))
+
 (deftest delegated-helper-rejects-nonpositional-parameters-and-writes
   (doseq [source ["(defn h [{:keys [beta]}] beta) (defn f [r] (h r))"
                   "(defn h [& p] (:beta p)) (defn f [r] (h r))"

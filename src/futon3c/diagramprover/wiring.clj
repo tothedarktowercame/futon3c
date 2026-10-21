@@ -1867,11 +1867,39 @@
              acc (:carries box)))
    {:evidence {} :failed {}} boxes))
 
+(defn- binds-symbol?
+  "Whether FORM binds the symbol NAME anywhere: a let-style binding pattern, a
+  letfn name, or an fn/defn parameter (or fn self-name). A local so named
+  shadows the file's defn, so a call to it is no evidence about that defn.
+  Position-insensitive on purpose: a binding anywhere in the site rejects."
+  [form nm]
+  (letfn [(mentions? [node]
+            (or (= nm (token-text node)) (some mentions? (:children node))))
+          (params-bind? [kids]
+            (some #(cond (= :vector (:kind %)) (mentions? %)
+                         (= :list (:kind %)) (let [pv (first (:children %))]
+                                               (and (= :vector (:kind pv)) (mentions? pv))))
+                  kids))]
+    (boolean
+     (some (fn [[node _]]
+             (let [kids (:children node) h (head-text node)]
+               (cond
+                 (#{"let" "let*" "loop" "loop*" "if-let" "when-let" "if-some"
+                    "when-some" "binding" "for" "doseq" "dotimes" "with-open"} h)
+                 (some mentions? (take-nth 2 (:children (second kids))))
+                 (= "letfn" h)
+                 (some #(= nm (head-text %)) (:children (second kids)))
+                 (#{"fn" "fn*"} h)
+                 (or (= nm (token-text (second kids))) (params-bind? (rest kids)))
+                 (#{"defn" "defn-"} h) (params-bind? (drop 2 kids)))))
+           (walk-nodes form [])))))
+
 (defn- delegated-read?
   "One direct same-file defn call, with a record passed to a plain positional
   parameter. Only inspect that arity's body, never delegate recursively.
   Qualified calls are excluded: a same-named function in another namespace
-  is not evidence about this file's helper. Writes are never inferred."
+  is not evidence about this file's helper, nor is a call to a local that
+  shadows the helper's name. Writes are never inferred."
   [source text vertex cfg]
   (when-let [record (vertex-record vertex)]
     (let [definitions (into {} (for [form (:forms (parse-forms source))
@@ -1879,6 +1907,7 @@
                                                (#{"defn" "defn-"} (head-text form)))]
                                 [(token-text (second (:children form))) form]))
           names (record-names record (:aliases cfg))
+          site-forms (:forms (parse-forms text))
           plain? #(and (= :token (:kind %))
                        (boolean (re-matches #"[a-zA-Z_*+!?<>=$%][\w*+!?<>=$%.-]*"
                                             (or (token-text %) ""))))]
@@ -1887,8 +1916,9 @@
         (fn [[call _]]
           (when (and (= :list (:kind call))
                      (string? (head-text call))
-                     (not (str/includes? (or (head-text call) "") "/")))
-            (when-let [helper (get definitions (last (str/split (head-text call) #"/")))]
+                     (not (str/includes? (head-text call) "/"))
+                     (not-any? #(binds-symbol? % (head-text call)) site-forms))
+            (when-let [helper (get definitions (head-text call))]
               (let [args (rest (:children call))
                     kids (drop 2 (:children helper))
                     arities (filter #(and (= :list (:kind %))
@@ -1910,7 +1940,7 @@
                                                          :cfg {}}))))))
                         (map vector args ps)))))
                  arities)))))
-        (mapcat #(walk-nodes % []) (:forms (parse-forms text))))))))
+        (mapcat #(walk-nodes % []) site-forms))))))
 
 (defn conformance
   "Compare declared box reads/writes with occurrences in their named sites.
