@@ -5,6 +5,7 @@
             [clojure.string]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.graph :as graph]
+            [futon3c.diagramprover.matcher :as matcher]
             [futon3c.diagramprover.wiring :as wiring]))
 
 (def apm-round1-pre-fix
@@ -47,6 +48,30 @@
              :required-measurement-fields}
            (set (map (comp :field #(graph/vertex-data g %))
                      (graph/vertices g)))))))
+
+(defn- one-port-wiring [id field semantic-type]
+  (wiring/ingest
+   {:spec/id id
+    :field-types {field semantic-type}
+    :boxes [{:box/id :consumer :reads [field]}]}))
+
+(deftest typed-fields-constrain-matches
+  (testing "an F input cannot collapse onto the only G vertex"
+    (let [pattern (one-port-wiring :f-pattern :policy/F :quantity/free-energy)
+          wrong-host (one-port-wiring :g-host :policy/G :quantity/expected-free-energy)]
+      (is (empty? (matcher/matches pattern wrong-host)))))
+  (testing "the same F input matches an F vertex"
+    (let [pattern (one-port-wiring :f-pattern :policy/F :quantity/free-energy)
+          right-host (one-port-wiring :f-host :scorer/F :quantity/free-energy)]
+      (is (seq (matcher/matches pattern right-host))))))
+
+(deftest untyped-ingest-is-unchanged
+  (let [today (wiring/ingest apm-round1-pre-fix)
+        explicitly-untyped (wiring/ingest (assoc apm-round1-pre-fix :field-types {}))]
+    (is (= today explicitly-untyped))
+    (is (= #{:wiring/field}
+           (set (map (comp :vtype #(graph/vertex-data today %))
+                     (graph/vertices today)))))))
 
 (deftest empty-spec-has-no-findings
   (is (= [] (wiring/written-never-read

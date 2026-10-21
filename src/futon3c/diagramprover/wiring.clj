@@ -34,6 +34,12 @@
        distinct
        (sort-by str)))
 
+(defn- field-type [field-types field]
+  (cond
+    (contains? field-types field) (get field-types field)
+    (contains? field-types (vertex-field field)) (get field-types (vertex-field field))
+    :else :wiring/field))
+
 (defn- scopes-of
   "field key -> set of the records some vertex of the map scopes it to."
   [vertices]
@@ -44,12 +50,15 @@
   "Turn an EDN wiring spec into an open hypergraph.
 
   Fields are wire vertices. Boxes are hyperedges from their read fields to
-  their written fields. Missing read/write collections are empty."
-  [{:keys [spec/id boxes]}]
+  their written fields. Missing read/write collections are empty. Optional
+  `:field-types` maps field keys (or scoped vertex keys) to semantic vertex
+  types; fields without an entry retain `:wiring/field`."
+  [{:keys [spec/id boxes field-types]}]
   (let [[initial field->vertex]
         (reduce (fn [[g index] field]
                   (let [[g' vertex] (graph/add-vertex
-                                     g (cond-> {:vtype :wiring/field :field field}
+                                     g (cond-> {:vtype (field-type field-types field)
+                                                :field field}
                                          (vertex-record field) (assoc :record (vertex-record field))))]
                     [g' (assoc index field vertex)]))
                 [(graph/make-graph) {}]
