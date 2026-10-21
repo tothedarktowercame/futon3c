@@ -40,6 +40,17 @@
     (contains? field-types (vertex-field field)) (get field-types (vertex-field field))
     :else :wiring/field))
 
+(defn- check-field-types!
+  "Refuse a `:field-types` key that names no field or vertex of the spec. A
+  misspelt key would otherwise leave its field as `:wiring/field`, and two
+  such fields match each other again."
+  [field-types fields]
+  (let [known (into (set fields) (map vertex-field fields))
+        unknown (remove known (keys field-types))]
+    (when (seq unknown)
+      (throw (ex-info "field-types names fields the spec does not have"
+                      {:unknown (vec (sort-by str unknown))})))))
+
 (defn- scopes-of
   "field key -> set of the records some vertex of the map scopes it to."
   [vertices]
@@ -52,8 +63,10 @@
   Fields are wire vertices. Boxes are hyperedges from their read fields to
   their written fields. Missing read/write collections are empty. Optional
   `:field-types` maps field keys (or scoped vertex keys) to semantic vertex
-  types; fields without an entry retain `:wiring/field`."
+  types; fields without an entry retain `:wiring/field`. A key naming no
+  field of the spec is refused."
   [{:keys [spec/id boxes field-types]}]
+  (check-field-types! field-types (fields-in boxes))
   (let [[initial field->vertex]
         (reduce (fn [[g index] field]
                   (let [[g' vertex] (graph/add-vertex

@@ -65,6 +65,21 @@
           right-host (one-port-wiring :f-host :scorer/F :quantity/free-energy)]
       (is (seq (matcher/matches pattern right-host))))))
 
+(deftest misspelt-field-type-is-refused
+  (testing "a key naming no field would silently leave the field untyped"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"does not have"
+                          (wiring/ingest
+                           {:spec/id :typo
+                            :field-types {:policy/f :quantity/free-energy}
+                            :boxes [{:box/id :consumer :reads [:policy/F]}]}))))
+  (testing "a scoped vertex key and its bare field key are both known"
+    (is (some? (wiring/ingest
+                {:spec/id :scoped
+                 :field-types {[:policy/F :row] :quantity/free-energy
+                               :policy/F :quantity/free-energy}
+                 :boxes [{:box/id :consumer
+                          :reads [[:policy/F {:record :row}]]}]})))))
+
 (deftest untyped-ingest-is-unchanged
   (let [today (wiring/ingest apm-round1-pre-fix)
         explicitly-untyped (wiring/ingest (assoc apm-round1-pre-fix :field-types {}))]
