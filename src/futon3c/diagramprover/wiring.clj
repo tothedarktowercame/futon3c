@@ -1261,13 +1261,16 @@
   "Start offsets of direct keyword/get reads inside a declared element mapper.
   Helper calls are intentionally left to delegated-read?."
   [text forms field cfg]
-  (let [found (volatile! {})]
+  (let [found (volatile! {})
+        rebound (rebound-receivers forms)
+        element? (fn [parameter arg] (and arg (= parameter (token-text arg))
+                                          (not (contains? rebound (:start arg)))))]
     (doseq [{:keys [fn parameter records]} (element-alias-contexts text forms cfg)]
       (letfn [(walk [node]
                 (let [kids (:children node) h (head-text node)]
-                  (when (and (= (str field) h) (= parameter (token-text (second kids))))
+                  (when (and (= (str field) h) (element? parameter (second kids)))
                     (vswap! found update (:start (first kids)) (fnil into #{}) records))
-                  (when (and (= "get" h) (= parameter (token-text (second kids)))
+                  (when (and (= "get" h) (element? parameter (second kids))
                              (= (str field) (token-text (nth kids 2 nil))))
                     (vswap! found update (:start (nth kids 2)) (fnil into #{}) records))
                   (doseq [child kids

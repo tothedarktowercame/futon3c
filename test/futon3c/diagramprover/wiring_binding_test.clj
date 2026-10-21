@@ -192,6 +192,10 @@
     (is (element-missing?
          "(defn f [items] (mapv (fn [{:keys [f]}] f) items))"
          "items")))
+  (testing "(f) a let that rebinds the element parameter ends the alias"
+    (is (element-missing?
+         "(defn f [items] (mapv (fn [x] (let [x (:g x)] (:f x))) items))"
+         "items")))
   (testing "(e) only the listed mapper calls introduce an element alias"
     (is (element-missing?
          "(defn helper [ignored p] (:f p)) (defn f [items x] (foo #(helper x %) items))"
