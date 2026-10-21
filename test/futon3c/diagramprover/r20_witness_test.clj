@@ -27,13 +27,13 @@
                 :confirmed true
                 :sha "270bebc27965b31f1d33012e68b4d1f512eca3f9"}]]
              (edge-hops witnesses :inferenceToPrecisionF))))
-    (testing "G and habit pass through the presently unconfirmed family hops"
+    (testing "G and habit pass through the family hops, confirmed since S4e"
       (doseq [edge [:selectionToPrecisionG :selectionToPrecisionHabit]]
         (let [chain (first (edge-hops witnesses edge))]
           (is (= ["futon2/src/futon2/aif/policy.clj#selection-candidate"
                   "futon2/src/futon2/aif/policy_precision_carry.clj#family"]
                  (mapv :writer chain)))
-          (is (= [false false] (mapv :confirmed chain))))))))
+          (is (= [true true] (mapv :confirmed chain))))))))
 
 (deftest a-second-g-writer-is-preserved-as-ambiguity
   (let [[spec edges findings] (real-input)
@@ -92,3 +92,8 @@
         findings (conj findings {:finding :var-not-found :site f-site :var "retrospective-f"})
         witnesses (witness/witness-edges spec edges findings)]
     (is (= [false] (mapv :confirmed (first (edge-hops witnesses :inferenceToPrecisionF)))))))
+
+(deftest a-method-site-is-named-by-its-multimethod
+  (is (= "m.clj#evaluate"
+         (witness/site {:site {:file "m.clj" :var "evaluate :exact-enumeration"}})))
+  (is (= "m.clj#evaluate" (witness/site {:site {:file "m.clj" :var "evaluate"}}))))

@@ -38,8 +38,13 @@
                   (wiring/multiply-written g)
                   (wiring/conformance root spec {:heuristic? true})))))
 
-(defn site [box]
-  (str (get-in box [:site :file]) "#" (get-in box [:site :var])))
+(defn site
+  "BOX's site as Lean names it, file#var. A :var of the form
+  `name dispatch-value` selects one method for the checker; the Lean names
+  the multimethod, so the dispatch value is dropped here."
+  [box]
+  (str (get-in box [:site :file]) "#"
+       (first (str/split (str/trim (str (get-in box [:site :var]))) #"\s+"))))
 
 (defn- field-name [field] (str (wiring/vertex-field field)))
 (defn- record-name [field] (str (or (wiring/vertex-record field) :unscoped)))
