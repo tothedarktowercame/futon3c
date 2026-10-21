@@ -14,6 +14,53 @@
        {:heuristic? true})
       (finally (.delete file)))))
 
+(def helper-field [:beta {:record :record}])
+(def helper-opts {:record-aliases {:record ["r"]}})
+(defn- helper-missing? [source]
+  (some #(= :declaration-without-occurrence (:finding %))
+        (findings source helper-field helper-opts)))
+
+(deftest delegated-helper-reads-the-positional-record
+  (doseq [source ["(defn- h [ignored p] (:beta p)) (defn f [r] (h 0 r))"
+                  "(defn h [p] (get-in p [:beta])) (defn f [record] (h record))"
+                  "(defn h [p tau] (get-in p [:beta tau])) (defn f [r] (h r 2))"
+                  "(defn h ([p] (:beta p)) ([x p] (:other p))) (defn f [r] (h r))"]]
+    (is (empty? (findings source helper-field helper-opts)))))
+
+(deftest delegated-helper-must-read-the-declared-field
+  (is (helper-missing? "(defn h [p] (:other p)) (defn f [r] (h r))")))
+
+(deftest delegated-helper-must-receive-the-record
+  (is (helper-missing? "(defn h [p] (:beta p)) (defn f [r unrelated] (h unrelated))")))
+
+(deftest delegated-helper-does-not-follow-a-second-hop
+  (is (helper-missing? "(defn h2 [p] (:beta p)) (defn h [p] (h2 p)) (defn f [r] (h r))")))
+
+(deftest delegated-helper-is-same-file-only
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                     "helper-scope" (make-array java.nio.file.attribute.FileAttribute 0)))
+        file (java.io.File. dir "reader.clj")
+        other (java.io.File. dir "other.clj")]
+    (try
+      (spit file "(ns reader) (defn h [p] (:beta p)) (defn f [r] (other/h r))")
+      (spit other "(ns other) (defn h [p] (:beta p))")
+      (is (some #(= :declaration-without-occurrence (:finding %))
+                (wiring/conformance (str dir)
+                                    {:boxes [(merge helper-opts
+                                                    {:box/id :reader :site {:file "reader.clj" :var "f"}
+                                                     :reads [helper-field]})]}
+                                    {:heuristic? true})))
+      (finally (.delete file) (.delete other) (.delete dir)))))
+
+(deftest delegated-helper-rejects-nonpositional-parameters-and-writes
+  (doseq [source ["(defn h [{:keys [beta]}] beta) (defn f [r] (h r))"
+                  "(defn h [& p] (:beta p)) (defn f [r] (h r))"
+                  "(defn h [p] (:beta other)) (defn f [r] (h r))"
+                  "(defn h [p] {:beta 1}) (defn f [r] (h r))"]]
+    (is (helper-missing? source)))
+  (is (seq (findings "(defn h [p] (:beta p)) (defn f [r] (h r))"
+                     helper-field (assoc helper-opts :reads [] :writes [helper-field])))))
+
 (deftest bindings-reach-the-public-occurrence-and-role-checks
   (doseq [source ["(defn f [{:keys [beta]}] beta)"
                   "(defn f [{b :beta}] b)"

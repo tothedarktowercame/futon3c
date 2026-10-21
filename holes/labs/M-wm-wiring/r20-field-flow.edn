@@ -202,14 +202,8 @@
    :role :reads
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}}
   {:finding :declaration-without-occurrence
-   :box/id :r20-independence :field [:roles :participants] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "independence-row"}}
-  {:finding :declaration-without-occurrence
    :box/id :r20-class-preference :field [:scoring :selection-certificate] :role :reads
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "class-preference-row"}}
-  {:finding :declaration-without-occurrence
-   :box/id :r20-strategic-focus :field [:scoring :selection-certificate] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}}
   {:finding :declaration-without-occurrence
    :box/id :phase8-class-scorer :field [:target-class :class-model] :role :reads
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}

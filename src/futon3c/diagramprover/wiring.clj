@@ -1034,7 +1034,7 @@
     (let [text (slurp (site-path repo-root site))]
       (if-let [v (:var site)]
         (if-let [f (var-form text v)]
-          {:text (:text f)}
+          {:text (:text f) :file-text text}
           {:var-not-found true})
         {:text text}))
     (catch Exception e
@@ -1867,6 +1867,51 @@
              acc (:carries box)))
    {:evidence {} :failed {}} boxes))
 
+(defn- delegated-read?
+  "One direct same-file defn call, with a record passed to a plain positional
+  parameter. Only inspect that arity's body, never delegate recursively.
+  Qualified calls are excluded: a same-named function in another namespace
+  is not evidence about this file's helper. Writes are never inferred."
+  [source text vertex cfg]
+  (when-let [record (vertex-record vertex)]
+    (let [definitions (into {} (for [form (:forms (parse-forms source))
+                                    :when (and (not (quoted-form? form))
+                                               (#{"defn" "defn-"} (head-text form)))]
+                                [(token-text (second (:children form))) form]))
+          names (record-names record (:aliases cfg))
+          plain? #(and (= :token (:kind %))
+                       (boolean (re-matches #"[a-zA-Z_*+!?<>=$%][\w*+!?<>=$%.-]*"
+                                            (or (token-text %) ""))))]
+      (boolean
+       (some
+        (fn [[call _]]
+          (when (and (= :list (:kind call))
+                     (string? (head-text call))
+                     (not (str/includes? (or (head-text call) "") "/")))
+            (when-let [helper (get definitions (last (str/split (head-text call) #"/")))]
+              (let [args (rest (:children call))
+                    kids (drop 2 (:children helper))
+                    arities (filter #(and (= :list (:kind %))
+                                          (= :vector (:kind (first (:children %))))) kids)
+                    arities (if (seq arities) (map :children arities)
+                                [(drop-while #(not= :vector (:kind %)) kids)])]
+                (some
+                 (fn [[params & body]]
+                   (let [ps (:children params)]
+                     (when (and (= (count ps) (count args))
+                                (not-any? #(= "&" (token-text %)) ps))
+                       (some
+                        (fn [[arg param]]
+                          (when (and (plain? arg) (contains? names (token-text arg))
+                                     (plain? param))
+                            (let [body-text (str/join "\n" (map #(subs source (:start %) (:end %)) body))]
+                              (pos? (:reads (field-usage* body-text (vertex-field vertex)
+                                                        {:only-record (keyword (token-text param))
+                                                         :cfg {}}))))))
+                        (map vector args ps)))))
+                 arities)))))
+        (mapcat #(walk-nodes % []) (:forms (parse-forms text))))))))
+
 (defn conformance
   "Compare declared box reads/writes with occurrences in their named sites.
 
@@ -1908,7 +1953,6 @@
          evidence (merge evidence (:evidence carry-evidence))
          carry-failed (:failed carry-evidence)
          evidence-of (fn [box field role] (get evidence [(:box/id box) field role] 0))
-         evidenced? (fn [box field role] (pos? (evidence-of box field role)))
          ;; An unreadable or malformed site is a FINDING, not an exception: the
          ;; checker's own boundary must not escape unstructured (the ToolBackend
          ;; lesson from the peripheral session, applied to the verifier itself).
@@ -1916,6 +1960,18 @@
                          (map (fn [[site _]]
                                 [site (site-scope repo-root site)]))
                          boxes-by-site)
+         delegated (set (for [box boxes
+                              :let [site (:site box)
+                                    {:keys [text file-text]} (get site-text site)]
+                              :when (and text file-text)
+                              field (entries box :reads)
+                              :when (and (zero? (:reads (vertex-usage text field scopes (cfg-of site))))
+                                         (delegated-read? file-text text field (site-cfg [box])))]
+                          [(:box/id box) field :reads]))
+         evidence-of (fn [box field role]
+                       (+ (evidence-of box field role)
+                          (if (contains? delegated [(:box/id box) field role]) 1 0)))
+         evidenced? (fn [box field role] (pos? (evidence-of box field role)))
          unreadable-sites
          (for [[site {:keys [error var-not-found]}] site-text
                :when (or error var-not-found)]
