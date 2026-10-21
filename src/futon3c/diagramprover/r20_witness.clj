@@ -8,7 +8,6 @@
 
 (def default-map "holes/labs/M-wm-wiring/r20-field-flow.edn")
 (def default-edges "holes/labs/M-wm-wiring/r20-lean-edges.edn")
-(def fixture-edges "test/futon3c/diagramprover/fixtures/r20-lean-edges.edn")
 
 (defn read-edn [path] (edn/read-string (slurp path)))
 
@@ -47,11 +46,17 @@
 (defn- type-name [field-type] (subs (str field-type) 1))
 
 (defn- missing-declaration?
+  "True when the checker did not positively find FIELD in ROLE at BOX's site:
+  the declaration has no occurrence, the occurrence is in the wrong role, or
+  the site itself could not be read (then no per-field finding is emitted)."
   [findings box field role]
-  (some #(and (= :declaration-without-occurrence (:finding %))
-              (= (:box/id box) (:box/id %))
-              (= (wiring/vertex-key field) (:field %))
-              (= role (:role %)))
+  (some #(or (and (#{:site-unreadable :var-not-found} (:finding %))
+                  (= (:site box) (:site %)))
+             (and (#{:declaration-without-occurrence
+                     :declared-write-not-found :declared-read-not-found} (:finding %))
+                  (= (:box/id box) (:box/id %))
+                  (= (wiring/vertex-key field) (:field %))
+                  (= role (:role %))))
         findings))
 
 (defn hops
@@ -79,10 +84,13 @@
   (let [sites (concat (map :writer chain) [(-> chain last :reader)])]
     (= (count sites) (count (set sites)))))
 
-(defn- permitted-type? [edge index hop]
-  (let [allowed (if (zero? index)
-                  #{(:quantity edge)}
-                  (conj (set (:carriers edge)) (:quantity edge)))]
+(defn- permitted-type?
+  "X1's exported edge table writes types as strings; the fixture as keywords."
+  [edge index hop]
+  (let [allowed (set (map keyword
+                          (if (zero? index)
+                            [(:quantity edge)]
+                            (conj (vec (:carriers edge)) (:quantity edge)))))]
     (contains? allowed (keyword (:field-type hop)))))
 
 (defn chains-for-edge
@@ -160,10 +168,7 @@
      :output output-path}))
 
 (defn -main [& [map-path edges-path output-path]]
-  (let [edges-path (or edges-path
-                       (when (.exists (io/file default-edges)) default-edges)
-                       fixture-edges)
-        result (emit! (or map-path default-map) edges-path
+  (let [result (emit! (or map-path default-map) (or edges-path default-edges)
                       (or output-path "holes/labs/M-wm-wiring/R20WitnessFuton2.lean"))]
     (println (pr-str result))
     (shutdown-agents)))

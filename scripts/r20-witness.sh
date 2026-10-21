@@ -4,9 +4,6 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 output="$root/holes/labs/M-wm-wiring/R20WitnessFuton2.lean"
 edges="${R20_LEAN_EDGES:-holes/labs/M-wm-wiring/r20-lean-edges.edn}"
-if [ ! -f "$edges" ]; then
-  edges="test/futon3c/diagramprover/fixtures/r20-lean-edges.edn"
-fi
 cd "$root"
 
 classpath=$(tr -d '\n' < "$HOME/notes/lean-led/review/s3a/cp.txt" \

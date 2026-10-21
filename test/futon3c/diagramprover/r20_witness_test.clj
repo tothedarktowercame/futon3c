@@ -1,13 +1,11 @@
 (ns futon3c.diagramprover.r20-witness-test
-  (:require [clojure.java.io :as io]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.r20-witness :as witness]))
 
 (def map-path "holes/labs/M-wm-wiring/r20-field-flow.edn")
 
-;; This is the W1 fixture transcribed from R20Witness.lean. X1 will replace it
-;; with the production edge declaration when its map lands.
-(def edge-path (str (io/file (io/resource "futon3c/diagramprover/fixtures/r20-lean-edges.edn"))))
+;; X1's edge table, exported from DarkTower.WarMachine.R20Witness.
+(def edge-path witness/default-edges)
 
 (defn- real-input []
   (let [spec (witness/read-edn map-path)
@@ -87,3 +85,10 @@
                 "#eval verdicts futon2Witness\n\n"
                 "end DarkTower.WarMachine.R20Witness.Generated\n")
            text))))
+
+(deftest an-unreadable-site-confirms-nothing
+  (let [[spec edges findings] (real-input)
+        f-site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "retrospective-f"}
+        findings (conj findings {:finding :var-not-found :site f-site :var "retrospective-f"})
+        witnesses (witness/witness-edges spec edges findings)]
+    (is (= [false] (mapv :confirmed (first (edge-hops witnesses :inferenceToPrecisionF)))))))
