@@ -8,12 +8,8 @@
   (:import [java.security MessageDigest]))
 
 (def map-path "holes/labs/M-wm-wiring/r20-field-flow.edn")
-(def map-sha256 "ec6b728f3efd8f9e045e547eb4502a04e8de92f7e0d96296a235dacf53ec565b")
+(def map-sha256 "4c985644074add5153237ed8395a21361eaed3a67a92fa5f17040e4d6adda02f")
 (def repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"})
-
-(def resolved-precision-findings
-  #{[:precision-retrospective-f [:f :precision-retrospective] :writes]
-    [:precision-carry-advance [:f :precision-retrospective] :reads]})
 
 (defn- sha256 [path]
   (let [digest (.digest (MessageDigest/getInstance "SHA-256")
@@ -57,9 +53,7 @@
 (deftest the-report-equals-the-declared-expected-findings
   (let [s (spec)
         got (report (materialise s) s)
-        want (remove #(contains? resolved-precision-findings
-                                 [(:box/id %) (:field %) (:role %)])
-                     (:expected-findings s))]
+        want (:expected-findings s)]
     (is (= (set want) (set got))
         (pr-str {:unexpected (remove (set want) got)
                  :missing (remove (set got) want)}))
@@ -80,7 +74,7 @@
         scorer-findings (report (materialise changed) changed)]
     (is (not-any? #(contains? true-edge [(:box/id %) (:field %) (:role %)]) findings)
         "the true retrospective-F write/read pair has site evidence")
-    (is (= 15 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
+    (is (= 10 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
         "the other S4b declarations remain findings")
     (is (some #(and (= :declaration-without-occurrence (:finding %))
                     (= :precision-carry-advance (:box/id %))
@@ -117,3 +111,38 @@
                       (= :precision-carry-advance (:box/id %)))
                 findings)
           (pr-str findings)))))
+
+(deftest precision-carry-cannot-claim-the-class-preference-g
+  (let [s (spec)
+        scorer-g [:scoring {:record :selection-certificate}]
+        scorer-vertex (wiring/vertex-key scorer-g)
+        changed (update s :boxes
+                        (fn [boxes]
+                          (mapv (fn [box]
+                                  (if (= :precision-carry-advance (:box/id box))
+                                    (update box :reads conj scorer-g)
+                                    box))
+                                boxes)))
+        findings (report (materialise changed) changed)]
+    (is (some #(and (= :declaration-without-occurrence (:finding %))
+                    (= scorer-vertex (:field %))
+                    (= :precision-carry-advance (:box/id %)))
+              findings)
+        "the planted scorer-G read remains distinct from the frozen candidate G")))
+
+(defn- constant-hole-call [node missing]
+  (str "(constant-row " (pr-str node) " " (pr-str missing) ")"))
+
+(defn- constant-holes-match? [root s]
+  (let [source (slurp (io/file root "futon2/src/futon2/aif/wm/apparatus_certificates.clj"))]
+    (every? (fn [[node missing]]
+              (str/includes? source (constant-hole-call node missing)))
+            (:r20/constant-holes s))))
+
+(deftest constant-holes-are-pinned-to-receipt-calls
+  (let [s (spec)
+        root (materialise s)]
+    (is (constant-holes-match? root s))
+    (is (not (constant-holes-match?
+              root (assoc-in s [:r20/constant-holes :evidence] [:wrong])))
+        "a changed literal hole vector is rejected by the pinned receipt source")))

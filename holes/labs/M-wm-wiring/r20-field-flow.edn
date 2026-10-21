@@ -8,14 +8,14 @@
  {[:f {:record :precision-retrospective}] :quantity/free-energy
   [:f-consumed {:record :phase8-scorer}] :quantity/free-energy
   [:update {:record :precision-carry}] :receipt/precision-update
-  [:missing {:record :evidence}] :hole/required-fields
-  [:missing {:record :habit}] :hole/required-fields
+  [:habit {:record :selection-candidate}] :quantity/policy-prior
+  [:g {:record :selection-candidate}] :quantity/expected-free-energy
+  [:candidates {:record :precision-family}] :receipt/frozen-policy-family
+  [:missing {:record :absent-row}] :hole/required-fields
   [:target-class {:record :class-model}] :receipt/target-classification
   [:scoring {:record :selection-certificate}] :receipt/scoring
   [:focus-receipt {:record :selection-certificate}] :receipt/focus
-  [:missing {:record :liveness}] :hole/required-fields
   [:roles {:record :participants}] :receipt/participant-roles
-  [:missing {:record :joint-action}] :hole/required-fields
   [:jobs {:record :model-usage}] :receipt/job-usage
   [:phase-timings-ms {:record :timing}] :quantity/duration-ms}
 
@@ -26,26 +26,32 @@
   {:status :absent :note "selection-certificate retains each candidate's scorer consumption record, but the value itself has no run/click id"}
   [:update {:record :precision-carry}]
   {:status :absent :note "the sealed carry has model/family/predecessor hashes and occurrence evidence, but no run or click id"}
-  [:missing {:record :evidence}]
-  {:status :absent :note "constant missing-field declaration has no run identity"}
-  [:missing {:record :habit}]
-  {:status :absent :note "constant missing-field declaration has no run identity"}
+  [:habit {:record :selection-candidate}]
+  {:status :absent :note "selection candidate preserves the policy prior without a run/click identity"}
+  [:g {:record :selection-candidate}]
+  {:status :absent :note "selection candidate preserves the controller score without a run/click identity"}
+  [:candidates {:record :precision-family}]
+  {:status :absent :note "sealed precision family freezes the selected candidates without a run/click identity"}
+  [:missing {:record :absent-row}]
+  {:status :absent :note "the absent-row producer records literal missing fields without a run/click identity"}
   [:target-class {:record :class-model}]
   {:status :absent :note "target-class is retained in the observation model without run/click identity"}
   [:scoring {:record :selection-certificate}]
   {:status :absent :note "scoring entries retain candidate ids and scorer data, but no run/click id"}
   [:focus-receipt {:record :selection-certificate}]
   {:status :present :note "focus receipt carries :inputs-sha256 and decision-time context; this is a producer receipt, though not a run/click id"}
-  [:missing {:record :liveness}]
-  {:status :absent :note "constant missing-field declaration has no run identity"}
   [:roles {:record :participants}]
   {:status :absent :note "participant snapshot has role identities and schema but no run/click id"}
-  [:missing {:record :joint-action}]
-  {:status :absent :note "constant missing-field declaration has no run identity"}
   [:jobs {:record :model-usage}]
   {:status :present :note "every projected job row carries run-id, click-id and job-id checked against the terminal harness"}
   [:phase-timings-ms {:record :timing}]
   {:status :unknown :note "phase events are run-local state and debugger receipts check run-id, but the emitted phase-timings-ms map itself carries no id"}}
+
+ :r20/constant-holes
+ {:evidence [:likelihood]
+  :habit [:counts-after :next-consumed]
+  :liveness [:before-state :after-state :reported-live]
+  :joint-action [:ownership]}
 
  :boxes
   [{:box/id :precision-retrospective-f :box/kind :producer
@@ -54,10 +60,24 @@
    :writes [[:f {:record :precision-retrospective}]]}
   {:box/id :precision-carry-advance :box/kind :producer
    :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}
-   :record-aliases {:precision-retrospective ["f"]}
+   :record-aliases {:precision-retrospective ["f"]
+                    :precision-family ["family"]}
    :returns-record :precision-carry
-   :reads [[:f {:record :precision-retrospective}]]
+   :reads [[:f {:record :precision-retrospective}]
+           [:candidates {:record :precision-family}]]
    :writes [[:update {:record :precision-carry}]]}
+  {:box/id :selection-candidate :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-candidate"}
+   :returns-record :selection-candidate
+   :writes [[:habit {:record :selection-candidate}]
+            [:g {:record :selection-candidate}]]}
+  {:box/id :precision-family :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}
+   :record-aliases {:selection-candidate ["candidates"]}
+   :returns-record :precision-family
+   :reads [[:habit {:record :selection-candidate}]
+           [:g {:record :selection-candidate}]]
+   :writes [[:candidates {:record :precision-family}]]}
   {:box/id :phase8-scorer-f :box/kind :producer
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}
    :returns-record :selection-certificate
@@ -68,21 +88,10 @@
    :reads [[:update {:record :precision-carry}]]
    }
 
-  {:box/id :evidence-hole :box/kind :hole
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
-   :writes [[:missing {:record :evidence}]]}
-  {:box/id :r20-evidence :box/kind :row
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
-   :reads [[:missing {:record :evidence}]]
-   }
-
-  {:box/id :habit-hole :box/kind :hole
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
-   :writes [[:missing {:record :habit}]]}
-  {:box/id :r20-habit :box/kind :row
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
-   :reads [[:missing {:record :habit}]]
-   }
+  {:box/id :constant-absent-row :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "absent"}
+   :returns-record :absent-row
+   :writes [[:missing {:record :absent-row}]]}
 
   {:box/id :class-emission-model :box/kind :producer
    :site {:file "futon2/src/futon2/aif/cascade_shape_g.clj" :var "class-emission-model"}
@@ -110,14 +119,6 @@
            [:scoring {:record :selection-certificate}]]
    }
 
-  {:box/id :liveness-hole :box/kind :hole
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
-   :writes [[:missing {:record :liveness}]]}
-  {:box/id :r20-liveness :box/kind :row
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
-   :reads [[:missing {:record :liveness}]]
-   }
-
   {:box/id :participant-observation :box/kind :producer
    :site {:file "futon2/src/futon2/aif/run_participants.clj" :var "record-value"}
    :returns-record :participants
@@ -126,14 +127,6 @@
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "independence-row"}
    :record-aliases {:participants ["participants"]}
    :reads [[:roles {:record :participants}]]
-   }
-
-  {:box/id :joint-action-hole :box/kind :hole
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
-   :writes [[:missing {:record :joint-action}]]}
-  {:box/id :r20-joint-action :box/kind :row
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
-   :reads [[:missing {:record :joint-action}]]
    }
 
   {:box/id :agency-job-ledger :box/kind :producer
@@ -154,14 +147,18 @@
  [{:finding :written-never-read
    :field [:f-consumed :phase8-scorer]
    :writers [:phase8-scorer-f]}
+  {:finding :written-never-read
+   :field [:missing :absent-row]
+   :writers [:constant-absent-row]}
   {:finding :declaration-without-occurrence
-   :box/id :precision-retrospective-f :field [:f :precision-retrospective]
-   :role :writes
-   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "retrospective-f"}}
+   :box/id :precision-family :field [:habit :selection-candidate] :role :reads
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}}
   {:finding :declaration-without-occurrence
-   :box/id :precision-carry-advance :field [:f :precision-retrospective]
-   :role :reads
-   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}}
+   :box/id :precision-family :field [:g :selection-candidate] :role :reads
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}}
+  {:finding :declaration-without-occurrence
+   :box/id :precision-family :field [:candidates :precision-family] :role :writes
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "family"}}
   {:finding :declaration-without-occurrence
    :box/id :phase8-scorer-f :field [:f-consumed :phase8-scorer]
    :role :writes
@@ -170,30 +167,6 @@
    :box/id :r20-strategic-focus :field [:focus-receipt :selection-certificate]
    :role :reads
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}}
-  {:finding :declaration-without-occurrence
-   :box/id :evidence-hole :field [:missing :evidence] :role :writes
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
-  {:finding :declaration-without-occurrence
-   :box/id :r20-evidence :field [:missing :evidence] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
-  {:finding :declaration-without-occurrence
-   :box/id :habit-hole :field [:missing :habit] :role :writes
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
-  {:finding :declaration-without-occurrence
-   :box/id :r20-habit :field [:missing :habit] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
-  {:finding :declaration-without-occurrence
-   :box/id :joint-action-hole :field [:missing :joint-action] :role :writes
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
-  {:finding :declaration-without-occurrence
-   :box/id :r20-joint-action :field [:missing :joint-action] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
-  {:finding :declaration-without-occurrence
-   :box/id :liveness-hole :field [:missing :liveness] :role :writes
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
-  {:finding :declaration-without-occurrence
-   :box/id :r20-liveness :field [:missing :liveness] :role :reads
-   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
   {:finding :declaration-without-occurrence
    :box/id :r20-independence :field [:roles :participants] :role :reads
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "independence-row"}}
