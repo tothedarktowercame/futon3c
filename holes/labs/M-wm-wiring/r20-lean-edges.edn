@@ -1,4 +1,4 @@
-;; Generated from mathlib4 commit b42b77253670805eb39192025c9bd31421592b6b
+;; Generated from mathlib4 commit a1362d7d19f05c08e64fb4f83d4b21d1976cb7d9
 {:lean/module "DarkTower.WarMachine.R20Witness"
  :edges [{:edge :selectionToPrecisionHabit :quantity "quantity/policy-prior" :carriers ["receipt/frozen-policy-family"] :source-sites ["futon2/src/futon2/aif/policy.clj#selection-candidate" "futon2/src/futon2/aif/policy.clj#selection-certificate"] :target-sites ["futon2/src/futon2/aif/policy_precision_carry.clj#advance"]}
          {:edge :selectionToPrecisionG :quantity "quantity/expected-free-energy" :carriers ["receipt/frozen-policy-family"] :source-sites ["futon2/src/futon2/aif/policy.clj#selection-candidate" "futon2/src/futon2/aif/policy.clj#selection-certificate"] :target-sites ["futon2/src/futon2/aif/policy_precision_carry.clj#advance"]}
