@@ -1,0 +1,211 @@
+;; R20 Clojure field-flow map. Checked against committed futon2 source by
+;; futon3c.diagramprover.r20-field-flow-test. Field scopes distinguish values
+;; whose Clojure leaf keyword is the same but whose producer and meaning differ.
+{:spec/id :wm/r20-field-flow-v1
+ :repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"}
+
+ :r20/field-types
+ {[:f {:record :precision-retrospective}] :quantity/free-energy
+  [:f-consumed {:record :phase8-scorer}] :quantity/free-energy
+  [:update {:record :precision-carry}] :receipt/precision-update
+  [:missing {:record :evidence}] :hole/required-fields
+  [:missing {:record :habit}] :hole/required-fields
+  [:target-class {:record :class-model}] :receipt/target-classification
+  [:scoring {:record :selection-certificate}] :receipt/scoring
+  [:focus-receipt {:record :selection-certificate}] :receipt/focus
+  [:missing {:record :liveness}] :hole/required-fields
+  [:roles {:record :participants}] :receipt/participant-roles
+  [:missing {:record :joint-action}] :hole/required-fields
+  [:jobs {:record :model-usage}] :receipt/job-usage
+  [:phase-timings-ms {:record :timing}] :quantity/duration-ms}
+
+ :r20/field-identity
+ {[:f {:record :precision-retrospective}]
+  {:status :absent :note "retrospective-f returns policy keyed values with probability and :f, but no run/click id or producer receipt"}
+  [:f-consumed {:record :phase8-scorer}]
+  {:status :absent :note "selection-certificate retains each candidate's scorer consumption record, but the value itself has no run/click id"}
+  [:update {:record :precision-carry}]
+  {:status :absent :note "the sealed carry has model/family/predecessor hashes and occurrence evidence, but no run or click id"}
+  [:missing {:record :evidence}]
+  {:status :absent :note "constant missing-field declaration has no run identity"}
+  [:missing {:record :habit}]
+  {:status :absent :note "constant missing-field declaration has no run identity"}
+  [:target-class {:record :class-model}]
+  {:status :absent :note "target-class is retained in the observation model without run/click identity"}
+  [:scoring {:record :selection-certificate}]
+  {:status :absent :note "scoring entries retain candidate ids and scorer data, but no run/click id"}
+  [:focus-receipt {:record :selection-certificate}]
+  {:status :present :note "focus receipt carries :inputs-sha256 and decision-time context; this is a producer receipt, though not a run/click id"}
+  [:missing {:record :liveness}]
+  {:status :absent :note "constant missing-field declaration has no run identity"}
+  [:roles {:record :participants}]
+  {:status :absent :note "participant snapshot has role identities and schema but no run/click id"}
+  [:missing {:record :joint-action}]
+  {:status :absent :note "constant missing-field declaration has no run identity"}
+  [:jobs {:record :model-usage}]
+  {:status :present :note "every projected job row carries run-id, click-id and job-id checked against the terminal harness"}
+  [:phase-timings-ms {:record :timing}]
+  {:status :unknown :note "phase events are run-local state and debugger receipts check run-id, but the emitted phase-timings-ms map itself carries no id"}}
+
+ :boxes
+  [{:box/id :precision-retrospective-f :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "retrospective-f"}
+   :returns-record :precision-retrospective
+   :writes [[:f {:record :precision-retrospective}]]}
+  {:box/id :precision-carry-advance :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}
+   :record-aliases {:precision-retrospective ["f"]}
+   :returns-record :precision-carry
+   :reads [[:f {:record :precision-retrospective}]]
+   :writes [[:update {:record :precision-carry}]]}
+  {:box/id :phase8-scorer-f :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}
+   :returns-record :selection-certificate
+   :writes [[:f-consumed {:record :phase8-scorer}]]}
+  {:box/id :r20-precision :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "precision-row"}
+   :record-aliases {:precision-carry ["state" "update"]}
+   :reads [[:update {:record :precision-carry}]]
+   }
+
+  {:box/id :evidence-hole :box/kind :hole
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
+   :writes [[:missing {:record :evidence}]]}
+  {:box/id :r20-evidence :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
+   :reads [[:missing {:record :evidence}]]
+   }
+
+  {:box/id :habit-hole :box/kind :hole
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
+   :writes [[:missing {:record :habit}]]}
+  {:box/id :r20-habit :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
+   :reads [[:missing {:record :habit}]]
+   }
+
+  {:box/id :class-emission-model :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/cascade_shape_g.clj" :var "class-emission-model"}
+   :returns-record :class-model
+   :writes [[:target-class {:record :class-model}]]}
+  {:box/id :phase8-class-scorer :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}
+   :returns-record :selection-certificate
+   :reads [[:target-class {:record :class-model}]]
+   :writes [[:scoring {:record :selection-certificate}]]}
+  {:box/id :r20-class-preference :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "class-preference-row"}
+   :record-aliases {:selection-certificate ["decision"]}
+   :reads [[:scoring {:record :selection-certificate}]]
+   }
+
+  {:box/id :focus-receipt-builder :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "attach"}
+   :reads [[:target-class {:record :class-model}]]
+   :writes [[:focus-receipt {:record :selection-certificate}]]}
+  {:box/id :r20-strategic-focus :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}
+   :record-aliases {:selection-certificate ["decision"]}
+   :reads [[:focus-receipt {:record :selection-certificate}]
+           [:scoring {:record :selection-certificate}]]
+   }
+
+  {:box/id :liveness-hole :box/kind :hole
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
+   :writes [[:missing {:record :liveness}]]}
+  {:box/id :r20-liveness :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
+   :reads [[:missing {:record :liveness}]]
+   }
+
+  {:box/id :participant-observation :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/run_participants.clj" :var "record-value"}
+   :returns-record :participants
+   :writes [[:roles {:record :participants}]]}
+  {:box/id :r20-independence :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "independence-row"}
+   :record-aliases {:participants ["participants"]}
+   :reads [[:roles {:record :participants}]]
+   }
+
+  {:box/id :joint-action-hole :box/kind :hole
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}
+   :writes [[:missing {:record :joint-action}]]}
+  {:box/id :r20-joint-action :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}
+   :reads [[:missing {:record :joint-action}]]
+   }
+
+  {:box/id :agency-job-ledger :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/registered_run_telemetry.clj" :var "model-usage"}
+   :returns-record :model-usage
+   :writes [[:jobs {:record :model-usage}]]}
+  {:box/id :phase-event-ledger :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/registered_run_telemetry.clj" :var "phase-timings"}
+   :returns-record :timing
+   :writes [[:phase-timings-ms {:record :timing}]]}
+  {:box/id :r20-cost :box/kind :row
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "cost-row"}
+   :record-aliases {:model-usage ["usage"] :timing ["timing"]}
+   :reads [[:jobs {:record :model-usage}]
+           [:phase-timings-ms {:record :timing}]]}]
+
+ :expected-findings
+ [{:finding :written-never-read
+   :field [:f-consumed :phase8-scorer]
+   :writers [:phase8-scorer-f]}
+  {:finding :declaration-without-occurrence
+   :box/id :precision-retrospective-f :field [:f :precision-retrospective]
+   :role :writes
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "retrospective-f"}}
+  {:finding :declaration-without-occurrence
+   :box/id :precision-carry-advance :field [:f :precision-retrospective]
+   :role :reads
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}}
+  {:finding :declaration-without-occurrence
+   :box/id :phase8-scorer-f :field [:f-consumed :phase8-scorer]
+   :role :writes
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-strategic-focus :field [:focus-receipt :selection-certificate]
+   :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :evidence-hole :field [:missing :evidence] :role :writes
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-evidence :field [:missing :evidence] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :habit-hole :field [:missing :habit] :role :writes
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-habit :field [:missing :habit] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :joint-action-hole :field [:missing :joint-action] :role :writes
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-joint-action :field [:missing :joint-action] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :liveness-hole :field [:missing :liveness] :role :writes
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "receipt"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-liveness :field [:missing :liveness] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "constant-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-independence :field [:roles :participants] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "independence-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-class-preference :field [:scoring :selection-certificate] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "class-preference-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :r20-strategic-focus :field [:scoring :selection-certificate] :role :reads
+   :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :phase8-class-scorer :field [:target-class :class-model] :role :reads
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-certificate"}}
+  {:finding :declaration-without-occurrence
+   :box/id :focus-receipt-builder :field [:target-class :class-model] :role :reads
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "attach"}}]}
