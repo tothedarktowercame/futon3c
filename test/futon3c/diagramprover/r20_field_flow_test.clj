@@ -8,7 +8,7 @@
   (:import [java.security MessageDigest]))
 
 (def map-path "holes/labs/M-wm-wiring/r20-field-flow.edn")
-(def map-sha256 "fc699e53752e1682eceafe60f5f5469dbfa66e42927e2e89abf5d258c14182bb")
+(def map-sha256 "ba485328f71e782034efc016b6f595e441eab8dbb689743b705f7e2f32913dc7")
 (def repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"})
 
 (defn- sha256 [path]
@@ -17,6 +17,51 @@
     (apply str (map #(format "%02x" %) digest))))
 
 (defn- spec [] (edn/read-string (slurp map-path)))
+
+(defn- identity-declaration-errors [s]
+  (vec (keep (fn [[field {:keys [status id-paths witness-when]}]]
+               (cond
+                 (and (= :present status) (not (map? id-paths)))
+                 {:kind :present-missing-id-paths :field field}
+
+                 (and (not= :present status) (some? id-paths))
+                 {:kind :id-paths-on-non-present :field field :status status}
+
+                 (and (= :present status) (not (map? witness-when)))
+                 {:kind :present-missing-witness-condition :field field}))
+             (:r20/field-identity s))))
+
+(defn- producer-source [root s field]
+  (let [box (first (filter #(some #{field} (:writes %)) (:boxes s)))]
+    (slurp (io/file root (get-in box [:site :file])))))
+
+(defn- model-usage-row-writes?
+  "The pinned producer's returned `:jobs` row has these literal keys. This is
+  deliberately a source witness, not an inference from a prose identity note."
+  [source keys]
+  (let [compact (str/replace source #"\s+" "")
+        written {:run-id ":run-id(:run-identry)"
+                 :click-id ":click-id(:click-identry)"
+                 :status ":status(ifreason"}]
+    (every? #(let [fragment (get written %)]
+               (and (string? fragment) (str/includes? compact fragment)))
+            keys)))
+
+(defn- identity-source-errors [root s]
+  (let [field [:jobs {:record :model-usage}]
+        identity (get-in s [:r20/field-identity field])]
+    (if (= :present (:status identity))
+      (let [paths (:id-paths identity)
+            leaves (set (map (comp keyword name last) (vals paths)))
+            needed (conj leaves :status)]
+        (if (model-usage-row-writes? (producer-source root s field) needed)
+          []
+          [{:kind :id-path-not-produced :field field :paths paths}]))
+      [])))
+
+(defn- identity-errors [root s]
+  (vec (concat (identity-declaration-errors s)
+               (identity-source-errors root s))))
 
 (defn- materialise [s]
   (let [root (.toFile
@@ -108,6 +153,26 @@
     (is (= fields (set (keys (:r20/field-identity s)))))
     (is (every? #{:present :absent :unknown}
                 (map :status (vals (:r20/field-identity s)))))))
+
+(deftest present-run-identity-is-declared-and-pinned-to-its-producer
+  (let [s (spec)
+        root (materialise s)
+        jobs [:jobs {:record :model-usage}]
+        focus [:focus-receipt {:record :selection-certificate}]]
+    (is (empty? (identity-errors root s))
+        "the only present identity is a complete job-row run/click witness")
+    (testing "(a) a present value without paths is refused"
+      (is (= [{:kind :present-missing-id-paths :field jobs}]
+             (identity-errors root (assoc-in s [:r20/field-identity jobs :id-paths] nil)))))
+    (testing "(b) a declared leaf must be written by the pinned row literal"
+      (is (= [{:kind :id-path-not-produced :field jobs
+               :paths {:run [:jobs :* :execution-id] :click [:jobs :* :click-id]}}]
+             (identity-errors root (assoc-in s [:r20/field-identity jobs :id-paths :run]
+                                             [:jobs :* :execution-id])))))
+    (testing "(c) absent values cannot claim identity paths"
+      (is (= [{:kind :id-paths-on-non-present :field focus :status :absent}]
+             (identity-errors root (assoc-in s [:r20/field-identity focus :id-paths]
+                                             {:run [:run-id]})))))))
 
 (deftest precision-carry-cannot-claim-the-scorers-f
   (let [s (spec)

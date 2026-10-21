@@ -57,13 +57,17 @@
   [:scoring {:record :selection-certificate}]
   {:status :absent :note "scoring entries retain candidate ids and scorer data, but no run/click id"}
   [:focus-receipt {:record :selection-certificate}]
-  {:status :present :note "focus receipt carries :inputs-sha256 and decision-time context; this is a producer receipt, though not a run/click id"}
+  {:status :absent :note "focus receipt carries :inputs-sha256 and decision-time context, but neither is a run/click id"}
   [:roles {:record :participants}]
   {:status :absent :note "participant snapshot has role identities and schema but no run/click id"}
   [:jobs {:record :model-usage}]
-  {:status :present :note "every projected job row carries run-id, click-id and job-id checked against the terminal harness"}
+  {:status :present
+   :id-paths {:run [:jobs :* :run-id]
+              :click [:jobs :* :click-id]}
+   :witness-when {[:jobs :* :status] :complete}
+   :note "every complete projected job row carries run-id, click-id and job-id checked against the terminal harness"}
   [:phase-timings-ms {:record :timing}]
-  {:status :unknown :note "phase events are run-local state and debugger receipts check run-id, but the emitted phase-timings-ms map itself carries no id"}}
+  {:status :absent :note "phase-timings receives run-id to validate dwell receipts, but does not write it into the emitted phase-timings-ms map"}}
 
  :r20/constant-holes
  {:evidence [:likelihood]
