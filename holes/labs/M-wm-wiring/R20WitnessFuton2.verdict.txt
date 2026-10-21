@@ -5,5 +5,5 @@ r20-lean-edges.edn (exported from mathlib4 a1362d7d19).
  (DarkTower.WarMachine.R20Graph.Edge.selectionToPrecisionG, true),
  (DarkTower.WarMachine.R20Graph.Edge.inferenceToPrecisionF, true),
  (DarkTower.WarMachine.R20Graph.Edge.strategicFocusToClassPreference, false),
- (DarkTower.WarMachine.R20Graph.Edge.selectionToClassPreference, false),
- (DarkTower.WarMachine.R20Graph.Edge.classPreferenceToSelectionG, false)]
+ (DarkTower.WarMachine.R20Graph.Edge.selectionToClassPreference, true),
+ (DarkTower.WarMachine.R20Graph.Edge.classPreferenceToSelectionG, true)]
