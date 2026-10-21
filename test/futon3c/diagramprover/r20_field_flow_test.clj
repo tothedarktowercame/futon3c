@@ -133,16 +133,24 @@
 (defn- constant-hole-call [node missing]
   (str "(constant-row " (pr-str node) " " (pr-str missing) ")"))
 
-(defn- constant-holes-match? [root s]
-  (let [source (slurp (io/file root "futon2/src/futon2/aif/wm/apparatus_certificates.clj"))]
-    (every? (fn [[node missing]]
-              (str/includes? source (constant-hole-call node missing)))
-            (:r20/constant-holes s))))
+(defn- constant-holes-match?
+  "Every pinned hole is a call in the receipt source, and the source has no
+   constant-row call the map does not pin."
+  [source s]
+  (and (every? (fn [[node missing]]
+                 (str/includes? source (constant-hole-call node missing)))
+               (:r20/constant-holes s))
+       (= (count (:r20/constant-holes s))
+          (count (re-seq #"\(constant-row :" source)))))
 
 (deftest constant-holes-are-pinned-to-receipt-calls
   (let [s (spec)
-        root (materialise s)]
-    (is (constant-holes-match? root s))
+        source (slurp (io/file (materialise s)
+                               "futon2/src/futon2/aif/wm/apparatus_certificates.clj"))]
+    (is (constant-holes-match? source s))
     (is (not (constant-holes-match?
-              root (assoc-in s [:r20/constant-holes :evidence] [:wrong])))
-        "a changed literal hole vector is rejected by the pinned receipt source")))
+              source (assoc-in s [:r20/constant-holes :evidence] [:wrong])))
+        "a changed literal hole vector is rejected by the pinned receipt source")
+    (is (not (constant-holes-match?
+              (str source "\n(constant-row :extra [:x])") s))
+        "a constant hole added to receipt but not to the map is rejected")))
