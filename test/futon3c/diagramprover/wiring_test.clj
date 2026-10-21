@@ -560,3 +560,19 @@
           "(defn entry [xs] (mapv (fn [id] {:f id}) xs))"
           {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
          [:f :record]))))
+
+(deftest into-with-a-transducer-does-not-write-f
+  (is (declared-without?
+       (temporary-conformance
+        "(defn entry [] (into {} (map (fn [[k v]] [k (dissoc v :f)])) (for [id [1]] [id {:f id}])))"
+        {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
+       [:f :record])
+      "the transducer may rewrite each entry, so the tuple map is not the returned value"))
+
+(deftest for-binding-shadows-a-let-bound-literal
+  (is (declared-without?
+       (temporary-conformance
+        "(defn entry [] (let [v {:f 1}] (into {} (for [v [2]] [v v]))))"
+        {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
+       [:f :record])
+      "the for rebinds v, so the outer {:f 1} is not the entry value"))

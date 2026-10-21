@@ -396,18 +396,21 @@
 (defn- into-for-value-maps
   "The per-entry map literals of a returned `(into {} (for [...] [k value]))`.
   This deliberately recognizes only a two-element tuple body of a `for` that
-  is directly an argument of returned `into`; map/mapv/reduce and an unreturned
-  for remain outside return ownership."
+  is directly the second and last argument of returned `into`; map/mapv/reduce,
+  an unreturned for, and `(into {} xform (for ...))` (the transducer may rewrite
+  the entry) remain outside return ownership. The value must be a map literal
+  written in place: a symbol is not resolved through ENV, since the `for`
+  bindings may shadow it."
   [node env]
-  (let [args (drop 1 (:children node))
-        target (first args)
+  (let [[target for-node :as args] (drop 1 (:children node))
         supported-target? (or (and (= :map (:kind target)) (empty? (:children target)))
                               (and (= :list (:kind target)) (= "sorted-map" (head-text target))))
-        for-node (some #(when (and (= :list (:kind %)) (= "for" (head-text %))) %) args)
-        body (some-> for-node :children last)]
-    (when (and supported-target? (= :vector (:kind body)) (= 2 (count (:children body))))
-      (when-let [value (literal-of (second (:children body)) env)]
-        [[value env]]))))
+        body (when (and (= 2 (count args)) (= :list (:kind for-node)) (= "for" (head-text for-node)))
+               (last (:children for-node)))
+        value (second (:children body))]
+    (when (and supported-target? (= :vector (:kind body)) (= 2 (count (:children body)))
+               (= :map (:kind value)))
+      [[value env]])))
 
 (defn- return-maps
   "The [literal env] pairs in return position of NODE."
