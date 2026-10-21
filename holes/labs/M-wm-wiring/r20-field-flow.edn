@@ -211,10 +211,6 @@
    :box/id :focus-receipt-builder :field [:target-class :class-model] :role :reads
    :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "attach"}}
   {:finding :declaration-without-occurrence
-   :box/id :class-prediction-and-risk :field [:prediction :class-step]
-   :role :writes
-   :site {:file "futon2/src/futon2/aif/observation_model.clj" :var "evaluate :exact-enumeration"}}
-  {:finding :declaration-without-occurrence
    :box/id :class-score-candidate :field [:prediction :class-step] :role :reads
    :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"
           :var "score-candidate"}}
@@ -222,9 +218,6 @@
    :box/id :r20-class-preference :field [:prediction :class-step] :role :reads
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj"
           :var "class-preference-row"}}
-  {:finding :declaration-without-occurrence
-   :box/id :class-prediction-and-risk :field [:risk :class-step] :role :writes
-   :site {:file "futon2/src/futon2/aif/observation_model.clj" :var "evaluate :exact-enumeration"}}
   {:finding :declaration-without-occurrence
    :box/id :class-score-candidate :field [:risk :class-step] :role :reads
    :site {:file "futon2/src/futon2/aif/cascade_observation_scoring.clj"

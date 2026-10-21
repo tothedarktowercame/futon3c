@@ -8,7 +8,7 @@
   (:import [java.security MessageDigest]))
 
 (def map-path "holes/labs/M-wm-wiring/r20-field-flow.edn")
-(def map-sha256 "d9b353ea5ea7937b0b6473d80fab8b0ffa6bc861366ad3324c863d014aa5fd34")
+(def map-sha256 "09640006dfcf67474ca41ff700bd207f442204dc35f5b36a2789b185272cc872")
 (def repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"})
 
 (defn- sha256 [path]
@@ -74,8 +74,8 @@
         scorer-findings (report (materialise changed) changed)]
     (is (not-any? #(contains? true-edge [(:box/id %) (:field %) (:role %)]) findings)
         "the true retrospective-F write/read pair has site evidence")
-    (is (= 14 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
-        "17 declaration findings minus two same-file delegated reads, minus evaluate's read once its defmethod is named")
+    (is (= 12 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
+        "17 declaration findings - 2 delegated reads - evaluate read - 2 defmethod return writes = 12")
     (is (some #(and (= :declaration-without-occurrence (:finding %))
                     (= :precision-carry-advance (:box/id %))
                     (= [:f-consumed :phase8-scorer] (:field %)))

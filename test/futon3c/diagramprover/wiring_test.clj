@@ -542,20 +542,54 @@
 ;; ---------------------------------------------------------------------------
 ;; S4c: narrow R20 precision forms.
 
-(defn- temporary-conformance [source box]
-  (let [root (.toFile (java.nio.file.Files/createTempDirectory
-                       "wiring-s4c" (make-array java.nio.file.attribute.FileAttribute 0)))
-        file (clojure.java.io/file root "fixture.clj")
-        site {:file "fixture.clj" :var "entry"}]
-    (spit file source)
-    (wiring/conformance
-     (str root)
-     {:spec/id :s4c :boxes [(assoc box :site site)]}
-     {:heuristic? true})))
+(defn- temporary-conformance
+  ([source box] (temporary-conformance source "entry" box))
+  ([source var box]
+   (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                        "wiring-s4c" (make-array java.nio.file.attribute.FileAttribute 0)))
+         file (clojure.java.io/file root "fixture.clj")
+         site {:file "fixture.clj" :var var}]
+     (spit file source)
+     (wiring/conformance
+      (str root)
+      {:spec/id :s4c :boxes [(assoc box :site site)]}
+      {:heuristic? true}))))
 
 (defn- declared-without? [findings field]
   (some #(and (= :declaration-without-occurrence (:finding %))
               (= field (:field %))) findings))
+
+(defn- defmethod-write-findings [body]
+  (temporary-conformance
+   (str "(defmulti entry (fn [& _] :dispatch))\n"
+        "(defmethod entry :dispatch [x] " body ")")
+   "entry :dispatch"
+   {:box/id :writer :returns-record :record
+    :writes [[:prediction {:record :record}]]}))
+
+(deftest defmethod-nested-return-map-writes-its-field
+  (is (not (declared-without?
+            (defmethod-write-findings
+             "(cond x (case x :score (do (inc 0) (let [y x] {:prediction y})) nil) :else nil)")
+            [:prediction :record]))))
+
+(deftest defmethod-non-final-do-map-does-not-write-field
+  (is (declared-without?
+       (defmethod-write-findings
+        "(cond x (case x :score (do {:prediction x} (let [y x] {:other y})) nil) :else nil)")
+       [:prediction :record])))
+
+(deftest defmethod-map-passed-as-argument-does-not-write-field
+  (is (declared-without?
+       (defmethod-write-findings
+        "(cond x (case x :score (do (inc 0) (let [y x] (consume {:prediction y}))) nil) :else nil)")
+       [:prediction :record])))
+
+(deftest defmethod-case-dispatch-map-does-not-write-field
+  (is (declared-without?
+       (defmethod-write-findings
+        "(cond x (case {:prediction 1} :score (do (inc 0) (let [y x] {:other y})) nil) :else nil)")
+       [:prediction :record])))
 
 (deftest returned-into-for-tuple-map-writes-its-entry-field
   (is (not (declared-without?

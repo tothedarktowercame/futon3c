@@ -474,15 +474,16 @@
       nil)))
 
 (defn- defn-return-maps
-  "The [literal env] pairs in return position of the top-level defn/defn- FORM."
+  "The [literal env] pairs in return position of a top-level function FORM."
   [form]
-  (when (and (#{:list} (:kind form)) (#{"defn" "defn-"} (head-text form)))
-    (let [kids (drop 2 (:children form))
-          arities (filter #(and (= :list (:kind %)) (= :vector (:kind (first (:children %))))) kids)]
-      (if (seq arities)
-        (mapcat #(return-maps (peek (:children %)) {}) arities)
-        (let [after-params (rest (drop-while #(not= :vector (:kind %)) kids))]
-          (when (seq after-params) (return-maps (last after-params) {})))))))
+  (let [h (head-text form)]
+    (when (and (#{:list} (:kind form)) (#{"defn" "defn-" "defmethod"} h))
+      (let [kids (drop (if (= "defmethod" h) 3 2) (:children form))
+            arities (filter #(and (= :list (:kind %)) (= :vector (:kind (first (:children %))))) kids)]
+        (if (seq arities)
+          (mapcat #(return-maps (peek (:children %)) {}) arities)
+          (let [after-params (rest (drop-while #(not= :vector (:kind %)) kids))]
+            (when (seq after-params) (return-maps (last after-params) {}))))))))
 
 (defn- key->record [k]
   (when (and (= :token (:kind k)) (str/starts-with? (str (:text k)) ":"))
