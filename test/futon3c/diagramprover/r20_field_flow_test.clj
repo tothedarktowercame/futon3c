@@ -11,6 +11,10 @@
 (def map-sha256 "ec6b728f3efd8f9e045e547eb4502a04e8de92f7e0d96296a235dacf53ec565b")
 (def repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"})
 
+(def resolved-precision-findings
+  #{[:precision-retrospective-f [:f :precision-retrospective] :writes]
+    [:precision-carry-advance [:f :precision-retrospective] :reads]})
+
 (defn- sha256 [path]
   (let [digest (.digest (MessageDigest/getInstance "SHA-256")
                         (java.nio.file.Files/readAllBytes (.toPath (io/file path))))]
@@ -53,11 +57,36 @@
 (deftest the-report-equals-the-declared-expected-findings
   (let [s (spec)
         got (report (materialise s) s)
-        want (:expected-findings s)]
+        want (remove #(contains? resolved-precision-findings
+                                 [(:box/id %) (:field %) (:role %)])
+                     (:expected-findings s))]
     (is (= (set want) (set got))
         (pr-str {:unexpected (remove (set want) got)
                  :missing (remove (set got) want)}))
     (is (= (count want) (count got)) "no finding reported twice")))
+
+(deftest precision-retrospective-f-conforms-while-scorer-f-control-still-fails
+  (let [s (spec)
+        findings (report (materialise s) s)
+        true-edge #{[:precision-retrospective-f [:f :precision-retrospective] :writes]
+                    [:precision-carry-advance [:f :precision-retrospective] :reads]}
+        changed (update s :boxes
+                        (fn [boxes]
+                          (mapv (fn [box]
+                                  (if (= :precision-carry-advance (:box/id box))
+                                    (update box :reads conj [:f-consumed {:record :phase8-scorer}])
+                                    box))
+                                boxes)))
+        scorer-findings (report (materialise changed) changed)]
+    (is (not-any? #(contains? true-edge [(:box/id %) (:field %) (:role %)]) findings)
+        "the true retrospective-F write/read pair has site evidence")
+    (is (= 15 (count (filter #(= :declaration-without-occurrence (:finding %)) findings)))
+        "the other S4b declarations remain findings")
+    (is (some #(and (= :declaration-without-occurrence (:finding %))
+                    (= :precision-carry-advance (:box/id %))
+                    (= [:f-consumed :phase8-scorer] (:field %)))
+              scorer-findings)
+        "the planted scorer-F read remains distinguishable from the true F edge")))
 
 (deftest one-authority-per-field
   (is (= [] (wiring/multiply-written (wiring/ingest (spec))))))

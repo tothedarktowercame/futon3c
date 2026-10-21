@@ -498,3 +498,65 @@
     (is (= {:reads 0 :writes 0 :unclassified 1}
            (wiring/field-usage "(select-keys [:detail] ks)" :detail))
         "a vector in select-keys' map position is not its key vector")))
+
+;; ---------------------------------------------------------------------------
+;; S4c: narrow R20 precision forms.
+
+(defn- temporary-conformance [source box]
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "wiring-s4c" (make-array java.nio.file.attribute.FileAttribute 0)))
+        file (clojure.java.io/file root "fixture.clj")
+        site {:file "fixture.clj" :var "entry"}]
+    (spit file source)
+    (wiring/conformance
+     (str root)
+     {:spec/id :s4c :boxes [(assoc box :site site)]}
+     {:heuristic? true})))
+
+(defn- declared-without? [findings field]
+  (some #(and (= :declaration-without-occurrence (:finding %))
+              (= field (:field %))) findings))
+
+(deftest returned-into-for-tuple-map-writes-its-entry-field
+  (is (not (declared-without?
+            (temporary-conformance
+             "(defn entry [] (into {} (for [id [1]] [id {:f id}])))"
+             {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
+            [:f :record]))))
+
+(deftest update-vals-other-key-does-not-read-f
+  (is (declared-without?
+       (temporary-conformance
+        "(defn entry [m] (update-vals m :g))"
+        {:box/id :reader :record-aliases {:record ["m"]}
+         :reads [[:f {:record :record}]]})
+       [:f :record])))
+
+(deftest update-vals-non-keyword-function-does-not-read-f
+  (is (declared-without?
+       (temporary-conformance
+        "(defn entry [m some-fn] (update-vals m some-fn))"
+        {:box/id :reader :record-aliases {:record ["m"]}
+         :reads [[:f {:record :record}]]})
+       [:f :record])))
+
+(deftest returned-into-for-without-f-does-not-write-f
+  (is (declared-without?
+       (temporary-conformance
+        "(defn entry [] (into {} (for [id [1]] [id {:g id}])))"
+        {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
+       [:f :record])))
+
+(deftest unreturned-or-mapv-maps-do-not-write-f
+  (testing "the returned into/for shape must itself be the returned value"
+    (is (declared-without?
+         (temporary-conformance
+          "(defn entry [] (let [x (into {} (for [id [1]] [id {:f id}]))] nil))"
+          {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
+         [:f :record])))
+  (testing "mapv is deliberately not broadened into returned-record ownership"
+    (is (declared-without?
+         (temporary-conformance
+          "(defn entry [xs] (mapv (fn [id] {:f id}) xs))"
+          {:box/id :writer :returns-record :record :writes [[:f {:record :record}]]})
+         [:f :record]))))

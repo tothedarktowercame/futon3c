@@ -300,7 +300,8 @@
 (defn- classify-keyword
   "WRITE: map-literal key, key argument of assoc/update, a key in the path of
   assoc-in/update-in. READ: argument of get, a key in the path of get-in, a
-  keyword in function position (also as a step of ->, ->>, some->, some->>).
+  keyword in function position, or the keyword function argument of
+  `(update-vals m :k)` (also as a step of ->, ->>, some->, some->>).
   Binding reads are classified separately by `binding-reads`. Inside a thread-first step
   (`thread-first-step?`: ->, some->, cond->) the same calls with the
   threaded argument omitted: (assoc :k v …) and (update :k f) write :k,
@@ -318,6 +319,7 @@
                         (and (thread-heads h) (<= 2 idx)) :reads
                         (and (= "assoc" h) (<= 2 idx) (even? idx)) :writes
                         (and (= "update" h) (= 2 idx)) :writes
+                        (and (= "update-vals" h) (= 2 idx)) :reads
                         (and step? (= "get" h) (= 1 idx)) :reads
                         (and step? (= "assoc" h) (odd? idx)) :writes
                         (and step? (= "update" h) (= 1 idx)) :writes
@@ -391,6 +393,22 @@
             env (partition 2 (:children bindings)))
     env))
 
+(defn- into-for-value-maps
+  "The per-entry map literals of a returned `(into {} (for [...] [k value]))`.
+  This deliberately recognizes only a two-element tuple body of a `for` that
+  is directly an argument of returned `into`; map/mapv/reduce and an unreturned
+  for remain outside return ownership."
+  [node env]
+  (let [args (drop 1 (:children node))
+        target (first args)
+        supported-target? (or (and (= :map (:kind target)) (empty? (:children target)))
+                              (and (= :list (:kind target)) (= "sorted-map" (head-text target))))
+        for-node (some #(when (and (= :list (:kind %)) (= "for" (head-text %))) %) args)
+        body (some-> for-node :children last)]
+    (when (and supported-target? (= :vector (:kind body)) (= 2 (count (:children body))))
+      (when-let [value (literal-of (second (:children body)) env)]
+        [[value env]]))))
+
 (defn- return-maps
   "The [literal env] pairs in return position of NODE."
   [node env]
@@ -425,7 +443,8 @@
                                      nil))
                            (rest kids))
                 first-arg (literal-of node env)]
-            (map (fn [l] [l env]) (distinct (concat (when first-arg [first-arg]) lits))))
+            (concat (map (fn [l] [l env]) (distinct (concat (when first-arg [first-arg]) lits)))
+                    (when (= "into" h) (into-for-value-maps node env))))
           nil))
       nil)))
 
@@ -691,6 +710,9 @@
                           (or (and (pos? idx) (= rkey (token-text (first (:children parent)))))
                               (and (= 2 gidx) (= rname (token-text (nth (:children grand) 1 nil))))))
                      (and (key-fns ph) (= 2 idx) (= rname (token-text (nth (:children parent) 1 nil))))
+                     (and (= "update-vals" ph) (= 2 idx)
+                          (contains? (conj (get (:aliases cfg) r #{}) rname)
+                                     (token-text (nth (:children parent) 1 nil))))
                      (and ph (zero? idx)
                           (contains? (conj (get (:aliases cfg) r #{}) rname)
                                      (token-text (nth (:children parent) 1 nil))))
@@ -953,7 +975,8 @@
 ;; :declaration-without-occurrence, with :passes-failed naming the first failure.
 ;; LIMITS (the next ones): a function value passed as an argument and called under
 ;; the parameter's name (:via-param); a map literal that is an element of a returned
-;; sequence ((cons step ...)); a call threaded through -> / ->>; shadowing in the
+;; sequence other than the narrow `(into {} (for [...] [k {...}]))` tuple form;
+;; a call threaded through -> / ->>; shadowing in the
 ;; callee body is not modelled; the receiver of a keyed read must be a symbol.
 ;; For destructured parameters :to may carry :field-path [outer inner ...];
 ;; absent that, [value-field] is checked. Every step must be present in a
