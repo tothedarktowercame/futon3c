@@ -794,7 +794,7 @@
   [opts]
   (let [ready (readiness opts)]
     (if-not (= :ready (:status ready)) ready
-      {:status :ready :readiness ready
+      (cond-> {:status :ready :readiness ready
        :work-order-identities (work-order-identities ready)
        :agency-invoke-fn agency-invoke!
        :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
@@ -822,4 +822,10 @@
            {:status :queued
             :payload {:repair-id (:repair-id work-order)
                       :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
-                      :retry-click retry-click}}))})))
+                      :retry-click retry-click}}))}
+       ;; One-click frontier (2026-10-22, futon2 3e17ebedb): forward the
+       ;; serving side's read-only durable child-status port when the opts
+       ;; supply it. Absence is not a defect; the coordinator then honestly
+       ;; leaves an unobserved failed child at :awaiting-retry.
+       (fn? (:retry-click-status-fn opts))
+       (assoc :retry-click-status-fn (:retry-click-status-fn opts))))))

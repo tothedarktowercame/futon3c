@@ -1112,3 +1112,89 @@
     (is (= "/repo" (:target-worktree configured)) "a nil key is filled")
     (is (= (dissoc identities :author)
            (select-keys configured (keys (dissoc identities :author)))))))
+
+;; --- One-click frontier (2026-10-22): durable child-status port ---
+;; futon2 3e17ebedb reads :retry-click-status-fn to observe a meta-retry
+;; child that failed service-side before any run record existed. The port
+;; must be backed by this service's own durable acceptance bytes.
+
+(def failed-child-click-id
+  "wm-requeue-7-4-repair/239cf98836afc977cd589141c224ec3f4bca83dc")
+
+(def failed-child-acceptance
+  "The exact durable acceptance bytes of the frontier's failed child
+   (holes/labs/wm-contract/runs/one-click-frontier-2026-10-22/failed-child.edn,
+   verbatim shape): the stale-runner-source service failure recorded before
+   persist-run-record!, with the original failure message preserved."
+  (str "{:idempotency-key \"meta-retry/wm-requeue-7-4-repair/239cf98836afc977cd589141c224ec3f4bca83dc\", "
+       ":schema :wm/click-state-v1, :started-at \"2026-10-22T03:04:34.920490546Z\", "
+       ":click-id \"wm-requeue-7-4-repair/239cf98836afc977cd589141c224ec3f4bca83dc\", "
+       ":running-at \"2026-10-22T03:04:34.924800634Z\", :status :failed, "
+       ":result {:attempt-id nil, :outcome :service-failed, "
+       ":error \"Serving runner source drifts from the canonical checkout\"}, "
+       ":completed-at \"2026-10-22T03:04:37.221685495Z\", "
+       ":payload-sha256 \"453d6e72c1b402c2f12b13055f041a2d4fb0c7a44d68523c42b4ba8973397628\"}\n"))
+
+(defn- acceptance-bytes-sha256
+  "Independent digest of the exact bytes written, so the test does not trust
+   the implementation's own hashing helper."
+  [^String s]
+  (apply str (map #(format "%02x" %)
+                  (.digest (doto (java.security.MessageDigest/getInstance "SHA-256")
+                             (.update (.getBytes s "UTF-8")))))))
+
+(defn- write-acceptance!
+  [click-id content]
+  (let [target (io/file service/*click-acceptance-dir*
+                        (str "click-"
+                             (clojure.string/replace click-id #"[^A-Za-z0-9._-]" "_")
+                             ".edn"))]
+    (io/make-parents target)
+    (spit target content)
+    target))
+
+(deftest retry-click-status-observes-only-the-exact-durable-failed-child
+  (let [file (write-acceptance! failed-child-click-id failed-child-acceptance)
+        observed (service/retry-click-status failed-child-click-id)]
+    (testing "the exact failed-child.edn shape is observed with pinned evidence"
+      (is (map? observed))
+      (is (= :failed (:status observed)))
+      (is (= {:attempt-id nil :outcome :service-failed
+              :error "Serving runner source drifts from the canonical checkout"}
+             (:result observed))
+          "the original failure bytes flow through verbatim, nothing invented")
+      (is (= (.getPath file) (get-in observed [:evidence-pin :path])))
+      (is (= (acceptance-bytes-sha256 failed-child-acceptance)
+             (get-in observed [:evidence-pin :sha256]))
+          "the pin seals the exact acceptance file bytes")))
+  (testing "a child that never reached this service is honestly unobserved"
+    (is (nil? (service/retry-click-status "wm-requeue-9-1-repair/nosuch"))))
+  (testing "non-failed children are never observed"
+    (doseq [status [:queued :running :completed]]
+      (write-acceptance! (str "wm-requeue-7-4-" status)
+                         (pr-str {:schema :wm/click-state-v1
+                                  :click-id (str "wm-requeue-7-4-" status)
+                                  :status status}))
+      (is (nil? (service/retry-click-status (str "wm-requeue-7-4-" status)))
+          (str status " is not a durable failure"))))
+  (testing "a record whose stored identity does not match the request is refused"
+    ;; A file reachable under the requested id but naming a different click
+    ;; must not be observed as the requested child's failure.
+    (write-acceptance! "wm-requeue-1-1-imposter"
+                       (pr-str {:schema :wm/click-state-v1
+                                :click-id "wm-requeue-1-1-someone-else"
+                                :status :failed
+                                :result {:outcome :service-failed}}))
+    (is (nil? (service/retry-click-status "wm-requeue-1-1-imposter"))))
+  (testing "a torn record is honestly unobserved, never guessed"
+    (write-acceptance! "wm-requeue-1-1-torn" "{:status :failed, :result {:outcome :ser")
+    (is (nil? (service/retry-click-status "wm-requeue-1-1-torn")))))
+
+(deftest configure-self-heal-ports-supplies-the-retry-click-status-port
+  (with-redefs [self-heal-adapters/ports (constantly {:status :ready})]
+    (let [configured (#'service/configure-self-heal-ports {})]
+      (is (true? (:self-heal-concrete-ports? configured)))
+      (is (identical? service/retry-click-status
+                      (:retry-click-status-fn configured))
+          "the futon2 effect-ports receives this service's durable status fn"))))
+

@@ -117,6 +117,21 @@
       (is (= (sut/retry-click-id "repair/x" 1 1)
              ((:retry-click-id-fn ports) "repair/x" 1 1))))))
 
+(deftest ports-forward-the-serving-retry-click-status-port
+  ;; One-click frontier (2026-10-22, futon2 3e17ebedb): the coordinator's
+  ;; read-only durable child-status port must survive the adapter so futon2's
+  ;; meta_self_heal_production effect-ports actually consumes it; absence is
+  ;; not a defect.
+  (let [status-fn (fn [_] nil)
+        ports (with-redefs [sut/readiness (constantly {:status :ready})]
+                (sut/ports {:queue-retry-fn identity
+                            :retry-click-status-fn status-fn}))]
+    (is (identical? status-fn (:retry-click-status-fn ports))))
+  (let [ports (with-redefs [sut/readiness (constantly {:status :ready})]
+                (sut/ports {:queue-retry-fn identity}))]
+    (is (not (contains? ports :retry-click-status-fn))
+        "absence is forwarded as absence, not as a defect")))
+
 (deftest retry-click-identities-preserve-legacy-and-separate-requeues
   "No live record carried a wm-retry id on 2026-10-20. Ordinal zero is pinned
   to the literal historical A:432 form rather than a live capture."

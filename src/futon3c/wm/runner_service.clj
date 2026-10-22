@@ -15,7 +15,8 @@
             [futon3c.wm.meta-self-heal-adapters :as self-heal-adapters]
             [futon3c.wm.run4-historical-projection :as run4-historical]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
-  (:import [java.time Instant]
+  (:import [java.security MessageDigest]
+           [java.time Instant]
            [java.util UUID]
            [java.nio ByteBuffer]
            [java.nio.channels FileChannel]
@@ -79,6 +80,8 @@
   (reduce-kv (fn [m k v] (if (some? (get m k)) m (assoc m k v)))
              opts identities))
 
+(declare retry-click-status)
+
 (defn- configure-self-heal-ports
   "Click wm-click-c78d0f27 (2026-10-19): the adapter has always resolved the
    cast and repository, but only the port functions were forwarded, so the
@@ -95,7 +98,12 @@
                       :meta-repair-transaction-path
                       (or (:meta-repair-transaction-path opts)
                           "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn")
-                      :queue-retry-fn enqueue-post-release-retry!)
+                      :queue-retry-fn enqueue-post-release-retry!
+                      ;; One-click frontier (2026-10-22, futon2 3e17ebedb):
+                      ;; read-only durable child status for the coordinator's
+                      ;; :retry-click-status-fn port, backed by this service's
+                      ;; own acceptance bytes.
+                      :retry-click-status-fn retry-click-status)
           resolved (self-heal-adapters/ports base)]
       (if (= :ready (:status resolved))
         ;; F8 (click wm-click-2b1d568c, 2026-10-19): the adapter supplies
@@ -113,7 +121,8 @@
                                       :meta-acceptance-fn
                                       :meta-acceptance-review-fn
                                       :meta-acceptance-run-fn
-                                      :retry-click-id-fn])
+                                      :retry-click-id-fn
+                                      :retry-click-status-fn])
                {:self-heal-concrete-ports? true
                 :self-heal-serving-readiness (:readiness resolved)})
         (assoc base :self-heal-serving-readiness resolved)))))
@@ -154,6 +163,47 @@
              {:schema :wm/click-state-v1 :click-id click-id :status :invalid
               :reason :click-state-unreadable :message (ex-message t)}))
       {:schema :wm/click-state-v1 :click-id click-id :status :not-found})))
+
+(defn- file-sha256-hex
+  "Exact SHA256 of FILE's bytes as it lies on disk, lowercase hex. This is
+   the evidence-pin digest the futon2 coordinator's observation will cite."
+  [^java.io.File file]
+  (with-open [in (java.io.FileInputStream. file)]
+    (let [digest (MessageDigest/getInstance "SHA-256")
+          buf (byte-array 8192)]
+      (loop []
+        (let [n (.read in buf)]
+          (when (pos? n)
+            (.update digest buf 0 n)
+            (recur))))
+      (apply str (map #(format "%02x" %) (.digest digest))))))
+
+(defn retry-click-status
+  "Read-only :retry-click-status-fn port for the futon2 meta-repair
+   coordinator (futon2 3e17ebedb): the durable service-side status of one
+   meta-retry child click, backed by this service's own acceptance bytes.
+
+   Only a durably recorded failure of exactly CLICK-ID is reported: the
+   record must carry the :wm/click-state-v1 schema, its stored :click-id
+   must match the requested identity, and its :status must be :failed. The
+   record's own :result flows through verbatim — nothing is synthesized —
+   and the :evidence-pin seals the exact acceptance file bytes (SHA256).
+
+   A queued, running, completed, not-found, unreadable (torn/garbage)
+   record, or one whose stored identity does not match the requested click,
+   is not a durable failure and returns nil; the coordinator then honestly
+   leaves the retry :awaiting-retry instead of observing an unsourced
+   failure."
+  [click-id]
+  (let [state (click-status click-id)]
+    (when (and (= :wm/click-state-v1 (:schema state))
+               (= :failed (:status state))
+               (= click-id (:click-id state)))
+      (let [file (acceptance-file click-id)]
+        {:status :failed
+         :result (:result state)
+         :evidence-pin {:path (.getPath file)
+                        :sha256 (file-sha256-hex file)}}))))
 
 (defn- persist-click-state! [click-id f]
   (locking acceptance-lock
