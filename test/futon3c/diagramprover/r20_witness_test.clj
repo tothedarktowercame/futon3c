@@ -25,7 +25,7 @@
                 :field-type "quantity/free-energy"
                 :reader "futon2/src/futon2/aif/policy_precision_carry.clj#advance"
                 :confirmed true
-                :sha "270bebc27965b31f1d33012e68b4d1f512eca3f9"}]]
+                :sha "b6d557aa073ca52939f64c0267754bf8286d84ed"}]]
              (edge-hops witnesses :inferenceToPrecisionF))))
     (testing "G and habit pass through the family hops, confirmed since S4e"
       (doseq [edge [:selectionToPrecisionG :selectionToPrecisionHabit]]
@@ -33,7 +33,15 @@
           (is (= ["futon2/src/futon2/aif/policy.clj#selection-candidate"
                   "futon2/src/futon2/aif/policy_precision_carry.clj#family"]
                  (mapv :writer chain)))
-          (is (= [true true] (mapv :confirmed chain))))))))
+          (is (= [true true] (mapv :confirmed chain))))))
+    (testing "A2's focus class route reaches class emission but remains an explicit unconfirmed frontier"
+      (let [chain (first (edge-hops witnesses :strategicFocusToClassPreference))]
+        (is (= ["futon2/src/futon2/aif/focus_receipt.clj#decision-focus"
+                "futon2/src/futon2/aif/meta_live_outer_selector.clj#selector"]
+               (mapv :writer chain)))
+        (is (= "futon2/src/futon2/aif/cascade_shape_g.clj#class-emission-model"
+               (:reader (last chain))))
+        (is (= [false false] (mapv :confirmed chain)))))))
 
 (deftest a-second-g-writer-is-preserved-as-ambiguity
   (let [[spec edges findings] (real-input)
