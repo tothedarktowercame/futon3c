@@ -9,6 +9,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon2.aif.meta-injury-store :as injury-store]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
   (:import (java.security MessageDigest)
@@ -20,7 +21,7 @@
 (def default-repository "/home/joe/code/futon2")
 (def ^:dynamic *acceptance-repository* default-repository)
 (def ^:dynamic *acceptance-runs-root*
-  "/home/joe/code/futon2/data/wm-meta-injuries/acceptance-runs")
+  (str injury-store/default-root "/acceptance-runs"))
 (def ^:private default-acceptance-timeout-ms (* 15 60 1000))
 (def ^:private bounded-test-dir "/tmp/futon-bounded-tests")
 (def ^:private bounded-test-runner "/home/joe/code/futon3c/scripts/bounded_test_job.py")

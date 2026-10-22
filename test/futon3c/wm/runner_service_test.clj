@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon2.aif.meta-injury-store :as injury-store]
             [futon3c.agency.registry :as reg]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]
@@ -1198,3 +1199,25 @@
                       (:retry-click-status-fn configured))
           "the futon2 effect-ports receives this service's durable status fn"))))
 
+
+(deftest serving-defaults-follow-the-authoritative-injury-root
+  (let [root "/isolated/fresh-injury-store"
+        seen (atom nil)]
+    (with-redefs [injury-store/default-root root
+                  self-heal-adapters/ports
+                  (fn [opts] (reset! seen opts) {:status :ready})]
+      (let [configured (#'service/configure-self-heal-ports {})]
+        (is (= (str root "/ledger.edn") (:meta-injury-ledger-path configured)))
+        (is (= (str root "/transaction.edn") (:meta-repair-transaction-path @seen))))
+      (binding [service/*resolve-var*
+                (fn [sym]
+                  (when (= sym 'futon2.aif.meta-self-heal-production/production-readiness)
+                    (fn [opts] (reset! seen opts) {:status :ready})))]
+        (service/meta-self-heal-preflight! {})
+        (is (= (str root "/ledger.edn") (:meta-injury-ledger-path @seen)))
+        (is (= (str root "/transaction.edn") (:meta-repair-transaction-path @seen)))
+        (service/meta-self-heal-preflight!
+          {:meta-injury-ledger-path "/explicit/ledger.edn"
+           :meta-repair-transaction-path "/explicit/transaction.edn"})
+        (is (= "/explicit/ledger.edn" (:meta-injury-ledger-path @seen)))
+        (is (= "/explicit/transaction.edn" (:meta-repair-transaction-path @seen)))))))

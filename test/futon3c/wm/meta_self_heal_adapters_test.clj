@@ -5,6 +5,7 @@
             [clojure.java.shell]
             [clojure.string :as str]
             [futon2.aif.meta-injury-ledger :as ledger]
+            [futon2.aif.meta-injury-store :as injury-store]
             [futon2.aif.meta-repair-coordinator :as coordinator]
             [futon2.aif.meta-self-heal-harness :as harness]
             [futon3c.agency.registry :as reg]
@@ -1177,3 +1178,7 @@
     ;; The pre-F39 shape, a Var in the payload, is what the click produced.
     (is (thrown-with-msg? Exception #"Unsupported action identity value"
                           (seal (assoc payload :reload-receipts [#'clojure.core/map]))))))
+
+(deftest acceptance-run-default-shares-the-authoritative-injury-root
+  (is (= (str injury-store/default-root "/acceptance-runs")
+         sut/*acceptance-runs-root*)))

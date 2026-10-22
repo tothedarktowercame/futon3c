@@ -8,6 +8,7 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.meta-injury-store :as injury-store]
             [futon3c.agency.bg-process :as bg-process]
             [futon3c.agency.registry :as reg]
             [futon3c.test-registry.local-port]
@@ -94,10 +95,10 @@
     (let [base (assoc opts
                       :meta-injury-ledger-path
                       (or (:meta-injury-ledger-path opts)
-                          "/home/joe/code/futon2/data/wm-meta-injuries/ledger.edn")
+                          (str injury-store/default-root "/ledger.edn"))
                       :meta-repair-transaction-path
                       (or (:meta-repair-transaction-path opts)
-                          "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn")
+                          (str injury-store/default-root "/transaction.edn"))
                       :queue-retry-fn enqueue-post-release-retry!
                       ;; One-click frontier (2026-10-22, futon2 3e17ebedb):
                       ;; read-only durable child status for the coordinator's
@@ -398,10 +399,10 @@
   (let [configured (assoc opts
                           :meta-injury-ledger-path
                           (or (:meta-injury-ledger-path opts)
-                              "/home/joe/code/futon2/data/wm-meta-injuries/ledger.edn")
+                              (str injury-store/default-root "/ledger.edn"))
                           :meta-repair-transaction-path
                           (or (:meta-repair-transaction-path opts)
-                              "/home/joe/code/futon2/data/wm-meta-injuries/transaction.edn")
+                              (str injury-store/default-root "/transaction.edn"))
                           :meta-self-heal/readiness-route :ordinary)
         readiness-fn (try
                        (*resolve-var*
