@@ -56,6 +56,20 @@
         (is (thrown-with-msg? clojure.lang.ExceptionInfo #"dirty repository"
                               (identity/load-file-recorded! (.getPath source))))
         (is (= :unavailable (:availability (identity/status)))))
+      (testing "an untracked file outside src/ does not refuse the reload"
+        (identity/reset-for-test!)
+        (git! (.getPath root) "checkout" "--" identity/production-runner)
+        (let [lab (io/file root "holes/labs/probe.edn")]
+          (io/make-parents lab)
+          (spit lab "{}\n")
+          (is (map? (identity/load-file-recorded! (.getPath source))))
+          (is (false? (:dirty? (:identity (identity/status)))))))
+      (testing "an untracked file under src/ still refuses the reload"
+        (identity/reset-for-test!)
+        (spit (io/file root "src/futon2/aif/untracked_helper.clj") "(ns x)\n")
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"dirty repository"
+                              (identity/load-file-recorded! (.getPath source))))
+        (is (= :unavailable (:availability (identity/status)))))
       (testing "noncanonical source is refused and records nothing"
         (identity/reset-for-test!)
         (let [outside (java.io.File/createTempFile "wm-code-outside-" ".clj")]

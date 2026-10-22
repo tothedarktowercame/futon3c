@@ -32,6 +32,20 @@
     (when (.startsWith file-path root-path)
       (str (.relativize root-path file-path)))))
 
+(defn- dirty-status?
+  "True when `git status --porcelain` output shows a change that could reach
+   loaded code: any tracked change, or an untracked file under src/. Untracked
+   files elsewhere (lab outputs under holes/, data) cannot be loaded and do not
+   count: click wm-click-57af6c46 (2026-10-22) had its reviewed repair refused
+   at enact because 26 untracked holes/labs files made the shared futon2
+   checkout read as dirty."
+  [porcelain]
+  (boolean
+   (some (fn [line]
+           (or (not (str/starts-with? line "?? "))
+               (str/starts-with? (str/replace (subs line 3) #"^\"" "") "src/")))
+         (remove str/blank? (str/split-lines porcelain)))))
+
 (defn measure-file
   "Observe one canonical Futon2 source before/after a targeted reload."
   [path]
@@ -46,7 +60,7 @@
        :path relative
        :git-head (:value head)
        :tree-sha (:value tree)
-       :dirty? (boolean (seq (:value status)))
+       :dirty? (dirty-status? (:value status))
        :content-sha256 (sha256-bytes (java.nio.file.Files/readAllBytes (.toPath file)))})))
 
 (defn load-file-recorded!
