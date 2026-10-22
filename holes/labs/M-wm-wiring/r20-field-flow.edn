@@ -2,7 +2,7 @@
 ;; futon3c.diagramprover.r20-field-flow-test. Field scopes distinguish values
 ;; whose Clojure leaf keyword is the same but whose producer and meaning differ.
 {:spec/id :wm/r20-field-flow-v1
- :repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"}
+ :repos {"futon2" "b6d557aa073ca52939f64c0267754bf8286d84ed"}
 
  :r20/field-types
  {[:f {:record :precision-retrospective}] :quantity/free-energy

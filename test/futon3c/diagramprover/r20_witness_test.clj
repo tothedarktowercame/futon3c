@@ -25,7 +25,7 @@
                 :field-type "quantity/free-energy"
                 :reader "futon2/src/futon2/aif/policy_precision_carry.clj#advance"
                 :confirmed true
-                :sha "270bebc27965b31f1d33012e68b4d1f512eca3f9"}]]
+                :sha "b6d557aa073ca52939f64c0267754bf8286d84ed"}]]
              (edge-hops witnesses :inferenceToPrecisionF))))
     (testing "G and habit pass through the family hops, confirmed since S4e"
       (doseq [edge [:selectionToPrecisionG :selectionToPrecisionHabit]]

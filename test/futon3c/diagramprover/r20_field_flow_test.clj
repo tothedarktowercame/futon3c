@@ -8,8 +8,8 @@
   (:import [java.security MessageDigest]))
 
 (def map-path "holes/labs/M-wm-wiring/r20-field-flow.edn")
-(def map-sha256 "ba485328f71e782034efc016b6f595e441eab8dbb689743b705f7e2f32913dc7")
-(def repos {"futon2" "270bebc27965b31f1d33012e68b4d1f512eca3f9"})
+(def map-sha256 "cf8b667bc6545b38458afcd5917d590939480491135deb453cb845b2ac039217")
+(def repos {"futon2" "b6d557aa073ca52939f64c0267754bf8286d84ed"})
 
 (defn- sha256 [path]
   (let [digest (.digest (MessageDigest/getInstance "SHA-256")
