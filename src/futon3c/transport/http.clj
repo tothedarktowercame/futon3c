@@ -10139,6 +10139,35 @@
                                           opts)]
                         (throw (ex-info "WM click refused: a cast seat cannot be invoked"
                                         refusal))))
+                  ;; Canonical freshness boundary: this runs after the read-only
+                  ;; cast preflight and before click! can consume the ration or
+                  ;; start its worker.
+                  opts (if (and ordinary? (not prepared))
+                         (assoc opts :cast-refresh
+                                (mapv
+                                 (fn [[role seat]]
+                                   (let [reset-at (str (java.time.Instant/now))
+                                         reset (reg/reset-session! seat)]
+                                     (when-not (:ok reset)
+                                       (throw
+                                        (ex-info
+                                         "WM click refused: a cast seat could not be refreshed"
+                                         {:status 409
+                                          :error :wm-click-cast-refresh-failed
+                                          :role role
+                                          :seat seat
+                                          :reset-error (:error reset)})))
+                                     {:agent-id seat
+                                      :role role
+                                      :old-session-id (:old-session-id reset)
+                                      :carried-before
+                                      {:status :absent
+                                       :reason :seat-context-state-not-readable-without-invoke}
+                                      :reset-at reset-at}))
+                                 [[:author (:author opts)]
+                                  [:reviewer (:reviewer opts)]
+                                  [:repair-reviewer (:repair-reviewer opts)]]))
+                         opts)
                   result (if commissioned?
                            (click! {:config config :issuer-provenance issuer-provenance})
                            (click! opts))
@@ -10162,6 +10191,7 @@
                             :details (select-keys data [:authorization :allocated :consumed :renewal
                                                         :unready :cause :trigger :run-id :format
                                                         :run-record :prior-click-ids
+                                                        :role :seat :reset-error
                                                         :accepted-triggers])})))))))
 
 (defn- handle-wm-click-status

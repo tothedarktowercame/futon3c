@@ -728,6 +728,9 @@
                            :value run-id})
                         :run-record-status run-record-status
                         :recorded-at (str (Instant/now))}
+                 (:cast-refresh result)
+                 (assoc :cast-refresh (:cast-refresh result))
+
                  run-record-path
                  (assoc :run-record run-record-path)
 
@@ -1109,7 +1112,9 @@
               (:ordinary-click/issue! opts)
               (assoc :readiness-admitted-fn #(deliver admission :admitted)))]
         (when-not (:ordinary-click/issue! opts) (deliver admission :admitted))
-        (let [result (run! runner-opts)]
+        (let [result (cond-> (run! runner-opts)
+                       (:cast-refresh configured)
+                       (assoc :cast-refresh (:cast-refresh configured)))]
           (when-not (realized? admission)
             (deliver admission
                      (ex-info "WM click refused before ration admission"
