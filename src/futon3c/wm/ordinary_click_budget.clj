@@ -141,7 +141,10 @@
   plus ten clicks authorized directly by Joe to claude-5 on 2026-10-20 at
   about 18:39Z, after M23L (darktower 87784b4534, Lean rev 24) was accepted
   and the alignment regenerated (futon2 38419663c): \"10 more clicks granted\""
-  148)
+  ;; Joe to codex-11, 2026-10-22: ten clicks for frozen-section development.
+  ;; Record successful boundaries; resume without a click whenever possible.
+  ;; Authority: renewal-7 document, frozen-section project grant section.
+  158)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
