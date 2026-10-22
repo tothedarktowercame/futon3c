@@ -10029,7 +10029,13 @@
                                              (:issuing-caller payload)
                                              :caller-unknown)
                                  :source :wm-click-http-boundary}
+              _ (when (and (contains? payload :g-law)
+                           (not= "canonical-coapply" (:g-law payload)))
+                  (throw (ex-info "Unsupported G law" {:status 400 :error :invalid-g-law})))
               legacy-opts (cond-> {}
+                     (= "canonical-coapply" (:g-law payload))
+                     (assoc :g-law :canonical-coapply)
+
                      (nonblank-string? (:author payload))
                      (assoc :author (:author payload))
 
@@ -10105,7 +10111,7 @@
                                      (select-keys payload
                                                   [:author :reviewer :repair-reviewer
                                                    :run-id :trigger :measured-acquisition
-                                                   :flight-edn :issuing-caller])))
+                                                   :flight-edn :issuing-caller :g-law])))
                   ;; Ordinary clicks without an explicit cast acquire one
                   ;; from the live Agency roster before their ration is
                   ;; consumed. Keep that exact resolved cast through
