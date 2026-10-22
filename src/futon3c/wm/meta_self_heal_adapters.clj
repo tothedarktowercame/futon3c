@@ -639,15 +639,12 @@
      :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}}))
 
 (defn executed-command
-  "F13 (off-click replay 3, 2026-10-19): the admitted command is the
-   proposal's declaration, [\"clojure\" \"-M:test\" \"-n\" ns (\"-v\" var)].
-   futon2's :test alias carries cognitect.test-runner as a dependency but has
-   no :main-opts, so that argv run verbatim fails before any test loads
-   (\"-n (No such file or directory)\"). The port owns the real invocation:
-   the runner main is inserted; the declared namespace and var are used as
-   admitted, never re-parsed from text."
+  "The admitted command is [clojure -M:test -n ns (-v var)].
+   Canonical futon2's :test alias owns -m cognitect.test-runner (b463d85cc).
+   Adding another -m passes it to the runner as an unknown option. Preserve
+   the admitted namespace/var argv verbatim; never widen to a suite."
   [command]
-  (into ["clojure" "-M:test" "-m" "cognitect.test-runner"] (subvec command 2)))
+  command)
 
 (defn- launch-bounded-acceptance! [timeout-ms id command]
   (let [job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))
