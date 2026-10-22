@@ -33,7 +33,15 @@
           (is (= ["futon2/src/futon2/aif/policy.clj#selection-candidate"
                   "futon2/src/futon2/aif/policy_precision_carry.clj#family"]
                  (mapv :writer chain)))
-          (is (= [true true] (mapv :confirmed chain))))))))
+          (is (= [true true] (mapv :confirmed chain))))))
+    (testing "A2's focus class route reaches class emission but remains an explicit unconfirmed frontier"
+      (let [chain (first (edge-hops witnesses :strategicFocusToClassPreference))]
+        (is (= ["futon2/src/futon2/aif/focus_receipt.clj#decision-focus"
+                "futon2/src/futon2/aif/meta_live_outer_selector.clj#selector"]
+               (mapv :writer chain)))
+        (is (= "futon2/src/futon2/aif/cascade_shape_g.clj#class-emission-model"
+               (:reader (last chain))))
+        (is (= [false false] (mapv :confirmed chain)))))))
 
 (deftest a-second-g-writer-is-preserved-as-ambiguity
   (let [[spec edges findings] (real-input)

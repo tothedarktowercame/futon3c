@@ -21,6 +21,8 @@
   [:controller-score {:record :ranked-candidate}] :quantity/expected-free-energy
   [:scoring {:record :selection-certificate}] :receipt/scoring
   [:focus-receipt {:record :selection-certificate}] :receipt/focus
+  [:focus {:record :decision-focus}] :quantity/preference
+  [:scorer-class {:record :outer-target-class}] :quantity/preference
   [:roles {:record :participants}] :receipt/participant-roles
   [:jobs {:record :model-usage}] :receipt/job-usage
   [:phase-timings-ms {:record :timing}] :quantity/duration-ms}
@@ -58,6 +60,10 @@
   {:status :absent :note "scoring entries retain candidate ids and scorer data, but no run/click id"}
   [:focus-receipt {:record :selection-certificate}]
   {:status :absent :note "focus receipt carries :inputs-sha256 and decision-time context, but neither is a run/click id"}
+  [:focus {:record :decision-focus}]
+  {:status :absent :note "decision focus is a time-scoped relation context without a run/click identity"}
+  [:scorer-class {:record :outer-target-class}]
+  {:status :absent :note "the frozen outer target class carries relation provenance but no run/click identity"}
   [:roles {:record :participants}]
   {:status :absent :note "participant snapshot has role identities and schema but no run/click id"}
   [:jobs {:record :model-usage}]
@@ -119,7 +125,9 @@
 
   {:box/id :class-emission-model :box/kind :producer
    :site {:file "futon2/src/futon2/aif/cascade_shape_g.clj" :var "class-emission-model"}
+   :record-aliases {:outer-target-class ["target-class"]}
    :returns-record :class-model
+   :reads [[:scorer-class {:record :outer-target-class}]]
    :writes [[:target-class {:record :class-model}]
             [:class-preference {:record :class-model}]]}
   {:box/id :class-prediction-and-risk :box/kind :producer
@@ -160,6 +168,16 @@
    :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "attach"}
    :reads [[:target-class {:record :class-model}]]
    :writes [[:focus-receipt {:record :selection-certificate}]]}
+  {:box/id :decision-focus :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "decision-focus"}
+   :returns-record :decision-focus
+   :writes [[:focus {:record :decision-focus}]]}
+  {:box/id :outer-focus-classification :box/kind :producer
+   :site {:file "futon2/src/futon2/aif/meta_live_outer_selector.clj" :var "selector"}
+   :record-aliases {:decision-focus ["focus-context"]}
+   :returns-record :outer-target-class
+   :reads [[:focus {:record :decision-focus}]]
+   :writes [[:scorer-class {:record :outer-target-class}]]}
   {:box/id :r20-strategic-focus :box/kind :row
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj" :var "strategic-focus-row"}
    :record-aliases {:selection-certificate ["decision"]}
@@ -240,4 +258,16 @@
    :box/id :r20-class-preference :field [:steps :selection-certificate]
    :role :reads
    :site {:file "futon2/src/futon2/aif/wm/apparatus_certificates.clj"
-          :var "class-preference-row"}}]}
+          :var "class-preference-row"}}
+  {:finding :declaration-without-occurrence
+   :box/id :decision-focus :field [:focus :decision-focus] :role :writes
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "decision-focus"}}
+  {:finding :declaration-without-occurrence
+   :box/id :outer-focus-classification :field [:focus :decision-focus] :role :reads
+   :site {:file "futon2/src/futon2/aif/meta_live_outer_selector.clj" :var "selector"}}
+  {:finding :declaration-without-occurrence
+   :box/id :outer-focus-classification :field [:scorer-class :outer-target-class] :role :writes
+   :site {:file "futon2/src/futon2/aif/meta_live_outer_selector.clj" :var "selector"}}
+  {:finding :declaration-without-occurrence
+   :box/id :class-emission-model :field [:scorer-class :outer-target-class] :role :reads
+   :site {:file "futon2/src/futon2/aif/cascade_shape_g.clj" :var "class-emission-model"}}]}
