@@ -642,9 +642,16 @@
   "The admitted command is [clojure -M:test -n ns (-v var)].
    Canonical futon2's :test alias owns -m cognitect.test-runner (b463d85cc).
    Adding another -m passes it to the runner as an unknown option. Preserve
-   the admitted namespace/var argv verbatim; never widen to a suite."
+   the admitted namespace argv verbatim; never widen to a suite.
+   Admission takes -v as a bare var name (command-name-pattern has no /),
+   but cognitect.test-runner resolves -v from user, where a bare name
+   never resolves (click wm-click-e1c2ae11, 2026-10-23: \"Could not
+   resolve var\"). Qualify a bare var with the admitted namespace."
   [command]
-  command)
+  (if (and (= 6 (count command)) (= "-v" (nth command 4))
+           (not (str/includes? (nth command 5) "/")))
+    (assoc command 5 (str (nth command 3) "/" (nth command 5)))
+    command))
 
 (defn- launch-bounded-acceptance! [timeout-ms id command]
   (let [job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))

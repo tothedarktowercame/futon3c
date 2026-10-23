@@ -18,6 +18,9 @@
       (is (= command (sut/executed-command command)))
       (is (= (conj command "-v" "fixture.test/a")
              (sut/executed-command (conj command "-v" "fixture.test/a"))))
+      (is (= (conj command "-v" (str (nth command 3) "/a"))
+             (sut/executed-command (conj command "-v" "a")))
+          "a bare admitted var is qualified with the -n namespace")
       ;; Copy the actual alias (including main-opts), not a fixture inventing
       ;; the old alias shape. Only test-runner dependency is needed here.
       (spit (io/file root "deps.edn")
@@ -48,4 +51,15 @@
         (is (str/includes? (or output "") "Ran 1 tests containing 1 assertions"))
         (is (not (str/includes? (or output "") "UNREQUESTED-NAMESPACE-LOADED")))
         (spit "/home/joe/notes/M2a-real-port.log" (str (pr-str r) "\n" output)))
+      ;; The proposal form the prompt asks for: -v with a bare var name,
+      ;; through the real runner (E3 click stopped on exactly this).
+      (let [r (binding [sut/*acceptance-repository* (.getPath root)
+                       sut/*acceptance-runs-root* (.getPath logs)]
+                (#'sut/run-acceptance! 60000
+                 {:id "m2a-bare-var" :command ["clojure" "-M:test" "-n" target "-v" "passes"]
+                  :source {:namespace target :path "test/fixture/m2a_only_test.clj" :text text}}))
+            output (when-let [p (get-in r [:run-pin :path])] (slurp p))]
+        (is (= :passed (:outcome r)) (pr-str r))
+        (is (not (str/includes? (or output "") "Could not resolve var")))
+        (is (str/includes? (or output "") "Ran 1 tests containing 1 assertions")))
       (finally (doseq [f (reverse (file-seq root))] (io/delete-file f))))))
