@@ -1,0 +1,38 @@
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/joe/notes/M2r/tmp
+WARNING: Use of :paths external to the project has been deprecated, please remove: ../futon2/test
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/joe/notes/M2r/tmp
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.retry-identity-test
+promise-history write failed: :promise/park-store-changed Evidence backend unavailable
+[wm-click] {:run-binding "/home/joe/notes/M2r/tmp/wm-click-bindings-test-14791247457723698101/click-run-binding-wm-retry-repair_d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1.edn", :click-id "wm-retry-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1", :attempt-id nil, :route-check {:status :launched, :job {:id "bg-fixture"}}, :outcome :grounded-change, :binding-durability :confirmed, :binding-status :absent, :runtime-disposition {}, :run-record-absence :runner-did-not-return-run-record, :run-id-observation {:status :absent, :reason :runner-did-not-return-run-id}, :run-record-status :absent, :report-card {:status :failed, :reason :verified-run-record-unavailable}}
+
+FAIL in (different-patches-admit-distinct-children-and-replays-do-not-run) (retry_identity_test.clj:37)
+expected: (= :queued (:status second-result))
+  actual: (not (= :queued 409))
+
+FAIL in (different-patches-admit-distinct-children-and-replays-do-not-run) (retry_identity_test.clj:39)
+expected: (not= (:click-id first-result) (:click-id second-result))
+  actual: (not (not= "wm-retry-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1" "wm-retry-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1"))
+
+FAIL in (different-patches-admit-distinct-children-and-replays-do-not-run) (retry_identity_test.clj:43)
+expected: (= 2 (count (clojure.core/deref runs)))
+  actual: (not (= 2 1))
+[wm-click] {:run-binding "/home/joe/notes/M2r/tmp/wm-click-bindings-test-14791247457723698101/click-run-binding-wm-requeue-1-1-repair_d9ca0b41fe22ddc094e3b30816a1e085b6e16481.edn", :click-id "wm-requeue-1-1-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481", :attempt-id nil, :route-check {:status :launched, :job {:id "bg-fixture"}}, :outcome :grounded-change, :binding-durability :confirmed, :binding-status :absent, :runtime-disposition {}, :run-record-absence :runner-did-not-return-run-record, :run-id-observation {:status :absent, :reason :runner-did-not-return-run-id}, :run-record-status :absent, :report-card {:status :failed, :reason :verified-run-record-unavailable}}
+
+FAIL in (different-patches-admit-distinct-children-and-replays-do-not-run) (retry_identity_test.clj:37)
+expected: (= :queued (:status second-result))
+  actual: (not (= :queued 409))
+
+FAIL in (different-patches-admit-distinct-children-and-replays-do-not-run) (retry_identity_test.clj:39)
+expected: (not= (:click-id first-result) (:click-id second-result))
+  actual: (not (not= "wm-requeue-1-1-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481" "wm-requeue-1-1-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481"))
+
+FAIL in (different-patches-admit-distinct-children-and-replays-do-not-run) (retry_identity_test.clj:43)
+expected: (= 2 (count (clojure.core/deref runs)))
+  actual: (not (= 2 1))
+
+Ran 1 tests containing 11 assertions.
+6 failures, 0 errors.

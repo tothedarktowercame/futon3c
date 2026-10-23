@@ -762,18 +762,18 @@
       (assoc @result :source-clean? (not (.exists file)))))))
 
 (defn retry-click-id
-  "Return the child-click identity for REPAIR-ID, ATTEMPT, and re-queue ordinal.
-
-  Ordinal zero preserves the historical `wm-retry-<repair-id>-<attempt>`
-  receipt form. Positive ordinals use the disjoint `wm-requeue-<ordinal>-<attempt>-<repair-id>`
-  namespace, so no re-queued id can equal any legacy retry id even when a
-  repair id itself contains hyphens or digits."
-  [repair-id attempt requeue-ordinal]
+  "Mint a retry identity from repair, attempt, ordinal and the full patch SHA.
+   Distinct patches cannot alias a prior repair's child; replay stays stable.
+   Initial retries and requeues retain disjoint prefixes."
+  [repair-id attempt requeue-ordinal patch-sha]
   (assert (and (integer? requeue-ordinal) (not (neg? requeue-ordinal)))
           "re-queue ordinal must be a non-negative integer")
-  (if (zero? requeue-ordinal)
-    (str "wm-retry-" repair-id "-" attempt)
-    (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id)))
+  (assert (and (string? patch-sha) (re-matches #"[0-9a-fA-F]{40}" patch-sha))
+          "patch SHA must be 40 hex characters")
+  (str (if (zero? requeue-ordinal)
+         (str "wm-retry-" repair-id "-" attempt)
+         (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id))
+       "-patch-" patch-sha))
 
 (defn enact!
   "Verify the reviewed patch is integrated on canonical HEAD, then reload only its changed
@@ -794,7 +794,7 @@
             receipts (mapv #(code-identity/load-file-recorded!
                              (str repo "/" %)) sources)
             retry-click (retry-click-id (:repair-id work-order)
-                                        (:attempt work-order) 0)]
+                                        (:attempt work-order) 0 patch)]
         {:status :succeeded
          :payload {:patch-sha patch :retry-click retry-click
                    :integration-commit head :reload-receipts receipts}}))))
