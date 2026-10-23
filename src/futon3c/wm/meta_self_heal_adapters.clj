@@ -367,7 +367,9 @@
          (str "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value> "
               ":source {:namespace <namespace-string> :path <test/... .clj> :text <complete-file-text>}}}. "
               "The source must be a complete clojure.test file that pins the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named in the diagnosis's :production-functions, with no stubs. "
-              "The command must be [\"clojure\" \"-M:test\" \"-n\" <that-namespace>] optionally followed by [\"-v\" <var>]. The specification is not run and is not accepted. ")
+              "The command must be [\"clojure\" \"-M:test\" \"-n\" <that-namespace>] optionally followed by [\"-v\" <var>]. The specification is not run and is not accepted. "
+              ":expected must be {:exit 0}, the passing run after repair; do not predict test or assertion counts "
+              "(click wm-click-c1dcd274, 2026-10-23: a declared {:pass 10} for a test that ran 15 assertions was refused as unattainable). ")
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
               "Admit it if it pins the injury (fails for the injury's reason) and is the right test for the repair; refuse with a typed reason otherwise. "
