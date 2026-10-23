@@ -1014,6 +1014,18 @@
                             (catch Throwable _ nil))]
     (remove-watch @stops-var [::pre-admission-stop click-id])))
 
+(defn- retry-child-opts
+  "Carry parent runtime options into the queued child, replacing click identity."
+  [opts retry]
+  (-> opts
+                      (dissoc :ordinary-click/issue! :idempotency-key)
+                      (assoc :accepted-click-id (:retry-click retry)
+                             :idempotency-key (str "meta-retry/" (:retry-click retry))
+                             :acceptance-payload retry
+                             :meta-repair-retry (select-keys retry
+                                                             [:injury-id :repair-id
+                                                              :attempt :patch-sha :retry-click]))))
+
 (defn- close-click!
   [agent-id click-id result opts]
   (let [fallback-attempt-id (:attempt-id @!status)
@@ -1051,14 +1063,7 @@
       (swap! !post-release-retries pop)
       (future
         (try
-          (click! (-> opts
-                      (dissoc :ordinary-click/issue! :idempotency-key)
-                      (assoc :accepted-click-id (:retry-click retry)
-                             :idempotency-key (str "meta-retry/" (:retry-click retry))
-                             :acceptance-payload retry
-                             :meta-repair-retry (select-keys retry
-                                                             [:injury-id :repair-id
-                                                              :attempt :patch-sha :retry-click]))))
+          (click! (retry-child-opts opts retry))
           (catch Throwable t
             (println "[wm-self-heal] queued retry launch failed" (ex-message t))))))))
 

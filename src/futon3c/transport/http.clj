@@ -10032,7 +10032,15 @@
               _ (when (and (contains? payload :g-law)
                            (not= "canonical-coapply" (:g-law payload)))
                   (throw (ex-info "Unsupported G law" {:status 400 :error :invalid-g-law})))
+              _ (when (and (contains? payload :interpretation-seats)
+                           (not (and (vector? (:interpretation-seats payload))
+                                     (seq (:interpretation-seats payload))
+                                     (every? nonblank-string? (:interpretation-seats payload)))))
+                  (throw (ex-info "interpretation-seats must be a nonempty vector of strings"
+                                  {:status 400 :error :invalid-interpretation-seats})))
               legacy-opts (cond-> {}
+                     (contains? payload :interpretation-seats)
+                     (assoc :interpretation-seats (:interpretation-seats payload))
                      (= "canonical-coapply" (:g-law payload))
                      (assoc :g-law :canonical-coapply)
 
@@ -10111,7 +10119,7 @@
                                      (select-keys payload
                                                   [:author :reviewer :repair-reviewer
                                                    :run-id :trigger :measured-acquisition
-                                                   :flight-edn :issuing-caller :g-law])))
+                                                   :flight-edn :issuing-caller :g-law :interpretation-seats])))
                   ;; Ordinary clicks without an explicit cast acquire one
                   ;; from the live Agency roster before their ration is
                   ;; consumed. Keep that exact resolved cast through
