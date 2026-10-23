@@ -695,6 +695,7 @@
                                                  ;; coordinator stopped (M4a,
                                                  ;; futon2 dfe565350)
                                                  :phase
+                                                 :detail
                                                  :ordinary-selection-called?
                                                  :absent-terms :before-ration-spend?
                                                  :injury-id :repair-id :attempt
