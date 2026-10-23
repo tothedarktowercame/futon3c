@@ -1,0 +1,93 @@
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_harness.clj:99:                    :retry-click "offline-retry-click-1"
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_harness.clj:109:                   :retry-click "offline-retry-click-1"
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:238:  the read-only :retry-click-status-fn port. Returns the evidence map only
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:243:  [ports retry-click]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:244:  (when-let [status-fn (:retry-click-status-fn ports)]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:245:    (let [observed (try (status-fn retry-click) (catch Throwable _ nil))]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:252:                   {:retry-click retry-click
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:259:  existed (one-click frontier 2026-10-22: wm-requeue-7-4-repair/239cf988
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:265:  [history ports injury-id retry-click]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:266:  (when-let [observed (failed-child-observation ports retry-click)]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:273:                          {:injury-id injury-id :retry-click retry-click})]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:278:                               :retry-click retry-click})))))))))
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:293:                                 {:retry-click (:retry-click latest)
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:299:                           (= (:retry-click latest)
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:300:                              (get-in retry-receipt [:payload :retry-click])))))
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:305:                                                         (:retry-click latest))]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:310:           :retry-click (:retry-click latest)})
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:312:              retry-click-id (:retry-click-id ports)
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:313:              _ (when-not (fn? retry-click-id)
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:314:                  (stop! (refusal :coordinator/retry-click-id-unavailable
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:316:              new-id (retry-click-id repair-id attempt next-n)
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:436:                  retry-click (:retry-click enact-payload)]
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:438:                             (nonblank? retry-click))
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:448:                                           :retry-click retry-click
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:465:                               (= retry-click (:retry-click retry-payload)))
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:479:                                           :retry-click retry-click
+/home/joe/code/futon2/src/futon2/aif/meta_repair_coordinator.clj:490:                                             :retry-click retry-click
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:101:                          (= (:retry-click enacted) (:retry-click %)))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:218:               (not (nonblank? (:retry-click entry)))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:226:           (or (not (nonblank? (:retry-click entry)))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:227:               (= (:retry-click entry) (:retry-click previous))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:245:           (or (not (nonblank? (:retry-click entry)))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:247:               (not= (:retry-click entry) (:retry-click previous))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:248:               (= (:retry-click entry)
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:341:             (not (nonblank? (:retry-click entry)))))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:363:                      (select-keys attribution [:injury-id :retry-click]))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:468:                                   (dissoc :retry-click :new-cause-pin :patch-sha)))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:478:  [ledger injury-id new-retry-click]
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:489:            (not (nonblank? new-retry-click))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:490:            (refusal :requeue/retry-click-blank {:injury-id injury-id})
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:492:            (= new-retry-click (:retry-click previous))
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:493:            (refusal :requeue/retry-click-reused
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:494:                     {:injury-id injury-id :retry-click new-retry-click})
+/home/joe/code/futon2/src/futon2/aif/meta_injury_ledger.clj:512:                                 :retry-click new-retry-click
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1167:          ;; minting function as :retry-click-id-fn; the coordinator reads it
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1168:          ;; as :retry-click-id when it re-queues an inconclusive retry. Its
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1170:          ;; :coordinator/retry-click-id-unavailable only at the requeue.
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1171:          (fn? (:retry-click-id-fn opts))
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1172:          (assoc :retry-click-id (:retry-click-id-fn opts))
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1177:          (fn? (:retry-click-status-fn opts))
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1178:          (assoc :retry-click-status-fn (:retry-click-status-fn opts))))))
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1179:(defn latest-retry-click
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1191:    (or (get-in (last (filter retry? receipts)) [:payload :retry-click])
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1193:                [:payload :retry-click]))))
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1369:        expected (select-keys enacted [:injury-id :repair-id :retry-click])
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1370:        supplied (select-keys retry [:injury-id :repair-id :retry-click])]
+/home/joe/code/futon2/src/futon2/aif/meta_self_heal_production.clj:1476:                                       :retry-click (latest-retry-click (:transaction result))
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:182:                      (= click-id (:retry-click %)))
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:191:                   :retry-click (:click-id classification)})]
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:195:                                    [:injury-id :repair-id :retry-click]))
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:230:                        :retry-click (:click-id classification)
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:238:                         :retry-click (:click-id classification)})]
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:240:                 :retry-of (select-keys enacted [:injury-id :repair-id :retry-click]))))
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:270:          (if (= (:retry-click previous) (:click-id classification))
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:281:                            :retry-click (:click-id classification)
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:285:            (refusal :injury/retry-click-mismatch
+/home/joe/code/futon2/src/futon2/aif/meta_terminal_injury.clj:286:                     {:expected (:retry-click previous)
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:764:(defn retry-click-id
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:767:  Ordinal zero preserves the historical `wm-retry-<repair-id>-<attempt>`
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:768:  receipt form. Positive ordinals use the disjoint `wm-requeue-<ordinal>-<attempt>-<repair-id>`
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:775:    (str "wm-retry-" repair-id "-" attempt)
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:776:    (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id)))
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:796:            retry-click (retry-click-id (:repair-id work-order)
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:799:         :payload {:patch-sha patch :retry-click retry-click
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:845:       :retry-click-id-fn retry-click-id
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:848:         (let [retry-click (or (:retry-click request)
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:849:                               (get-in request [:transaction :receipts 2 :payload :retry-click]))]
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:855:                     :retry-click retry-click
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:862:                      :retry-click retry-click}}))}
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:867:       (fn? (:retry-click-status-fn opts))
+/home/joe/code/futon3c/src/futon3c/wm/meta_self_heal_adapters.clj:868:       (assoc :retry-click-status-fn (:retry-click-status-fn opts))))))
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:84:(declare retry-click-status)
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:105:                      ;; :retry-click-status-fn port, backed by this service's
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:107:                      :retry-click-status-fn retry-click-status)
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:116:               ;; :retry-click-id-fn, the minting function the futon2
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:119:               ;; :coordinator/retry-click-id-unavailable.
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:125:                                      :retry-click-id-fn
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:126:                                      :retry-click-status-fn])
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:182:(defn retry-click-status
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:183:  "Read-only :retry-click-status-fn port for the futon2 meta-repair
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:1022:                      (assoc :accepted-click-id (:retry-click retry)
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:1023:                             :idempotency-key (str "meta-retry/" (:retry-click retry))
+/home/joe/code/futon3c/src/futon3c/wm/runner_service.clj:1027:                                                              :attempt :patch-sha :retry-click]))))

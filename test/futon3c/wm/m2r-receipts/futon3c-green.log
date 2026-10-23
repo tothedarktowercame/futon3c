@@ -1,0 +1,33 @@
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/joe/notes/M2r/tmp
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.meta-self-heal-adapters-test
+[wm-self-heal] zai-2 rate-limited; one retry after 0 ms: Exit 1: last status: 429 Too Many Requests
+
+FAIL in (acceptance-run-is-bounded-pinned-and-shell-free) (meta_self_heal_adapters_test.clj:573)
+nonzero exit and full-output pin
+expected: (str/includes? (:summary result) "1 failures, 0 errors")
+  actual: (not (str/includes? "Execution error (FileNotFoundException) at java.io.FileInputStream/open0 (FileInputStream.java:-2)." "1 failures, 0 errors"))
+
+FAIL in (executed-command-inserts-the-test-runner-main) (meta_self_heal_adapters_test.clj:664)
+expected: (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"] (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"]))
+  actual: (not (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"] ["clojure" "-M:test" "-n" "a.b-test"]))
+
+FAIL in (executed-command-inserts-the-test-runner-main) (meta_self_heal_adapters_test.clj:666)
+expected: (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"] (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))
+  actual: (not (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"] ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))
+[wm-self-heal] zai-2 rate-limited; one retry after 0 ms: 429 Too Many Requests
+[wm-self-heal] wm-reviewer rate-limited; one retry after 0 ms: Exit 1: exceeded retry limit, last status: 429 Too Many Requests
+[wm-self-heal] wm-reviewer rate-limited; one retry after 0 ms: Exit 1: exceeded retry limit, last status: 429 Too Many Requests
+
+Testing futon3c.wm.retry-identity-test
+promise-history write failed: :promise/park-store-changed Evidence backend unavailable
+[wm-click] {:run-binding "/home/joe/notes/M2r/tmp/wm-click-bindings-test-1633792294504354693/click-run-binding-wm-retry-repair_d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1-patch-dafa05dbd9e22f305a4b8e8ddf72cea3678eee50.edn", :click-id "wm-retry-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1-patch-dafa05dbd9e22f305a4b8e8ddf72cea3678eee50", :attempt-id nil, :route-check {:status :launched, :job {:id "bg-fixture"}}, :outcome :grounded-change, :binding-durability :confirmed, :binding-status :absent, :runtime-disposition {}, :run-record-absence :runner-did-not-return-run-record, :run-id-observation {:status :absent, :reason :runner-did-not-return-run-id}, :run-record-status :absent, :report-card {:status :failed, :reason :verified-run-record-unavailable}}
+[wm-click] {:run-binding "/home/joe/notes/M2r/tmp/wm-click-bindings-test-1633792294504354693/click-run-binding-wm-retry-repair_d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1-patch-7ca70e10ea413d94303f4592755fb04433c31021.edn", :click-id "wm-retry-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-1-patch-7ca70e10ea413d94303f4592755fb04433c31021", :attempt-id nil, :route-check {:status :launched, :job {:id "bg-fixture"}}, :outcome :grounded-change, :binding-durability :confirmed, :binding-status :absent, :runtime-disposition {}, :run-record-absence :runner-did-not-return-run-record, :run-id-observation {:status :absent, :reason :runner-did-not-return-run-id}, :run-record-status :absent, :report-card {:status :failed, :reason :verified-run-record-unavailable}}
+[wm-click] {:run-binding "/home/joe/notes/M2r/tmp/wm-click-bindings-test-1633792294504354693/click-run-binding-wm-requeue-1-1-repair_d9ca0b41fe22ddc094e3b30816a1e085b6e16481-patch-dafa05dbd9e22f305a4b8e8ddf72cea3678eee50.edn", :click-id "wm-requeue-1-1-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-patch-dafa05dbd9e22f305a4b8e8ddf72cea3678eee50", :attempt-id nil, :route-check {:status :launched, :job {:id "bg-fixture"}}, :outcome :grounded-change, :binding-durability :confirmed, :binding-status :absent, :runtime-disposition {}, :run-record-absence :runner-did-not-return-run-record, :run-id-observation {:status :absent, :reason :runner-did-not-return-run-id}, :run-record-status :absent, :report-card {:status :failed, :reason :verified-run-record-unavailable}}
+[wm-click] {:run-binding "/home/joe/notes/M2r/tmp/wm-click-bindings-test-1633792294504354693/click-run-binding-wm-requeue-1-1-repair_d9ca0b41fe22ddc094e3b30816a1e085b6e16481-patch-7ca70e10ea413d94303f4592755fb04433c31021.edn", :click-id "wm-requeue-1-1-repair/d9ca0b41fe22ddc094e3b30816a1e085b6e16481-patch-7ca70e10ea413d94303f4592755fb04433c31021", :attempt-id nil, :route-check {:status :launched, :job {:id "bg-fixture"}}, :outcome :grounded-change, :binding-durability :confirmed, :binding-status :absent, :runtime-disposition {}, :run-record-absence :runner-did-not-return-run-record, :run-id-observation {:status :absent, :reason :runner-did-not-return-run-id}, :run-record-status :absent, :report-card {:status :failed, :reason :verified-run-record-unavailable}}
+
+Ran 37 tests containing 319 assertions.
+3 failures, 0 errors.

@@ -115,8 +115,8 @@
         (is (= enact-click (get-in result [:payload :retry-click])))))
     (testing "the coordinator receives the actual public id minting function"
       (is (identical? sut/retry-click-id (:retry-click-id-fn ports)))
-      (is (= (sut/retry-click-id "repair/x" 1 1)
-             ((:retry-click-id-fn ports) "repair/x" 1 1))))))
+      (is (= (sut/retry-click-id "repair/x" 1 1 (apply str (repeat 40 "a")))
+             ((:retry-click-id-fn ports) "repair/x" 1 1 (apply str (repeat 40 "a"))))))))
 
 (deftest ports-forward-the-serving-retry-click-status-port
   ;; One-click frontier (2026-10-22, futon2 3e17ebedb): the coordinator's
@@ -133,33 +133,33 @@
     (is (not (contains? ports :retry-click-status-fn))
         "absence is forwarded as absence, not as a defect")))
 
-(deftest retry-click-identities-preserve-legacy-and-separate-requeues
+(deftest retry-click-identities-bind-patch-and-separate-requeues
   "No live record carried a wm-retry id on 2026-10-20. Ordinal zero is pinned
   to the literal historical A:432 form rather than a live capture."
   (testing "ordinal zero preserves existing receipts"
-    (is (= "wm-retry-repair-alpha-1"
-           (sut/retry-click-id "repair-alpha" 1 0))))
+    (is (= (str "wm-retry-repair-alpha-1-patch-" (apply str (repeat 40 "a")))
+           (sut/retry-click-id "repair-alpha" 1 0 (apply str (repeat 40 "a"))))))
   (testing "each re-queue gets a fresh id, including against another attempt"
-    (let [ids [(sut/retry-click-id "repair-alpha" 1 0)
-               (sut/retry-click-id "repair-alpha" 1 1)
-               (sut/retry-click-id "repair-alpha" 1 2)
-               (sut/retry-click-id "repair-alpha" 2 0)]]
+    (let [ids [(sut/retry-click-id "repair-alpha" 1 0 (apply str (repeat 40 "a")))
+               (sut/retry-click-id "repair-alpha" 1 1 (apply str (repeat 40 "a")))
+               (sut/retry-click-id "repair-alpha" 1 2 (apply str (repeat 40 "a")))
+               (sut/retry-click-id "repair-alpha" 2 0 (apply str (repeat 40 "a")))]]
       (is (= 4 (count (set ids))))
       ;; A naive suffix form could confuse a hyphen-bearing repair id with
       ;; an attempt/ordinal tail; the separate wm-requeue namespace cannot.
-      (is (not= (sut/retry-click-id "repair-1" 1 1)
-                (sut/retry-click-id "repair-1--requeue" 11 0)))
+      (is (not= (sut/retry-click-id "repair-1" 1 1 (apply str (repeat 40 "a")))
+                (sut/retry-click-id "repair-1--requeue" 11 0 (apply str (repeat 40 "a")))))
       ;; The pair that actually collides under the naive suffix form
       ;; wm-retry-<repair-id>-<attempt>-<ordinal>: both would read
       ;; "wm-retry-repair-1-1-1". Review 2026-10-20: the pair above stays
       ;; distinct under that form, so it did not pin the scheme.
-      (is (not= (sut/retry-click-id "repair-1" 1 1)
-                (sut/retry-click-id "repair-1-1" 1 0)))))
+      (is (not= (sut/retry-click-id "repair-1" 1 1 (apply str (repeat 40 "a")))
+                (sut/retry-click-id "repair-1-1" 1 0 (apply str (repeat 40 "a")))))))
   (testing "invalid ordinals fail at the public boundary"
-    (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 -1)))
-    (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 1.5)))))
+    (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 -1 (apply str (repeat 40 "a")))))
+    (is (thrown? AssertionError (sut/retry-click-id "repair-alpha" 1 1.5 (apply str (repeat 40 "a")))))))
 
-(deftest enact-mints-the-legacy-ordinal-zero-retry-id
+(deftest enact-mints-the-patch-bound-ordinal-zero-retry-id
   (let [root (.toString (java.nio.file.Files/createTempDirectory
                          "meta-adapters-enact" (make-array java.nio.file.attribute.FileAttribute 0)))
         sh #(apply clojure.java.shell/sh "git" "-C" root %)
@@ -182,7 +182,7 @@
                              (fn [path] {:status :loaded :path path})]
                  (sut/enact! request))]
     (is (= :succeeded (:status result)))
-    (is (= (sut/retry-click-id "repair-alpha" 1 0)
+    (is (= (sut/retry-click-id "repair-alpha" 1 0 (str/trim patch))
            (get-in result [:payload :retry-click])))))
 
 (defn- enact-fixture-repo

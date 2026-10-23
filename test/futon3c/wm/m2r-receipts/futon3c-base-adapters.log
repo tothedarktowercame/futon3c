@@ -1,0 +1,28 @@
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/joe/notes/M2r/tmp
+WARNING: Use of :paths external to the project has been deprecated, please remove: ../futon2/test
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/joe/notes/M2r/tmp
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.meta-self-heal-adapters-test
+[wm-self-heal] zai-2 rate-limited; one retry after 0 ms: Exit 1: last status: 429 Too Many Requests
+
+FAIL in (acceptance-run-is-bounded-pinned-and-shell-free) (meta_self_heal_adapters_test.clj:573)
+nonzero exit and full-output pin
+expected: (str/includes? (:summary result) "1 failures, 0 errors")
+  actual: (not (str/includes? "Execution error (FileNotFoundException) at java.io.FileInputStream/open0 (FileInputStream.java:-2)." "1 failures, 0 errors"))
+
+FAIL in (executed-command-inserts-the-test-runner-main) (meta_self_heal_adapters_test.clj:664)
+expected: (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"] (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"]))
+  actual: (not (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"] ["clojure" "-M:test" "-n" "a.b-test"]))
+
+FAIL in (executed-command-inserts-the-test-runner-main) (meta_self_heal_adapters_test.clj:666)
+expected: (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"] (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))
+  actual: (not (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"] ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))
+[wm-self-heal] zai-2 rate-limited; one retry after 0 ms: 429 Too Many Requests
+[wm-self-heal] wm-reviewer rate-limited; one retry after 0 ms: Exit 1: exceeded retry limit, last status: 429 Too Many Requests
+[wm-self-heal] wm-reviewer rate-limited; one retry after 0 ms: Exit 1: exceeded retry limit, last status: 429 Too Many Requests
+
+Ran 35 tests containing 303 assertions.
+3 failures, 0 errors.
