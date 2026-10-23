@@ -629,7 +629,7 @@
   (loop [[line & remaining] (str/split-lines output)]
     (when line
       (if-let [[_ file row col]
-               (re-matches #"Syntax error(?: \([^\r\n)]+\))? compiling at \((.+):([0-9]+):([0-9]+)\)\." line)]
+               (re-matches #"Syntax error(?: \([^\r\n)]+\))? (?:compiling|reading source|macroexpanding(?: [^\s]+)?) at \((.+):([0-9]+):([0-9]+)\)\." line)]
         (let [message (or (first (remove str/blank? remaining)) "")]
           {:file file :line (Long/parseLong row) :col (Long/parseLong col)
            :message (subs message 0 (min 2000 (count message)))})

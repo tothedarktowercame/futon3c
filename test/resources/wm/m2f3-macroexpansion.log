@@ -1,0 +1,5 @@
+Syntax error macroexpanding clojure.core/let at (/home/joe/notes/M2f-3-malformed-let.clj:2:1).
+[x] - failed: even-number-of-forms? at: [:bindings] spec: :clojure.core.specs.alpha/bindings
+
+Full report at:
+/home/joe/notes/clojure-13989728527132210083.edn
