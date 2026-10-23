@@ -147,7 +147,9 @@
   ;; Joe to claude-7, 2026-10-23 ~03:38Z, after the E3 rerun (M2 F1-F3) was
   ;; refused at 158/158: "10 clicks granted". Lane: E3 rerun, resumes it
   ;; needs, and the failure-detail injury via the self-heal route.
-  168)
+  ;; Joe to claude-7, 2026-10-23 ~14:56Z: "yes, 5 more clicks are awarded
+  ;; for research purposes". Lane: T1, the two-click G2 run, one rerun each.
+  173)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
