@@ -829,7 +829,7 @@
   match the click-run-binding- scan.  Atomic and fsynced."
   [binding report-card]
   (let [target (io/file (.getParentFile (io/file (:path binding)))
-                        (str "report-card-" (:click/id binding) ".edn"))
+                        (str "report-card-" (safe-id (:click/id binding)) ".edn"))
         tmp (io/file (.getParentFile target)
                      (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
         record {:schema :wm-click-report-card-v1
