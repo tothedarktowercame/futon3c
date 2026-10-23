@@ -683,7 +683,9 @@
     (is (str/includes? prompt "complete clojure.test file"))
     (is (str/includes? prompt "real production functions"))
     (is (str/includes? prompt "with no stubs"))
-    (is (str/includes? prompt ":production-functions"))))
+    (is (str/includes? prompt ":production-functions"))
+    (is (str/includes? prompt "[\"clojure\" \"-M:test\" \"-n\" \"<that-namespace>\"]")
+        "the command template quotes the namespace (wm-click-77a24533)")))
 
 (deftest diagnosis-prompt-requires-production-functions
   ;; F11b, click wm-click-fca1c921
