@@ -625,6 +625,16 @@
     (when (and (.isDirectory dir) (empty? (.listFiles dir)))
       (.delete dir))))
 
+(defn- compile-diagnostic [output]
+  (loop [[line & remaining] (str/split-lines output)]
+    (when line
+      (if-let [[_ file row col]
+               (re-matches #"Syntax error(?: \([^\r\n)]+\))? compiling at \((.+):([0-9]+):([0-9]+)\)\." line)]
+        (let [message (or (first (remove str/blank? remaining)) "")]
+          {:file file :line (Long/parseLong row) :col (Long/parseLong col)
+           :message (subs message 0 (min 2000 (count message)))})
+        (recur remaining)))))
+
 (defn- write-run-result [id output-file output outcome exit]
   (let [instant (str/replace (str (Instant/now)) #"[:.]" "-")
         log-file (io/file *acceptance-runs-root*
@@ -634,9 +644,11 @@
     (with-open [stream (io/output-stream log-file)] (.write stream bytes))
     (when (and output-file (.exists (io/file output-file)))
       (.delete (io/file output-file)))
-    {:status :ran :outcome outcome :exit exit
-     :summary (acceptance-summary output)
-     :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}}))
+    (cond-> {:status :ran :outcome outcome :exit exit
+             :summary (acceptance-summary output)
+             :run-pin {:path (.getCanonicalPath log-file) :sha256 (hex-sha256 bytes)}}
+      (compile-diagnostic output)
+      (assoc :compile-diagnostic (compile-diagnostic output)))))
 
 (defn executed-command
   "The admitted command is [clojure -M:test -n ns (-v var)].

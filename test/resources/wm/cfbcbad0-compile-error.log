@@ -1,0 +1,8 @@
+
+Running tests in #{"test"}
+Syntax error compiling at (futon2/aif/meta_acceptance_injury_cfbcbad0_test.clj:92:3).
+No such var: falsifier/want-check-refusal
+
+Full report at:
+/tmp/clojure-1962572016455661304.edn
+bounded-test failure/resource correlation: command-exit=1 resource-status=:clean pids.events:max-delta=0 scope=:whole-run-not-per-test; run-level correlation cannot identify which test caused resource pressure
