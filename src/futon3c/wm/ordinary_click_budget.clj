@@ -144,7 +144,10 @@
   ;; Joe to codex-11, 2026-10-22: ten clicks for frozen-section development.
   ;; Record successful boundaries; resume without a click whenever possible.
   ;; Authority: renewal-7 document, frozen-section project grant section.
-  158)
+  ;; Joe to claude-7, 2026-10-23 ~03:38Z, after the E3 rerun (M2 F1-F3) was
+  ;; refused at 158/158: "10 clicks granted". Lane: E3 rerun, resumes it
+  ;; needs, and the failure-detail injury via the self-heal route.
+  168)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
