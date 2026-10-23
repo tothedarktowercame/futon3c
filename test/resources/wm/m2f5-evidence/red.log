@@ -1,0 +1,46 @@
+WARNING: Use of :paths external to the project has been deprecated, please remove: ../futon2/test
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.meta-self-heal-adapters-test
+[wm-self-heal] zai-2 rate-limited; one retry after 0 ms: Exit 1: last status: 429 Too Many Requests
+
+FAIL in (acceptance-run-is-bounded-pinned-and-shell-free) (meta_self_heal_adapters_test.clj:573)
+nonzero exit and full-output pin
+expected: (str/includes? (:summary result) "1 failures, 0 errors")
+  actual: (not (str/includes? "Execution error (FileNotFoundException) at java.io.FileInputStream/open0 (FileInputStream.java:-2)." "1 failures, 0 errors"))
+
+FAIL in (executed-command-inserts-the-test-runner-main) (meta_self_heal_adapters_test.clj:664)
+expected: (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"] (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"]))
+  actual: (not (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"] ["clojure" "-M:test" "-n" "a.b-test"]))
+
+FAIL in (executed-command-inserts-the-test-runner-main) (meta_self_heal_adapters_test.clj:666)
+expected: (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"] (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))
+  actual: (not (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"] ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))
+[wm-self-heal] zai-2 rate-limited; one retry after 0 ms: 429 Too Many Requests
+[wm-self-heal] wm-reviewer rate-limited; one retry after 0 ms: Exit 1: exceeded retry limit, last status: 429 Too Many Requests
+[wm-self-heal] wm-reviewer rate-limited; one retry after 0 ms: Exit 1: exceeded retry limit, last status: 429 Too Many Requests
+
+FAIL in (envelope-reask-locates-live-unquoted-prose) (meta_self_heal_adapters_test.clj:1201)
+expected: (str/includes? prompt "line 20")
+  actual: (not (str/includes? "Dedicated META diagnosis. Return exactly one EDN map and no prose. Do not select ordinary work, run tests, builds or code, write any file, or claim a repair. Success must be {:status :succeeded :diagnosis <map>}, where the map includes :classification, :primary-cause (the stage, the condition, and the affected nodes with reasons), and :production-functions, a vector of {:role <keyword> :var \"<ns>/<fn>\" :file \"<repo-relative path>\"}. :production-functions must contain at least one entry for each of the roles :selection-entrypoint, :required-loop-node-evaluator and :terminal-routing-entrypoint. Each :var must be a real, callable function that you found by reading the repository at /home/joe/code/futon2 (read-only shell commands on that repository, such as cat, sed -n, grep, ls, git show and git grep, are allowed and expected; nothing that runs code or writes), and :file is the repo-relative path of the file that defines it. These are the functions the acceptance test will exercise. A function you cannot find must be reported in a typed refusal ({:status :failed :kind :production-function-identity-absent ...}), never invented. A refusal/failure must be typed. Bind every returned identity and pin to this request.\n\n{}\n\nYour previous answer did not read as one EDN map (Invalid leading character: ~). Return the same map, complete and balanced, as one EDN map and nothing else." "line 20"))
+
+FAIL in (envelope-reask-locates-live-unquoted-prose) (meta_self_heal_adapters_test.clj:1202)
+expected: (str/includes? prompt "reviewer-wait wiring (src/futon2/aif/full_loop_runner.clj ~lines")
+  actual: (not (str/includes? "Dedicated META diagnosis. Return exactly one EDN map and no prose. Do not select ordinary work, run tests, builds or code, write any file, or claim a repair. Success must be {:status :succeeded :diagnosis <map>}, where the map includes :classification, :primary-cause (the stage, the condition, and the affected nodes with reasons), and :production-functions, a vector of {:role <keyword> :var \"<ns>/<fn>\" :file \"<repo-relative path>\"}. :production-functions must contain at least one entry for each of the roles :selection-entrypoint, :required-loop-node-evaluator and :terminal-routing-entrypoint. Each :var must be a real, callable function that you found by reading the repository at /home/joe/code/futon2 (read-only shell commands on that repository, such as cat, sed -n, grep, ls, git show and git grep, are allowed and expected; nothing that runs code or writes), and :file is the repo-relative path of the file that defines it. These are the functions the acceptance test will exercise. A function you cannot find must be reported in a typed refusal ({:status :failed :kind :production-function-identity-absent ...}), never invented. A refusal/failure must be typed. Bind every returned identity and pin to this request.\n\n{}\n\nYour previous answer did not read as one EDN map (Invalid leading character: ~). Return the same map, complete and balanced, as one EDN map and nothing else." "reviewer-wait wiring (src/futon2/aif/full_loop_runner.clj ~lines"))
+
+FAIL in (envelope-reask-locates-live-unquoted-prose) (meta_self_heal_adapters_test.clj:1203)
+expected: (not (str/includes? prompt "Return the same map"))
+  actual: (not (not true))
+
+FAIL in (envelope-reask-locates-live-unquoted-prose) (meta_self_heal_adapters_test.clj:1204)
+expected: (= 20 (get-in result [:read-retry :first-line]))
+  actual: (not (= 20 nil))
+
+FAIL in (envelope-reask-locates-live-unquoted-prose) (meta_self_heal_adapters_test.clj:1205)
+expected: (pos-int? (get-in result [:read-retry :first-col]))
+  actual: (not (pos-int? nil))
+
+Ran 35 tests containing 302 assertions.
+8 failures, 0 errors.

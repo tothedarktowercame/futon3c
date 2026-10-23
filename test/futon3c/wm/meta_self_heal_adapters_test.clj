@@ -872,9 +872,8 @@
         (is (string? (:first-preview retry)))
         (is (str/ends-with?
              second-prompt
-             (str "Your previous answer did not read as one EDN map ("
-                  (:first-error retry)
-                  "). Return the same map, complete and balanced, as one EDN map and nothing else.")))
+             (str "Every value that is prose must be one quoted string; "
+                  "return the corrected map as one EDN map and nothing else.")))
         (is (str/includes? second-prompt "EOF while reading"))
         (is (str/includes? second-prompt
                            "1 `{` opened, 0 `}` closed outside strings")
@@ -1182,3 +1181,25 @@
 (deftest acceptance-run-default-shares-the-authoritative-injury-root
   (is (= (str injury-store/default-root "/acceptance-runs")
          sut/*acceptance-runs-root*)))
+
+(deftest envelope-reask-locates-live-unquoted-prose
+  (let [file (io/file "test/resources/wm/diagnosis-reply-tilde.txt")
+        text (slurp file)
+        calls (atom [])]
+    (is (= "64706efa6844b8f79a8aa5ee41840cfe563484d5852315a711fe724984bdd85f"
+           (#'sut/hex-sha256 (java.nio.file.Files/readAllBytes (.toPath file)))))
+    (with-redefs [reg/get-agent (fn [_] ready-agent)
+                  reg/invoke-agent! (fn [_ prompt _]
+                                      (swap! calls conj prompt)
+                                      {:ok true :result (if (= 1 (count @calls))
+                                                         text "{:status :succeeded :diagnosis {}}")
+                                       :session-id "fixture"})]
+      (let [result (#'sut/producer-invoke! "zai-2" :diagnosis {})
+            prompt (second @calls)]
+        (is (= 2 (count @calls)))
+        (is (str/includes? prompt "line 20"))
+        (is (str/includes? prompt "reviewer-wait wiring (src/futon2/aif/full_loop_runner.clj ~lines"))
+        (is (not (str/includes? prompt "Return the same map")))
+        (is (= 20 (get-in result [:read-retry :first-line])))
+        (is (pos-int? (get-in result [:read-retry :first-col])))
+        (is (= :succeeded (:status result)))))))

@@ -1,0 +1,31 @@
+{:status :succeeded
+ :diagnosis
+ {:schema :wm/meta-diagnosis-v1
+  :injury-id "injury/cfbcbad062bde07d539c7e2abd97a6a189f910f4"
+  :request-bound {:source-record-pin {:path "/home/joe/code/futon2/data/wm-runs/tick-run-record-2026-10-22-fb1ff2b0-2012-4ba0-a57a-c5cb0afa46ce.edn" :sha256 "13659d51d2e8f6e40780858d5ea79a8726d3f83c3ece41a2c7571f45c41b8ff0"}}
+  :classification :apparatus-contract-mismatch
+  :classification-basis
+  "Run 2026-10-22-fb1ff2b0 attempt-001, build checkpoint at /home/joe/code/futon2/data/wm-full-loop-machinery-147/wm-contract-machinery-147-v1/attempt-001/005-build.edn (not the abbreviated pinned record, whose :failure detail omits :checks/:failed-checks): the reviewer-falsifier receipt ba1380e65e519089245dff3cd15c52b6d1a892b144c9f226d81b9b580bc5f98a is :refused with :failed-checks [:selected-want-accounting :evidence-authority]. Author commit 38f70766 and reviewer job invoke-1792711605133-2578-0edff4a6 were both fine (:artifact-binding pass, :review-execution pass, :mission-standing pass)."
+  :primary-cause
+  {:stage :reviewer-wait
+   :condition
+   "The ordinary-cascade selected action carried no want tokens. futon2.aif.cascade-shape-g/candidate (src/futon2/aif/cascade_shape_g.clj line ~202) emits {:kind :cascade-candidate :id ... :target ... :precedence ... :arrangement ...} with no :want key — wants exist only inside the progress-preference model, not on the action. full_loop_runner's reviewer-falsifier-input builds :selected-want-outcomes via futon2.aif.selected-want-outcome/receipt with that action; its first guard refuses :selected-want-identity-missing because (seq wants) is empty ({:target \"M-self-improvement-loop\", :wants []}, confirmed verbatim in 005-build.edn). reviewer-falsifier/receipt then fails :selected-want-accounting (want-check), and with zero outcome rows authority-check fails :revision-authority-missing (:measurements []). verify returns {:status :refused :reason :reviewer-falsifier-applicable-check-failed} and the run is typed :reviewer-falsifier-failed / :build-failed at :reviewer-wait. The falsifier behaved per its contract; the producer/consumer mismatch is that the falsifier contract places wants on the selected action while the cascade-shape candidate producer does not write them there."
+   :affected-nodes
+   [{:node :futon2.aif.cascade-shape-g/candidate
+     :reason "produced the selected action (id M-self-improvement-loop/policy-1bbcf6a06eb2766b5e77, seen in attempt-001/003-construction.edn) with precedence/arrangement only; :want is absent, so every downstream want-accounting check is starved"}
+    {:node :futon2.aif.selected-want-outcome/receipt
+     :reason "correctly refused :selected-want-identity-missing ({:wants []}); this refusal is the direct input to the failed :selected-want-accounting check"}
+    {:node :futon2.aif.reviewer-falsifier/receipt
+     :reason "failed checks :selected-want-accounting (:selected-want-identity-missing) and :evidence-authority (:revision-authority-missing, measurements empty); :mission-standing, :artifact-binding, :review-execution all passed — author and reviewer are exonerated"}
+    {:node :futon2.aif.full-loop-runner reviewer-wait wiring (src/futon2/aif/full_loop_runner.clj ~lines 7883-7923, 8043-8049)
+     :reason "classifies any want-less cascade-candidate as :ordinary-cascade and feeds the refused outcome receipt into the falsifier without a path for cascade-shape candidates whose wants live in the arrangement model rather than on the action; converts the refused verification into the terminal :reviewer-falsifier-failed injury"}]}
+  :production-functions
+  [{:role :selection-entrypoint
+    :var "futon2.aif.meta-live-outer-selector/selector"
+    :file "src/futon2/aif/meta_live_outer_selector.clj"}
+   {:role :required-loop-node-evaluator
+    :var "futon2.aif.wm.loop-node-exercise/receipt"
+    :file "src/futon2/aif/wm/loop_node_exercise.clj"}
+   {:role :terminal-routing-entrypoint
+    :var "futon2.aif.run-ending-classification/classify"
+    :file "src/futon2/aif/run_ending_classification.clj"}]}}

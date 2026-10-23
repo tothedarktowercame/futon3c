@@ -208,17 +208,26 @@
         ;; machine result. The fence is usable only when it ends the answer;
         ;; prose after the closing fence remains a malformed response.
         fenced (re-matches #"(?s).*?```[A-Za-z]*\s*(.*?)\s*```\s*" text)
-        reader-text (or (second fenced) text)]
+        reader-text (or (second fenced) text)
+        reader (clojure.lang.LineNumberingPushbackReader.
+                (java.io.StringReader. reader-text))]
     (try
       ;; First form only, as before F21: a map followed by trailing prose is
       ;; the map. read-one-edn's one-form check guards the repair candidate,
       ;; where an appended brace must not close a second form.
-      (let [value (edn/read-string reader-text)]
+      (let [value (edn/read reader)]
         (if (keyword-keyed-map? value)
           {:value value}
           {:read-error (wrong-edn-shape value)}))
       (catch Throwable t
         (let [message (or (ex-message t) (.getName (class t)))
+              ;; EDN ReaderException has nil ex-data on Clojure 1.11.1;
+              ;; capture the position from the reader that actually failed.
+              line (.getLineNumber reader)
+              col (.getColumnNumber reader)
+              line-text (get (str/split-lines reader-text) (dec line) "")
+              location {:line line :col col
+                        :line-text (subs line-text 0 (min 200 (count line-text)))}
               eof? (str/includes? message "EOF while reading")
               {:keys [opened closed]} (when eof?
                                         (braces-outside-strings reader-text))
@@ -235,10 +244,10 @@
             (assoc repair :read-repair {:appended deficit :error counted-error})
 
             repair
-            {:read-error (wrong-edn-shape (:value repair))}
+            (assoc location :read-error (wrong-edn-shape (:value repair)))
 
             :else
-            {:read-error counted-error}))))))
+            (assoc location :read-error counted-error)))))))
 
 (def ^:dynamic *rate-limit-backoff-ms*
   "Wait before the one retry of a seat invoke the provider rate-limited."
@@ -469,11 +478,19 @@
         first-preview (when (:ok result) (response-preview (:result result)))
         read-retry (when (and (:ok result) (:read-error first-read))
                      {:first-error (:read-error first-read)
-                      :first-preview first-preview})
+                      :first-preview first-preview
+                      :first-line (:line first-read)
+                      :first-col (:col first-read)})
         complaint (when read-retry
                     (str "\n\nYour previous answer did not read as one EDN map ("
                          (:first-error read-retry)
-                         "). Return the same map, complete and balanced, as one EDN map and nothing else."))
+                         ")"
+                         (when (:line first-read)
+                           (str " at line " (:line first-read)
+                                ", column " (:col first-read)
+                                ". Line text: " (pr-str (:line-text first-read))))
+                         ". Every value that is prose must be one quoted string; "
+                         "return the corrected map as one EDN map and nothing else."))
         read-second-result (when read-retry
                              (invoke-with-rate-limit-retry! seat (str prompt complaint) options))
         envelope-result (or read-second-result result)
