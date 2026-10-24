@@ -1,0 +1,835 @@
+[
+ {
+  "symbol": "sym-close-ask-action--intent-propose",
+  "gloss": "when close:ask-action, predict intent:propose",
+  "guard": "close:ask-action",
+  "prediction": "intent:propose",
+  "train": {
+   "fired": 60,
+   "hit": 21
+  },
+  "test": {
+   "fired": 96,
+   "hit": 35
+  },
+  "baseline_test": 0.31048387096774194,
+  "evidence": [
+   "turn-aMNhxV",
+   "turn-FUuuI1",
+   "turn-eunhIY",
+   "turn-KOwPBy",
+   "turn-3fWrhs",
+   "turn-E5LoPx",
+   "turn-acm0YL",
+   "turn-KkUaaz",
+   "turn-rG28eX",
+   "turn-u1DDEK",
+   "turn-KC7wAa",
+   "turn-vDYhhJ",
+   "turn-ARRiVh",
+   "turn-fCcsC5",
+   "turn-SwxO2e",
+   "turn-qpylNN",
+   "turn-qvOQGL",
+   "turn-cgdqXo",
+   "turn-GdCA9H",
+   "turn-4LNcnW"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-ask-action--intent-explain",
+  "gloss": "when close:ask-action, predict intent:explain",
+  "guard": "close:ask-action",
+  "prediction": "intent:explain",
+  "train": {
+   "fired": 60,
+   "hit": 20
+  },
+  "test": {
+   "fired": 96,
+   "hit": 35
+  },
+  "baseline_test": 0.3064516129032258,
+  "evidence": [
+   "turn-aMNhxV",
+   "turn-FUuuI1",
+   "turn-eunhIY",
+   "turn-KOwPBy",
+   "turn-3fWrhs",
+   "turn-E5LoPx",
+   "turn-acm0YL",
+   "turn-KkUaaz",
+   "turn-rG28eX",
+   "turn-u1DDEK",
+   "turn-KC7wAa",
+   "turn-vDYhhJ",
+   "turn-ARRiVh",
+   "turn-fCcsC5",
+   "turn-SwxO2e",
+   "turn-qpylNN",
+   "turn-qvOQGL",
+   "turn-cgdqXo",
+   "turn-GdCA9H",
+   "turn-4LNcnW"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-propose--intent-propose",
+  "gloss": "when close:propose, predict intent:propose",
+  "guard": "close:propose",
+  "prediction": "intent:propose",
+  "train": {
+   "fired": 42,
+   "hit": 14
+  },
+  "test": {
+   "fired": 23,
+   "hit": 9
+  },
+  "baseline_test": 0.31048387096774194,
+  "evidence": [
+   "turn-pVzQBC",
+   "turn-ZNi76Y",
+   "turn-E0OPvB",
+   "turn-GmVL50",
+   "turn-9FCQ7c",
+   "turn-FrMU3d",
+   "turn-pAGTpo",
+   "turn-Lp9TI9",
+   "turn-f4yepo",
+   "turn-d2jbA6",
+   "turn-fhHNM0",
+   "turn-hVreGy",
+   "turn-gzovxG",
+   "turn-JmbXQe",
+   "turn-62N2V3",
+   "turn-uSuWEj",
+   "turn-1udaqe",
+   "turn-L2Ojy6",
+   "turn-UW5KjV",
+   "turn-rn35Fc"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-propose--intent-report-problem",
+  "gloss": "when close:propose, predict intent:report-problem",
+  "guard": "close:propose",
+  "prediction": "intent:report-problem",
+  "train": {
+   "fired": 42,
+   "hit": 11
+  },
+  "test": {
+   "fired": 23,
+   "hit": 4
+  },
+  "baseline_test": 0.17137096774193547,
+  "evidence": [
+   "turn-pVzQBC",
+   "turn-ZNi76Y",
+   "turn-E0OPvB",
+   "turn-GmVL50",
+   "turn-9FCQ7c",
+   "turn-FrMU3d",
+   "turn-pAGTpo",
+   "turn-Lp9TI9",
+   "turn-f4yepo",
+   "turn-d2jbA6",
+   "turn-fhHNM0",
+   "turn-hVreGy",
+   "turn-gzovxG",
+   "turn-JmbXQe",
+   "turn-62N2V3",
+   "turn-uSuWEj",
+   "turn-1udaqe",
+   "turn-L2Ojy6",
+   "turn-UW5KjV",
+   "turn-rn35Fc"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-propose--intent-approve",
+  "gloss": "when close:propose, predict intent:approve",
+  "guard": "close:propose",
+  "prediction": "intent:approve",
+  "train": {
+   "fired": 42,
+   "hit": 10
+  },
+  "test": {
+   "fired": 23,
+   "hit": 9
+  },
+  "baseline_test": 0.16330645161290322,
+  "evidence": [
+   "turn-pVzQBC",
+   "turn-ZNi76Y",
+   "turn-E0OPvB",
+   "turn-GmVL50",
+   "turn-9FCQ7c",
+   "turn-FrMU3d",
+   "turn-pAGTpo",
+   "turn-Lp9TI9",
+   "turn-f4yepo",
+   "turn-d2jbA6",
+   "turn-fhHNM0",
+   "turn-hVreGy",
+   "turn-gzovxG",
+   "turn-JmbXQe",
+   "turn-62N2V3",
+   "turn-uSuWEj",
+   "turn-1udaqe",
+   "turn-L2Ojy6",
+   "turn-UW5KjV",
+   "turn-rn35Fc"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-qualify--intent-report-problem",
+  "gloss": "when close:qualify, predict intent:report-problem",
+  "guard": "close:qualify",
+  "prediction": "intent:report-problem",
+  "train": {
+   "fired": 67,
+   "hit": 25
+  },
+  "test": {
+   "fired": 39,
+   "hit": 10
+  },
+  "baseline_test": 0.17137096774193547,
+  "evidence": [
+   "turn-2CZbnz",
+   "turn-I4xlIe",
+   "turn-yrF2dH",
+   "turn-SeqAbK",
+   "turn-oDaFoR",
+   "turn-ue2xjN",
+   "turn-k4Bdek",
+   "turn-u1XKbh",
+   "turn-aCjgmx",
+   "turn-SJjoqd",
+   "turn-jmtFzE",
+   "turn-kt2uCs",
+   "turn-aUrFTr",
+   "turn-vK4bnN",
+   "turn-J3iSOS",
+   "turn-dTvGqh",
+   "turn-JXepUh",
+   "turn-ZuFEtk",
+   "turn-w6xdpt",
+   "turn-SBTZe6"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-qualify--intent-approve",
+  "gloss": "when close:qualify, predict intent:approve",
+  "guard": "close:qualify",
+  "prediction": "intent:approve",
+  "train": {
+   "fired": 67,
+   "hit": 5
+  },
+  "test": {
+   "fired": 39,
+   "hit": 8
+  },
+  "baseline_test": 0.16330645161290322,
+  "evidence": [
+   "turn-2CZbnz",
+   "turn-I4xlIe",
+   "turn-yrF2dH",
+   "turn-SeqAbK",
+   "turn-oDaFoR",
+   "turn-ue2xjN",
+   "turn-k4Bdek",
+   "turn-u1XKbh",
+   "turn-aCjgmx",
+   "turn-SJjoqd",
+   "turn-jmtFzE",
+   "turn-kt2uCs",
+   "turn-aUrFTr",
+   "turn-vK4bnN",
+   "turn-J3iSOS",
+   "turn-dTvGqh",
+   "turn-JXepUh",
+   "turn-ZuFEtk",
+   "turn-w6xdpt",
+   "turn-SBTZe6"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-report--intent-propose",
+  "gloss": "when close:report, predict intent:propose",
+  "guard": "close:report",
+  "prediction": "intent:propose",
+  "train": {
+   "fired": 55,
+   "hit": 23
+  },
+  "test": {
+   "fired": 76,
+   "hit": 25
+  },
+  "baseline_test": 0.31048387096774194,
+  "evidence": [
+   "turn-zudQKV",
+   "turn-qVx26T",
+   "turn-4iuLRT",
+   "turn-04dRzE",
+   "turn-wTAl4C",
+   "turn-nJZkJ7",
+   "turn-wn1ytS",
+   "turn-DHzkds",
+   "turn-XI5XUg",
+   "turn-laS0G1",
+   "turn-sanlGS",
+   "turn-igj48l",
+   "turn-iaaPMe",
+   "turn-EdL8PP",
+   "turn-QTk532",
+   "turn-4QOrp2",
+   "turn-Kkv7r8",
+   "turn-0JU27W",
+   "turn-z3G6tA",
+   "turn-vpC5J4"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-report--intent-explain",
+  "gloss": "when close:report, predict intent:explain",
+  "guard": "close:report",
+  "prediction": "intent:explain",
+  "train": {
+   "fired": 55,
+   "hit": 11
+  },
+  "test": {
+   "fired": 76,
+   "hit": 25
+  },
+  "baseline_test": 0.3064516129032258,
+  "evidence": [
+   "turn-zudQKV",
+   "turn-qVx26T",
+   "turn-4iuLRT",
+   "turn-04dRzE",
+   "turn-wTAl4C",
+   "turn-nJZkJ7",
+   "turn-wn1ytS",
+   "turn-DHzkds",
+   "turn-XI5XUg",
+   "turn-laS0G1",
+   "turn-sanlGS",
+   "turn-igj48l",
+   "turn-iaaPMe",
+   "turn-EdL8PP",
+   "turn-QTk532",
+   "turn-4QOrp2",
+   "turn-Kkv7r8",
+   "turn-0JU27W",
+   "turn-z3G6tA",
+   "turn-vpC5J4"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-close-unresolved--intent-explain",
+  "gloss": "when close:unresolved, predict intent:explain",
+  "guard": "close:unresolved",
+  "prediction": "intent:explain",
+  "train": {
+   "fired": 29,
+   "hit": 4
+  },
+  "test": {
+   "fired": 25,
+   "hit": 8
+  },
+  "baseline_test": 0.3064516129032258,
+  "evidence": [
+   "turn-2XQSWn",
+   "turn-9wxcHg",
+   "turn-nTv1Cl",
+   "turn-9arIho",
+   "turn-HNaEUB",
+   "turn-JsLCB1",
+   "turn-N2PmcF",
+   "turn-sRU0zO",
+   "turn-XY5o64",
+   "turn-Ikwjni",
+   "turn-ZXkLnx",
+   "turn-hzoYSL",
+   "turn-Lr8RU4",
+   "turn-SaU0t9",
+   "turn-4pWv8t",
+   "turn-lVx5Pl",
+   "turn-nE6ytD",
+   "turn-74acWb",
+   "turn-3lVwlA",
+   "turn-KllbG8"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-approve--intent-propose",
+  "gloss": "when sure:approve, predict intent:propose",
+  "guard": "sure:approve",
+  "prediction": "intent:propose",
+  "train": {
+   "fired": 51,
+   "hit": 14
+  },
+  "test": {
+   "fired": 48,
+   "hit": 15
+  },
+  "baseline_test": 0.31048387096774194,
+  "evidence": [
+   "turn-FUuuI1",
+   "turn-Bitufh",
+   "turn-2CZbnz",
+   "turn-acm0YL",
+   "turn-M1yhqw",
+   "turn-04dRzE",
+   "turn-mvfdCR",
+   "turn-brwATk",
+   "turn-co8geN",
+   "turn-wn1ytS",
+   "turn-xWZbkD",
+   "turn-eYdJ5x",
+   "turn-sE96OI",
+   "turn-Ni4K21",
+   "turn-z5huwA",
+   "turn-30Es21",
+   "turn-ku8uNp",
+   "turn-Z7tiEt",
+   "turn-323ozi",
+   "turn-AMiPDX"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-approve--intent-ask-action",
+  "gloss": "when sure:approve, predict intent:ask-action",
+  "guard": "sure:approve",
+  "prediction": "intent:ask-action",
+  "train": {
+   "fired": 51,
+   "hit": 15
+  },
+  "test": {
+   "fired": 48,
+   "hit": 12
+  },
+  "baseline_test": 0.24596774193548387,
+  "evidence": [
+   "turn-FUuuI1",
+   "turn-Bitufh",
+   "turn-2CZbnz",
+   "turn-acm0YL",
+   "turn-M1yhqw",
+   "turn-04dRzE",
+   "turn-mvfdCR",
+   "turn-brwATk",
+   "turn-co8geN",
+   "turn-wn1ytS",
+   "turn-xWZbkD",
+   "turn-eYdJ5x",
+   "turn-sE96OI",
+   "turn-Ni4K21",
+   "turn-z5huwA",
+   "turn-30Es21",
+   "turn-ku8uNp",
+   "turn-Z7tiEt",
+   "turn-323ozi",
+   "turn-AMiPDX"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-approve--intent-report-problem",
+  "gloss": "when sure:approve, predict intent:report-problem",
+  "guard": "sure:approve",
+  "prediction": "intent:report-problem",
+  "train": {
+   "fired": 51,
+   "hit": 15
+  },
+  "test": {
+   "fired": 48,
+   "hit": 9
+  },
+  "baseline_test": 0.17137096774193547,
+  "evidence": [
+   "turn-FUuuI1",
+   "turn-Bitufh",
+   "turn-2CZbnz",
+   "turn-acm0YL",
+   "turn-M1yhqw",
+   "turn-04dRzE",
+   "turn-mvfdCR",
+   "turn-brwATk",
+   "turn-co8geN",
+   "turn-wn1ytS",
+   "turn-xWZbkD",
+   "turn-eYdJ5x",
+   "turn-sE96OI",
+   "turn-Ni4K21",
+   "turn-z5huwA",
+   "turn-30Es21",
+   "turn-ku8uNp",
+   "turn-Z7tiEt",
+   "turn-323ozi",
+   "turn-AMiPDX"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-approve--intent-explain",
+  "gloss": "when sure:approve, predict intent:explain",
+  "guard": "sure:approve",
+  "prediction": "intent:explain",
+  "train": {
+   "fired": 51,
+   "hit": 8
+  },
+  "test": {
+   "fired": 48,
+   "hit": 16
+  },
+  "baseline_test": 0.3064516129032258,
+  "evidence": [
+   "turn-FUuuI1",
+   "turn-Bitufh",
+   "turn-2CZbnz",
+   "turn-acm0YL",
+   "turn-M1yhqw",
+   "turn-04dRzE",
+   "turn-mvfdCR",
+   "turn-brwATk",
+   "turn-co8geN",
+   "turn-wn1ytS",
+   "turn-xWZbkD",
+   "turn-eYdJ5x",
+   "turn-sE96OI",
+   "turn-Ni4K21",
+   "turn-z5huwA",
+   "turn-30Es21",
+   "turn-ku8uNp",
+   "turn-Z7tiEt",
+   "turn-323ozi",
+   "turn-AMiPDX"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-approve--intent-approve",
+  "gloss": "when sure:approve, predict intent:approve",
+  "guard": "sure:approve",
+  "prediction": "intent:approve",
+  "train": {
+   "fired": 51,
+   "hit": 10
+  },
+  "test": {
+   "fired": 48,
+   "hit": 9
+  },
+  "baseline_test": 0.16330645161290322,
+  "evidence": [
+   "turn-FUuuI1",
+   "turn-Bitufh",
+   "turn-2CZbnz",
+   "turn-acm0YL",
+   "turn-M1yhqw",
+   "turn-04dRzE",
+   "turn-mvfdCR",
+   "turn-brwATk",
+   "turn-co8geN",
+   "turn-wn1ytS",
+   "turn-xWZbkD",
+   "turn-eYdJ5x",
+   "turn-sE96OI",
+   "turn-Ni4K21",
+   "turn-z5huwA",
+   "turn-30Es21",
+   "turn-ku8uNp",
+   "turn-Z7tiEt",
+   "turn-323ozi",
+   "turn-AMiPDX"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-ask-action--intent-ask-action",
+  "gloss": "when sure:ask-action, predict intent:ask-action",
+  "guard": "sure:ask-action",
+  "prediction": "intent:ask-action",
+  "train": {
+   "fired": 143,
+   "hit": 41
+  },
+  "test": {
+   "fired": 90,
+   "hit": 23
+  },
+  "baseline_test": 0.24596774193548387,
+  "evidence": [
+   "turn-Bd0Bea",
+   "turn-l48Gr0",
+   "turn-h3q8Zq",
+   "turn-pnKrDm",
+   "turn-MSsrFP",
+   "turn-9XEsiN",
+   "turn-eunhIY",
+   "turn-KOwPBy",
+   "turn-qVx26T",
+   "turn-gbuoMn",
+   "turn-ZnbOqu",
+   "turn-yB4Zf7",
+   "turn-pVzQBC",
+   "turn-M1yhqw",
+   "turn-XOoYvT",
+   "turn-ckJwA3",
+   "turn-uQaot9",
+   "turn-yrF2dH",
+   "turn-fCcsC5",
+   "turn-CbniFR"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-ask-action--intent-approve",
+  "gloss": "when sure:ask-action, predict intent:approve",
+  "guard": "sure:ask-action",
+  "prediction": "intent:approve",
+  "train": {
+   "fired": 143,
+   "hit": 21
+  },
+  "test": {
+   "fired": 90,
+   "hit": 16
+  },
+  "baseline_test": 0.16330645161290322,
+  "evidence": [
+   "turn-Bd0Bea",
+   "turn-l48Gr0",
+   "turn-h3q8Zq",
+   "turn-pnKrDm",
+   "turn-MSsrFP",
+   "turn-9XEsiN",
+   "turn-eunhIY",
+   "turn-KOwPBy",
+   "turn-qVx26T",
+   "turn-gbuoMn",
+   "turn-ZnbOqu",
+   "turn-yB4Zf7",
+   "turn-pVzQBC",
+   "turn-M1yhqw",
+   "turn-XOoYvT",
+   "turn-ckJwA3",
+   "turn-uQaot9",
+   "turn-yrF2dH",
+   "turn-fCcsC5",
+   "turn-CbniFR"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-continue--intent-approve",
+  "gloss": "when sure:continue, predict intent:approve",
+  "guard": "sure:continue",
+  "prediction": "intent:approve",
+  "train": {
+   "fired": 87,
+   "hit": 3
+  },
+  "test": {
+   "fired": 17,
+   "hit": 3
+  },
+  "baseline_test": 0.16330645161290322,
+  "evidence": [
+   "turn-ulCSSl",
+   "turn-hSbLsr",
+   "turn-aLSkRo",
+   "turn-GcJp2o",
+   "turn-DrUs5x",
+   "turn-8pCpsy",
+   "turn-npNhlG",
+   "turn-f52HqD",
+   "turn-B1pzVN",
+   "turn-KVZuGr",
+   "turn-Czkk8J",
+   "turn-Y7ZsYp",
+   "turn-fldIp8",
+   "turn-7cpmDN",
+   "turn-9arIho",
+   "turn-NOOeBZ",
+   "turn-eGPRuw"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-delegate--intent-propose",
+  "gloss": "when sure:delegate, predict intent:propose",
+  "guard": "sure:delegate",
+  "prediction": "intent:propose",
+  "train": {
+   "fired": 28,
+   "hit": 10
+  },
+  "test": {
+   "fired": 28,
+   "hit": 9
+  },
+  "baseline_test": 0.31048387096774194,
+  "evidence": [
+   "turn-MnkBGn",
+   "turn-2vHZIS",
+   "turn-Txy8Rb",
+   "turn-Fpdhp9",
+   "turn-nsydSm",
+   "turn-dxQOsB",
+   "turn-Jx4qiI",
+   "turn-LGTPbn",
+   "turn-GT3lEq",
+   "turn-2KP3Ka",
+   "turn-C7zQ3O",
+   "turn-sXWok1",
+   "turn-8vI0kD",
+   "turn-N91RBV",
+   "turn-KsW9wQ",
+   "turn-74acWb",
+   "turn-SuQRiG",
+   "turn-Hkjeqy",
+   "turn-2sbrpL",
+   "turn-Jm2KWG"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-delegate--intent-ask-action",
+  "gloss": "when sure:delegate, predict intent:ask-action",
+  "guard": "sure:delegate",
+  "prediction": "intent:ask-action",
+  "train": {
+   "fired": 28,
+   "hit": 10
+  },
+  "test": {
+   "fired": 28,
+   "hit": 9
+  },
+  "baseline_test": 0.24596774193548387,
+  "evidence": [
+   "turn-MnkBGn",
+   "turn-2vHZIS",
+   "turn-Txy8Rb",
+   "turn-Fpdhp9",
+   "turn-nsydSm",
+   "turn-dxQOsB",
+   "turn-Jx4qiI",
+   "turn-LGTPbn",
+   "turn-GT3lEq",
+   "turn-2KP3Ka",
+   "turn-C7zQ3O",
+   "turn-sXWok1",
+   "turn-8vI0kD",
+   "turn-N91RBV",
+   "turn-KsW9wQ",
+   "turn-74acWb",
+   "turn-SuQRiG",
+   "turn-Hkjeqy",
+   "turn-2sbrpL",
+   "turn-Jm2KWG"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-delegate--intent-report-problem",
+  "gloss": "when sure:delegate, predict intent:report-problem",
+  "guard": "sure:delegate",
+  "prediction": "intent:report-problem",
+  "train": {
+   "fired": 28,
+   "hit": 6
+  },
+  "test": {
+   "fired": 28,
+   "hit": 6
+  },
+  "baseline_test": 0.17137096774193547,
+  "evidence": [
+   "turn-MnkBGn",
+   "turn-2vHZIS",
+   "turn-Txy8Rb",
+   "turn-Fpdhp9",
+   "turn-nsydSm",
+   "turn-dxQOsB",
+   "turn-Jx4qiI",
+   "turn-LGTPbn",
+   "turn-GT3lEq",
+   "turn-2KP3Ka",
+   "turn-C7zQ3O",
+   "turn-sXWok1",
+   "turn-8vI0kD",
+   "turn-N91RBV",
+   "turn-KsW9wQ",
+   "turn-74acWb",
+   "turn-SuQRiG",
+   "turn-Hkjeqy",
+   "turn-2sbrpL",
+   "turn-Jm2KWG"
+  ],
+  "status": "candidate"
+ },
+ {
+  "symbol": "sym-sure-delegate--intent-approve",
+  "gloss": "when sure:delegate, predict intent:approve",
+  "guard": "sure:delegate",
+  "prediction": "intent:approve",
+  "train": {
+   "fired": 28,
+   "hit": 5
+  },
+  "test": {
+   "fired": 28,
+   "hit": 5
+  },
+  "baseline_test": 0.16330645161290322,
+  "evidence": [
+   "turn-MnkBGn",
+   "turn-2vHZIS",
+   "turn-Txy8Rb",
+   "turn-Fpdhp9",
+   "turn-nsydSm",
+   "turn-dxQOsB",
+   "turn-Jx4qiI",
+   "turn-LGTPbn",
+   "turn-GT3lEq",
+   "turn-2KP3Ka",
+   "turn-C7zQ3O",
+   "turn-sXWok1",
+   "turn-8vI0kD",
+   "turn-N91RBV",
+   "turn-KsW9wQ",
+   "turn-74acWb",
+   "turn-SuQRiG",
+   "turn-Hkjeqy",
+   "turn-2sbrpL",
+   "turn-Jm2KWG"
+  ],
+  "status": "candidate"
+ }
+]

@@ -44,6 +44,11 @@ library/social/cluster-tooling-bootstrap.flexiarg
 # with no past) on the very trial meant to prove the system.
 !data/ct-commissioning/
 !data/ct-commissioning/**
+# 2026-10-24: 小象 guard→prediction symbol candidates (LAB-2026-10-24-turn-forecast
+# "Guards and symbols") are the packet's committed deliverable, same shape as
+# the commissioning evidence base above.
+!data/xiaoxiang-symbols/
+!data/xiaoxiang-symbols/**
 .shadow-cljs/
 tmp/
 hs_err_pid*.log
