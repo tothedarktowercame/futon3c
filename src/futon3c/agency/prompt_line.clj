@@ -20,13 +20,14 @@
 (defn providers [] @!providers)
 
 (defn analysis-seat?
-  "True for the 象 turn-analysis seats (象, 象-sonnet, 象-kimi, …) and the 馬
-   reading seats (馬-sonnet). They are kept out of the per-turn Prompt line so
-   what they supply can be compared with the embedding's pattern rather than
-   primed by it (Joe, 2026-09-28)."
+  "True for the 象 turn-analysis seats (象, 象-sonnet, 象-kimi, …), the 馬
+   reading seats (馬-sonnet) and the 驴 rerank seats (驴-haiku). They are kept
+   out of the per-turn Prompt line so what they supply can be compared with
+   the embedding's pattern rather than primed by it (Joe, 2026-09-28)."
   [agent-id]
   (let [a (str agent-id)]
-    (or (= "象" a) (str/starts-with? a "象-") (str/starts-with? a "馬-"))))
+    (or (= "象" a) (str/starts-with? a "象-")
+        (str/starts-with? a "馬-") (str/starts-with? a "驴-"))))
 
 (defn register-provider!
   [{:keys [segment/id provider fn budget-ms] :as registration}]

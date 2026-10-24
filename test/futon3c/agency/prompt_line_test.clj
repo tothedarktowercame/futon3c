@@ -18,6 +18,15 @@
 
 (use-fixtures :each (fn [f] (prompt-line/reset-registry!) (f)))
 
+(deftest analysis-seats-are-kept-out-of-the-prompt-line
+  (is (prompt-line/analysis-seat? "象"))
+  (is (prompt-line/analysis-seat? "象-sonnet"))
+  (is (prompt-line/analysis-seat? "馬-sonnet"))
+  (is (prompt-line/analysis-seat? "驴-haiku") "the 驴 rerank seat, like 馬")
+  (is (not (prompt-line/analysis-seat? "claude-3")))
+  (is (not (prompt-line/analysis-seat? "驴"))) ; only the hyphenated seats
+  )
+
 (deftest pure-render-composes-pattern-and-ordered-markers
   (is (= "> " (:prompt (prompt-line/render {:render-at now} []))))
   (let [providers [(registration :pattern "pattern"
