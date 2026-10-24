@@ -9,6 +9,7 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.meta-injury-store :as injury-store]
+            [futon2.aif.load-identity :as load-identity]
             [futon3c.agency.bg-process :as bg-process]
             [futon3c.agency.registry :as reg]
             [futon3c.test-registry.local-port]
@@ -226,6 +227,23 @@
   "Resolver seam for tests. Production always delegates to requiring-resolve."
   requiring-resolve)
 
+(def ^:dynamic *source-readiness*
+  "Read-only production source verifier. Isolated runner tests bind their
+   explicit readiness dependency; request opts cannot replace this function."
+  load-identity/composition-status)
+
+(defn- verify-source-readiness!
+  []
+  (let [r (try (*source-readiness*)
+               (catch Throwable t
+                 {:status :unavailable :reason :source-verifier-failed
+                  :error-class (.getName (class t))}))]
+    (when-not (= :current (:status r))
+      (throw (ex-info "WM click source composition is unavailable"
+                      {:status 503 :error :wm-click-launch-unavailable
+                       :before-ration-spend? true :readiness r})))
+    r))
+
 (def ^:dynamic *admission-wait-ms*
   "Maximum time click! holds its caller while the runner has neither admitted
    nor refused the click. The worker remains live after this bound and its
@@ -383,8 +401,12 @@
   (let [bound-opts (-> opts machinery-cohort/apply-binding
                        configure-self-heal-ports)]
     (try
-      (if-let [config-fn (*resolve-var*
-                          'futon2.aif.full-loop-runner/config)]
+      ;; Do not load a missing runner while preparing a request: that would
+      ;; capture current disk bytes before admission could observe its absence.
+      (if-let [config-fn (if (identical? *resolve-var* requiring-resolve)
+                          (some-> (find-ns 'futon2.aif.full-loop-runner)
+                                  (ns-resolve 'config))
+                          (*resolve-var* 'futon2.aif.full-loop-runner/config))]
         (config-fn bound-opts)
         bound-opts)
       (catch Throwable _
@@ -1204,13 +1226,14 @@
                                    (not (nonblank-string? requested-click-id)))
                           (throw (ex-info "WM retry click identity is invalid"
                                           {:status 400 :error :wm-click-id-invalid})))
-                      click-id (or requested-click-id
-                                   (str "wm-click-" (UUID/randomUUID)))
                       _ (when (and requested-click-id
-                                   (not= :not-found (:status (click-status click-id))))
+                                   (not= :not-found (:status (click-status requested-click-id))))
                           (throw (ex-info "WM retry click identity already exists"
                                           {:status 409 :error :wm-click-id-conflict
-                                           :click-id click-id})))
+                                           :click-id requested-click-id})))
+                      _ (verify-source-readiness!)
+                      click-id (or requested-click-id
+                                   (str "wm-click-" (UUID/randomUUID)))
               started-at (str (Instant/now))
               next-status (assoc current
                                  :running? true

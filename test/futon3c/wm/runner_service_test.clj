@@ -45,7 +45,10 @@
                       (java.nio.file.Files/createTempDirectory
                        "wm-click-bindings-test-"
                        (make-array java.nio.file.attribute.FileAttribute 0))))]
-    (binding [service/*click-run-binding-dir* binding-dir
+    (binding [;; This fixture injects the runner; it also explicitly supplies
+              ;; its source readiness, rather than certifying canonical code.
+              service/*source-readiness* (constantly {:status :current})
+              service/*click-run-binding-dir* binding-dir
               service/*click-acceptance-dir* (str binding-dir "/acceptances")
               budget/*ledger-path* (str binding-dir "/ordinary.jsonl")
               ;; Never launch the real route-check script from a unit test.
