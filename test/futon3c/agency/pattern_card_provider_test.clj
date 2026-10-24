@@ -27,6 +27,25 @@
       (is (= "retrieved right/pattern 0.7; also other/two"
              (:segment/header segment))))))
 
+(deftest ranked-list-carries-all-proposed-patterns-with-scores
+  (pattern/observe-results!
+   "claude-17" "target"
+   [{:id "top/pattern" :score 0.42 :rank 1}
+    {:id "second/pattern" :score 0.31 :rank 2}
+    {:id "third/pattern" :score 0.2 :rank 3}]
+   "2026-09-27T19:59:59Z" "e-ranked" :provisional)
+  (let [segment (pattern/provider {:agent-id "claude-17" :session-id "target"
+                                   :render-at "2026-09-27T20:00:00Z"})]
+    (is (= [{:id "top/pattern" :score 0.42 :rank 1}
+            {:id "second/pattern" :score 0.31 :rank 2}
+            {:id "third/pattern" :score 0.2 :rank 3}]
+           (:segment/ranked segment))
+        "the top and both also-patterns travel in rank order with scores")
+    (is (= "~top/pattern" (:segment/value segment))
+        "value and header are unchanged by the new field")
+    (is (= "retrieved top/pattern 0.42; also second/pattern, third/pattern"
+           (:segment/header segment)))))
+
 (deftest stale-retrieval-is-omitted
   (pattern/observe-entry! (entry "e-stale" "claude-17" "target"
                                  "2026-09-27T18:00:00Z" "old/pattern"))

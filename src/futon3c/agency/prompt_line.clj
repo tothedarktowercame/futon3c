@@ -162,11 +162,15 @@
         (let [store (or *turn-record-store* (turn-store/store))
               pattern-segments (filter #(= :pattern (:segment/id %))
                                        (:segments result))
-              entry {:patterns (vec (keep #(some-> (:segment/value %) str)
-                                          pattern-segments))
-                     :at (or (some :segment/observed-at pattern-segments)
-                             (:rendered-at result))
-                     :job_id (some-> job-id str)}]
+              entry (cond-> {:patterns (vec (keep #(some-> (:segment/value %) str)
+                                                  pattern-segments))
+                             :at (or (some :segment/observed-at pattern-segments)
+                                     (:rendered-at result))
+                             :job_id (some-> job-id str)}
+                      ;; The ranked list travels alongside :patterns (kept
+                      ;; verbatim for the port exporter and ma-occurrence).
+                      (some :segment/ranked pattern-segments)
+                      (assoc :ranked (first (keep :segment/ranked pattern-segments))))]
           ;; update-record! is read-then-replace; serialise appends so two
           ;; renders for one record cannot drop each other's entry.
           (locking write-lock

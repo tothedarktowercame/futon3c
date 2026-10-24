@@ -83,6 +83,27 @@
 (defn- renders [store id]
   (:proposed_patterns (turn-store/read-record store id)))
 
+(deftest turn-record-write-carries-ranked-list
+  (let [store (temp-turn-store)]
+    (turn-store/write-record-id! store "turn-dddddd" {:turn_id "t4"})
+    (prompt-line/register-provider!
+     (registration :pattern "t" (fn [_] (segment :pattern "t"
+                                                 {:segment/value "~top/pattern"
+                                                  :segment/ranked
+                                                  [{:id "top/pattern" :score 0.42 :rank 1}
+                                                   {:id "second/pattern" :score 0.31 :rank 2}
+                                                   {:id "third/pattern" :score 0.2 :rank 3}]}))))
+    (binding [prompt-line/*turn-record-store* store]
+      (prompt-line/render! {:agent-id "claude-17" :session-id "s1" :render-at now
+                            :turn-record-id "turn-dddddd" :job-id "job-r"}))
+    (is (= [{:patterns ["~top/pattern"]
+             :ranked [{:id "top/pattern" :score 0.42 :rank 1}
+                      {:id "second/pattern" :score 0.31 :rank 2}
+                      {:id "third/pattern" :score 0.2 :rank 3}]
+             :at now :job_id "job-r"}]
+           (renders store "turn-dddddd"))
+        ":ranked sits next to the unchanged :patterns on the record")))
+
 (deftest turn-record-write-targets-the-render-s-own-record
   (let [store (temp-turn-store)
         pattern (atom ["~p1" now])]

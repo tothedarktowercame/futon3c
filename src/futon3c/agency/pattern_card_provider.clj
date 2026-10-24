@@ -284,10 +284,17 @@
                   top (first ranked)
                   id (some-> (result-field top :id) str)
                   score (result-field top :score)
-                  also (keep #(some-> (result-field % :id) str) (take 2 (rest ranked)))]
+                  shown (take 3 ranked)
+                  ranked-entries (map-indexed (fn [i r]
+                                               {:id (some-> (result-field r :id) str)
+                                                :score (result-field r :score)
+                                                :rank (or (result-field r :rank) (inc i))})
+                                             shown)
+                  also (keep :id (rest ranked-entries))]
               (when-not (str/blank? id)
                 {:segment/id :pattern
                  :segment/value (str "~" id)
+                 :segment/ranked (vec ranked-entries)
                  :segment/provider "futon3c.agency.pattern-card-provider/provider"
                  :segment/observed-at (:observed-at cached)
                  :segment/basis {:evidence-ref (:evidence-id cached)
