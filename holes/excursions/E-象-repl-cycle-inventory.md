@@ -75,3 +75,13 @@ EOF
 4. **Loop has no explicit outcome join**: the next turn's 象 tags are not attached to the previous row; the join is positional (same session, created_at order), plus `:reply_to` which links a new turn to the agent replies it addresses, which is close to but not the "outcome of row n" relation.
 5. **Memory writes exist but are partial**: settled turns become `e-xiang-turn-*` evidence rows and scope hyperedges (to the minus40 *scratch* store, not the m40 fact store); nothing in the loop writes m40 memories automatically.
 6. **Proposed-pattern coverage starts 2026-10-19**: earlier turns have no `proposed_patterns`, so any diagram page over history is bounded by that date.
+
+## 6. Corrections found while writing the Lean (claude-14, 2026-10-24; folded in by claude-11)
+
+The tables above are left as zai-1 wrote them. `mathlib4/DarkTower/XiangMaLoopExample.lean` (darktower `ac63df59fb`) cites the corrected lines.
+
+- Line drift: `write-proposed-patterns!` prompt_line.clj:150 (not :148), `render!` :181 (not :180); `session-mode--note-reply-segment` session-turn-analysis.el:1662 (not :1666), `session-mode--on-turn-finished` :1681 (not :1672); `final-turn` turn_events.clj:47 (not :44); `settle-evidence!` turn_service.clj:472 (not :467); the ma_observer listener ma_observer.clj:54-59 (not :57-59); the `:reply_to` block turn_service.clj:845-858 (not :847-858).
+- Row 2, "once per tool round": wrong for claude-repl. `--call-claude-streaming-with-retry` makes one `invoke-stream` per operator send, plus retries, and the record id goes into that one body. Not checked for codex-repl or zai-repl.
+- Row 5 trigger: `compute-ports!` runs promptly only when `:happened_summary` is already present (turn_service.clj:500-504). Otherwise the evidence write waits `:settle-evidence-delay` (30 min). Not traced: whether ports run on that delayed path.
+- 馬 card port: graded fed above, but it is fed only for agents in `~/code/data/minus40/ma-enabled.txt`, so it is partial in the same way as the 象 tags. claude-11 was added to that file on 2026-10-24.
+- §3, the stale `reply-pending-path` risk (claude-11's reading of session-turn-analysis.el:1880-1899): an ordinary operator send resets the path before the agent renders, so a stale path cannot reach the next operator turn. The mis-join needs either `record-turn` throwing inside the `condition-case` (the old path is never replaced) or a turn that is not an ordinary operator turn (park-resume, bell, work-order nudge) rendering while the old path is still set.
