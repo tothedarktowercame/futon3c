@@ -1,0 +1,103 @@
+{
+ "schema": "xiangma.port-measure/v1",
+ "store": "test/fixtures/xiangma-ports/store",
+ "evidence": "test/fixtures/xiangma-ports/evidence.json",
+ "window": {
+  "since": "2026-10-19",
+  "latest": "2026-10-20T13:00:00Z"
+ },
+ "records": 4,
+ "ports": [
+  {
+   "port": "operatorText",
+   "measure": "turn records with a non-blank :source_text, of all turn records",
+   "eligible": 3,
+   "carrying": 3,
+   "grade": "canon"
+  },
+  {
+   "port": "xiangTags",
+   "measure": "turn records with a .analysis.json sidecar whose :sentences is non-empty; excludes analysis_status \"declared\" (bell turns get no 象 reading, turn_service.clj:1003-1006)",
+   "eligible": 2,
+   "carrying": 1,
+   "grade": "payoff"
+  },
+  {
+   "port": "proposedPatterns",
+   "measure": "turn records with a :proposed_patterns key, of all turn records",
+   "eligible": 3,
+   "carrying": 3,
+   "grade": "canon"
+  },
+  {
+   "port": "agentReply",
+   "measure": "turn records with a non-blank :reply_text, of all turn records",
+   "eligible": 3,
+   "carrying": 3,
+   "grade": "canon"
+  },
+  {
+   "port": "commits",
+   "measure": "turn records with :happened_summary (the commit list after the trailer filter, turn_service.clj:976), of all turn records",
+   "eligible": 3,
+   "carrying": 3,
+   "grade": "canon"
+  },
+  {
+   "port": "maCard",
+   "measure": "operator-origin turn records whose :evidence_id is the turn-evidence-id of a ma-observation evidence row; excludes non-operator records (ma_observe.py:414 observes operator turns); agents absent from ma-enabled.txt are NOT excluded",
+   "eligible": 2,
+   "carrying": 2,
+   "grade": "canon"
+  },
+  {
+   "port": "patternVerdict",
+   "measure": "turn records with a non-empty :pattern_verdicts (per proposed pattern: used / didn't-apply / missed); the field is not built yet",
+   "eligible": 3,
+   "carrying": 0,
+   "grade": "payoff"
+  },
+  {
+   "port": "outcomeJoin",
+   "measure": "turn records with a non-empty :outcome_join (the next turn's id and its 象 tags as this turn's outcome); the field is not built yet",
+   "eligible": 3,
+   "carrying": 0,
+   "grade": "payoff"
+  },
+  {
+   "port": "memoryWrite",
+   "measure": "turn records with an e-xiang-turn-<id> row in the xiang-turn evidence query; excludes analysis_status \"declared\" and \"not-requested\" (not written by design, turn_service.clj:372-374)",
+   "eligible": 2,
+   "carrying": 2,
+   "grade": "canon"
+  },
+  {
+   "port": "citesUsedMemory",
+   "measure": "turn records whose :reply_text has a line \"㊢ (m40) used: ...\", of all turn records",
+   "eligible": 3,
+   "carrying": 1,
+   "grade": "payoff"
+  },
+  {
+   "port": "storesFinding",
+   "measure": "turn records whose :reply_text has the \"㊢ (m40) used:\" line with a \"stored:\" field, every stored slug existing as <memory-dir>/<slug>.md, of all turn records",
+   "eligible": 3,
+   "carrying": 1,
+   "grade": "payoff"
+  },
+  {
+   "port": "marksParagraphs",
+   "measure": "turn records with a non-blank :reply_text in which every blank-line paragraph (fenced code removed) opens with a proforma mark; excludes records with no reply and bell records (origin \"agent\": bells are not marked, ~/code/CLAUDE.md:338)",
+   "eligible": 2,
+   "carrying": 2,
+   "grade": "canon"
+  },
+  {
+   "port": "commitTrailers",
+   "measure": "turn records with any commit seen (a commit line in :happened_summary, turn_acts.clj:96, or a :commits_excluded entry); carrying when no excluded commit has reason no-trailers or trailers-unreadable (turn_service.clj:331-334)",
+   "eligible": 2,
+   "carrying": 2,
+   "grade": "canon"
+  }
+ ]
+}

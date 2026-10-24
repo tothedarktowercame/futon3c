@@ -1,0 +1,23 @@
+{
+ "version": 1,
+ "surface": "typed",
+ "analysis_status": "analyzed",
+ "origin": "operator",
+ "session_id": "fx-session",
+ "agent_id": "fx-agent",
+ "ports_status": {
+  "state": "computed"
+ },
+ "proposed_patterns": [
+  {
+   "patterns": [
+    "fixture/pattern"
+   ],
+   "at": "2026-10-20T00:00:00Z",
+   "job_id": "fx-job"
+  }
+ ],
+ "created_at": "2026-10-18T09:00:00Z",
+ "turn_id": "fx-t0",
+ "source_text": "Synthetic, before the window."
+}

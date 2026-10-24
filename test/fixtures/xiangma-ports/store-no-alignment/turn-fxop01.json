@@ -1,0 +1,30 @@
+{
+ "version": 1,
+ "surface": "typed",
+ "analysis_status": "analyzed",
+ "origin": "operator",
+ "session_id": "fx-session",
+ "agent_id": "fx-agent",
+ "ports_status": {
+  "state": "computed"
+ },
+ "proposed_patterns": [
+  {
+   "patterns": [
+    "fixture/pattern"
+   ],
+   "at": "2026-10-20T00:00:00Z",
+   "job_id": "fx-job"
+  }
+ ],
+ "created_at": "2026-10-20T10:00:00Z",
+ "turn_id": "fx-t1",
+ "evidence_id": "emacs-fx01",
+ "source_text": "Synthetic operator text one.",
+ "reply_text": "㊥ (fixture gist) Synthetic reply paragraph one.\n\n㊢ (fixture report) Synthetic paragraph two.\n\n```\nsynthetic code, not marked\n```\n\n㊢ (m40) used: none · stored: `fx-slug` · queried: none",
+ "happened_summary": "What the agent did (machine-added context for reading the turn):\nReply begins:\nsynthetic\nCommits during the turn (any repo; not necessarily the agent's own):\n- fxrepo 0123456789abcdef synthetic commit",
+ "alignment": {
+  "version": 1,
+  "acts": []
+ }
+}

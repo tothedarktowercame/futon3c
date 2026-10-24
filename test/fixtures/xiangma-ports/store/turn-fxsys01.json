@@ -1,0 +1,13 @@
+{
+ "origin": "system",
+ "analysis_status": "declared",
+ "created_at": "2026-10-20T13:00:00Z",
+ "agent_id": "fx-agent",
+ "session_id": "fx-session",
+ "turn_id": "fx-t4",
+ "source_text": "session ended: fixture",
+ "session_end": {
+  "id": "fx",
+  "reason": "fixture"
+ }
+}

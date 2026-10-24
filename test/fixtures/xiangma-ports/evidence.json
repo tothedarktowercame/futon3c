@@ -1,0 +1,36 @@
+[
+ {
+  "evidence/id": "e-fx-obs-1",
+  "evidence/tags": [
+   "ma-observation"
+  ],
+  "evidence/body": {
+   "turn-evidence-id": "emacs-fx01"
+  }
+ },
+ {
+  "evidence/id": "e-fx-obs-2",
+  "evidence/tags": [
+   "ma-observation"
+  ],
+  "evidence/body": {
+   "turn-evidence-id": "emacs-fx02"
+  }
+ },
+ {
+  "evidence/id": "e-xiang-turn-turn-fxop01",
+  "evidence/tags": [
+   "xiang-turn",
+   "xiang-turn-analyzed"
+  ],
+  "evidence/body": {}
+ },
+ {
+  "evidence/id": "e-xiang-turn-turn-fxop02",
+  "evidence/tags": [
+   "xiang-turn",
+   "xiang-turn-analyzed"
+  ],
+  "evidence/body": {}
+ }
+]
