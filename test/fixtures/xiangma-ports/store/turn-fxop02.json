@@ -21,17 +21,13 @@
  "turn_id": "fx-t2",
  "evidence_id": "emacs-fx02",
  "source_text": "Synthetic operator text two.",
- "reply_text": "㊥ (fixture gist) Synthetic reply paragraph one.\n\n㊢ (fixture report) Synthetic paragraph two.\n\n```\nsynthetic code, not marked\n```",
+ "reply_text": "㊥ (fixture gist) Synthetic reply paragraph one.\n\n㊢ (fixture report) Synthetic paragraph two.\n\n```\nsynthetic code, not marked\n```\n\nAn unmarked synthetic paragraph.",
  "happened_summary": "What the agent did (machine-added context for reading the turn):\nReply begins:\nsynthetic\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
  "commits_excluded": [
   {
    "sha": "fedcba9876543210",
-   "reason": "another-seat",
+   "reason": "no-trailers",
    "agent-id": "fx-other"
   }
- ],
- "alignment": {
-  "version": 1,
-  "acts": []
- }
+ ]
 }

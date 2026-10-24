@@ -1,3 +1,8 @@
 {
- "sentences": []
+ "sentences": [
+  {
+   "text": "Synthetic operator text two.",
+   "intent": "report"
+  }
+ ]
 }
