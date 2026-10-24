@@ -51,6 +51,7 @@
                        :reply_text (str "reply words of " id " that can be quoted at length")}))
   (record! store "turn-system" {:origin "system" :created_at "2026-10-24T00:03:30Z"})
   (record! store "turn-other" {:session_id "sess-2" :created_at "2026-10-24T00:03:45Z"})
+  (record! store "turn-bell" {:origin "agent" :created_at "2026-10-24T00:03:50Z"})
   store)
 
 (defn- q [id who] ;; a 5+ word verbatim quote of record ID's text
@@ -68,9 +69,9 @@
         "n=3: the record plus its two immediately earlier operator turns")
     (is (= ["turn-new"] (mapv :id (mo/chain-window store "turn-new" 1)))
         "n=1: the record alone")
-    (is (not (some #{"turn-system" "turn-other"}
+    (is (not (some #{"turn-system" "turn-other" "turn-bell"}
                    (mapv :id (mo/chain-window store "turn-new" 9))))
-        "system and other-session records are excluded")
+        "system, bell and other-session records are excluded")
     (is (= ["turn-old1" "turn-old2" "turn-old3" "turn-old4" "turn-new"]
            (mapv :id (mo/chain-window store "turn-new" 9)))
         "n=9: all five operator turns of the session, ending at the record")))
@@ -182,7 +183,9 @@
       (is (= "none" (:reader v)))
       (is (= "no reader" (get-in v [:patterns 0 :chain :I1 :why])))
       (is (= 0 (get-in v [:patterns 0 :chain_mapped])))
-      (is (= "void" (get-in v [:patterns 0 :status]))))
+      (is (= "void" (get-in v [:patterns 0 :status])))
+      (is (= ["turn-old1" "turn-old2" "turn-old3" "turn-old4" "turn-new"] (:window v))
+          "the stored window is the chain, oldest first"))
     (record! store "turn-new"
              {:proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
     (mo/verdict! {:store store :library (temp-library)

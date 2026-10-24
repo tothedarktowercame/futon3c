@@ -50,16 +50,16 @@
 
 (defn chain-window
   "The record plus up to N-1 earlier operator-origin records of the same
-  session, oldest first, ending at the record: [{:id :record}].  Session-end
-  records (origin \"system\") are excluded, as are records of other
-  sessions.  Pure over the store.  Default N is 8."
+  session, oldest first, ending at the record: [{:id :record}].  Records
+  of any other origin (session-end \"system\", bell \"agent\") are excluded,
+  as are records of other sessions.  Pure over the store.  Default N is 8."
   ([store record-id] (chain-window store record-id (:window-n defaults)))
   ([store record-id n]
    (when-let [record (and (ts/record-id? record-id) (ts/read-record store record-id))]
      (let [session (:session_id record)
            at (str (:created_at record))
            all (->> (ts/list-records store :session-id session :limit 500)
-                    (filterv (fn [{r :record}] (not= "system" (:origin r))))
+                    (filterv (fn [{r :record}] (= "operator" (:origin r))))
                     (sort-by #(str (get-in % [:record :created_at])))
                     (filterv (fn [{id :id r :record}]
                                (or (= id record-id)
@@ -295,7 +295,7 @@
                        patterns)))]
     {:version 1
      :at (str (java.time.Instant/now))
-     :window (vec window-ids)
+     :window (mapv :id window)
      :reader (if (string? reply) (str (or seat "unknown")) "none")
      :patterns (vec rows)}))
 
