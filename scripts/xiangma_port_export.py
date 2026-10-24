@@ -15,6 +15,10 @@ Eligibility excludes records only for a reason the code gives; each
 exclusion cites file:line below and is stated in the port's `measure`.
 
 Unit: one turn record `turn-<id>.json` in the window (by `created_at`).
+The window ends `--settle-minutes` (default 35) before now: a turn's later
+ports are written up to 30 min after it (`:settle-evidence-delay`,
+turn_service.clj:500-504), so a turn still in flight is not yet due to carry
+them.  A turn stuck past that margin is counted.
 Sidecars (`turn-<id>.json.analysis.json` and the rest, turn_store.clj:50-53)
 are not records.  Session-end records (origin "system",
 turn_service.clj:640) are not turns, so no port counts them.
@@ -51,7 +55,7 @@ COMMIT_SECTION = re.compile(r"Commits during the turn[^\n]*:\n")
 COMMIT_LINE = re.compile(r"- (\S+) ([0-9a-f]{7,40}) (.+)")
 
 
-def load_records(store, since):
+def load_records(store, since, until=None):
     recs = []
     for path in sorted(glob.glob(os.path.join(store, "turn-*.json"))):
         name = os.path.basename(path)
@@ -63,6 +67,8 @@ def load_records(store, since):
         except (OSError, ValueError) as e:
             raise SystemExit("xiangma_port_export: unreadable record %s: %s" % (path, e))
         if not isinstance(d, dict) or str(d.get("created_at", "")) < since:
+            continue
+        if until is not None and str(d.get("created_at", "")) > until:
             continue
         recs.append((name[:-len(".json")], path, d))
     return recs
@@ -269,15 +275,20 @@ def main(argv=None):
     ap.add_argument("--memory-dir", default=DEFAULT_MEMORY)
     ap.add_argument("--base", default=DEFAULT_BASE)
     ap.add_argument("--evidence-file")
+    ap.add_argument("--settle-minutes", type=float, default=35.0)
     args = ap.parse_args(argv)
+    import datetime
+    until = (datetime.datetime.now(datetime.timezone.utc)
+             - datetime.timedelta(minutes=args.settle_minutes)
+             ).strftime("%Y-%m-%dT%H:%M:%SZ")
     if not os.path.isdir(args.store):
         raise SystemExit("xiangma_port_export: no store at %s" % args.store)
-    recs = load_records(args.store, args.since)
+    recs = load_records(args.store, args.since, until)
     rows, source = evidence_rows(args, args.since)
     latest = max((str(d.get("created_at")) for _, _, d in recs), default=None)
     json.dump({"schema": SCHEMA, "store": os.path.abspath(args.store),
                "evidence": source,
-               "window": {"since": args.since, "latest": latest},
+               "window": {"since": args.since, "until": until, "latest": latest},
                "records": len(recs),
                "ports": measure(recs, rows, args.memory_dir)},
               sys.stdout, ensure_ascii=False, indent=1)
