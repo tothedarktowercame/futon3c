@@ -19,13 +19,16 @@
 
   Design copied from futon3c.xiang.ma-reading: injectable :ask, a verbatim
   quote check, and the write goes through the turn store's update-record!,
-  so it cannot race the JVM's other record writers.  Not registered as a
-  listener; that is the next packet."
+  so it cannot race the JVM's other record writers.  Registered by start!
+  on :aligned (after the alignment reading) and wired live from
+  futon3c.xiang.ma-reading-live."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.nio.file Files]
+           [java.util.concurrent ExecutorService Executors ThreadFactory]
            [java.security MessageDigest]))
 
 (def defaults
@@ -299,19 +302,106 @@
      :reader (if (string? reply) (str (or seat "unknown")) "none")
      :patterns (vec rows)}))
 
+(defn- verdict-pattern-ids
+  "The set of pattern ids a stored verdict covers."
+  [v]
+  (into #{} (map :pattern) (:patterns v)))
+
 (defn verdict!
   "Read one operator turn record's per-pattern occurrence verdict and store
   :pattern_verdicts on it (the field scripts/xiangma_port_export.py measures
   for the patternVerdict port).  Nil (nothing stored) when the record is
-  absent, is not an operator turn, or proposed no patterns.  Never throws."
+  absent, is not an operator turn, or proposed no patterns.  Never throws.
+
+  Idempotent over the pattern set: a record that already carries a verdict
+  for exactly the same patterns is left alone (the existing verdict is
+  returned and nothing is written), so a repeated :aligned event — the
+  alignment reading can raise it more than once per record, because it runs
+  per :ported and :ported is dispatched from more than one path — cannot
+  double-write.  A changed pattern set is re-read."
   [{:keys [store notify!] :as opts} id]
   (try
-    (let [record (and store (ts/read-record store id))]
+    (let [record (and store (ts/read-record store id))
+          proposed (some-> record patterns-of)]
       (when (and record
                  (= "operator" (:origin record))
-                 (seq (patterns-of record)))
-        (let [verdicts (verdict-map opts store id)]
-          (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))
-          (when notify! (notify! {:event :pattern-verdicts :id id}))
-          verdicts)))
+                 (seq proposed))
+        (let [existing (:pattern_verdicts record)]
+          (if (and (map? existing)
+                   (= (set proposed) (verdict-pattern-ids existing)))
+            existing
+            (let [verdicts (verdict-map opts store id)]
+              (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))
+              (when notify! (notify! {:event :pattern-verdicts :id id}))
+              verdicts)))))
     (catch Exception _ nil)))
+
+;; ------------------------------------------------------------ live wiring
+
+(defonce ^:private ^ExecutorService executor
+  ;; One daemon thread, as ma-reading's: the model pass can take up to
+  ;; :timeout-ms, and the turn service's scheduler is shared with every
+  ;; other turn listener.
+  (Executors/newSingleThreadExecutor
+   (reify ThreadFactory
+     (newThread [_ r] (doto (Thread. ^Runnable r "ma-occurrence") (.setDaemon true))))))
+
+(defn handle-event
+  "One turn-service event for the occurrence reading under OPTS: run the
+  verdict only for an :aligned event with a record id (the alignment
+  reading raises :aligned after storing the alignment; the occurrence
+  reading needs the reply and the computed ports too, so a fair verdict
+  runs after it, not on :ported)."
+  [{:keys [store notify!] :as opts} {:keys [event id]}]
+  (when (and (= :aligned event) id)
+    (let [store (if (fn? store) (store) store)]
+      (when store
+        (verdict! (assoc opts :store store :notify! notify!) id)))))
+
+(defn start!
+  "Register the occurrence listener on turn-service events.  OPTS as per
+  defaults plus :store (turn-store, or a 0-arg fn returning it, resolved at
+  event time) and :notify! (a 1-arg fn, usually the running service's
+  notify).  The work runs on this namespace's own thread, so a slow whistle
+  never holds the turn service's scheduler.  Re-registering replaces the
+  listener."
+  [opts]
+  (turn-service/add-turn-listener!
+   ::ma-occurrence
+   (fn [event]
+     (.submit executor ^Runnable #((resolve `handle-event) opts event))))
+  nil)
+
+(defn whistle-ask
+  "The production :ask: a bounded whistle to SEAT through Agency's HTTP API
+  (synchronous, so the request and its answer cannot cross).  Returns the
+  seat's text, or nil on any failure or timeout."
+  [{:keys [seat prompt timeout-ms]}]
+  (try
+    (let [conn (doto ^java.net.HttpURLConnection
+                (.openConnection (java.net.URL. "http://127.0.0.1:7070/api/alpha/whistle"))
+                 (.setRequestMethod "POST")
+                 (.setDoOutput true)
+                 (.setConnectTimeout 5000)
+                 (.setReadTimeout (int (+ (or timeout-ms 60000) 15000)))
+                 (.setRequestProperty "Content-Type" "application/json"))]
+      (with-open [w (io/writer (.getOutputStream conn))]
+        (.write w (json/generate-string {:agent-id seat :prompt prompt
+                                         :timeout-ms (or timeout-ms 60000)
+                                         :caller "ma-occurrence"})))
+      (let [body (json/parse-string (slurp (.getInputStream conn)) true)]
+        (when (:ok body) (some-> (:response body) str))))
+    (catch Throwable _ nil)))
+
+(defn- live-service []
+  (try (some-> (requiring-resolve 'futon3c.transport.http/xiang-bell-service) deref (apply []))
+       (catch Throwable _ nil)))
+
+(defn start-live!
+  "Wire the listener to the running service: its store and notify are found
+  at event time, so this survives reloads of either namespace."
+  []
+  (start! {:ask whistle-ask
+           :store (fn [] (some-> (live-service) :config :store))
+           :notify! (fn [ev] (when-let [svc (live-service)]
+                               (@#'turn-service/notify-turn! svc ev)))}))

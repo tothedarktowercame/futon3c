@@ -8,6 +8,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.xiang.ma-occurrence :as mo]
+            [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts]))
 
 (defn- temp-store []
@@ -202,3 +203,81 @@
                                  :proposed_patterns [{:patterns [pid]}]})
     (is (nil? (run-with store "turn-agent" (constantly "[]"))))
     (is (nil? (verdicts store "turn-agent")))))
+
+;; -------------------------------------------------------------- the listener
+
+(defn- wait-for
+  "Poll PRED up to ~5 s (the listener runs on the namespace's own thread)."
+  [pred]
+  (let [deadline (+ (System/nanoTime) (* 5 (long 1e9)))]
+    (loop []
+      (or (pred)
+          (when (< (System/nanoTime) deadline)
+            (Thread/sleep 20)
+            (recur))))))
+
+(deftest an-aligned-event-writes-verdicts-a-ported-event-alone-does-not
+  (let [store (base-records (temp-store))
+        asks (atom 0)
+        opts {:store store :library (temp-library)
+              :ask (fn [_]
+                     (swap! asks inc)
+                     (ask-reply [{:pattern pid :turn {} :chain {}}]))}]
+    (record! store "turn-new"
+             {:proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
+    (mo/handle-event opts {:event :ported :id "turn-new"})
+    (is (nil? (verdicts store "turn-new"))
+        "a :ported event alone writes no verdict")
+    (mo/handle-event opts {:event :aligned :id "turn-new"})
+    (let [v (verdicts store "turn-new")]
+      (is (map? v) "the :aligned event writes :pattern_verdicts")
+      (is (= 1 (count (:patterns v)))))
+    ;; idempotence: a repeated :aligned (the alignment reading can raise it
+    ;; more than once per record) must not double-write or re-ask.
+    (let [before (verdicts store "turn-new")]
+      (mo/handle-event opts {:event :aligned :id "turn-new"})
+      (is (= 1 @asks) "the same pattern set is not read twice")
+      (is (= before (verdicts store "turn-new"))
+          "the stored verdict is left alone, not overwritten")))
+  ;; a non-operator record is left alone even on :aligned
+  (let [store (temp-store)
+        opts {:store store :library (temp-library) :ask (constantly "[]")}]
+    (record! store "turn-bell2" {:origin "agent"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (mo/handle-event opts {:event :aligned :id "turn-bell2"})
+    (is (nil? (verdicts store "turn-bell2")))))
+
+(deftest deletion-check-removing-the-aligned-filter-makes-ported-write
+  ;; The guard under test is handle-event's (= :aligned event) filter.
+  ;; Replace handle-event with a copy that has that one check deleted: a
+  ;; :ported event now writes, so the :ported-alone assertion above would
+  ;; fail without the filter (demonstrated against the real store and ask).
+  (let [store (base-records (temp-store))
+        opts {:store store :library (temp-library)
+              :ask (constantly (ask-reply [{:pattern pid :turn {} :chain {}}]))}]
+    (record! store "turn-del" {:proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
+    (with-redefs [mo/handle-event
+                  (fn [opts {:keys [id]}]
+                    ;; the (= :aligned event) check, deleted
+                    (let [store (if (fn? (:store opts)) ((:store opts)) (:store opts))]
+                      (when (and id store)
+                        (mo/verdict! (assoc opts :store store) id))))]
+      (mo/handle-event opts {:event :ported :id "turn-del"})
+      (is (map? (verdicts store "turn-del"))
+          "with the filter deleted a :ported event DOES write — so the
+          :ported-alone test above fails in that world; the filter is what
+          holds it"))))
+
+(deftest start-registers-a-keyed-listener-that-runs-on-its-own-thread
+  (let [store (base-records (temp-store))
+        registered (atom nil)]
+    (record! store "turn-live" {:proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
+    (with-redefs [turn-service/add-turn-listener!
+                  (fn [_key f] (reset! registered f) nil)]
+      (mo/start! {:store store :library (temp-library)
+                  :ask (constantly (ask-reply [{:pattern pid :turn {} :chain {}}]))}))
+    (let [f @registered]
+      (is (fn? f) "start! registers a listener")
+      (f {:event :aligned :id "turn-live"})
+      (is (wait-for #(map? (verdicts store "turn-live")))
+          "the registered listener's :aligned event reaches the store"))))
