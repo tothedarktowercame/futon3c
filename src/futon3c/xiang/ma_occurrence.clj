@@ -126,9 +126,14 @@
 
 (defn patterns-of
   "The distinct pattern ids of RECORD's :proposed_patterns (leading ~
-  stripped), across renders, in first-seen order."
+  stripped), across renders, in first-seen order.  A render that carries
+  :ranked (the top pattern and the two shown as \"also\") contributes all of
+  its ranked ids; an older render contributes its :patterns."
   [record]
-  (into [] (comp (mapcat :patterns)
+  (into [] (comp (mapcat (fn [entry]
+                           (if-let [ranked (seq (:ranked entry))]
+                             (keep #(some-> (:id %) str) ranked)
+                             (:patterns entry))))
                  (map #(str/replace-first % #"^~" ""))
                  (remove str/blank?)
                  (distinct))

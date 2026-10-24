@@ -281,3 +281,15 @@
       (f {:event :aligned :id "turn-live"})
       (is (wait-for #(map? (verdicts store "turn-live")))
           "the registered listener's :aligned event reaches the store"))))
+
+(deftest patterns-of-reads-the-ranked-list-when-a-render-has-one
+  (is (= ["a/top" "b/also" "c/also" "d/old"]
+         (mo/patterns-of
+          {:proposed_patterns
+           [{:patterns ["~a/top"]
+             :ranked [{:id "a/top" :score 0.5 :rank 1}
+                      {:id "b/also" :score 0.4 :rank 2}
+                      {:id "c/also" :score 0.3 :rank 3}]}
+            {:patterns ["~d/old"]}
+            {:patterns ["~a/top"] :ranked [{:id "a/top" :rank 1}]}]}))
+      "ranked ids in rank order, older renders by :patterns, distinct"))
