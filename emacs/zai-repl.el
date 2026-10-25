@@ -475,6 +475,7 @@ the id is display-only, so a failed read must never break buffer setup."
 
 (define-key zai-repl-mode-map (kbd "RET") #'zai-repl-send-input)
 (define-key zai-repl-mode-map (kbd "C-a") #'agent-chat-beginning-of-line)
+(define-key zai-repl-mode-map (kbd "<home>") #'agent-chat-beginning-of-line)
 (define-key zai-repl-mode-map (kbd "C-l") #'recenter-top-bottom)
 (define-key zai-repl-mode-map (kbd "C-c C-c") #'agent-chat-interrupt)
 (define-key zai-repl-mode-map (kbd "C-c C-k") #'zai-repl-clear)

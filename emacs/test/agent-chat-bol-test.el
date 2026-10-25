@@ -1,6 +1,10 @@
-;;; agent-chat-bol-test.el --- C-a stops after the prompt -*- lexical-binding: t; -*-
+;;; agent-chat-bol-test.el --- C-a and HOME stop after the prompt -*- lexical-binding: t; -*-
 (require 'ert)
 (require 'agent-chat)
+(require 'claude-repl)
+(require 'codex-repl)
+(require 'kimi-repl)
+(require 'zai-repl)
 
 (defmacro agent-chat-bol-test--with-repl (&rest body)
   "A buffer holding a transcript line, a prompt, and typed input \"hello\"."
@@ -42,5 +46,16 @@
    (goto-char (+ (point-min) 5))
    (agent-chat-beginning-of-line)
    (should (= (point) (point-min)))))
+
+(ert-deftest agent-chat-repl-home-has-the-same-command-as-control-a ()
+  (dolist (map (list claude-repl-mode-map
+                     codex-repl-mode-map
+                     codex-repl-mirror-mode-map
+                     kimi-repl-mode-map
+                     zai-repl-mode-map))
+    (should (eq (lookup-key map (kbd "C-a"))
+                #'agent-chat-beginning-of-line))
+    (should (eq (lookup-key map (kbd "<home>"))
+                (lookup-key map (kbd "C-a"))))))
 
 (provide 'agent-chat-bol-test)

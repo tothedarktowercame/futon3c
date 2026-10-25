@@ -4431,6 +4431,7 @@ nil means no mission."
 
 (define-key codex-repl-mode-map (kbd "RET") #'codex-repl-send-input)
 (define-key codex-repl-mode-map (kbd "C-a") #'agent-chat-beginning-of-line)
+(define-key codex-repl-mode-map (kbd "<home>") #'agent-chat-beginning-of-line)
 (define-key codex-repl-mode-map (kbd "C-l") #'recenter-top-bottom)
 (define-key codex-repl-mode-map (kbd "C-c C-c") #'codex-repl-interrupt)
 (define-key codex-repl-mode-map (kbd "C-c C-k") #'codex-repl-clear)
@@ -4454,6 +4455,7 @@ nil means no mission."
 (define-key codex-repl-mirror-mode-map (kbd "g") #'codex-repl-mirror-refresh)
 (define-key codex-repl-mirror-mode-map (kbd "RET") #'codex-repl-send-input)
 (define-key codex-repl-mirror-mode-map (kbd "C-a") #'agent-chat-beginning-of-line)
+(define-key codex-repl-mirror-mode-map (kbd "<home>") #'agent-chat-beginning-of-line)
 (define-key codex-repl-mirror-mode-map (kbd "C-l") #'recenter-top-bottom)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-c") #'codex-repl-interrupt)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-k") #'codex-repl-clear)
