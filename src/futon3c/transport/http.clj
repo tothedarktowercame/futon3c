@@ -8467,6 +8467,19 @@
       (json-response 503 {:ok false :error :meta-preview-failed
                           :message (ex-message t)}))))
 
+(defn- handle-meta-latest
+  "GET /api/alpha/wm/meta-latest — the newest outer-task-selection receipt a
+  real click retained on disk, served without recomputation (Joe, approved
+  2026-10-25; the Emacs META browser must not block on a recompute that took
+  84 s).  See futon3c.wm.meta-latest."
+  []
+  (try
+    (let [[status body] ((requiring-resolve 'futon3c.wm.meta-latest/response))]
+      (json-response status body))
+    (catch Throwable t
+      (json-response 503 {:ok false :error :meta-latest-failed
+                          :message (ex-message t)}))))
+
 (defn- handle-mission-detail
   "GET /api/alpha/missions/:id — single mission info + wiring diagram."
   [_config mission-id]
@@ -12944,6 +12957,9 @@
       (and (= :get method) (= "/api/alpha/wm/meta-preview" uri))
       (handle-meta-preview)
 
+      (and (= :get method) (= "/api/alpha/wm/meta-latest" uri))
+      (handle-meta-latest)
+
       (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
       (handle-cascade-real-graph request config)
 
@@ -13465,6 +13481,9 @@
 
           (and (= :get method) (= "/api/alpha/wm/meta-preview" uri))
           (handle-meta-preview)
+
+          (and (= :get method) (= "/api/alpha/wm/meta-latest" uri))
+          (handle-meta-latest)
 
           (and (= :get method) (string? uri)
                (str/starts-with? uri "/api/alpha/missions/")
