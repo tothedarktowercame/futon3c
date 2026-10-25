@@ -35,7 +35,7 @@ turns** (1477/(1477+381)). Declared marks are rare: 35 tensions across 5
 sessions, all with full windows, 54% resolved.
 
 Unresolved splits into re-raised in window vs no resolution signal:
-397 = 21 re-raised + 376 no-signal (re-raise is rare; most unresolved
+397 = 19 re-raised + 378 no-signal (re-raise is rare; most unresolved
 tensions are simply left behind).
 
 ## D/X agreement (turn granularity, n=3068)
