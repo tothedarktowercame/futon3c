@@ -488,6 +488,22 @@
           :ms (quot (- (System/nanoTime) t0) 1000000) :source nil
           :reason (str "resident-error: " (or (.getMessage t) (class t)))})))))
 
+(defn prewarm!
+  "Start the read resident in the background, so the first render after a
+  JVM start does not pay the ~2.5 s model load (the pattern-search
+  prewarm pattern; claude-11 packet 2b). Failures are only logged — the
+  first read-near then starts it or falls back as usual. Never blocks."
+  []
+  (future
+    (locking read-owner-lock
+      (try
+        (when-not (when-let [r @!read-resident]
+                    (.isAlive ^java.lang.Process (:process r)))
+          (start-read-resident! {}))
+        (catch Throwable t
+          (println (str "[lu-memory] prewarm failed: " (.getMessage t)))))))
+  nil)
+
 (defn append-situation!
   "Keep the sidecar current: embed one situation (id, text, props) and
   append its vector through the resident. Returns true when appended,

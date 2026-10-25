@@ -124,11 +124,27 @@
           :sha256 (sha256-hex data)
           :parts parts})))))
 
+(defn- ranked-ids
+  "The ranked entries' ids, ~ stripped, blanks dropped, first-seen order."
+  [coll]
+  (into [] (comp (keep #(some-> (:id %) str))
+                 (map #(str/replace-first % #"^~" ""))
+                 (remove str/blank?))
+        coll))
+
+(def per-source-cap
+  "Packet 2b: each source contributes at most its top 3 ids to 馬's verdict,
+  so the union across embedding / 驴/m40 / 驴 is capped at 9 patterns."
+  3)
+
 (defn patterns-of
-  "The distinct pattern ids proposed to RECORD, each as {:id .. :sources [..]}:
-  the :proposed_patterns ids (leading ~ stripped, across renders, first-seen
-  order, source \"embedding\") then the :lu_ranked ids (source \"驴\"),
-  deduplicated; an id proposed by both carries both sources.  A render that
+  "The pattern ids proposed to RECORD for 馬's verdict, each as
+  {:id .. :sources [..] :shown bool}: the union of the :proposed_patterns
+  ids, the :embedding_ranked ids, the :m40_ranked ids and the :lu_ranked ids
+  (leading ~ stripped), deduplicated in that source order, each source
+  capped at its top 3 (so at most 9). :sources is the subset of
+  \"embedding\", \"驴/m40\" and \"驴\" that proposed the id; :shown is true
+  for the ids of a shown segment (a render's :ranked).  A render that
   carries :ranked contributes all of its ranked ids; an older render
   contributes its :patterns."
   [record]
@@ -140,22 +156,30 @@
                              (map #(str/replace-first % #"^~" ""))
                              (remove str/blank?))
                        (:proposed_patterns record))
-        lu (into []
-                 (comp (keep #(some-> (:id %) str))
-                       (map #(str/replace-first % #"^~" ""))
-                       (remove str/blank?))
-                 (:ranked (:lu_ranked record)))
-        entries (concat (for [i proposed] {:id i :source "embedding"})
-                        (for [i lu] {:id i :source "驴"}))]
-    (reduce (fn [acc {:keys [id source]}]
-              (if (some #(when (= (:id %) id) %) acc)
-                (mapv #(if (= (:id %) id)
-                         (update % :sources (fn [s] (vec (distinct (conj (vec s) source)))))
-                         %)
-                      acc)
-                (conj acc {:id id :sources [source]})))
-            []
-            entries)))
+        shown-ids (into #{} (comp (mapcat #(ranked-ids (:ranked %)))
+                                  (distinct))
+                        (:proposed_patterns record))
+        groups [["embedding" (distinct (concat proposed
+                                               (ranked-ids (:embedding_ranked record))))]
+                ["驴/m40" (ranked-ids (:ranked (:m40_ranked record)))]
+                ["驴" (ranked-ids (:ranked (:lu_ranked record)))]]
+        entries (mapcat (fn [[source ids]]
+                          (for [i (take per-source-cap ids)]
+                            {:id i :source source}))
+                        groups)]
+    (->>
+      (reduce (fn [acc {:keys [id source]}]
+                (if (some #(when (= (:id %) id) %) acc)
+                  (mapv #(if (= (:id %) id)
+                           (update % :sources (fn [s] (vec (distinct (conj (vec s) source)))))
+                           %)
+                        acc)
+                  (conj acc {:id id :sources [source]})))
+              []
+              entries)
+      (mapv #(if (contains? shown-ids (:id %))
+               (assoc % :shown true)
+               %)))))
 
 ;; ------------------------------------------------------------- the model pass
 
@@ -270,10 +294,11 @@
    "  \"chain\": {\"I1\": {..}, \"I2\": {..}, \"G\": {..}, \"B\": {..}}}]\n"
    "Do not summarise or judge the work in the turns. Only map the parts."))
 
-(defn- no-reader-pattern [sources p]
+(defn- no-reader-pattern [sources shown p]
   (let [void {:element nil :why "no reader"}]
     {:pattern (:id p) :sha256 (:sha256 p)
      :sources (vec (or (get sources (:id p)) []))
+     :shown (boolean (get shown (:id p)))
      :turn {:I1 void :I2 void :G void :B void}
      :chain {:I1 void :I2 void :G void :B void}
      :turn_mapped 0 :chain_mapped 0 :status "void"}))
@@ -292,6 +317,7 @@
         texts (window-texts window)
         proposed (patterns-of record)
         sources (into {} (map (juxt :id :sources)) proposed)
+        shown (into {} (map (juxt :id :shown)) proposed)
         patterns (mapv #(read-pattern (or library pattern-library) (:id %))
                        proposed)
         reply (when (and ask (seq patterns))
@@ -302,7 +328,7 @@
         rows (if-not (string? reply)
                ;; typed absence: no reader (not wired, off, or failed) is
                ;; recorded, not defaulted to success.
-               (mapv #(no-reader-pattern sources %) patterns)
+               (mapv #(no-reader-pattern sources shown %) patterns)
                (let [parsed (extract-json-array reply)
                      by-pattern (into {}
                                       (comp (filter map?)
@@ -318,6 +344,7 @@
                                chain-n (stored-count chain-m)]
                            {:pattern (:id p) :sha256 (:sha256 p)
                             :sources (vec (or (get sources (:id p)) []))
+                            :shown (boolean (get shown (:id p)))
                             :turn turn-m :chain chain-m
                             :turn_mapped (stored-count turn-m)
                             :chain_mapped chain-n

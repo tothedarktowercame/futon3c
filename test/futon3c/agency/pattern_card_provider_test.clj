@@ -273,6 +273,7 @@
 (deftest without-lu-ranked-the-embedding-segment-is-unchanged-apart-from-source
   ;; no :lu_ranked at all, and one whose source is the embedding fallback:
   ;; both must render the embedding segment, without waiting for anything.
+  ;; The 驴/m40 read is stubbed to a typed fallback so no resident starts.
   (doseq [store [(temp-turn-record "turn-no-lu" nil)
                  (temp-turn-record
                   "turn-fallback"
@@ -283,7 +284,10 @@
      "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}
                            {:id "emb/two" :score 0.8 :rank 2}]
      "2026-10-25T00:00:10Z" "e-emb" :provisional)
-    (binding [prompt-line/*turn-record-store* store]
+    (binding [prompt-line/*turn-record-store* store
+              pattern/*read-near* (fn [_text _opts]
+                                    {:ranked [] :neighbours 0 :ms 3
+                                     :source nil :reason "no-positive-pattern"})]
       (let [segment (pattern/provider
                      {:agent-id "claude-17" :session-id "target"
                       :render-at "2026-10-25T00:00:11Z"
@@ -299,3 +303,114 @@
          (:segment/value
           (pattern/provider {:agent-id "claude-17" :session-id "target"
                              :render-at "2026-10-25T00:00:11Z"})))))
+
+;; Packet 2b: the 驴/m40 read shown by record-id alternation, budgeted,
+;; recorded, and fully disabled by the off-switch. "turn-even-5"'s first
+;; sha256 byte is 100 (even), "turn-odd-1"'s is 165 (odd); both are
+;; asserted as preconditions.
+
+(def m40-ranked
+  [{:id "m40/one" :score 1.5 :rank 1 :evidence ["r9" "r8"]}
+   {:id "m40/two" :score 1.0 :rank 2 :evidence ["r8"]}
+   {:id "m40/three" :score 0.6 :rank 3 :evidence ["r1"]}])
+
+(defn- m40-read [ranked source]
+  (fn [_text _opts]
+    {:ranked ranked :neighbours (if (seq ranked) 6 0) :ms 7
+     :source source :reason nil}))
+
+(deftest the-sha-parity-of-the-test-record-ids
+  (is (true? (pattern/m40-parity-even? "turn-even-5")))
+  (is (false? (pattern/m40-parity-even? "turn-odd-1"))))
+
+(deftest an-even-record-id-shows-the-m40-read
+  (let [store (temp-turn-record "turn-even-5" nil)]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}] 
+     "2026-10-25T00:00:10Z" "e-emb" :provisional)
+    (binding [prompt-line/*turn-record-store* store
+              pattern/*read-near* (m40-read m40-ranked "驴/m40")]
+      (let [segment (pattern/provider
+                     {:agent-id "claude-17" :session-id "target"
+                      :render-at "2026-10-25T00:00:11Z"
+                      :turn-record-id "turn-even-5"})]
+        (is (= "~m40/one" (:segment/value segment)))
+        (is (= "驴/m40" (:segment/shown-source segment)))
+        (is (= "驴/m40" (:source (first (:segment/ranked segment)))))
+        (is (= "驴/m40 m40/one (score 1.5); also m40/two, m40/three"
+               (:segment/header segment)))
+        (is (= "驴/m40" (:source (:segment/m40 segment))))
+        (is (= ["emb/top"] (mapv :id (:segment/embedding-ranked segment)))
+            "the unshown embedding top 3 is still carried for the record")))))
+
+(deftest an-odd-record-id-shows-the-embedding-but-records-both
+  (let [store (temp-turn-record "turn-odd-1" nil)]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}
+                           {:id "emb/two" :score 0.8 :rank 2}]
+     "2026-10-25T00:00:10Z" "e-emb" :provisional)
+    (binding [prompt-line/*turn-record-store* store
+              pattern/*read-near* (m40-read m40-ranked "驴/m40")]
+      (let [segment (pattern/provider
+                     {:agent-id "claude-17" :session-id "target"
+                      :render-at "2026-10-25T00:00:11Z"
+                      :turn-record-id "turn-odd-1"})]
+        (is (= "~emb/top" (:segment/value segment)))
+        (is (= "embedding" (:segment/shown-source segment)))
+        (is (= "驴/m40" (:source (:segment/m40 segment)))
+            "the m40 read is recorded even though it was not shown")))))
+
+(deftest a-read-slower-than-the-budget-is-typed-and-shows-the-embedding
+  (let [store (temp-turn-record "turn-even-5" nil)]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}]
+     "2026-10-25T00:00:10Z" "e-emb" :provisional)
+    (binding [prompt-line/*turn-record-store* store
+              pattern/*read-near* (fn [_ _]
+                                    (Thread/sleep 400)
+                                    {:ranked m40-ranked :neighbours 6 :ms 400
+                                     :source "驴/m40" :reason nil})]
+      (let [segment (pattern/provider
+                     {:agent-id "claude-17" :session-id "target"
+                      :render-at "2026-10-25T00:00:11Z"
+                      :turn-record-id "turn-even-5"})]
+        (is (= "~emb/top" (:segment/value segment))
+            "even parity but no read in budget: the embedding is shown")
+        (is (= "embedding" (:segment/shown-source segment)))
+        (is (= "budget" (:reason (:segment/m40 segment))))))))
+
+(deftest the-off-switch-keeps-the-pre-2b-behaviour
+  (let [store (temp-turn-record "turn-even-5" nil)
+        off (doto (java.io.File/createTempFile "lu-off" "") (.deleteOnExit))]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}]
+     "2026-10-25T00:00:10Z" "e-emb" :provisional)
+    (binding [prompt-line/*turn-record-store* store
+              pattern/*m40-off-switch* (.getPath off)
+              pattern/*read-near* (fn [_ _] (throw (ex-info "must not read" {})))]
+      (let [segment (pattern/provider
+                     {:agent-id "claude-17" :session-id "target"
+                      :render-at "2026-10-25T00:00:11Z"
+                      :turn-record-id "turn-even-5"})]
+        (is (= "~emb/top" (:segment/value segment)))
+        (is (nil? (:segment/m40 segment)))
+        (is (nil? (:segment/shown-source segment)))))))
+
+(deftest a-render-records-m40-embedding-ranked-and-shown-source
+  (let [store (temp-turn-record "turn-even-5" nil)]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}]
+     "2026-10-25T00:00:10Z" "e-emb" :provisional)
+    (binding [prompt-line/*turn-record-store* store
+              pattern/*read-near* (m40-read m40-ranked "驴/m40")]
+      (prompt-line/render! {:agent-id "claude-17" :session-id "target"
+                            :render-at "2026-10-25T00:00:11Z"
+                            :turn-record-id "turn-even-5" :job-id "j-1"})
+      (let [entry (peek (:proposed_patterns
+                         (turn-store/read-record store "turn-even-5")))]
+        (is (= ["~m40/one"] (:patterns entry)))
+        (is (= "驴/m40" (:shown_source entry)))
+        (is (= "驴/m40" (:source (:m40_ranked entry))))
+        (is (= 7 (:ms (:m40_ranked entry))))
+        (is (= ["emb/top"] (mapv :id (:embedding_ranked entry))))
+        (is (= "j-1" (:job_id entry)))))))

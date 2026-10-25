@@ -11,3 +11,7 @@
 (mo/start-live!)
 (lu/start-live!)
 (lum/start-live!)
+
+;; Packet 2b: the 驴/m40 read resident prewarmed in the background at JVM
+;; start, after the listeners — the same pattern as pattern-search.
+(lum/prewarm!)

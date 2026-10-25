@@ -71,14 +71,16 @@
 
 (defn- submit-provider
   [pool ctx registration]
-  (let [submitted-at (System/nanoTime)]
+  ;; bound-fn* conveys the caller's dynamic bindings (*turn-record-store*,
+  ;; pattern-card-provider's *read-near* seams) onto the pool thread.
+  (let [pf (bound-fn* (:fn registration))
+        submitted-at (System/nanoTime)]
     [submitted-at
      (.submit pool
               ^Callable
               (fn []
                 (try
-                  {:value ((:fn registration)
-                           (assoc ctx :budget-ms (:budget-ms registration)))
+                  {:value (pf (assoc ctx :budget-ms (:budget-ms registration)))
                    :completed-at (System/nanoTime)}
                   (catch Throwable t
                     {:error t :completed-at (System/nanoTime)}))))]))
@@ -163,6 +165,7 @@
         (let [store (or *turn-record-store* (turn-store/store))
               pattern-segments (filter #(= :pattern (:segment/id %))
                                        (:segments result))
+              shown (first pattern-segments)
               entry (cond-> {:patterns (vec (keep #(some-> (:segment/value %) str)
                                                   pattern-segments))
                              :at (or (some :segment/observed-at pattern-segments)
@@ -170,8 +173,17 @@
                              :job_id (some-> job-id str)}
                       ;; The ranked list travels alongside :patterns (kept
                       ;; verbatim for the port exporter and ma-occurrence).
-                      (some :segment/ranked pattern-segments)
-                      (assoc :ranked (first (keep :segment/ranked pattern-segments))))]
+                      (:segment/ranked shown)
+                      (assoc :ranked (:segment/ranked shown))
+                      ;; Packet 2b: the 驴/m40 read (fallbacks and timeouts
+                      ;; included), the embedding top 3 and which source was
+                      ;; shown, so 馬 can score every source, shown or not.
+                      (:segment/m40 shown)
+                      (assoc :m40_ranked (:segment/m40 shown))
+                      (:segment/embedding-ranked shown)
+                      (assoc :embedding_ranked (:segment/embedding-ranked shown))
+                      (:segment/shown-source shown)
+                      (assoc :shown_source (:segment/shown-source shown)))]
           ;; update-record! is read-then-replace; serialise appends so two
           ;; renders for one record cannot drop each other's entry.
           (locking write-lock

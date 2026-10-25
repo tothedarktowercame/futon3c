@@ -1,6 +1,7 @@
 (ns futon3c.agency.pattern-card-provider
   "Cached prompt-line provider for the most recent exact-session retrieval."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.pattern-card-acts :as card-acts]
             [futon3c.agency.pattern-card-record :as card-record]
@@ -8,8 +9,10 @@
             [futon3c.agency.rule-record :as hx-store]
             [futon3c.evidence.store :as estore]
             [futon3c.mission-control.service :as mcs]
+            [futon3c.xiang.lu-memory :as lum]
             [futon3c.xiang.turn-store :as turn-store])
   (:import [java.net URLEncoder]
+           [java.security MessageDigest]
            [java.time Duration Instant]))
 
 (def stale-after (Duration/ofMinutes 30))
@@ -302,50 +305,163 @@
                         (when (seq also) (str "; also " (str/join ", " also))))})))))))
     (catch Throwable _ nil)))
 
+(defn- embedding-segment
+  "The exact-session embedding segment from the cache, as before packet 2b."
+  [{:keys [agent-id session-id render-at]}]
+  (let [key [(str agent-id) (str session-id)]
+        cached (get @!retrievals key)]
+    (if-not cached
+      nil
+      (if-not (fresh? (str render-at) (:observed-at cached))
+        nil
+        (let [ranked (sort-by #(long (or (result-field % :rank) Long/MAX_VALUE))
+                              (:results cached))
+              top (first ranked)
+              id (some-> (result-field top :id) str)
+              score (result-field top :score)
+              shown (take 3 ranked)
+              ranked-entries (map-indexed (fn [i r]
+                                            {:id (some-> (result-field r :id) str)
+                                             :score (result-field r :score)
+                                             :rank (or (result-field r :rank) (inc i))
+                                             :source "embedding"})
+                                          shown)
+              also (keep :id (rest ranked-entries))]
+          (when-not (str/blank? id)
+            {:segment/id :pattern
+             :segment/value (str "~" id)
+             :segment/ranked (vec ranked-entries)
+             :segment/provider "futon3c.agency.pattern-card-provider/provider"
+             :segment/observed-at (:observed-at cached)
+             :segment/basis {:evidence-ref (:evidence-id cached)
+                             :scope {:agent-id (str agent-id)
+                                     :session-id (str session-id)
+                                     :basis-status (:basis-status cached)}}
+             :segment/header
+             (str "retrieved " id " " score
+                  (when (seq also) (str "; also " (str/join ", " also))))}))))))
+
+;; ------------------------------------------------- the 驴/m40 read (packet 2b)
+
+(def m40-budget-ms
+  "The hard ceiling the render path ever waits for one 驴/m40 read. The
+  read itself runs on a future and is deref'd with this timeout, so the
+  provider never blocks longer. 150 ms (claude-11, packet 2b)."
+  150)
+
+(def ^:dynamic *read-near*
+  "Seam over lum/read-near so tests never start the resident python."
+  nil)
+
+(def ^:dynamic *m40-off-switch*
+  "Seam over the off-switch file path so tests never touch the real one."
+  nil)
+
+(defn- m40-off?
+  []
+  (try (.isFile (io/file (str (or *m40-off-switch* lum/off-switch-path))))
+       (catch Throwable _ false)))
+
+(defn m40-parity-even?
+  "The alternation: even first sha256 byte of RECORD-ID → 驴/m40, odd → the
+  embedding. Deterministic per record, so the comparison between the two
+  sources stays fair across turns (claude-11, packet 2b)."
+  [record-id]
+  (let [d (.digest (MessageDigest/getInstance "SHA-256")
+                   (.getBytes ^String (str record-id) "UTF-8"))]
+    (even? (bit-and 0xFF (aget ^bytes d 0)))))
+
+(defn- read-m40
+  "One bounded 驴/m40 read for RECORD-ID's source text: the future is deref'd
+  with the hard budget and cancelled on timeout, and the result carries :at
+  and, on timeout, :reason \"budget\". Never throws."
+  [record-id text]
+  (let [f (future (try ((or *read-near* lum/read-near)
+                        (str text) {:record-id record-id})
+                      (catch Throwable t
+                        {:ranked [] :neighbours 0 :ms 0 :source nil
+                         :reason (str "read-error: " (.getMessage t))})))
+        result (deref f m40-budget-ms ::budget)]
+    (if (identical? ::budget result)
+      (do (future-cancel f)
+          {:at (str (Instant/now)) :ms m40-budget-ms :source nil
+           :reason "budget" :ranked [] :neighbours 0})
+      (try (assoc result :at (str (Instant/now)))
+           (catch Throwable _
+             {:at (str (Instant/now)) :ms 0 :source nil
+              :reason "read-error: non-map-result" :ranked [] :neighbours 0})))))
+
+(defn- m40-segment
+  "The shown 驴/m40 segment, with the read result and the embedding's ranked
+  carried alongside for the record write."
+  [{:keys [agent-id session-id]} m40 embedding-ranked]
+  (let [ranked (mapv (fn [{:keys [id score rank]}]
+                       {:id (str id) :score score :rank rank :source "驴/m40"})
+                     (:ranked m40))
+        top (first ranked)]
+    (when (and top (not (str/blank? (str (:id top)))))
+      (cond-> {:segment/id :pattern
+               :segment/value (str "~" (:id top))
+               :segment/ranked ranked
+               :segment/provider "futon3c.agency.pattern-card-provider/provider"
+               :segment/observed-at (str (:at m40))
+               :segment/basis {:scope {:agent-id (str agent-id)
+                                       :session-id (str session-id)
+                                       :basis-status :lu-m40}}
+               :segment/header (str "驴/m40 " (:id top) " (score " (:score top) ")"
+                                    (when-let [also (seq (keep :id (rest ranked)))]
+                                      (str "; also " (str/join ", " also))))
+               :segment/m40 m40
+               :segment/shown-source "驴/m40"}
+        (seq embedding-ranked) (assoc :segment/embedding-ranked embedding-ranked)))))
+
+(defn- alternation-segment
+  "Packet 2b: for a render context whose record has a source_text, read
+  驴/m40 under the hard budget and show either it or the embedding segment
+  by the record id's sha parity — even → 驴/m40 (only when the read's
+  :source is non-nil), odd → the embedding. Whichever is shown carries the
+  m40 read result, the embedding top 3 and :shown-source onto the record.
+  Nil (the pre-2b paths) when there is no turn-record-id, no source text,
+  or the off-switch file exists."
+  [ctx]
+  (try
+    (let [record-id (some-> (:turn-record-id ctx) str)
+          store (or prompt-line/*turn-record-store* (turn-store/store))
+          record (when (and record-id (turn-store/record-id? record-id))
+                   (turn-store/read-record store record-id))]
+      (when (and (map? record)
+                 (seq (str (:source_text record)))
+                 (not (m40-off?)))
+        (let [m40 (read-m40 record-id (:source_text record))
+              embedding (embedding-segment ctx)
+              embedding-ranked (some-> embedding :segment/ranked)]
+          (if (and (m40-parity-even? record-id) (:source m40))
+            (or (m40-segment ctx m40 embedding-ranked)
+                ;; a nil m40 segment (blank top id) falls back to embedding
+                (some-> embedding
+                        (assoc :segment/m40 m40
+                               :segment/shown-source "embedding")))
+            (some-> embedding
+                    (assoc :segment/m40 m40
+                           :segment/shown-source "embedding"))))))
+    (catch Throwable _ nil)))
+
 (defn provider
-  [{:keys [agent-id session-id render-at] :as ctx}]
+  [{:keys [agent-id session-id] :as ctx}]
   (recheck-async! agent-id session-id)
   (or (active-pattern-card ctx)
       (provisional-pattern-card ctx)
       (lu-ranked-segment ctx)
-      (let [key [(str agent-id) (str session-id)]
-            cached (get @!retrievals key)]
-        (if-not cached
-          nil
-          (if-not (fresh? (str render-at) (:observed-at cached))
-            nil
-            (let [ranked (sort-by #(long (or (result-field % :rank) Long/MAX_VALUE))
-                                  (:results cached))
-                  top (first ranked)
-                  id (some-> (result-field top :id) str)
-                  score (result-field top :score)
-                  shown (take 3 ranked)
-                  ranked-entries (map-indexed (fn [i r]
-                                               {:id (some-> (result-field r :id) str)
-                                                :score (result-field r :score)
-                                                :rank (or (result-field r :rank) (inc i))
-                                                :source "embedding"})
-                                             shown)
-                  also (keep :id (rest ranked-entries))]
-              (when-not (str/blank? id)
-                {:segment/id :pattern
-                 :segment/value (str "~" id)
-                 :segment/ranked (vec ranked-entries)
-                 :segment/provider "futon3c.agency.pattern-card-provider/provider"
-                 :segment/observed-at (:observed-at cached)
-                 :segment/basis {:evidence-ref (:evidence-id cached)
-                                 :scope {:agent-id (str agent-id)
-                                         :session-id (str session-id)
-                                         :basis-status (:basis-status cached)}}
-                 :segment/header
-                 (str "retrieved " id " " score
-                      (when (seq also) (str "; also " (str/join ", " also))))})))))))
+      (alternation-segment ctx)
+      (embedding-segment ctx)))
 
 (defn register! []
   (prompt-line/register-provider!
    {:segment/id :pattern
     :provider "futon3c.agency.pattern-card-provider/provider"
     :fn provider
-    :budget-ms 100}))
+    ;; 200 ms so the 150 ms 驴/m40 read budget fits inside the provider
+    ;; deadline (packet 2b); the whole-render budget (250 ms) still bounds it.
+    :budget-ms 200}))
 
 (register!)

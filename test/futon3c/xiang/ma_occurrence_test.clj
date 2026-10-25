@@ -283,10 +283,9 @@
           "the registered listener's :aligned event reaches the store"))))
 
 (deftest patterns-of-reads-the-ranked-list-when-a-render-has-one
-  (is (= [{:id "a/top" :sources ["embedding"]}
-          {:id "b/also" :sources ["embedding"]}
-          {:id "c/also" :sources ["embedding"]}
-          {:id "d/old" :sources ["embedding"]}]
+  (is (= [{:id "a/top" :sources ["embedding"] :shown true}
+          {:id "b/also" :sources ["embedding"] :shown true}
+          {:id "c/also" :sources ["embedding"] :shown true}]
          (mo/patterns-of
           {:proposed_patterns
            [{:patterns ["~a/top"]
@@ -295,7 +294,8 @@
                       {:id "c/also" :score 0.3 :rank 3}]}
             {:patterns ["~d/old"]}
             {:patterns ["~a/top"] :ranked [{:id "a/top" :rank 1}]}]}))
-      "ranked ids in rank order, older renders by :patterns, distinct"))
+      "ranked ids in rank order, older renders by :patterns, distinct; the
+      embedding source is capped at its top 3 (packet 2b), so d/old drops"))
 
 (deftest patterns-of-unions-lu-ranked-after-the-embedding-ids
   (is (= [{:id "e/one" :sources ["embedding"]}
@@ -313,6 +313,32 @@
                        :ranked [{:id "x/both" :rank 1}]}}))
       "an id proposed by both carries both sources, whatever lu's source"))
 
+(deftest patterns-of-unions-all-sources-with-shown-and-cap
+  (let [result (mo/patterns-of
+                {:proposed_patterns
+                 [{:ranked [{:id "emb/one" :rank 1} {:id "emb/two" :rank 2}
+                            {:id "emb/three" :rank 3} {:id "emb/four" :rank 4}]}]
+                 :embedding_ranked [{:id "emb/three" :rank 1} {:id "emb/nine" :rank 2}]
+                 :m40_ranked {:source "驴/m40"
+                              :ranked [{:id "m40/one" :rank 1} {:id "emb/one" :rank 2}
+                                       {:id "m40/two" :rank 3} {:id "m40/three" :rank 4}]}
+                 :lu_ranked {:source "驴"
+                             :ranked [{:id "m40/one" :rank 1} {:id "lu/one" :rank 2}
+                                      {:id "lu/two" :rank 3} {:id "lu/three" :rank 4}]}})]
+    ;; embedding top 3 (emb/nine and emb/four capped out), 驴/m40's new ids
+    ;; (emb/one merges, m40/three capped out), 驴's new ids (lu/three capped
+    ;; out): 7 ids, never more than 9.
+    (is (= ["emb/one" "emb/two" "emb/three" "m40/one" "m40/two" "lu/one" "lu/two"]
+           (mapv :id result)))
+    (is (= ["embedding" "驴/m40"]
+           (:sources (some #(when (= "emb/one" (:id %)) %) result))))
+    (is (= ["驴/m40" "驴"]
+           (:sources (some #(when (= "m40/one" (:id %)) %) result))))
+    (is (true? (:shown (some #(when (= "emb/one" (:id %)) %) result)))
+        "ids of the shown segment carry :shown true")
+    (is (not (:shown (some #(when (= "lu/one" (:id %)) %) result)))
+        "unshown ids do not")))
+
 (deftest verdict-rows-score-both-sets-and-carry-sources
   (let [store (base-records (temp-store))]
     (record! store "turn-new"
@@ -329,4 +355,6 @@
       (is (= 2 (count rows)) "both the embedding's and 驴's patterns are read in one whistle")
       (is (= ["embedding"] (:sources (first rows))))
       (is (= ["驴"] (:sources (second rows))))
-      (is (= "test-family/lu-only" (:pattern (second rows)))))))
+      (is (= "test-family/lu-only" (:pattern (second rows))))
+      (is (false? (:shown (first rows)))
+          "no render carried :ranked, so nothing was marked shown"))))
