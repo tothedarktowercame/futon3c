@@ -185,6 +185,8 @@ def measure(recs, rows, memory_dir):
             os.path.exists(os.path.join(memory_dir, s + ".md")) for s in slugs)
 
     unsigned = {"no-trailers", "trailers-unreadable"}
+    lu_ranked = sum(1 for t in turns
+                    if (t[2].get("lu_ranked") or {}).get("source") == "驴")
 
     return [
         port("operatorText",
@@ -198,7 +200,9 @@ def measure(recs, rows, memory_dir):
              "turn_service.clj:1003-1006)",
              [t for t in turns if status(t) != "declared"], tagged),
         port("proposedPatterns",
-             "turn records with a :proposed_patterns key, of all turn records",
+             "turn records with a :proposed_patterns key, of all turn records"
+             + "; informational (not graded): %d of %d carry :lu_ranked from 驴"
+             % (lu_ranked, len(turns)),
              turns, lambda t: "proposed_patterns" in t[2]),
         port("agentReply",
              "turn records with a non-blank :reply_text, of all turn records",
