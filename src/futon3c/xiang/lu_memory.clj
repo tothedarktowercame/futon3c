@@ -265,7 +265,7 @@
   ([opts] (seed! opts nil))
   ([opts store]
    (let [store (or store (:store opts))
-         with-verdicts (->> (ts/list-records store 100000)
+         with-verdicts (->> (ts/list-records store :limit 100000)
                             (filter #(seq (-> (:record %) :pattern_verdicts :patterns))))]
      (loop [[{id :id r :record} & rest*] with-verdicts
             acc {:records 0 :rows 0 :written 0 :unchanged 0 :failed []
