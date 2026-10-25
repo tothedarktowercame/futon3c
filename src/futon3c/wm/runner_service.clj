@@ -91,7 +91,8 @@
              {:generation (inc generation) :provider provider}))))
 
 (defn- acquire-medic-authority
-  [opts expected]
+  ([opts] (acquire-medic-authority opts ::initial))
+  ([opts expected]
   (let [{:keys [generation provider]} @!medic-authority-provider
         ;; Request-supplied contexts, resolutions and derived verifiers are
         ;; always discarded before consulting the application provider.
@@ -102,16 +103,38 @@
                    ((requiring-resolve
                      'futon2.aif.meta-medic-authority/resolve-context)
                     (provider))
-                   {:status :absent :verifier (constantly false)})
-        identity (when (= :ready (:status resolved))
-                   {:generation generation :authority (:identity resolved)})]
-    (when (and expected (not= expected identity))
+                   {:status :absent})
+        _ (when (= :refused (:status resolved))
+            (throw (ex-info "Medic authority provider refused"
+                            {:status 503
+                             :error (:reason resolved)
+                             :before-ration-spend? true})))
+        identity {:generation generation
+                  :authority (if (= :ready (:status resolved))
+                               (:identity resolved)
+                               {:status :absent})}
+        resolution (:resolution resolved)
+        verifier (if resolution
+                   ((requiring-resolve
+                     'futon2.aif.meta-medic-authority/resolution-verifier)
+                    resolution)
+                   (constantly false))]
+    (when (and (not= ::initial expected) (not= expected identity))
       (throw (ex-info "Medic authority changed between admission and worker"
                       {:status 503 :error :meta-medic-authority-context-drift
                        :before-ration-spend? true})))
-    (assoc clean :meta-medic-authority-identity identity
-                 :meta-medic-authority-resolution resolved
-                 :meta-medic-authority-verifier (:verifier resolved))))
+    (cond-> (assoc clean :meta-medic-authority-identity identity
+                         :meta-medic-authority-verifier verifier)
+      resolution (assoc :meta-medic-authority-resolution resolution)))))
+
+(defn- assert-provider-current! [opts]
+  (let [expected (:meta-medic-authority-identity opts)
+        actual-generation (:generation @!medic-authority-provider)]
+    (when-not (= (:generation expected) actual-generation)
+      (throw (ex-info "Medic authority changed before click admission"
+                      {:status 503 :error :meta-medic-authority-context-drift
+                       :before-ration-spend? true})))
+    true))
 
 (defn- serializable-click-opts [opts]
   (let [clean (-> opts
@@ -315,6 +338,10 @@
    nor refused the click. The worker remains live after this bound and its
    authoritative state remains observable through status/GET."
   30000)
+
+(def ^:dynamic *before-medic-admission-lock-hook*
+  "Hermetic race seam. Production is nil; no external effect is installed."
+  nil)
 
 (def ^:dynamic *click-run-binding-persist-stage-hook*
   "Fault-injection seam. Stages are :temp-forced before rename and :renamed
@@ -1268,11 +1295,13 @@
         ;; authority.  Reject malformed identity before any ledger/port
         ;; preflight can obscure the request's own error.
         opts (admit-run-id! opts)
-        opts (acquire-medic-authority (configured-runner-opts opts) nil)
+        opts (acquire-medic-authority (configured-runner-opts opts))
         opts (meta-self-heal-preflight! opts)
         idem (:idempotency-key opts)
         payload (acceptance-payload opts)
         payload-sha (digest/sha256 (pr-str payload))]
+    (when *before-medic-admission-lock-hook*
+      (*before-medic-admission-lock-hook*))
     (locking acceptance-lock
       (let [idem-file (when (nonblank-string? idem) (idempotency-file idem))
             prior (when (and idem-file (.exists idem-file))
@@ -1284,7 +1313,9 @@
             (throw (ex-info "WM click idempotency key reused with conflicting payload"
                             {:status 409 :error :wm-click-idempotency-conflict
                              :idempotency-key idem :click-id (:click-id prior)})))
-          (loop []
+          (do
+            (assert-provider-current! opts)
+            (loop []
             (let [current @!status]
               (if (:running? current)
                 {:rejected :already-running :click-id (:click-id current)}
@@ -1354,4 +1385,4 @@
                       (finally
                         (deliver completion {:status :start-failed
                                              :click-id click-id}))))
-                          (throw throwable))))))))))))))
+                          (throw throwable)))))))))))))))

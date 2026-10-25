@@ -5,6 +5,7 @@
             [futon2.aif.meta-medic-authority :as authority]
             [futon2.aif.meta-medic-authority-test :as authority-fixture]
             [futon2.aif.meta-self-heal-production :as self-heal]
+            [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
             [futon3c.wm.runner-service :as service]))
 
 (def pin {:path "synthetic.edn" :sha256 (apply str (repeat 64 "a"))})
@@ -25,15 +26,15 @@
     (service/install-medic-authority-provider! (constantly context))
     (let [resolved (#'service/acquire-medic-authority
                     {:meta-medic-authority-context {:trust (constantly false)}
-                     :meta-medic-authority-verifier (constantly true)} nil)]
+                     :meta-medic-authority-verifier (constantly true)})]
       (with-redefs [self-heal/production-readiness
                     (fn [opts]
                       (reset! seen opts)
                       {:status :ready})]
-        (is (= :ready (get-in (service/meta-self-heal-preflight! resolved)
-                              [:meta-medic-authority-resolution :status])))
+        (is (some? (:meta-medic-authority-resolution
+                    (service/meta-self-heal-preflight! resolved))))
         (is (ifn? (:meta-medic-authority-verifier @seen)))
-        (is (= :ready (get-in @seen [:meta-medic-authority-resolution :status])))
+        (is (some? (:meta-medic-authority-resolution @seen)))
         (is (nil? (:meta-medic-authority-context @seen)))))))
 
 (deftest actual-preflight-uses-provider-for-medic-bearing-ledger
@@ -61,19 +62,19 @@
     (service/install-medic-authority-provider! (constantly context))
     (let [resolved (#'service/acquire-medic-authority
                     {:meta-injury-ledger-path ledger-path
-                     :meta-repair-transaction-path tx-path} nil)
+                     :meta-repair-transaction-path tx-path})
           preflight (service/meta-self-heal-preflight! resolved)
           diagnosis (self-heal/diagnosis-context resolved)]
       (is (= :appended (:status medic)))
       (is (= :appended (:status unrelated)))
-      (is (= :ready (get-in preflight [:meta-medic-authority-resolution :status])))
+      (is (some? (:meta-medic-authority-resolution preflight)))
       (is (= :absent (get-in preflight [:meta-self-heal-readiness :status])))
       (is (= #{"injury/unrelated"}
              (set (keys (get-in diagnosis [:active-injuries :injuries]))))))))
 
 (deftest serialization-retains-only-stable-authority-identity
   (service/install-medic-authority-provider! (constantly context))
-  (let [resolved (#'service/acquire-medic-authority {} nil)
+  (let [resolved (#'service/acquire-medic-authority {})
         payload (#'service/serializable-click-opts resolved)
         roundtrip (read-string (pr-str payload))]
     (is (= (:meta-medic-authority-identity resolved)
@@ -94,7 +95,7 @@
 
 (deftest worker-reacquires-same-scope-and-refuses-drift
   (service/install-medic-authority-provider! (constantly context))
-  (let [admitted (#'service/acquire-medic-authority {} nil)
+  (let [admitted (#'service/acquire-medic-authority {})
         identity (:meta-medic-authority-identity admitted)]
     (is (= identity (:meta-medic-authority-identity
                      (#'service/acquire-medic-authority admitted identity))))
@@ -105,10 +106,49 @@
                     (catch clojure.lang.ExceptionInfo e (ex-data e)))]
       (is (= :meta-medic-authority-context-drift (:error failure))))))
 
+(deftest absent-refused-and-provider-transitions-are-explicit
+  (let [absent (#'service/acquire-medic-authority {})
+        absent-id (:meta-medic-authority-identity absent)]
+    (is (= {:status :absent} (get-in absent-id [:authority])))
+    (is (= absent-id (:meta-medic-authority-identity
+                      (#'service/acquire-medic-authority absent absent-id))))
+    (service/install-medic-authority-provider! (constantly context))
+    (is (= :meta-medic-authority-context-drift
+           (:error (try
+                     (#'service/acquire-medic-authority absent absent-id)
+                     nil
+                     (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+  (service/install-medic-authority-provider! (constantly nil))
+  (is (= :meta-self-heal/medic-authority-unavailable
+         (:error (try
+                   (#'service/acquire-medic-authority {})
+                   nil
+                   (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+
+(deftest provider-change-before-admission-lock-spends-no-ration
+  (let [spent (atom 0)]
+    (service/install-medic-authority-provider! nil)
+    (with-redefs [machinery-cohort/apply-binding identity]
+      (binding [service/*resolve-var* (constantly nil)
+                service/*before-medic-admission-lock-hook*
+                #(swap! (deref (ns-resolve 'futon3c.wm.runner-service
+                                           '!medic-authority-provider))
+                         update :generation inc)]
+        (let [failure (try
+                        (service/click! {:ordinary-click/issue! #(swap! spent inc)
+                                         :acceptance-payload {:race :synthetic}})
+                        nil
+                        (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+          (is (= :meta-medic-authority-context-drift (:error failure)))
+          (is (true? (:before-ration-spend? failure)))
+          (is (zero? @spent)))))))
+
 (deftest default-provider-denies-and-request-cannot-install-trust
   (let [resolved (#'service/acquire-medic-authority
                   {:meta-medic-authority-context context
-                   :meta-medic-authority-verifier (constantly true)} nil)]
-    (is (= :absent (get-in resolved [:meta-medic-authority-resolution :status])))
+                   :meta-medic-authority-verifier (constantly true)})]
+    (is (= {:status :absent}
+           (get-in resolved [:meta-medic-authority-identity :authority])))
+    (is (nil? (:meta-medic-authority-resolution resolved)))
     (is (false? ((:meta-medic-authority-verifier resolved) {})))
     (is (nil? (:meta-medic-authority-context resolved)))))
