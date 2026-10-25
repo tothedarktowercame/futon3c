@@ -74,7 +74,7 @@
 
 (defn- request [opts method path body]
   ((or (:request opts) (partial http-request))
-   {:base (:base opts) :method method :path path :body body}))
+   {:base (or (:base opts) (:base defaults)) :method method :path path :body body}))
 
 (defn- enc [s] (URLEncoder/encode (str s) "UTF-8"))
 
