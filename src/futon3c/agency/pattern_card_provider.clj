@@ -440,10 +440,12 @@
                 ;; a nil m40 segment (blank top id) falls back to embedding
                 (some-> embedding
                         (assoc :segment/m40 m40
-                               :segment/shown-source "embedding")))
+                               :segment/shown-source "embedding"
+                               :segment/embedding-ranked embedding-ranked)))
             (some-> embedding
                     (assoc :segment/m40 m40
-                           :segment/shown-source "embedding"))))))
+                           :segment/shown-source "embedding"
+                           :segment/embedding-ranked embedding-ranked))))))
     (catch Throwable _ nil)))
 
 (defn provider

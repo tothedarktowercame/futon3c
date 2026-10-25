@@ -357,6 +357,7 @@
                       :turn-record-id "turn-odd-1"})]
         (is (= "~emb/top" (:segment/value segment)))
         (is (= "embedding" (:segment/shown-source segment)))
+        (is (= ["emb/top" "emb/two"] (mapv :id (:segment/embedding-ranked segment))))
         (is (= "驴/m40" (:source (:segment/m40 segment)))
             "the m40 read is recorded even though it was not shown")))))
 
