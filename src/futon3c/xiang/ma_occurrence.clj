@@ -125,19 +125,37 @@
           :parts parts})))))
 
 (defn patterns-of
-  "The distinct pattern ids of RECORD's :proposed_patterns (leading ~
-  stripped), across renders, in first-seen order.  A render that carries
-  :ranked (the top pattern and the two shown as \"also\") contributes all of
-  its ranked ids; an older render contributes its :patterns."
+  "The distinct pattern ids proposed to RECORD, each as {:id .. :sources [..]}:
+  the :proposed_patterns ids (leading ~ stripped, across renders, first-seen
+  order, source \"embedding\") then the :lu_ranked ids (source \"驴\"),
+  deduplicated; an id proposed by both carries both sources.  A render that
+  carries :ranked contributes all of its ranked ids; an older render
+  contributes its :patterns."
   [record]
-  (into [] (comp (mapcat (fn [entry]
-                           (if-let [ranked (seq (:ranked entry))]
-                             (keep #(some-> (:id %) str) ranked)
-                             (:patterns entry))))
-                 (map #(str/replace-first % #"^~" ""))
-                 (remove str/blank?)
-                 (distinct))
-        (:proposed_patterns record)))
+  (let [proposed (into []
+                       (comp (mapcat (fn [entry]
+                                       (if-let [ranked (seq (:ranked entry))]
+                                         (keep #(some-> (:id %) str) ranked)
+                                         (:patterns entry))))
+                             (map #(str/replace-first % #"^~" ""))
+                             (remove str/blank?))
+                       (:proposed_patterns record))
+        lu (into []
+                 (comp (keep #(some-> (:id %) str))
+                       (map #(str/replace-first % #"^~" ""))
+                       (remove str/blank?))
+                 (:ranked (:lu_ranked record)))
+        entries (concat (for [i proposed] {:id i :source "embedding"})
+                        (for [i lu] {:id i :source "驴"}))]
+    (reduce (fn [acc {:keys [id source]}]
+              (if (some #(when (= (:id %) id) %) acc)
+                (mapv #(if (= (:id %) id)
+                         (update % :sources (fn [s] (vec (distinct (conj (vec s) source)))))
+                         %)
+                      acc)
+                (conj acc {:id id :sources [source]})))
+            []
+            entries)))
 
 ;; ------------------------------------------------------------- the model pass
 
@@ -252,9 +270,10 @@
    "  \"chain\": {\"I1\": {..}, \"I2\": {..}, \"G\": {..}, \"B\": {..}}}]\n"
    "Do not summarise or judge the work in the turns. Only map the parts."))
 
-(defn- no-reader-pattern [p]
+(defn- no-reader-pattern [sources p]
   (let [void {:element nil :why "no reader"}]
     {:pattern (:id p) :sha256 (:sha256 p)
+     :sources (vec (or (get sources (:id p)) []))
      :turn {:I1 void :I2 void :G void :B void}
      :chain {:I1 void :I2 void :G void :B void}
      :turn_mapped 0 :chain_mapped 0 :status "void"}))
@@ -271,8 +290,10 @@
         window (chain-window store record-id window-n)
         window-ids (into #{} (map :id) window)
         texts (window-texts window)
-        patterns (mapv #(read-pattern (or library pattern-library) %)
-                       (patterns-of record))
+        proposed (patterns-of record)
+        sources (into {} (map (juxt :id :sources)) proposed)
+        patterns (mapv #(read-pattern (or library pattern-library) (:id %))
+                       proposed)
         reply (when (and ask (seq patterns))
                 (try (ask {:seat seat
                            :prompt (prompt-for window record-id patterns)
@@ -281,7 +302,7 @@
         rows (if-not (string? reply)
                ;; typed absence: no reader (not wired, off, or failed) is
                ;; recorded, not defaulted to success.
-               (mapv no-reader-pattern patterns)
+               (mapv #(no-reader-pattern sources %) patterns)
                (let [parsed (extract-json-array reply)
                      by-pattern (into {}
                                       (comp (filter map?)
@@ -296,6 +317,7 @@
                                chain-m (normalize-window (:chain row) texts window-ids)
                                chain-n (stored-count chain-m)]
                            {:pattern (:id p) :sha256 (:sha256 p)
+                            :sources (vec (or (get sources (:id p)) []))
                             :turn turn-m :chain chain-m
                             :turn_mapped (stored-count turn-m)
                             :chain_mapped chain-n
@@ -333,7 +355,7 @@
                  (seq proposed))
         (let [existing (:pattern_verdicts record)]
           (if (and (map? existing)
-                   (= (set proposed) (verdict-pattern-ids existing)))
+                   (= (set (map :id proposed)) (verdict-pattern-ids existing)))
             existing
             (let [verdicts (verdict-map opts store id)]
               (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))

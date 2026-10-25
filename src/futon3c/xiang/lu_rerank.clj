@@ -18,8 +18,10 @@
             [clojure.string :as str]
             [futon3c.agency.pattern-search :as pattern-search]
             [futon3c.xiang.ma-occurrence :as ma]
+            [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
-  (:import [java.net HttpURLConnection URL]))
+  (:import [java.net HttpURLConnection URL]
+           [java.util.concurrent ExecutorService Executors ThreadFactory]))
 
 (def defaults
   {:seat "驴-haiku"
@@ -169,8 +171,9 @@
 (defn check-picks
   "The 驴 quote ground: a pick stands only if its quote, at least 5 words,
   occurs verbatim (whitespace-normalised) in SOURCE-TEXT and names a pooled
-  pattern. Failed picks are dropped; the first KEEP survivors are taken.
-  Rows are the parsed reply objects in ranked order."
+  pattern. A pattern id already kept is skipped, so a repeated pick cannot
+  take two slots. Failed picks are dropped; the first KEEP survivors are
+  taken. Rows are the parsed reply objects in ranked order."
   ([source-text pool rows] (check-picks source-text pool rows (:keep defaults)))
   ([source-text pool rows keep]
    (let [pool (set pool)
@@ -182,6 +185,7 @@
                        quote (-> row (get "quote") str norm str/trim)]
                    (cond
                      (not (contains? pool pid)) out
+                     (some #(= (:id %) pid) out) out
                      (or (not (string? quote)) (< (count (str/split quote #"\s+")) min-quote-words)) out
                      (not (str/includes? text quote)) out
                      :else (conj out {:id pid :rank (inc (count out)) :quote quote})))))
@@ -270,3 +274,76 @@
       (let [body (json/parse-string (slurp (.getInputStream conn)) true)]
         (when (:ok body) (some-> (:response body) str))))
     (catch Throwable _ nil)))
+
+;; ------------------------------------------- Packet B: the record-time trigger
+
+(def off-switch-path
+  "The 驴 off-switch: when this file exists the trigger does nothing. The
+  path is an opts key (:off-switch) so tests never touch the real file."
+  "/home/joe/code/data/minus40/lu-off")
+
+(def ^:private ^ExecutorService trigger-executor
+  ;; One daemon thread, as ma-occurrence's: the whistle can take seconds and
+  ;; must never hold the turn service's scheduler or delay record-turn!.
+  (Executors/newSingleThreadExecutor
+   (reify ThreadFactory
+     (newThread [_ r] (doto (Thread. ^Runnable r "lu-rerank") (.setDaemon true))))))
+
+(defn- trigger-off?
+  "True when the off-switch file exists (OPTS' :off-switch, else the real
+  path above)."
+  [opts]
+  (try (.isFile (io/file (str (or (:off-switch opts) off-switch-path))))
+       (catch Throwable _ false)))
+
+(defn handle-event
+  "One turn-service event for the record-time 驴 rerank under OPTS: run it
+  only for a :recorded event with a record id. The :recorded event is
+  raised by record-turn! the moment the record is written, before the 小象
+  draft, so 驴 works while 狗 does. Skips records with no :source_text,
+  records already carrying :lu_ranked (idempotent), and everything when the
+  off-switch file exists. Never throws."
+  [{:keys [store] :as opts} {:keys [event id]}]
+  (when (and (= :recorded event) id (not (trigger-off? opts)))
+    (let [store (if (fn? store) (store) store)]
+      (when store
+        (try
+          (when-let [record (and (ts/record-id? (str id)) (ts/read-record store (str id)))]
+            (when (and (= "operator" (or (:origin record) "operator"))
+                       (not (str/blank? (str (or (:source_text record) ""))))
+                       (not (:lu_ranked record)))
+              (let [{:keys [ranked source ms reason]} (rerank opts store (str id))]
+                (ts/update-record! store (str id)
+                                   #(assoc % :lu_ranked
+                                           {:version 1
+                                            :at (str (java.time.Instant/now))
+                                            :ms (long (or ms 0))
+                                            :source (str source)
+                                            :reason reason
+                                            :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
+                                                          (or ranked []))})))))
+          (catch Throwable _ nil))))))
+
+(defn start!
+  "Register the record-time 驴 listener on turn-service events. OPTS as per
+  defaults plus :store (turn-store, or a 0-arg fn resolved at event time).
+  The work runs on this namespace's own single daemon thread, so a slow
+  whistle never holds the turn service's scheduler. Re-registering replaces
+  the listener."
+  [opts]
+  (turn-service/add-turn-listener!
+   ::lu-rerank
+   (fn [event]
+     (.submit trigger-executor ^Runnable #((resolve `handle-event) opts event))))
+  nil)
+
+(defn- live-service []
+  (try (some-> (requiring-resolve 'futon3c.transport.http/xiang-bell-service) deref (apply []))
+       (catch Throwable _ nil)))
+
+(defn start-live!
+  "Wire the listener to the running service: its store is found at event
+  time, so this survives reloads of either namespace."
+  []
+  (start! {:ask whistle-ask
+           :store (fn [] (some-> (live-service) :config :store))}))

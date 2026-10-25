@@ -283,7 +283,10 @@
           "the registered listener's :aligned event reaches the store"))))
 
 (deftest patterns-of-reads-the-ranked-list-when-a-render-has-one
-  (is (= ["a/top" "b/also" "c/also" "d/old"]
+  (is (= [{:id "a/top" :sources ["embedding"]}
+          {:id "b/also" :sources ["embedding"]}
+          {:id "c/also" :sources ["embedding"]}
+          {:id "d/old" :sources ["embedding"]}]
          (mo/patterns-of
           {:proposed_patterns
            [{:patterns ["~a/top"]
@@ -293,3 +296,37 @@
             {:patterns ["~d/old"]}
             {:patterns ["~a/top"] :ranked [{:id "a/top" :rank 1}]}]}))
       "ranked ids in rank order, older renders by :patterns, distinct"))
+
+(deftest patterns-of-unions-lu-ranked-after-the-embedding-ids
+  (is (= [{:id "e/one" :sources ["embedding"]}
+          {:id "l/one" :sources ["驴"]}
+          {:id "l/two" :sources ["驴"]}]
+         (mo/patterns-of
+          {:proposed_patterns [{:patterns ["~e/one"]}]
+           :lu_ranked {:source "驴"
+                       :ranked [{:id "l/one" :rank 1} {:id "l/two" :rank 2}]}}))
+      "the lu_ranked ids follow the proposed ids, deduplicated")
+  (is (= [{:id "x/both" :sources ["embedding" "驴"]}]
+         (mo/patterns-of
+          {:proposed_patterns [{:patterns ["~x/both"]}]
+           :lu_ranked {:source "embedding-fallback"
+                       :ranked [{:id "x/both" :rank 1}]}}))
+      "an id proposed by both carries both sources, whatever lu's source"))
+
+(deftest verdict-rows-score-both-sets-and-carry-sources
+  (let [store (base-records (temp-store))]
+    (record! store "turn-new"
+             {:created_at "2026-10-24T00:04:00Z"
+              :source_text (q "turn-new" "operator")
+              :reply_text (q "turn-new" "reply")
+              :proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]
+              :lu_ranked {:version 1 :source "驴" :ranked [{:id "test-family/lu-only" :rank 1}]}})
+    (run-with store "turn-new"
+              (constantly
+               (ask-reply [{:pattern pid :turn {} :chain {}}
+                           {:pattern "test-family/lu-only" :turn {} :chain {}}])))
+    (let [rows (:patterns (verdicts store "turn-new"))]
+      (is (= 2 (count rows)) "both the embedding's and 驴's patterns are read in one whistle")
+      (is (= ["embedding"] (:sources (first rows))))
+      (is (= ["驴"] (:sources (second rows))))
+      (is (= "test-family/lu-only" (:pattern (second rows)))))))

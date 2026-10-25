@@ -7,6 +7,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.xiang.lu-rerank :as lu]
+            [futon3c.xiang.turn-service]
             [futon3c.xiang.turn-store :as ts]))
 
 (defn- temp-store []
@@ -108,3 +109,96 @@
     (with-redefs [lu/embedding-top (fn [& _] (throw (ex-info "search down" {})))
                   lu/load-graph (constantly nil)]
       (is (map? (lu/rerank {:ask (fn [_] "garbage")} store "turn-never"))))))
+
+;; ------------------------------------------- Packet B: the record-time trigger
+
+(defn- wait-for
+  "Poll PRED up to ~5 s (the trigger runs on the namespace's own thread)."
+  [pred]
+  (let [deadline (+ (System/nanoTime) (* 5 (long 1e9)))]
+    (loop []
+      (or (pred)
+          (when (< (System/nanoTime) deadline)
+            (Thread/sleep 20)
+            (recur))))))
+
+(defn- stub-ask [picks]
+  (fn [_] (json/generate-string
+           (mapv (fn [[pid quote]] {:pattern pid :quote quote}) picks))))
+
+(deftest a-recorded-event-writes-lu-ranked-onto-the-record
+  (let [store (temp-store)
+        registered (atom nil)]
+    (record! store "turn-trig"
+             {:source_text "the operator asked for a rerank of patterns here"})
+    (with-redefs [lu/embedding-top (stub-search ["trig/emb" "trig/emb2" "trig/emb3"])
+                  lu/load-graph (constantly nil)
+                  futon3c.xiang.turn-service/add-turn-listener!
+                  (fn [_key f] (reset! registered f) nil)]
+      (lu/start! {:store store
+                  :ask (stub-ask [["trig/emb" "a rerank of patterns here"]])})
+      (let [f @registered]
+        (is (fn? f) "start! registers a turn listener")
+        (f {:event :recorded :id "turn-trig"})
+        (is (wait-for #(contains? (ts/read-record store "turn-trig") :lu_ranked))
+            "the :recorded event leads to :lu_ranked on the record")
+        (let [lu* (:lu_ranked (ts/read-record store "turn-trig"))]
+          (is (= 1 (:version lu*)))
+          (is (= "驴" (:source lu*)))
+          (is (= [{:id "trig/emb" :rank 1 :quote "a rerank of patterns here"}]
+                 (:ranked lu*)))
+          (is (number? (:ms lu*)))
+          (is (string? (:at lu*))))
+        ;; idempotent: a second :recorded event does not re-run the whistle
+        (let [first-at (:at (:lu_ranked (ts/read-record store "turn-trig")))]
+          (f {:event :recorded :id "turn-trig"})
+          (Thread/sleep 300)
+          (is (= first-at (:at (:lu_ranked (ts/read-record store "turn-trig"))))
+              "the second :recorded event leaves the first :lu_ranked alone"))))))
+
+(deftest the-off-switch-file-stops-the-trigger
+  (let [store (temp-store)
+        off (str (java.nio.file.Files/createTempDirectory
+                  "lu-off-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        off-file (java.io.File. (str off) "lu-off")]
+    (spit off-file "")
+    (record! store "turn-off" {:source_text "some operator text"})
+    (with-redefs [lu/embedding-top (stub-search ["off/one" "off/two" "off/three"])
+                  lu/load-graph (constantly nil)]
+      (lu/handle-event {:store store :off-switch (.getPath off-file)
+                        :ask (stub-ask [["off/one" "some operator text"]])}
+                       {:event :recorded :id "turn-off"})
+      (is (not (contains? (ts/read-record store "turn-off") :lu_ranked))
+          "with the off-switch file present, nothing is written")
+      ;; and the same event runs when the switch is a non-existent path
+      (lu/handle-event {:store store :off-switch (str off "/absent")
+                        :ask (stub-ask [["off/one" "some operator text"]])}
+                       {:event :recorded :id "turn-off"})
+      (is (wait-for #(contains? (ts/read-record store "turn-off") :lu_ranked))
+          "without the off-switch, the same trigger writes"))))
+
+(deftest the-trigger-skips-records-with-no-source-text
+  (let [store (temp-store)]
+    (record! store "turn-blank" {:source_text ""})
+    (with-redefs [lu/embedding-top (stub-search ["b/one" "b/two" "b/three"])
+                  lu/load-graph (constantly nil)]
+      (lu/handle-event {:store store
+                        :ask (stub-ask [["b/one" "nothing quotable"]])}
+                       {:event :recorded :id "turn-blank"})
+      (is (not (contains? (ts/read-record store "turn-blank") :lu_ranked))
+          "no :source_text, no rerank"))))
+
+(deftest a-repeated-pick-cannot-take-two-slots
+  (let [store (temp-store)]
+    (record! store "turn-dup" {:source_text
+                               "duplicate picks must not take two slots here"})
+    (with-redefs [lu/embedding-top (stub-search ["d/one" "d/two" "d/three"])
+                  lu/load-graph (constantly nil)]
+      (let [ask (fn [_] (json/generate-string
+                         [{:pattern "d/one" :quote "must not take two slots here"}
+                          {:pattern "d/one" :quote "must not take two slots here"}
+                          {:pattern "d/two" :quote "picks must not take two slots"}]))]
+        (is (= [{:id "d/one" :rank 1 :quote "must not take two slots here"}
+                {:id "d/two" :rank 2 :quote "picks must not take two slots"}]
+               (:ranked (lu/rerank {:ask ask} store "turn-dup")))
+            "the second d/one is skipped and d/two takes the next slot")))))

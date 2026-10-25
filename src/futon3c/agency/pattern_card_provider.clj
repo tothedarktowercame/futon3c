@@ -7,7 +7,8 @@
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.agency.rule-record :as hx-store]
             [futon3c.evidence.store :as estore]
-            [futon3c.mission-control.service :as mcs])
+            [futon3c.mission-control.service :as mcs]
+            [futon3c.xiang.turn-store :as turn-store])
   (:import [java.net URLEncoder]
            [java.time Duration Instant]))
 
@@ -268,11 +269,45 @@
 
 (defn- result-field [result k] (or (get result k) (get result (name k))))
 
+(defn- lu-ranked-segment
+  "驴's picks, already written on the turn record, as the pattern segment.
+  One store read of an already-written field — the provider never waits for
+  the whistle (it runs off the render path from the :recorded event). Nil
+  when the render context names no turn record, the record carries no
+  :lu_ranked from 驴, or the read fails."
+  [{:keys [agent-id session-id] :as ctx}]
+  (try
+    (let [id (some-> (:turn-record-id ctx) str)]
+      (when (and id (turn-store/record-id? id))
+        (when-let [lu (:lu_ranked (turn-store/read-record
+                                   (or prompt-line/*turn-record-store*
+                                       (turn-store/store))
+                                   id))]
+          (when (and (= "驴" (:source lu)) (seq (:ranked lu)))
+            (let [ranked (mapv #(assoc (select-keys % [:id :rank]) :source "驴")
+                               (:ranked lu))
+                  top-id (some-> (:id (first ranked)) str)]
+              (when-not (str/blank? top-id)
+                (let [also (keep :id (rest ranked))]
+                  {:segment/id :pattern
+                   :segment/value (str "~" top-id)
+                   :segment/ranked ranked
+                   :segment/provider "futon3c.agency.pattern-card-provider/provider"
+                   :segment/observed-at (str (or (:at lu) (Instant/now)))
+                   :segment/basis {:scope {:agent-id (str agent-id)
+                                           :session-id (str session-id)
+                                           :basis-status :lu-ranked}}
+                   :segment/header
+                   (str "驴 " top-id
+                        (when (seq also) (str "; also " (str/join ", " also))))})))))))
+    (catch Throwable _ nil)))
+
 (defn provider
   [{:keys [agent-id session-id render-at] :as ctx}]
   (recheck-async! agent-id session-id)
   (or (active-pattern-card ctx)
       (provisional-pattern-card ctx)
+      (lu-ranked-segment ctx)
       (let [key [(str agent-id) (str session-id)]
             cached (get @!retrievals key)]
         (if-not cached
@@ -288,7 +323,8 @@
                   ranked-entries (map-indexed (fn [i r]
                                                {:id (some-> (result-field r :id) str)
                                                 :score (result-field r :score)
-                                                :rank (or (result-field r :rank) (inc i))})
+                                                :rank (or (result-field r :rank) (inc i))
+                                                :source "embedding"})
                                              shown)
                   also (keep :id (rest ranked-entries))]
               (when-not (str/blank? id)

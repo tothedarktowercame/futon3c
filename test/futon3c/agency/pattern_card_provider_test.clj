@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.rule-record :as hx-store]
             [futon3c.agency.pattern-card-provider :as pattern]
-            [futon3c.agency.prompt-line :as prompt-line]))
+            [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.xiang.turn-store :as turn-store]))
 
 (defn entry [id agent session at pattern-id]
   {:evidence/id id :evidence/author agent :evidence/session-id session
@@ -36,11 +37,11 @@
    "2026-09-27T19:59:59Z" "e-ranked" :provisional)
   (let [segment (pattern/provider {:agent-id "claude-17" :session-id "target"
                                    :render-at "2026-09-27T20:00:00Z"})]
-    (is (= [{:id "top/pattern" :score 0.42 :rank 1}
-            {:id "second/pattern" :score 0.31 :rank 2}
-            {:id "third/pattern" :score 0.2 :rank 3}]
+    (is (= [{:id "top/pattern" :score 0.42 :rank 1 :source "embedding"}
+            {:id "second/pattern" :score 0.31 :rank 2 :source "embedding"}
+            {:id "third/pattern" :score 0.2 :rank 3 :source "embedding"}]
            (:segment/ranked segment))
-        "the top and both also-patterns travel in rank order with scores")
+        "the top and both also-patterns travel in rank order with scores, stamped embedding")
     (is (= "~top/pattern" (:segment/value segment))
         "value and header are unchanged by the new field")
     (is (= "retrieved top/pattern 0.42; also second/pattern, third/pattern"
@@ -230,3 +231,71 @@
     (is (nil? (pattern/active-pattern-card
                {:agent-id "claude-17" :session-id "target"
                 :render-at "2026-09-27T20:31:00Z"})))))
+
+;; 驴's picks on the turn record (Packet B): used only when already there,
+;; never waited for — the provider has no whistle path at all.
+
+(defn- temp-turn-record [id lu-ranked]
+  (let [store (turn-store/store
+               (str (java.nio.file.Files/createTempDirectory
+                     "lu-provider-" (make-array java.nio.file.attribute.FileAttribute 0))))]
+    (turn-store/write-record-id!
+     store id (merge {:origin "operator" :agent_id "claude-17" :session_id "target"
+                      :turn_id id :created_at "2026-10-25T00:00:00Z"
+                      :source_text "operator text"}
+                     (when lu-ranked {:lu_ranked lu-ranked})))
+    store))
+
+(deftest lu-ranked-picks-are-used-when-already-on-the-record
+  (let [store (temp-turn-record
+               "turn-lu"
+               {:version 1 :at "2026-10-25T00:00:05Z" :ms 6500 :source "驴"
+                :reason nil
+                :ranked [{:id "lu/one" :rank 1 :quote "q1 q2 q3 q4 q5"}
+                         {:id "lu/two" :rank 2 :quote "q2"}
+                         {:id "lu/three" :rank 3 :quote "q3"}]})]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}]
+     "2026-10-25T00:00:10Z" "e-lu" :provisional)
+    (binding [prompt-line/*turn-record-store* store]
+      (let [segment (pattern/provider
+                     {:agent-id "claude-17" :session-id "target"
+                      :render-at "2026-10-25T00:00:11Z"
+                      :turn-record-id "turn-lu"})]
+        (is (= "~lu/one" (:segment/value segment)))
+        (is (= [{:id "lu/one" :rank 1 :source "驴"}
+                {:id "lu/two" :rank 2 :source "驴"}
+                {:id "lu/three" :rank 3 :source "驴"}]
+               (:segment/ranked segment)))
+        (is (= "驴 lu/one; also lu/two, lu/three" (:segment/header segment)))
+        (is (re-find #"lu-rerank|provider" (:segment/provider segment)))))))
+
+(deftest without-lu-ranked-the-embedding-segment-is-unchanged-apart-from-source
+  ;; no :lu_ranked at all, and one whose source is the embedding fallback:
+  ;; both must render the embedding segment, without waiting for anything.
+  (doseq [store [(temp-turn-record "turn-no-lu" nil)
+                 (temp-turn-record
+                  "turn-fallback"
+                  {:version 1 :at "2026-10-25T00:00:05Z" :ms 3500
+                   :source "embedding-fallback" :reason "timeout-or-empty-reply"
+                   :ranked [{:id "fb/one" :rank 1}]})]]
+    (pattern/observe-results!
+     "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}
+                           {:id "emb/two" :score 0.8 :rank 2}]
+     "2026-10-25T00:00:10Z" "e-emb" :provisional)
+    (binding [prompt-line/*turn-record-store* store]
+      (let [segment (pattern/provider
+                     {:agent-id "claude-17" :session-id "target"
+                      :render-at "2026-10-25T00:00:11Z"
+                      :turn-record-id "turn-no-lu"})]
+        (is (= "~emb/top" (:segment/value segment)))
+        (is (= "embedding" (:source (first (:segment/ranked segment)))))))))
+
+(deftest a-render-context-without-a-turn-record-id-is-the-embedding-path
+  (pattern/observe-results!
+   "claude-17" "target" [{:id "emb/only" :score 0.7 :rank 1}]
+   "2026-10-25T00:00:10Z" "e-no-id" :provisional)
+  (is (= "~emb/only"
+         (:segment/value
+          (pattern/provider {:agent-id "claude-17" :session-id "target"
+                             :render-at "2026-10-25T00:00:11Z"})))))
