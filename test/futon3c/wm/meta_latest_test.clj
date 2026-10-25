@@ -95,6 +95,19 @@
     (is (false? (:ok body)))
     (is (= :no-retained-receipt (:error body)))))
 
+(deftest g-frontier-lists-every-scored-candidate-by-rank
+  (let [receipt {:policy {:canonical-g-frontier
+                          {:status :produced :horizon-choice {:horizon 10}
+                           :entries [{:target-id "B" :rank 2 :G -1.0 :cascade-digest "d2" :belief :dropped}
+                                     {:target-id "A" :rank 1 :G -2.0 :cascade-digest "d1"}
+                                     {:target-id "C" :status :refused :reason :canonical-action-unavailable}]}}}
+        f (ml/g-frontier receipt)]
+    (is (= ["A" "B" "C"] (mapv :target-id (:entries f))) "ranked first, unranked last")
+    (is (= 10 (:horizon f)))
+    (is (nil? (:belief (second (:entries f)))) "only the summary keys are kept")
+    (is (= :canonical-action-unavailable (:reason (last (:entries f))))))
+  (is (nil? (ml/g-frontier {:policy {}})) "no frontier, no summary"))
+
 (deftest strings-and-char-literals-inside-a-receipt-do-not-break-balancing
   (let [text "{:payload {:judgment {:outer-task-selection {:schema :wm/outer-task-selection-v1
    :note \"braces }{ inside \\\" a string\"

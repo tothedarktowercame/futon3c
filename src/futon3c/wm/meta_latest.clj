@@ -165,6 +165,20 @@
     {:schema (:schema receipt)
      :status :refused :reason :browser-receipt-unavailable}))
 
+(defn g-frontier
+  "The canonical G frontier the click scored, as a short summary: every
+  scored candidate's target, rank, G and cascade digest, and the horizon.
+  browser-receipt drops it; Joe asked to see how the outer loop chose."
+  [receipt]
+  (when-let [f (get-in receipt [:policy :canonical-g-frontier])]
+    {:status (:status f)
+     :horizon (get-in f [:horizon-choice :horizon])
+     :entries (->> (:entries f)
+                   (mapv #(select-keys % [:target-id :policy-id :status :rank :G
+                                          :cascade-digest :reason]))
+                   (sort-by (juxt #(or (:rank %) Long/MAX_VALUE) :target-id))
+                   vec)}))
+
 (defn response
   "The meta-latest HTTP response body and status for ROOTS:
   200 {:ok true :receipt <browser shape> :source {...}}, or
@@ -177,4 +191,5 @@
              :scanned (:scanned found)}]
        [200 {:ok true
              :receipt (browser-projection (:receipt found))
+             :g-frontier (g-frontier (:receipt found))
              :source (:source found)}]))))
