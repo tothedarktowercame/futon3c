@@ -8467,6 +8467,27 @@
       (json-response 503 {:ok false :error :meta-preview-failed
                           :message (ex-message t)}))))
 
+(defn- handle-mission-wants
+  "GET /api/alpha/wm/mission-wants?id=<mission>&path=<absolute mission doc>
+  — the wants the WM would compute selecting that mission, read-only, with
+  nothing observed (futon2.aif.mission-wants-view; Joe, 2026-10-25)."
+  [request]
+  (let [{:strs [id path]} (parse-query-params request)
+        code-root "/home/joe/code/"
+        rel (when (and (string? path) (str/starts-with? path code-root))
+              (subs path (count code-root)))
+        [repo doc] (when rel (str/split rel #"/" 2))]
+    (if (or (str/blank? id) (str/blank? repo) (str/blank? doc))
+      (json-response 400 {:ok false :error :mission-wants-needs-id-and-path
+                          :hint "path must be absolute under /home/joe/code/"})
+      (try
+        (let [view ((requiring-resolve 'futon2.aif.mission-wants-view/mission-wants-view)
+                    id {:repo repo :path doc})]
+          (json-response 200 {:ok true :view view}))
+        (catch Throwable t
+          (json-response 503 {:ok false :error :mission-wants-failed
+                              :message (ex-message t)}))))))
+
 (defn- handle-meta-latest
   "GET /api/alpha/wm/meta-latest — the newest outer-task-selection receipt a
   real click retained on disk, served without recomputation (Joe, approved
@@ -12960,6 +12981,9 @@
       (and (= :get method) (= "/api/alpha/wm/meta-latest" uri))
       (handle-meta-latest)
 
+      (and (= :get method) (= "/api/alpha/wm/mission-wants" uri))
+      (handle-mission-wants request)
+
       (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
       (handle-cascade-real-graph request config)
 
@@ -13484,6 +13508,9 @@
 
           (and (= :get method) (= "/api/alpha/wm/meta-latest" uri))
           (handle-meta-latest)
+
+          (and (= :get method) (= "/api/alpha/wm/mission-wants" uri))
+          (handle-mission-wants request)
 
           (and (= :get method) (string? uri)
                (str/starts-with? uri "/api/alpha/missions/")
