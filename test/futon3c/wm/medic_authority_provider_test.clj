@@ -78,6 +78,10 @@
         roundtrip (read-string (pr-str payload))]
     (is (= (:meta-medic-authority-identity resolved)
            (:meta-medic-authority-identity roundtrip)))
+    (is (= (:meta-medic-authority-identity resolved)
+           (:meta-medic-authority-identity
+            (#'service/acceptance-payload
+             (assoc resolved :acceptance-payload {:custom true})))))
     (is (nil? (:meta-medic-authority-resolution payload)))
     (is (nil? (:meta-medic-authority-verifier payload)))
     (is (not-any? fn? (tree-seq coll? seq payload)))

@@ -128,6 +128,13 @@
                        :before-ration-spend? true})))
     clean))
 
+(defn- acceptance-payload [opts]
+  (serializable-click-opts
+   (cond-> (or (:acceptance-payload opts) opts)
+     (:meta-medic-authority-identity opts)
+     (assoc :meta-medic-authority-identity
+            (:meta-medic-authority-identity opts)))))
+
 (declare click!)
 
 (defn- enqueue-post-release-retry! [request]
@@ -1264,8 +1271,7 @@
         opts (acquire-medic-authority (configured-runner-opts opts) nil)
         opts (meta-self-heal-preflight! opts)
         idem (:idempotency-key opts)
-        payload (serializable-click-opts
-                 (or (:acceptance-payload opts) opts))
+        payload (acceptance-payload opts)
         payload-sha (digest/sha256 (pr-str payload))]
     (locking acceptance-lock
       (let [idem-file (when (nonblank-string? idem) (idempotency-file idem))
