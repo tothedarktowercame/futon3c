@@ -25,7 +25,8 @@
   daemon thread.  The file ~/code/data/minus40/lu-off stops it.  The HTTP
   transport is injectable as :request (fn [method path body] -> {:status
   .. :body ..}), so tests never touch a real store."
-  (:require [clojure.edn :as edn]
+  (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.xiang.turn-service :as turn-service]
@@ -43,6 +44,8 @@
    :request nil})
 
 (def author "lu-memory")
+
+(declare append-situation!) ; defined with the fast read half, used by the listener
 
 (def off-switch-path
   "The 驴 off-switch (shared with lu-rerank): when this file exists the
@@ -155,6 +158,20 @@
     (#{200 201} h-status) :written
     :else {:evidence e-status :hyperedge h-status :body h-body}))
 
+(defn- written-row
+  "The append payload for one written row: situation id, text and props for
+  the sidecar."
+  [record-id record row]
+  (let [ev (situation-evidence record-id record row)]
+    {:id (:evidence/id ev)
+     :text (get-in ev [:evidence/body :text])
+     :props {:record record-id
+             :session (:session_id record)
+             :pattern (str (:pattern row))
+             :status (str (:status row))
+             :chain_mapped (long (or (:chain_mapped row) 0))
+             :sources (vec (or (:sources row) []))}}))
+
 (defn write-record!
   "Write every verdict row of RECORD-ID as a situation evidence + :lu/occurrence
   hyperedge pair into the minus40 store under OPTS. Returns a tally
@@ -166,7 +183,7 @@
     (let [record (ts/read-record (:store opts) record-id)
           rows (or (-> record :pattern_verdicts :patterns) [])]
       (if (empty? rows)
-        {:rows 0 :written 0 :unchanged 0 :failed []}
+        {:rows 0 :written 0 :unchanged 0 :failed [] :written-rows []}
         (let [results
               (for [row rows
                     :let [hx (occurrence-hyperedge record-id record row)
@@ -186,6 +203,10 @@
           {:rows (count rows)
            :written (count (filter #(= :written %) results))
            :unchanged (count (filter #(= :unchanged %) results))
+           :written-rows (vec (keep #(when (= :written (:result %))
+                                       (written-row record-id record (:row %)))
+                                    (map (fn [row result] {:row row :result result})
+                                         rows results)))
            :failed (vec (keep #(when (map? %) %) results))})))
     (catch Throwable t
       {:rows 0 :written 0 :unchanged 0 :failed [{:error (str (.getMessage t))}]})))
@@ -228,7 +249,12 @@
   (when (and (= :pattern-verdicts event) id (not (off? opts)))
     (let [store (if (fn? store) (store) store)]
       (when store
-        (write-record! (assoc opts :store store) (str id))))))
+        (let [tally (write-record! (assoc opts :store store) (str id))]
+          ;; keep the sidecar current: append each newly written situation's
+          ;; vector. A failure is logged inside append-situation!, never
+          ;; thrown, and never blocks the write half.
+          (doseq [{sid :id text :text props :props} (:written-rows tally)]
+            (append-situation! sid text props)))))))
 
 (defonce ^:private ^ExecutorService executor
   (Executors/newSingleThreadExecutor
@@ -293,3 +319,188 @@
                       (update :situations
                               into (set (map #(situation-id id (str (:pattern %)) at)
                                              rows)))))))))))
+
+;; -------------------------------------------------- the fast read half (2a)
+
+(def read-defaults
+  "The fast half's knobs. The rule is FIXED (claude-11, packet 2a; do not
+  tune it on the data): k=10 nearest situations with cosine >= 0.35, a
+  pattern scores sum(cosine * w(status)) with w occurrence 1.0 partial 0.5
+  void -0.5, patterns with score > 0, top 3."
+  {:k 10
+   :min-cos 0.35
+   :top 3
+   :model "sentence-transformers/all-MiniLM-L6-v2"
+   :script "/home/joe/code/futon3c/scripts/lu_situations.py"
+   :query-timeout-ms 5000
+   :startup-timeout-ms 60000})
+
+(def status-weights {"occurrence" 1.0 "partial" 0.5 "void" -0.5})
+
+(defn score-patterns
+  "The fixed scoring rule over NEIGHBOURS ({:pattern :status :cos :record}):
+  each pattern scores sum(cosine * w(status)); keep score > 0, top 3 by
+  score, each {:id :score :rank :evidence [the neighbour records]}. Pure."
+  ([neighbours] (score-patterns neighbours 3))
+  ([neighbours top]
+   (->> neighbours
+        (group-by :pattern)
+        (map (fn [[pid ns]]
+               {:id pid
+                :score (double (reduce + (map #(-> (get status-weights (:status %) 0.0)
+                                                   (* (double (or (:cos %) 0.0))))
+                                              ns)))
+                :evidence (vec (distinct (keep :record ns)))}))
+        (filter #(pos? (:score %)))
+        (sort-by (juxt (comp - :score) :id))
+        (take (long top))
+        (map-indexed (fn [i p] (assoc p :rank (inc i))))
+        vec)))
+
+;; The resident process: pattern-search keeps the futon3a notions search
+;; resident as one owned python process speaking one JSON line per query
+;; (handshake {"resident" "ready"}, single owner lock, restart on death,
+;; bounded timeouts). lu-situations.py speaks the same protocol and also
+;; embeds appends, so the same mechanism is reused here with a second
+;; resident owned by this namespace — no second model load per call.
+
+(defonce ^:private read-owner-lock (Object.))
+(defonce ^:private !read-resident (atom nil))
+
+(defn- futon3a-python []
+  (or (System/getenv "FUTON3A_PYTHON")
+      (str (System/getProperty "user.home") "/code/futon3a/.venv/bin/python3")))
+
+(defn- read-resident-command [opts]
+  (or (:resident-command opts)
+      [(futon3a-python) "-u" (:script (merge read-defaults opts))
+       "--resident" "--model" (:model (merge read-defaults opts))]))
+
+(defn- destroy-read-resident! [{:keys [^java.lang.Process process
+                                       ^java.io.BufferedReader reader
+                                       ^java.io.BufferedWriter writer]}]
+  (when writer (try (.close writer) (catch Throwable _)))
+  (when process
+    (try
+      (when (.isAlive process)
+        (.destroyForcibly process)
+        (.waitFor process 500 java.util.concurrent.TimeUnit/MILLISECONDS))
+      (catch Throwable _)))
+  (when reader (try (.close reader) (catch Throwable _))))
+
+(defn stop-read-resident! []
+  (locking read-owner-lock
+    (destroy-read-resident! @!read-resident)
+    (reset! !read-resident nil)))
+
+(defn- start-read-resident! [opts]
+  (let [builder (doto (java.lang.ProcessBuilder.
+                       ^java.util.List (vec (read-resident-command opts)))
+                  (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT))
+        env (.environment builder)
+        _ (.put env "HF_HUB_OFFLINE" "1")
+        _ (.put env "TRANSFORMERS_OFFLINE" "1")
+        process (.start builder)
+        resident {:process process
+                  :reader (java.io.BufferedReader.
+                           (java.io.InputStreamReader. (.getInputStream process)))
+                  :writer (java.io.BufferedWriter.
+                           (java.io.OutputStreamWriter. (.getOutputStream process)))}
+        pending (future (.readLine ^java.io.BufferedReader (:reader resident)))
+        token (Object.)
+        line (deref pending (:startup-timeout-ms (merge read-defaults opts)) token)]
+    (if (or (identical? token line) (nil? line))
+      (do (future-cancel pending)
+          (destroy-read-resident! resident)
+          (throw (ex-info "lu situation resident failed startup handshake"
+                          {:error/code :resident-startup :line (str line)})))
+      (do (future-cancel pending)
+          (reset! !read-resident resident)
+          resident))))
+
+(defn read-resident-op!
+  "One op against the resident situation reader: writes one JSON line,
+  reads one JSON reply. Throws on timeout/exit/malformed (the caller
+  decides whether that is a fallback)."
+  ([op] (read-resident-op! op {}))
+  ([op opts]
+   (locking read-owner-lock
+     (let [resident (or (when-let [r @!read-resident]
+                          (when (.isAlive ^java.lang.Process (:process r)) r))
+                        (start-read-resident! opts))
+           ^java.io.BufferedWriter writer (:writer resident)
+           ^java.io.BufferedReader reader (:reader resident)]
+       (try
+         (.write writer (json/generate-string op))
+         (.newLine writer)
+         (.flush writer)
+         (let [pending (future (.readLine reader))
+               token (Object.)
+               line (deref pending (:query-timeout-ms (merge read-defaults opts)) token)]
+           (cond
+             (identical? token line)
+             (throw (ex-info "lu resident op timed out" {:error/code :resident-timeout}))
+             (nil? line)
+             (throw (ex-info "lu resident exited" {:error/code :resident-exited}))
+             :else (let [reply (json/parse-string line true)]
+                     (when-not (and (map? reply) (true? (:ok reply)))
+                       (throw (ex-info "lu resident op refused"
+                                       {:error/code :resident-refused
+                                        :reply reply})))
+                     reply)))
+         (catch Throwable t
+           (destroy-read-resident! resident)
+           (reset! !read-resident nil)
+           (throw t)))))))
+
+(defn read-near
+  "The fast read half: the patterns that occurred in the stored situations
+  most like TEXT. Opts: :record-id (exclude that record's situations, so a
+  turn never retrieves itself), plus read-defaults. Returns
+  {:ranked [{:id :score :rank :evidence [record ids]}] :neighbours n
+   :ms n :source \"驴/m40\" | nil :reason ...}. Fewer than 3 neighbours
+  above the threshold, or no positive pattern, gives :source nil with the
+  reason (the caller's cue to fall back to the embedding). Never throws."
+  ([text] (read-near text {}))
+  ([text opts]
+   (let [opts (merge read-defaults opts)
+         t0 (System/nanoTime)]
+     (try
+       (let [reply (read-resident-op!
+                    {:op "near" :text (str text)
+                     :k (long (:k opts)) :min-cos (double (:min-cos opts))
+                     :exclude-records (vec (keep identity [(:record-id opts)]))}
+                    opts)
+             neighbours (vec (:neighbours reply))
+             ms (quot (- (System/nanoTime) t0) 1000000)
+             ranked (score-patterns neighbours (:top opts))]
+         (cond
+           (< (count neighbours) 3)
+           {:ranked [] :neighbours (count neighbours) :ms ms :source nil
+            :reason "fewer-than-3-neighbours"}
+           (empty? ranked)
+           {:ranked [] :neighbours (count neighbours) :ms ms :source nil
+            :reason "no-positive-pattern"}
+           :else {:ranked ranked :neighbours (count neighbours) :ms ms
+                  :source "驴/m40"}))
+       (catch Throwable t
+         {:ranked [] :neighbours 0
+          :ms (quot (- (System/nanoTime) t0) 1000000) :source nil
+          :reason (str "resident-error: " (or (.getMessage t) (class t)))})))))
+
+(defn append-situation!
+  "Keep the sidecar current: embed one situation (id, text, props) and
+  append its vector through the resident. Returns true when appended,
+  false when unchanged, and nil (logged, never thrown) on failure — a
+  failure here must never block the write half."
+  ([id text props] (append-situation! id text props {}))
+  ([id text props opts]
+   (try
+     (let [reply (read-resident-op! (assoc props :op "add" :id (str id)
+                                          :text (str text))
+                                    (merge read-defaults opts))]
+       (not (true? (:unchanged reply))))
+     (catch Throwable t
+       (println (str "[lu-memory] situation append failed for " id ": "
+                     (.getMessage t)))
+       nil))))

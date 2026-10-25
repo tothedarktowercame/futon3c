@@ -56,7 +56,7 @@
                                                      :quote "quote from lu for f/one"}]}})
     (let [{:keys [request calls]} (stub)
           tally (lum/write-record! {:store store :request request} "turn-lm1")]
-      (is (= {:rows 2 :written 2 :unchanged 0} (dissoc tally :failed))
+      (is (= {:rows 2 :written 2 :unchanged 0} (dissoc tally :failed :written-rows))
           "both rows (occurrence and void) are written")
       (is (empty? (:failed tally)))
       (let [evidence-posts (filter #(and (= "POST" (:method %))
@@ -106,7 +106,7 @@
       ;; second run: the stub now reports the hyperedges as already stored
       (let [{:keys [request calls]} (stub :found? true)
             second (lum/write-record! {:store store :request request} "turn-lm2")]
-        (is (= {:rows 2 :written 0 :unchanged 2} (dissoc second :failed)))
+        (is (= {:rows 2 :written 0 :unchanged 2} (dissoc second :failed :written-rows)))
         (is (empty? (:failed second)))
         (is (= 2 (count @calls))
             "only the two existence GETs happen; no POSTs")
@@ -139,10 +139,9 @@
       (is (empty? @(:calls s)) "only :pattern-verdicts events write"))
     (let [{:keys [request]} (stub)]
       (lum/write-record! {:store store :request request} "turn-none")
-      (is (= {:rows 0 :written 0 :unchanged 0 :failed []}
+      (is (= {:rows 0 :written 0 :unchanged 0 :failed [] :written-rows []}
              (lum/write-record! {:store store :request request} "turn-none"))
           "a record without verdicts writes nothing"))))
-
 (deftest situations-of-reads-back-by-endpoint
   (let [calls (atom [])
         request (fn [{:keys [method path]}]
@@ -163,3 +162,95 @@
 (deftest situations-of-returns-nil-when-the-query-fails
   (is (nil? (lum/situations-of {:request (fn [_] {:status 500 :body {}})}
                                "f/one"))))
+
+;; --------------------------------------------- the fast read half (packet 2a)
+
+(def planted-neighbours
+  "Four planted situations: p/occ lifted by an occurrence neighbour and
+  dragged by a void one; p/part carried by a partial; p/void-only pushed
+  under zero."
+  [{:id "s1" :cos 0.60 :record "r1" :pattern "p/occ" :status "occurrence"}
+   {:id "s2" :cos 0.50 :record "r2" :pattern "p/occ" :status "void"}
+   {:id "s3" :cos 0.45 :record "r3" :pattern "p/part" :status "partial"}
+   {:id "s4" :cos 0.40 :record "r4" :pattern "p/void-only" :status "void"}])
+
+(deftest the-scoring-rule-on-four-planted-situations
+  (let [ranked (lum/score-patterns planted-neighbours)]
+    ;; p/occ: 0.60*1.0 + 0.50*(-0.5) = 0.35 > 0 (the occurrence lifts it
+    ;; past the void); p/part: 0.45*0.5 = 0.225; p/void-only: -0.20 drops out.
+    (is (= ["p/occ" "p/part"] (mapv :id ranked))
+        "the void-only pattern is pushed below zero and dropped")
+    (is (= [0.35 0.225] (mapv :score ranked)))
+    (is (= [1 2] (mapv :rank ranked)))
+    (is (= [["r1" "r2"] ["r3"]] (mapv :evidence ranked)))))
+
+(deftest an-occurrence-neighbour-alone-lifts-a-pattern
+  (is (= [{:id "p/a" :score 0.6 :rank 1 :evidence ["r1"]}]
+         (lum/score-patterns
+          [{:id "s1" :cos 0.60 :record "r1" :pattern "p/a" :status "occurrence"}]))))
+
+(deftest a-void-heavier-than-its-occurrence-drops-the-pattern
+  (is (empty? (lum/score-patterns
+               [{:id "s1" :cos 0.30 :record "r1" :pattern "p/a" :status "occurrence"}
+                {:id "s2" :cos 0.70 :record "r2" :pattern "p/a" :status "void"}]))))
+
+(deftest the-threshold-fallback-and-no-positive-fallback
+  (let [replies (atom [{:ok true :neighbours (subvec planted-neighbours 0 2)}
+                       {:ok true :neighbours
+                        [{:id "s1" :cos 0.6 :record "r1" :pattern "p/v" :status "void"}
+                         {:id "s2" :cos 0.5 :record "r2" :pattern "p/w" :status "void"}
+                         {:id "s3" :cos 0.4 :record "r3" :pattern "p/x" :status "void"}]}
+                       {:ok true :neighbours planted-neighbours}])]
+    (with-redefs [lum/read-resident-op!
+                  (fn [_op _opts]
+                    (let [r (first @replies)]
+                      (swap! replies rest)
+                      r))]
+      (let [fewer (lum/read-near "text" {})]
+        (is (nil? (:source fewer)))
+        (is (= "fewer-than-3-neighbours" (:reason fewer)))
+        (is (= 2 (:neighbours fewer))))
+      (let [none (lum/read-near "text" {})]
+        (is (nil? (:source none)))
+        (is (= "no-positive-pattern" (:reason none)))
+        (is (= 3 (:neighbours none))))
+      (let [hit (lum/read-near "text" {})]
+        (is (= "驴/m40" (:source hit)))
+        (is (= ["p/occ" "p/part"] (mapv :id (:ranked hit))))
+        (is (= 4 (:neighbours hit)))
+        (is (number? (:ms hit)))))))
+
+(deftest the-same-record-exclusion-is-sent-to-the-resident
+  (let [ops (atom [])]
+    (with-redefs [lum/read-resident-op!
+                  (fn [op _opts] (swap! ops conj op) {:ok true :neighbours []})]
+      (lum/read-near "some operator text" {:record-id "turn-self"})
+      (is (= ["turn-self"] (get-in (first @ops) [:exclude-records]))
+          "the query's own record is excluded so a turn never retrieves itself")
+      (lum/read-near "some operator text" {})
+      (is (= [] (get-in (second @ops) [:exclude-records]))))))
+
+(deftest a-resident-error-is-a-typed-fallback-never-a-throw
+  (with-redefs [lum/read-resident-op! (fn [_ _] (throw (ex-info "down" {})))]
+    (let [out (lum/read-near "text" {})]
+      (is (nil? (:source out)))
+      (is (re-find #"resident-error" (:reason out))))))
+
+(deftest an-append-adds-exactly-one-row-through-the-resident
+  (let [ops (atom [])]
+    (with-redefs [lum/read-resident-op!
+                  (fn [op _opts]
+                    (swap! ops conj op)
+                    (if (= 1 (count @ops))
+                      {:ok true :situations 130}
+                      {:ok true :unchanged true}))]
+      (is (true? (lum/append-situation! "e-lu-new" "new text" {:pattern "p/x"}))
+          "the first append is a write")
+      (is (false? (lum/append-situation! "e-lu-new" "new text" {:pattern "p/x"}))
+          "the second is the resident's unchanged")
+      (is (= "add" (:op (first @ops))))
+      (is (= "e-lu-new" (:id (first @ops))))
+      (is (= "new text" (:text (first @ops))))
+      ;; a failure is nil, logged, never thrown
+      (with-redefs [lum/read-resident-op! (fn [_ _] (throw (ex-info "down" {})))]
+        (is (nil? (lum/append-situation! "e-lu-2" "t" {:pattern "p"})))))))
