@@ -106,3 +106,48 @@ them left-behind rather than resolved.
 - D is small (35 tensions); its 54% resolved rate is fragile.
 - Sessions are keyed by `session_id` and ordered by `created_at`; ties within
   a second are not broken further.
+
+## Evaluating the sensor (2026-10-25, follow-up)
+
+Joe doubted that word overlap senses tension. The first run already showed the
+symptoms: the re-raise rule fired 19 times in 1,932 X tensions, and the
+"moves to a different about" rule resolves nearly everything that is not
+re-raised — so "resolved" was close to "not re-raised". Tool:
+`scripts/tension_sensor_eval.py` (`py_compile` gate passes); sample, labels
+and Joe's sheet live under `~/notes/experiments/2026-10-25-tension-eval/`.
+
+Method: 60 X tensions with a full two-turn window, stratified 20/20/20
+(resolved-by-act, resolved-by-different-about, unresolved), fixed seed 7,
+spread over 26 sessions. 馬-sonnet labelled all 60 blind to the rule's
+classification (6 whistles of 10 items); every supplied quote was
+string-verified verbatim against the later turns (0 unverified, 60/60 labels).
+
+Confusion matrix (rule stratum × 馬's label):
+
+| rule stratum | resolved | re-raised | dropped | not-a-tension |
+|---|---|---|---|---|
+| resolved-act (20) | 11 | 2 | 7 | 0 |
+| resolved-about (20) | 2 | 3 | 15 | 0 |
+| unresolved (20) | 8 | 5 | 6 | 1 |
+
+Readings:
+- **The different-about rule measures dropping, not resolution.** 15/20 of
+  its "resolutions" are 馬-labelled `dropped` (Joe moved on without the
+  concern being dealt with); only 2/20 are genuinely resolved. The 76%
+  resolution rate in the first run is therefore mostly turnover.
+- **The approve/agree/continue rule is better but not clean**: 11/20 truly
+  resolved, but 7/20 are `dropped` — an approve act elsewhere in the window
+  does not necessarily address the tension.
+- **The unresolved stratum is half wrong in the other direction**: 8/20 are
+  actually resolved, i.e. the rule is pessimistic when resolution happens
+  without an approve/agree/continue act and the next about differs.
+- **Re-raise recall is 5/10** on 馬's `re-raised` items: word-overlap
+  Jaccard ≥ 0.3 on paraphrased `about` strings catches half the returns.
+- **X is not too broad**: only 1/60 items is `not-a-tension` by 馬's reading.
+
+Conclusion: word overlap on `about` is a weak sensor for both re-raise and
+resolution; resolution needs a notion of *the reply addressing the concern*,
+not conversation movement. Joe's sheet (15 blind items, 5 per stratum) at
+`~/notes/experiments/2026-10-25-tension-eval/joe-15.md` tests 馬 as a
+stand-in when he fills it in. Caveat: many operator turns have no recorded
+`reply_text`, so some sheet items show "(no reply)".
