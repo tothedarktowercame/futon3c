@@ -151,3 +151,65 @@ not conversation movement. Joe's sheet (15 blind items, 5 per stratum) at
 `~/notes/experiments/2026-10-25-tension-eval/joe-15.md` tests 馬 as a
 stand-in when he fills it in. Caveat: many operator turns have no recorded
 `reply_text`, so some sheet items show "(no reply)".
+
+## Sensor evaluation v2: reply bug fixed, quoted fragments dropped (2026-10-25)
+
+Joe labelled 13 of the 15 sheet items and agreed with 馬 on only 4 — the gap
+sat almost entirely in `dropped`, which Joe never uses. claude-11 found the
+cause: `tension_sensor_eval.py` read `reply_text` from a dict that
+`load_turns` never populates, so **every v1 prompt showed an empty reply**
+(53/60 records actually have one). Both labellers judged tensions without the
+agent's answer; a tension the reply had dealt with then looked "dropped".
+
+v2 changes: `reply_text` is read from the record file (closing 1,500 chars in
+the prompt); tension fragments that quote agent text are dropped (leading
+`>>>`, a CLAUDE.md proforma mark followed by `(`, or `("`) — **112 fragments
+dropped** corpus-wide; the label set splits re-raised into
+`re-raised:not-fixed` (try-harder push) and `re-raised:variation` (accepted,
+but a different way of going about it), with a string-checked variation
+quote. The v2 sample carries over all 54 v1 items that survive the filter
+(60 total, 6 top-ups), so Joe's sheet stays comparable: **14 of the 15 sheet
+items survive**; sheet v2 is `~/notes/experiments/2026-10-25-tension-eval/joe-15-v2.md`.
+
+### 馬 (new, with reply) against Joe's 13 labels
+
+**5/13 agree** (either re-raised subtype matching Joe's re-raised). Better
+than v1's 4/13, but 馬 still disagrees with Joe on most items.
+
+### 馬 (old, blind) against 馬 (new, with reply), 53 jointly labelled items
+
+**34/53 agree.** The disagreement is concentrated exactly where the bug
+predicted:
+
+| 馬 old label | 馬 new labels |
+|---|---|
+| resolved (16) | resolved 12, re-raised 3, dropped 1 |
+| re-raised (9) | not-fixed 5, variation 4 |
+| dropped (27) | **dropped 13, resolved 10**, variation 2, not-a-tension 2 |
+| not-a-tension (1) | resolved 1 |
+
+Seeing the reply converted 10 of 27 old `dropped` labels into `resolved`.
+Joe's refusal to use `dropped` and 馬-v1's heavy `dropped` use were partly the
+same artifact: without the reply, "dealt with" is indistinguishable from
+"moved on". 馬's re-raised judgements were stable (all 9 stayed re-raised,
+splitting 5 not-fixed / 4 variation — Joe's own split).
+
+### The rule against 馬 (new)
+
+| rule stratum | resolved | re-raised:not-fixed | re-raised:variation | dropped | not-a-tension | unverified |
+|---|---|---|---|---|---|---|
+| resolved-act (20) | 11 | 0 | 2 | 5 | 1 | 1 |
+| resolved-about (20) | 8 | 3 | 3 | 5 | 1 | 0 |
+| unresolved (20) | 7 | 3 | 3 | 7 | 0 | 0 |
+
+With the reply visible the different-about stratum looks better than in v1
+(8/20 resolved vs 2/20) — partly because 6 of its items were replaced by
+top-ups, partly because resolution is easier to see. Re-raise recall is
+6/14 on 馬's re-raised items; word overlap still misses paraphrased returns.
+not-a-tension is 2/59: X remains broadly sound as a tension detector; the
+weak part is resolution, not detection.
+
+Method note: the v2 sample re-uses v1 item ids for carried items and fresh
+`<record>/b<n>` ids for top-ups; joins between rounds use
+(record, tension-text) keys, not the printed ids, because the fragment filter
+shifts the per-turn counters the ids embed.
