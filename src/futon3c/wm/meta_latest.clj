@@ -21,25 +21,39 @@
   (:import [java.nio.file Files]))
 
 (def default-roots
-  "The machinery attempt trees, newest cohort style first (the pre-machinery
-  wm-full-loop trees keep the same checkpoint file and key)."
-  ["/home/joe/code/futon2/data/wm-full-loop-machinery"
-   "/home/joe/code/futon2/data/wm-full-loop"])
+  "futon2's data root: the machinery cohorts (wm-full-loop-machinery-*/…) and
+  the pre-machinery wm-full-loop trees (wm-outer-loop-*/…) live directly
+  under it.  Only these prefixes are walked."
+  "/home/joe/code/futon2/data")
+
+(def cohort-prefixes
+  "Level-one directory prefixes that hold attempt trees."
+  ["wm-full-loop-machinery-" "wm-outer-loop-"])
+
+(defn- cohort-dir?
+  [^java.io.File f]
+  (and (.isDirectory f)
+       (some #(.startsWith (.getName f) %) cohort-prefixes)))
 
 (defn- selection-files
-  "Every attempt's 002-selection.edn under ROOT (one level of cohort dirs,
-  then one level of wm-*-v1 dirs, then attempt dirs)."
+  "Every attempt's 002-selection.edn under ROOT: the machinery layout is
+  root/wm-full-loop-machinery-N/wm-contract-*-v1/attempt-*/002-selection.edn,
+  the older layout root/wm-outer-loop-N-v1/attempt-*/002-selection.edn — a
+  bounded walk to depth 4 collecting 002-selection.edn files whose parent
+  directory is an attempt-*. "
   [^java.io.File root]
-  (vec
-   (for [cohort (sort-by #(.getName ^java.io.File %) (.listFiles root))
-         :when (.isDirectory ^java.io.File cohort)
-         tree (.listFiles ^java.io.File cohort)
-         :when (.isDirectory ^java.io.File tree)
-         attempt (sort-by #(.getName ^java.io.File %) (.listFiles ^java.io.File tree))
-         :when (.isDirectory ^java.io.File attempt)
-         :let [f (java.io.File. ^java.io.File attempt "002-selection.edn")]
-         :when (.isFile f)]
-     f)))
+  (let [found (java.util.ArrayList.)]
+    (letfn [(walk [^java.io.File dir depth]
+              (when (and (.isDirectory dir) (pos? depth))
+                (let [children (sort-by #(.getName ^java.io.File %) (.listFiles dir))]
+                  (if (.startsWith (.getName dir) "attempt-")
+                    (when-let [f (java.io.File. dir "002-selection.edn")]
+                      (when (.isFile f) (.add found f)))
+                    (doseq [^java.io.File c children] (walk c (dec depth)))))))]
+      (doseq [^java.io.File c (sort-by #(.getName ^java.io.File %)
+                                       (.listFiles root))]
+        (when (cohort-dir? c) (walk c 4))))
+    (vec found)))
 
 (defn- newest-first
   "Files ordered by last-modified, newest first."
@@ -116,11 +130,13 @@
   {:receipt <raw v1 receipt> :text <its EDN text>
    :source {:path .. :attempt .. :tree .. :written-at ..}}
   or a typed absence {:absent ::no-retained-receipt :reason ... :scanned n}.
-  Roots default to default-roots.  No computation, no selection, one file
-  read per candidate newest-first until a receipt is found."
+  Roots default to default-roots (a data root or a collection of them).
+  No computation, no selection, one file read per candidate newest-first
+  until a receipt is found."
   ([] (latest-retained-receipt default-roots))
   ([roots]
-   (let [files (->> (mapv #(java.io.File. (str %)) roots)
+   (let [roots (if (coll? roots) roots [roots])
+         files (->> (mapv #(java.io.File. (str %)) roots)
                     (filter #(.isDirectory ^java.io.File %))
                     (mapcat selection-files)
                     newest-first)]

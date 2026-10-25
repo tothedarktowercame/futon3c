@@ -53,11 +53,11 @@
 
 (deftest the-newest-retained-receipt-wins-with-its-source
   (let [root (temp-root)
-        _ (attempt! root "wm-contract-machinery-9-v1" "wm-contract-machinery-9-v1"
+        _ (attempt! root "wm-full-loop-machinery-9" "wm-contract-machinery-9-v1"
                     "attempt-001" receipt-text-old 1000000)
-        _ (attempt! root "wm-contract-machinery-9-v1" "wm-contract-machinery-9-v1"
+        _ (attempt! root "wm-full-loop-machinery-9" "wm-contract-machinery-9-v1"
                     "attempt-002" absent-text 2000000)
-        _ (attempt! root "wm-contract-machinery-9-v1" "wm-contract-machinery-9-v1"
+        _ (attempt! root "wm-full-loop-machinery-9" "wm-contract-machinery-9-v1"
                     "attempt-003" receipt-text-new 3000000)
         found (ml/latest-retained-receipt [root])]
     (is (nil? (:absent found)))
@@ -69,7 +69,7 @@
 
 (deftest no-receipt-anywhere-is-a-typed-absence
   (let [root (temp-root)
-        _ (attempt! root "wm-contract-machinery-1-v1" "wm-contract-machinery-1-v1"
+        _ (attempt! root "wm-full-loop-machinery-1" "wm-contract-machinery-1-v1"
                     "attempt-001" absent-text 1000000)
         found (ml/latest-retained-receipt [root])]
     (is (= ::ml/no-retained-receipt (:absent found)))
@@ -82,7 +82,7 @@
 
 (deftest response-shape-matches-meta-preview-and-404s-typed
   (let [root (temp-root)
-        _ (attempt! root "wm-contract-machinery-2-v1" "wm-contract-machinery-2-v1"
+        _ (attempt! root "wm-full-loop-machinery-2" "wm-contract-machinery-2-v1"
                     "attempt-001" receipt-text-old 1000000)
         [status body] (ml/response [root])]
     (is (= 200 status))
