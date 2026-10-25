@@ -69,6 +69,65 @@
 (defonce ^:private acceptance-lock (Object.))
 (defonce ^:private !post-release-retries (atom clojure.lang.PersistentQueue/EMPTY))
 
+(defonce ^:private !medic-authority-provider
+  ;; Application-installed, process-local authority source. Request data can
+  ;; neither install nor override it. The nil default preserves default deny.
+  (atom {:generation 0 :provider nil}))
+
+(defn install-medic-authority-provider!
+  "Install a trusted process-local provider only while the service is idle.
+  PROVIDER returns an authority context; it is never serialized."
+  [provider]
+  (when-not (or (nil? provider) (ifn? provider))
+    (throw (ex-info "Medic authority provider must be callable or nil"
+                    {:error :meta-medic-authority-provider-invalid})))
+  (locking acceptance-lock
+    (when (or (:running? @!status) (seq @!post-release-retries)
+              (some-> @!completion :thread .isAlive))
+      (throw (ex-info "Medic authority provider installation requires idle service"
+                      {:error :meta-medic-authority-provider-busy})))
+    (swap! !medic-authority-provider
+           (fn [{:keys [generation]}]
+             {:generation (inc generation) :provider provider}))))
+
+(defn- acquire-medic-authority
+  [opts expected]
+  (let [{:keys [generation provider]} @!medic-authority-provider
+        ;; Request-supplied contexts, resolutions and derived verifiers are
+        ;; always discarded before consulting the application provider.
+        clean (dissoc opts :meta-medic-authority-context
+                      :meta-medic-authority-resolution
+                      :meta-medic-authority-verifier)
+        resolved (if provider
+                   ((requiring-resolve
+                     'futon2.aif.meta-medic-authority/resolve-context)
+                    (provider))
+                   {:status :absent :verifier (constantly false)})
+        identity (when (= :ready (:status resolved))
+                   {:generation generation :authority (:identity resolved)})]
+    (when (and expected (not= expected identity))
+      (throw (ex-info "Medic authority changed between admission and worker"
+                      {:status 503 :error :meta-medic-authority-context-drift
+                       :before-ration-spend? true})))
+    (assoc clean :meta-medic-authority-identity identity
+                 :meta-medic-authority-resolution resolved
+                 :meta-medic-authority-verifier (:verifier resolved))))
+
+(defn- serializable-click-opts [opts]
+  (let [clean (-> opts
+                  (dissoc :ordinary-click/issue! :phase-log-fn
+                          :meta-medic-authority-context
+                          :meta-medic-authority-resolution
+                          :meta-medic-authority-verifier))]
+    (when (or (some fn? (tree-seq coll? seq clean))
+              (some #(and (map? %) (or (contains? % :trust)
+                                       (contains? % :artifacts)))
+                    (tree-seq coll? seq clean)))
+      (throw (ex-info "Click acceptance payload contains executable authority material"
+                      {:status 400 :error :wm-click-authority-not-serializable
+                       :before-ration-spend? true})))
+    clean))
+
 (declare click!)
 
 (defn- enqueue-post-release-retry! [request]
@@ -1126,7 +1185,8 @@
       (persist-click-state! click-id #(assoc % :status :running
                                              :running-at (str (Instant/now))))
       (watch-pre-admission-stop! click-id admission)
-      (let [configured (configured-runner-opts opts)
+      (let [opts (acquire-medic-authority opts (:meta-medic-authority-identity opts))
+            configured (configured-runner-opts opts)
             run! (*resolve-var*
                   'futon2.aif.full-loop-runtime/run-opportunity!)
             runner-opts
@@ -1201,10 +1261,11 @@
         ;; authority.  Reject malformed identity before any ledger/port
         ;; preflight can obscure the request's own error.
         opts (admit-run-id! opts)
-        opts (meta-self-heal-preflight! (configured-runner-opts opts))
+        opts (acquire-medic-authority (configured-runner-opts opts) nil)
+        opts (meta-self-heal-preflight! opts)
         idem (:idempotency-key opts)
-        payload (or (:acceptance-payload opts)
-                    (dissoc opts :ordinary-click/issue! :phase-log-fn))
+        payload (serializable-click-opts
+                 (or (:acceptance-payload opts) opts))
         payload-sha (digest/sha256 (pr-str payload))]
     (locking acceptance-lock
       (let [idem-file (when (nonblank-string? idem) (idempotency-file idem))
