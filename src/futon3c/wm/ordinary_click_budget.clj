@@ -149,7 +149,15 @@
   ;; needs, and the failure-detail injury via the self-heal route.
   ;; Joe to claude-7, 2026-10-23 ~14:56Z: "yes, 5 more clicks are awarded
   ;; for research purposes". Lane: T1, the two-click G2 run, one rerun each.
-  173)
+  ;; Joe in the codex-11 conversation, 2026-10-26 (held note
+  ;; ~/notes/wm-next/click-authorizations/joe-five-clicks-held-2026-10-26.md):
+  ;; "I would allocate 5 more clicks to the ledger that could be used when
+  ;; the outstanding issues are resolved." Released by claude-9 2026-10-26
+  ;; ~09:00Z: every R line of DEFECTS-reading-era.md is REPAIRED-FORWARD or
+  ;; not a defect; the four unruled questions are on the decision sheet
+  ;; (futon2 d054744c0) and none gates a click. Lane: the first predicted
+  ;; click after the reading-era repairs, codex-11 on Zai seats.
+  178)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
