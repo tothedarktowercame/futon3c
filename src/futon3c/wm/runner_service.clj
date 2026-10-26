@@ -244,9 +244,17 @@
       value
       (finally (Files/deleteIfExists (.toPath tmp))))))
 
-(defn click-status
-  "Read the durable state of exactly CLICK-ID. Never consults :last-result."
-  [click-id]
+(defn parent-verdict
+  "Project the parent's verdict from its exact retained child completion."
+  [state]
+  (if-not (contains? state :child)
+    {:status :not-applicable :reason :no-child}
+    (case (get-in state [:child :completion :status])
+      :pending {:status :not-checked :reason :child-pending}
+      :complete (get-in state [:child :completion :verdict])
+      nil)))
+
+(defn- read-click-state [click-id]
   (let [file (acceptance-file click-id)]
     (if (.exists file)
       (try (edn/read-string (slurp file))
@@ -254,6 +262,13 @@
              {:schema :wm/click-state-v1 :click-id click-id :status :invalid
               :reason :click-state-unreadable :message (ex-message t)}))
       {:schema :wm/click-state-v1 :click-id click-id :status :not-found})))
+
+(defn click-status
+  "Read the durable state of exactly CLICK-ID. Never consults :last-result."
+  [click-id]
+  (let [state (read-click-state click-id)]
+    (cond-> state
+      (contains? state :child) (assoc :parent-verdict (parent-verdict state)))))
 
 (defn- file-sha256-hex
   "Exact SHA256 of FILE's bytes as it lies on disk, lowercase hex. This is
@@ -298,7 +313,43 @@
 
 (defn- persist-click-state! [click-id f]
   (locking acceptance-lock
-    (atomic-edn! (acceptance-file click-id) (f (click-status click-id)))))
+    (atomic-edn! (acceptance-file click-id) (f (read-click-state click-id)))))
+
+(defn- bind-child! [parent-click-id retry]
+  (persist-click-state!
+   parent-click-id
+   (fn [state]
+     (let [existing (get-in state [:child :click-id])
+           attempted (:retry-click retry)]
+       (cond
+         (and existing (not= existing attempted))
+         (assoc state :child-conflict {:existing existing :attempted attempted})
+
+         existing state
+
+         :else
+         (assoc state :child
+                {:schema :wm/click-child-v1
+                 :click-id attempted
+                 :repair-id (:repair-id retry)
+                 :attempt (:attempt retry)
+                 :patch-sha (:patch-sha retry)
+                 :completion {:status :pending}
+                 :bound-at (str (Instant/now))}))))))
+
+(defn- complete-child! [parent-click-id child-click-id summary]
+  (persist-click-state!
+   parent-click-id
+   (fn [state]
+     (if (= child-click-id (get-in state [:child :click-id]))
+       (assoc-in state [:child :completion]
+                 {:status :complete
+                  :completed-at (str (Instant/now))
+                  :outcome (:outcome summary)
+                  :run-record (:run-record summary)
+                  :verdict {:status :not-checked :reason :requirements-not-run}})
+       (assoc-in state [:child :completion-mismatch]
+                 {:child-click-id child-click-id :outcome (:outcome summary)})))))
 
 (def ^:dynamic *click-run-binding-dir*
   "/home/joe/code/futon3c/data/wm-click-run-bindings")
@@ -1131,15 +1182,17 @@
 
 (defn- retry-child-opts
   "Carry parent runtime options into the queued child, replacing click identity."
-  [opts retry]
-  (-> opts
+  ([opts retry] (retry-child-opts opts retry nil))
+  ([opts retry parent-click-id]
+   (cond-> (-> opts
                       (dissoc :ordinary-click/issue! :idempotency-key)
                       (assoc :accepted-click-id (:retry-click retry)
                              :idempotency-key (str "meta-retry/" (:retry-click retry))
                              :acceptance-payload retry
                              :meta-repair-retry (select-keys retry
                                                              [:injury-id :repair-id
-                                                              :attempt :patch-sha :retry-click]))))
+                                                              :attempt :patch-sha :retry-click])))
+     parent-click-id (assoc :parent-click-id parent-click-id))))
 
 (defn- close-click!
   [agent-id click-id result opts]
@@ -1159,6 +1212,8 @@
     (persist-click-state! click-id
                           #(assoc % :status :completed :completed-at (str (Instant/now))
                                   :result summary))
+    (when-let [parent-click-id (:parent-click-id opts)]
+      (complete-child! parent-click-id click-id summary))
     (let [route-check (:route-check
                        (launch-route-check-after-close!
                         {:path (:run-binding summary) :click/id click-id}))]
@@ -1176,9 +1231,10 @@
     ;; single-flight acquisition from inside the parent opportunity.
     (when-let [retry (peek @!post-release-retries)]
       (swap! !post-release-retries pop)
+      (bind-child! click-id retry)
       (future
         (try
-          (click! (retry-child-opts opts retry))
+          (click! (retry-child-opts opts retry click-id))
           (catch Throwable t
             (println "[wm-self-heal] queued retry launch failed" (ex-message t))))))))
 

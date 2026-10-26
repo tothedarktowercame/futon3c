@@ -7,7 +7,13 @@
             [futon3c.wm.runner-service-test :as fixture]
             [futon3c.wm.machinery-execution-cohort :as cohort]))
 
-(use-fixtures :each #'fixture/reset-service!
+(defn isolated-retry-queue [f]
+  (let [queue @#'service/!post-release-retries]
+    (reset! queue clojure.lang.PersistentQueue/EMPTY)
+    (try (f)
+         (finally (reset! queue clojure.lang.PersistentQueue/EMPTY)))))
+
+(use-fixtures :each #'fixture/reset-service! #'isolated-retry-queue
   (fn [f] (with-redefs [cohort/apply-binding identity] (f))))
 
 (def parent-id "wm-click-parent-r11")
@@ -17,14 +23,18 @@
             :patch-sha "0123456789012345678901234567890123456789"})
 
 (defn close-under-fixture!
-  [click-id summary opts click-fn]
-  (with-redefs-fn
-    {#'service/result-summary (fn [& _] summary)
-     #'service/publish-registry! (fn [& _] nil)
-     #'service/launch-route-check-after-close! (fn [_] {:route-check {:status :fixture}})
-     #'service/signal-park-deps! (fn [& _] nil)
-     #'service/click! click-fn}
-    (fn [] (#'service/close-click! fixture/scratch-agent-id click-id {} opts))))
+  ([click-id summary opts click-fn]
+   (close-under-fixture! click-id summary opts click-fn nil))
+  ([click-id summary opts click-fn while-redefs]
+   (with-redefs-fn
+     {#'service/result-summary (fn [& _] summary)
+      #'service/publish-registry! (fn [& _] nil)
+      #'service/launch-route-check-after-close! (fn [_] {:route-check {:status :fixture}})
+      #'service/signal-park-deps! (fn [& _] nil)
+      #'service/click! click-fn}
+     (fn []
+       (#'service/close-click! fixture/scratch-agent-id click-id {} opts)
+       (when while-redefs (while-redefs))))))
 
 (deftest bind-at-launch-is-durable-before-child-call
   (#'service/enqueue-post-release-retry! retry)
@@ -34,9 +44,11 @@
      parent-id summary {:wm-agent-id fixture/scratch-agent-id}
      (fn [opts]
        (deliver seen {:opts opts :parent-state (service/click-status parent-id)})
-       {:status :queued :click-id child-id}))
-    (let [{:keys [opts parent-state]} (deref seen 5000 ::timeout)]
-      (is (not= ::timeout opts))
+       {:status :queued :click-id child-id})
+     #(is (not= ::timeout (deref seen 5000 ::timeout))))
+    (let [observed (deref seen 0 ::timeout)
+          {:keys [opts parent-state]} observed]
+      (is (not= ::timeout observed))
       (is (= parent-id (:parent-click-id opts)))
       (is (= child-id (:accepted-click-id opts)))
       (is (= child-id (get-in parent-state [:child :click-id])))
