@@ -26,12 +26,15 @@ After the change, the same retained bytes returned:
 
 The registered namespace run passed 3 tests and 9 assertions with 0 failures
 and 0 errors. Warrant:
-`test-registry-9b2cd0428ebc65dff4687dc28e9dd848616ffadf440463ac1839e6eec07f6b0c`.
+`test-registry-e5018d7d48a8e5d538055e64a38628d851e66f43af0bfe04143b44b8649ac35e`.
+Its post-landing validity check returned `:warrant? true` with no changed paths.
 
 The first registration attempt did not execute the tests: JVM startup refused
-because it could not create the initial G1 refinement thread (`EAGAIN`). The
-successful pinned registration used `JAVA_TOOL_OPTIONS='-XX:+UseSerialGC
--XX:ActiveProcessorCount=2'`; that environment is recorded by the warrant.
+because it could not create the initial G1 refinement thread (`EAGAIN`). An
+intermediate bounded-thread registration minted
+`test-registry-9b2cd0428ebc65dff4687dc28e9dd848616ffadf440463ac1839e6eec07f6b0c`,
+but its validity check correctly refused `:environment-mismatch`; it is not the
+warrant cited above. The final registration used the standard environment.
 
 Static gates: clj-kondo reported 0 errors and 0 warnings on `http.clj` and the
 new test namespace; `futon4/dev/check-parens.el` returned `OK` on both files.
