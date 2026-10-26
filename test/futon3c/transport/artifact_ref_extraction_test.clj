@@ -44,7 +44,12 @@ FULL_LOOP_AUTHOR: REFUSE :already-satisfied-at-base-head")
   (testing "a PR reference still takes priority over a sha"
     (is (= "https://github.com/example/project/pull/17"
            (artifact-ref
-            (str "Review https://github.com/example/project/pull/17 before " full-sha ".")))))
+            (str "Review https://github.com/example/project/pull/17 before " full-sha "."))))
+    ;; Order-independent: the earlier extractor returned the first match in
+    ;; text order, so a sha written before the PR link won. Reviewer-added pin.
+    (is (= "https://github.com/example/project/pull/17"
+           (artifact-ref
+            (str "Landed " full-sha ", see https://github.com/example/project/pull/17.")))))
   (testing "a full sha beats earlier short shas, while short-only input keeps its first sha"
     (is (= full-sha
            (artifact-ref (str "Started at 09a7cb8d and finished at " full-sha "."))))
