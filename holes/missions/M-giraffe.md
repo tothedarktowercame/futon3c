@@ -35,3 +35,34 @@ What should one work item be, as data, so that a War Machine (ours, or one readi
 
 - Where the structure lives (substrate, files, or both), and whether it replaces or projects the existing M/E/T documents.
 - What "the machine is runnable" requires of it first (Joe's invariant, 2026-10-25): no large redesign before a run is demonstrated.
+
+## Giraffe in futonic logic (Joe, 2026-10-26)
+
+Source: `futon3/library/futon-theory/futonic-logic.flexiarg` §4.9–4.11. The essay port in `futon7a/essays/futonic-logic/futonic-logic.md` is identical in these sections.
+
+- 間 (honest interval) reads the gap without filling it. 関 (gate/relation) names the gate. 間 + 関 → 無門関: "the gate dissolves when the interval is honestly read … The tension IS the gate: traversing it (proposing the mission, tracing the path) is how it opens."
+- **馬 is the 無門関.** It reads the interval between a tension and the later turns, with quote-checked evidence (no filling), and names the gate: resolved, re-raised (not-fixed or variation), dropped.
+- **Giraffe is the traversal.** It takes 馬's honestly read tensions and the mined pattern cascade, and proposes the ticket that opens each gate: an attested want, its check, its traced dependencies. The existing operations it starts from are `query-uncovered-components` (reads 間 relationally) and `trace-tension-path` (traverses 関).
+- The loop: 驴 (recall) → 象 (read the operator's turn) → 狗 (act) → 馬 (無門関) → Giraffe (traverse into tickets) → War Machine (select from ready tickets).
+
+## The Jira lens
+
+What a tracker people have used for years would give the gate, if we did this in Jira. This is a map of terms, not a dependency.
+
+| Jira | Here |
+|---|---|
+| acceptance criteria | a want with a locator |
+| "blocks / is blocked by" links | the dependency input G lacks |
+| epic → story → sub-task | breakdown into doable tickets |
+| resolution "won't do" | 馬's "dropped" |
+| Definition of Ready | the gate before selection: criteria present, blockers resolved, small enough |
+| Definition of Done | the after-run check (futon2 `368079c98`: wants re-read at the reviewed commit) |
+
+Jira shows whether a ticket can be done; it does not show whether it is worth doing. That comes from the capability stars and from wants Joe has attested.
+
+## Stop-the-line findings for the War Machine (Joe, 2026-10-26)
+
+Each of these is a stop-the-line finding in its own right. They are not data to tidy later.
+1. **Eligible missions the War Machine cannot reach.** 101 of 109 eligible items had never been read: the runner reads at most 3 new targets per click, in field order (claude-9, `futon2/holes/labs/wm-contract/E-outer-selection-landscape.md`, `f20df2c28`).
+2. **Tickets that cannot be selected.** All 171 tickets are excluded before scoring. A ticket's wants found on the fly have no locator.
+3. **G has no dependency input.** G rates cascades, but nothing at any stage reads dependencies or readiness, so a cascade can order work in an order that makes no sense, and G would not see it. Two cascades of 27 and 12 units scored identical G to 16 digits (claude-9's H1: only novelty separates candidates).
