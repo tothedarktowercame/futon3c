@@ -84,3 +84,17 @@ Report: `~/notes/wm-next/tracker-survey/report.md`; read-only checkouts with sha
 - **Dependencies range from a flag to an operational graph.** Taiga: a boolean `is_blocked` plus a free-text note. Plane: typed relations (blocked-by, start-before, finish-before, implemented-by …) that the core enforces nothing from. OpenProject: precedes/follows with a signed lag, cycle rejection, rescheduling of the successor. Redmine: cycle rejection, delay on precedes, and `closable?` refuses to close an issue while a blocker or a child is open.
 - **None has our want + check pair**: no field for the claim to be checked, its locator, or a typed reason it cannot be checked; acceptance criteria live in free text everywhere. None records a reason for "dropped".
 - **Worth taking:** keep hard readiness (blocks/requires) apart from schedule order (precedes), as Redmine and OpenProject do; data on the relation itself (lag, and for us the evidence tag the blend carrier already requires on application-order edges); an explicit cycle policy before G reads the graph; who may attest ready / done / dropped.
+
+## Giraffe is the anticipatory analogue of m40 (Joe, 2026-10-26)
+
+m40 crystallises what has been said: memories arrive, become dated facts, and are combined as admissible cones in the 3/2-blend carrier (`mathlib4/DarkTower/MemoryCones.lean`; minus40 `docs/SPEC-open-items.md` §6), keeping the maximal antichain rather than one best merge; a pair with no admissible cone is sorry-certified. Giraffe would do the same for what is to be done (claude-11's reading, for Joe to correct):
+
+| m40 (past) | Giraffe (anticipated) |
+|---|---|
+| a memory arrives (write hook) | a want arrives: an operator turn read by 象/馬, a mission doc, a ticket |
+| crystallised into dated facts | crystallised into a ticket: want, check, needs |
+| combined memory = admissible cone | work package = admissible blend of tickets, with application-order edges |
+| conflict on a claim schema (corner store: 23rd vs 40th) | conflict on a plan: two packages claiming the same capability, or orders that cycle |
+| maximal antichain of merges, no unique best | maximal antichain of orderings, no unique best; G chooses among them |
+| sorry-certified: no admissible cone | an open gate: no admissible order yet (APM before prelims) |
+| `asof`: what was true then | "ready as of": what can start now, what waits on what |
