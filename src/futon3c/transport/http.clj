@@ -10249,6 +10249,26 @@
                      {:error "wm-click-status-failed"
                       :message (.getMessage throwable)}))))
 
+(defn- handle-wm-click-child-verdict
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:error "invalid-json"})
+      (if-let [field (cond
+                       (not (nonblank-string? (:click-id payload))) "click-id"
+                       (not (nonblank-string? (:verdict-file payload))) "verdict-file")]
+        (json-response 400 {:error "missing-field" :field field})
+        (try
+          (json-response
+           200
+           ((requiring-resolve
+             'futon3c.wm.runner-service/record-child-verdict!)
+            (:click-id payload) (:verdict-file payload)))
+          (catch Throwable throwable
+            (json-response 500
+                           {:error "wm-click-child-verdict-failed"
+                            :message (.getMessage throwable)})))))))
+
 (defn- handle-wm-run4-series-step [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
@@ -12968,6 +12988,9 @@
 
       (and (= :post method) (= "/api/alpha/wm/click" uri))
       (handle-wm-click-start request config)
+
+      (and (= :post method) (= "/api/alpha/wm/click/child-verdict" uri))
+      (handle-wm-click-child-verdict request)
 
       (and (= :post method) (= "/api/alpha/wm/run4/series/step" uri))
       (handle-wm-run4-series-step request config)

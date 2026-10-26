@@ -317,6 +317,96 @@
   (locking acceptance-lock
     (atomic-edn! (acceptance-file click-id) (f (read-click-state click-id)))))
 
+(defn apply-child-verdict
+  "Apply a requirements verdict only to an exact completed child whose
+   provisional verdict still says that requirements have not run."
+  [state verdict]
+  (let [child (:child state)
+        completion-status (get-in state [:child :completion :status])
+        existing (get-in state [:child :completion :verdict])
+        refusal (cond
+                  (nil? child) {:reason :no-child}
+                  (not= :complete completion-status)
+                  {:reason :child-not-complete
+                   :completion-status completion-status}
+                  (not= {:status :not-checked :reason :requirements-not-run}
+                        existing)
+                  {:reason :verdict-already-recorded :existing existing})]
+    (if refusal
+      (assoc-in state [:child :verdict-refusal] refusal)
+      (-> state
+          (assoc-in [:child :completion :verdict] verdict)
+          (update :child dissoc :verdict-refusal)))))
+
+(defn- child-verdict-result [click-id state]
+  {:click-id click-id
+   :child-verdict (get-in state [:child :completion :verdict])
+   :verdict-refusal (get-in state [:child :verdict-refusal])
+   :parent-verdict (parent-verdict state)})
+
+(defn- canonical-path [path]
+  (when (string? path)
+    (.getCanonicalPath (io/file path))))
+
+(defn record-child-verdict!
+  "Carry a requirements sidecar's verdict into its exact completed child.
+   The sidecar is retained producer evidence; Q1--Q10 are not recomputed."
+  [parent-click-id verdict-file]
+  (let [initial (read-click-state parent-click-id)]
+    (cond
+      ;; An ordinary click remains byte-identical: there is no child record to
+      ;; which a refusal could be durably attached.
+      (not (contains? initial :child))
+      (child-verdict-result parent-click-id
+                            (apply-child-verdict initial nil))
+
+      ;; Structural eligibility precedes evidence-file interpretation. A
+      ;; pending child, or one with a final verdict, cannot be authorized by
+      ;; changing the supplied file.
+      (or (not= :complete (get-in initial [:child :completion :status]))
+          (not= {:status :not-checked :reason :requirements-not-run}
+                (get-in initial [:child :completion :verdict])))
+      (child-verdict-result
+       parent-click-id
+       (persist-click-state! parent-click-id
+                             #(apply-child-verdict % nil)))
+
+      :else
+      (let [loaded (try
+                     {:value (edn/read-string (slurp verdict-file))
+                      :canonical-verdict-file (canonical-path verdict-file)}
+                     (catch Throwable t {:error t}))]
+        (if-let [error (:error loaded)]
+          (let [after (persist-click-state!
+                       parent-click-id
+                       #(assoc-in % [:child :verdict-refusal]
+                                  {:reason :verdict-file-unreadable
+                                   :message (ex-message error)}))]
+            (child-verdict-result parent-click-id after))
+          (let [record (:value loaded)
+                expected (get-in initial [:child :completion :run-record])
+                actual (:run-record record)
+                expected-path (try (canonical-path expected)
+                                   (catch Throwable _ nil))
+                actual-path (try (canonical-path actual)
+                                 (catch Throwable _ nil))
+                after (persist-click-state!
+                       parent-click-id
+                       (fn [state]
+                         (if (and expected-path actual-path
+                                  (= expected-path actual-path))
+                           (apply-child-verdict
+                            state
+                            {:status (if (:conforms record) :passed :failed)
+                             :verdicts (:verdicts record)
+                             :checked-at (:checked-at record)
+                             :verdict-file (:canonical-verdict-file loaded)})
+                           (assoc-in state [:child :verdict-refusal]
+                                     {:reason :verdict-run-record-mismatch
+                                      :child-run-record expected
+                                      :verdict-run-record actual}))))]
+            (child-verdict-result parent-click-id after)))))))
+
 (defn- bind-child! [parent-click-id retry]
   (persist-click-state!
    parent-click-id
