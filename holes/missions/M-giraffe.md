@@ -225,3 +225,43 @@ Exit criterion (lifecycle): someone could implement the mission from this sectio
 - [ ] **Open choice: the work-package ranking** — K2' prunes to the maximal antichain, fit to attested wants ranks within it, both scores recorded, packages marked *imagined* until a click scores them (§Lynn, proposed reading).
 - [ ] **Wiring diagram:** triggers 2 and 3 of the lifecycle's list hold (adapter writes what the selector reads; it crosses futon3c/futon2), so one is drawn before VERIFY.
 - [ ] **Fidelity contract (GF):** greenfield over the documents; declared commitments are the candidate-field list and the tracker survey's "worth taking" list.
+
+### Sketch: items as open theories, glued with the pattern cascade (claude-11, 2026-10-26, for claude-9's comments)
+
+Joe, 2026-10-26: mining relations between tasks is the task-side counterpart of the Giant Connected Cascade 馬 is building for patterns. Giraffe could reuse the same machinery over task space, and the notebook (`futon3c/notebooks/daxiang_live.clj` §7) already does most of the translating. This sketch takes up the Relation, Invariant and Open-choice items above. It does not replace them.
+
+**Encoding, item by item, after `pattern-theory` (`daxiang_live.clj:399`).** Each item `k` is a small open theory built with `ot/theory`:
+- `k-ready` = the `and` of its hard needs (the gate);
+- `k-open` = `k-ready and not k-landed` (it can start now and has not landed);
+- `k-landed` is the interface variable other theories read, the counterpart of a pattern's `-then`.
+The two sides fit together: a pattern's `:why` says which `-then` answers its `-if` (the reason for doing something next), and an item's needs say which variables must hold before it can start (the gate). In the glued theory both kinds are mechanisms over the same variable names.
+
+**Need kinds (H4 finding 2) as variables.**
+| Kind | Variable | Comes from |
+|---|---|---|
+| artifact exists | `art:<path or key>` | a leaf, observed by checking the file system or the store |
+| item status | `j-landed` | owned by item `j`'s theory |
+| ruling | `rule:<id>` | a leaf, *undetermined* unless the operator has ruled |
+| dangling name | none | refused at adapter time with a typed reason; never a variable |
+| operator practice | `op:<id>` | a leaf, *undetermined* |
+An `enables` edge (H4 finding 4) makes `k-landed` an input of the target's need variable, through a link theory like `link-theory` (`daxiang_live.clj:414`). The equation grammar only has two-input connectives, so longer conjunctions get private intermediate variables, as the notebook already does for `or`.
+
+**What the existing refusals mean here.**
+- `:double-mechanism`: two theories both claim to establish the same variable, e.g. two items each say they produce `art:X`. This is the "conflict on a plan" row of the m40 table. Recorded as a typed fact (house convention), not resolved by guessing.
+- `:cycle`: a cycle of hard needs. Proposed: record it, and the items on the cycle get the typed readiness reason `:needs/cyclic` (this settles the cycle-policy item above, pending Joe).
+- Matching by name will produce false sharings at item grain. The adapter emits a variable only from an explicit path, key or item id, never from prose, and keeps a list of the name collisions it saw.
+
+**Readiness and the "what it unblocks" score, as computations.**
+- Readiness of `k` at a selection = the value of `k-ready` under `scm/evaluate`, with the leaves observed now. Never stored (Joe, HTM analogy).
+- What landing `k` unblocks = the set of `j` whose `j-ready` changes from false to true under `surgery/do-intervention` on `k-landed`. This is a causal question asked of the glued model, not a weighting. The same question asked of a capability star is Joe's "joe-passes-prelims … depends on a calculation over the rest of the potential-capability landscape" (`M-象-2000/data/moves-scale3/shard-3/labels.py:100`).
+- Threshold vs edge kind (open choice above): in this encoding a hard need is a conjunct of `k-ready`, and a soft one is not. A soft need could feed a degree later, once values stop being Boolean. Proposed: two edge kinds now, no degrees.
+
+**Pieces that are not built yet (M-diagramprover.md:2005–2010), and what DERIVE requires of each.**
+1. *Mechanisms written by hand.* Giraffe's adapter is the miner for task space: it writes the mechanisms from the documents' Blocked-by/Depends-on lines and declared enables. 馬 does the same for patterns. Both write `ot/theory` values, so they can be glued together.
+2. *Boolean values.* Keep Boolean for the first test. *Undetermined* (rulings, practices) is carried as a leaf with no observation, plus a typed reason. It is never defaulted to false.
+3. *Variables identified by name.* As above: explicit targets only; collisions are listed.
+4. *Predictions not tested against the act history.* Every do(·) cone is a prediction: "if `k` lands, `j` becomes ready". The act and commit history says whether `j` was started after `k` landed. This is the falsification test, and the first one below is its smallest form.
+
+**First test (small, existing code only).** Glue the roughly eight item-to-item need edges and the one enables edge found in MAP, plus the two prelims stars, with `ot/glue`. Compute the cone of do(`ai-passes-prelims-landed`). Compare it with what was actually started afterwards. Output: one receipt with the glue result (or its refusal), the cone, and the comparison. Pass: the glue succeeds or refuses with a typed reason that names the colliding variables; the cone is non-empty; every member of the cone is checked against history as either confirmed or not. Before running, the prediction is written down here.
+
+**For claude-9 (WM side).** Questions to put once Joe has read this: (a) can the selector read `k-ready` and the do(·) cone as typed facts beside the choice without changing `evaluate` (§Overlap, sequencing)? (b) does `:needs/cyclic` fit the S1 exclusion-reason vocabulary, or does it belong in the trace? (c) is a cone a candidate input to G, or only to the brief?
