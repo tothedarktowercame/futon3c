@@ -98,3 +98,28 @@ m40 crystallises what has been said: memories arrive, become dated facts, and ar
 | maximal antichain of merges, no unique best | maximal antichain of orderings, no unique best; G chooses among them |
 | sorry-certified: no admissible cone | an open gate: no admissible order yet (APM before prelims) |
 | `asof`: what was true then | "ready as of": what can start now, what waits on what |
+
+## Lynn (2026): blending as predictive processing, and what her code does not reproduce (claude-11, 2026-10-26)
+
+Source: Lynn, "Conceptual Blending in Humans and Language Models", *Frontiers in Psychology* 17, doi 10.3389/fpsyg.2026.1849083. Full notes, the supplementary script (`osprey.py`) and the run are in `~/notes/wm-next/anticipation/parr-friston-and-futon-theory.md` and `lynn-supp/` beside it.
+
+**Claim in the text.** The goal "functions as a control constraint that selects among possible source concept elements": source concepts send their features as predictions, prediction error flows back, and the blend is the selective combination that stabilises.
+
+**What the open code does.** Four aircraft prototypes as role:filler bundles in a vector-symbolic model. The posterior over prototypes is a softmax of log prior − 4·error (helicopter 0.59, airplane 0.23). The blend takes each role's filler from whichever of the top two prototypes fits the observation better. Blend error 0.17 against 0.38 for the best single prototype (numpy, seed 13; the paper reports no numbers to compare with).
+
+**What does not reproduce.**
+- There is no goal term. The script's docstring says "No synergy terms and no goals." In the worked example this follows from the set-up: the goal is to understand the percept, so "the node representing the goal is the same as the node that comes to have the blended knowledge". The goal and the observation are the same node, and fitting the observation is pursuing the goal. The general claim, that a goal *different from* the observation selects what is inherited, is never exercised.
+- The test is close to circular. Each filler is chosen by fit to the observation and the blend is then scored on that observation, so the blend almost has to win. A held-out check would score features the blend predicts but was not chosen for (hover, cruise efficiency) against later observations.
+- No relations between roles, so nothing like Goguen's axioms is carried or broken.
+
+**Why this is the question for Giraffe.** Giraffe is exactly the case Lynn's code leaves out: offline, between clicks, there is no observation (Parr–Pezzulo–Friston: the present is switched off for recall and planning), so the goal cannot coincide with the observation. Something else has to be the target. In active inference that is the preferred outcomes, the C term of expected free energy (Parr–Friston 2018); for us, the attested wants. So our version has to say what Lynn's does not: how a target that is not an observation selects which features of each input a work-package blend inherits.
+
+**Against the carrier.** Lynn's set-up is a `Span` in `mathlib4/DarkTower/WarMachine/ThreeHalvesBlend.lean`: generic theory = the shared role vocabulary, inputs = the two prototypes, blend = a `Cone` with partial legs, one source per role. The two rankings differ in kind. K2' (`Cone.qualityLE`) is structural and partial, uses no evidence, and `MemoryCones.lean` keeps the maximal antichain. Lynn's is evidential and total (cosine to an observation, argmax).
+
+**Proposed reading (not yet argued against the Question's field list).**
+1. K2' prunes candidate work-package blends to the maximal antichain.
+2. Fit to the attested wants ranks within that antichain.
+3. Both scores are recorded on the package, never merged into one number.
+4. The package is marked *imagined* until a real observation (a click's result) scores it; then *attested*. This mark goes in the provenance field ("who said so, and when").
+
+Test that would separate this from Lynn's fitting step: rank packages by want-fit, run the top one, and score the features it predicted but was not selected for against the click's result.
