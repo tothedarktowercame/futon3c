@@ -1479,12 +1479,21 @@
   [text]
   (or (mfuton-mode/first-frontiermath-local-artifact-ref text)
       (when (string? text)
-        (some->> (re-find artifact-ref-re text)
-                 rest
-                 (remove nil?)
-                 first
-                 (#(str/replace % #"[.,:;]+$" ""))
-                 str/trim))))
+        (let [matches (map (fn [[_ pr-link pr-number sha path]]
+                             {:pr (or pr-link pr-number)
+                              :sha sha
+                              :path path})
+                           (re-seq artifact-ref-re text))
+              ref (or (some :pr matches)
+                      (some (fn [{:keys [sha]}]
+                              (when (= 40 (count sha)) sha))
+                            matches)
+                      (some :sha matches)
+                      (some :path matches))]
+          (some-> ref
+                  (str/replace #"[.,:;]+$" "")
+                  str/trim
+                  not-empty)))))
 
 (defn- summarize-result-text
   [text]
