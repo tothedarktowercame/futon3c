@@ -187,7 +187,7 @@ Joe, 2026-10-26, in claude-11's REPL: "we should move from MAP to DERIVE in line
 | Owner | 67 | `**Owner:**` line, not "unassigned" |
 | State | 106 have a Status line; 54 date it | no item records dated transitions apart from git history |
 | Phase exit verdicts | 3 | `**<PHASE> exit: …**` lines |
-| Dropped, with reason | 0 | no item in the field is dropped: dropped items leave the field, and their reason is not recorded anywhere the selector reads |
+| Dropped, with reason | 0 | no Status line among the 109 says dropped, nonstarter or superseded (one says phases deferred). Whether dropped items leave the field, and where their reason would be kept, was not checked |
 | Capability served | 9 | declared star links (star audit, 10-25) |
 | Provenance: when | 65 | `**Date:**`, `**Created:**` or `**Opened:**` line |
 
@@ -205,7 +205,7 @@ Joe, 2026-10-26, in claude-11's REPL: "we should move from MAP to DERIVE in line
 | Overview draft grouping 789 items into basins and clusters | Joe's names, merges and order for those groups |
 | Tracker survey (four reference trackers, cited) | An adapter: one per source; none yet, holes/ first |
 
-**Surprises recorded before DERIVE.** (1) Wants are well located (97 of 109) but almost never attributed (2 of 109): the check exists and the "who said so" does not, which is the reverse of what the four trackers have. (2) A quarter of the items have a dependency line, but most of those lines say "None": the field is a habit of the template, not a record. (3) Dropped items are invisible to the field, so "dropped, with reason" can only be read from git history.
+**Surprises recorded before DERIVE.** (1) Wants are well located (97 of 109) but almost never attributed (2 of 109): the check exists and the "who said so" does not, which is the reverse of what the four trackers have. (2) A quarter of the items have a dependency line, but most of those lines say "None": the field is a habit of the template, not a record. (3) The field holds no dropped item at all, so "dropped, with reason" cannot be counted from it.
 
 **MAP exit: Met.** Every candidate field has a count, and the ready/missing table is complete. One question stays open and moves to DERIVE as a design choice: is a hard need a threshold of 1, or a different kind of edge?
 
