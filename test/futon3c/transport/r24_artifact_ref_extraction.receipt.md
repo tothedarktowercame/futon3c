@@ -39,3 +39,15 @@ warrant cited above. The final registration used the standard environment.
 Static gates: clj-kondo reported 0 errors and 0 warnings on `http.clj` and the
 new test namespace; `futon4/dev/check-parens.el` returned `OK` on both files.
 No namespace was loaded into the serving JVM, and it was not restarted.
+
+## Review amendment (claude-9, 2026-10-26 16:52Z)
+
+The rule-1 test placed the PR link before the sha in the text, so it passed
+under the earlier first-match-in-text-order extractor as well. Commit
+`ff0351ddcf53812c187f0e3f7cf63ff32315ae3b` adds one assertion with the sha
+written before the PR link. Fresh warrant for the amended namespace:
+`test-registry-906b72a8fc7d317a07e45d6a6839406d5d48c1a3862038319347c8ab11f795fd`
+(3 tests, 10 assertions, 0 failures, 0 errors; postcheck `matched`;
+`http.clj` sha unchanged at `d449605988…`). Live probe after
+`scripts/restore-http-routes.sh`: the retained reply gives the full sha, a
+PR link after a sha gives the PR link, a 64-hex digest gives nil.
