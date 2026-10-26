@@ -988,6 +988,10 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         # the record like ports; a frame without it stays byte-identical.
         if entry is not None and entry["record"].get("alignment"):
             frames[-1]["alignment"] = entry["record"]["alignment"]
+        # pattern_verdicts (馬's occurrence reading: did the reply use each
+        # proposed pattern, by source, shown or not) rides the record too.
+        if entry is not None and entry["record"].get("pattern_verdicts"):
+            frames[-1]["pattern_verdicts"] = entry["record"]["pattern_verdicts"]
         # record: the 象 turn record this frame was joined to, so a viewer can
         # reach the record's own pages (scope view ?turn=<turn_id>).  Absent
         # when the frame has no record.  The id is the file's stem, or the

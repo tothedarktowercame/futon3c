@@ -27,6 +27,7 @@
 
 ;;; Code:
 
+(require 'seq)
 (require 'json)
 (require 'cl-lib)
 (require 'subr-x)
@@ -315,6 +316,22 @@ content of that mark.  The marks themselves are underlined in PARSE."
            (t ""))))
     (format "  %s  %-28s %s" at type detail)))
 
+(defcustom turn-stepper-open-max-age-minutes 360
+  "Show a still-open act in the stepper only if it is younger than this.
+Older open acts stay on the record (and in memory); the stepper names how
+many it is not showing.  Joe, 2026-10-26: acts from 1500 minutes ago are
+forgotten clutter in the side buffer.  Nil shows every open act."
+  :type '(choice (const :tag "No limit" nil) integer)
+  :group 'turn-stepper)
+
+(defun turn-stepper--minutes-between (since turn-at)
+  "Whole minutes from SINCE to TURN-AT, or nil when either is unreadable."
+  (condition-case nil
+      (floor (/ (float-time (time-subtract (date-to-time turn-at)
+                                           (date-to-time since)))
+                60))
+    (error nil)))
+
 (defun turn-stepper--ports-age (since turn-at)
   "Age of a still-open act: minutes from SINCE to TURN-AT, or nil."
   (condition-case nil
@@ -332,8 +349,17 @@ or empty."
   (if (not (listp ports))
       ""
     (let ((closed (turn-stepper--aget (quote closed_this_turn) ports))
-          (open (turn-stepper--aget (quote still_open) ports)))
-      (if (and (null closed) (null open))
+          (open-all (turn-stepper--aget (quote still_open) ports))
+          (open nil) (older 0))
+      (seq-doseq (a open-all)
+        (let ((m (turn-stepper--minutes-between
+                  (turn-stepper--aget (quote since) a) turn-at)))
+          (if (and turn-stepper-open-max-age-minutes m
+                   (>= m turn-stepper-open-max-age-minutes))
+              (setq older (1+ older))
+            (push a open))))
+      (setq open (nreverse open))
+      (if (and (null closed) (null open) (zerop older))
           ""
         (concat
          "\n"
@@ -358,7 +384,33 @@ or empty."
                             (turn-stepper--aget (quote since) a) turn-at)
                            "?")
                        (or (turn-stepper--aget (quote text) a) "")))
-             open "\n"))))))))
+             open "\n")))
+         (when (> older 0)
+           (format "%s  (%d older open act%s not shown: over %d min; still on the record)"
+                   (if open "\n" "") older (if (= older 1) "" "s")
+                   turn-stepper-open-max-age-minutes)))))))
+
+(defun turn-stepper--render-pattern-verdicts (verdicts)
+  "Render 馬's PATTERN VERDICTS: for each proposed pattern, whether the reply
+used it (status, mapped parts), which source proposed it, and whether the
+prompt line showed it.  Returns the empty string when absent."
+  (let ((patterns (and (listp verdicts) (turn-stepper--aget (quote patterns) verdicts))))
+    (if (null patterns)
+        ""
+      (concat
+       "\n"
+       (propertize (format "PATTERNS (馬, %s)\n"
+                           (or (turn-stepper--aget (quote reader) verdicts) "?"))
+                   'face '(:weight bold))
+       (mapconcat
+        (lambda (p)
+          (format "  %-8s %-46s %s%s"
+                  (or (turn-stepper--aget (quote status) p) "?")
+                  (or (turn-stepper--aget (quote pattern) p) "?")
+                  (mapconcat (lambda (x) (format "%s" x))
+                             (turn-stepper--aget (quote sources) p) "+")
+                  (if (turn-stepper--aget (quote shown) p) " shown" "")))
+        patterns "\n")))))
 
 (defun turn-stepper--first-words (text n)
   "The first N whitespace words of TEXT, ellipsized; \"…\" when empty."
@@ -461,6 +513,7 @@ carries that information."
      (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
                                  (turn-stepper--aget 'at turn))
      (turn-stepper--render-alignment (turn-stepper--aget 'alignment frame))
+     (turn-stepper--render-pattern-verdicts (turn-stepper--aget 'pattern_verdicts frame))
      "\n")))
 
 ;;; ---------------------------------------------------------------- mode
