@@ -56,6 +56,29 @@
         (is (= expected (:parent-verdict (service/click-status parent-id)))))
       (finally (.delete file)))))
 
+(deftest producer-form-with-quoted-keywords-lands
+  ;; wm_run_alert.py's edn() quotes every string, keywords included; the
+  ;; file on disk is `{":run-record" "..." ":conforms" false ...}`.
+  (seed! (complete-state))
+  (let [file (java.io.File/createTempFile
+              "r11-child-verdict-" ".edn"
+              (.getParentFile (io/file service/*click-acceptance-dir*)))]
+    (spit file (str "{\":run-record\" " (pr-str run-record)
+                    " \":checked-at\" \"2026-10-26T08:00:00+00:00\""
+                    " \":conforms\" false"
+                    " \":verdicts\" {\":Q1\" \":holds\" \":Q2\" \":unverifiable\"}"
+                    " \":critical-parameters\" {\":Q1\" \"784 / 784\"}}\n"))
+    (try
+      (let [result (service/record-child-verdict! parent-id (.getPath file))]
+        (is (nil? (:verdict-refusal result)))
+        (is (= :failed (get-in result [:child-verdict :status])))
+        (is (= {:Q1 :holds :Q2 :unverifiable}
+               (get-in result [:child-verdict :verdicts])))
+        (is (= "2026-10-26T08:00:00+00:00"
+               (get-in (service/click-status parent-id)
+                       [:parent-verdict :checked-at]))))
+      (finally (.delete file)))))
+
 (deftest failed-requirements-land-verbatim
   (seed! (complete-state))
   (let [verdicts {:Q1 :holds :Q2 :fails}

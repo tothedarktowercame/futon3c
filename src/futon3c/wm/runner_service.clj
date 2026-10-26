@@ -348,6 +348,20 @@
   (when (string? path)
     (.getCanonicalPath (io/file path))))
 
+(defn- keywordize-edn-strings
+  "`wm_run_alert.py` writes its verdict with every keyword quoted as a string
+   (`{\":run-record\" \"...\" \":verdicts\" {\":Q1\" \":holds\"}}`), so read the
+   producer's form: a string beginning with a colon is the keyword it names."
+  [value]
+  (cond
+    (map? value) (into {} (map (fn [[k v]] [(keywordize-edn-strings k)
+                                           (keywordize-edn-strings v)]))
+                       value)
+    (sequential? value) (mapv keywordize-edn-strings value)
+    (and (string? value) (> (count value) 1) (= \: (first value)))
+    (keyword (subs value 1))
+    :else value))
+
 (defn record-child-verdict!
   "Carry a requirements sidecar's verdict into its exact completed child.
    The sidecar is retained producer evidence; Q1--Q10 are not recomputed."
@@ -373,7 +387,8 @@
 
       :else
       (let [loaded (try
-                     {:value (edn/read-string (slurp verdict-file))
+                     {:value (keywordize-edn-strings
+                              (edn/read-string (slurp verdict-file)))
                       :canonical-verdict-file (canonical-path verdict-file)}
                      (catch Throwable t {:error t}))]
         (if-let [error (:error loaded)]
