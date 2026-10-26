@@ -1,7 +1,7 @@
 # M-giraffe — start from the data structure: a work pool the War Machine can read
 
 **Date:** 2026-10-25
-**Status:** OPEN — HEAD (raised by Joe in claude-11's REPL)
+**Status:** OPEN — DERIVE (from 2026-10-26; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
 **Owner:** Joe + claude-11
 **Follows:** M-kangaroo (warm pouches, i.e. agents that persist; this mission is about the work those agents are given).
 **Serves:** our own War Machine first. Second, the consulting offer: "show me your agent logs and your ticket tracker, and I will show you how to make it work better" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞).
@@ -167,3 +167,61 @@ Source: Lynn, "Conceptual Blending in Humans and Language Models", *Frontiers in
 4. The package is marked *imagined* until a real observation (a click's result) scores it; then *attested*. This mark goes in the provenance field ("who said so, and when").
 
 Test that would separate this from Lynn's fitting step: rank packages by want-fit, run the top one, and score the features it predicted but was not selected for against the click's result.
+
+## MAP close-out (claude-11, 2026-10-26)
+
+Joe, 2026-10-26, in claude-11's REPL: "we should move from MAP to DERIVE in line with the futon4/holes/mission-lifecycle.md". The sections above are the HEAD, IDENTIFY and MAP work, written before this mission had phase headings. The verdicts below record Joe's judgment; the table adds the one MAP count still missing.
+
+**HEAD exit: Met.** The anchor is Joe's "start with the data structure" turn and the 2026-10-25 measurements in §HEAD.
+
+**IDENTIFY exit: Met.** The gap and scope are §Question and §Approach; Joe raised them and has directed every section since.
+
+**Candidate fields counted over the pool.** This is §Approach's first step, done for all 109 eligible items of attempt-002 rather than the four of H4. The script and per-item rows are in `~/notes/experiments/2026-10-26-giraffe-map-close/` (`field_counts.py`, `field-counts.json`). The regexes read each item's own document, so the numbers are a floor.
+
+| Candidate field | Items carrying it (of 109) | How counted |
+|---|---|---|
+| Stated want | 106 | ≥1 admitted want in the 10-25 wants view; the 3 without are E-kimi-task-28, E-kimi-task-103, E-convert-operator-turns-to-patterns |
+| Every want has a locator | 97 | all admitted wants carry `:locator` |
+| Want in the owner's words, with source | 2 | a checkbox line carrying "(Joe … date)" or "(operator … date)" |
+| What must exist first | 27 have a `**Blocked by / Depends on / Requires …:**` line; 17 name something | about half of the 17 name another item by id; the rest name an artifact or a decision. The rest of the 27 say "None" or "Nothing" |
+| Owner | 67 | `**Owner:**` line, not "unassigned" |
+| State | 106 have a Status line; 54 date it | no item records dated transitions apart from git history |
+| Phase exit verdicts | 3 | `**<PHASE> exit: …**` lines |
+| Dropped, with reason | 0 | no item in the field is dropped: dropped items leave the field, and their reason is not recorded anywhere the selector reads |
+| Capability served | 9 | declared star links (star audit, 10-25) |
+| Provenance: when | 65 | `**Date:**`, `**Created:**` or `**Opened:**` line |
+
+**Ready vs missing.**
+
+| Ready (no new code) | Missing (the work) |
+|---|---|
+| Wants with C4 locators for 97 of 109 items (`target_reading_registry`, the 10-25 wants view) | Attribution of a want to who said it and when: 2 of 109 |
+| Need-derived step order inside a cascade (`construction.clj:125`), cyclic descent refused by canonical G | Edges between items: 17 of 109 state one, in prose; no code reads them (`M-war-machine-pilot.md:337` "Depends on") |
+| Per-click typed exclusion reasons (S1), recomputed each click, i.e. readiness computed rather than stored, at the selector | A readiness reason for an unmet need between items; the five need kinds of H4 finding 2, of which only artifact-exists and item-status are checkable |
+| Application-order edges with evidence, specified at the blend-carrier level (`ThreeHalvesBlend.lean`, `NOTE-three-halves-blend-carrier-2026-10-06.md` §2) | Application-order edges between missions: one so far (APM after prelims, evidence = operator) |
+| `:wm/outer-selection-trace-v1` (why the funnel dropped what) | A reason for the choice derived from the item's own fields |
+| Status lines (106) and git history | Dated state transitions as data; `dropped` with a reason; roles (source / doer / accountable); revision number |
+| Capability stars (9 of 109 linked) | Star links for the other 100 |
+| Overview draft grouping 789 items into basins and clusters | Joe's names, merges and order for those groups |
+| Tracker survey (four reference trackers, cited) | An adapter: one per source; none yet, holes/ first |
+
+**Surprises recorded before DERIVE.** (1) Wants are well located (97 of 109) but almost never attributed (2 of 109): the check exists and the "who said so" does not, which is the reverse of what the four trackers have. (2) A quarter of the items have a dependency line, but most of those lines say "None": the field is a habit of the template, not a record. (3) Dropped items are invisible to the field, so "dropped, with reason" can only be read from git history.
+
+**MAP exit: Met.** Every candidate field has a count, and the ready/missing table is complete. One question stays open and moves to DERIVE as a design choice: is a hard need a threshold of 1, or a different kind of edge?
+
+## DERIVE (open, from 2026-10-26)
+
+Exit criterion (lifecycle): someone could implement the mission from this section alone. Each item below is a draft position taken from MAP, to be argued or replaced. None is settled yet.
+
+- [ ] **Entity: the work item is a projection over the existing M/E/T documents, not a replacement.** IF the item should carry want, check, needs, roles, state and provenance, HOWEVER 422 documents already exist and Joe's invariant forbids a large redesign before a run is shown, THEN an adapter reads each document into an item record and writes nothing back, BECAUSE a projection can be checked against the pool today, and a structure `evaluate` does not read can land without waiting on claude-9's defect list (§Overlap, sequencing).
+- [ ] **Relation: a need edge names the thing needed, not only the other item.** Fields: kind (one of H4's five: artifact, item-status, ruling, dangling name, operator practice); target (path / key / item id); owning side (this item's own work or someone else's, H4 finding 3); direction (`needs` or `enables`, H4 finding 4); evidence (who stated it, where). This reuses `construction.clj:125`'s derivation at item grain (§Overlap).
+- [ ] **Relation: hard readiness kept apart from application order.** `needs` is readiness; `precedes` is order, with its own evidence, never derived (blend-carrier NOTE §2; Redmine and OpenProject keep the same split).
+- [ ] **Invariant: readiness is never stored.** It is computed at each selection from the edges, and a need that cannot be determined (ruling, dangling name) gets a typed reason, not a guess (Joe, HTM analogy).
+- [ ] **Invariant: a cycle policy before anything reads the graph** — refuse, or report as a typed fact beside the choice (house convention, §Overlap guard vs record). Choose one.
+- [ ] **Invariant: an item's own Missing column is never counted as its dependency.**
+- [ ] **State: dated transitions, `dropped` with a reason** (obsolete, duplicate, declined, impossible, superseded), roles source / attester / doer / accountable, source system + external id, revision number (tracker survey).
+- [ ] **Data flow:** holes/ adapter → item records (location open: substrate, files, or both) → read by a tool for Joe first (the overview groups, with what waits on what), and by the selector only after the defect list closes.
+- [ ] **Open choice: a hard need as threshold 1 of a degree, or a separate edge kind** (HTM segments; H4 finding 1: a threshold term alone would rank M-self-improvement-loop first).
+- [ ] **Open choice: the work-package ranking** — K2' prunes to the maximal antichain, fit to attested wants ranks within it, both scores recorded, packages marked *imagined* until a click scores them (§Lynn, proposed reading).
+- [ ] **Wiring diagram:** triggers 2 and 3 of the lifecycle's list hold (adapter writes what the selector reads; it crosses futon3c/futon2), so one is drawn before VERIFY.
+- [ ] **Fidelity contract (GF):** greenfield over the documents; declared commitments are the candidate-field list and the tracker survey's "worth taking" list.
