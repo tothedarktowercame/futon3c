@@ -157,6 +157,28 @@
         (should (equal prompt
                        (buffer-substring-no-properties prompt-start input-start)))))))
 
+(ert-deftest agent-chat-delete-trailing-whitespace-restores-prompt-boundary ()
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    ;; Construct the live bad case: the final prompt space has lost its
+    ;; protection while `>' remains protected.  Exercise Emacs's real
+    ;; whitespace command, not a stand-in for it.
+    (let ((inhibit-read-only t))
+      (remove-list-of-text-properties (1- (point-max)) (point-max)
+                                      '(read-only rear-nonsticky)))
+    (delete-trailing-whitespace)
+    (should-not (string-suffix-p "> " (buffer-string)))
+    (agent-chat--repair-live-prompt!)
+    (insert "operator input")
+    (let ((prompt-start (marker-position agent-chat--prompt-marker))
+          (input-start (marker-position agent-chat--input-start)))
+      (should (equal "> " (buffer-substring-no-properties
+                            prompt-start input-start)))
+      (should (equal "operator input"
+                     (buffer-substring-no-properties input-start (point-max))))
+      (should (text-property-not-all prompt-start input-start 'read-only nil))
+      (should-not (get-text-property input-start 'read-only)))))
+
 (ert-deftest agent-chat-prompt-fetch-failure-falls-back-exactly ()
   (dolist (failure '(:error :timeout))
     (with-temp-buffer

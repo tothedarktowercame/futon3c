@@ -157,6 +157,9 @@ to this many attempts, then retain the record as a terminal failure."
 (defvar-local agent-chat--input-start nil
   "Marker at start of user input (after the complete prompt line).")
 
+(defvar-local agent-chat--expected-prompt nil
+  "Exact prompt text that must precede pending operator input.")
+
 (defvar-local agent-chat--separator-start nil
   "Marker at start of the separator line above prompt.")
 
@@ -1022,6 +1025,7 @@ text-face overlays were removed, painting everything prompt-face orange
 \(2026-07-02)."
   (let ((start (point))
         (prompt (or prompt (agent-chat--prompt-line))))
+    (setq agent-chat--expected-prompt prompt)
     (insert prompt)
     (add-text-properties
      start (point)
@@ -1044,6 +1048,62 @@ it anywhere at or after that boundary."
       (let ((inhibit-read-only t))
         (remove-list-of-text-properties
          start (point-max) '(read-only rear-nonsticky))))))
+
+(defun agent-chat--repair-live-prompt! ()
+  "Restore the protected prompt boundary after the preceding command.
+
+Some whitespace commands bind `inhibit-read-only' and can remove the final
+space from the prompt.  Once that happens, subsequent insertion occurs between
+the prompt characters (or pushes a protected prompt character through the
+pending input).  `read-only' alone therefore cannot maintain the boundary.
+
+The prompt marker and `agent-chat--expected-prompt' identify the authority.
+When the text or protection at that position differs, retain every
+non-prompt character as operator input, redraw the exact prompt, and put
+`agent-chat--input-start' immediately after it."
+  (when-let* ((expected (and (stringp agent-chat--expected-prompt)
+                             agent-chat--expected-prompt))
+              (marker-start (and (markerp agent-chat--prompt-marker)
+                                 (marker-position agent-chat--prompt-marker)))
+              (start (if (and marker-start
+                              (memq (char-after marker-start) '(?$ ?>)))
+                         marker-start
+                       (and (markerp agent-chat--input-start)
+                            (marker-position agent-chat--input-start)
+                            (save-excursion
+                              (goto-char agent-chat--input-start)
+                              (line-beginning-position))))))
+    (let* ((end (min (point-max) (+ start (length expected))))
+           (intact (and (= (- end start) (length expected))
+                        (equal expected
+                               (buffer-substring-no-properties start end))
+                        (text-property-not-all start end 'read-only nil))))
+      (if intact
+          (progn
+            (unless (markerp agent-chat--input-start)
+              (setq agent-chat--input-start (copy-marker end nil)))
+            (set-marker agent-chat--input-start end)
+            (agent-chat--repair-input-properties!))
+        (let ((inhibit-read-only t)
+              (input "")
+              (prompt-property
+               "Agent REPL prompt is read-only; type after its final \"> \""))
+          ;; Remove surviving prompt characters wherever a failed edit pushed
+          ;; them in the pending-input region.  Ordinary input never carries
+          ;; this exact property value.
+          (let ((pos start))
+            (while (< pos (point-max))
+              (unless (equal (get-text-property pos 'read-only)
+                             prompt-property)
+                (setq input (concat input (string (char-after pos)))))
+              (setq pos (1+ pos))))
+          (delete-region start (point-max))
+          (goto-char start)
+          (agent-chat--insert-prompt nil expected)
+          (setq agent-chat--input-start (copy-marker (point) nil))
+          (insert input)
+          (set-marker agent-chat--prompt-marker start)
+          (set-marker-insertion-type agent-chat--prompt-marker t))))))
 
 (defun agent-chat-beginning-of-line (&optional n)
   "Move to the start of the input, as C-a does in `shell-mode'.
@@ -3271,7 +3331,7 @@ CONFIG keys:
     (set-marker-insertion-type agent-chat--input-start nil)
     ;; Marker advances when messages are inserted
     (set-marker-insertion-type agent-chat--prompt-marker t)
-    (add-hook 'post-command-hook #'agent-chat--repair-input-properties! nil t)
+    (add-hook 'post-command-hook #'agent-chat--repair-live-prompt! nil t)
     (agent-chat-enable-markdown-font-lock)
     (goto-char (point-max))
     (agent-chat-scroll-to-bottom)
