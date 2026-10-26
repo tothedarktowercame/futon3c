@@ -153,7 +153,7 @@
   ;; ~/notes/wm-next/click-authorizations/joe-five-clicks-held-2026-10-26.md):
   ;; "I would allocate 5 more clicks to the ledger that could be used when
   ;; the outstanding issues are resolved." Released by claude-9 2026-10-26
-  ;; ~09:00Z: every R line of DEFECTS-reading-era.md is REPAIRED-FORWARD or
+  ;; 08:20Z: every R line of DEFECTS-reading-era.md is REPAIRED-FORWARD or
   ;; not a defect; the four unruled questions are on the decision sheet
   ;; (futon2 d054744c0) and none gates a click. Lane: the first predicted
   ;; click after the reading-era repairs, codex-11 on Zai seats.
