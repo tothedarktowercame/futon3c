@@ -105,3 +105,31 @@
     (is (= {:status :not-applicable :reason :no-child}
            (service/parent-verdict state)))
     (is (not (contains? state :child)))))
+
+(deftest real-child-click-reaches-the-parent-binding
+  ;; The seam the other tests stub past: a child launched with
+  ;; retry-child-opts keeps :parent-click-id through configured-runner-opts
+  ;; (apply-binding, configure-self-heal-ports, full-loop-runner/config) so
+  ;; the real close-click! writes its completion to the parent.
+  (#'service/bind-child! parent-id retry)
+  (let [run! (fn [_] {:outcome :grounded-change})
+        child-opts (#'service/retry-child-opts
+                    {:wm-agent-id fixture/scratch-agent-id} retry parent-id)]
+    (binding [service/*resolve-var* (#'fixture/resolver run! (constantly {}))]
+      (let [result (service/click! child-opts)]
+        (is (= :queued (:status result)))
+        (is (= child-id (:click-id result)))
+        (service/await-click! (:click-id result))))
+    (let [parent (service/click-status parent-id)]
+      (is (= :complete (get-in parent [:child :completion :status])))
+      (is (= :grounded-change (get-in parent [:child :completion :outcome])))
+      (is (= {:status :not-checked :reason :requirements-not-run}
+             (:parent-verdict parent)))
+      (is (not (contains? (get parent :child) :completion-mismatch))))))
+
+(deftest unreadable-child-completion-is-typed-not-nil
+  (is (= {:status :not-checked :reason :child-completion-unreadable
+          :completion-status :garbage}
+         (service/parent-verdict {:child {:completion {:status :garbage}}})))
+  (is (= {:status :not-checked :reason :child-verdict-absent}
+         (service/parent-verdict {:child {:completion {:status :complete}}}))))

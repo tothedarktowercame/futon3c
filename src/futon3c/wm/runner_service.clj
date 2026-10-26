@@ -251,8 +251,10 @@
     {:status :not-applicable :reason :no-child}
     (case (get-in state [:child :completion :status])
       :pending {:status :not-checked :reason :child-pending}
-      :complete (get-in state [:child :completion :verdict])
-      nil)))
+      :complete (or (get-in state [:child :completion :verdict])
+                    {:status :not-checked :reason :child-verdict-absent})
+      {:status :not-checked :reason :child-completion-unreadable
+       :completion-status (get-in state [:child :completion :status])})))
 
 (defn- read-click-state [click-id]
   (let [file (acceptance-file click-id)]
