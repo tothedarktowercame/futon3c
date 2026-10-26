@@ -165,6 +165,21 @@
     {:schema (:schema receipt)
      :status :refused :reason :browser-receipt-unavailable}))
 
+(defn- cascade-at
+  "Locator into the same receipt for the q4 row (under
+   [:outer-policy-recomputation :q4]) holding this entry's cascade, or a
+   typed absence. Reader-side only; the producer already retains the
+   cascade there."
+  [receipt cascade-digest]
+  (if cascade-digest
+    (or (when-let [rows (seq (get-in receipt [:outer-policy-recomputation :q4]))]
+          (some (fn [[i row]]
+                  (when (= cascade-digest (:cascade-digest row))
+                    [:outer-policy-recomputation :q4 i]))
+                (map vector (range) rows)))
+        {:absent :cascade-not-retained})
+    {:absent :cascade-not-retained}))
+
 (defn g-frontier
   "The canonical G frontier the click scored, as a short summary: every
   scored candidate's target, rank, G and cascade digest, and the horizon.
@@ -174,8 +189,9 @@
     {:status (:status f)
      :horizon (get-in f [:horizon-choice :horizon])
      :entries (->> (:entries f)
-                   (mapv #(select-keys % [:target-id :policy-id :status :rank :G
-                                          :cascade-digest :reason]))
+                   (mapv #(assoc (select-keys % [:target-id :policy-id :status :rank :G
+                                                 :cascade-digest :reason])
+                                 :cascade-at (cascade-at receipt (:cascade-digest %))))
                    (sort-by (juxt #(or (:rank %) Long/MAX_VALUE) :target-id))
                    vec)}))
 
