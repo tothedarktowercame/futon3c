@@ -84,6 +84,21 @@ Report: `~/notes/wm-next/tracker-survey/report.md`; read-only checkouts with sha
 - **Dependencies range from a flag to an operational graph.** Taiga: a boolean `is_blocked` plus a free-text note. Plane: typed relations (blocked-by, start-before, finish-before, implemented-by …) that the core enforces nothing from. OpenProject: precedes/follows with a signed lag, cycle rejection, rescheduling of the successor. Redmine: cycle rejection, delay on precedes, and `closable?` refuses to close an issue while a blocker or a child is open.
 - **None has our want + check pair**: no field for the claim to be checked, its locator, or a typed reason it cannot be checked; acceptance criteria live in free text everywhere. None records a reason for "dropped".
 - **Worth taking:** keep hard readiness (blocks/requires) apart from schedule order (precedes), as Redmine and OpenProject do; data on the relation itself (lag, and for us the evidence tag the blend carrier already requires on application-order edges); an explicit cycle policy before G reads the graph; who may attest ready / done / dropped.
+- **Also worth taking:** a reason on `dropped` (obsolete, duplicate, declined, impossible, superseded); separate roles for source/attester, doer and accountable owner, rather than one `owner`; source system + immutable external id kept apart from the prose attribution (Plane, Taiga), which a tracker adapter needs; a revision number (Redmine `lock_version`) so two agents cannot silently overwrite each other's state change.
+
+Candidate fields against the four trackers ("—" = no core field; cites in the report's table):
+
+| Candidate field | Plane | OpenProject | Taiga | Redmine |
+|---|---|---|---|---|
+| Stated want | name + description | subject + description | subject + description | subject + description |
+| Want in owner's words, with source | — (import id only) | — (author only) | — (owner only) | — (author only) |
+| Check / locator | — | — (`done_ratio` is progress) | — | — (`done_ratio` is progress) |
+| Typed reason no check yet | — | — | — | — |
+| What must exist first | typed edges, not enforced | typed edges, lag, cycles rejected, rescheduling | blocked flag + note | typed edges, cycles rejected, `closable?` refuses |
+| Owner, state, dated transitions | assignees; state; activity log | assignee + responsible; status; journals | owner + assignee; status; history | assignee; status; journals |
+| Dropped, with reason | cancelled state, no reason | closed, no reason | closed, no reason | closed, no reason |
+| Capability or goal served | module (closest) | parent / version (closest) | epic (closest) | version / parent (closest) |
+| Provenance: who and when | created_by + timestamps | author + journal | owner + history | author + journal |
 
 ## Giraffe is the anticipatory analogue of m40 (Joe, 2026-10-26)
 
