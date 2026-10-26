@@ -1,0 +1,95 @@
+(ns futon3c.wm.parent-child-binding-test
+  "R11 contract: the real close lifecycle durably binds a queued retry child
+  to its parent and writes the child's typed completion back. Requirements are
+  intentionally not run here."
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.wm.runner-service :as service]
+            [futon3c.wm.runner-service-test :as fixture]
+            [futon3c.wm.machinery-execution-cohort :as cohort]))
+
+(use-fixtures :each #'fixture/reset-service!
+  (fn [f] (with-redefs [cohort/apply-binding identity] (f))))
+
+(def parent-id "wm-click-parent-r11")
+(def child-id "wm-retry-repair/r11-1")
+(def other-child-id "wm-retry-repair/r11-2")
+(def retry {:retry-click child-id :repair-id "repair/r11" :attempt 1
+            :patch-sha "0123456789012345678901234567890123456789"})
+
+(defn close-under-fixture!
+  [click-id summary opts click-fn]
+  (with-redefs-fn
+    {#'service/result-summary (fn [& _] summary)
+     #'service/publish-registry! (fn [& _] nil)
+     #'service/launch-route-check-after-close! (fn [_] {:route-check {:status :fixture}})
+     #'service/signal-park-deps! (fn [& _] nil)
+     #'service/click! click-fn}
+    (fn [] (#'service/close-click! fixture/scratch-agent-id click-id {} opts))))
+
+(deftest bind-at-launch-is-durable-before-child-call
+  (#'service/enqueue-post-release-retry! retry)
+  (let [seen (promise)
+        summary {:outcome :unknown :runtime-disposition {:status :awaiting-retry}}]
+    (close-under-fixture!
+     parent-id summary {:wm-agent-id fixture/scratch-agent-id}
+     (fn [opts]
+       (deliver seen {:opts opts :parent-state (service/click-status parent-id)})
+       {:status :queued :click-id child-id}))
+    (let [{:keys [opts parent-state]} (deref seen 5000 ::timeout)]
+      (is (not= ::timeout opts))
+      (is (= parent-id (:parent-click-id opts)))
+      (is (= child-id (:accepted-click-id opts)))
+      (is (= child-id (get-in parent-state [:child :click-id])))
+      (is (= :pending (get-in parent-state [:child :completion :status])))
+      (is (= {:status :not-checked :reason :child-pending}
+             (:parent-verdict parent-state))))))
+
+(deftest child-close-completes-exact-parent-binding
+  (#'service/bind-child! parent-id retry)
+  (let [summary {:outcome :already-satisfied :run-record "/fixture/child.edn"}]
+    (close-under-fixture! child-id summary {:parent-click-id parent-id} (constantly nil))
+    (let [parent (service/click-status parent-id)
+          child (service/click-status child-id)]
+      (is (= {:status :complete
+              :outcome :already-satisfied
+              :run-record "/fixture/child.edn"
+              :verdict {:status :not-checked :reason :requirements-not-run}}
+             (dissoc (get-in parent [:child :completion]) :completed-at)))
+      (is (= {:status :not-checked :reason :requirements-not-run}
+             (:parent-verdict parent)))
+      (is (not (contains? child :child)))
+      (is (not (contains? child :parent-verdict))))))
+
+(deftest mismatched-child-is-retained-without-overwrite
+  (#'service/bind-child! parent-id retry)
+  (#'service/complete-child! parent-id other-child-id {:outcome :build-failed})
+  (let [state (service/click-status parent-id)]
+    (is (= :pending (get-in state [:child :completion :status])))
+    (is (= {:child-click-id other-child-id :outcome :build-failed}
+           (get-in state [:child :completion-mismatch])))))
+
+(deftest conflicting-bind-never-overwrites-existing-child
+  (#'service/bind-child! parent-id retry)
+  (#'service/bind-child! parent-id (assoc retry :retry-click other-child-id))
+  (let [state (service/click-status parent-id)]
+    (is (= child-id (get-in state [:child :click-id])))
+    (is (= {:existing child-id :attempted other-child-id}
+           (:child-conflict state)))))
+
+(deftest parent-verdict-is-exact-function-of-child-completion
+  (testing "pending cannot inherit a successful runtime outcome"
+    (is (= {:status :not-checked :reason :child-pending}
+           (service/parent-verdict
+            {:result {:outcome :success} :child {:completion {:status :pending}}}))))
+  (doseq [verdict [{:status :passed} {:status :failed}]]
+    (is (= verdict
+           (service/parent-verdict
+            {:child {:completion {:status :complete :verdict verdict}}}))))
+  (is (= {:status :not-applicable :reason :no-child}
+         (service/parent-verdict {:status :completed}))))
+
+(deftest ordinary-click-shape-is-unchanged
+  (let [state {:schema :wm/click-state-v1 :click-id "ordinary" :status :completed}]
+    (is (= {:status :not-applicable :reason :no-child}
+           (service/parent-verdict state)))
+    (is (not (contains? state :child)))))
