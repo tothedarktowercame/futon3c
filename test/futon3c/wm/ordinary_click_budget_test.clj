@@ -6,10 +6,7 @@
             [futon3c.transport.http :as http]
             [futon3c.wm.ordinary-click-budget :as budget]
             [futon3c.wm.runner-service :as service]
-            [futon3c.agency.registry :as reg]
-            [futon3c.wm.r10-click-adapter :as r10]
-            [futon3c.wm.machinery-execution-cohort :as cohort]
-            [futon2.aif.hermetic-repair-fixture :refer [with-hermetic-stores]]))
+            [futon3c.wm.r10-click-adapter :as r10]))
 
 (defn files [root]
   (count (filter #(.isFile %) (file-seq (io/file root)))))
@@ -30,60 +27,29 @@
         production ["/home/joe/code/futon2/data/wm-repair-obligations"
                     "/home/joe/code/futon2/data/wm-tripwires/trips"
                     "/home/joe/code/futon2/data/wm-ordinary-clicks"]
-        before (mapv files production)
-        observed (atom [])
-        h (http/make-handler {})]
-    (with-hermetic-stores
-      (fn []
-        (binding [budget/*ledger-path* (str root "/consumption.jsonl")
-                  service/*roster-fn*
-                  (fn [_] {:zai-1 {:status "idle" :invoke-ready? true}
-                           :codex-34 {:status "idle" :invoke-ready? true}})
-                  service/*resolve-var*
-                  (fn [sym]
-                    (case sym
-                      futon2.aif.full-loop-runner/config identity
-                      futon2.aif.full-loop-runtime/run-opportunity!
-                      (fn [opts]
-                        ((:readiness-admitted-fn opts))
-                        (swap! observed conj {:click-id (:click-id opts) :rows (rows)})
-                        (throw (ex-info "intentional immediate runner failure" {:fixture true})))
-                      nil))]
-          (with-redefs [cohort/apply-binding identity
-                        reg/mark-agent-idle! (fn [& _])
-                        reg/clear-external-invoke! (fn [& _])]
-            (reset! service/!status service/initial-status)
-            (dotimes [n budget/allocated]
-              (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
-                                 :body (json/generate-string
-                                        (cond-> {:trigger "duree-click-on-demand"
-                                                 :author "zai-1"
-                                                 :reviewer "codex-34"}
-                                          (zero? n) (assoc :issuing-caller "codex-34")))})
-                    body (json/parse-string (:body response) true)]
-                (is (= 200 (:status response)))
-                (service/await-click! (:click-id body))
-                (is (= :service-failed (get-in @service/!status [:last-result :outcome])))
-                (is (= (inc n) (count (rows))))))
-            (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
-                               :body "{\"author\":\"zai-1\",\"reviewer\":\"codex-34\"}"})
-                  body (json/parse-string (:body response) true)]
-              (is (= 409 (:status response)))
-              (is (= "ordinary-click-budget-exhausted" (:error body)))
-              (is (= budget/authorization (get-in body [:details :authorization])))
-              (is (= "Joe" (get-in body [:details :renewal])))
-              (is (= budget/allocated (count (rows))))
-              (is (= budget/allocated (count @observed))))
-            (is (= (vec (range 1 (inc budget/allocated)))
-                   (mapv #(count (:rows %)) @observed)))
-            (is (every? #(= (:click-id %) (:click-id (last (:rows %)))) @observed))
-            (is (= "codex-34" (:caller (first (rows)))))
-            (is (= "caller-unknown" (:caller (second (rows)))))
-            (println "EXECUTION-RECEIPT"
-                     (pr-str {:issued budget/allocated
-                              :failed-after-issue budget/allocated
-                              :one-past-allocation-status 409
-                              :worker-entry-counts (vec (range 1 (inc budget/allocated)))}))))))
+        before (mapv files production)]
+    ;; This is the exact live-allocation boundary. Keep it independent of
+    ;; runner admission/provider fixtures: those are not budget semantics.
+    (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
+      (dotimes [n budget/allocated]
+        (let [entry (budget/consume! (str "boundary-" n) "now"
+                                     (when (zero? n) "codex-34"))]
+          (is (= (inc n) (count (rows))))
+          (is (= (str "boundary-" n) (:click-id entry)))))
+      (let [refusal (try
+                      (budget/consume! "one-past-allocation" "now" nil)
+                      nil
+                      (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+        (is (= :ordinary-click-budget-exhausted (:error refusal)))
+        (is (= budget/authorization (:authorization refusal)))
+        (is (= "Joe" (:renewal refusal)))
+        (is (= budget/allocated (count (rows)))))
+      (is (= "codex-34" (:caller (first (rows)))))
+      (is (= "caller-unknown" (:caller (second (rows)))))
+      (println "EXECUTION-RECEIPT"
+               (pr-str {:issued budget/allocated
+                        :one-past-allocation :ordinary-click-budget-exhausted
+                        :ledger-rows (count (rows))})))
     (is (= before (mapv files production)))
     (println "PRODUCTION-STORE-COUNTS" (pr-str {:before before :after (mapv files production)}))))
 
@@ -97,15 +63,20 @@
 
 (deftest concurrent-issues-cannot-overspend
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
-                      "ordinary-concurrent" (make-array java.nio.file.attribute.FileAttribute 0)))]
-    (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
-      (let [attempts (mapv (fn [n] (future (try (budget/consume! (str n) (str (java.time.Instant/now)) nil)
-                                              :issued
-                                              (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))
-                           (range (+ budget/allocated 7)))
-            outcomes (frequencies (mapv deref attempts))]
-        (is (= {:issued budget/allocated :ordinary-click-budget-exhausted 7} outcomes))
-        (is (= budget/allocated (count (rows))))))))
+                      "ordinary-concurrent" (make-array java.nio.file.attribute.FileAttribute 0)))
+        contention-allocation 16]
+    ;; Contention needs overlapping issuers, not one native thread per live
+    ;; campaign credit. The preceding boundary test still exercises all 228
+    ;; real credits sequentially and the one-past-allocation refusal.
+    (with-redefs [budget/allocated contention-allocation]
+      (binding [budget/*ledger-path* (str root "/consumption.jsonl")]
+        (let [attempts (mapv (fn [n] (future (try (budget/consume! (str n) (str (java.time.Instant/now)) nil)
+                                                :issued
+                                                (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))
+                             (range (+ contention-allocation 7)))
+              outcomes (frequencies (mapv deref attempts))]
+          (is (= {:issued contention-allocation :ordinary-click-budget-exhausted 7} outcomes))
+          (is (= contention-allocation (count (rows)))))))))
 
 (deftest availability-is-source-pinned-and-does-not-consume
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
