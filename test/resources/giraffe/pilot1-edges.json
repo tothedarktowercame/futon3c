@@ -1,0 +1,338 @@
+{
+ "tickets": [
+  {
+   "id": "T-agency-desktop-save",
+   "status": ":done-in-fact",
+   "priority_text": null
+  },
+  {
+   "id": "T-car3-phase2-impl",
+   "status": ":partial",
+   "priority_text": null
+  },
+  {
+   "id": "T-car3-queue-routing",
+   "status": ":superseded",
+   "priority_text": null
+  },
+  {
+   "id": "T-car3-queue-routing-design-note",
+   "status": ":partial",
+   "priority_text": null
+  },
+  {
+   "id": "T-codex-auto-bellback",
+   "status": ":done-in-fact",
+   "priority_text": null
+  },
+  {
+   "id": "T-durable-queue-rename-and-tidies",
+   "status": ":done-in-fact",
+   "priority_text": null
+  },
+  {
+   "id": "T-matrix-federation-proof",
+   "status": ":parked",
+   "priority_text": null
+  },
+  {
+   "id": "T-mesh-edge-coverage",
+   "status": ":done-in-fact",
+   "priority_text": null
+  },
+  {
+   "id": "T-mesh-qa-misrouting",
+   "status": ":done-in-fact",
+   "priority_text": null
+  },
+  {
+   "id": "T-mq7-unaddressable-caller",
+   "status": ":partial",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-activation-authority-unavailable",
+   "status": ":still-open",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-agent-not-found",
+   "status": ":still-open",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-invoke-error",
+   "status": ":still-open",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-invoke-interrupted",
+   "status": ":still-open",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-no-execution-evidence",
+   "status": ":partial",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-operator-cancelled",
+   "status": ":still-open",
+   "priority_text": null
+  },
+  {
+   "id": "T-fail-worker-lost-on-restart",
+   "status": ":partial",
+   "priority_text": null
+  },
+  {
+   "id": "T-typed-bell-arse-write-async",
+   "status": ":watch",
+   "priority_text": null
+  },
+  {
+   "id": "T-cx-new-blocks-emacs",
+   "status": ":still-open",
+   "priority_text": null
+  },
+  {
+   "id": "T-kangaroo-v1-pouch",
+   "status": ":done-in-fact",
+   "priority_text": null
+  },
+  {
+   "id": "T-kangaroo-caching-and-compaction",
+   "status": ":partial",
+   "priority_text": "# T-kangaroo-caching-and-compaction — TOMORROW (2026-06-11)"
+  },
+  {
+   "id": "T-zai-chat-transient-timeout",
+   "status": ":still-open",
+   "priority_text": null
+  }
+ ],
+ "edges": [
+  {
+   "from": "T-car3-phase2-impl",
+   "to": "T-car3-queue-routing",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-car3-phase2-impl.md",
+   "line": 5,
+   "quote": "Parent: `M-agency-hardening.md`. Phase 2 of Car-3, after Phase-1 model was\n**ratified-with-amendment** by claude-6 (2026-06-10). Branch base:",
+   "note": "Phase 2 implementation is stated to come after the Phase-1 model was ratified, so impl could not be done until the Phase-1 ticket's model was ratified."
+  },
+  {
+   "from": "T-mq7-unaddressable-caller",
+   "to": "T-car3-queue-routing",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-mq7-unaddressable-caller.md",
+   "line": 10,
+   "quote": "after Car-3 Phase-1 returns, to avoid codex-1 contention).",
+   "note": "The ticket says its dispatch waits until Car-3 Phase-1 returns, so it could not be started before that."
+  },
+  {
+   "from": "T-mq7-unaddressable-caller",
+   "to": "T-mesh-qa-misrouting",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-mq7-unaddressable-caller.md",
+   "line": 22,
+   "quote": "- recipient (`:to`) is an **auto-bellback-eligible** agent (reuse mesh-qa's\n  existing recipient predicate — currently `:codex` type); and",
+   "note": "MQ-7's definition reuses mesh-qa's existing recipient predicate, so the mesh-qa ticket's checker must exist first."
+  },
+  {
+   "from": "T-mesh-qa-misrouting",
+   "to": "T-mesh-edge-coverage",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-mesh-qa-misrouting.md",
+   "line": 70,
+   "quote": "- **Branch from the Car-1 base** (it carries the `:mesh-edge` schema you need):",
+   "note": "The mesh-qa ticket branches from the Car-1 base because it carries the :mesh-edge schema the unified reader needs, so Car-1 had to land first."
+  },
+  {
+   "from": "T-durable-queue-rename-and-tidies",
+   "to": "T-car3-phase2-impl",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-durable-queue-rename-and-tidies.md",
+   "line": 5,
+   "quote": "Parent: `M-agency-hardening.md`. Post-landing polish before activating the queue.",
+   "note": "This ticket is 'post-landing polish before activating the queue', so the queue implementation (Car-3 Phase 2) had to land before this work."
+  },
+  {
+   "from": "T-durable-queue-rename-and-tidies",
+   "to": "T-codex-auto-bellback",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-durable-queue-rename-and-tidies.md",
+   "line": 21,
+   "quote": "`enqueue-auto-bellback!` (http.clj) creates a bell job + runs it, but never",
+   "note": "Section 2 modifies enqueue-auto-bellback!, which exists only after the auto-bellback ticket shipped, so that work had to exist first."
+  },
+  {
+   "from": "T-durable-queue-rename-and-tidies",
+   "to": "T-mq7-unaddressable-caller",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-durable-queue-rename-and-tidies.md",
+   "line": 29,
+   "quote": "`unaddressable-caller?` (mesh_qa.clj) currently flags a codex completion whose\ncaller is `joe` (not a registered agent) — but a human-dispatched codex job",
+   "note": "Section 3 changes unaddressable-caller? behavior, so the MQ-7 checker it amends had to exist first."
+  },
+  {
+   "from": "T-typed-bell-arse-write-async",
+   "to": "FUTON3C_TYPED_BELLS flag is live and typed-bell volume grows",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-typed-bell-arse-write-async.md",
+   "line": 5,
+   "quote": "Pick up only if/when the flag is live AND typed-bell volume grows.",
+   "note": "The ticket says to pick it up only when the flag is live and volume grows, a condition on the world that must hold before the work."
+  },
+  {
+   "from": "T-cx-new-blocks-emacs",
+   "to": "Joe's go-ahead",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-cx-new-blocks-emacs.md",
+   "line": 6,
+   "quote": "Joe's go-ahead.",
+   "note": "The ticket forbids picking it up without Joe's go-ahead, a condition that must hold first."
+  },
+  {
+   "from": "T-cx-new-blocks-emacs",
+   "to": "drainer fix lands",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-cx-new-blocks-emacs.md",
+   "line": 34,
+   "quote": "Deferred. Bounded UX annoyance, not a correctness bug. Revisit after the drainer\nfix lands.",
+   "note": "The ticket says to revisit after the drainer fix lands, so that must hold before this work."
+  },
+  {
+   "from": "T-kangaroo-caching-and-compaction",
+   "to": "Joe's approval to start",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-kangaroo-caching-and-compaction.md",
+   "line": 6,
+   "quote": "(commit 042fad2) and the prompt-caching accounting. Do NOT start without Joe.",
+   "note": "The ticket says do NOT start without Joe, a condition that must hold first."
+  },
+  {
+   "from": "T-kangaroo-caching-and-compaction",
+   "to": "T-kangaroo-v1-pouch",
+   "to_kind": "cluster",
+   "kind": "needs",
+   "file": "T-kangaroo-caching-and-compaction.md",
+   "line": 5,
+   "quote": "Parked at end of day 2026-06-10. Three linked follow-ons to the joey gate",
+   "note": "The ticket describes itself as follow-ons to the joey gate (part of the v1 pouch ticket's joey cap), so the pouch work came first."
+  },
+  {
+   "from": "T-fail-no-execution-evidence",
+   "to": "TN-apm-defect-register C3 decision",
+   "to_kind": "external-item",
+   "kind": "needs",
+   "file": "T-fail-no-execution-evidence.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- merge with defect C3.** 22 occurrences; TN-apm-defect-register C3 records a job can be functionally successful yet state:failed under this code. The state semantics need the C3 decision; census alone cannot close it.",
+   "note": "The ticket states the state semantics need the C3 decision and census alone cannot close it, so the C3 decision must be made first."
+  },
+  {
+   "from": "T-fail-worker-lost-on-restart",
+   "to": "delivery-retry cap for restart-orphaned jobs",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-fail-worker-lost-on-restart.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): PARTIAL, quiescent.** Exactly the ticketed 3 (last 08-23), all stuck in `delivering`. Close as non-reproducing after a delivery-retry cap for restart-orphaned jobs.",
+   "note": "The ticket says to close as non-reproducing only after a delivery-retry cap exists, so that must hold before closing."
+  },
+  {
+   "from": "T-fail-invoke-error",
+   "to": "exception-payload triage done",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-fail-invoke-error.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN.** 2 -> 111 at review (latest 09-01T03:06); now the second-heaviest class. Needs exception-payload triage before a close criterion can be stated.",
+   "note": "The ticket says it needs exception-payload triage before a close criterion can be stated, so that must be done first."
+  },
+  {
+   "from": "T-matrix-federation-proof",
+   "to": "Joe is ready",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-matrix-federation-proof.md",
+   "line": 4,
+   "quote": "M-agency-hardening. Revisit when Joe is ready.",
+   "note": "The ticket says to revisit when Joe is ready, a condition that must hold before the work."
+  }
+ ],
+ "rejected": [
+  {
+   "file": "T-agency-desktop-save.md",
+   "line": 13,
+   "quote": "now-kangaroo-gated factory) **warm**. Joe's flow becomes: wait for a pause →",
+   "reason": "Describes a shipped property (restored agents are warm because the factory is kangaroo-gated), not an ordering between pieces of work; the roster work itself did not require the kangaroo work first."
+  },
+  {
+   "file": "T-kangaroo-v1-pouch.md",
+   "line": 15,
+   "quote": "invoke-fn, so warming the invoke-fn warms both surfaces (the durable queue",
+   "reason": "States existing ground (the durable queue already serializes per-agent) to justify one-pouch design; the queue was already shipped, so this is a design fact, not a work dependency."
+  },
+  {
+   "file": "T-mesh-edge-coverage.md",
+   "line": 89,
+   "quote": "minimal and localized to the new GET endpoint to ease the eventual merge.)",
+   "reason": "Merge-coordination note about both branches touching http.clj; says keep edits minimal to ease merge, not that one piece of work must precede the other."
+  },
+  {
+   "file": "T-zai-chat-transient-timeout.md",
+   "line": 38,
+   "quote": "   exception propagation. (Smallest diff, prerequisite for the rest.)",
+   "reason": "H1 is a prerequisite for H2-H5, but all five are steps inside this same ticket's hardening ladder, not separate tickets or named items, so the schema has no from/to pair here."
+  },
+  {
+   "file": "T-fail-agent-not-found.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, worsening.** 72 at ticketing -> 145 at review (latest 09-01T17:23); mitigation is process-only (roster-check rule). Candidate fixes: auto-register pull-only seats (E-bell-clink-adapter) or fail-fast at send with a roster hint.",
+   "reason": "Names candidate fixes (auto-register pull-only seats / fail-fast with roster hint), but candidates are options, not stated prerequisites."
+  },
+  {
+   "file": "T-typed-bell-arse-write-async.md",
+   "line": 37,
+   "quote": "- Enqueue the `:ask`/`:answer` onto an async worker (the durable turn-queue is the",
+   "reason": "Suggests the durable turn-queue as the obvious feeder for the fix; the queue already shipped, and this is a fix-direction suggestion, not a stated dependency."
+  },
+  {
+   "file": "T-mesh-qa-misrouting.md",
+   "line": 14,
+   "quote": "(crossed/missed bells). Builds on Car 1 (`:mesh-edge` coordination evidence) +\nthe invoke-jobs ledger; the data is already captured, this unifies it and adds",
+   "reason": "'Builds on Car 1' restates the same dependency already recorded via the branch-base quote at line 70; not a separate edge."
+  },
+  {
+   "file": "T-fail-activation-authority-unavailable.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, quiescent.** 1 occurrence ever (08-22), none since; the job is stuck in state `delivering`, so the real residue is delivery-retry terminal handling. Close as non-reproducing, reopen on second occurrence.",
+   "reason": "The close instruction is unconditional ('Close as non-reproducing, reopen on second occurrence'); delivery-retry handling is named as the residue, not as a precondition for closing (claude-11 review)."
+  },
+  {
+   "file": "T-car3-queue-routing-design-note.md",
+   "line": 60,
+   "quote": "- Current invoke-job records do not persist a per-recipient sequence marker.\n  Phase 2 must add `:seq` to the accepted job/turn record before any invoke.",
+   "reason": "The sentence fixes an order of steps inside Phase 2 (persist :seq before any invoke); it does not say Phase 2 waits on the note. Phase 2's real precondition is already the T-car3-phase2-impl L5 edge (claude-11 review)."
+  },
+  {
+   "file": "T-car3-queue-routing.md",
+   "line": 52,
+   "quote": "- **Bell claude-6 with the model + design note. STOP.** Implementation is a\n  separate phase after ratification (it will touch `make-claude-invoke-fn`/the",
+   "reason": "Containment, not dependency: the design note is the deliverable of T-car3-queue-routing Phase 1, so an edge routing->note makes the ticket wait on its own output (claude-11 review)."
+  }
+ ]
+}
