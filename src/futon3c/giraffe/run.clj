@@ -243,7 +243,9 @@
 ;; ---------------------------------------------------------------- main
 
 (defn- merge-args [args]
-  (into {} (map (fn [[k v]] [k v])) (partition 2 args)))
+  (into {}
+        (map (fn [[k v]] [(subs k 2) v]))
+        (partition 2 args)))
 
 (defn -main
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]
@@ -258,7 +260,7 @@
             (throw (ex-info "--edges <file> is required"
                             {:kind :giraffe/edges-required})))
         only-ids (when only
-                   (vec (remove str/blank? (str/split-lines (slurp only)))))
+                   (vec (remove str/blank? (str/split (slurp only) #"\s+"))))
         adapter-result (gt/tickets->input
                         {:tickets-dir default-tickets-dir
                          :index-file default-index-file
