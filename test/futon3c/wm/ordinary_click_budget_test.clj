@@ -6,7 +6,10 @@
             [futon3c.transport.http :as http]
             [futon3c.wm.ordinary-click-budget :as budget]
             [futon3c.wm.runner-service :as service]
-            [futon3c.wm.r10-click-adapter :as r10]))
+            [futon3c.agency.registry :as reg]
+            [futon3c.wm.r10-click-adapter :as r10]
+            [futon3c.wm.machinery-execution-cohort :as cohort]
+            [futon2.aif.hermetic-repair-fixture :refer [with-hermetic-stores]]))
 
 (defn files [root]
   (count (filter #(.isFile %) (file-seq (io/file root)))))
