@@ -1,7 +1,7 @@
 # M-giraffe — start from the data structure: a work pool the War Machine can read
 
 **Date:** 2026-10-25
-**Status:** OPEN — VERIFY planned (2026-10-27; ARGUE open items listed in §Still open in ARGUE; DERIVE open from 2026-10-26, items still unchecked; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
+**Status:** OPEN — VERIFY planned, ARGUE approved provisionally pending the mock-up (2026-10-27; ARGUE open items listed in §Still open in ARGUE; DERIVE open from 2026-10-26, items still unchecked; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
 **Owner:** Joe + claude-11
 **Follows:** M-kangaroo (warm pouches, i.e. agents that persist; this mission is about the work those agents are given).
 **Serves:** our own War Machine first. Second, the consulting offer: "show me your agent logs and your ticket tracker, and I will show you how to make it work better" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞).
@@ -325,6 +325,8 @@ For a client's tracker the same three facts are needed, and the trackers surveye
 
 ### Still open in ARGUE
 
+Joe, 2026-10-27: approves the argument provisionally, without reading the paragraph, and will rule on it only after seeing a working mock-up: "I don't want to trust the paragraph until I see the proof". So the items below stay open until VERIFY has run, and are then settled against its result.
+
 - [ ] Joe's correction of the plain-language paragraph.
 - [ ] Whether `give-the-dependent-piece-its-hypothesis` becomes the suggested breakdown on a `:needs-breakdown` record (DERIVE revision).
 - [ ] The DERIVE items still unchecked.
@@ -344,6 +346,8 @@ Joe, 2026-10-27: verification here can be informal. A proof would count, but so 
 **Baseline: what a Plane user sees.** The project list ordered the way Plane's default views order it (state group, then priority, then updated), with `blocked_by` shown but not enforced (survey: "typed relations that the core enforces nothing from").
 
 **Giraffe pass on the same records.** At one recorded choice point: readiness for every item computed from the `blocked_by` edges and the blockers' state groups; for each ready item, what finishing it unblocks (the cone, via the existing gluing in `ot/glue`, no new evaluator); cycles flagged `:needs-breakdown`, with the dependent-piece split suggested if ARGUE settles that. The active-inference reading is unchanged: the attested wants are the preferred outcomes, and readiness plus unblocks says which of them can be pursued now. The output is the same list re-ordered, each item carrying its two facts and the reason for its place.
+
+**Finding before the cluster was chosen (claude-11, 2026-10-27).** The T- tickets have almost no explicit need edges. Of the 36, the only ticket-to-ticket references are "same series" and "Related" lists (the forward-model four: `T-forward-model-vs-active-work`, `T-exogenous-evidence-update-rule`, `T-devmap-forward-model-calibration`, `T-watu-replay-layer`; and `T-car3-queue-routing-design-note` → `T-car3-queue-routing`). The one ticket with a `## Blocker` section (`T-exogenous-evidence-update-rule`) is blocked on a state of the world (the WM loop dead since 2026-07-14), not on another ticket. Mission headers are no better: 9 mission files have a `Blocked by`/`Depends on`/`Needs`/`Requires` line, and those lines name 1 item id between them. Under the no-prose-edges rule a T- cluster converts to Plane with nearly zero `blocked_by` rows, so the Giraffe pass would have nothing to say, and that would show a gap in our records, not a test of the method. This is H4 finding 1 again at ticket grain. The cluster choice waits on Joe (see the reply of 2026-10-27).
 
 **Prediction (to be written before the pass runs, from reading the cluster only):**
 - [ ] how many of Plane's top five by priority are not ready;
