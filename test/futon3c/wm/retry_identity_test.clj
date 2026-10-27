@@ -41,3 +41,14 @@
 (deftest malformed-patch-is-refused-before-minting
   (doseq [patch [nil "" "abc" (apply str (repeat 40 "z"))]]
     (is (thrown? AssertionError (adapter/retry-click-id repair-id 1 0 patch)))))
+
+(deftest child-does-not-inherit-parent-run-id
+  ;; run001 click 3: the requeue child ran under the run id wm_click.sh had
+  ;; reserved for the admitted parent, so (run, parent-click) never existed.
+  (let [parent-run "2026-10-27-c9d132d8-a2be-42b3-8369-fd23e9b9924f"
+        child (#'service/retry-child-opts
+               {:wm-agent-id fixture/scratch-agent-id :run-id parent-run}
+               (retry-request 1 (first patches))
+               "wm-click-5b04d4f2-0b15-4a71-97dc-6d00eed8587b")]
+    (is (not (contains? child :run-id)))
+    (is (= "wm-click-5b04d4f2-0b15-4a71-97dc-6d00eed8587b" (:parent-click-id child)))))

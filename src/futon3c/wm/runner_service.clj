@@ -1288,11 +1288,13 @@
     (remove-watch @stops-var [::pre-admission-stop click-id])))
 
 (defn- retry-child-opts
-  "Carry parent runtime options into the queued child, replacing click identity."
+  "Carry parent runtime options into the queued child, replacing click identity.
+  The parent's caller-supplied :run-id is dropped: it was reserved for the
+  parent click, and the child gets its own from the Futon2 runner."
   ([opts retry] (retry-child-opts opts retry nil))
   ([opts retry parent-click-id]
    (cond-> (-> opts
-                      (dissoc :ordinary-click/issue! :idempotency-key)
+                      (dissoc :ordinary-click/issue! :idempotency-key :run-id)
                       (assoc :accepted-click-id (:retry-click retry)
                              :idempotency-key (str "meta-retry/" (:retry-click retry))
                              :acceptance-payload retry
