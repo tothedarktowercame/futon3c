@@ -100,13 +100,16 @@
     @out))
 
 (defn- need-var
-  "One variable per need edge: <from>-needs-<to>.  Private to the needing
-  item's theory (see the namespace docstring for why it is not <to>-landed)."
+  "One variable per need edge: <from>-needs-<to>-<class>.  Private to the
+  needing item's theory (see the namespace docstring for why it is not
+  <to>-landed).  The class is part of the name so that a :closure and an
+  :artifact edge on the same target stay two needs."
   [e]
   (keyword (str (name (:from e)) "-needs-"
                 (if (= :external (:kind e))
                   (str "ext:" (name (:to e)))
-                  (name (:to e))))))
+                  (name (:to e)))
+                "-" (name (edge-class e)))))
 
 (defn- build-theory
   "Item k's open theory: k-ready is the conjunction of its counting need
@@ -156,13 +159,13 @@
         needs (needs-of id)
         alts (alternatives-of id)]
     (cond
+      (= :completed g) {:status :done :reason :lifecycle/completed}
+      (= :cancelled g) {:status :cancelled :reason :lifecycle/cancelled}
+
       (cyclic id)
       {:status :undetermined :reason :needs/cyclic
        :evidence (component-of id)
        :flag :needs-breakdown :component (component-of id)}
-
-      (= :completed g) {:status :done :reason :lifecycle/completed}
-      (= :cancelled g) {:status :cancelled :reason :lifecycle/cancelled}
 
       :else
       (let [unmet (unmet-of id)
@@ -205,10 +208,16 @@
         item-ids (set (map :id items))
         open-fn (fn [id] (not (contains? closed-groups
                                          (get-in items-by-id [id :state-group]))))
-        all-edges (map (fn [e] (-> e
-                                   (update :class #(or % :closure))
-                                   (update :kind #(or % :item))))
-                       edges)
+        all-edges (->> edges
+                       (map (fn [e] (-> e
+                                        (update :class #(or % :closure))
+                                        (update :kind #(or % :item)))))
+                       ;; a repeated need is one need (one variable)
+                       (reduce (fn [[seen acc] e]
+                                 (let [k ((juxt :from :to :kind :class) e)]
+                                   (if (seen k) [seen acc] [(conj seen k) (conj acc e)])))
+                               [#{} []])
+                       second)
         counting (filter counting-edge? all-edges)
         counting-item (filter #(and (= :item (:kind %))
                                     (contains? item-ids (:to %))) counting)
@@ -242,7 +251,8 @@
                                   (for [e counting :when (= :external (:kind e))]
                                     [(need-var e) true]))
                       {})
-        ext-ready-val (fn [id] (get world-ext-true (ready-var id) (ready-val id)))
+        ext-ready-val (fn [id] (and (not (cyclic id))
+                                    (get world-ext-true (ready-var id) (ready-val id))))
         alternatives-of (fn [id] (filter #(and (= (:from %) id)
                                                (= :alternative (:class %)))
                                          all-edges))

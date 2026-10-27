@@ -296,3 +296,32 @@
     (is (= [:r1 :r2 :n2 :n1] (map :id (:order out))))
     (is (= :order/ready-by-unblocks (get-in out [:order 0 :reason])))
     (is (= :order/not-ready-by-source-order (get-in out [:order 2 :reason])))))
+
+;; Review (claude-13, 2026-10-27): three bad cases constructed at review that
+;; the first version got wrong.
+(deftest review-cyclic-items-are-not-ready-ignoring-externals
+  ;; wrong: cycle members, absent from the glued model, defaulted to ready.
+  (let [out (gp/pass {:items [{:id :a :state-group :unstarted}
+                              {:id :b :state-group :unstarted}
+                              {:id :c :state-group :unstarted}]
+                      :edges [{:from :a :to :b} {:from :b :to :a}
+                              {:from :c :to :x :kind :external}]})]
+    (is (= [:c] (:ready-ignoring-externals out)))
+    (is (= 1 (get-in out [:counts :ready-ignoring-externals])))))
+
+(deftest review-closed-items-on-a-cycle-keep-their-lifecycle-status
+  (let [out (gp/pass {:items [{:id :a :state-group :completed}
+                              {:id :b :state-group :cancelled}]
+                      :edges [{:from :a :to :b} {:from :b :to :a}]})]
+    (is (= :done (get-in out [:readiness :a :status])))
+    (is (= :cancelled (get-in out [:readiness :b :status])))))
+
+(deftest review-closure-and-artifact-on-one-target-are-two-needs
+  ;; wrong: both edges shared one variable and the artifact edge's value won.
+  (let [out (gp/pass {:items [{:id :a :state-group :unstarted}
+                              {:id :b :state-group :started}]
+                      :edges [{:from :a :to :b :class :closure}
+                              {:from :a :to :b :class :artifact}
+                              {:from :a :to :b :class :closure}]})]
+    (is (= :not-ready (get-in out [:readiness :a :status])))
+    (is (= :needs/unmet (get-in out [:readiness :a :reason])))))
