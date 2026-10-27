@@ -157,7 +157,14 @@
   ;; not a defect; the four unruled questions are on the decision sheet
   ;; (futon2 d054744c0) and none gates a click. Lane: the first predicted
   ;; click after the reading-era repairs, codex-11 on Zai seats.
-  178)
+  ;; Joe to codex-11, 2026-10-27: fifty additional ordinary clicks for the
+  ;; supervised criteria-completeness excursion on Zai seats. Run one at a
+  ;; time, read logs between runs, use self-heal on unsuccessful work, and
+  ;; repair externally (including warranted algorithm changes) when self-heal
+  ;; is unsuccessful. The prior unspent credit remains; no charge is reset.
+  ;; Authority: renewal-7 document, criteria-completeness grant section, and
+  ;; E-wm-criteria-completeness.md.
+  228)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
