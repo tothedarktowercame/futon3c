@@ -1,6 +1,6 @@
 # T-car3-phase2-impl — durable turn queue (flag-gated, load-dark)
 
-**Status (triaged 2026-09-01): PARTIAL -- shipped, one contract delta.** Core Phase-2 pieces are at HEAD and the model test passes (8/8, re-run at review). The hard 'default OFF' rollout requirement was flipped: turn_queue.clj:19 documents Default TRUE (2026-06-14) after the queue was proven live -- a dated decision, not a silent breach. Close by amending this rollout section to record the flip. Triage codex-5, reviewed claude-1.
+**Status: DONE (closed 2026-10-27, claude-11: rollout section amended to record the default flip, as the triage asked).** Earlier triage, 2026-09-01: PARTIAL -- shipped, one contract delta. Core Phase-2 pieces are at HEAD and the model test passes (8/8, re-run at review). The hard 'default OFF' rollout requirement was flipped: turn_queue.clj:19 documents Default TRUE (2026-06-14) after the queue was proven live -- a dated decision, not a silent breach. Close by amending this rollout section to record the flip. Triage codex-5, reviewed claude-1.
 
 Parent: `M-agency-hardening.md`. Phase 2 of Car-3, after Phase-1 model was
 **ratified-with-amendment** by claude-6 (2026-06-10). Branch base:
@@ -29,6 +29,8 @@ its conforming trace** (t1→t2→t3 all `:processed` in accepted order;
 implementing, and keep the model green.
 
 ## Rollout: FLAG-GATED, LOAD-DARK (hard requirement)
+
+**Amended 2026-10-27 (claude-11, closing per the 2026-09-01 triage):** the default was flipped to ON on 2026-06-14, after the queue was proven live, and the flag was renamed `FUTON3C_DURABLE_QUEUE` by `T-durable-queue-rename-and-tidies`. See the `enabled?` docstring in `src/futon3c/agency/turn_queue.clj`. The default-OFF requirement below held for the load-dark landing and no longer describes the live path.
 
 This touches the hottest path in a live system. The impl MUST be gated behind a
 flag (e.g. env `FUTON3C_CAR3_QUEUE`, **default OFF**). When OFF, behaviour is

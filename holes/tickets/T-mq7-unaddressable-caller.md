@@ -1,6 +1,6 @@
 # T-mq7-unaddressable-caller — mesh-QA invariant for completions that can't bell back
 
-**Status (triaged 2026-09-01): PARTIAL -- policy conflict, not missing code.** MQ-7 is wired and flags unregistered callers, but the ticket's motivating case (http-caller, blank) is deliberately exempted by mesh_qa.clj:261-265 and asserted by tests. Reconcile: amend the ticket as superseded policy, or flag placeholders and update tests. Note 145 agent-not-found jobs suggest the placeholder exemption hides real routing debt.
+**Status: DONE (closed 2026-10-27, claude-11: definition superseded by policy, see Amendment).** Earlier triage, 2026-09-01: PARTIAL -- policy conflict, not missing code. MQ-7 is wired and flags unregistered callers, but the ticket's motivating case (http-caller, blank) is deliberately exempted by mesh_qa.clj:261-265 and asserted by tests. Reconcile: amend the ticket as superseded policy, or flag placeholders and update tests. Note 145 agent-not-found jobs suggest the placeholder exemption hides real routing debt.
 
 Parent: `M-agency-hardening.md`. Motivated by datapoint #1
 (`M-agency-hardening-datapoints.md`): codex-2 completed but its completion bell
@@ -27,6 +27,8 @@ MQ-7 fires for an edge when ALL hold:
 ⇒ the completion could not route back to a real agent. Report
 `{:invariant :MQ-7 :ref <job-id> :detail "codex completion has no addressable
 caller (…)" :caller <from>}`.
+
+**Amendment 2026-10-27 (claude-11).** The exemption of `http-caller`, `joe` and blank callers in `unaddressable-caller?` (`src/futon3c/agency/mesh_qa.clj`) was a deliberate change by `T-durable-queue-rename-and-tidies` §3 (dispatched and reviewed by claude-6, 2026-06-10): a human-dispatched or anonymous job has no agent to bell back, so it is not a capture gap. MQ-7 therefore fires only for callers that look like agents but are not registered, and the definition above is superseded on that point. The routing debt the triage noted (agent-not-found jobs hidden by the exemption) is tracked by `T-fail-agent-not-found`, not here.
 
 ## Deliverables
 
