@@ -1,0 +1,1116 @@
+{
+ "states": [
+  {
+   "name": "Backlog",
+   "group": "backlog"
+  },
+  {
+   "name": "Todo",
+   "group": "unstarted"
+  },
+  {
+   "name": "Held",
+   "group": "unstarted"
+  },
+  {
+   "name": "In Progress",
+   "group": "started"
+  },
+  {
+   "name": "Done",
+   "group": "completed"
+  },
+  {
+   "name": "Cancelled",
+   "group": "cancelled"
+  }
+ ],
+ "mapping": {
+  "done": "Done",
+  "unstarted": "Todo",
+  "backlog": "Backlog",
+  "held": "Held"
+ },
+ "mapping_reasons": [
+  "done -> Done (work finished and read back (review job read as done))",
+  "unstarted -> Todo (not yet begun; does not assert actionable now)",
+  "backlog -> Backlog (deferred / conditional, not currently planned)",
+  "held -> Held (a current gate on work that has not started; Plane has no blocked group)"
+ ],
+ "issues": [
+  {
+   "name": "Close the demonstrated ticket admission gap",
+   "description": "Viable ticket increments can enter selection with honest evidence and justified exclusions.\n\nCheck: Repair demonstrated exclusion defect with reviewed boundary evidence; no mission-only substitution.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/criteria-completeness-deficits.tsv:2\n- edge-class B1-TICKETS -> B1-ACTIVATE: closure — Needs the reviewed repair installed and read back, not only an isolated branch.\n- edge-class B1-TICKETS -> B1-FINAL-REVIEW: closure — Needs evidence-backed acceptance of the admission capability and limits.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 1,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B1-TICKETS",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/criteria-completeness-deficits.tsv:2",
+    "owner": "codex-11",
+    "want": "Viable ticket increments can enter selection with honest evidence and justified exclusions.",
+    "check": "Repair demonstrated exclusion defect with reviewed boundary evidence; no mission-only substitution."
+   }
+  },
+  {
+   "name": "Review frozen B1 commit 6bc9e873",
+   "description": "An independent report identifies the actual acceptance boundary and remaining gaps.\n\nCheck: Written commit-specific review with evidence and explicit disposition; a held verdict satisfies report delivery, not release.\n\n## Giraffe fields (no Plane field)\n- futon-status: done\n- owner: codex-13\n- source: /home/joe/notes/wm-next/criteria-completeness/ticket-audit/implementation/acceptance-final/independent-review/review.md:7\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Done",
+   "sequence_id": 2,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B1-REVIEW",
+   "extras": {
+    "source": "/home/joe/notes/wm-next/criteria-completeness/ticket-audit/implementation/acceptance-final/independent-review/review.md:7",
+    "owner": "codex-13",
+    "want": "An independent report identifies the actual acceptance boundary and remaining gaps.",
+    "check": "Written commit-specific review with evidence and explicit disposition; a held verdict satisfies report delivery, not release."
+   }
+  },
+  {
+   "name": "Exercise the actual ticket caller and qualification boundaries",
+   "description": "A composed test demonstrates canonical selection, immutable observations and qualified preparation without fabricated learning.\n\nCheck: Use production runtime/selector route rather than custom judge; exercise real qualification and discriminate learning registration/write refusal; cover the released twenty cases.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-12\n- source: /home/joe/notes/wm-next/criteria-completeness/ticket-audit/implementation/acceptance-final/coordinator-acceptance-scope-review.json:1\n- edge-class B1-ACCEPT -> B1-REVIEW: artifact — Needs the written findings artifact to target remaining tests; review need not approve or be reopened.",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 3,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B1-ACCEPT",
+   "extras": {
+    "source": "/home/joe/notes/wm-next/criteria-completeness/ticket-audit/implementation/acceptance-final/coordinator-acceptance-scope-review.json:1",
+    "owner": "codex-12",
+    "want": "A composed test demonstrates canonical selection, immutable observations and qualified preparation without fabricated learning.",
+    "check": "Use production runtime/selector route rather than custom judge; exercise real qualification and discriminate learning registration/write refusal; cover the released twenty cases."
+   }
+  },
+  {
+   "name": "Execute the eight implementation mutation controls",
+   "description": "Tests demonstrably fail when each claimed repair boundary is removed.\n\nCheck: Actual isolated behavior-changing mutants produce named semantic failures; restore exact bytes and obtain green; ordinary negative tests alone do not count.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-12\n- source: /home/joe/notes/wm-next/criteria-completeness/ticket-audit/implementation/acceptance-final/coordinator-acceptance-scope-review.json:1\n- edge-class B1-MUTATIONS -> B1-ACCEPT: artifact — Needs executable discriminating acceptance tests to run against changed implementations; does not require the entire acceptance ticket closed first.",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 4,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B1-MUTATIONS",
+   "extras": {
+    "source": "/home/joe/notes/wm-next/criteria-completeness/ticket-audit/implementation/acceptance-final/coordinator-acceptance-scope-review.json:1",
+    "owner": "codex-12",
+    "want": "Tests demonstrably fail when each claimed repair boundary is removed.",
+    "check": "Actual isolated behavior-changing mutants produce named semantic failures; restore exact bytes and obtain green; ordinary negative tests alone do not count."
+   }
+  },
+  {
+   "name": "Independently qualify the final B1 revision",
+   "description": "A final source revision and its acceptance evidence are independently judged adequate.\n\nCheck: Review exact final commit, composed caller coverage, mutation evidence and remaining limitations; explicit release or hold.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-13\n- source: codex-11, stated 2026-10-27\n- edge-class B1-FINAL-REVIEW -> B1-ACCEPT: closure — Needs completed composed acceptance evidence at a frozen final revision.\n- edge-class B1-FINAL-REVIEW -> B1-MUTATIONS: closure — Needs actual mutant-red and restored-green evidence, not negative-test labels.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 5,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B1-FINAL-REVIEW",
+   "extras": {
+    "source": "codex-11, stated 2026-10-27",
+    "owner": "codex-13",
+    "want": "A final source revision and its acceptance evidence are independently judged adequate.",
+    "check": "Review exact final commit, composed caller coverage, mutation evidence and remaining limitations; explicit release or hold."
+   }
+  },
+  {
+   "name": "Land and activate the reviewed B1 repair",
+   "description": "The reviewed ticket capability is installed with known serving identity.\n\nCheck: Approved exact revision landed; idle activation with dependency identity/readback, unchanged unrelated state and budget; no click bundled with activation.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:26\n- edge-class B1-ACTIVATE -> B1-FINAL-REVIEW: closure — Needs approving final review and coordinator release, not merely existence of any review report.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 6,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B1-ACTIVATE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:26",
+    "owner": "codex-11",
+    "want": "The reviewed ticket capability is installed with known serving identity.",
+    "check": "Approved exact revision landed; idle activation with dependency identity/readback, unchanged unrelated state and budget; no click bundled with activation."
+   }
+  },
+  {
+   "name": "Repair reading evidence retention across failed redecision",
+   "description": "Reading work remains visible when redecision fails.\n\nCheck: Discriminating retained failure replay and correct observer output; no silent not-required fallback.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/criteria-completeness-deficits.tsv:4\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 7,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "R28-RETENTION",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/criteria-completeness-deficits.tsv:4",
+    "owner": "codex-11",
+    "want": "Reading work remains visible when redecision fails.",
+    "check": "Discriminating retained failure replay and correct observer output; no silent not-required fallback."
+   }
+  },
+  {
+   "name": "Implement the no-progress detector",
+   "description": "Repeated ineffective work is detected with an accountable response.\n\nCheck: Implemented detector plus live repeated-progress evidence; any interim manual exception must be bounded.\n\n## Giraffe fields (no Plane field)\n- futon-status: backlog\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/criteria-completeness-deficits.tsv:3\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Backlog",
+   "sequence_id": 8,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "T12-DETECTOR",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/criteria-completeness-deficits.tsv:3",
+    "owner": "codex-11",
+    "want": "Repeated ineffective work is detected with an accountable response.",
+    "check": "Implemented detector plus live repeated-progress evidence; any interim manual exception must be bounded."
+   }
+  },
+  {
+   "name": "Freeze per-run tripwire reading and exception duties",
+   "description": "Recording-mode alarms and missing detectors have an explicit human reader and response.\n\nCheck: Name enabled wires, retained firing/completion/error evidence, reader, stop conditions and any bounded manual E3 disposition; silence is not a pass.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:30\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 9,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "TRIPWIRE-PLAN",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:30",
+    "owner": "codex-11",
+    "want": "Recording-mode alarms and missing detectors have an explicit human reader and response.",
+    "check": "Name enabled wires, retained firing/completion/error evidence, reader, stop conditions and any bounded manual E3 disposition; silence is not a pass."
+   }
+  },
+  {
+   "name": "Bind run001 objective and issuance authority",
+   "description": "One intended issuance has a retained scope, identity and available credit.\n\nCheck: Record objective, authorization and fresh budget; specify one-admission/one-consumption check for the actual issued run.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:19\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 10,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "A1-ISSUE-PLAN",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:19",
+    "owner": "codex-11",
+    "want": "One intended issuance has a retained scope, identity and available credit.",
+    "check": "Record objective, authorization and fresh budget; specify one-admission/one-consumption check for the actual issued run."
+   }
+  },
+  {
+   "name": "Refresh actual serving and resource envelope",
+   "description": "The intended run has measured code, provider, resource and seat conditions.\n\nCheck: Pin loaded composition including unknown registrations, heap thresholds, provider, seats, queue/stops and worker state; no stale readiness read reused.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:20\n- edge-class A2-ENVELOPE -> B1-ACTIVATE: closure — Needs the actual installed revision to measure the intended run envelope.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 11,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "A2-ENVELOPE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:20",
+    "owner": "codex-11",
+    "want": "The intended run has measured code, provider, resource and seat conditions.",
+    "check": "Pin loaded composition including unknown registrations, heap thresholds, provider, seats, queue/stops and worker state; no stale readiness read reused."
+   }
+  },
+  {
+   "name": "Resolve blocking state and run limitations",
+   "description": "Run001 has no undispositioned blocker or incompatible concurrent work.\n\nCheck: Fresh authority-aware effective injuries and service state; B1 hold addressed; R28/T12 resolved or specifically bounded and dispositioned before issuance.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:52\n- edge-class A3-DISPOSITION -> B1-TICKETS: closure — Needs the explicit B1 run001 hold discharged with boundary evidence.\n- edge-class A3-DISPOSITION -> R28-RETENTION: alternative — Needs either repair evidence or the documented current defect/interpretability evidence to decide a bounded disposition; not automatically ticket closure.\n- edge-class A3-DISPOSITION -> TRIPWIRE-PLAN: closure — Needs the written observer/response plan and any proposed bounded T12 manual coverage.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 12,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "A3-DISPOSITION",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:52",
+    "owner": "codex-11",
+    "want": "Run001 has no undispositioned blocker or incompatible concurrent work.",
+    "check": "Fresh authority-aware effective injuries and service state; B1 hold addressed; R28/T12 resolved or specifically bounded and dispositioned before issuance."
+   }
+  },
+  {
+   "name": "Refresh candidate and reading inputs after repair",
+   "description": "The next prediction refers to the actual post-repair field and source envelope.\n\nCheck: Retain census, exclusions, reading partition and source pins; selection quantities unavailable in preview remain conditional.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:21\n- edge-class INPUT-FREEZE -> B1-ACTIVATE: closure — Needs installed source revision and retained changes to bind the post-repair input freeze.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 13,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "INPUT-FREEZE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:21",
+    "owner": "codex-11",
+    "want": "The next prediction refers to the actual post-repair field and source envelope.",
+    "check": "Retain census, exclusions, reading partition and source pins; selection quantities unavailable in preview remain conditional."
+   }
+  },
+  {
+   "name": "Bind the run001 prediction to refreshed inputs",
+   "description": "The run has a reviewed prospective prediction with honest conditional branches.\n\nCheck: Exact model and input pins, valid build/review, explicit externally checked premises; model does not claim all twenty criteria by itself.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-14\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:59\n- edge-class PREDICTION -> INPUT-FREEZE: closure — Needs pinned field/reading/source inputs; unavailable exact selection values remain conditional.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 14,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "PREDICTION",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:59",
+    "owner": "codex-14",
+    "want": "The run has a reviewed prospective prediction with honest conditional branches.",
+    "check": "Exact model and input pins, valid build/review, explicit externally checked premises; model does not claim all twenty criteria by itself."
+   }
+  },
+  {
+   "name": "Specify the selected-contract dispatch checkpoint",
+   "description": "Selection can proceed while author dispatch waits for exact contract and baseline evidence.\n\nCheck: Name pre-author gate, token/locator/revision checks and missing-evidence stop; distinguish planned A4 check from A4 observed.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:42\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 15,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "A4-PLAN",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:42",
+    "owner": "codex-11",
+    "want": "Selection can proceed while author dispatch waits for exact contract and baseline evidence.",
+    "check": "Name pre-author gate, token/locator/revision checks and missing-evidence stop; distinguish planned A4 check from A4 observed."
+   }
+  },
+  {
+   "name": "Decide readiness to enter selection",
+   "description": "A bounded run can be issued under a frozen, evidence-backed envelope.\n\nCheck: A1-A3 fresh preflight, A4 checkpoint planned, inputs/prediction pinned and exceptions explicit; no blanket deficit waiver.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:42\n- edge-class GATE-READY -> A1-ISSUE-PLAN: closure — Needs completed objective/authority/budget preflight.\n- edge-class GATE-READY -> A2-ENVELOPE: closure — Needs current serving/resource preflight.\n- edge-class GATE-READY -> A3-DISPOSITION: closure — Needs explicit passing blocking-state and deficit disposition.\n- edge-class GATE-READY -> A4-PLAN: closure — Needs the pre-author selected-baseline gate specified, not yet observed.\n- edge-class GATE-READY -> PREDICTION: closure — Needs a reviewed pinned prospective model for this input freeze.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 16,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "GATE-READY",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:42",
+    "owner": "codex-11",
+    "want": "A bounded run can be issued under a frozen, evidence-backed envelope.",
+    "check": "A1-A3 fresh preflight, A4 checkpoint planned, inputs/prediction pinned and exceptions explicit; no blanket deficit waiver."
+   }
+  },
+  {
+   "name": "Execute and retain the first supervised campaign attempt",
+   "description": "One actual run supplies observable behavior under the frozen criteria.\n\nCheck: One background issuance, retained IDs/logs/checkpoints/replies and final outcome or managed stop; no automatic second click.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:22\n- edge-class RUN-001 -> GATE-READY: closure — Needs coordinator release to enter selection for exactly one supervised issuance.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 17,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "RUN-001",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:22",
+    "owner": "codex-11",
+    "want": "One actual run supplies observable behavior under the frozen criteria.",
+    "check": "One background issuance, retained IDs/logs/checkpoints/replies and final outcome or managed stop; no automatic second click."
+   }
+  },
+  {
+   "name": "Verify selected contract and durable before-state",
+   "description": "The actual selected increment is checkable before its author is dispatched.\n\nCheck: Exact token census, locators, immutable revision and durable baseline or explicit nonmission route; absent evidence stays unknown.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:22\n- edge-class A4-VERIFY -> RUN-001: artifact — Needs this attempt's selected action and contract artifact once selection has run, not its terminal close.\n- edge-class A4-VERIFY -> A4-PLAN: closure — Needs the frozen dispatch-boundary checks and evidence locations.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 18,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "A4-VERIFY",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:22",
+    "owner": "codex-11",
+    "want": "The actual selected increment is checkable before its author is dispatched.",
+    "check": "Exact token census, locators, immutable revision and durable baseline or explicit nonmission route; absent evidence stays unknown."
+   }
+  },
+  {
+   "name": "Read run001 selection and prediction evidence",
+   "description": "B1-B4 are classified from the real field, preparation, comparison and frozen observation domain.\n\nCheck: File:key for census/exclusions, prepared evidence lineage, G/ranking/draw, and prospective token-domain prediction; unavailable values remain explicit.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:23\n- edge-class B-EVIDENCE -> RUN-001: artifact — Needs retained selection and prediction artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 19,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "B-EVIDENCE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:23",
+    "owner": "codex-11",
+    "want": "B1-B4 are classified from the real field, preparation, comparison and frozen observation domain.",
+    "check": "File:key for census/exclusions, prepared evidence lineage, G/ranking/draw, and prospective token-domain prediction; unavailable values remain explicit."
+   }
+  },
+  {
+   "name": "Read run001 execution and review joins",
+   "description": "C1-C4 state whether the selected identity, durable send, artifact and review remained coherent.\n\nCheck: Retain dispatch/baseline/job/reply/artifact/review joins and qualified outcome; branch omissions labeled not-exercised.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:27\n- edge-class C-EVIDENCE -> RUN-001: artifact — Needs retained construction, dispatch, author and reviewer artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 20,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "C-EVIDENCE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:27",
+    "owner": "codex-11",
+    "want": "C1-C4 state whether the selected identity, durable send, artifact and review remained coherent.",
+    "check": "Retain dispatch/baseline/job/reply/artifact/review joins and qualified outcome; branch omissions labeled not-exercised."
+   }
+  },
+  {
+   "name": "Read run001 effects, learning and terminal reporting",
+   "description": "D1-D4 distinguish measured useful effect from safe refusal or mere summary claims.\n\nCheck: Original wants measured at reviewed revision, separate pattern/write evidence, close/ledger/predecessor agreement and complete operator account.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:31\n- edge-class D-EVIDENCE -> RUN-001: artifact — Needs retained after-observation, learning and terminal artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 21,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "D-EVIDENCE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:31",
+    "owner": "codex-11",
+    "want": "D1-D4 distinguish measured useful effect from safe refusal or mere summary claims.",
+    "check": "Original wants measured at reviewed revision, separate pattern/write evidence, close/ledger/predecessor agreement and complete operator account."
+   }
+  },
+  {
+   "name": "Account for run001 termination and interventions",
+   "description": "The run ends or stops within its declared resource and control envelope.\n\nCheck: Record phase durations, resources, debugger dispositions, final job/service state, and separate planned pauses from repairs.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:35\n- edge-class E1-TERMINATION -> RUN-001: artifact — Needs retained stop/terminal and resource artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 22,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "E1-TERMINATION",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:35",
+    "owner": "codex-11",
+    "want": "The run ends or stops within its declared resource and control envelope.",
+    "check": "Record phase durations, resources, debugger dispositions, final job/service state, and separate planned pauses from repairs."
+   }
+  },
+  {
+   "name": "Populate the checklist from four retained reading-era runs",
+   "description": "Known counterexamples and missing observations have stable per-run evidence rows.\n\nCheck: Populate each relevant criterion with actual file:key and outcome; repaired replays kept separate; no historical failure rewritten as pass.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:48\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 23,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "HISTORICAL-GRID",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:48",
+    "owner": "codex-11",
+    "want": "Known counterexamples and missing observations have stable per-run evidence rows.",
+    "check": "Populate each relevant criterion with actual file:key and outcome; repaired replays kept separate; no historical failure rewritten as pass."
+   }
+  },
+  {
+   "name": "Declare the consecutive-run demonstration envelope",
+   "description": "Loop capability has a stated run count, task/branch coverage and intervention rule.\n\nCheck: Freeze count and coverage before qualifying consecutive runs; one good run or a medic clearance cannot discharge the demonstration.\n\n## Giraffe fields (no Plane field)\n- futon-status: unstarted\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:44\n- edge-class: (no ticket needs declared)",
+   "priority": "none",
+   "state": "Todo",
+   "sequence_id": 24,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "LOOP-PLAN",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:44",
+    "owner": "codex-11",
+    "want": "Loop capability has a stated run count, task/branch coverage and intervention rule.",
+    "check": "Freeze count and coverage before qualifying consecutive runs; one good run or a medic clearance cannot discharge the demonstration."
+   }
+  },
+  {
+   "name": "Decide the next supervised action from run001 evidence",
+   "description": "Continuation, self-heal or external repair follows observed outcome rather than spending another credit blindly.\n\nCheck: Written progress/obstacle judgment using B-D/E1 evidence; useful success permits next preparation, failure gets appropriate recovery disposition.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:24\n- edge-class NEXT-DECISION -> B-EVIDENCE: closure — Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.\n- edge-class NEXT-DECISION -> C-EVIDENCE: closure — Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.\n- edge-class NEXT-DECISION -> D-EVIDENCE: closure — Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.\n- edge-class NEXT-DECISION -> E1-TERMINATION: closure — Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.\n- edge-class NEXT-DECISION -> A4-VERIFY: closure — Needs the actual dispatch-baseline verdict, including a stop/refusal if it could not be established.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 25,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "NEXT-DECISION",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:24",
+    "owner": "codex-11",
+    "want": "Continuation, self-heal or external repair follows observed outcome rather than spending another credit blindly.",
+    "check": "Written progress/obstacle judgment using B-D/E1 evidence; useful success permits next preparation, failure gets appropriate recovery disposition."
+   }
+  },
+  {
+   "name": "Observe successor consumption of retained outcome",
+   "description": "A later decision demonstrably uses the predecessor and changed evidence.\n\nCheck: Retain actual successor predecessor read, Q6 applicability and projection/reading pins; no claim from the first run alone.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:36\n- edge-class E2-SUCCESSOR -> D-EVIDENCE: closure — Needs the retained predecessor close, output and projection artifacts.\n- edge-class E2-SUCCESSOR -> NEXT-DECISION: closure — Needs permission and scope for an actual subsequent decision, not blind reissuance.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 26,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "E2-SUCCESSOR",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:36",
+    "owner": "codex-11",
+    "want": "A later decision demonstrably uses the predecessor and changed evidence.",
+    "check": "Retain actual successor predecessor read, Q6 applicability and projection/reading pins; no claim from the first run alone."
+   }
+  },
+  {
+   "name": "Evaluate progress and repetition across runs",
+   "description": "Repeated choices produce verified work or an evidence-backed exhaustion explanation.\n\nCheck: Compare selected targets and measured effects, already-satisfied resolutions, refusal recurrence and resource use; no unchanged failing repeat by default.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:37\n- edge-class E3-PROGRESS -> HISTORICAL-GRID: artifact — Needs existing failure/progress evidence to distinguish recurrence; artifact may be used before full historical population is complete.\n- edge-class E3-PROGRESS -> D-EVIDENCE: closure — Needs measured wants and outcomes from the new run.\n- edge-class E3-PROGRESS -> T12-DETECTOR: alternative — Needs detector output for automatic-loop coverage; supervised evidence may instead use an explicitly bounded manual plan, not a silent waiver.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 27,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "E3-PROGRESS",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:37",
+    "owner": "codex-11",
+    "want": "Repeated choices produce verified work or an evidence-backed exhaustion explanation.",
+    "check": "Compare selected targets and measured effects, already-satisfied resolutions, refusal recurrence and resource use; no unchanged failing repeat by default."
+   }
+  },
+  {
+   "name": "Check across-run authority and state conservation",
+   "description": "Successive iterations preserve budget, store consistency and accountable cleanup.\n\nCheck: Across-run exact budget/store deltas, dispositions, orphan jobs/stops and resource trend without corrective intervention; restart only claimed if exercised.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:38\n- edge-class E4-CONSERVATION -> D-EVIDENCE: closure — Needs exact ledger/budget/close classifications and write evidence.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 28,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "E4-CONSERVATION",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:38",
+    "owner": "codex-11",
+    "want": "Successive iterations preserve budget, store consistency and accountable cleanup.",
+    "check": "Across-run exact budget/store deltas, dispositions, orphan jobs/stops and resource trend without corrective intervention; restart only claimed if exercised."
+   }
+  },
+  {
+   "name": "Judge the declared loop demonstration",
+   "description": "Consecutive useful iterations demonstrate the declared capability coverage.\n\nCheck: Declared count/coverage met, relevant B-D and E1 observed, E2-E4 across boundaries, no intervening corrective code/state changes.\n\n## Giraffe fields (no Plane field)\n- futon-status: held\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:44\n- edge-class LOOP-DEMO -> LOOP-PLAN: closure — Needs the count, coverage and intervention rule frozen before the demonstration.\n- edge-class LOOP-DEMO -> E2-SUCCESSOR: closure — Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.\n- edge-class LOOP-DEMO -> E3-PROGRESS: closure — Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.\n- edge-class LOOP-DEMO -> E4-CONSERVATION: closure — Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.\n- edge-class LOOP-DEMO -> E1-TERMINATION: closure — Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.",
+   "priority": "none",
+   "state": "Held",
+   "sequence_id": 29,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "LOOP-DEMO",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/GRID-wm-criteria-completeness-v1.md:44",
+    "owner": "codex-11",
+    "want": "Consecutive useful iterations demonstrate the declared capability coverage.",
+    "check": "Declared count/coverage met, relevant B-D and E1 observed, E2-E4 across boundaries, no intervening corrective code/state changes."
+   }
+  },
+  {
+   "name": "Observe recovery when an eligible failure occurs",
+   "description": "The existing self-heal route has a truthful capability witness separate from ordinary task success.\n\nCheck: When applicable, retain repair choice, execution, outcome and successor disposition; if inapplicable/refused/failed, retain boundary and commission external repair; do not induce failure just to fill a row.\n\n## Giraffe fields (no Plane field)\n- futon-status: backlog\n- owner: codex-11\n- source: /home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:25\n- edge-class SELF-HEAL-EVIDENCE -> NEXT-DECISION: closure — Needs a recorded eligible-failure/recovery decision; conditional, not part of the success-only chain.",
+   "priority": "none",
+   "state": "Backlog",
+   "sequence_id": 30,
+   "created_at": "2026-10-27",
+   "updated_at": "2026-10-27",
+   "external_source": "giraffe-author-stated",
+   "external_id": "SELF-HEAL-EVIDENCE",
+   "extras": {
+    "source": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:25",
+    "owner": "codex-11",
+    "want": "The existing self-heal route has a truthful capability witness separate from ordinary task success.",
+    "check": "When applicable, retain repair choice, execution, outcome and successor disposition; if inapplicable/refused/failed, retain boundary and commission external repair; do not induce failure just to fill a row."
+   }
+  }
+ ],
+ "relations": [
+  {
+   "issue": "B1-ACCEPT",
+   "related_issue": "B1-REVIEW",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs the written findings artifact to target remaining tests; review need not approve or be reopened.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B1-MUTATIONS",
+   "related_issue": "B1-ACCEPT",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs executable discriminating acceptance tests to run against changed implementations; does not require the entire acceptance ticket closed first.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B1-FINAL-REVIEW",
+   "related_issue": "B1-ACCEPT",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs completed composed acceptance evidence at a frozen final revision.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B1-FINAL-REVIEW",
+   "related_issue": "B1-MUTATIONS",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs actual mutant-red and restored-green evidence, not negative-test labels.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B1-ACTIVATE",
+   "related_issue": "B1-FINAL-REVIEW",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs approving final review and coordinator release, not merely existence of any review report.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B1-TICKETS",
+   "related_issue": "B1-ACTIVATE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the reviewed repair installed and read back, not only an isolated branch.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B1-TICKETS",
+   "related_issue": "B1-FINAL-REVIEW",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs evidence-backed acceptance of the admission capability and limits.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "INPUT-FREEZE",
+   "related_issue": "B1-ACTIVATE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs installed source revision and retained changes to bind the post-repair input freeze.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "PREDICTION",
+   "related_issue": "INPUT-FREEZE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs pinned field/reading/source inputs; unavailable exact selection values remain conditional.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "A2-ENVELOPE",
+   "related_issue": "B1-ACTIVATE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the actual installed revision to measure the intended run envelope.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "A3-DISPOSITION",
+   "related_issue": "B1-TICKETS",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the explicit B1 run001 hold discharged with boundary evidence.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "A3-DISPOSITION",
+   "related_issue": "R28-RETENTION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "alternative",
+    "note": "Needs either repair evidence or the documented current defect/interpretability evidence to decide a bounded disposition; not automatically ticket closure.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "A3-DISPOSITION",
+   "related_issue": "TRIPWIRE-PLAN",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the written observer/response plan and any proposed bounded T12 manual coverage.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "GATE-READY",
+   "related_issue": "A1-ISSUE-PLAN",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs completed objective/authority/budget preflight.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "GATE-READY",
+   "related_issue": "A2-ENVELOPE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs current serving/resource preflight.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "GATE-READY",
+   "related_issue": "A3-DISPOSITION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs explicit passing blocking-state and deficit disposition.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "GATE-READY",
+   "related_issue": "A4-PLAN",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the pre-author selected-baseline gate specified, not yet observed.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "GATE-READY",
+   "related_issue": "PREDICTION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs a reviewed pinned prospective model for this input freeze.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "RUN-001",
+   "related_issue": "GATE-READY",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs coordinator release to enter selection for exactly one supervised issuance.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "A4-VERIFY",
+   "related_issue": "RUN-001",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs this attempt's selected action and contract artifact once selection has run, not its terminal close.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "A4-VERIFY",
+   "related_issue": "A4-PLAN",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the frozen dispatch-boundary checks and evidence locations.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "B-EVIDENCE",
+   "related_issue": "RUN-001",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs retained selection and prediction artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "C-EVIDENCE",
+   "related_issue": "RUN-001",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs retained construction, dispatch, author and reviewer artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "D-EVIDENCE",
+   "related_issue": "RUN-001",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs retained after-observation, learning and terminal artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E1-TERMINATION",
+   "related_issue": "RUN-001",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs retained stop/terminal and resource artifacts as they are produced; blocked branches are explicitly not-exercised, not invented.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "NEXT-DECISION",
+   "related_issue": "B-EVIDENCE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "NEXT-DECISION",
+   "related_issue": "C-EVIDENCE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "NEXT-DECISION",
+   "related_issue": "D-EVIDENCE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "NEXT-DECISION",
+   "related_issue": "E1-TERMINATION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the recorded per-run judgment and exact first divergence or useful-progress evidence.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "NEXT-DECISION",
+   "related_issue": "A4-VERIFY",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the actual dispatch-baseline verdict, including a stop/refusal if it could not be established.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E2-SUCCESSOR",
+   "related_issue": "D-EVIDENCE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the retained predecessor close, output and projection artifacts.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E2-SUCCESSOR",
+   "related_issue": "NEXT-DECISION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs permission and scope for an actual subsequent decision, not blind reissuance.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E3-PROGRESS",
+   "related_issue": "HISTORICAL-GRID",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "artifact",
+    "note": "Needs existing failure/progress evidence to distinguish recurrence; artifact may be used before full historical population is complete.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E3-PROGRESS",
+   "related_issue": "D-EVIDENCE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs measured wants and outcomes from the new run.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E3-PROGRESS",
+   "related_issue": "T12-DETECTOR",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "alternative",
+    "note": "Needs detector output for automatic-loop coverage; supervised evidence may instead use an explicitly bounded manual plan, not a silent waiver.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "E4-CONSERVATION",
+   "related_issue": "D-EVIDENCE",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs exact ledger/budget/close classifications and write evidence.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "LOOP-DEMO",
+   "related_issue": "LOOP-PLAN",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs the count, coverage and intervention rule frozen before the demonstration.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "LOOP-DEMO",
+   "related_issue": "E2-SUCCESSOR",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "LOOP-DEMO",
+   "related_issue": "E3-PROGRESS",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "LOOP-DEMO",
+   "related_issue": "E4-CONSERVATION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "LOOP-DEMO",
+   "related_issue": "E1-TERMINATION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs satisfied observational evidence under the declared consecutive-run envelope, not merely a finished report.",
+    "edge/source": "author-stated"
+   }
+  },
+  {
+   "issue": "SELF-HEAL-EVIDENCE",
+   "related_issue": "NEXT-DECISION",
+   "relation_type": "blocked_by",
+   "external_source": "giraffe-author-stated",
+   "extras": {
+    "class": "closure",
+    "note": "Needs a recorded eligible-failure/recovery decision; conditional, not part of the success-only chain.",
+    "edge/source": "author-stated"
+   }
+  }
+ ],
+ "external_needs": [
+  {
+   "issue": "B1-ACTIVATE",
+   "to": "idle-serving-state",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs fresh idle/no-incompatible-work observation before activation.",
+   "state": null
+  },
+  {
+   "issue": "A2-ENVELOPE",
+   "to": "zai-seats-and-provider",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs measured available seats/quota and provider/resource evidence, not an assumed roster.",
+   "state": null
+  },
+  {
+   "issue": "A1-ISSUE-PLAN",
+   "to": "Joe-campaign-authorization",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs the retained 50-additional-credit authorization and its scope; already granted, not a new approval request.",
+   "state": null
+  },
+  {
+   "issue": "A1-ISSUE-PLAN",
+   "to": "live-budget-observation",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs fresh unspent-credit evidence before issuing, even though allocation is already activated.",
+   "state": null
+  },
+  {
+   "issue": "A3-DISPOSITION",
+   "to": "live-authority-and-service-readback",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs current effective-injury, queue/worker/stops and incompatible-work observations.",
+   "state": null
+  },
+  {
+   "issue": "E2-SUCCESSOR",
+   "to": "successor-decision-evidence",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs actual later decision/readback evidence; a plan for it is insufficient.",
+   "state": null
+  },
+  {
+   "issue": "E3-PROGRESS",
+   "to": "successive-run-evidence",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs comparable actual runs and their target/effect/resource records.",
+   "state": null
+  },
+  {
+   "issue": "E4-CONSERVATION",
+   "to": "successive-run-evidence",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs before/after state across actual iteration boundaries.",
+   "state": null
+  },
+  {
+   "issue": "SELF-HEAL-EVIDENCE",
+   "to": "eligible-failure-occurrence",
+   "to_kind": "external",
+   "kind": "needs",
+   "note": "Needs an actual applicable occurrence and permitted existing self-heal route; do not induce one.",
+   "state": null
+  }
+ ],
+ "gaps": [
+  {
+   "gap": "Edge classes (artifact / alternative / closure) live only in the author's notes; Plane's blocked_by has one meaning. Carried in the issue description and relation extras; artifact means met when the target has started (not only completed), alternative means met another way",
+   "example": "A4-VERIFY -> RUN-001 (artifact); A3-DISPOSITION -> R28-RETENTION (alternative)"
+  },
+  {
+   "gap": "held records a current gate on work that has not started; mapping it to a State 'Held' in group unstarted loses that it is a gate (not a readiness verdict), and Plane groups cannot distinguish held from todo by group alone",
+   "example": "GATE-READY, RUN-001 (held)"
+  },
+  {
+   "gap": "The tickets carry no per-ticket dates; created_at/updated_at are all as_of, so Plane's default order (-created_at, issue.py:178) ties on everything and falls back to sequence_id — real recency is lost",
+   "example": "all 30 issues"
+  },
+  {
+   "gap": "No priorities are assigned (priority_text absent), so every issue converts priority=none and Plane's order reduces to created_at then sequence_id",
+   "example": "all 30 issues"
+  },
+  {
+   "gap": "External needs have no Plane record; carried in external_needs, unmet unless the record shows state (none does)",
+   "example": "A1-ISSUE-PLAN -> Joe-campaign-authorization, live-budget-observation"
+  },
+  {
+   "gap": "The 11 not_edges (rejected needs, e.g. the A4-VERIFY/RUN-001 false cycle) are not convertible; their content — why a plain needs graph is wrong — is only in this gap",
+   "example": "not_edges: 'GATE-READY does not need A4-VERIFY closed...'"
+  }
+ ]
+}

@@ -1,0 +1,446 @@
+{
+ "states": [
+  {
+   "name": "Backlog",
+   "group": "backlog"
+  },
+  {
+   "name": "Todo",
+   "group": "unstarted"
+  },
+  {
+   "name": "In Progress",
+   "group": "started"
+  },
+  {
+   "name": "Done",
+   "group": "completed"
+  },
+  {
+   "name": "Cancelled",
+   "group": "cancelled"
+  }
+ ],
+ "mapping": {
+  ":done-in-fact": "Done",
+  ":partial": "In Progress",
+  ":superseded": "Cancelled",
+  ":still-open": "Todo",
+  ":parked": "Backlog",
+  ":watch": "Backlog"
+ },
+ "mapping_reasons": [
+  ":done-in-fact -> Done (finished work, evidence cited)",
+  ":partial -> In Progress (shipped in part with named residue; Plane has no finer state than started)",
+  ":superseded -> Cancelled (work moved on (impl shipped elsewhere); same group the rules give :dropped)",
+  ":still-open -> Todo (triaged open, nothing written in the ticket yet; unstarted)",
+  ":parked -> Backlog (deferred by decision, no start date; not currently planned work)",
+  ":watch -> Backlog (no action unless a trigger fires; parked-by-trigger, closest group is backlog)"
+ ],
+ "issues": [
+  {
+   "name": "T-agency-desktop-save — durable agent roster (W5), restart → same agents, warm",
+   "description": "**Status (triaged 2026-09-01): DONE-IN-FACT.** roster_store.clj shipped whole (restore-payload, continuous persist watch, restore-on-boot! with detached marking and collision refusal), wired into bootstrap restore-before-watch, flag default TRUE since 2026-06-14, 12 tests. Close.\n\n## Giraffe fields (no Plane field)\n- futon-status: :done-in-fact\n- priority_text: null",
+   "priority": "none",
+   "state": "Done",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-agency-desktop-save.md",
+   "updated_at": "2026-09-01T20:39:39+00:00"
+  },
+  {
+   "name": "T-car3-phase2-impl — durable turn queue (flag-gated, load-dark)",
+   "description": "**Status (triaged 2026-09-01): PARTIAL -- shipped, one contract delta.** Core Phase-2 pieces are at HEAD and the model test passes (8/8, re-run at review). The hard 'default OFF' rollout requirement was flipped: turn_queue.clj:19 documents Default TRUE (2026-06-14) after the queue was proven live -- a dated decision, not a silent breach. Close by amending this rollout section to record the flip. Triage codex-5, reviewed claude-1.\n\n## Giraffe fields (no Plane field)\n- futon-status: :partial\n- priority_text: null",
+   "priority": "none",
+   "state": "In Progress",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-car3-phase2-impl.md",
+   "updated_at": "2026-09-01T20:29:06+00:00"
+  },
+  {
+   "name": "T-car3-queue-routing — durable queue, ordered drain, per-surface reply routing",
+   "description": "**Status (triaged 2026-09-01): SUPERSEDED.** The Phase-1 stop-for-ratification state no longer describes HEAD: the implementation shipped (turn_queue.clj accept!/drain/reply-route; invoke wiring dev.clj:4083). Triage codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1; verdicts in tickets-index.edn.\n\n## Giraffe fields (no Plane field)\n- futon-status: :superseded\n- priority_text: null",
+   "priority": "none",
+   "state": "Cancelled",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-car3-queue-routing.md",
+   "updated_at": "2026-09-01T20:29:06+00:00"
+  },
+  {
+   "name": "T-car3-queue-routing — Phase 1 design note",
+   "description": "**Status (triaged 2026-09-01): PARTIAL -- mechanism landed, capture-gap fallback still tolerated.** Persisted route + seq markers exist (turn_queue.clj:213,241,523); missing caller/surface still normalizes to \"unknown\" with generated msg-ids (turn_queue.clj:221-239, :msg-id-source records which). Close after either proving all accept sites supply stable :from/:surface/:msg-id or accepting the fallback as the contract. Triage codex-5, reviewed claude-1.\n\n## Giraffe fields (no Plane field)\n- futon-status: :partial\n- priority_text: null",
+   "priority": "none",
+   "state": "In Progress",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-car3-queue-routing-design-note.md",
+   "updated_at": "2026-09-01T20:29:06+00:00"
+  },
+  {
+   "name": "T-codex-auto-bellback — automatic completion bell to the job's caller",
+   "description": "**Status (triaged 2026-09-01): DONE-IN-FACT, widened.** Default-on, durable enqueue, idempotency stamp, loop prevention, delivery records, tests -- all live; recipients widened from codex-only to #{:codex :claude :zai}. Close.\n\n## Giraffe fields (no Plane field)\n- futon-status: :done-in-fact\n- priority_text: null",
+   "priority": "none",
+   "state": "Done",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-codex-auto-bellback.md",
+   "updated_at": "2026-09-01T20:31:41+00:00"
+  },
+  {
+   "name": "T-durable-queue-rename-and-tidies",
+   "description": "**Status (triaged 2026-09-01): DONE-IN-FACT.** Only FUTON3C_DURABLE_QUEUE names remain (0 CAR3 hits in src/test/resources); bellback delivery recorded; MQ-7 excludes http-caller/joe. Focused tests pass (5/17, 6/23 -- mesh-qa re-run at review). Close all three rows.\n\n## Giraffe fields (no Plane field)\n- futon-status: :done-in-fact\n- priority_text: null",
+   "priority": "none",
+   "state": "Done",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-durable-queue-rename-and-tidies.md",
+   "updated_at": "2026-09-01T20:31:41+00:00"
+  },
+  {
+   "name": "T-matrix-federation-proof — cross-server proof handshake with Rob",
+   "description": "**Status: DEFERRED / parked 2026-06-10.** Standalone follow-on — **NOT** part of\nM-agency-hardening. Revisit when Joe is ready.\n\n## Giraffe fields (no Plane field)\n- futon-status: :parked\n- priority_text: null",
+   "priority": "none",
+   "state": "Backlog",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-matrix-federation-proof.md",
+   "updated_at": "2026-06-10T14:52:52+01:00"
+  },
+  {
+   "name": "T-mesh-edge-coverage (Car 1) — make every agent→agent invoke visible in the mesh",
+   "description": "**Status (triaged 2026-09-01): DONE-IN-FACT.** Typed mesh-edge evidence, the three bypass-caller migrations, GET /api/alpha/coordination/edges, and the merged mesh_trace.py source all shipped and are tested. Close.\n\n## Giraffe fields (no Plane field)\n- futon-status: :done-in-fact\n- priority_text: null",
+   "priority": "none",
+   "state": "Done",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-mesh-edge-coverage.md",
+   "updated_at": "2026-09-01T20:34:03+00:00"
+  },
+  {
+   "name": "T-mesh-qa-misrouting — unified mesh + misrouting QA",
+   "description": "**Status (triaged 2026-09-01): DONE-IN-FACT, with declared limits.** Unified reader + MQ checks + GET /api/alpha/coordination/qa exist; the checkability registry itself records MQ-2 as a capture gap and MQ-3/MQ-4 as partial. Close the implementation; the limits are recorded, not hidden.\n\n## Giraffe fields (no Plane field)\n- futon-status: :done-in-fact\n- priority_text: null",
+   "priority": "none",
+   "state": "Done",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-mesh-qa-misrouting.md",
+   "updated_at": "2026-09-01T20:34:03+00:00"
+  },
+  {
+   "name": "T-mq7-unaddressable-caller — mesh-QA invariant for completions that can't bell back",
+   "description": "**Status (triaged 2026-09-01): PARTIAL -- policy conflict, not missing code.** MQ-7 is wired and flags unregistered callers, but the ticket's motivating case (http-caller, blank) is deliberately exempted by mesh_qa.clj:261-265 and asserted by tests. Reconcile: amend the ticket as superseded policy, or flag placeholders and update tests. Note 145 agent-not-found jobs suggest the placeholder exemption hides real routing debt.\n\n## Giraffe fields (no Plane field)\n- futon-status: :partial\n- priority_text: null",
+   "priority": "none",
+   "state": "In Progress",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-mq7-unaddressable-caller.md",
+   "updated_at": "2026-09-01T20:34:03+00:00"
+  },
+  {
+   "name": "T-fail-activation-authority-unavailable -- activation-authority-unavailable (1x)",
+   "description": "**Status (triaged 2026-09-01): STILL-OPEN, quiescent.** 1 occurrence ever (08-22), none since; the job is stuck in state `delivering`, so the real residue is delivery-retry terminal handling. Close as non-reproducing, reopen on second occurrence.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-activation-authority-unavailable.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-fail-agent-not-found -- agent-not-found (72x)",
+   "description": "**Status (triaged 2026-09-01): STILL-OPEN, worsening.** 72 at ticketing -> 145 at review (latest 09-01T17:23); mitigation is process-only (roster-check rule). Candidate fixes: auto-register pull-only seats (E-bell-clink-adapter) or fail-fast at send with a roster hint.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-agent-not-found.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-fail-invoke-error -- invoke-error (2x)",
+   "description": "**Status (triaged 2026-09-01): STILL-OPEN.** 2 -> 111 at review (latest 09-01T03:06); now the second-heaviest class. Needs exception-payload triage before a close criterion can be stated.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-invoke-error.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-fail-invoke-interrupted -- invoke-interrupted (1x)",
+   "description": "**Status (triaged 2026-09-01): STILL-OPEN, rare.** 4 occurrences, latest 08-31. Decide whether interruption is a defect or an expected terminal class.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-invoke-interrupted.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-fail-no-execution-evidence -- no-execution-evidence (1x)",
+   "description": "**Status (triaged 2026-09-01): PARTIAL -- merge with defect C3.** 22 occurrences; TN-apm-defect-register C3 records a job can be functionally successful yet state:failed under this code. The state semantics need the C3 decision; census alone cannot close it.\n\n## Giraffe fields (no Plane field)\n- futon-status: :partial\n- priority_text: null",
+   "priority": "none",
+   "state": "In Progress",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-no-execution-evidence.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-fail-operator-cancelled -- operator-cancelled (4x)",
+   "description": "**Status (triaged 2026-09-01): RECLASSIFY CANDIDATE.** 19 at review, mostly deliberate watchdog cancels. Propose census-exempting operator cancellation as expected behaviour rather than fixing anything.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-operator-cancelled.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-fail-worker-lost-on-restart -- worker-lost-on-restart (3x)",
+   "description": "**Status (triaged 2026-09-01): PARTIAL, quiescent.** Exactly the ticketed 3 (last 08-23), all stuck in `delivering`. Close as non-reproducing after a delivery-retry cap for restart-orphaned jobs.\n\n## Giraffe fields (no Plane field)\n- futon-status: :partial\n- priority_text: null",
+   "priority": "none",
+   "state": "In Progress",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-fail-worker-lost-on-restart.md",
+   "updated_at": "2026-09-01T20:30:26+00:00"
+  },
+  {
+   "name": "T-typed-bell-arse-write-async — move the typed-bell ArSE write off the bell request thread (WATCH, flag-ON only)",
+   "description": "Surfaced by the Claude-owner review of M-typed-bells (`b4ed15f`), 2026-06-11.\n**Status: WATCH — not a defect, no action while `FUTON3C_TYPED_BELLS` is OFF.**\nPick up only if/when the flag is live AND typed-bell volume grows.\n\n## Giraffe fields (no Plane field)\n- futon-status: :watch\n- priority_text: null",
+   "priority": "none",
+   "state": "Backlog",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-typed-bell-arse-write-async.md",
+   "updated_at": "2026-06-11T15:17:51+01:00"
+  },
+  {
+   "name": "T-cx-new-blocks-emacs — `cx new` blocks Emacs for a while (DEFERRED)",
+   "description": "**Status (triaged 2026-09-01): STILL-OPEN, deferred by design.** cx at HEAD still runs the synchronous wait_for_agency poll (up to 30 s) and blocking emacsclient evals; no async conversion exists. The ticket's own DO-NOT-PICK-UP note stands -- needs Joe's go-ahead plus a timing repro separating the wait from the first turn.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-cx-new-blocks-emacs.md",
+   "updated_at": "2026-09-01T20:39:39+00:00"
+  },
+  {
+   "name": "T-kangaroo-v1-pouch — warm claude pouch (cr version, flag-gated)",
+   "description": "**Status (triaged 2026-09-01): DONE-IN-FACT.** Warm reuse, locking, eviction, joey cap, snapshots, cold fallback all live (agent_pouch.clj; enabled in dev-laptop-env, source default off). One deliberate later change: an operator-interrupted warm turn does NOT fall back cold (dev.clj:4039+). Close.\n\n## Giraffe fields (no Plane field)\n- futon-status: :done-in-fact\n- priority_text: null",
+   "priority": "none",
+   "state": "Done",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-kangaroo-v1-pouch.md",
+   "updated_at": "2026-09-01T20:31:41+00:00"
+  },
+  {
+   "name": "T-kangaroo-caching-and-compaction — TOMORROW (2026-06-11)",
+   "description": "**Status (triaged 2026-09-01): PARTIAL -- research portions obsolete.** The 1h-prompt-cache env rollout and joey-threshold recalibration were never implemented (0 occurrences; threshold still 2 MiB). Compaction went further than the ticket: warm /compact and default-on cold monster compaction both shipped. Close the superseded parts; decide whether threshold recalibration is still wanted.\n\n## Giraffe fields (no Plane field)\n- futon-status: :partial\n- priority_text: \"# T-kangaroo-caching-and-compaction \\u2014 TOMORROW (2026-06-11)\"",
+   "priority": "none",
+   "state": "In Progress",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-kangaroo-caching-and-compaction.md",
+   "updated_at": "2026-09-01T20:31:41+00:00"
+  },
+  {
+   "name": "T-zai-chat-transient-timeout — a transient model-call failure must not kill a turn that can continue",
+   "description": "**Status (triaged 2026-09-01): STILL-OPEN, cheap prerequisite named.** chat! (zai_api.clj:752) still sends with no transport catch; a timeout throws past the {:error ...} contract and the sole caller has no retry. One fresh occurrence since filing. H1 (~5-line catch returning the error shape) is the first row; H2 retry after.\n\n## Giraffe fields (no Plane field)\n- futon-status: :still-open\n- priority_text: null",
+   "priority": "none",
+   "state": "Todo",
+   "external_source": "futon-holes",
+   "external_id": "holes/tickets/T-zai-chat-transient-timeout.md",
+   "updated_at": "2026-09-01T20:39:39+00:00"
+  }
+ ],
+ "relations": [
+  {
+   "issue": "T-car3-phase2-impl",
+   "related_issue": "T-car3-queue-routing",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-car3-phase2-impl.md",
+    "line": 5,
+    "quote": "Parent: `M-agency-hardening.md`. Phase 2 of Car-3, after Phase-1 model was\n**ratified-with-amendment** by claude-6 (2026-06-10). Branch base:",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-mq7-unaddressable-caller",
+   "related_issue": "T-car3-queue-routing",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-mq7-unaddressable-caller.md",
+    "line": 10,
+    "quote": "after Car-3 Phase-1 returns, to avoid codex-1 contention).",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-mq7-unaddressable-caller",
+   "related_issue": "T-mesh-qa-misrouting",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-mq7-unaddressable-caller.md",
+    "line": 22,
+    "quote": "- recipient (`:to`) is an **auto-bellback-eligible** agent (reuse mesh-qa's\n  existing recipient predicate — currently `:codex` type); and",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-mesh-qa-misrouting",
+   "related_issue": "T-mesh-edge-coverage",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-mesh-qa-misrouting.md",
+    "line": 70,
+    "quote": "- **Branch from the Car-1 base** (it carries the `:mesh-edge` schema you need):",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-durable-queue-rename-and-tidies",
+   "related_issue": "T-car3-phase2-impl",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-durable-queue-rename-and-tidies.md",
+    "line": 5,
+    "quote": "Parent: `M-agency-hardening.md`. Post-landing polish before activating the queue.",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-durable-queue-rename-and-tidies",
+   "related_issue": "T-codex-auto-bellback",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-durable-queue-rename-and-tidies.md",
+    "line": 21,
+    "quote": "`enqueue-auto-bellback!` (http.clj) creates a bell job + runs it, but never",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-durable-queue-rename-and-tidies",
+   "related_issue": "T-mq7-unaddressable-caller",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-durable-queue-rename-and-tidies.md",
+    "line": 29,
+    "quote": "`unaddressable-caller?` (mesh_qa.clj) currently flags a codex completion whose\ncaller is `joe` (not a registered agent) — but a human-dispatched codex job",
+    "edge/source": "prose-reading"
+   }
+  },
+  {
+   "issue": "T-kangaroo-caching-and-compaction",
+   "related_issue": "T-kangaroo-v1-pouch",
+   "relation_type": "blocked_by",
+   "external_source": "futon-holes",
+   "extras": {
+    "file": "T-kangaroo-caching-and-compaction.md",
+    "line": 5,
+    "quote": "Parked at end of day 2026-06-10. Three linked follow-ons to the joey gate",
+    "edge/source": "prose-reading"
+   }
+  }
+ ],
+ "external_needs": [
+  {
+   "issue": "T-typed-bell-arse-write-async",
+   "to": "FUTON3C_TYPED_BELLS flag is live and typed-bell volume grows",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-typed-bell-arse-write-async.md",
+   "line": 5,
+   "quote": "Pick up only if/when the flag is live AND typed-bell volume grows.",
+   "note": "The ticket says to pick it up only when the flag is live and volume grows, a condition on the world that must hold before the work."
+  },
+  {
+   "issue": "T-cx-new-blocks-emacs",
+   "to": "Joe's go-ahead",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-cx-new-blocks-emacs.md",
+   "line": 6,
+   "quote": "Joe's go-ahead.",
+   "note": "The ticket forbids picking it up without Joe's go-ahead, a condition that must hold first."
+  },
+  {
+   "issue": "T-cx-new-blocks-emacs",
+   "to": "drainer fix lands",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-cx-new-blocks-emacs.md",
+   "line": 34,
+   "quote": "Deferred. Bounded UX annoyance, not a correctness bug. Revisit after the drainer\nfix lands.",
+   "note": "The ticket says to revisit after the drainer fix lands, so that must hold before this work."
+  },
+  {
+   "issue": "T-kangaroo-caching-and-compaction",
+   "to": "Joe's approval to start",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-kangaroo-caching-and-compaction.md",
+   "line": 6,
+   "quote": "(commit 042fad2) and the prompt-caching accounting. Do NOT start without Joe.",
+   "note": "The ticket says do NOT start without Joe, a condition that must hold first."
+  },
+  {
+   "issue": "T-fail-no-execution-evidence",
+   "to": "TN-apm-defect-register C3 decision",
+   "to_kind": "external-item",
+   "kind": "needs",
+   "file": "T-fail-no-execution-evidence.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- merge with defect C3.** 22 occurrences; TN-apm-defect-register C3 records a job can be functionally successful yet state:failed under this code. The state semantics need the C3 decision; census alone cannot close it.",
+   "note": "The ticket states the state semantics need the C3 decision and census alone cannot close it, so the C3 decision must be made first."
+  },
+  {
+   "issue": "T-fail-worker-lost-on-restart",
+   "to": "delivery-retry cap for restart-orphaned jobs",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-fail-worker-lost-on-restart.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): PARTIAL, quiescent.** Exactly the ticketed 3 (last 08-23), all stuck in `delivering`. Close as non-reproducing after a delivery-retry cap for restart-orphaned jobs.",
+   "note": "The ticket says to close as non-reproducing only after a delivery-retry cap exists, so that must hold before closing."
+  },
+  {
+   "issue": "T-fail-invoke-error",
+   "to": "exception-payload triage done",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-fail-invoke-error.md",
+   "line": 3,
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN.** 2 -> 111 at review (latest 09-01T03:06); now the second-heaviest class. Needs exception-payload triage before a close criterion can be stated.",
+   "note": "The ticket says it needs exception-payload triage before a close criterion can be stated, so that must be done first."
+  },
+  {
+   "issue": "T-matrix-federation-proof",
+   "to": "Joe is ready",
+   "to_kind": "world-state",
+   "kind": "needs",
+   "file": "T-matrix-federation-proof.md",
+   "line": 4,
+   "quote": "M-agency-hardening. Revisit when Joe is ready.",
+   "note": "The ticket says to revisit when Joe is ready, a condition that must hold before the work."
+  }
+ ],
+ "gaps": [
+  {
+   "gap": "Futon triage status distinctions (e.g. :partial vs :still-open vs :watch) collapse into Plane's five groups; :partial's 'shipped with named residue' is lost",
+   "example": "T-car3-phase2-impl"
+  },
+  {
+   "gap": "No ticket states a priority, so every issue converts priority=none; Plane's order among open items reduces to state group then updated",
+   "example": "T-kangaroo-caching-and-compaction"
+  },
+  {
+   "gap": "External needs (world-state / external-item targets) have no Plane record; they are carried in external_needs and count as unmet",
+   "example": "T-cx-new-blocks-emacs -> \"Joe's go-ahead\""
+  },
+  {
+   "gap": "Edge evidence (file, line, verbatim quote, :edge/source :prose-reading) has no Plane field on IssueRelation; carried in extras",
+   "example": "T-mesh-qa-misrouting -> T-mesh-edge-coverage (file T-mesh-qa-misrouting.md, line 70)"
+  },
+  {
+   "gap": "Dependencies inside one ticket (T-zai-chat H1->H5 ladder; T-fail-invoke-error triage) are expressible neither in edges.json nor in Plane records",
+   "example": "T-zai-chat-transient-timeout"
+  },
+  {
+   "gap": "A cancelled-group blocker does not count as met (:blocker-cancelled); Plane's blocked_by has no such semantics",
+   "example": "T-mq7-unaddressable-caller -> T-car3-queue-routing (superseded)"
+  }
+ ]
+}
