@@ -70,8 +70,9 @@
         (is (= 13 (get-in pass-output [:counts :open])))
         (is (= 13 (count (re-seq #"(?m)^\| T-" report)))
             "13 table rows: one per open item, so 13 ids per column")
-        (doseq [id opens]
-          (is (= 2 (count (re-seq (re-pattern (name id)) report)))
+        (doseq [id opens
+                :let [table (str/join "\n" (re-seq #"(?m)^\| T-.*$" report))]]
+          (is (= 2 (count (re-seq (re-pattern (str "\\b" (name id) "\\b")) table)))
               (str (name id)
                    " must occur exactly once per column, twice in the row")))))))
 
@@ -100,3 +101,29 @@
 
 (deftest default-root-is-the-canonical-storage-root-never-tmp
   (is (= "/home/joe/code/storage/giraffe/" gr/default-root)))
+
+;; Review (claude-13, 2026-10-27).
+(deftest review-a-file-dropped-from-the-manifest-is-reported
+  ;; wrong: verify-run checked only the files the manifest listed, so editing
+  ;; pass.edn and deleting its manifest row passed.
+  (let [root (temp-root "dropped")
+        {:keys [written]} (pilot-run root)
+        dir (str (:dir written))
+        mf (io/file dir "manifest.edn")
+        m (edn/read-string (slurp mf))]
+    (spit (io/file dir "pass.edn") "(planted)")
+    (spit mf (pr-str (update m :files
+                             (fn [fs] (vec (remove #(= "pass.edn" (:file %)) fs))))))
+    (let [{:keys [ok? mismatches]} (gr/verify-run dir)]
+      (is (not ok?))
+      (is (= [{:file "pass.edn" :missing-from-manifest true}] mismatches)))))
+
+(deftest review-report-says-what-each-not-ready-item-waits-on
+  (let [root (temp-root "waiting")
+        {:keys [written]} (pilot-run root)
+        report (slurp (io/file (str (:dir written)) "report.md"))]
+    (is (str/includes? report "## Waiting on"))
+    (is (str/includes? report "### T-cx-new-blocks-emacs (external)"))
+    ;; every edge line is one line: no quote breaks out of its bullet
+    (is (not-any? #(str/starts-with? % "**")
+                (str/split-lines report)))))

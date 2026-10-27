@@ -149,7 +149,8 @@
 
 (defn- evidence-of
   [es]
-  (mapv #(select-keys % [:from :to :kind :class :source :quote :file :line]) es))
+  (mapv #(select-keys % [:from :to :kind :class :source :quote :file :line
+                         :external-target]) es))
 
 (defn- readiness-entry
   "One item's readiness record."

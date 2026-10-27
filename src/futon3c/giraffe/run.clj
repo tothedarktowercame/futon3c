@@ -73,9 +73,13 @@
 ;; ------------------------------------------------------------ report
 
 (defn- edge-line [e]
-  (format "- %s needs %s (%s) -- quote: %s -- %s:%s"
-          (:from e) (:to e) (name (or (:class e) :closure))
-          (or (:quote e) "") (or (:file e) "?") (or (:line e) "?")))
+  ;; quotes span wrapped lines in the ticket; collapse them so one edge stays
+  ;; one markdown line.  External targets show the raw text, not the key.
+  (format "- %s needs %s (%s) -- quote: \"%s\" -- %s:%s"
+          (name (:from e)) (or (:external-target e) (name (:to e)))
+          (name (or (:class e) :closure))
+          (str/join " " (str/split (str/trim (or (:quote e) "")) #"\s+"))
+          (or (:file e) "?") (or (:line e) "?")))
 
 (defn- order-row [entry]
   (let [{:keys [id status reason cone unblocks]} entry]
@@ -134,7 +138,7 @@
                             (str "- " (name r) ": " n))
                           ["- none"]))
          ""
-         "## Order of build (stage 1)"
+         "## Order of work"
          ""
          "The source's own order (tickets index order of open items) beside"
          "Giraffe's order (ready first by unblocks, cone, source order)."
@@ -149,6 +153,22 @@
              (concat order (repeat {:id :none-listed :status :none
                                     :reason :none :cone 0 :unblocks 0})))
         [""]
+        (let [waiting (for [{:keys [id]} order
+                            :let [r (get readiness id)]
+                            :when (not= :ready (:status r))]
+                        [id r])]
+          (when (seq waiting)
+            (concat ["## Waiting on" ""
+                     "What each not-ready item still needs, with the sentence the need was read from."
+                     ""]
+                    (mapcat (fn [[id r]]
+                              (concat [(format "### %s (%s)" (name id)
+                                               (name (or (:reason r) :unknown)))]
+                                      (if (every? map? (:evidence r))
+                                        (map edge-line (:evidence r))
+                                        [(str "- " (pr-str (:evidence r)))])
+                                      [""]))
+                            waiting))))
         (section "blocker-cancelled"
                  (mapcat (fn [b]
                            (flag-lines
@@ -224,6 +244,9 @@
     (write! "manifest.edn" (print-edn manifest))
     {:run-id run-id :dir (str dir) :manifest manifest}))
 
+(def ^:private run-files
+  ["input.edn" "rejected.edn" "pass.edn" "report.md"])
+
 (defn verify-run
   "Recompute the sha256 of every file the manifest recorded in this run
   directory; {:ok? true :mismatches []} or the list of files whose
@@ -233,14 +256,18 @@
   (let [manifest (with-open [r (java.io.PushbackReader.
                                 (io/reader (io/file dir "manifest.edn")))]
                    (edn/read r))
-        mismatches (vec (for [{:keys [file] :as entry} (:files manifest)
+        listed (set (map :file (:files manifest)))
+        unlisted (vec (for [f run-files :when (not (listed f))]
+                        {:file f :missing-from-manifest true}))
+        mismatches (into unlisted
+                         (for [{:keys [file] :as entry} (:files manifest)
                               :let [f (io/file dir file)
                                     actual (when (.isFile f) (sha256 f))]
                               :when (not= actual (:sha256 entry))]
                           {:file file
                            :manifest-sha256 (:sha256 entry)
                            :actual-sha256 actual}))]
-    {:ok? (empty? mismatches) :mismatches mismatches}))
+    {:ok? (empty? mismatches) :mismatches (vec mismatches)}))
 
 ;; ---------------------------------------------------------------- main
 
