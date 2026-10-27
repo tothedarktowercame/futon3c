@@ -6,13 +6,13 @@
             [futon3c.agents.kimi-api :as kimi-api]
             [futon3c.agents.zai-api :as zai-api]))
 
+;; Zai backends (Joe 2026-10-19: "use zai runners in wm roles rather than
+;; codex"). The role names stay, so clicks never queue behind a general zai-N
+;; seat that another job holds (Joe 2026-10-27).
 (def default-specs
-  [{:id "wm-author" :role "war-machine-author"
-    :backend :codex :model "gpt-5.6-sol"}
-   {:id "wm-reviewer" :role "war-machine-reviewer"
-    :backend :codex :model "gpt-5.6-sol"}
-   {:id "wm-repair-reviewer" :role "war-machine-repair-reviewer"
-    :backend :codex :model "gpt-5.6-sol"}])
+  [{:id "wm-author" :role "war-machine-author" :backend :zai}
+   {:id "wm-reviewer" :role "war-machine-reviewer" :backend :zai}
+   {:id "wm-repair-reviewer" :role "war-machine-repair-reviewer" :backend :zai}])
 
 (def supported-backends #{:codex :claude :zai :kimi})
 (def role-identities #{"wm-author" "wm-reviewer" "wm-repair-reviewer"})
