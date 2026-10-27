@@ -29,7 +29,10 @@
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- available-seat-state? [status]
-  (contains? #{:idle :restored "idle" "restored"} status))
+  ;; The registry reads an absent :agent/status as :idle (a seat registered
+  ;; but never invoked).  Click 4 of run001 (2026-10-27) refused
+  ;; :cast-not-ready because freshly re-registered reviewer seats had nil.
+  (contains? #{:idle :restored "idle" "restored"} (or status :idle)))
 (defn- invoke-capable? [agent]
   ;; get-agent returns the stored record, whereas the HTTP projection derives
   ;; :invoke-ready? from its registered local/WS route.  The dedicated WM

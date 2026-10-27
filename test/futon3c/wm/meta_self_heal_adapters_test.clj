@@ -344,6 +344,27 @@
     (is (= :ready (:status result)))
     (is (empty? (:defects result)))))
 
+(deftest never-invoked-seat-reads-as-idle
+  ;; run001 click 4 (2026-10-27): re-registered reviewer seats carried no
+  ;; :agent/status, which the registry reads as :idle; readiness refused them.
+  (let [result (with-redefs [reg/get-agent
+                             (fn [seat]
+                               (if (= seat "wm-author")
+                                 ready-agent
+                                 (dissoc ready-agent :agent/status)))
+                             clojure.java.shell/sh
+                             (fn [& args]
+                               {:exit 0
+                                :out (if (some #{"status"} args) "" "clean-head\n")
+                                :err ""})]
+                 (sut/readiness
+                  {:target-repository "/home/joe/code/futon2"
+                   :meta-injury-ledger-path "/tmp/ledger.edn"
+                   :meta-repair-transaction-path "/tmp/tx.edn"
+                   :queue-retry-fn identity}))]
+    (is (= :ready (:status result)))
+    (is (empty? (:defects result)))))
+
 (deftest missing-queue-or-unready-seat-refuses-without-effects
   (with-redefs [reg/get-agent (fn [seat]
                                 (assoc ready-agent :agent/status
