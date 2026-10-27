@@ -1,7 +1,7 @@
 # M-giraffe — start from the data structure: a work pool the War Machine can read
 
 **Date:** 2026-10-25
-**Status:** OPEN — INSTANTIATE stage 1 started 2026-10-27 (Joe: "proceed with stage 1"; packet 1, the pass namespace, belled to zai-2 as job invoke-1793115922312-5587-4e51a12a). VERIFY pilots 1 and 2 run and scored; DERIVE and ARGUE updated with their results (claude-13, 2026-10-27), plain-language paragraph under discussion with Joe; ARGUE approved provisionally pending the mock-up (2026-10-27; ARGUE open items listed in §Still open in ARGUE; DERIVE open from 2026-10-26, items still unchecked; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
+**Status:** OPEN — INSTANTIATE: stage 1 tickets source built 2026-10-27 (§INSTANTIATE; two questions for Joe; mission-docs source and the cone-against-history test still open); stage 2 next. VERIFY pilots 1 and 2 run and scored; DERIVE and ARGUE updated with their results (claude-13, 2026-10-27), plain-language paragraph under discussion with Joe; ARGUE approved provisionally pending the mock-up (2026-10-27; ARGUE open items listed in §Still open in ARGUE; DERIVE open from 2026-10-26, items still unchecked; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
 **Owner:** Joe + claude-11
 **Follows:** M-kangaroo (warm pouches, i.e. agents that persist; this mission is about the work those agents are given).
 **Serves:** our own War Machine first. Second, the consulting offer: "show me your agent logs and your ticket tracker, and I will show you how to make it work better" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞).
@@ -450,3 +450,30 @@ Pilot 1 could not test unblocking: no ready item's cone was non-empty. This samp
 The two readings agree on every count today because no ticket has started, so B's started rule went unexercised. At review, claude-11 set `RUN-001` to In Progress in a scratch copy and reran both the pass and the checker. They agreed. In B, `B-`, `C-`, `D-EVIDENCE` and `E1-TERMINATION` became ready; `A4-VERIFY` stayed not ready, waiting on `A4-PLAN`'s closure; in A nothing changed. The review also found that `check_pass.py` accepted a bullet whose recorded numbers contradicted its claim, as long as it was marked held (a planted `B1-ACCEPT` cone of 20 passed). claude-11 added a check that compares the bullets' numbers with the recompute, plus that plant (now `af3194df…c1d2`, all 7 plants caught).
 
 Giraffe's first five: A = `B1-ACCEPT`, `R28-RETENTION`, `TRIPWIRE-PLAN`, `A4-PLAN`, `T12-DETECTOR`; B = `B1-ACCEPT`, `TRIPWIRE-PLAN`, `A4-PLAN`, `HISTORICAL-GRID`, `LOOP-PLAN`. Unlike pilot 1, this one shows the pass separating cone size from immediate unblocking: `R28-RETENTION` and `TRIPWIRE-PLAN` have cones of 14 and unblock nothing alone. Under the author's classes, R28's whole cone goes, because it runs through an edge that can be met another way.
+
+## INSTANTIATE (from 2026-10-27)
+
+Scope (Joe, 2026-10-27): stages 1 and 2 of §Order of build; stage 3's route is decided after stage 2, by what the War Machine can then do.
+
+### Stage 1, tickets source: built (claude-13 owner, zai-2 author, 2026-10-27)
+
+Packets in `~/notes/packets/giraffe/stage1-0{1..4}-*.md`. Each was reviewed by reading the diff and by constructing bad cases. Every review found real defects, and each fix landed with the bad case as a test.
+
+| Piece | Namespace | Author commit(s) | Review fix | Bad cases that were wrong before the fix |
+|---|---|---|---|---|
+| The pass | `futon3c.giraffe.pass` | `ef4918e34` | `878273cd3` | cycle members counted as ready when externals are ignored; closed items on a cycle shown as undetermined; a `:closure` and an `:artifact` edge to one target shared a variable, so the item showed ready |
+| holes/tickets adapter | `futon3c.giraffe.tickets` | `0e660102b` | `9ceb5ac2e` | a blank quote passed the quote check (every window contains ""); an unknown edge class reached the pass, whose `case` has no default |
+| Run writer + report | `futon3c.giraffe.run` | `540dd8ca4`, `e93d7283b`, `f09463ba0` | `e86571695` | `verify-run` passed after a file was edited and its manifest row deleted; the report did not say what a not-ready item waits on |
+| Edges for all 35 tickets | `holes/tickets/giraffe-edges.json` | zai-2 reading (`~/notes/experiments/2026-10-27-giraffe-stage1/edges-13.json`) | `af320ba50` | 2 of 7 new edges moved to rejected as internal steps (choosing among its own fixes; establishing which tree to review), i.e. the ticket's own work, the same rule as a mission's Missing column |
+
+Tests: `futon3c.giraffe.{pass,tickets,run}-test`, 24 tests, 157 assertions, all pass at `e86571695` (claude-13's run). How to run: `clojure -M -m futon3c.giraffe.run --edges holes/tickets/giraffe-edges.json [--only ids-file]`; output in `~/code/storage/giraffe/<run-id>/`, with `report.md` for reading and `verify-run` for the manifest.
+
+**Runs.** Pilot 1 on today's states: `20261027T162035.757Z-027038fc` (13 open, the same 6 ready as pilot 1). All 35 tickets: `20261027T162433.443Z-4129963c`: 24 open, 13 ready, 23 ready if outside needs are ignored. 20 need edges (one `precedes` is set aside as out of stage 1), 23 rejected readings.
+
+**What the all-35 run shows.** For the first time on our own records, a ready item unblocks another: `T-devmap-forward-model-calibration` is first in Giraffe's order because finishing it (more exactly, producing its rubric: an `:artifact` edge) makes `T-watu-replay-layer` ready. Of the 11 not-ready tickets, 10 wait only on things outside the tickets. Four of those need a decision from Joe: go-ahead, approval to start, "when Joe is ready", and the CLeans product decision. The rest wait on states of the world: the WM loop running, a drainer fix, the C3 decision, a retry cap, the typed-bell flag. On this pool, Joe's decisions are what would unblock the most.
+
+**Open, for Joe.**
+- [ ] `T-car3-phase2-impl` and `T-mq7-unaddressable-caller` are closed but still need the superseded `T-car3-queue-routing`. The pass reports both as `:anomaly/done-with-open-needs`. Re-point or drop the two edges (a ticket-text edit).
+- [ ] VERIFY's third criterion, now on the all-35 run: is Giraffe's order defensible as "what to do next"?
+
+**Not done in stage 1.** The mission-docs source, where the Missing-column invariant applies; this mission said "tickets first". DERIVE's cone-against-history test (§First test), which is stage 1's own check per §Order of build: it needs a later state of the tickets to compare against, so it can run once tickets have moved.
