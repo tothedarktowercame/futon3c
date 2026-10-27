@@ -1,7 +1,7 @@
 # M-giraffe — start from the data structure: a work pool the War Machine can read
 
 **Date:** 2026-10-25
-**Status:** OPEN — DERIVE (from 2026-10-26; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
+**Status:** OPEN — ARGUE (from 2026-10-27; DERIVE open from 2026-10-26, items still unchecked; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
 **Owner:** Joe + claude-11
 **Follows:** M-kangaroo (warm pouches, i.e. agents that persist; this mission is about the work those agents are given).
 **Serves:** our own War Machine first. Second, the consulting offer: "show me your agent logs and your ticket tracker, and I will show you how to make it work better" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞).
@@ -271,3 +271,60 @@ An `enables` edge (H4 finding 4) makes `k-landed` an input of the target's need 
 - (a) *Can the selector read `k-ready` and the cone without changing `evaluate`?* Yes. `evaluate` reads `:status`, `:G`, `:policy-id`, `:cascade-digest`, `:action-pin`, the menu pin and (since R17) `excluded-keys`; readiness and cones are keys it never reads, so they are captures beside the receipt, at `[<arm> :<name>]` on the selection cell next to `:outer-selection-trace` and `:reading-preparation`. That needs one retain-time call in `full_loop_runner.clj` (claude-9's file, a small packet like C4b). Until then the record is written to its own file keyed by run id and joined offline. Conditions: the as-of stamp and sealed leaf assignment, and per-item rather than per-choice (both above).
 - (b) *Does `:needs/cyclic` go with the S1 exclusion reasons or in the trace?* Neither. The keyword has the right `:<stage>/<reason>` form, but `[:excluded]` would make it a guard that drops the item from support, against the "typed fact beside the choice until a ruling" invariant (U4 was ruled that way on the 26th). It goes in the readiness record as a status reason. If Joe later rules that unready items are excluded, the same keyword moves into S1 unchanged. The trace is a projection of the receipt and takes no new facts; counting readiness statuses there would be a trace v2, not now.
 - (c) *Does a cone feed G or only the brief?* Brief and receipt now. G is the per-cascade score (`scorer/rank-cascade-actions` minus the frontier-beta novelty term; Lean `CascadeCoApplyGNovelty`, `classKernel`), and a cone is per item. Any new term changes the ranking law, and Lean specifies, code conforms: a cone enters G only after a Lean clause defines it and Joe rules on it. The first test above is the case for that clause. Until a recorded cone has predicted history better than no cone, it is a computed urgency shown in the brief and retained beside the receipt.
+
+## ARGUE (open, from 2026-10-27)
+
+Joe, 2026-10-27, in claude-11's REPL, opened ARGUE and gave its outline: the theory (papers, the landscape map, a category-theoretic treatment, the design patterns we already have) has to be distilled into one common-sense paragraph. The thread through it: the War Machine may select any task, but for its selections to mean anything it should prefer tasks that can be done now and tasks that unblock others. The proof work is the evidence that this works. DERIVE's unchecked items stay open: per the lifecycle, the pattern survey below may revise them, and DERIVE's exit is recorded when they close.
+
+### Plain-language argument (draft)
+
+A list of work tells you what someone wants done. It does not tell you what to do next. To decide that, you need two more facts about each item: can it be started now, and what does finishing it let other people start? When we gave our proof seats exactly that (each problem broken into small lemmas, each lemma saying which others it needs, a lemma that turns out too big split rather than retried, and the pieces many others wait on done first), 72 problems were closed in two weeks. Where the same seats worked over a dependency map that had no readiness and no ordering by what unblocks what, two chains grew for weeks without closing anything. Giraffe gives every item in our pool, and in a client's tracker, those two facts: computed each time a choice is made, never stored, and recorded beside the choice so it can be checked afterwards. An item that turns out to depend on itself is not refused: it is marked as needing to be broken down, the same thing a proof seat does with a lemma it cannot finish.
+
+### The evidence from the proof work
+
+- **Lemma rounds (claude-14, 2026-10-13 to 2026-10-26; `~/notes/packets/lemmas/STATUS.md`).** Each problem was given a blueprint: lemmas in dependency layers. The seat brief has a `BLOCKED-ON <name>` rule (`preamble.md:18`): a seat that cannot prove its lemma without one that is still `sorry` stops and the lemma is re-queued after that one lands, i.e. readiness is checked when the seat starts, not assumed. A partial must bank its proved steps as `_aux_` helpers and leave the rest as separate lemmas for other seats (`preamble.md:21`). Ledger counts: 72 distinct problems recorded CLOSED, 1442 lemma rows PASS, 289 rows PARTIAL, each split rather than sent out again. Merged to master by `merge_lemmas.sh` (last 2026-10-26, `fe63b1840`).
+- **Topology loops (from 2026-09).** `apm-lean/TOPOLOGY-ROUTES.md` records that the earlier `TOPOLOGY-DEPENDENCY-DAG.md` "named 31 of the open problems and let two chains grow for weeks without touching a `sorry`" (`/home/joe/topo-watch/dag-audit.md`). That map had dependencies but no readiness and no rule for which piece to build first; the routes file that replaced it added election rules ("infrastructure steps shared by two or more of its problems first").
+- **What this comparison is not.** The problems, seats and dates differ, and the lemma rounds also had a reviewed decomposition and mechanical acceptance (`lemmatool.py check`). So it shows that breakdown + readiness + unblock-first ordering can carry a large body of work to closure here, not that ordering alone caused the difference. The VERIFY test for Giraffe is the one in DERIVE: a recorded cone predicts what is started next.
+
+### Pattern cross-reference
+
+| Pattern | Where it applies in DERIVE | How |
+|---|---|---|
+| `cascade-construction/order-by-what-each-step-needs` | need edges; `k-ready` as the `and` of hard needs | the same rule at item grain: needs in the guard, contributions in the effect, order follows (`construction.clj:125`) |
+| `efficiency/order-by-what-it-unlocks` | the "what landing `k` unblocks" set | its rule ("rank shared pieces by how many consumers each one closes … recompute whenever the set of statements changes") is the do(`k-landed`) cone, recomputed at each selection rather than stored |
+| `efficiency/split-the-partial-not-retry-it` | `:needs-breakdown` flag on cycles | a cycle, like a partial, is split into parts whose needs become ordinary edges; the item is not sent round again unchanged |
+| `efficiency/give-the-dependent-piece-its-hypothesis` | breaking a cycle | the proof-side way to split mutual dependency: B takes A's conclusion as an explicit hypothesis, so the edge becomes an `enables` with a stated assumption instead of a hard need. Proposed as the default suggestion attached to a `:needs-breakdown` record (DERIVE revision, for Joe) |
+| `efficiency/split-by-shared-dependency` | `art:` variables shared between items | split by the facts pieces would each need; each shared `art:X` becomes its own item others wait on, which is what `:undeclared-sharing` forces the adapter to make explicit |
+| `efficiency/review-the-decomposition-before-dispatch` | the overview for Joe before the selector reads anything | DERIVE's data flow (Joe's tool first, selector later) is this pattern: judgment spent on the breakdown once, leaves accepted mechanically |
+| `futon-theory/mission-dependency` | the whole mission | "represent missions as an explicit dependency graph so blocked work, leaf work, and high-value unblocks are visible"; MAP measured that it is not yet (17 of 109 items state an edge, in prose, and no code reads them) |
+
+The memory side: m40 combines memories as admissible cones in the 3/2-blend carrier (`MemoryCones.lean`), and our design patterns are increasingly written as blends (`ThreeHalvesBlend.lean`). Giraffe's work packages are blends of items under the same carrier (§Giraffe is the anticipatory analogue of m40), so the memory of what was done and the plan of what to do are combined by one construction.
+
+### Rationale citation
+
+- `@why war-room/wr-10-next-move-surface-is-recursive-closure`: the next-move recommendation was ranked on three criteria, "direct leverage, unlock cascade, and self-referential closure". The unlock-cascade criterion was ruled in April; MAP found that the live selector has no input for it (G reads no dependencies or readiness, §HEAD). Giraffe supplies the data that criterion needs.
+- `@why war-room/wr-13-futonic-debt-is-paid-in-order`: "complete work that unblocks the pilot before undertaking deferrable library hygiene", i.e. unblock-first ordering, ruled for debt.
+- `@why war-room/wr-14-predecessor-completion-pull-is-a-fourth-next-move-criterion`: an item whose predecessor is nearly done is pulled forward; in DERIVE this is the "unmet-need count drops by one" record kept beside the unblocked-now set.
+
+### Theoretical coherence
+
+IDENTIFY's anchor was "start with the data structure". The design keeps to it: the change is a record per item (needs, readiness, unblocks, flags), and the selector's ranking law is untouched until a Lean clause and Joe's ruling admit a cone into G (claude-9's answer (c)). The active-inference reading from MAP still holds: offline there is no observation, so the attested wants are the preferred outcomes, and readiness plus unblocks says which of them can be pursued now.
+
+Category-theoretic reading (Joe, 2026-10-27: beyond the usual standard of a mission, though the work is heading that way). Each item is an open theory with an interface (its `-landed` variable and the leaves it needs); the field is their gluing, a colimit over shared interface variables, which is what `ot/glue` computes and what its refusals (`:double-mechanism`, `:undeclared-sharing`, `:cycle`) report as failures of the colimit to exist in the DAG category. "What landing `k` unblocks" is the image of an intervention on one interface variable under evaluation of the glued theory. The same gluing over patterns is 馬's Giant Connected Cascade, so tasks and patterns land in one category and can be glued to each other. The self-ordering Joe names is this: the order of work is not supplied from outside but read off the glued graph each time. Writing this out properly (the category, the functor to evaluations, and where cycles sit) is a candidate paper, not a mission exit.
+
+### Trade-offs
+
+- Readiness is recomputed at every selection rather than stored: costs a pass over the glued graph per click, and buys records that cannot go stale (Joe, HTM analogy).
+- Cycles are flagged, not evaluated: items on a cycle get no readiness until split. A fixed-point treatment of feedback would evaluate them, and would mean changing `glue` (claude-9's code); not taken.
+- Edges come only from explicit paths, keys and item ids, never from prose: most of the 17 prose dependency lines will be missed at first, in exchange for no false edges.
+- The cone goes to the brief, not into G, until it has predicted history better than no cone: the selector does not improve from this mission alone.
+
+### Generalization
+
+For a client's tracker the same three facts are needed, and the trackers surveyed already store the edges (Jira links, Redmine/OpenProject `blocks` vs `precedes`) but not readiness-as-of-a-choice or the unblocked-now set. The adapter is per source; the gluing, readiness and cone computations are not. What would change: need kinds (a ruling has no Jira counterpart; a "blocked by" link does), and attribution, which trackers keep and our pool lacks (2 of 109).
+
+### Still open in ARGUE
+
+- [ ] Joe's correction of the plain-language paragraph.
+- [ ] Whether `give-the-dependent-piece-its-hypothesis` becomes the suggested breakdown on a `:needs-breakdown` record (DERIVE revision).
+- [ ] The DERIVE items still unchecked.
