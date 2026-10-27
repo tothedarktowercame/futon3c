@@ -193,3 +193,32 @@ the phase-1 model, superseded by the impl.
     (testing "with no :only every pilot edge target resolves; nothing dangles"
       (is (empty? (filter #(#{:edge/dangling-source :edge/dangling-target}
                             (:reject %)) rejected))))))
+
+;; Review (claude-13, 2026-10-27): bad cases built at review.
+(deftest review-blank-quote-and-unknown-class-are-rejected
+  ;; wrong: (str/includes? window "") is true, so an empty or blank quote
+  ;; passed the check on any line; an unknown class reached the pass, whose
+  ;; edge-met? has no case for it.
+  (let [root (temp-root "review")]
+    (spit (str root "/T-a.md") "A\n\nneeds T-b first.\n")
+    (spit (str root "/T-b.md") "B\n")
+    (spit (str root "/index.edn")
+          (pr-str [{:ticket "T-a.md" :status :still-open}
+                   {:ticket "T-b.md" :status :still-open}]))
+    (spit (str root "/edges.json")
+          (json/generate-string
+           {:tickets [] :rejected []
+            :edges [{:from "T-a" :to "T-b" :to_kind "cluster" :kind "needs"
+                     :file "T-a.md" :line 3 :quote ""}
+                    {:from "T-a" :to "T-b" :to_kind "cluster" :kind "needs"
+                     :file "T-a.md" :line 3 :quote "   "}
+                    {:from "T-a" :to "T-b" :to_kind "cluster" :kind "needs"
+                     :file "T-a.md" :line 3 :quote "needs T-b first."
+                     :class "soonish"}]}))
+    (let [{:keys [input rejected]}
+          (gt/tickets->input {:tickets-dir root
+                              :index-file (str root "/index.edn")
+                              :edges-file (str root "/edges.json")})]
+      (is (empty? (:edges input)))
+      (is (= 2 (count (filter #(= :edge/quote-not-at-line (:reject %)) rejected))))
+      (is (= 1 (count (filter #(= :edge/unknown-class (:reject %)) rejected)))))))

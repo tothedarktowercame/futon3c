@@ -114,10 +114,12 @@
 
 (defn- quote-at-line?
   "The quote occurs verbatim in the cited line or the next five lines;
-  line-wrap whitespace differences are allowed (check_edges.py)."
+  line-wrap whitespace differences are allowed (check_edges.py).  A blank
+  quote never passes: every window contains the empty string."
   [lines line quote]
   (boolean
-   (when (and (vector? lines) (pos-int? line) (<= line (count lines)) (string? quote))
+   (when (and (vector? lines) (pos-int? line) (<= line (count lines))
+              (string? quote) (not (str/blank? quote)))
      (let [window (str/join "\n" (subvec lines (dec line)
                                           (min (count lines) (+ line 5))))
            wnorm (whitespace-normalize window)]
@@ -142,6 +144,9 @@
 
       (not (contains? item-ids from))
       {:reject {:reject :edge/dangling-source :edge e}}
+
+      (not (#{:closure :artifact :alternative} (edge-class e)))
+      {:reject {:reject :edge/unknown-class :edge e}}
 
       (= "cluster" (:to_kind e))
       (if (contains? item-ids to)
