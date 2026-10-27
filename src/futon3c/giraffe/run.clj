@@ -142,7 +142,9 @@
          "| Source order | status | reason | cone | unblocks | Giraffe order | status | reason | cone | unblocks |"
          "|---|---|---|---|---|---|---|---|---|---|"]
         (map (fn [src giraffe]
-               (str (order-row src) " " (order-row giraffe)))
+               (let [l (order-row src) r (order-row giraffe)]
+                 ;; splice: drop l's trailing | and r's leading "| "
+                 (str (subs l 0 (dec (count l))) " | " (subs r 2))))
              src-entries
              (concat order (repeat {:id :none-listed :status :none
                                     :reason :none :cone 0 :unblocks 0})))
