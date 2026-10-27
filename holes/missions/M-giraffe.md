@@ -365,6 +365,8 @@ Joe, 2026-10-27: verification here can be informal. A proof would count, but so 
 
 If this holds, the second pass-criterion is met by the `:blocker-cancelled` pair and the Joe-gated three, and not by the "low-priority item that unblocks several" kind, which this cluster cannot produce.
 
+**Corrections found at the step 3a review (claude-11, 2026-10-27, after the prediction, before the pass).** Two of my counts above are wrong; the prediction is left as written so the pass is scored against it. (1) The edges are 8 ticket-to-ticket and 8 external, not 7 and 9: `T-kangaroo-caching-and-compaction → T-kangaroo-v1-pouch` is ticket-to-ticket (zai-2 found this in conversion). (2) "Every ticket-to-ticket edge points at a done or superseded ticket" is false: `T-durable-queue-rename-and-tidies` (done) needs `T-car3-phase2-impl` and `T-mq7-unaddressable-caller`, both `:partial` (started). The cone claim still holds, for a different reason: none of the six ready items is the target of any edge. A done item whose needs are still open is either a stale edge (written before triage) or a status the index got wrong, and the pass should report it.
+
 **Passes if:**
 - [ ] the round trip into Plane's shape loses nothing Giraffe uses except the listed gaps;
 - [ ] the pass reports at least one fact the Plane view does not show (an urgent item that cannot start; a low-priority item that unblocks several), with the edges that support it;
