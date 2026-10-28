@@ -1194,6 +1194,33 @@
     (write-acceptance! "wm-requeue-1-1-torn" "{:status :failed, :result {:outcome :ser")
     (is (nil? (service/retry-click-status "wm-requeue-1-1-torn")))))
 
+(deftest retry-click-status-observes-completed-attribution-refusal-only
+  (let [click-id "wm-requeue-2-2-repair/refused"
+        result {:outcome :unknown
+                :runtime-disposition
+                {:status :refused
+                 :reason :meta-self-heal/retry-attribution-refused
+                 :expected {:patch-sha "authored"}}}
+        bytes (str (pr-str {:schema :wm/click-state-v1
+                            :click-id click-id
+                            :status :completed
+                            :result result}) "\n")
+        file (write-acceptance! click-id bytes)
+        observed (service/retry-click-status click-id)]
+    (is (= :completed (:status observed)))
+    (is (= :retry-attribution-refused (:refusal observed)))
+    (is (= result (:result observed)) "the durable result is returned verbatim")
+    (is (= {:path (.getPath file)
+            :sha256 (acceptance-bytes-sha256 bytes)}
+           (:evidence-pin observed)))
+    (let [ordinary-id "wm-requeue-2-2-repair/completed"
+          ordinary (str (pr-str {:schema :wm/click-state-v1
+                                 :click-id ordinary-id
+                                 :status :completed
+                                 :result {:outcome :cohort-complete}}) "\n")]
+      (write-acceptance! ordinary-id ordinary)
+      (is (nil? (service/retry-click-status ordinary-id))))))
+
 (deftest configure-self-heal-ports-supplies-the-retry-click-status-port
   (with-redefs [self-heal-adapters/ports (constantly {:status :ready})]
     (let [configured (#'service/configure-self-heal-ports {})]

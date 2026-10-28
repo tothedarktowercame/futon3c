@@ -316,27 +316,36 @@
    coordinator (futon2 3e17ebedb): the durable service-side status of one
    meta-retry child click, backed by this service's own acceptance bytes.
 
-   Only a durably recorded failure of exactly CLICK-ID is reported: the
+   A durably recorded failure of exactly CLICK-ID is reported, as is a
+   completed click whose `[:result :runtime-disposition :reason]` is exactly
+   :meta-self-heal/retry-attribution-refused. The latter is marked with
+   :refusal :retry-attribution-refused so the coordinator can distinguish it
+   from a service failure. In both cases the
    record must carry the :wm/click-state-v1 schema, its stored :click-id
-   must match the requested identity, and its :status must be :failed. The
+   must match the requested identity, and its status must match the shape. The
    record's own :result flows through verbatim — nothing is synthesized —
    and the :evidence-pin seals the exact acceptance file bytes (SHA256).
 
-   A queued, running, completed, not-found, unreadable (torn/garbage)
+   A queued, running, ordinarily completed, not-found, unreadable (torn/garbage)
    record, or one whose stored identity does not match the requested click,
-   is not a durable failure and returns nil; the coordinator then honestly
+   is not a durable non-success and returns nil; the coordinator then honestly
    leaves the retry :awaiting-retry instead of observing an unsourced
    failure."
   [click-id]
   (let [state (click-status click-id)]
     (when (and (= :wm/click-state-v1 (:schema state))
-               (= :failed (:status state))
-               (= click-id (:click-id state)))
+               (= click-id (:click-id state))
+               (or (= :failed (:status state))
+                   (and (= :completed (:status state))
+                        (= :meta-self-heal/retry-attribution-refused
+                           (get-in state [:result :runtime-disposition :reason])))))
       (let [file (acceptance-file click-id)]
-        {:status :failed
-         :result (:result state)
-         :evidence-pin {:path (.getPath file)
-                        :sha256 (file-sha256-hex file)}}))))
+        (cond-> {:status (:status state)
+                 :result (:result state)
+                 :evidence-pin {:path (.getPath file)
+                                :sha256 (file-sha256-hex file)}}
+          (= :completed (:status state))
+          (assoc :refusal :retry-attribution-refused))))))
 
 (defn- persist-click-state! [click-id f]
   (locking acceptance-lock
