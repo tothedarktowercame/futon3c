@@ -282,15 +282,36 @@
 ;; compacted by Claude Code itself (a summary plus a compact_boundary record,
 ;; same session id), and Agency never edits a transcript.
 
-(defn compact-monsters-enabled?
-  "Flag (default OFF since 2026-10-28, FUTON3C_KANGAROO_COMPACT_MONSTERS): when
-   true, a session whose live context is over joey-max-tokens is compacted with
-   Claude Code's /compact before its turn. Off by default because compaction is
-   the operator's call: the REPL's turn-end line says \"Compaction recommended
-   (C-c C-z)\" at agent-chat-compaction-hint-ctx (200k, emacs/agent-chat.el)
-   and Joe compacts when he chooses. Turn it on for seats nobody is watching."
-  []
-  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" false))
+(defn auto-compact-seat?
+  "True when AGENT-ID's roster metadata carries `auto-compact? true`: a seat
+   nobody watches, whose session Agency compacts with Claude Code's /compact
+   once it passes joey-max-tokens. Every other seat is compacted only by its
+   operator: the REPL's turn-end line says \"Compaction recommended (C-c C-z)\"
+   at agent-chat-compaction-hint-ctx (200k, emacs/agent-chat.el). The flag lives
+   in the seat's metadata, so it shows in GET /api/alpha/agents and survives a
+   restart with the saved roster. Set it with `set-auto-compact!`."
+  [agent-id]
+  (let [get-agent (requiring-resolve 'futon3c.agency.registry/get-agent)
+        metadata (:agent/metadata (get-agent (str agent-id)))]
+    (true? (if (contains? metadata :auto-compact?)
+             (get metadata :auto-compact?)
+             (get metadata "auto-compact?")))))
+
+(defn set-auto-compact!
+  "Mark AGENT-ID as a seat Agency compacts by itself (ON? true) or one its
+   operator compacts (false). Returns the updated metadata, or the registry's
+   error."
+  [agent-id on?]
+  (let [get-agent (requiring-resolve 'futon3c.agency.registry/get-agent)
+        update-agent! (requiring-resolve 'futon3c.agency.registry/update-agent!)
+        agent (get-agent (str agent-id))]
+    (if-not agent
+      {:ok false :error (str "Agent not registered: " agent-id)}
+      (let [metadata (-> (or (:agent/metadata agent) {})
+                         (dissoc "auto-compact?")
+                         (assoc :auto-compact? (boolean on?)))
+            result (update-agent! (str agent-id) :agent/metadata metadata)]
+        (if (false? (:ok result)) result {:ok true :metadata (:agent/metadata result)})))))
 
 (defonce ^:private !compact-failed (atom #{}))
 
@@ -298,7 +319,7 @@
 
 (defn joey-eligible-or-compact?
   "Called before every turn. When the live context is over joey-max-tokens and
-   compaction is enabled, compact the session with Claude Code's own /compact:
+   the seat is marked `auto-compact?` (see auto-compact-seat?), compact the session with Claude Code's own /compact:
    inside the agent's warm pouch when it has one (a cold /compact beside a live
    pouch would be undone by the pouch's in-memory context on its next turn),
    otherwise by calling COMPACT! (a zero-argument fn, e.g. a cold invoke of
@@ -321,7 +342,7 @@
    (let [sid (some-> session-id str str/trim not-empty)
          aid (str agent-id)
          k [aid sid]]
-     (when (and sid (not (joey-eligible? agent-id sid)) (compact-monsters-enabled?)
+     (when (and sid (not (joey-eligible? agent-id sid)) (auto-compact-seat? aid)
                 (not (contains? @!compact-failed k)))
        (let [pouch (get @!pouches aid)
              warm? (boolean (and pouch (alive? pouch) (= sid (some-> (:session-id pouch) str))))]

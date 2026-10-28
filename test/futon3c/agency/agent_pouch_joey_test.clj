@@ -4,7 +4,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.agency.agent-pouch :as pouch])
+            [futon3c.agency.agent-pouch :as pouch]
+            [futon3c.agency.registry])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -160,18 +161,31 @@
       (is (= 30502 (pouch/session-context-tokens "s-c"))
           "the first reply after the compaction reports the new size"))))
 
-(deftest automatic-compaction-is-off-by-default
-  (let [old (System/getProperty "FUTON3C_KANGAROO_COMPACT_MONSTERS")]
-    (try
-      (System/clearProperty "FUTON3C_KANGAROO_COMPACT_MONSTERS")
-      (is (false? (pouch/compact-monsters-enabled?))
-          "compaction is the operator's call (C-c C-z) unless a seat opts in")
-      (finally
-        (when old (System/setProperty "FUTON3C_KANGAROO_COMPACT_MONSTERS" old))))))
+(deftest auto-compact-is-a-per-seat-flag
+  (let [reg (atom {"watched" {:agent/metadata {:model "opus"}}
+                   "unwatched" {:agent/metadata {:auto-compact? true}}
+                   "restored" {:agent/metadata {"auto-compact?" true}}})]
+    (with-redefs [futon3c.agency.registry/get-agent (fn [aid] (get @reg aid))
+                  futon3c.agency.registry/update-agent!
+                  (fn [aid & {:as u}] (let [r (merge (get @reg aid) u)]
+                                        (swap! reg assoc aid r) r))]
+      (is (false? (pouch/auto-compact-seat? "watched"))
+          "unmarked seats are the operator's to compact")
+      (is (true? (pouch/auto-compact-seat? "unwatched")))
+      (is (true? (pouch/auto-compact-seat? "restored"))
+          "a roster restored from JSON carries the key as a string")
+      (is (false? (pouch/auto-compact-seat? "not-registered")))
+      (is (:ok (pouch/set-auto-compact! "watched" true)))
+      (is (true? (pouch/auto-compact-seat? "watched")))
+      (is (= "opus" (get-in @reg ["watched" :agent/metadata :model]))
+          "setting the flag keeps the rest of the metadata")
+      (pouch/set-auto-compact! "restored" false)
+      (is (false? (pouch/auto-compact-seat? "restored"))
+          "turning it off also clears the string-keyed copy"))))
 
 (deftest monster-is-compacted-by-claude-code-and-always-warms
   (with-redefs [pouch/joey-max-tokens (constantly 200000)
-                pouch/compact-monsters-enabled? (constantly true)]
+                pouch/auto-compact-seat? (constantly true)]
     (testing "a cold /compact that lands: called once, then the session is a joey"
       (with-transcript "s-m1" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                big-reply]
@@ -208,7 +222,7 @@
               (finally (swap! !pouches dissoc "m-5")))
             (is (= [["m-5" {:wait? true}]] @warm))
             (is (zero? @cold) "no cold /compact beside a live pouch")))))
-    (testing "a joey is not compacted; nor is a monster with the flag off"
+    (testing "a joey is not compacted; nor is a monster on an unmarked seat"
       (with-transcript "s-m3" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                (assoc-in big-reply [:message :usage] {:input_tokens 1000})]
         (fn [_]
@@ -219,6 +233,6 @@
                                big-reply]
         (fn [_]
           (let [calls (atom 0)]
-            (with-redefs [pouch/compact-monsters-enabled? (constantly false)]
+            (with-redefs [pouch/auto-compact-seat? (constantly false)]
               (is (true? (pouch/joey-eligible-or-compact? "m-4" "s-m4" #(swap! calls inc)))))
             (is (zero? @calls))))))))
