@@ -176,12 +176,14 @@
   (is (= :started (gm/status->group "OPEN · HEAD drafted 2026-10-10 · MAP not started (a first-pass"))))
 
 (deftest review-a-doc-without-a-status-line-is-reported
-  ;; wrong: :status-unmapped nil, so the doc counted as open and unstarted
-  ;; and was missing from :unmapped-statuses.
+  ;; wrong: :status-unmapped nil, so the doc counted as an open, unstarted
+  ;; mission and was listed nowhere.  Now it is not an item at all, and is
+  ;; rejected with a typed reason.
   (let [root (temp-dir "nostatus")]
     (spit-mission root "futonZ" "M-no-status" "# M-no-status\n\nNo status line here.\n")
-    (let [{:keys [input unmapped-statuses]}
+    (let [{:keys [input rejected]}
           (gm/missions->input {:repos [(str root "/futonZ")]
                                :edges-file (edges-file root [])})]
-      (is (= [{:id :M-no-status :status-unmapped :status/missing}] unmapped-statuses))
-      (is (= :status/missing (:status-unmapped (first (:items input))))))))
+      (is (empty? (:items input)))
+      (is (= [:M-no-status]
+             (map :id (filter #(= :item/no-status-line (:reject %)) rejected)))))))

@@ -246,11 +246,21 @@
                rows)
         id-counts (frequencies (map :id kept))
         dup-ids (set (for [[id n] id-counts :when (> n 1)] id))
-        items (vec (map #(dissoc % :path) (remove #(contains? dup-ids (:id %)) kept)))
+        ;; a doc with no Status line is not counted as an open mission
+        ;; (claude-13, 2026-10-28): it is rejected, typed, and listed
+        no-status? #(= :status/missing (:status-unmapped %))
+        items (vec (map #(dissoc % :path)
+                        (remove #(or (contains? dup-ids (:id %)) (no-status? %)) kept)))
         rejects (vec (for [row (sort-by (juxt :repo :file) kept)
                            :when (contains? dup-ids (:id row))]
                        {:reject :item/duplicate-id
                         :id (:id row) :repo (:repo row) :file (:file row)}))
+        rejects (into rejects
+                      (for [row (sort-by (juxt :repo :file) kept)
+                            :when (and (no-status? row)
+                                       (not (contains? dup-ids (:id row))))]
+                        {:reject :item/no-status-line
+                         :id (:id row) :repo (:repo row) :file (:file row)}))
         item-ids (set (map :id items))
         repos-by-name (repo-roots-by-name repos)
         edges-json (json/parse-string (slurp (str edges-file)) keyword)
