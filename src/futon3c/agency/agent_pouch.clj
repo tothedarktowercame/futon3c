@@ -127,16 +127,12 @@
 ;; turn past the cache window re-prefills the whole history regardless of process
 ;; warmth. Policy: warm a "joey" (small session) by default; a "monster" (transcript
 ;; over the threshold) stays COLD unless overridden (allow-monster! / env).
+;;
+;; "Size" is the live context in tokens (session-context-tokens), not the
+;; transcript's bytes: FUTON3C_KANGAROO_JOEY_MAX_BYTES is retired (2026-10-28).
 
-(def ^:private default-joey-max-bytes (* 2 1024 1024))   ;; 2 MiB
-
-(defn joey-max-bytes []
-  (long-prop-or-env "FUTON3C_KANGAROO_JOEY_MAX_BYTES" default-joey-max-bytes))
-
-(defn session-transcript-bytes
-  "Best-effort byte size of SESSION-ID's transcript file
-   (~/.claude/projects/.../<sid>.jsonl). nil when not found — a brand-new session
-   has no transcript yet."
+(defn- session-transcript-file
+  "SESSION-ID's transcript file (~/.claude/projects/.../<sid>.jsonl), or nil."
   [session-id]
   (let [sid (some-> session-id str str/trim not-empty)]
     (when sid
@@ -144,8 +140,75 @@
         (when (.isDirectory projects)
           (some (fn [d]
                   (let [f (io/file d (str sid ".jsonl"))]
-                    (when (.isFile f) (.length f))))
+                    (when (.isFile f) f)))
                 (.listFiles projects)))))))
+
+(defn session-transcript-bytes
+  "Best-effort byte size of SESSION-ID's transcript file
+   (~/.claude/projects/.../<sid>.jsonl). nil when not found — a brand-new session
+   has no transcript yet. Reported in `snapshot`; NOT the joey measure — file
+   size stopped tracking context when Claude Code 2.1.300 (2026-10-15) began
+   logging every API request (api-request / api-request-blob / atis-latch /
+   cost-state) into the transcript: a 31 MB file held 32 KB of conversation."
+  [session-id]
+  (some-> (session-transcript-file session-id) .length))
+
+;; =============================================================================
+;; Joey measure: the context the model last saw, from Claude Code's own usage
+;; =============================================================================
+
+(def ^:private default-joey-max-tokens 200000)
+
+(defn joey-max-tokens []
+  (long-prop-or-env "FUTON3C_KANGAROO_JOEY_MAX_TOKENS" default-joey-max-tokens))
+
+(defn usage-context-tokens
+  "Context size implied by one Anthropic `usage` map: the prompt the model read
+   (uncached + cache-read + cache-written) plus the reply it wrote, which becomes
+   prompt on the next turn. nil when USAGE carries none of these."
+  [usage]
+  (let [ks [:input_tokens :cache_read_input_tokens
+            :cache_creation_input_tokens :output_tokens]
+        vs (keep #(let [v (get usage %)] (when (number? v) (long v))) ks)]
+    (when (seq vs) (reduce + 0 vs))))
+
+(defn- last-assistant-usage-in
+  "Usage map of the last `assistant` record in LINES (oldest first), or nil."
+  [lines]
+  (some (fn [line]
+          (when (str/includes? line "\"assistant\"")
+            (let [rec (try (json/parse-string line true) (catch Exception _ nil))]
+              (when (= "assistant" (:type rec))
+                (get-in rec [:message :usage])))))
+        (reverse lines)))
+
+(defn- tail-lines
+  "Complete lines in the last N bytes of FILE (the first, possibly partial,
+   line is dropped unless the window reaches the start of the file)."
+  [^java.io.File file n]
+  (with-open [raf (java.io.RandomAccessFile. file "r")]
+    (let [len (.length raf)
+          start (max 0 (- len n))
+          buf (byte-array (- len start))]
+      (.seek raf start)
+      (.readFully raf buf)
+      (let [lines (str/split-lines (String. buf "UTF-8"))]
+        (if (zero? start) lines (rest lines))))))
+
+(defn session-context-tokens
+  "Tokens in SESSION-ID's live context, read from the usage Claude Code records
+   on the newest assistant reply. Reads the transcript from the end, widening
+   the window until a reply is found, so a request log after the reply does not
+   hide it. nil when there is no transcript or no reply yet (a fresh session)."
+  [session-id]
+  (when-let [f (session-transcript-file session-id)]
+    (let [len (.length ^java.io.File f)]
+      (loop [n (* 1024 1024)]
+        (let [usage (last-assistant-usage-in (tail-lines f n))]
+          (cond
+            usage (usage-context-tokens usage)
+            (>= n len) nil
+            :else (recur (min len (* 4 n)))))))))
 
 (defonce ^:private !monster-allowlist (atom #{}))
 
@@ -174,35 +237,40 @@
       (contains? @!monster-allowlist (str agent-id))))
 
 (defn joey-eligible?
-  "True when AGENT-ID's SESSION-ID may be warmed: an override is set, the transcript
-   is at or under joey-max-bytes, or its size is unknown (a fresh session is a joey
-   until it grows). A monster returns false, keeping the caller on the cold path."
+  "True when AGENT-ID's SESSION-ID may be warmed: an override is set, the live
+   context is at or under joey-max-tokens, or it is unknown (a fresh session is a
+   joey until it grows). A monster returns false, keeping the caller on the cold
+   path."
   [agent-id session-id]
   (or (monster-allowed? agent-id)
-      (let [bytes (session-transcript-bytes session-id)]
-        (or (nil? bytes) (<= (long bytes) (long (joey-max-bytes)))))))
+      (let [tokens (session-context-tokens session-id)]
+        (or (nil? tokens) (<= (long tokens) (long (joey-max-tokens)))))))
 
 (defonce ^:private !monster-logged (atom #{}))
 
 (defn note-monster-cold!
   "Log once per (agent, session) that a monster is being kept cold, so the decision
-   is visible (loud-failure discipline). Returns the transcript bytes."
+   is visible (loud-failure discipline). Returns the context tokens."
   [agent-id session-id]
-  (let [bytes (session-transcript-bytes session-id)
+  (let [tokens (session-context-tokens session-id)
         k [(str agent-id) (some-> session-id str)]]
-    (when (and bytes (not (contains? @!monster-logged k)))
+    (when (and tokens (not (contains? @!monster-logged k)))
       (swap! !monster-logged conj k)
-      (println (format "[kangaroo] %s session %.1fMB exceeds joey-max %.1fMB — staying COLD (no pouch). Override: (futon3c.agency.agent-pouch/allow-monster! \"%s\")"
-                       (str agent-id) (/ (double bytes) 1048576.0)
-                       (/ (double (joey-max-bytes)) 1048576.0) (str agent-id)))
+      (println (format "[kangaroo] %s session context %d tokens exceeds joey-max %d — staying COLD (no pouch). Override: (futon3c.agency.agent-pouch/allow-monster! \"%s\")"
+                       (str agent-id) (long tokens) (long (joey-max-tokens)) (str agent-id)))
       (flush))
-    bytes))
+    tokens))
 
 ;; -- E-monster-to-joey: compact a monster's COLD transcript so it can warm -----
-;; Flag-gated (default OFF). Compaction rewrites the transcript IN PLACE under the
+;; Flag-gated (default ON). Compaction rewrites the transcript IN PLACE under the
 ;; same session-id (agent clock/evidence/pouch key untouched), backing up the
 ;; original; safe because this fires only at the monster-cold decision, where the
 ;; session has no warm writer. See scripts/compact_session.py.
+;;
+;; Lossless only (--no-truncate, 2026-10-28): the truncate layer budgets FILE
+;; bytes, and once Claude Code's request log filled the file it cut every
+;; conversation down to its newest exchange on every cold turn. A session over
+;; the token limit is shrunk by Claude Code's own /compact, not by dropping turns.
 
 (def ^:private default-compact-script
   "/home/joe/code/futon3c/scripts/compact_session.py")
@@ -220,12 +288,6 @@
       (some-> (config/env "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
       default-compact-script))
 
-(defn- compact-target-mib []
-  (or (some-> (or (System/getProperty "FUTON3C_KANGAROO_COMPACT_TARGET_MIB")
-                  (config/env "FUTON3C_KANGAROO_COMPACT_TARGET_MIB"))
-              str/trim not-empty)
-      "1.7"))
-
 (defn compact-session!
   "Run the recency-shell compactor on SESSION-ID's cold transcript, in place
    (backup kept). Returns true on success. Loud-failure: logs and returns false on
@@ -236,8 +298,7 @@
     (when (and sid (.isFile (io/file script)))
       (try
         (let [sh (requiring-resolve 'clojure.java.shell/sh)
-              {:keys [exit out err]} (sh "python3" script sid
-                                         "--target-mib" (compact-target-mib))]
+              {:keys [exit out err]} (sh "python3" script sid "--no-truncate")]
           (println (format "[kangaroo] compact %s: exit=%s %s" sid (str exit)
                            (str/trim (str (or out "")
                                           (when (seq err) (str " ERR:" err))))))

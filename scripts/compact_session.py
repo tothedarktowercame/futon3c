@@ -24,7 +24,7 @@ session (no warm process appending). Idempotent.
 Usage:
   compact_session.py <session-id> [--target-mib 1.5] [--dry-run] [--no-truncate]
 """
-import argparse, json, os, shutil, sys, time
+import argparse, copy, json, os, shutil, sys, time
 
 DROP_TYPES = {"ai-title", "mode", "last-prompt", "queue-operation", "attachment"}
 DROP_FIELDS = {"toolUseResult", "attachment"}
@@ -223,6 +223,7 @@ def main():
                 pass
 
     n0 = len(recs)
+    original = copy.deepcopy(recs)
     recs = debloat(recs)
     n1 = len(recs)
     dropped_turns = 0
@@ -236,6 +237,11 @@ def main():
     print(f"[compact] {args.session_id}: {before/1048576:.2f}MB -> {after/1048576:.2f}MB "
           f"({pct:.0f}%)  records {n0}->{n1}->{len(recs)}  turns-dropped {dropped_turns}")
     if args.dry_run:
+        return 0
+    if recs == original:
+        # Already de-bloated: rewriting would only add another full-size backup
+        # (6,398 identical-ish backups, 77 GB, by 2026-10-28).
+        print(f"[compact] unchanged, not rewritten")
         return 0
     backup = f"{path}.pre-compact-{int(time.time())}"
     shutil.copy2(path, backup)
