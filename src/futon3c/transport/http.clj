@@ -10088,6 +10088,9 @@
                      (nonblank-string? (:repair-reviewer payload))
                      (assoc :repair-reviewer (:repair-reviewer payload))
 
+                     (nonblank-string? (:task payload))
+                     (assoc :task {:id (:task payload)})
+
                      (contains? payload :run-id)
                      (assoc :run-id (:run-id payload))
 
@@ -10153,6 +10156,7 @@
                               (assoc :acceptance-payload
                                      (select-keys payload
                                                   [:author :reviewer :repair-reviewer
+                                                   :task
                                                    :run-id :trigger :measured-acquisition
                                                    :flight-edn :issuing-caller :g-law :interpretation-seats])))
                   ;; Ordinary clicks without an explicit cast acquire one
