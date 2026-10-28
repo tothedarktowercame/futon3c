@@ -496,3 +496,20 @@ Discovery (zai-2, packet `~/notes/packets/giraffe/stage1-05-mission-history-disc
 - HEAD, `:review`, `:in-progress`, `:testing`, PARTIAL, DISPATCHED, conditional, Slice … run → started.
 - DELIVERED, ANSWERED, IMPLEMENTED, ACCEPTED → completed.
 - Anything else stays unmapped and is reported.
+
+### Stage 1, mission-docs source: forward run and prediction (claude-13, 2026-10-28)
+
+**Edges.** 283 candidate pairs (open mission A names open mission B) were read in 7 batches by zai-1..6 and zai-8 (packets `~/notes/packets/giraffe/stage1-07-*.md`); every batch's check printed OK. That check compared unordered pairs, so one two-way pair was decided in one direction only; it is recorded as no edge. claude-13 read all 59 edges against their quotes and moved 19 to rejected. Most of the 19 were the supplier mission describing a "consumer" or "future consumer" (12), plus scope splits, a successor spec, a sub-document, and a chosen instrument. claude-13 also rejected `M-futonzero-prelim-practice → M-apm-capability-ratchet`, a planned handoff that contradicts Joe's stated order, and added Joe's own edge (ratchet needs prelims, line 77 above). Result: `holes/missions/giraffe-mission-edges.json` (sha256 `2c728646aaa9f2b7…`), 41 edges (28 stated by the needing mission, 12 by the supplier, 1 by Joe; 32 artifact, 7 closure, 2 alternative), 243 rejected. Missions adapter: no quote and no Missing-column rejects (the readers had already left Missing tables out).
+
+**Run** `20261028T154010.715Z-15abba2c`: 157 open, 150 ready, 7 not ready, 2 undetermined.
+- Not ready (every one on a closure need): `M-stack-inhabitation` and `M-a-sorry-enterprise` need `M-repl-wins-over-cli`; `M-apm-capability-ratchet` needs `M-futonzero-prelim-practice` (Joe); `M-state-snapshot-witness` needs `M-reachable-from-boot`; `M-coupling-as-constraint` needs both `M-xor-coupling-probe` and `M-tpg-coupling-evolution`.
+- The first real cycle: `M-pattern-application-diagnostic` ↔ `M-superpod-mark3` (pad needs mark3 closed; mark3's Stage 3 prompt needs pad's taxonomy). Both are flagged `:needs-breakdown`, and the cycle policy ran as specified. The split the pattern suggests (`give-the-dependent-piece-its-hypothesis`) would make mark3 take the taxonomy as given.
+- Artifact edges whose target has started count as met, so the 32 artifact edges block nothing today. They still put missions in cones: `M-pattern-mining` has a cone of 5, `M-superpod-mark2` 4, `M-repl-wins-over-cli` 4, and `M-autoclock-in` and `M-hyperreal-dictionary-planning` 3 each.
+- One-step unblocking: `M-repl-wins-over-cli` 2, `M-futonzero-prelim-practice` 1, `M-reachable-from-boot` 1. Each coupling probe unblocks nothing alone; only the two together unblock `M-coupling-as-constraint`.
+
+**Prediction, written 2026-10-28 before anything has moved, to be scored on later runs over the same edges file:**
+- [ ] P1 (order). None of the five not-ready missions reaches completed before what it needs does: stack-inhabitation and a-sorry-enterprise not before repl-wins-over-cli; ratchet not before prelims; snapshot-witness not before reachable-from-boot; coupling-as-constraint not before both probes.
+- [ ] P2 (the cone). When one of `M-repl-wins-over-cli`, `M-futonzero-prelim-practice` or `M-reachable-from-boot` completes, every mission it unblocks gets a new Status-line commit within 30 days. The comparison is all open missions outside any cone over the same 30 days. P2 holds only if the unblocked missions move at a clearly higher rate, and with as few as 4 unblocked missions the result will be read case by case, not as a statistic.
+- [ ] P3 (the cycle). Neither pad nor mark3 completes while the cycle stands; the first of them to move does so after the cycle is split, or one of their two edges is restated.
+
+Scoring hazards, known in advance: status lines are edited in bulk (the 09-30 sweep), so a completion counts only if its commit touches that mission alone or its text gives a date; and a new Status-line commit shows that someone wrote to the mission, not that work on it started.
