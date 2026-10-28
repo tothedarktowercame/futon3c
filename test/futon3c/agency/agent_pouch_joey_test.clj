@@ -160,8 +160,18 @@
       (is (= 30502 (pouch/session-context-tokens "s-c"))
           "the first reply after the compaction reports the new size"))))
 
+(deftest automatic-compaction-is-off-by-default
+  (let [old (System/getProperty "FUTON3C_KANGAROO_COMPACT_MONSTERS")]
+    (try
+      (System/clearProperty "FUTON3C_KANGAROO_COMPACT_MONSTERS")
+      (is (false? (pouch/compact-monsters-enabled?))
+          "compaction is the operator's call (C-c C-z) unless a seat opts in")
+      (finally
+        (when old (System/setProperty "FUTON3C_KANGAROO_COMPACT_MONSTERS" old))))))
+
 (deftest monster-is-compacted-by-claude-code-and-always-warms
-  (with-redefs [pouch/joey-max-tokens (constantly 200000)]
+  (with-redefs [pouch/joey-max-tokens (constantly 200000)
+                pouch/compact-monsters-enabled? (constantly true)]
     (testing "a cold /compact that lands: called once, then the session is a joey"
       (with-transcript "s-m1" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                big-reply]

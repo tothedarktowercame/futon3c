@@ -283,12 +283,14 @@
 ;; same session id), and Agency never edits a transcript.
 
 (defn compact-monsters-enabled?
-  "Flag (default ON, FUTON3C_KANGAROO_COMPACT_MONSTERS): a session whose live
-   context is over joey-max-tokens is compacted with Claude Code's /compact
-   before its turn, so it warms instead of staying cold. Set false to leave
-   monsters cold and uncompacted."
+  "Flag (default OFF since 2026-10-28, FUTON3C_KANGAROO_COMPACT_MONSTERS): when
+   true, a session whose live context is over joey-max-tokens is compacted with
+   Claude Code's /compact before its turn. Off by default because compaction is
+   the operator's call: the REPL's turn-end line says \"Compaction recommended
+   (C-c C-z)\" at agent-chat-compaction-hint-ctx (200k, emacs/agent-chat.el)
+   and Joe compacts when he chooses. Turn it on for seats nobody is watching."
   []
-  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" true))
+  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" false))
 
 (defonce ^:private !compact-failed (atom #{}))
 
