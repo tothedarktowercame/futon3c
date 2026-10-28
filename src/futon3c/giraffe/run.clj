@@ -21,6 +21,7 @@
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
             [clojure.string :as str]
+            [futon3c.giraffe.missions :as gm]
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.tickets :as gt]))
 
@@ -278,30 +279,46 @@
 
 (defn -main
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]
-  [--root <dir>] [--run-id <id>]
+  [--root <dir>] [--run-id <id>] [--source tickets|missions]
+  [--repos <comma-separated repo roots, missions source only>]
 
-  Runs the tickets adapter over holes/tickets plus the edges file, the
-  Giraffe pass, and writes one run directory.  Prints the run dir and
-  manifest path."
+  Runs the chosen source adapter (default tickets) plus the edges
+  file, the Giraffe pass, and writes one run directory.  Prints the
+  run dir and manifest path."
   [& args]
-  (let [{:strs [edges only root run-id]} (merge-args args)
+  (let [{:strs [edges only root run-id source repos]} (merge-args args)
+        source (or source "tickets")
         _ (when (str/blank? (str edges))
             (throw (ex-info "--edges <file> is required"
                             {:kind :giraffe/edges-required})))
+        _ (when-not (contains? #{"tickets" "missions"} source)
+            (throw (ex-info "--source must be tickets or missions"
+                            {:kind :giraffe/unknown-source
+                             :source source})))
         only-ids (when only
                    (vec (remove str/blank? (str/split (slurp only) #"\s+"))))
-        adapter-result (gt/tickets->input
-                        {:tickets-dir default-tickets-dir
-                         :index-file default-index-file
-                         :edges-file edges
-                         :only only-ids})
+        missions? (= "missions" source)
+        repo-roots (when missions?
+                     (or (when repos
+                           (vec (remove str/blank?
+                                        (map str/trim (str/split repos #",")))))
+                         gm/default-repos))
+        adapter-result (if missions?
+                         (gm/missions->input {:repos repo-roots
+                                              :edges-file edges
+                                              :only only-ids})
+                         (gt/tickets->input
+                          {:tickets-dir default-tickets-dir
+                           :index-file default-index-file
+                           :edges-file edges
+                           :only only-ids}))
         pass-output (gp/pass (:input adapter-result))
         result (write-run! {:root (or root default-root)
                             :run-id run-id
                             :adapter-result adapter-result
                             :pass-output pass-output
                             :git-sha (git-head-sha)
-                            :index-file default-index-file
+                            :index-file (when-not missions? default-index-file)
                             :edges-file edges})]
     (println "run dir:" (:dir result))
     (println "run id:" (:run-id result))

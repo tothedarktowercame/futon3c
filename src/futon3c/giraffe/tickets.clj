@@ -103,19 +103,22 @@
 (defn- whitespace-normalize [s]
   (str/join " " (str/split s #"\s+")))
 
-(defn- external-key
+(defn external-key
   "Identifier-safe key for an external target.  The pass builds one
   need variable per edge from (name :to) inside whitespace-split
   structural equations (scm/parse-equation), so the key must contain
   no whitespace.  The raw target text is kept on the edge as
-  :external-target; nothing is lost."
+  :external-target; nothing is lost.  Public: the missions adapter
+  (packet 6) reuses it."
   [target]
   (str/replace (str target) #"\s+" "-"))
 
-(defn- quote-at-line?
+(defn quote-at-line?
   "The quote occurs verbatim in the cited line or the next five lines;
   line-wrap whitespace differences are allowed (check_edges.py).  A blank
-  quote never passes: every window contains the empty string."
+  quote never passes: every window contains the empty string.  Public:
+  the missions adapter (packet 6) reuses this check rather than
+  copying it."
   [lines line quote]
   (boolean
    (when (and (vector? lines) (pos-int? line) (<= line (count lines))
