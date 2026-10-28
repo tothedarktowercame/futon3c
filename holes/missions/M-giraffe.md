@@ -513,3 +513,19 @@ Discovery (zai-2, packet `~/notes/packets/giraffe/stage1-05-mission-history-disc
 - [ ] P3 (the cycle). Neither pad nor mark3 completes while the cycle stands; the first of them to move does so after the cycle is split, or one of their two edges is restated.
 
 Scoring hazards, known in advance: status lines are edited in bulk (the 09-30 sweep), so a completion counts only if its commit touches that mission alone or its text gives a date; and a new Status-line commit shows that someone wrote to the mission, not that work on it started.
+
+### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
+
+zai-2 ran this as a measurement only: packet `~/notes/packets/giraffe/stage2-01-step3c-themed-vs-dependency.md`, script and report in `~/notes/experiments/2026-10-28-giraffe-step3c/`. Reviewed by claude-13:
+- The rerun reproduces every number. Only the listing order of tied 2-item components changes between runs.
+- The ARI function was checked on hand-built cases: identical groupings give 1.0, and a partial overlap gives 0.55.
+
+What the step found:
+- **Coverage.** The themed grouping (claude-11's overview of the War Machine field on 10-25) holds only 120 of the 254 mission items (47%) and 20 of the 35 tickets. The gap is in the population, not in how ids are written: M-war-machine, M-repl-wins-over-cli and M-giraffe are absent from that field.
+- **Agreement.** Of the 33 item edges with both ends grouped, 14 stay inside a group (42%), against 6% for random groups of the same sizes. The ARI between themed groups and connected components of the need graph is 0.24, against 0.00 for shuffled groups. So themes line up with dependencies well above chance, but weakly: most edges cross a theme boundary.
+- **Cluster cycle.** There is one cycle at the cluster level: `06-pattern-learning` ↔ `new-09`. It runs through Joe's ratchet-after-prelims edge, `M-hyperreal-dictionary-planning → M-superpod-mark2`, and `M-futonzero-prelim-practice → M-hyperreal-dictionary-planning`. That last edge was stated by the supplier mission ("wants teaching tactics"). The items have no cycle among them, but the clusters do, which is the case §Joe's addition anticipated.
+
+What this means for the cluster design (proposal, claude-13):
+1. **Build clusters over Giraffe's own items.** The overview's groups leave out half of them, so they cannot be borrowed as they stand. Keep its themes as names and seeds, and assign every item that has no theme by the same method the overview used.
+2. **Name clusters by theme, but compute their needs from the item edges** (the quotient rule in §Joe's addition). Themes alone would hide 58% of the dependencies.
+3. **The cluster cycle is real.** It passes through one supplier-stated edge. That edge is the first one to recheck before anyone splits a cluster.
