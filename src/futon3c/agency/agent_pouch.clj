@@ -174,15 +174,21 @@
 
 (defn- last-assistant-usage-in
   "Usage map of the last model-written `assistant` record in LINES (oldest
-   first), or nil. Claude Code's own `<synthetic>` replies (\"You're out of
-   usage credits\", interrupts) carry all-zero usage and say nothing about the
-   context, so they are skipped."
+   first), ::compacted when a compact_boundary is newer than any such reply
+   (the old usage no longer describes the context), or nil. Claude Code's own
+   `<synthetic>` replies (\"You're out of usage credits\", interrupts) carry
+   all-zero usage and say nothing about the context, so they are skipped."
   [lines]
   (some (fn [line]
-          (when (str/includes? line "\"assistant\"")
+          (when (or (str/includes? line "\"assistant\"")
+                    (str/includes? line "\"compact_boundary\""))
             (let [rec (try (json/parse-string line true) (catch Exception _ nil))]
-              (when (and (= "assistant" (:type rec))
-                         (not= "<synthetic>" (get-in rec [:message :model])))
+              (cond
+                (= "compact_boundary" (:subtype rec))
+                ::compacted
+
+                (and (= "assistant" (:type rec))
+                     (not= "<synthetic>" (get-in rec [:message :model])))
                 (get-in rec [:message :usage])))))
         (reverse lines)))
 
@@ -203,13 +209,15 @@
   "Tokens in SESSION-ID's live context, read from the usage Claude Code records
    on the newest assistant reply. Reads the transcript from the end, widening
    the window until a reply is found, so a request log after the reply does not
-   hide it. nil when there is no transcript or no reply yet (a fresh session)."
+   hide it. nil when there is no transcript, no reply yet (a fresh session), or
+   a /compact since the last reply (unknown until the next reply reports it)."
   [session-id]
   (when-let [f (session-transcript-file session-id)]
     (let [len (.length ^java.io.File f)]
       (loop [n (* 1024 1024)]
         (let [usage (last-assistant-usage-in (tail-lines f n))]
           (cond
+            (= ::compacted usage) nil
             usage (usage-context-tokens usage)
             (>= n len) nil
             :else (recur (min len (* 4 n)))))))))
@@ -265,65 +273,56 @@
       (flush))
     tokens))
 
-;; -- E-monster-to-joey: compact a monster's COLD transcript so it can warm -----
-;; Flag-gated (default ON). Compaction rewrites the transcript IN PLACE under the
-;; same session-id (agent clock/evidence/pouch key untouched), backing up the
-;; original; safe because this fires only at the monster-cold decision, where the
-;; session has no warm writer. See scripts/compact_session.py.
+;; -- E-monster-to-joey: shrink a monster with Claude Code's own /compact ------
 ;;
-;; Lossless only (--no-truncate, 2026-10-28): the truncate layer budgets FILE
-;; bytes, and once Claude Code's request log filled the file it cut every
-;; conversation down to its newest exchange on every cold turn. A session over
-;; the token limit is shrunk by Claude Code's own /compact, not by dropping turns.
-
-(def ^:private default-compact-script
-  "/home/joe/code/futon3c/scripts/compact_session.py")
+;; History: until 2026-10-28 this rewrote the cold transcript with
+;; scripts/compact_session.py, whose truncate layer budgeted FILE bytes. Once
+;; Claude Code 2.1.300 filled the file with its request log, that cut every
+;; conversation to its newest exchange on every cold turn. Now a monster is
+;; compacted by Claude Code itself (a summary plus a compact_boundary record,
+;; same session id), and Agency never edits a transcript.
 
 (defn compact-monsters-enabled?
-  "Flag (default ON as of 2026-07-01, FUTON3C_KANGAROO_COMPACT_MONSTERS): compact a
-   monster's cold transcript so it becomes a warm-able joey instead of cold-spawning
-   every turn. Verified live on real agents (E-monster-to-joey). Set the flag to
-   false to disable."
+  "Flag (default ON, FUTON3C_KANGAROO_COMPACT_MONSTERS): a session whose live
+   context is over joey-max-tokens is compacted with Claude Code's /compact
+   before its turn, so it warms instead of staying cold. Set false to leave
+   monsters cold and uncompacted."
   []
   (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" true))
 
-(defn- compact-script []
-  (or (some-> (System/getProperty "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
-      (some-> (config/env "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
-      default-compact-script))
-
-(defn compact-session!
-  "Run the recency-shell compactor on SESSION-ID's cold transcript, in place
-   (backup kept). Returns true on success. Loud-failure: logs and returns false on
-   any error. Only meaningful on a COLD session (no warm writer)."
-  [session-id]
-  (let [sid    (some-> session-id str str/trim not-empty)
-        script (compact-script)]
-    (when (and sid (.isFile (io/file script)))
-      (try
-        (let [sh (requiring-resolve 'clojure.java.shell/sh)
-              {:keys [exit out err]} (sh "python3" script sid "--no-truncate")]
-          (println (format "[kangaroo] compact %s: exit=%s %s" sid (str exit)
-                           (str/trim (str (or out "")
-                                          (when (seq err) (str " ERR:" err))))))
-          (flush)
-          (zero? (long exit)))
-        (catch Throwable t
-          (println (str "[kangaroo] compact failed for " sid ": " (.getMessage t)))
-          (flush)
-          false)))))
+(defonce ^:private !compact-failed (atom #{}))
 
 (defn joey-eligible-or-compact?
-  "Like `joey-eligible?`, but when a monster is found and compaction is enabled
-   (FUTON3C_KANGAROO_COMPACT_MONSTERS), compact the cold transcript in place and
-   re-check the gate — so a shrunk monster warms instead of staying cold.
-   SIDE EFFECT (only on a monster + flag on): rewrites the transcript."
-  [agent-id session-id]
-  (or (joey-eligible? agent-id session-id)
-      (and (compact-monsters-enabled?)
-           (some? (some-> session-id str str/trim not-empty))
-           (compact-session! session-id)
-           (joey-eligible? agent-id session-id))))
+  "Like `joey-eligible?`, but when a monster is found and compaction is enabled,
+   call COMPACT! (a zero-argument fn that runs /compact on the session, e.g. a
+   cold invoke of \"/compact\") and re-check the gate. The re-check is the
+   success test: a compact_boundary newer than the last reply reads as unknown
+   context, i.e. a joey. A compaction that leaves the session a monster is
+   logged and not retried for that (agent, session) in this JVM, so a failing
+   /compact costs one attempt, not one per turn.
+
+   The 2-arity (no COMPACT!) is the gate alone: invoke fns built before
+   2026-10-28 call it that way until they are rebuilt."
+  ([agent-id session-id] (joey-eligible-or-compact? agent-id session-id nil))
+  ([agent-id session-id compact!]
+   (let [sid (some-> session-id str str/trim not-empty)
+         k [(str agent-id) sid]]
+     (or (joey-eligible? agent-id session-id)
+         (when (and sid (fn? compact!) (compact-monsters-enabled?)
+                    (not (contains? @!compact-failed k)))
+           (let [before (session-context-tokens sid)]
+             (println (format "[kangaroo] %s session %s context %s tokens over joey-max %d — running /compact"
+                              (str agent-id) sid (str before) (long (joey-max-tokens))))
+             (flush)
+             (try (compact!)
+                  (catch Throwable t
+                    (println (str "[kangaroo] /compact threw for " sid ": " (.getMessage t)))))
+             (or (joey-eligible? agent-id sid)
+                 (do (swap! !compact-failed conj k)
+                     (println (format "[kangaroo] /compact left %s session %s at %s tokens — not retrying it this JVM; staying COLD"
+                                      (str agent-id) sid (str (session-context-tokens sid))))
+                     (flush)
+                     false))))))))
 
 (defn- now-ms [] (System/currentTimeMillis))
 (defn- now [] (str (Instant/now)))

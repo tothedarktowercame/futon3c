@@ -77,7 +77,8 @@
   (is (nil? (pouch/usage-context-tokens {:service_tier "standard"}))))
 
 (defn- with-transcript
-  "Write LINES as session SID's transcript under a throwaway user.home, call F."
+  "Write LINES as session SID's transcript under a throwaway user.home, call F
+   with the transcript file."
   [sid lines f]
   (let [home (.toFile (Files/createTempDirectory "joey-home" (make-array FileAttribute 0)))
         dir (io/file home ".claude" "projects" "-proj")
@@ -87,7 +88,7 @@
           (apply str (map #(str (json/generate-string %) "\n") lines)))
     (try
       (System/setProperty "user.home" (str home))
-      (f)
+      (f (io/file dir (str sid ".jsonl")))
       (finally (System/setProperty "user.home" old)))))
 
 (deftest context-tokens-come-from-the-last-reply-not-the-file-size
@@ -116,7 +117,7 @@
                                    :cache_read_input_tokens 0
                                    :cache_creation_input_tokens 0}}}])]
     (with-transcript "s-blobs" lines
-      (fn []
+      (fn [_]
         (is (> (pouch/session-transcript-bytes "s-blobs") (* 4 1024 1024))
             "the request log alone puts the file past the old 2 MiB limit")
         (is (= 47393 (pouch/session-context-tokens "s-blobs"))
@@ -125,6 +126,75 @@
           (is (true? (boolean (pouch/joey-eligible? "a" "s-blobs")))
               "a 47k-token session is a joey whatever its file size"))))
     (with-transcript "s-fresh" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}]
-      (fn []
+      (fn [_]
         (is (nil? (pouch/session-context-tokens "s-fresh"))
             "no reply yet: unknown, which the gate treats as a joey")))))
+
+(def ^:private big-reply
+  {:type "assistant" :uuid "a1" :parentUuid "u1"
+   :message {:role "assistant" :model "claude-opus-5-5"
+             :content [{:type "text" :text "long session"}]
+             :usage {:input_tokens 2 :cache_read_input_tokens 300000
+                     :cache_creation_input_tokens 5000 :output_tokens 800}}})
+
+(def ^:private boundary
+  ;; The shape Claude Code 2.1.30x writes for /compact (same session id).
+  {:type "system" :subtype "compact_boundary" :parentUuid nil
+   :logicalParentUuid "a1" :uuid "b1" :content "Conversation compacted"
+   :compactMetadata {:trigger "manual" :preTokens 305802}})
+
+(defn- append! [file rec]
+  (spit file (str (json/generate-string rec) "\n") :append true))
+
+(deftest compact-boundary-after-the-last-reply-reads-as-unknown
+  (with-transcript "s-c" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
+                          big-reply]
+    (fn [file]
+      (is (= 305802 (pouch/session-context-tokens "s-c")))
+      (append! file boundary)
+      (is (nil? (pouch/session-context-tokens "s-c"))
+          "after /compact the old usage no longer describes the context")
+      (append! file (assoc-in big-reply [:message :usage]
+                              {:input_tokens 2 :cache_read_input_tokens 30000
+                               :cache_creation_input_tokens 0 :output_tokens 500}))
+      (is (= 30502 (pouch/session-context-tokens "s-c"))
+          "the first reply after the compaction reports the new size"))))
+
+(deftest monster-is-compacted-by-claude-code-then-warms
+  (with-redefs [pouch/joey-max-tokens (constantly 200000)]
+    (testing "a /compact that lands: called once, then the session is a joey"
+      (with-transcript "s-m1" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
+                               big-reply]
+        (fn [file]
+          (let [calls (atom 0)]
+            (is (true? (boolean (pouch/joey-eligible-or-compact?
+                                 "m-1" "s-m1" #(do (swap! calls inc) (append! file boundary))))))
+            (is (= 1 @calls))))))
+    (testing "a /compact that does nothing: stays cold, and is not retried"
+      (with-transcript "s-m2" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
+                               big-reply]
+        (fn [file]
+          (let [calls (atom 0)
+                before (slurp file)]
+            (is (false? (boolean (pouch/joey-eligible-or-compact?
+                                  "m-2" "s-m2" #(swap! calls inc)))))
+            (is (false? (boolean (pouch/joey-eligible-or-compact?
+                                  "m-2" "s-m2" #(swap! calls inc)))))
+            (is (= 1 @calls) "one failed attempt per (agent, session), not one per turn")
+            (is (= before (slurp file)) "Agency never edits the transcript itself")))))
+    (testing "a joey is not compacted; nor is a monster with the flag off"
+      (with-transcript "s-m3" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
+                               (assoc-in big-reply [:message :usage] {:input_tokens 1000})]
+        (fn [_]
+          (let [calls (atom 0)]
+            (is (true? (boolean (pouch/joey-eligible-or-compact?
+                                 "m-3" "s-m3" #(swap! calls inc)))))
+            (is (zero? @calls)))))
+      (with-transcript "s-m4" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
+                               big-reply]
+        (fn [_]
+          (let [calls (atom 0)]
+            (with-redefs [pouch/compact-monsters-enabled? (constantly false)]
+              (is (false? (boolean (pouch/joey-eligible-or-compact?
+                                    "m-4" "s-m4" #(swap! calls inc))))))
+            (is (zero? @calls))))))))

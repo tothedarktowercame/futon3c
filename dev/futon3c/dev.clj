@@ -3937,9 +3937,11 @@ RESPOND WITH ONLY:
 
                     ;; Joey gate: only warm a small session. A monster stays cold
                     ;; (warming a giant history is a token-cost trap) unless overridden.
-                    ;; E-monster-to-joey: when compaction is enabled, a monster's cold
-                    ;; transcript is compacted in place first, so a shrunk monster warms.
-                    (not (agent-pouch/joey-eligible-or-compact? agent-id warm-sid))
+                    ;; E-monster-to-joey: when compaction is enabled, a monster is first
+                    ;; compacted by Claude Code's own /compact, so a shrunk monster warms.
+                    (not (agent-pouch/joey-eligible-or-compact?
+                          agent-id warm-sid
+                          #(invoke-once "/compact" warm-sid)))
                     (do (agent-pouch/note-monster-cold! agent-id warm-sid)
                         (invoke-once prompt session-id))
 
