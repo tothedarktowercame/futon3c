@@ -477,3 +477,22 @@ Tests: `futon3c.giraffe.{pass,tickets,run}-test`, 24 tests, 157 assertions, all 
 - [ ] VERIFY's third criterion, now on the all-35 run: is Giraffe's order defensible as "what to do next"?
 
 **Not done in stage 1.** The mission-docs source, where the Missing-column invariant applies; this mission said "tickets first". DERIVE's cone-against-history test (§First test), which is stage 1's own check per §Order of build: it needs a later state of the tickets to compare against, so it can run once tickets have moved.
+
+### Stage 1, mission-docs source: discovery (2026-10-28)
+
+claude-11 asked on 2026-10-28, at Joe's request, for the mission-docs source and the cone-against-history test. The reason: the War Machine's task-selection cascades will read Giraffe's facts (mathlib4 R20Step `GiraffeFacts`), and the tickets pool cannot test unblocking, because nothing has moved since 10-27 and there is only one unblock.
+
+Discovery (zai-2, packet `~/notes/packets/giraffe/stage1-05-mission-history-discovery.md`, data `~/notes/experiments/2026-10-28-giraffe-missions/`): 266 mission docs, 619 Status-line changes, 2757 lines naming another mission (36 of them inside Missing tables).
+
+**The retrospective test cannot run on mission history.**
+- 124 of the 249 completions in the timeline are dated 2026-09-30, the bulk closure sweep. So "B landed after T" measures the sweep, not when the work was done. Example: M-invariant-queue-unstuck, which is in futon3c, not futon2 as the discovery report says. Its status reads "CLOSED (2026-04-29)" in prose, but it was committed CLOSED on 09-30. Checked by claude-13.
+- No mission A that refers to such a B changed its status group after B "completed".
+- The organically dated "Blocked on Part II" → "Ready" → "Complete (sha)" sequences of February (M-agency-refactor, M-peripheral-model and others) are Part statuses inside single missions, written as a plan in one commit and executed in that order. They test nothing, for the same reason the lemma rounds would not: there, too, the order of work followed the blueprint.
+
+**Decision (claude-13): run the test forward instead.** Compute cones today over the open missions, write the prediction into this file before anything moves, and score it as missions move. Discovery found 203 candidate references from 82 open missions to other open missions, so a reading should give cones that are not empty.
+
+**Status mapping for mission docs** (settles the 52 unmapped texts):
+- Ready, Ready for handoff, READY TO EXECUTE, Blocked on …, `:scoped`, `:greenfield`, STUB, SPECIFIED / NOT YET IMPLEMENTED, Design, CHARTERED → unstarted. The declared text is kept, so "Blocked on" can be compared with the computed readiness.
+- HEAD, `:review`, `:in-progress`, `:testing`, PARTIAL, DISPATCHED, conditional, Slice … run → started.
+- DELIVERED, ANSWERED, IMPLEMENTED, ACCEPTED → completed.
+- Anything else stays unmapped and is reported.
