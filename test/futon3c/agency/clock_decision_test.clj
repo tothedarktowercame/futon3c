@@ -70,6 +70,15 @@
         (let [e (thrown #(decision/record! (context "busy-read")))]
           (is (= :clock/store-busy (:error/code (ex-data e))))
           (is (re-find #"^Turn not started: futon1b was busy while reading" (ex-message e))))))
+    (testing "a busy read inside the append, wrapped by the real boundary"
+      ;; Seen live 2026-10-28: the boundary reported :error/code :exception
+      ;; and the turn failed instead of waiting.
+      (with-redefs [store/append* (fn [& _]
+                                    (throw (ex-info "futon1b busy (HTTP 504): the read was not served"
+                                                    {:error/code :futon1b-read-unavailable})))]
+        (let [e (thrown #(decision/record! (context "busy-append-read")))]
+          (is (= :clock/store-busy (:error/code (ex-data e))))
+          (is (re-find #"^Turn not started: futon1b was busy while recording" (ex-message e))))))
     (testing "a write the store refused is still a clock-decision failure, with its reason"
       (with-redefs [boundary/append! (fn [& _]
                                        {:ok false :error/code :invalid-entry

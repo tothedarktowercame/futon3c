@@ -255,6 +255,15 @@
 (def ^:private busy-write-codes
   #{:store-unavailable :store-timeout :store-unreachable})
 
+(defn- busy-write?
+  "A write receipt that failed because futon1b was busy. The boundary turns an
+  exception thrown inside an append (its read-back included) into
+  :error/code :exception and keeps the thrown code under :invariant/violation,
+  so a busy read there arrives as a nested :futon1b-read-unavailable."
+  [result]
+  (or (busy-write-codes (:error/code result))
+      (busy-read-codes (get-in result [:invariant/violation :error/code]))))
+
 (defn- store-busy-error [what cause-message data cause]
   (ex-info (str "Turn not started: futon1b was busy while " what
                 " (" cause-message "). Nothing was recorded, so sending the"
@@ -307,7 +316,7 @@
                           :clock #(merge (clock/empty-clock) %))
         old-clock (clock/current-clock agent-id session-id)]
       (when (and (not existing) (not duplicate) (not (:ok result)))
-        (if (busy-write-codes (:error/code result))
+        (if (busy-write? result)
           (throw (store-busy-error "recording this turn's clock decision"
                                    (:error/message result) {:receipt result} nil))
           (throw (ex-info (str "Clock decision not recorded: the evidence store refused it ("
