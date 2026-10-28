@@ -173,12 +173,16 @@
     (when (seq vs) (reduce + 0 vs))))
 
 (defn- last-assistant-usage-in
-  "Usage map of the last `assistant` record in LINES (oldest first), or nil."
+  "Usage map of the last model-written `assistant` record in LINES (oldest
+   first), or nil. Claude Code's own `<synthetic>` replies (\"You're out of
+   usage credits\", interrupts) carry all-zero usage and say nothing about the
+   context, so they are skipped."
   [lines]
   (some (fn [line]
           (when (str/includes? line "\"assistant\"")
             (let [rec (try (json/parse-string line true) (catch Exception _ nil))]
-              (when (= "assistant" (:type rec))
+              (when (and (= "assistant" (:type rec))
+                         (not= "<synthetic>" (get-in rec [:message :model])))
                 (get-in rec [:message :usage])))))
         (reverse lines)))
 

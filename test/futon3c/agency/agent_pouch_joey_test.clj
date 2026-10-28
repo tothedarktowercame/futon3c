@@ -108,13 +108,19 @@
                                    :cache_read_input_tokens 46000
                                    :cache_creation_input_tokens 1200
                                    :output_tokens 190}}}]
-               (repeat 1200 blob))]
+               (repeat 1200 blob)
+               [{:type "assistant" :uuid "a3" :parentUuid "a2"
+                 :message {:role "assistant" :model "<synthetic>"
+                           :content [{:type "text" :text "You're out of usage credits."}]
+                           :usage {:input_tokens 0 :output_tokens 0
+                                   :cache_read_input_tokens 0
+                                   :cache_creation_input_tokens 0}}}])]
     (with-transcript "s-blobs" lines
       (fn []
         (is (> (pouch/session-transcript-bytes "s-blobs") (* 4 1024 1024))
             "the request log alone puts the file past the old 2 MiB limit")
         (is (= 47393 (pouch/session-context-tokens "s-blobs"))
-            "the newest reply is found behind 4 MB of log, and the older reply is not used")
+            "the newest model reply is found behind 4 MB of log; the synthetic reply after it and the older reply before it are not used")
         (with-redefs [pouch/joey-max-tokens (constantly 200000)]
           (is (true? (boolean (pouch/joey-eligible? "a" "s-blobs")))
               "a 47k-token session is a joey whatever its file size"))))
