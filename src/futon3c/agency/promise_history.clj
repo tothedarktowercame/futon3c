@@ -197,17 +197,32 @@
               (catch Throwable e (outcome/failed! e))))
         (= :duplicate-id (:error/code result)) (swap! !counts update :conflict (fnil inc 0))
         :else (outbox-failed! eid (:evidence/type entry) (:error/code result))))))
+;; State atoms with a drain already queued. Every park/followup mutation calls
+;; drain!, and each drain walks the whole outbox; with futon1b slow the queue
+;; filled with redundant drains of the same entries (2026-10-28: 1,024 queued,
+;; about one completion per 20 s). One queued drain per state is enough: it
+;; clears its mark before reading the outbox, so a mutation during the drain
+;; queues the next one.
+(defonce ^:private !drain-queued (atom #{}))
+
 (defn drain! [state persist!]
   ;; Best-effort: the caller has already persisted STATE, so a drain the full
   ;; writer queue rejects is retried by a later drain. Letting the rejection
   ;; escape turned every park and followups/ready call into a 500 while
   ;; futon1b was slow (2026-10-28 19:32Z, queue 1024/1024).
-  (try
-    (.execute writer ^Runnable (bound-fn [] (try (drain-now! state persist!)
-                                                 (catch Throwable e
-                                                   (failed! :outbox (.getMessage e))))))
-    (catch java.util.concurrent.RejectedExecutionException e
-      (failed! :outbox-rejected (.getMessage e)))))
+  (let [k state ; atoms compare by identity
+        [before _] (swap-vals! !drain-queued conj k)]
+    (when-not (contains? before k)
+      (try
+        (.execute writer ^Runnable
+                  (bound-fn []
+                    (swap! !drain-queued disj k)
+                    (try (drain-now! state persist!)
+                         (catch Throwable e
+                           (failed! :outbox (.getMessage e))))))
+        (catch java.util.concurrent.RejectedExecutionException e
+          (swap! !drain-queued disj k)
+          (failed! :outbox-rejected (.getMessage e)))))))
 
 (defn await-writes!
   "Wait up to TIMEOUT-MS for previously submitted writes; diagnostics/tests only."
