@@ -198,9 +198,16 @@
         (= :duplicate-id (:error/code result)) (swap! !counts update :conflict (fnil inc 0))
         :else (outbox-failed! eid (:evidence/type entry) (:error/code result))))))
 (defn drain! [state persist!]
-  (.execute writer ^Runnable (bound-fn [] (try (drain-now! state persist!)
-                                               (catch Throwable e
-                                                 (failed! :outbox (.getMessage e)))))))
+  ;; Best-effort: the caller has already persisted STATE, so a drain the full
+  ;; writer queue rejects is retried by a later drain. Letting the rejection
+  ;; escape turned every park and followups/ready call into a 500 while
+  ;; futon1b was slow (2026-10-28 19:32Z, queue 1024/1024).
+  (try
+    (.execute writer ^Runnable (bound-fn [] (try (drain-now! state persist!)
+                                                 (catch Throwable e
+                                                   (failed! :outbox (.getMessage e))))))
+    (catch java.util.concurrent.RejectedExecutionException e
+      (failed! :outbox-rejected (.getMessage e)))))
 
 (defn await-writes!
   "Wait up to TIMEOUT-MS for previously submitted writes; diagnostics/tests only."
