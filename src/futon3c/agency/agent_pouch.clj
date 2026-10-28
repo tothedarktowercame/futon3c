@@ -292,37 +292,53 @@
 
 (defonce ^:private !compact-failed (atom #{}))
 
-(defn joey-eligible-or-compact?
-  "Like `joey-eligible?`, but when a monster is found and compaction is enabled,
-   call COMPACT! (a zero-argument fn that runs /compact on the session, e.g. a
-   cold invoke of \"/compact\") and re-check the gate. The re-check is the
-   success test: a compact_boundary newer than the last reply reads as unknown
-   context, i.e. a joey. A compaction that leaves the session a monster is
-   logged and not retried for that (agent, session) in this JVM, so a failing
-   /compact costs one attempt, not one per turn.
+(declare alive? compact-pouch!)
 
-   The 2-arity (no COMPACT!) is the gate alone: invoke fns built before
-   2026-10-28 call it that way until they are rebuilt."
+(defn joey-eligible-or-compact?
+  "Called before every turn. When the live context is over joey-max-tokens and
+   compaction is enabled, compact the session with Claude Code's own /compact:
+   inside the agent's warm pouch when it has one (a cold /compact beside a live
+   pouch would be undone by the pouch's in-memory context on its next turn),
+   otherwise by calling COMPACT! (a zero-argument fn, e.g. a cold invoke of
+   \"/compact\"). Success is read back from the transcript: a compact_boundary
+   newer than the last reply reads as unknown context, i.e. a joey. A
+   compaction that leaves the session over the limit is logged and not retried
+   for that (agent, session) in this JVM, so a failing /compact costs one
+   attempt, not one per turn.
+
+   Always returns true: size no longer decides warm versus cold. Measured
+   2026-10-28, a cold resume of an unedited transcript read 90-96% of its prompt
+   from Anthropic's cache, the same as warm turns (84-98%); the cache is keyed
+   by request content, not by process. Pouch memory is bounded separately
+   (max-warm, max-rss-mb).
+
+   The 2-arity (no COMPACT!) is for invoke fns built before 2026-10-28; it can
+   still compact a warm pouch."
   ([agent-id session-id] (joey-eligible-or-compact? agent-id session-id nil))
   ([agent-id session-id compact!]
    (let [sid (some-> session-id str str/trim not-empty)
-         k [(str agent-id) sid]]
-     (or (joey-eligible? agent-id session-id)
-         (when (and sid (fn? compact!) (compact-monsters-enabled?)
-                    (not (contains? @!compact-failed k)))
-           (let [before (session-context-tokens sid)]
-             (println (format "[kangaroo] %s session %s context %s tokens over joey-max %d — running /compact"
-                              (str agent-id) sid (str before) (long (joey-max-tokens))))
-             (flush)
-             (try (compact!)
-                  (catch Throwable t
-                    (println (str "[kangaroo] /compact threw for " sid ": " (.getMessage t)))))
-             (or (joey-eligible? agent-id sid)
-                 (do (swap! !compact-failed conj k)
-                     (println (format "[kangaroo] /compact left %s session %s at %s tokens — not retrying it this JVM; staying COLD"
-                                      (str agent-id) sid (str (session-context-tokens sid))))
-                     (flush)
-                     false))))))))
+         aid (str agent-id)
+         k [aid sid]]
+     (when (and sid (not (joey-eligible? agent-id sid)) (compact-monsters-enabled?)
+                (not (contains? @!compact-failed k)))
+       (let [pouch (get @!pouches aid)
+             warm? (boolean (and pouch (alive? pouch) (= sid (some-> (:session-id pouch) str))))]
+         (when (or warm? (fn? compact!))
+           (println (format "[kangaroo] %s session %s context %s tokens over joey-max %d — running /compact (%s)"
+                            aid sid (str (session-context-tokens sid)) (long (joey-max-tokens))
+                            (if warm? "in its warm pouch" "cold")))
+           (flush)
+           (try (if warm?
+                  (compact-pouch! aid {:wait? true})
+                  (compact!))
+                (catch Throwable t
+                  (println (str "[kangaroo] /compact threw for " sid ": " (.getMessage t)))))
+           (when-not (joey-eligible? agent-id sid)
+             (swap! !compact-failed conj k)
+             (println (format "[kangaroo] /compact left %s session %s at %s tokens — not retrying it this JVM"
+                              aid sid (str (session-context-tokens sid))))
+             (flush)))))
+     true)))
 
 (defn- now-ms [] (System/currentTimeMillis))
 (defn- now [] (str (Instant/now)))

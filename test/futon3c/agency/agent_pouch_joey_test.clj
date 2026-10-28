@@ -160,41 +160,55 @@
       (is (= 30502 (pouch/session-context-tokens "s-c"))
           "the first reply after the compaction reports the new size"))))
 
-(deftest monster-is-compacted-by-claude-code-then-warms
+(deftest monster-is-compacted-by-claude-code-and-always-warms
   (with-redefs [pouch/joey-max-tokens (constantly 200000)]
-    (testing "a /compact that lands: called once, then the session is a joey"
+    (testing "a cold /compact that lands: called once, then the session is a joey"
       (with-transcript "s-m1" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                big-reply]
         (fn [file]
           (let [calls (atom 0)]
-            (is (true? (boolean (pouch/joey-eligible-or-compact?
-                                 "m-1" "s-m1" #(do (swap! calls inc) (append! file boundary))))))
-            (is (= 1 @calls))))))
-    (testing "a /compact that does nothing: stays cold, and is not retried"
+            (is (true? (pouch/joey-eligible-or-compact?
+                        "m-1" "s-m1" #(do (swap! calls inc) (append! file boundary)))))
+            (is (= 1 @calls))
+            (is (nil? (pouch/session-context-tokens "s-m1")))))))
+    (testing "a /compact that does nothing: still warm, and not retried"
       (with-transcript "s-m2" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                big-reply]
         (fn [file]
           (let [calls (atom 0)
                 before (slurp file)]
-            (is (false? (boolean (pouch/joey-eligible-or-compact?
-                                  "m-2" "s-m2" #(swap! calls inc)))))
-            (is (false? (boolean (pouch/joey-eligible-or-compact?
-                                  "m-2" "s-m2" #(swap! calls inc)))))
+            (is (true? (pouch/joey-eligible-or-compact? "m-2" "s-m2" #(swap! calls inc))))
+            (is (true? (pouch/joey-eligible-or-compact? "m-2" "s-m2" #(swap! calls inc))))
             (is (= 1 @calls) "one failed attempt per (agent, session), not one per turn")
             (is (= before (slurp file)) "Agency never edits the transcript itself")))))
+    (testing "a live warm pouch on the session is compacted in place, not beside it"
+      (with-transcript "s-m5" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
+                               big-reply]
+        (fn [file]
+          (let [cold (atom 0) warm (atom [])
+                !pouches @#'pouch/!pouches]
+            (swap! !pouches assoc "m-5" {:session-id "s-m5"})
+            (try
+              (with-redefs-fn {#'pouch/alive? (constantly true)
+                               #'pouch/compact-pouch! (fn [aid opts]
+                                                        (swap! warm conj [aid opts])
+                                                        (append! file boundary)
+                                                        {:ok true})}
+                #(is (true? (pouch/joey-eligible-or-compact? "m-5" "s-m5" (fn [] (swap! cold inc))))))
+              (finally (swap! !pouches dissoc "m-5")))
+            (is (= [["m-5" {:wait? true}]] @warm))
+            (is (zero? @cold) "no cold /compact beside a live pouch")))))
     (testing "a joey is not compacted; nor is a monster with the flag off"
       (with-transcript "s-m3" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                (assoc-in big-reply [:message :usage] {:input_tokens 1000})]
         (fn [_]
           (let [calls (atom 0)]
-            (is (true? (boolean (pouch/joey-eligible-or-compact?
-                                 "m-3" "s-m3" #(swap! calls inc)))))
+            (is (true? (pouch/joey-eligible-or-compact? "m-3" "s-m3" #(swap! calls inc))))
             (is (zero? @calls)))))
       (with-transcript "s-m4" [{:type "user" :uuid "u1" :message {:role "user" :content "hi"}}
                                big-reply]
         (fn [_]
           (let [calls (atom 0)]
             (with-redefs [pouch/compact-monsters-enabled? (constantly false)]
-              (is (false? (boolean (pouch/joey-eligible-or-compact?
-                                    "m-4" "s-m4" #(swap! calls inc))))))
+              (is (true? (pouch/joey-eligible-or-compact? "m-4" "s-m4" #(swap! calls inc)))))
             (is (zero? @calls))))))))

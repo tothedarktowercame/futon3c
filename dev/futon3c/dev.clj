@@ -3935,10 +3935,11 @@ RESPOND WITH ONLY:
                     (not (agent-pouch/enabled?))
                     (invoke-once prompt session-id)
 
-                    ;; Joey gate: only warm a small session. A monster stays cold
-                    ;; (warming a giant history is a token-cost trap) unless overridden.
-                    ;; E-monster-to-joey: when compaction is enabled, a monster is first
-                    ;; compacted by Claude Code's own /compact, so a shrunk monster warms.
+                    ;; Context gate: a session over joey-max-tokens is first compacted
+                    ;; by Claude Code's own /compact. Size no longer keeps a session
+                    ;; cold (cold resumes hit the prompt cache as warm turns do,
+                    ;; measured 2026-10-28), so it returns true and the cold branch
+                    ;; below is no longer taken.
                     (not (agent-pouch/joey-eligible-or-compact?
                           agent-id warm-sid
                           #(invoke-once "/compact" warm-sid)))
