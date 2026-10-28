@@ -475,5 +475,9 @@
         (throw (ex-info (str "Clock activity decision failed: " (ex-message error))
                         {:error/code :clock/activity-decision-failed} error)))
       (when (and session-id (not= session-id (:session-id *turn*)))
-        (record! (assoc *turn* :session-id session-id :phase :session-resolved)))
+        ;; Same bounded busy-wait as admission (3617cc30c): a busy store at the
+        ;; session-resolved decision refused META diagnosis outright
+        ;; (repair iteration 1, 2026-10-28).
+        (record-waiting-out-busy-store!
+         (assoc *turn* :session-id session-id :phase :session-resolved)))
       (finally (end! *turn*)))))

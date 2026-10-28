@@ -642,3 +642,27 @@
                  (get (do (decision/record! (operator "again" "T-fix-thing"))
                           (clock/evidence-clock-fields "clock-worker" "clock-session"))
                       "clocked-ticket"))))))))
+
+(deftest busy-store-at-session-resolved-is-waited-out
+  ;; 2026-10-28 repair iteration 1: META diagnosis refused because one 504
+  ;; hit the final :session-resolved decision, which called bare record!.
+  (let [backend (atom {:entries {} :order []})
+        real-append boundary/append!
+        busy {:ok false :error/code :store-unavailable
+              :error/message "futon1b busy (HTTP 504): the write was not served and nothing was written"}
+        busy-once (atom true)]
+    (binding [decision/*test-store* backend decision/*repo-roots* {}
+              decision/*store-busy-waits-ms* [0 0 0]]
+      (with-redefs [boundary/append! (fn [store entry & more]
+                                       (if (and (= :session-resolved
+                                                   (get-in entry [:evidence/body :phase]))
+                                                (compare-and-set! busy-once true false))
+                                         busy
+                                         (apply real-append store entry more)))]
+        (register! (fn [_ _] {:result "resolved through a 504" :session-id "new-session"}))
+        (let [result (reg/invoke-agent! "clock-worker" "continue"
+                                       {:turn-id "busy-resolve" :evidence-store backend})]
+          (is (true? (:ok result)))
+          (is (false? @busy-once) "the busy reply was actually served once")
+          (is (some #(= :session-resolved (get-in % [:evidence/body :phase]))
+                    (store/query* backend {:query/tags [:clock-decision]}))))))))
