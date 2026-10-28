@@ -56,6 +56,38 @@
       (is (= {:status :not-checked :reason :child-pending}
              (:parent-verdict parent-state))))))
 
+(deftest newer-retry-for-same-transaction-replaces-in-place
+  ;; Lean: PostReleaseRetryCoalescing.enqueue and its positive law.
+  (let [old-t {:injury-id "injury/T" :repair-id "repair/T" :attempt 2
+               :retry-click "wm-retry-T-old"}
+        request-u {:injury-id "injury/U" :repair-id "repair/U" :attempt 1
+                   :retry-click "wm-retry-U"}
+        newer-t {:injury-id "injury/T" :repair-id "repair/T" :attempt 2
+                 :retry-click "wm-requeue-T-new"}
+        queue @#'service/!post-release-retries]
+    (#'service/enqueue-post-release-retry! old-t)
+    (#'service/enqueue-post-release-retry! request-u)
+    (#'service/enqueue-post-release-retry! newer-t)
+    (let [launched (loop [pending @queue
+                          result []]
+                     (if (empty? pending)
+                       result
+                       (recur (pop pending)
+                              (conj result (:retry-click (peek pending))))))]
+      (is (= ["wm-requeue-T-new" "wm-retry-U"] launched))
+      (is (not-any? #{"wm-retry-T-old"} launched)))))
+
+(deftest retry-without-complete-transaction-key-remains-fifo
+  (let [first-request {:repair-id "repair/unkeyed" :attempt 1
+                       :retry-click "wm-retry-unkeyed-1"}
+        second-request {:repair-id "repair/unkeyed" :attempt 1
+                        :retry-click "wm-retry-unkeyed-2"}
+        queue @#'service/!post-release-retries]
+    (#'service/enqueue-post-release-retry! first-request)
+    (#'service/enqueue-post-release-retry! second-request)
+    (is (= ["wm-retry-unkeyed-1" "wm-retry-unkeyed-2"]
+           (mapv :retry-click (seq @queue))))))
+
 (deftest child-close-completes-exact-parent-binding
   (#'service/bind-child! parent-id retry)
   (let [summary {:outcome :already-satisfied :run-record "/fixture/child.edn"}]

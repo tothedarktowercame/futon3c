@@ -160,8 +160,33 @@
 
 (declare click!)
 
+(def ^:private post-release-retry-key-fields
+  [:injury-id :repair-id :attempt])
+
+(defn- post-release-retry-key [request]
+  (when (every? #(some? (get request %)) post-release-retry-key-fields)
+    (mapv request post-release-retry-key-fields)))
+
+(defn- enqueue-coalesced-retry
+  "PostReleaseRetryCoalescing.enqueue: replace a queued request with the same
+  complete transaction key at its first position; distinct and unkeyed
+  requests retain FIFO append order."
+  [queue request]
+  (if-let [request-key (post-release-retry-key request)]
+    (let [[coalesced replaced?]
+          (reduce (fn [[result replaced?] queued]
+                    (if (= request-key (post-release-retry-key queued))
+                      (if replaced?
+                        [result true]
+                        [(conj result request) true])
+                      [(conj result queued) replaced?]))
+                  [clojure.lang.PersistentQueue/EMPTY false]
+                  queue)]
+      (if replaced? coalesced (conj coalesced request)))
+    (conj queue request)))
+
 (defn- enqueue-post-release-retry! [request]
-  (swap! !post-release-retries conj request)
+  (swap! !post-release-retries enqueue-coalesced-retry request)
   request)
 
 (defn- fill-absent
