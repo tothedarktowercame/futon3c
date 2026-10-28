@@ -56,21 +56,25 @@
   "Ordered [group regex] pairs over the status text's leading phrase.
   SPECIFIED/STUB/NOT-YET-IMPLEMENTED come before IMPLEMENTED because
   \"SPECIFIED, NOT YET IMPLEMENTED\" contains IMPLEMENTED."
-  [[:unstarted #"(?i)not[ -]yet[ -]implemented|specified|stub"]
+  [;; a phrase that BEGINS with a phase name or OPEN is an open mission,
+   ;; whatever it says next ("HEAD and IDENTIFY accepted", "INSTANTIATE
+   ;; complete for the stash slice") — claude-13 review, 2026-10-28
+   [:started #"(?i)^[*_`\s]*(head|identify|map|derive|argue|verify|instantiate|open)\b"]
+   [:unstarted #"(?i)not[ -]yet[ -]implemented|specified|stub"]
    [:completed #"(?i)\bclosed\b|\bdone\b|\bcomplete\b|\bdelivered\b|\banswered\b|\bimplemented\b|\baccepted\b"]
    [:cancelled #"(?i)superseded|nonstarter|dropped|abandoned"]
    [:unstarted #"(?i)\bready\b|blocked[ -]on|\bproposed\b|\bdraft\b|not[ -]started|\bplanned\b|\bscoped\b|greenfield|\bdesign\b|\bchartered\b"]
    [:started #"(?i)\bidentify(?:ing)?\b|\bmap(?:ping)?\b|\bderive(?:d|ing)?\b|\bargu(?:e|ing|ment)\b|\bverif(?:y|ying|ication)\b|\binstantiate\b|\bdocument(?:ation|ing)?\b|\bopen\b|\bactive\b|in[ -]progress|\bpartial\b|\bpart\b|\bdispatched\b|\bhead\b|\breview\b|\btesting\b|\bconditional\b|\bslice\b|\bpart\b"]])
 
 (defn- leading-phrase
-  "The status text up to its first em-dash, semicolon, parenthesis or
-  sentence end, with a leading ':' stripped (:scoped, :review)."
+  "The status text up to its first em-dash, middle dot, semicolon,
+  parenthesis or sentence end, with a leading ':' stripped (:scoped, :review)."
   [s]
   (-> s
       (str/trim)
       (str/replace #"^\:+" "")
       (str/replace #"\s+" " ")
-      (as-> t (str/replace t #"( — .*|—.*|;.*|\(.*|\. .*$|\.$)" ""))
+      (as-> t (str/replace t #"( — .*|—.*| · .*|·.*|;.*|\(.*|\. .*$|\.$)" ""))
       (str/trim)))
 
 (defn status->group
@@ -129,7 +133,7 @@
                        :repo repo
                        :file file}
                 status (assoc :declared-status status)
-                (nil? group) (assoc :status-unmapped status))))
+                (nil? group) (assoc :status-unmapped (or status :status/missing)))))
           rows))))
 (defn- repo-roots-by-name [repos]
   (into {} (map (fn [root] [(repo-name root) root]) repos)))

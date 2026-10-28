@@ -166,3 +166,22 @@
              "| unmapped=" (count unmapped-statuses)
              "| duplicate-id rejects="
              (count (filter #(= :item/duplicate-id (:reject %)) rejected)))))
+
+;; Review (claude-13, 2026-10-28): cases from the real repos that the first
+;; version got wrong.
+(deftest review-middle-dot-separates-status-phrases
+  ;; M-joe-told-me-about-futon read "MAP closed" as completed;
+  ;; M-landscape-positioning read "MAP not started" as unstarted.
+  (is (= :started (gm/status->group "HEAD and IDENTIFY accepted 2026-09-26 · **MAP closed** 2026-09-26")))
+  (is (= :started (gm/status->group "OPEN · HEAD drafted 2026-10-10 · MAP not started (a first-pass"))))
+
+(deftest review-a-doc-without-a-status-line-is-reported
+  ;; wrong: :status-unmapped nil, so the doc counted as open and unstarted
+  ;; and was missing from :unmapped-statuses.
+  (let [root (temp-dir "nostatus")]
+    (spit-mission root "futonZ" "M-no-status" "# M-no-status\n\nNo status line here.\n")
+    (let [{:keys [input unmapped-statuses]}
+          (gm/missions->input {:repos [(str root "/futonZ")]
+                               :edges-file (edges-file root [])})]
+      (is (= [{:id :M-no-status :status-unmapped :status/missing}] unmapped-statuses))
+      (is (= :status/missing (:status-unmapped (first (:items input))))))))
