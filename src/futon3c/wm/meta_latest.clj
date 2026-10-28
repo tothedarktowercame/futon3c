@@ -13,9 +13,8 @@
   parses a whole file: it scans the raw text for the :outer-task-selection
   key, extracts the balanced map that follows, and reads only that substring
   as EDN.  Candidates are visited newest-mtime first across the configured
-  roots; the first real receipt wins.  The receipt is projected with
-  futon2.aif.meta-live-outer-selector/browser-receipt so the shape matches
-  GET /api/alpha/wm/meta-preview's :receipt exactly."
+  roots; the first real receipt wins. Historical disk records remain readable;
+  browser projection now reports :no-task-selection-policy, as meta-preview does."
   (:require [clojure.edn :as edn]
             [clojure.string :as str])
   (:import [java.nio.file Files]))
@@ -156,14 +155,9 @@
              (recur more))))))))
 
 (defn browser-projection
-  "The raw receipt in meta-preview's :receipt shape (browser-receipt), or a
-  typed refusal when futon2's projection cannot be resolved."
-  [receipt]
-  (if-let [project (requiring-resolve
-                    'futon2.aif.meta-live-outer-selector/browser-receipt)]
-    (project receipt)
-    {:schema (:schema receipt)
-     :status :refused :reason :browser-receipt-unavailable}))
+  "The removed outer selector has no browser projection."
+  [_receipt]
+  {:absent :no-task-selection-policy})
 
 (defn- cascade-at
   "Locator into the same receipt for the q4 row (under

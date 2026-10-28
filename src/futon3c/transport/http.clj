@@ -8464,17 +8464,9 @@
                         :turn-counts turn-counts})))
 
 (defn- handle-meta-preview
-  "GET /api/alpha/wm/meta-preview — bounded read-only UI projection of the
-  exact META outer-policy receipt used by Futon2 production selection."
+  "GET /api/alpha/wm/meta-preview: no task-selection policy is installed."
   []
-  (try
-    (if-let [preview (requiring-resolve
-                      'futon2.aif.meta-live-outer-selector/preview-live-browser)]
-      (json-response 200 {:ok true :receipt (preview)})
-      (json-response 503 {:ok false :error :meta-preview-unavailable}))
-    (catch Throwable t
-      (json-response 503 {:ok false :error :meta-preview-failed
-                          :message (ex-message t)}))))
+  (json-response 200 {:absent :no-task-selection-policy}))
 
 (defn- handle-mission-wants
   "GET /api/alpha/wm/mission-wants?id=<mission>&path=<absolute mission doc>

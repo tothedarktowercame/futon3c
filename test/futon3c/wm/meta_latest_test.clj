@@ -87,7 +87,7 @@
         [status body] (ml/response [root])]
     (is (= 200 status))
     (is (:ok body))
-    (is (get-in body [:receipt :chosen]))
+    (is (= {:absent :no-task-selection-policy} (:receipt body)))
     (is (= "attempt-001" (get-in body [:source :attempt]))))
   (let [root (temp-root)
         [status body] (ml/response [root])]
