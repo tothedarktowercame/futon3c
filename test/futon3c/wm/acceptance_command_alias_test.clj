@@ -6,6 +6,38 @@
             [clojure.string :as str]
             [futon3c.wm.meta-self-heal-adapters :as sut]))
 
+(defn- file-set [root]
+  (let [root-file (io/file root)]
+    (if (.exists root-file)
+      (set (map (juxt #(.getCanonicalPath ^java.io.File %)
+                      #(.length ^java.io.File %)
+                      #(.lastModified ^java.io.File %))
+                (filter #(.isFile ^java.io.File %) (file-seq root-file))))
+      #{})))
+
+(deftest real-acceptance-process-isolates-strategic-selection-stores
+  (let [repo "/home/joe/worktrees/futon2/acceptance-store-isolation"
+        namespace "futon2.aif.acceptance-store-isolation-probe-test"
+        path "test/futon2/aif/acceptance_store_isolation_probe_test.clj"
+        text (slurp (io/file repo path))
+        production-phase-root "/home/joe/code/futon2/data/wm-phase-replay-inputs"
+        logs (.toFile (java.nio.file.Files/createTempDirectory
+                       "acceptance-isolation-logs-"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        before (file-set production-phase-root)
+        result (binding [sut/*acceptance-repository* repo
+                         sut/*acceptance-runs-root* (.getPath logs)]
+                 (#'sut/run-acceptance! 60000
+                  {:id "acceptance-store-isolation"
+                   :command ["clojure" "-M:test" "-n" namespace]
+                   :source {:namespace namespace :path path :text text}}))]
+    (is (= [:ran :passed 0] ((juxt :status :outcome :exit) result)) (pr-str result))
+    (is (= :isolated (get-in result [:store-isolation :status])))
+    (is (true? (get-in result [:store-isolation :removed?])))
+    (is (= before (file-set production-phase-root))
+        "the real strategic-selection process must not change production replay inputs")
+    (doseq [file (reverse (file-seq logs))] (io/delete-file file true))))
+
 (deftest alias-owns-the-runner-and-port-runs-only-requested-namespace
   (let [command ["clojure" "-M:test" "-n" "futon2.aif.wm.meta-injury-04e1-acceptance-test"]
         deps (edn/read-string (slurp "/home/joe/code/futon2/deps.edn"))
