@@ -1,7 +1,7 @@
 # Excursion: E-typed-bells — type the bell channel; make ArSE the Q&A substrate
 
 **Date:** 2026-06-11
-**Status:** PROMOTED → `holes/missions/M-typed-bells.md` (2026-06-11). This file remains
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Design sketch completed and promoted: the deliverable was handed to the mission file holes/missions/M-typed-bells.md, which exists. Evidence: /home/joe/code/futon3c/holes/missions/M-typed-bells.md.
 the origin design sketch + full prior-art reading; the mission carries it through the
 lifecycle (slices, gates, ARGUE tensions). IDENTIFY (design + prior-art grounding; not
 built). Thinking captured at Joe's request, building on E-crossed-bells / the bell router.

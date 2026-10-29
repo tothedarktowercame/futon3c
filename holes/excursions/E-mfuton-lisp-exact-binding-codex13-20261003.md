@@ -1,4 +1,5 @@
 # E-mfuton-lisp-exact-binding-codex13-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The codex-13 exact installed-binding READ implementation was accepted and integrated: commit a3fa5fb3 adds lisp/src/installed-generated-binding.lisp, its differential test and the codex13 evidence directory to the mfuton-share history. Evidence: a3fa5fb3.
 
 **Requisition:** completed — 2026-10-03T01:50:40.862241520Z, job invoke-1790992141912-30666-7d196611, state done
 

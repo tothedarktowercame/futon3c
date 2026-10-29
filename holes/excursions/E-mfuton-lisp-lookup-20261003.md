@@ -1,4 +1,5 @@
 # E-mfuton-lisp-lookup-20261003 — Lisp lookup boundary contract
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The lookup-lane boundary investigation closed with coordinator-corrected acceptance: commit 2dbdcee3 'Review exact binding contract against Python presence and fallback semantics' adds the lisp/parallel/lookup contract and exact-binding fixture in mfuton-share. Evidence: 2dbdcee3.
 
 **Requisition:** completed — 2026-10-03T00:38:01.498880287Z, job invoke-1790986979223-30650-e35df9c5, state done
 

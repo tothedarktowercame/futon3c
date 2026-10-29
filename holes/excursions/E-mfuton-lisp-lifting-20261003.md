@@ -1,4 +1,5 @@
 # E-mfuton-lisp-lifting-20261003 — Lisp lifting boundary contract
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The lifting-lane boundary investigation was reviewed and committed in the mfuton-sbcl repo, which survives as commit 38b59d2 'Review lifting boundary and correct vacuous depth trace' in mfuton-share containing the lisp/parallel/lifting artifacts. Evidence: 38b59d2.
 
 **Requisition:** completed — 2026-10-03T00:34:09.882104672Z, job invoke-1790986976715-30649-68f36ee9, state done
 

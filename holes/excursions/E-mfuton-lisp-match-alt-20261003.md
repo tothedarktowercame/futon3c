@@ -1,4 +1,5 @@
 # E-mfuton-lisp-match-alt-20261003 — Match alternative reference scope
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The matchAlt reference-scope implementation closed under coordinator review: commit f0d5dbe6 'Port match alternative reference scope through pattern authority' adds lisp/src/source-reference-analysis.lisp and lisp/parallel/owner/implementation/review.json in mfuton-share. Evidence: f0d5dbe6.
 
 **Requisition:** completed — 2026-10-03T00:50:13.093046896Z, job invoke-1790988067875-30654-67a7b97f, state done
 

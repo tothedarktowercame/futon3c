@@ -1,4 +1,5 @@
 # E-typed-holes-aif-alternate — M-typed-holes down the HEAD→AIF lifeform path
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Bounded counterfactual comparison write-up delivered in full (through §5 comparison and §6 carry-back verdict); committed to the repo. Evidence: fc44c954b.
 
 **VERDICT (2026-10-09, provisional):** DONE — Counterfactual comparison write-up is complete through its §5 comparison with cross-references; it is a bounded analysis artifact, fully written. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 

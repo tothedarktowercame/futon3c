@@ -1,4 +1,5 @@
 # E-象-repl-cycle: inventory of the live turn loop (discovery, packet 1)
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Discovery inventory (packet 1) delivered in full: eight-stage table with file:line triggers, port table, join-key mis-join analysis, and live-store counts, committed read-only. Evidence: 31b6b2a7f.
 
 Written 2026-10-24 ~20:05Z by zai-1, from the futon3c source tree at
 `/home/joe/code/futon3c` (shared checkout, unmodified) and the live turn store

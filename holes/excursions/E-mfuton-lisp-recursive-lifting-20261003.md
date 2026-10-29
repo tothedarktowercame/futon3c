@@ -1,4 +1,5 @@
 # E-mfuton-lisp-recursive-lifting-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The recursive-let closure-conversion and lifted-member-publication packet was accepted and integrated through ASDF/Make: commit 3e11d97d 'Port recursive let closure conversion and lifted member publication' adds both lisp/src production files in mfuton-share. Evidence: 3e11d97d.
 
 **Requisition:** completed — 2026-10-03T02:02:45.876177064Z, job invoke-1790990760190-30660-efdd7548, state done
 

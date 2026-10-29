@@ -1,4 +1,5 @@
 # E-whitepaper-v2-to-v3-claims-inventory — what V3 would lose if it simply superseded V2
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Preparatory V2→V3 claims inventory delivered in full (section-by-section table, recommendation on form); 'Not done here' items are explicitly out of scope. Evidence: fc44c954b.
 
 **VERDICT (2026-10-09, provisional):** DONE — The preparatory inventory was delivered in full (both drafts read, claims inventoried); the 'Not done here' items are explicitly out of scope. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 

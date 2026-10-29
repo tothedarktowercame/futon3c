@@ -1,4 +1,5 @@
 # E-mfuton-typeclass-declaration-index-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The typeclass declaration-index prerequisite was integrated as commit 97479d0 'Integrate reviewed source typeclass declaration indexes', which exists in mfuton-share and touches the lisp Makefile and related integration files. Evidence: 97479d0.
 
 **Requisition:** completed — integrated as 97479d0; no curriculum credit
 

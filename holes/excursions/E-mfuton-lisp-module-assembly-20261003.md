@@ -1,4 +1,5 @@
 # E-mfuton-lisp-module-assembly-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): After a recovered first attempt, the bounded module-declaration-assembly extractor was accepted and integrated: commit 5c55598a 'Port bounded module declaration assembly with explicit authority limits' adds lisp/src/module-declaration-assembly.lisp and lisp/parallel/assembly-review/coordinator-review.json in mfuton-share. Evidence: 5c55598a.
 
 **Requisition:** completed — 2026-10-03T02:07:11.095108545Z, job invoke-1790991516952-30664-f1d6c942, state done
 

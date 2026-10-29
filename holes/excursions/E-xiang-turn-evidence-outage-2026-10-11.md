@@ -1,4 +1,5 @@
 # E-xiang-turn-evidence-outage-2026-10-11
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Read-only diagnosis complete (rebuilt Emacs came up in file recorder mode) and the authorized 243-record settlement backfill landed; the diagnosed record store files exist with analysis and ports present. Evidence: /home/joe/.emacs-graph/session-turn-analysis/turn-Ei1bca.json.
 
 Read-only diagnosis, 2026-10-11.  I did not reload or restart either JVM,
 change the Emacs setting, edit a turn record, or append to futon1b.

@@ -1,7 +1,7 @@
 # Excursion: E-wm-operator-lane — operator-communication lanes for the overnight War Machine
 
 **Date:** 2026-06-05
-**Status:** DATA BACKBONE LIVE (2026-06-05). Full chain shipped + verified over HTTP: invariant
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The operator-lane data backbone (logic-model, classifier, bulletin, adapter, endpoints) shipped and was verified over HTTP; the named chain commits all exist. Remaining items were explicitly held (futon2) or deferred to claude-1, not open on this excursion. Evidence: 6df1754, 2c0c6c4.
 logic-model (`2c0c6c4`, 6/6) → classifier (`f4d5e13`, 330 assertions) → bulletin (`2f34f68`) →
 adapter (`d6bba12`+`dc5c2bf`, :path 108/108) → endpoints (`6df1754`, reload-safe `extra-routes`).
 Live: `GET /api/alpha/war-machine/operator-bulletin` (nag 0 / brief 60 / silent 51 / total 111) +

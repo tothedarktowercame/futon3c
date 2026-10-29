@@ -1,4 +1,5 @@
 # E-mfuton-lisp-binding-review-codex14-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The codex-14 review/integration of the exact installed-binding read was accepted by the coordinator and committed: commit a3fa5fb3 'Port exact installed binding lookup and integrate ASDF test target' contains lisp/parallel/codex14/coordinator-review.json and lisp/src/installed-generated-binding.lisp in the mfuton-share history (where the mfuton-sbcl work landed). Evidence: a3fa5fb3.
 
 **Requisition:** completed — 2026-10-03T02:01:03.381931715Z, job invoke-1790992710305-30670-2cd341b1, state done
 

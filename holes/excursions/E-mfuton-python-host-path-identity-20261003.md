@@ -1,4 +1,5 @@
 # E-mfuton-python-host-path-identity-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The Python oracle source-path identity repair was accepted with 18 real pytest passing: commit 4952d690 'Preserve canonical source identity in host carrier compilation' changes bootstrap_host_meta_carriers.py and adds the lisp/parallel/wave2/identity evidence in mfuton-share. Evidence: 4952d690.
 
 **Requisition:** completed — 2026-10-03T01:49:38.401241005Z, job invoke-1790990763757-30661-8371d7f3, state done
 

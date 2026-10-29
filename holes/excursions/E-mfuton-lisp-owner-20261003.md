@@ -1,4 +1,5 @@
 # E-mfuton-lisp-owner-20261003 — Lisp owner boundary contract
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The owner-lane boundary investigation finished with the coordinator-verified probe committed: commit ad1402bd 'Verify owner extraction blocker and dispatch matchAlt integration' adds the lisp/parallel/owner contract and boundary-test artifacts in mfuton-share. Evidence: ad1402bd.
 
 **Requisition:** completed — 2026-10-03T00:36:20.351745028Z, job invoke-1790986974585-30648-a5142f02, state done
 

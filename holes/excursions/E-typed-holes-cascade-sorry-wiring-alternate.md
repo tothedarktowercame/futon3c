@@ -1,4 +1,5 @@
 # E-typed-holes-cascade-sorry-wiring-alternate — M-typed-holes run as a cascade→sorry→wiring fold
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Counterfactual comparison doc delivered complete; only the optional conformance certificate remains a commissionable extra, explicitly out of the excursion's deliverable. Evidence: fc44c954b.
 
 **VERDICT (2026-10-09, provisional):** DONE — Counterfactual comparison doc whose stated deliverable is the comparison itself; it concludes with convergence recorded as the finding and only the optional conformance certificate left as a commissionable extra. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
