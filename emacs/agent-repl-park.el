@@ -446,20 +446,22 @@ synchronous GET is what made you reach for C-g)."
      (lambda (status)
        (let ((response-buffer (current-buffer)))
          (unwind-protect
-             (unless (plist-get status :error)
-               (let ((http-status (agent-repl-park--http-status)))
-                 (cond
-                  ((eq http-status 404)
-                   (puthash api-url
-                            (+ (float-time) agent-repl-park-batch-retry-seconds)
-                            agent-repl-park--batch-disabled-until))
-                  ((eq http-status 200)
+             ;; url.el reports a 404 as STATUS (:error (error http 404)), so
+             ;; read the HTTP status before giving up on an error status.
+             (let ((http-status (agent-repl-park--http-status)))
+               (cond
+                ((eq http-status 404)
+                 (puthash api-url
+                          (+ (float-time) agent-repl-park-batch-retry-seconds)
+                          agent-repl-park--batch-disabled-until))
+                ((plist-get status :error) nil)
+                ((eq http-status 200)
                    (let* ((json (agent-repl-park--response-json))
                           (response-seats (plist-get json :seats)))
                      (when (vectorp response-seats)
                        (dolist (seat seats)
                          (agent-repl-park--deliver-batch-seat
-                          seat response-seats api-url))))))))
+                          seat response-seats api-url)))))))
            (agent-repl-park--finish-batch-request)
            (when (buffer-live-p response-buffer) (kill-buffer response-buffer))))))))
 

@@ -25,8 +25,11 @@
     (with-current-buffer buf
       (insert (format "HTTP/1.1 %d Test\r\nContent-Type: application/json\r\n\r\n%s"
                       code body))
+      ;; url.el reports a 4xx/5xx reply as an error status, with the body
+      ;; still in the buffer (checked against a live 404 on 2026-10-29).
       (let ((url-http-response-status code))
-        (funcall callback nil)))))
+        (funcall callback (when (>= code 400)
+                            (list :error (list 'error 'http code))))))))
 
 (defmacro agent-repl-park-batch-test--with-buffers (buffers &rest body)
   (declare (indent 1))
