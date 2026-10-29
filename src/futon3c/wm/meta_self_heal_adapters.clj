@@ -19,6 +19,7 @@
   {:author "wm-author" :reviewer "wm-reviewer"
    :repair-reviewer "wm-repair-reviewer"})
 (def default-repository "/home/joe/code/futon2")
+(def default-self-heal-worktree-root "/home/joe/worktrees/futon2/self-heal")
 (def ^:dynamic *acceptance-repository* default-repository)
 (def ^:dynamic *acceptance-runs-root*
   (str injury-store/default-root "/acceptance-runs"))
@@ -41,7 +42,7 @@
   (or (true? (:agent/invoke-ready? agent))
       (ifn? (:agent/invoke-fn agent))))
 (defn- git [repo & args]
-  (let [{:keys [exit out err]} (apply shell/sh "git" "-C" repo args)]
+  (let [{:keys [exit out err]} (apply shell/sh (concat ["git" "-C" repo] args))]
     {:ok? (zero? exit) :out (str/trim out) :err (str/trim err)}))
 
 (defn- read-repair-transaction [path]
@@ -790,6 +791,30 @@
          (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id))
        "-patch-" patch-sha))
 
+(defn ensure-author-worktree!
+  "Create or verify the sealed attempt worktree at its claim-time base.
+   Failed attempts are deliberately retained as evidence."
+  [{:keys [target-repository target-worktree canonical-base-sha repair-id attempt]}]
+  (let [worktree-file (io/file target-worktree)
+        branch (str "self-heal/"
+                    (str/replace repair-id #"[^A-Za-z0-9._-]" "-") "/" attempt)]
+    (if (.exists (io/file worktree-file ".git"))
+      (let [head (:out (git target-worktree "rev-parse" "HEAD"))]
+        (if (= canonical-base-sha head)
+          {:status :present :path target-worktree :branch branch :base-sha head}
+          {:status :refused :reason :author-worktree-base-mismatch
+           :path target-worktree :expected canonical-base-sha :actual head}))
+      (do
+        (.mkdirs (.getParentFile worktree-file))
+        (let [created (git target-repository "worktree" "add" "-b" branch
+                           target-worktree canonical-base-sha)]
+          (if (:ok? created)
+            {:status :created :path target-worktree :branch branch
+             :base-sha canonical-base-sha}
+            {:status :refused :reason :author-worktree-create-failed
+             :path target-worktree :base-sha canonical-base-sha
+             :detail (:err created)}))))))
+
 (defn enact!
   "Verify the reviewed patch is integrated on canonical HEAD, then reload only its changed
    Clojure sources through the serving JVM's recorded reload authority."
@@ -838,7 +863,9 @@
      :reviewer-session (claim-session (:reviewer cast))
      :repair-reviewer-session (claim-session (:repair-reviewer cast))
      :target-repository repo
-     :target-worktree repo}))
+     :target-worktree-root default-self-heal-worktree-root
+     :canonical-base-sha (when (nonblank? repo)
+                           (:out (git repo "rev-parse" "HEAD")))}))
 
 (defn ports
   "Resolve concrete ports after a successful readiness check. Retry only
@@ -857,6 +884,7 @@
                                  %)
        :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) :acceptance-review %)
        :repair-enact-fn enact!
+       :repair-worktree-fn ensure-author-worktree!
        :retry-click-id-fn retry-click-id
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]

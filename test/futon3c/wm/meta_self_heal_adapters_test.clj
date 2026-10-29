@@ -765,9 +765,28 @@
     (is (not= sessions (map again [:author-session :reviewer-session
                                    :repair-reviewer-session]))
         "sessions are fresh per call, so a later claim never reuses them")
-    (is (= (:repo env) (:target-repository identities) (:target-worktree identities)))
+    (is (= (:repo env) (:target-repository identities)))
+    (is (= sut/default-self-heal-worktree-root (:target-worktree-root identities)))
+    (is (re-matches #"[0-9a-f]{40}" (:canonical-base-sha identities)))
     (is (= :refused (:status refused)))
     (is (= [:work-order/invalid] (:defects refused)))))
+
+(deftest author-worktree-is-created-at-claim-head-and-retained
+  (let [{:keys [repo tracked]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "self-heal-author-worktrees"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/repair/test/1")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/test" :attempt 1}
+        created (sut/ensure-author-worktree! order)]
+    (is (= :created (:status created)))
+    (is (= base (str/trim (:out (clojure.java.shell/sh "git" "-C" worktree
+                                                      "rev-parse" "HEAD")))))
+    (spit (io/file worktree "tracked.txt") "failed authored attempt\n")
+    (is (= "committed\n" (slurp tracked)) "canonical main remains byte-identical")
+    (is (.exists (io/file worktree ".git")) "failed-attempt evidence is retained")))
 
 (deftest producer-invoke-retries-once-after-a-provider-rate-limit
   "Clicks wm-click-36b47627 and wm-click-fdc08aea (2026-10-19): each was spent
