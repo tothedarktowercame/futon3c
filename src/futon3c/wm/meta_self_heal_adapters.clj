@@ -681,7 +681,7 @@
                 (re-matches command-name-pattern (nth command 3))
                 (re-matches command-name-pattern (nth command 5))))))
 
-(defn- source-location [{:keys [namespace path text]}]
+(defn- source-location [{:keys [namespace path text sha256]}]
   (let [segments (when (string? namespace) (str/split namespace #"\." -1))
         valid? (and (seq segments)
                     (every? #(and (re-matches command-name-pattern %)
@@ -697,7 +697,8 @@
                        (.startsWith (.toPath file) (.toPath test-root))
                        (not= file test-root))]
     (when (and confined? (= derived path) (string? text))
-      {:file file :test-root test-root :derived derived :text text})))
+      {:file file :test-root test-root :derived derived :text text
+       :sha256 (or sha256 (hex-sha256 (.getBytes text "UTF-8")))})))
 
 (defn- create-parent-dirs! [^java.io.File parent]
   (let [missing (loop [dir parent acc []]
@@ -802,12 +803,18 @@
    review and records evidence; it neither interprets :expected nor claims
    acceptance."
   [timeout-ms {:keys [id command source]}]
-  (let [location (source-location source)]
+  (let [location (source-location source)
+        file ^java.io.File (:file location)
+        existing? (boolean (and file (.isFile file)))
+        existing-sha (when existing?
+                       (hex-sha256 (java.nio.file.Files/readAllBytes
+                                    (.toPath file))))]
     (cond
     (not location)
     {:status :failed :reason :meta-self-heal/acceptance-source-path-refused}
-    (.exists ^java.io.File (:file location))
-    {:status :failed :reason :meta-self-heal/acceptance-source-path-refused}
+    (and existing? (not= (:sha256 location) existing-sha))
+    {:status :failed :reason :meta-self-heal/acceptance-source-conflict
+     :path (:derived location) :expected (:sha256 location) :actual existing-sha}
     (not (nonblank? id)) {:status :failed :reason :acceptance-test-id-invalid}
     (not (admissible-acceptance-command? command))
     {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
@@ -816,18 +823,19 @@
     {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
      :command command}
     :else
-    (let [file ^java.io.File (:file location)
-          created-dirs (create-parent-dirs! (.getParentFile file))
+    (let [created-dirs (when-not existing?
+                         (create-parent-dirs! (.getParentFile file)))
           result (atom nil)]
       (try
-        (spit file (:text location))
+        (when-not existing? (spit file (:text location)))
         (reset! result (launch-bounded-acceptance! timeout-ms id command))
         (catch Throwable t
           (reset! result {:status :failed :reason :acceptance-runner-error
                           :summary (or (.getMessage t) (.getName (class t))) }))
         (finally
-          (remove-materialized! file created-dirs)))
-      (assoc @result :source-clean? (not (.exists file)))))))
+          (when-not existing? (remove-materialized! file created-dirs))))
+      (assoc @result :source-clean? (not (.exists file))
+             :source-retained? existing?)))))
 
 (defn retry-click-id
   "Mint a retry identity from repair, attempt, ordinal and the full patch SHA.

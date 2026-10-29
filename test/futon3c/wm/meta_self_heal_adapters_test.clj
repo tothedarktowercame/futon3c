@@ -634,7 +634,7 @@
                              :source {:namespace "fixture.acceptance-test"
                                       :path "test/fixture/acceptance_test.clj"
                                       :text "source"}})))))
-      (testing "an existing source is refused and untouched"
+      (testing "a conflicting existing source is refused and untouched"
         (let [file (io/file root "test/fixture/existing_test.clj")
               original (.getBytes "original bytes\n" "UTF-8")
               _ (.mkdirs (.getParentFile file))
@@ -643,9 +643,34 @@
                                  :command ["clojure" "-M:test" "-n" "fixture.existing-test"]
                                  :source {:namespace "fixture.existing-test"
                                           :path "test/fixture/existing_test.clj"
-                                          :text "replacement"}})]
-          (is (= :meta-self-heal/acceptance-source-path-refused (:reason result)))
+                                          :text "replacement"
+                                          :sha256 (#'sut/hex-sha256
+                                                   (.getBytes "replacement" "UTF-8"))}})]
+          (is (= :meta-self-heal/acceptance-source-conflict (:reason result)))
+          (is (not= (:expected result) (:actual result)))
           (is (= (seq original) (seq (.getBytes (slurp file) "UTF-8"))))))
+      (testing "an identical committed source runs in place and remains"
+        (let [file (io/file root "test/fixture/committed_test.clj")
+              text (str "(ns fixture.committed-test "
+                        "(:require [clojure.test :refer [deftest is]]))\n"
+                        "(deftest committed-source (is true))\n")
+              bytes (.getBytes text "UTF-8")
+              _ (spit file text)
+              result (with-redefs [sut/launch-bounded-acceptance!
+                                   (fn [& _] {:status :ran :outcome :passed
+                                              :exit 0 :summary "green"})]
+                       (port 60000 {:id "committed"
+                                    :command ["clojure" "-M:test" "-n"
+                                              "fixture.committed-test"]
+                                    :source {:namespace "fixture.committed-test"
+                                             :path "test/fixture/committed_test.clj"
+                                             :text text
+                                             :sha256 (#'sut/hex-sha256 bytes)}}))]
+          (is (= [:ran :passed 0]
+                 ((juxt :status :outcome :exit) result)))
+          (is (true? (:source-retained? result)))
+          (is (.isFile file))
+          (is (= (seq bytes) (seq (.getBytes (slurp file) "UTF-8"))))))
       (testing "a namespace-derived path outside test is refused"
         (is (= :meta-self-heal/acceptance-source-path-refused
                (:reason (port 1000 {:id "escape"
@@ -696,6 +721,43 @@
          (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"])))
   (is (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"]
          (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))))
+
+(deftest acceptance-run-existing-source-identity-controls-materialization
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "acceptance-existing-source"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        runs (atom 0)
+        launch (fn [_ _ _]
+                 (swap! runs inc)
+                 {:status :ran :outcome :passed :exit 0 :summary "green"})
+        invoke (fn [source]
+                 (#'sut/run-acceptance! 1000
+                    {:id "source-identity"
+                     :command ["clojure" "-M:test" "-n" (:namespace source)]
+                     :source source}))
+        text "(ns fixture.identity-test)\n"
+        bytes (.getBytes text "UTF-8")
+        source {:namespace "fixture.identity-test"
+                :path "test/fixture/identity_test.clj"
+                :text text :sha256 (#'sut/hex-sha256 bytes)}
+        file (io/file root (:path source))]
+    (binding [sut/*acceptance-repository* (.getPath root)]
+      (with-redefs [sut/launch-bounded-acceptance! launch]
+        (let [absent (invoke source)]
+          (is (= :ran (:status absent)))
+          (is (true? (:source-clean? absent)))
+          (is (not (.exists file))))
+        (.mkdirs (.getParentFile file))
+        (spit file text)
+        (let [identical (invoke source)]
+          (is (= :ran (:status identical)))
+          (is (true? (:source-retained? identical)))
+          (is (= text (slurp file))))
+        (spit file "(ns fixture.changed-test)\n")
+        (let [conflict (invoke source)]
+          (is (= :meta-self-heal/acceptance-source-conflict (:reason conflict)))
+          (is (= "(ns fixture.changed-test)\n" (slurp file))))
+        (is (= 2 @runs) "the conflicting source never launches")))))
 
 (deftest acceptance-review-prompt-describes-pre-repair-result
   (let [prompt (#'sut/producer-prompt :acceptance-review {:result {:status :ran}})]
