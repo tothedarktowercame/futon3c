@@ -109,7 +109,7 @@
                          open-items)
         edge-sources (frequencies (map #(or (:source %) :unrecorded) edges))
         reject-reasons (frequencies (map :reject adapter-rejected))
-        blockers (sort (for [[id r] readiness
+        blockers (sort-by :id (for [[id r] readiness
                              :when (= :blocker-cancelled (:flag r))]
                          {:id id :blockers (:blockers r)
                           :evidence (:evidence r)}))]
@@ -226,6 +226,8 @@
         input-entry (assoc (write! "input.edn" (print-edn input))
                            :bytes input-bytes)
         rejected-entry (write! "rejected.edn" (print-edn rejected))
+        excluded-entry (when (contains? adapter-result :excluded)
+                         (write! "excluded.edn" (print-edn (:excluded adapter-result))))
         pass-entry (write! "pass.edn" (print-edn pass-output))
         report-entry (write! "report.md"
                              (report {:input input
@@ -233,8 +235,9 @@
                                       :pass pass-output}))
         manifest {:run-id run-id
                   :git-sha (or git-sha (git-head-sha))
-                  :files [(dissoc input-entry :bytes)
-                          rejected-entry pass-entry report-entry]
+                  :files (cond-> [(dissoc input-entry :bytes)
+                                  rejected-entry pass-entry report-entry]
+                           excluded-entry (conj excluded-entry))
                   :sources (cond-> {}
                              index-file (assoc :tickets-index
                                                {:path (str index-file)

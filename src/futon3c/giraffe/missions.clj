@@ -1,45 +1,14 @@
 (ns futon3c.giraffe.missions
-  "M-giraffe stage 1, packet 6: the mission-docs source adapter.
-
-  Follows the tickets adapter (packet 2) and the mission-history
-  discovery (packet 5).  M-giraffe §\"Stage 1, mission-docs source\"
-  (2026-10-28) decided the retrospective cone test cannot run on git
-  history (the 2026-09-30 bulk closure sweep), so the test runs
-  forward; this adapter is the mission-docs source for it.
-
-  Items: every holes/missions/M-*.md under the given repo roots (the
-  canonical checkouts of packet 5; worktree copies excluded by which
-  roots the caller passes).  id = file name without .md; if two repos
-  have the same id both rows are rejected (:item/duplicate-id) — one
-  is never picked.  :repo and :file (workspace-relative, e.g.
-  \"futon2/holes/missions/M-x.md\") stay on the item;
-  :source-order is repo name then file name.
-
-  Status -> state group: the packet-5 rules plus the mapping fixed in
-  M-giraffe §\"Status mapping for mission docs\" (Ready/Blocked
-  on/:scoped/... -> unstarted; HEAD/:review/PARTIAL/... -> started;
-  DELIVERED/ANSWERED/IMPLEMENTED/ACCEPTED -> completed).  Rules are
-  matched against the status text's leading phrase (cut at the first
-  em-dash, semicolon, parenthesis or sentence end) so prose after the
-  marker — e.g. \"OPEN — ... not done in stage 1 ...\" — cannot flip
-  the group.  Anything unmatched stays unmapped: :state-group
-  :unstarted plus :status-unmapped, listed, never guessed.
-
-  Edges: the same JSON shape as holes/tickets/giraffe-edges.json, but
-  \"file\" is a workspace-relative path so a quote can be checked in
-  any repo.  The quote check is the tickets adapter's (reused, not
-  copied).  A target that is a mission id (M-...) resolves to an item;
-  T- ticket ids and anything else are external needs.
-
-  Missing-column invariant (M-giraffe §DERIVE): an edge whose quoted
-  line sits inside a markdown table whose header row contains
-  \"Missing\" is rejected (:edge/own-missing-column) — the mission's
-  own work, not a dependency.  The table is detected from the cited
-  file, never from the edges file's say-so."
+  "Mission graph adapter. Population, path/status grammar and liveness come
+  from mission-registry's shared file reader. Closed/inactive items remain
+  graph nodes; their exclusion receipts are separate from the open pass.
+  Legacy status->group is used only to rank live work as started/unstarted.
+  Cross-type graph admission remains outside this mission-only adapter."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.giraffe.tickets :as gt]))
+            [futon3c.giraffe.tickets :as gt]
+            [futon2.aif.mission-registry :as registry]))
 
 (def default-repos
   "The canonical checkouts scanned in packet 5 (futon1/1a/1b exist but
@@ -90,51 +59,31 @@
 
 (defn- repo-name [root] (.getName (io/file root)))
 
-(defn- mission-files
-  "Sorted M-*.md paths under one repo's holes/missions."
-  [root]
-  (let [dir (io/file root "holes/missions")]
-    (when (.isDirectory dir)
-      (->> (file-seq dir)
-           (filter #(.isFile ^java.io.File %))
-           (map #(str %))
-           (filter #(re-find #"/M-[^/]+\.md$" %))
-           sort))))
+(defn- mission-items [repos]
+  (let [rows (:missions (registry/load-missions-from-repos repos))
+        roots (mapv #(vector (.toPath (.getAbsoluteFile (io/file %)))
+                             (repo-name %)) repos)
+        rows (map (fn [m]
+                    (let [path (.toPath (io/file (:path m)))
+                          [root repo] (first (filter #(.startsWith path (first %)) roots))]
+                      (assoc m :repo repo :file (str repo "/" (.relativize root path))))) rows)]
+    (mapv (fn [i m]
+            (let [live? (registry/live-mission? m)
+                  rank (status->group (:status-line m))]
+              (cond-> {:id (keyword (:id m)) :repo (:repo m) :file (:file m)
+                       :source-order i :source-pin (:source m)
+                       :registry-status (:status-class m)
+                       :state-group (if live?
+                                      (if (= :started rank) :started :unstarted)
+                                      (if (= :complete (:status-class m)) :completed :cancelled))}
+                (:status-line m) (assoc :declared-status (:status-line m))
+                (not live?) (assoc :exclusion {:id (:id m) :reason (:status-class m)
+                                             :status-line (:status-line m)
+                                             :source (:source m)
+                                             :operator-gate-lines (:operator-gate-lines m)})
+                (= :unknown (:status-class m)) (assoc :status-unmapped (or (:status-line m) :status/missing)))))
+          (range) (sort-by (juxt :repo :file) rows))))
 
-(defn- declared-status
-  "Raw text of the first '**Status:**' line, or nil."
-  [path]
-  (some #(when-let [m (re-matches #"\*\*Status:\*\*(.*)" (str/trim %))]
-           (str/trim (second m)))
-        (str/split-lines (slurp path))))
-
-(defn- mission-items
-  "One row per mission doc across all repos, sorted by repo name then
-  file name; :source-order is that order."
-  [repos]
-  (let [rows (sort-by (juxt :repo :file)
-                      (mapcat (fn [root]
-                                (let [repo (repo-name root)]
-                                  (map (fn [path]
-                                         (let [f (.getName (io/file path))]
-                                           {:repo repo
-                                            :file (str repo "/holes/missions/" f)
-                                            :path path
-                                            :id (keyword (str/replace f #"\.md$" ""))}))
-                                       (mission-files root))))
-                              repos))]
-    (vec (map-indexed
-          (fn [i {:keys [repo file path id]}]
-            (let [status (declared-status path)
-                  group (status->group status)]
-              (cond-> {:id id
-                       :state-group (or group :unstarted)
-                       :source-order i
-                       :repo repo
-                       :file file}
-                status (assoc :declared-status status)
-                (nil? group) (assoc :status-unmapped (or status :status/missing)))))
-          rows))))
 (defn- repo-roots-by-name [repos]
   (into {} (map (fn [root] [(repo-name root) root]) repos)))
 
@@ -244,23 +193,9 @@
         kept (if only-ids
                (vec (filter #(contains? only-ids (:id %)) rows))
                rows)
-        id-counts (frequencies (map :id kept))
-        dup-ids (set (for [[id n] id-counts :when (> n 1)] id))
-        ;; a doc with no Status line is not counted as an open mission
-        ;; (claude-13, 2026-10-28): it is rejected, typed, and listed
-        no-status? #(= :status/missing (:status-unmapped %))
-        items (vec (map #(dissoc % :path)
-                        (remove #(or (contains? dup-ids (:id %)) (no-status? %)) kept)))
-        rejects (vec (for [row (sort-by (juxt :repo :file) kept)
-                           :when (contains? dup-ids (:id row))]
-                       {:reject :item/duplicate-id
-                        :id (:id row) :repo (:repo row) :file (:file row)}))
-        rejects (into rejects
-                      (for [row (sort-by (juxt :repo :file) kept)
-                            :when (and (no-status? row)
-                                       (not (contains? dup-ids (:id row))))]
-                        {:reject :item/no-status-line
-                         :id (:id row) :repo (:repo row) :file (:file row)}))
+        items (mapv #(dissoc % :exclusion) kept)
+        exclusions (vec (keep :exclusion kept))
+        rejects []
         item-ids (set (map :id items))
         repos-by-name (repo-roots-by-name repos)
         edges-json (json/parse-string (slurp (str edges-file)) keyword)
@@ -272,14 +207,15 @@
                       (:rejected edges-json))
         unmapped (vec (for [it items :when (:status-unmapped it)]
                         {:id (:id it) :status-unmapped (:status-unmapped it)}))
-        item-statuses (distinct (keep :declared-status items))
-        status-mapping (vec (for [s item-statuses]
-                              {:status s
-                               :group (status->group s)
-                               :mapped? (some? (status->group s))}))]
+        status-mapping (vec (distinct (map (fn [it]
+                                             {:status (:declared-status it)
+                                              :registry-status (:registry-status it)
+                                              :group (:state-group it)
+                                              :mapped? (not= :unknown (:registry-status it))}) items)))]
     {:input {:as-of (str (java.time.LocalDate/now))
              :items items
              :edges edges}
      :rejected (vec (concat rejects edge-rejects carried))
+     :excluded exclusions
      :status-mapping status-mapping
      :unmapped-statuses unmapped}))
