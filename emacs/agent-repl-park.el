@@ -70,14 +70,15 @@ Mode symbols do not load their defining libraries; an absent frontend is inert."
   (when (stringp park-id)
     (ring-insert agent-repl-park--seen-ids park-id)))
 
-(cl-defun agent-repl-park--ack (park-id)
+(cl-defun agent-repl-park--ack (park-id &optional api-url)
   "POST /api/alpha/parked/ready/ack for PARK-ID (confirm delivery, clear lease).
 Best-effort: failure means the server will redeliver after the lease deadline,
 and the dedup ring will skip the duplicate, so correctness is preserved even
 when the ACK is lost."
   (ignore-errors
     (let ((url (format "%s/api/alpha/parked/ready/ack"
-                       (string-remove-suffix "/" claude-repl-api-url)))
+                       (string-remove-suffix
+                        "/" (or api-url claude-repl-api-url))))
           (url-request-method "POST")
           (url-request-extra-headers '(("Content-Type" . "application/json")))
           (url-request-data (format "{\"park-id\":\"%s\"}" park-id)))
@@ -87,7 +88,7 @@ when the ACK is lost."
                                              (ignore)
                                            (when (buffer-live-p buf) (kill-buffer buf)))))))))
 
-(defun agent-repl-park--resume-in-buffer (buf prompt park-id)
+(defun agent-repl-park--resume-in-buffer (buf prompt park-id &optional api-url)
   "Resume the parked turn in BUF as its own unsolicited continuation turn.
 Bug 2 (E-park-delivery-losses): the busy gate is now SERVER-SIDE —
 handle-parked-ready checks the registry's :invoking status before leasing, so a
@@ -104,7 +105,7 @@ reply slot."
      ((and (stringp park-id) (agent-repl-park--seen-p park-id))
       (message "[park] skipping duplicate park %s in %s (already handled)"
                park-id (buffer-name buf))
-      (agent-repl-park--ack park-id))            ; clear the stale lease
+      (agent-repl-park--ack park-id api-url))    ; clear the stale lease
      (t
       (with-current-buffer buf
         (setq agent-repl-park--last (list :park-id park-id :buffer (buffer-name buf)))
@@ -125,7 +126,7 @@ reply slot."
                     (list :kind "harness" :actor "parked-resume" :source-id park-id))
                    ;; Bug 3: ACK delivery after send returns without error. If the
                    ;; ACK is lost, the server redelivers; the dedup ring skips it.
-                   (agent-repl-park--ack park-id))
+                   (agent-repl-park--ack park-id api-url))
           (message "[park] resume available in %s, but auto-send is disabled"
                    (buffer-name buf))))))))
 
@@ -190,6 +191,16 @@ missed tick."
 (defvar-local agent-repl-followup--poll-inflight nil
   "Time an async followup poll started for this buffer, or nil.")
 
+(defvar agent-repl-park--batch-inflight nil
+  "Batch poll state plist `(:started TIME :pending N)', or nil.")
+
+(defvar agent-repl-park--batch-disabled-until (make-hash-table :test #'equal)
+  "API URL to time before which the 404 batch fallback remains active.")
+
+(defcustom agent-repl-park-batch-retry-seconds 300
+  "Seconds after a batch-route 404 before trying the route again."
+  :type 'number :group 'agent-repl-park)
+
 (defun agent-repl-park--latch-held-p (started)
   "Non-nil when STARTED marks a poll still plausibly in flight.
 
@@ -248,6 +259,31 @@ interval before reaping guarantees the sentinel has had its turn."
                                          (string-remove-suffix "/" api-url))
                                  (lambda (_status) (kill-buffer (current-buffer)))))))
 
+(defun agent-repl-park--deliver-ready (buf response api-url)
+  "Deliver the first parked item in RESPONSE to BUF, ACKing via API-URL."
+  (let ((ready (plist-get response :ready)))
+    (when (and (vectorp ready) (> (length ready) 0) (buffer-live-p buf))
+      (let ((item (aref ready 0)))
+        (agent-repl-park--resume-in-buffer
+         buf (plist-get item :prompt) (plist-get item :park-id) api-url)))))
+
+(defun agent-repl-followup--deliver-ready (buf response api-url)
+  "Deliver the first followup item in RESPONSE to BUF, ACKing via API-URL."
+  (let ((ready (plist-get response :ready)))
+    (when (and (vectorp ready) (> (length ready) 0) (buffer-live-p buf))
+      (let* ((item (aref ready 0))
+             (id (plist-get item :followup-id)))
+        (unless (agent-repl-park--seen-p id)
+          (agent-repl-park--remember! id)
+          (with-current-buffer buf
+            (agent-chat-send-unsolicited-input
+             (agent-repl-capability :sender)
+             (or (agent-repl-capability :agent-name) "agent")
+             (plist-get item :prompt) "followup"
+             (agent-repl-capability :hooks)
+             (list :kind "harness" :actor "followup" :source-id id))))
+        (agent-repl-followup--ack id api-url)))))
+
 (defun agent-repl-followup--poll-buffer-async (buf)
   "Poll and deliver one typed external followup to BUF."
   (with-current-buffer buf
@@ -277,20 +313,8 @@ interval before reaping guarantees the sentinel has had its turn."
                                      (buffer-substring-no-properties (point) (point-max))
                                      :object-type 'plist :null-object nil :false-object nil)))
                             (ready (plist-get json :ready)))
-                       (when (and (vectorp ready) (> (length ready) 0)
-                                  (buffer-live-p buf))
-                         (let* ((item (aref ready 0))
-                                (id (plist-get item :followup-id)))
-                           (unless (agent-repl-park--seen-p id)
-                             (agent-repl-park--remember! id)
-                             (with-current-buffer buf
-                               (agent-chat-send-unsolicited-input
-                                (agent-repl-capability :sender)
-                                (or (agent-repl-capability :agent-name) "agent")
-                                (plist-get item :prompt) "followup"
-                                (agent-repl-capability :hooks)
-                                (list :kind "harness" :actor "followup" :source-id id))))
-                           (agent-repl-followup--ack id api-url))))))
+                       (when ready
+                        (agent-repl-followup--deliver-ready buf json api-url)))))
                (when (buffer-live-p response-buffer) (kill-buffer response-buffer))))))))))
 
 (defun agent-repl-park--poll-buffer-async (buf)
@@ -326,11 +350,141 @@ synchronous GET is what made you reach for C-g)."
                                     (json-parse-string body :object-type 'plist
                                                        :null-object nil :false-object nil)))
                             (ready (plist-get json :ready)))
-                       (when (and (vectorp ready) (> (length ready) 0) (buffer-live-p buf))
-                         (let ((item (aref ready 0)))    ; one per poll; extras next tick
-                           (agent-repl-park--resume-in-buffer
-                            buf (plist-get item :prompt) (plist-get item :park-id)))))))
+                       (when ready
+                         (agent-repl-park--deliver-ready buf json api-url)))))
                (when (buffer-live-p resp-buf) (kill-buffer resp-buf))))))))))
+
+(defun agent-repl-park--eligible-buffers ()
+  "Return the buffers the periodic ready-inbox poll may consume for."
+  (seq-filter
+   (lambda (buf)
+     (and (buffer-live-p buf)
+          (with-current-buffer buf
+            (and (memq major-mode (agent-repl-park--eligible-modes))
+                 (agent-repl-drivable-p major-mode)))))
+   (buffer-list)))
+
+(defun agent-repl-park--seat (buf)
+  "Return BUF's `(API-URL AGENT SESSION BUF)' batch seat."
+  (with-current-buffer buf
+    (list (string-remove-suffix
+           "/" (or (bound-and-true-p claude-repl-api-url)
+                   (agent-repl-api-base-url)))
+          (or (bound-and-true-p agent-chat--agent-id)
+              (bound-and-true-p claude-repl-agent-id) "")
+          (or agent-chat--session-id "")
+          buf)))
+
+(defun agent-repl-park--group-seats (seats)
+  "Group SEATS by API URL, retaining buffer order within each group."
+  (let (groups)
+    (dolist (seat seats)
+      (let* ((api-url (car seat))
+             (cell (assoc api-url groups)))
+        (if cell
+            (setcdr cell (append (cdr cell) (list seat)))
+          (setq groups (append groups (list (list api-url seat)))))))
+    groups))
+
+(defun agent-repl-park--http-status ()
+  "Return the current response buffer's HTTP status, or nil."
+  (or (and (boundp 'url-http-response-status) url-http-response-status)
+      (save-excursion
+        (goto-char (point-min))
+        (and (looking-at "HTTP/[0-9.]+ \\([0-9]+\\)")
+             (string-to-number (match-string 1))))))
+
+(defun agent-repl-park--response-json ()
+  "Parse the current HTTP response body as plist JSON, or return nil."
+  (goto-char (point-min))
+  (when (re-search-forward "\r?\n\r?\n" nil t)
+    (ignore-errors
+      (json-parse-string (buffer-substring-no-properties (point) (point-max))
+                         :object-type 'plist :null-object nil :false-object nil))))
+
+(defun agent-repl-park--batch-fallback-p (api-url)
+  "Non-nil while API-URL's batch-route 404 fallback is active."
+  (let ((until (gethash api-url agent-repl-park--batch-disabled-until)))
+    (and until (> until (float-time)))))
+
+(defun agent-repl-park--finish-batch-request ()
+  "Release one request from the global batch in-flight latch."
+  (when agent-repl-park--batch-inflight
+    (let ((pending (1- (plist-get agent-repl-park--batch-inflight :pending))))
+      (if (> pending 0)
+          (setq agent-repl-park--batch-inflight
+                (plist-put agent-repl-park--batch-inflight :pending pending))
+        (setq agent-repl-park--batch-inflight nil)))))
+
+(defun agent-repl-park--deliver-batch-seat (requested response-seats api-url)
+  "Deliver REQUESTED seat from RESPONSE-SEATS using API-URL."
+  (let* ((agent (nth 1 requested))
+         (session (nth 2 requested))
+         (buf (nth 3 requested))
+         (response
+          (seq-find (lambda (seat)
+                      (and (equal agent (plist-get seat :agent))
+                           (equal session (plist-get seat :session))))
+                    response-seats)))
+    (when response
+      (agent-repl-park--deliver-ready buf (plist-get response :parked) api-url)
+      (agent-repl-followup--deliver-ready buf (plist-get response :followups) api-url))))
+
+(defun agent-repl-park--poll-batch-group-async (api-url seats)
+  "Issue one batch request for SEATS at API-URL."
+  (let ((url-request-method "POST")
+        (url-request-extra-headers '(("Content-Type" . "application/json")))
+        (url-request-data
+         (json-serialize
+          (list :seats
+                (vconcat
+                 (mapcar (lambda (seat)
+                           (list :agent (nth 1 seat) :session (nth 2 seat)))
+                         seats))))))
+    (agent-repl-park--retrieve
+     (format "%s/api/alpha/ready/batch" api-url)
+     (lambda (status)
+       (let ((response-buffer (current-buffer)))
+         (unwind-protect
+             (unless (plist-get status :error)
+               (let ((http-status (agent-repl-park--http-status)))
+                 (cond
+                  ((eq http-status 404)
+                   (puthash api-url
+                            (+ (float-time) agent-repl-park-batch-retry-seconds)
+                            agent-repl-park--batch-disabled-until))
+                  ((eq http-status 200)
+                   (let* ((json (agent-repl-park--response-json))
+                          (response-seats (plist-get json :seats)))
+                     (when (vectorp response-seats)
+                       (dolist (seat seats)
+                         (agent-repl-park--deliver-batch-seat
+                          seat response-seats api-url))))))))
+           (agent-repl-park--finish-batch-request)
+           (when (buffer-live-p response-buffer) (kill-buffer response-buffer))))))))
+
+(defun agent-repl-park--poll-batch-async ()
+  "Poll all eligible buffers, issuing at most one request per API URL."
+  (unless (agent-repl-park--latch-held-p
+           (plist-get agent-repl-park--batch-inflight :started))
+    (setq agent-repl-park--batch-inflight nil)
+    (let* ((seats (mapcar #'agent-repl-park--seat
+                          (agent-repl-park--eligible-buffers)))
+           (groups (agent-repl-park--group-seats seats))
+           batch-groups)
+      (dolist (group groups)
+        (let ((api-url (car group))
+              (group-seats (cdr group)))
+          (if (agent-repl-park--batch-fallback-p api-url)
+              (dolist (seat group-seats)
+                (agent-repl-park--poll-buffer-async (nth 3 seat))
+                (agent-repl-followup--poll-buffer-async (nth 3 seat)))
+            (push group batch-groups))))
+      (when batch-groups
+        (setq agent-repl-park--batch-inflight
+              (list :started (current-time) :pending (length batch-groups)))
+        (dolist (group (nreverse batch-groups))
+          (agent-repl-park--poll-batch-group-async (car group) (cdr group)))))))
 
 (defun agent-repl-park--poll-once ()
   "Poll every participating REPL buffer's ready-inbox asynchronously.
@@ -340,15 +494,7 @@ checks the registry's :invoking status.  The old
 so it has been removed.  The server withholds items from busy agents; the
 buffer polls unconditionally and trusts that gate."
   (agent-repl-park--reap-dead-url-processes)
-  (dolist (buf (buffer-list))
-    (when (buffer-live-p buf)
-      (with-current-buffer buf
-        (when (and (memq major-mode (agent-repl-park--eligible-modes))
-                   ;; The ready-inbox is POLL-AND-CONSUME: never poll a buffer
-                   ;; we could not then drive, or the item is destroyed.
-                   (agent-repl-drivable-p major-mode))
-          (agent-repl-park--poll-buffer-async buf)
-          (agent-repl-followup--poll-buffer-async buf))))))
+  (agent-repl-park--poll-batch-async))
 
 ;;;; Enable / disable ---------------------------------------------------------
 
