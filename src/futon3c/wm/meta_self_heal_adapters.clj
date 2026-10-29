@@ -41,7 +41,9 @@
    "FUTON_WM_PHASE_REPLAY_INPUT_ROOT" (str (io/file root "phase-replay-inputs"))
    "FUTON_WM_LEARNING_TRIAL_LEDGER_ROOT" (str (io/file root "learning-ledger"))
    "FUTON_WM_MORNING_BRIEF_ROOT" (str (io/file root "morning-brief"))
-   "FUTON_WM_META_INJURY_ROOT" (str (io/file root "meta-injuries"))})
+   "FUTON_WM_META_INJURY_ROOT" (str (io/file root "meta-injuries"))
+   "FUTON_WM_REPAIR_OBLIGATION_ROOT" (str (io/file root "repair-obligations"))
+   "FUTON_WM_TICKET_PUBLICATION_ROOT" (str (io/file root "ticket-publication"))})
 
 (defn- remove-tree! [root]
   (doseq [file (reverse (file-seq (io/file root)))]
