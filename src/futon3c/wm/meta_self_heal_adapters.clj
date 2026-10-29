@@ -568,6 +568,18 @@
                             source-repair (assoc :source-repair source-repair)
                             transport-retry
                             (assoc :transport-retry transport-retry))
+      (= :unreadable (:status final-source-read))
+      (cond-> {:status :failed
+               :reason :meta-self-heal/acceptance-static-source-unreadable
+               :static-diagnostics
+               [{:type :reader
+                 :message (:error final-source-read)
+                 :line (:line final-source-read)
+                 :col (:col final-source-read)}]
+               :proposed-source (get-in parsed [:acceptance-test :source :text])}
+        source-retry (assoc :source-retry source-retry)
+        source-read-error (assoc :source-read-error source-read-error)
+        transport-retry (assoc :transport-retry transport-retry))
       :else (cond-> parsed
               read-retry (assoc :read-retry read-retry)
               read-repair (assoc :read-repair read-repair)
