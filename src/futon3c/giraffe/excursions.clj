@@ -78,11 +78,14 @@
         evidence (:reading-evidence input)
         ;; Missing/unresolved/out-of-scope prerequisites remain unknown for their
         ;; reading member. Non-prerequisite links do not enter readiness.
-        unknowns (set (concat (map :reading-member (:rejected evidence))
-                             (map :reading-member (filter #(#{"depends-on" "unblocks"} (:kind %))
-                                                          (:unresolved evidence)))
-                             (map :reading-member (filter #(= "depends-on" (:kind %))
-                                                          (:out-of-scope evidence)))))
+        missing (group-by :reading-member
+                          (concat
+                           (map #(assoc % :absence :rejected-dependency-reading) (:rejected evidence))
+                           (map #(assoc % :absence :unresolved-prerequisite)
+                                (filter #(#{"depends-on" "unblocks"} (:kind %)) (:unresolved evidence)))
+                           (map #(assoc % :absence :out-of-scope-prerequisite)
+                                (filter #(= "depends-on" (:kind %)) (:out-of-scope evidence)))))
+        unknowns (set (keys missing))
         scope {:scope :population/missions-excursions
                :population-sha (:population-sha coverage)
                :coverage (select-keys coverage [:status :member-count :counts :checker-sha])}
@@ -90,7 +93,12 @@
                      (let [item (get items (:id row))
                            unknown? (or incomplete? (contains? unknowns (name (:id row))))]
                        (cond-> (assoc row :dependency-reading (:dependency-reading item)
-                                          :graph-terms (assoc scope :status (if unknown? :unknown :known)))
+                                          :graph-terms (cond-> (assoc scope :status (if unknown? :unknown :known))
+                                                         unknown? (assoc :reason (if incomplete?
+                                                                                  :population-reading-incomplete
+                                                                                  :prerequisite-unresolved)
+                                                                         :prerequisites (vec (get missing (name (:id row))))
+                                                                         :producer :dependency-reader-reviewer)))
                          (:completion item) (assoc :completion (:completion item))
                          unknown? (assoc :status :undetermined :reason :needs/dependency-reading
                                          :cone nil :unblocks nil)))) (:order base))
