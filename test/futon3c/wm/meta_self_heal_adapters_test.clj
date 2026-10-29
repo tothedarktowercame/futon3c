@@ -586,8 +586,11 @@
         port (fn [timeout-ms request]
                (#'sut/run-acceptance! timeout-ms request))]
     (spit (io/file root ".gitignore") ".cpcache/\n")
+    ;; Since 1082ee474 the acceptance port runs the admitted argv verbatim:
+    ;; the repo's own :test alias must own the runner entrypoint, as
+    ;; canonical futon2's does.
     (spit (io/file root "deps.edn")
-          "{:paths [\"test\"] :aliases {:test {:extra-deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}}}}}\n")
+          "{:paths [\"test\"] :aliases {:test {:main-opts [\"-m\" \"cognitect.test-runner\"] :extra-deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}}}}}\n")
     (doseq [args [["init" "-q"] ["config" "user.email" "wm@test"]
                   ["config" "user.name" "WM"] ["add" "."]
                   ["commit" "-qm" "fixture"]]]
