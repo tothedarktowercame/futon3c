@@ -1078,10 +1078,14 @@
        :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
        :meta-acceptance-fn #(acceptance-proposal! (:repository ready)
                                                   (:author (:cast ready)) %)
-       :meta-acceptance-run-fn #(run-acceptance!
-                                 (or (:meta-acceptance-timeout-ms opts)
-                                     default-acceptance-timeout-ms)
-                                 %)
+       :meta-acceptance-run-fn (fn [test]
+                                  (binding [*acceptance-repository*
+                                            (or (:execution-repository test)
+                                                *acceptance-repository*)]
+                                    (run-acceptance!
+                                     (or (:meta-acceptance-timeout-ms opts)
+                                         default-acceptance-timeout-ms)
+                                     (dissoc test :execution-repository))))
        :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) :acceptance-review %)
        :repair-enact-fn enact!
        :repair-worktree-fn ensure-author-worktree!

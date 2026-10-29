@@ -1661,3 +1661,16 @@
         (is (= 20 (get-in result [:read-retry :first-line])))
         (is (pos-int? (get-in result [:read-retry :first-col])))
         (is (= :succeeded (:status result)))))))
+
+(deftest acceptance-port-selects-counterfactual-repository-without-changing-source
+  (let [seen (atom [])
+        source {:id "cause-specific" :source {:text "exact bytes"}}]
+    (with-redefs-fn {#'sut/readiness (constantly {:status :ready})
+                    #'sut/run-acceptance! (fn [_ test]
+                                           (swap! seen conj [sut/*acceptance-repository* test]))}
+      (fn []
+        (let [run (:meta-acceptance-run-fn (sut/ports {:queue-retry-fn identity}))]
+          (binding [sut/*acceptance-repository* "/canonical"]
+            (run source)
+            (run (assoc source :execution-repository "/counterfactual"))))))
+    (is (= [["/canonical" source] ["/counterfactual" source]] @seen))))
