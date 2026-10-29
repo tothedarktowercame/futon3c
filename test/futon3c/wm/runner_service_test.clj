@@ -1200,10 +1200,10 @@
                   :another-typed-refusal]]
     (let [click-id (str "wm-requeue-2-2-repair/" (name reason))
           result {:reason-context :unchanged
-                  :runtime-disposition {:status :refused :reason reason}}
-          record {:schema :wm/click-state-v1 :click-id click-id :status :completed
+                  :runtime-disposition {:status :refused :reason reason}
                   :run-record-status :absent
-                  :run-record-absence :runner-did-not-return-run-record
+                  :run-record-absence :runner-did-not-return-run-record}
+          record {:schema :wm/click-state-v1 :click-id click-id :status :completed
                   :result result}
           bytes (str (pr-str record) "\n")
           file (write-acceptance! click-id bytes)
@@ -1216,16 +1216,17 @@
              (:evidence-pin observed)))))
   (testing "ordinary or conflicting completions remain unobserved"
     (doseq [[suffix extra]
-            [["ordinary" {:result {:outcome :cohort-complete}
-                           :run-record-status :present}]
-             ["present" {:result {:runtime-disposition {:reason :makeup-unavailable}}
-                         :run-record-status :present
-                         :run-record {:run/id "run/present"}}]
+            [["ordinary" {:result {:outcome :cohort-complete
+                                    :run-record-status :present}}]
+             ["present" {:result {:runtime-disposition {:reason :makeup-unavailable}
+                                   :run-record-status :present
+                                   :run-record {:run/id "run/present"}}}]
              ["conflict" {:result {:runtime-disposition
                                     {:reason :makeup-unavailable
-                                     :run-record-sha256 (apply str (repeat 64 "a"))}}
-                          :run-record-status :absent
-                          :run-record-absence :runner-did-not-return-run-record}]]]
+                                     :run-record-sha256 (apply str (repeat 64 "a"))}
+                                    :run-record-status :absent
+                                    :run-record-absence
+                                    :runner-did-not-return-run-record}}]]]
       (let [click-id (str "wm-requeue-2-2-repair/" suffix)
             record (merge {:schema :wm/click-state-v1 :click-id click-id
                            :status :completed}
@@ -1235,13 +1236,31 @@
   (testing "identity mismatch and garbage remain unobserved"
     (write-acceptance! "wm-requeue-2-2-repair/mismatch"
                        (pr-str {:schema :wm/click-state-v1 :click-id "someone-else"
-                                :status :completed :run-record-status :absent
-                                :run-record-absence :runner-did-not-return-run-record
+                                :status :completed
                                 :result {:runtime-disposition
-                                         {:reason :makeup-unavailable}}}))
+                                         {:reason :makeup-unavailable}
+                                         :run-record-status :absent
+                                         :run-record-absence
+                                         :runner-did-not-return-run-record}}))
     (write-acceptance! "wm-requeue-2-2-repair/garbage" "{:not edn")
     (is (nil? (service/retry-click-status "wm-requeue-2-2-repair/mismatch")))
     (is (nil? (service/retry-click-status "wm-requeue-2-2-repair/garbage")))))
+
+(deftest retry-click-status-reads-the-live-nested-acceptance-shape
+  (let [bytes (slurp "test/resources/wm/retry-click-status/makeup-unavailable-live.edn")
+        record (edn/read-string bytes)
+        click-id (:click-id record)
+        file (write-acceptance! click-id bytes)
+        observed (service/retry-click-status click-id)]
+    (is (= :completed (:status observed)))
+    (is (= (:result record) (:result observed)))
+    (is (= :makeup-unavailable
+           (get-in observed [:result :runtime-disposition :reason])))
+    (is (= :absent (:run-record-status observed)))
+    (is (= :runner-did-not-return-run-record (:run-record-absence observed)))
+    (is (= {:path (.getPath file)
+            :sha256 "42e4e604725bf931c1f4e108966ca88a8b07febb76a685b47cc520d75b67277c"}
+           (:evidence-pin observed)))))
 
 (deftest configure-self-heal-ports-supplies-the-retry-click-status-port
   (with-redefs [self-heal-adapters/ports (constantly {:status :ready})]

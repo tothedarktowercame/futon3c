@@ -360,9 +360,9 @@
                (or (= :failed (:status state))
                    (and (= :completed (:status state))
                         (keyword? (get-in state [:result :runtime-disposition :reason]))
-                        (= :absent (:run-record-status state))
+                        (= :absent (get-in state [:result :run-record-status]))
                         (= :runner-did-not-return-run-record
-                           (:run-record-absence state))
+                           (get-in state [:result :run-record-absence]))
                         (not (present-run-record-reference? state)))))
       (let [file (acceptance-file click-id)]
         (cond-> {:status (:status state)
@@ -370,8 +370,8 @@
                  :evidence-pin {:path (.getPath file)
                                 :sha256 (file-sha256-hex file)}}
           (= :completed (:status state))
-          (assoc :run-record-status (:run-record-status state)
-                 :run-record-absence (:run-record-absence state)
+          (assoc :run-record-status (get-in state [:result :run-record-status])
+                 :run-record-absence (get-in state [:result :run-record-absence])
                  :run-record-reference-conflict? false))))))
 
 (defn- persist-click-state! [click-id f]
