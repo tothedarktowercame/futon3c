@@ -311,16 +311,38 @@
             (recur))))
       (apply str (map #(format "%02x" %) (.digest digest))))))
 
+(defn- present-run-record-reference? [value]
+  (letfn [(present? [v]
+            (cond
+              (nil? v) false
+              (string? v) (not (str/blank? v))
+              (coll? v) (boolean (seq v))
+              (= :absent v) false
+              :else true))
+          (walk [v]
+            (cond
+              (map? v)
+              (boolean
+               (some (fn [[k child]]
+                       (or (and (keyword? k)
+                                (str/includes? (name k) "run-record")
+                                (not (#{:run-record-status :run-record-absence} k))
+                                (present? child))
+                           (walk child)))
+                     v))
+              (coll? v) (boolean (some walk v))
+              :else false))]
+    (walk value)))
+
 (defn retry-click-status
   "Read-only :retry-click-status-fn port for the futon2 meta-repair
    coordinator (futon2 3e17ebedb): the durable service-side status of one
    meta-retry child click, backed by this service's own acceptance bytes.
 
-   A durably recorded failure of exactly CLICK-ID is reported, as is a
-   completed click whose `[:result :runtime-disposition :reason]` is exactly
-   :meta-self-heal/retry-attribution-refused. The latter is marked with
-   :refusal :retry-attribution-refused so the coordinator can distinguish it
-   from a service failure. In both cases the
+   A durably recorded failure of exactly CLICK-ID is reported, as is any
+   completed click with a typed runtime-disposition reason that durably records
+   the runner returned no run record and contains no conflicting run-record
+   reference. In both cases the
    record must carry the :wm/click-state-v1 schema, its stored :click-id
    must match the requested identity, and its status must match the shape. The
    record's own :result flows through verbatim — nothing is synthesized —
@@ -337,15 +359,20 @@
                (= click-id (:click-id state))
                (or (= :failed (:status state))
                    (and (= :completed (:status state))
-                        (= :meta-self-heal/retry-attribution-refused
-                           (get-in state [:result :runtime-disposition :reason])))))
+                        (keyword? (get-in state [:result :runtime-disposition :reason]))
+                        (= :absent (:run-record-status state))
+                        (= :runner-did-not-return-run-record
+                           (:run-record-absence state))
+                        (not (present-run-record-reference? state)))))
       (let [file (acceptance-file click-id)]
         (cond-> {:status (:status state)
                  :result (:result state)
                  :evidence-pin {:path (.getPath file)
                                 :sha256 (file-sha256-hex file)}}
           (= :completed (:status state))
-          (assoc :refusal :retry-attribution-refused))))))
+          (assoc :run-record-status (:run-record-status state)
+                 :run-record-absence (:run-record-absence state)
+                 :run-record-reference-conflict? false))))))
 
 (defn- persist-click-state! [click-id f]
   (locking acceptance-lock

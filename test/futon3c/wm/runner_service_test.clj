@@ -1194,32 +1194,54 @@
     (write-acceptance! "wm-requeue-1-1-torn" "{:status :failed, :result {:outcome :ser")
     (is (nil? (service/retry-click-status "wm-requeue-1-1-torn")))))
 
-(deftest retry-click-status-observes-completed-attribution-refusal-only
-  (let [click-id "wm-requeue-2-2-repair/refused"
-        result {:outcome :unknown
-                :runtime-disposition
-                {:status :refused
-                 :reason :meta-self-heal/retry-attribution-refused
-                 :expected {:patch-sha "authored"}}}
-        bytes (str (pr-str {:schema :wm/click-state-v1
-                            :click-id click-id
-                            :status :completed
-                            :result result}) "\n")
-        file (write-acceptance! click-id bytes)
-        observed (service/retry-click-status click-id)]
-    (is (= :completed (:status observed)))
-    (is (= :retry-attribution-refused (:refusal observed)))
-    (is (= result (:result observed)) "the durable result is returned verbatim")
-    (is (= {:path (.getPath file)
-            :sha256 (acceptance-bytes-sha256 bytes)}
-           (:evidence-pin observed)))
-    (let [ordinary-id "wm-requeue-2-2-repair/completed"
-          ordinary (str (pr-str {:schema :wm/click-state-v1
-                                 :click-id ordinary-id
-                                 :status :completed
-                                 :result {:outcome :cohort-complete}}) "\n")]
-      (write-acceptance! ordinary-id ordinary)
-      (is (nil? (service/retry-click-status ordinary-id))))))
+(deftest retry-click-status-observes-typed-completion-without-run-record
+  (doseq [reason [:makeup-unavailable
+                  :meta-self-heal/retry-attribution-refused
+                  :another-typed-refusal]]
+    (let [click-id (str "wm-requeue-2-2-repair/" (name reason))
+          result {:reason-context :unchanged
+                  :runtime-disposition {:status :refused :reason reason}}
+          record {:schema :wm/click-state-v1 :click-id click-id :status :completed
+                  :run-record-status :absent
+                  :run-record-absence :runner-did-not-return-run-record
+                  :result result}
+          bytes (str (pr-str record) "\n")
+          file (write-acceptance! click-id bytes)
+          observed (service/retry-click-status click-id)]
+      (is (= :completed (:status observed)))
+      (is (= result (:result observed)) "the durable result is unchanged")
+      (is (= :absent (:run-record-status observed)))
+      (is (= {:path (.getPath file)
+              :sha256 (acceptance-bytes-sha256 bytes)}
+             (:evidence-pin observed)))))
+  (testing "ordinary or conflicting completions remain unobserved"
+    (doseq [[suffix extra]
+            [["ordinary" {:result {:outcome :cohort-complete}
+                           :run-record-status :present}]
+             ["present" {:result {:runtime-disposition {:reason :makeup-unavailable}}
+                         :run-record-status :present
+                         :run-record {:run/id "run/present"}}]
+             ["conflict" {:result {:runtime-disposition
+                                    {:reason :makeup-unavailable
+                                     :run-record-sha256 (apply str (repeat 64 "a"))}}
+                          :run-record-status :absent
+                          :run-record-absence :runner-did-not-return-run-record}]]]
+      (let [click-id (str "wm-requeue-2-2-repair/" suffix)
+            record (merge {:schema :wm/click-state-v1 :click-id click-id
+                           :status :completed}
+                          extra)]
+        (write-acceptance! click-id (str (pr-str record) "\n"))
+        (is (nil? (service/retry-click-status click-id)) suffix))))
+  (testing "identity mismatch and garbage remain unobserved"
+    (write-acceptance! "wm-requeue-2-2-repair/mismatch"
+                       (pr-str {:schema :wm/click-state-v1 :click-id "someone-else"
+                                :status :completed :run-record-status :absent
+                                :run-record-absence :runner-did-not-return-run-record
+                                :result {:runtime-disposition
+                                         {:reason :makeup-unavailable}}}))
+    (write-acceptance! "wm-requeue-2-2-repair/garbage" "{:not edn")
+    (is (nil? (service/retry-click-status "wm-requeue-2-2-repair/mismatch")))
+    (is (nil? (service/retry-click-status "wm-requeue-2-2-repair/garbage")))))
 
 (deftest configure-self-heal-ports-supplies-the-retry-click-status-port
   (with-redefs [self-heal-adapters/ports (constantly {:status :ready})]
