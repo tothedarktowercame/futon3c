@@ -816,28 +816,57 @@
              :detail (:err created)}))))))
 
 (defn enact!
-  "Verify the reviewed patch is integrated on canonical HEAD, then reload only its changed
-   Clojure sources through the serving JVM's recorded reload authority."
+  "Integrate exactly the reviewed patch on canonical HEAD, then reload only
+   canonical Clojure sources through the serving JVM's recorded authority."
   [{:keys [work-order] :as request}]
   (let [repo (:target-repository work-order)
         patch (get-in request [:transaction :receipts 0 :payload :patch-sha])
         patch (or patch (:patch-sha request))
-        head (:out (git repo "rev-parse" "HEAD"))]
-    (if-not (:ok? (git repo "merge-base" "--is-ancestor" patch "HEAD"))
-      {:status :failed :payload {:reason :patch-not-on-canonical-branch
-                                 :patch-sha patch :canonical-head head}}
-      (let [parent (:out (git repo "rev-parse" (str patch "^")))
+        approved (get-in request [:transaction :receipts 1 :payload :patch-sha])
+        reviewer-head (get-in request [:transaction :receipts 1 :payload :reviewer-sha])
+        base (:canonical-base-sha work-order)
+        head (:out (git repo "rev-parse" "HEAD"))
+        already-ancestor? (:ok? (git repo "merge-base" "--is-ancestor" patch "HEAD"))
+        cherry-equivalent? (and (not already-ancestor?)
+                                (str/starts-with? (:out (git repo "cherry" "HEAD" patch)) "-"))]
+    (cond
+      (not= patch approved)
+      {:status :failed :payload {:reason :approved-patch-sha-mismatch
+                                 :patch-sha patch :approved-patch-sha approved}}
+
+      (not= patch reviewer-head)
+      {:status :failed :payload {:reason :reviewer-head-sha-mismatch
+                                 :patch-sha patch :reviewer-sha reviewer-head}}
+
+      :else
+      (let [integration (cond
+                          (or already-ancestor? cherry-equivalent?) head
+                          :else
+                          (let [picked (git repo "cherry-pick" patch)]
+                            (if (:ok? picked)
+                              (:out (git repo "rev-parse" "HEAD"))
+                              (do
+                                (git repo "cherry-pick" "--abort")
+                                nil))))]
+        (if-not integration
+          {:status :failed
+           :payload {:reason (if (= head base)
+                               :cherry-pick-conflict
+                               :canonical-head-moved-conflict)
+                     :patch-sha patch :canonical-head head :canonical-base-sha base}}
+          (let [parent (:out (git repo "rev-parse" (str patch "^")))
             changed (:out (git repo "diff" "--name-only" parent patch))
             sources (filter #(and (str/starts-with? % "src/")
                                   (str/ends-with? % ".clj"))
                             (str/split-lines changed))
             receipts (mapv #(code-identity/load-file-recorded!
                              (str repo "/" %)) sources)
-            retry-click (retry-click-id (:repair-id work-order)
-                                        (:attempt work-order) 0 patch)]
-        {:status :succeeded
-         :payload {:patch-sha patch :retry-click retry-click
-                   :integration-commit head :reload-receipts receipts}}))))
+                retry-click (retry-click-id (:repair-id work-order)
+                                            (:attempt work-order) 0 patch)]
+            {:status :succeeded
+             :payload {:patch-sha patch :retry-click retry-click
+                       :integration-commit integration
+                       :reload-receipts receipts}}))))))
 
 (defn work-order-identities
   "The caller-supplied identities coordinator/prepare needs on its work order,
