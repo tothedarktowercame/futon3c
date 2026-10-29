@@ -6213,17 +6213,17 @@
                                       :message (.getMessage e)}
                                (:reason (ex-data e)) (assoc :reason (:reason (ex-data e))))))))))
 
-(defn- handle-followup-ready [request]
-  (let [agent (req-query-param request "agent")
-        session (req-query-param request "session")
-        now (System/currentTimeMillis)
+(defn- followup-ready-response
+  "The body shared by the single-seat GET and ready batch routes."
+  [agent session]
+  (let [now (System/currentTimeMillis)
         ttl-ms (try (Long/parseLong (or (dev-config/env "FUTON3C_FOLLOWUP_TTL_MS")
                                         "21600000"))
                     (catch Throwable _ 21600000))
         current? (followup-validity/validator {})]
     (cond
       (agent-in-flight-turn? agent)
-      (json-response 200 {:ok true :ready [] :withheld true})
+      {:ok true :ready [] :withheld true}
       :else
       (let [item (followup-queue/lease-one!
                   agent session
@@ -6237,8 +6237,13 @@
 
                       (not (current? queued)) :stale
                       :else true)))]
-        (json-response 200 {:ok true :ready (if item [item] [])
-                            :leased (some? item)})))))
+        {:ok true :ready (if item [item] [])
+         :leased (some? item)}))))
+
+(defn- handle-followup-ready [request]
+  (json-response 200
+                 (followup-ready-response (req-query-param request "agent")
+                                          (req-query-param request "session"))))
 
 (defn- handle-followup-ack [request]
   (let [body (parse-json-map (read-body request))
@@ -6257,6 +6262,20 @@
                                       id (or (:reason body) (get body "reason")
                                              :sender-cancelled))}))))
 
+(defn- parked-ready-response
+  "The body shared by the single-seat GET and ready batch routes."
+  [agent session]
+  (if (and (parked-on-enabled?) agent (agent-in-flight-turn? agent))
+    ;; Bug 2: agent is mid-turn — withhold items, don't pop. They'll be
+    ;; delivered on a later poll when the agent is idle.
+    {:ok true :ready [] :withheld true}
+    (let [leased (if (and (parked-on-enabled?) agent)
+                   (parked-ready-pop! agent (or session ""))
+                   nil)]
+      {:ok true
+       :ready (if leased [leased] [])
+       :leased (some? leased)})))
+
 (defn- handle-parked-ready
   "GET /api/alpha/parked/ready?agent=&session= — poll-and-lease the ready resume
    prompts for a repl buffer (E-park-continuations Car 2b, polling path).
@@ -6269,16 +6288,28 @@
   [request _config]
   (let [agent (req-query-param request "agent")
         session (req-query-param request "session")]
-    (if (and (parked-on-enabled?) agent (agent-in-flight-turn? agent))
-      ;; Bug 2: agent is mid-turn — withhold items, don't pop. They'll be
-      ;; delivered on a later poll when the agent is idle.
-      (json-response 200 {:ok true :ready [] :withheld true})
-      (let [leased (if (and (parked-on-enabled?) agent)
-                     (parked-ready-pop! agent (or session ""))
-                     nil)]
-        (json-response 200 {:ok true
-                            :ready (if leased [leased] [])
-                            :leased (some? leased)})))))
+    (json-response 200 (parked-ready-response agent session))))
+
+(defn- handle-ready-batch
+  "POST /api/alpha/ready/batch — poll the two ready inboxes once per seat.
+   Each per-seat body is exactly the corresponding single-seat GET body."
+  [request _config]
+  (let [body (parse-json-map (read-body request))
+        seats (or (:seats body) (get body "seats"))]
+    (if-not (sequential? seats)
+      (json-response 400 {:ok false :error "seats-required"})
+      (json-response
+       200
+       {:ok true
+        :seats
+        (mapv (fn [seat]
+                (let [agent (or (:agent seat) (get seat "agent"))
+                      session (or (:session seat) (get seat "session"))
+                      parked (parked-ready-response agent session)
+                      followups (followup-ready-response agent session)]
+                  {:agent agent :session session
+                   :parked parked :followups followups}))
+              seats)}))))
 
 (defn- handle-parked-ready-ack
   "POST /api/alpha/parked/ready/ack — confirm delivery of a leased ready resume
@@ -13041,6 +13072,10 @@
       ;; but retain their own identity, queue, lease, ACK, and cancellation.
       (and (= :post method) (= "/api/alpha/followups" uri))
       (handle-followup-enqueue request)
+
+      ;; One poll serves both ready inboxes for every visible REPL seat.
+      (and (= :post method) (= "/api/alpha/ready/batch" uri))
+      (handle-ready-batch request config)
 
       (and (= :get method) (= "/api/alpha/followups/ready" uri))
       (handle-followup-ready request)
