@@ -363,7 +363,7 @@
   :production-functions, which the acceptance prompt refers to by that name."
   [operation request]
   (str "Dedicated META " (name operation) ". Return exactly one EDN map and no prose. "
-       "Do not select ordinary work, run tests, builds or code, write any file, or claim a repair. "
+       "Do not select ordinary work, run tests, builds or code, write any file except the acceptance-proposal test path explicitly authorized below, or claim a repair. "
        (case operation
          :diagnosis
          (str "Success must be {:status :succeeded :diagnosis <map>}, where the map includes :classification, "
@@ -379,8 +379,9 @@
               "A refusal/failure must be typed. ")
          :acceptance-proposal
          (str "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value> "
-              ":source {:namespace <namespace-string> :path <test/... .clj> :text <complete-file-text>}}}. "
-              "The source must be a complete clojure.test file that pins the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named in the diagnosis's :production-functions, with no stubs. "
+              ":source {:namespace <namespace-string> :path <test/... .clj> :sha256 <64-hex>}}}. "
+              "Write the complete clojure.test file at the declared relative :source :path under :acceptance-worktree, and write no other file. Return its SHA-256; do not embed source text in EDN. "
+              "The source must pin the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named in the diagnosis's :production-functions, with no stubs. "
               "The command must be [\"clojure\" \"-M:test\" \"-n\" \"<that-namespace>\"] optionally followed by [\"-v\" \"<var>\"]; every element is a quoted string "
               "(click wm-click-77a24533, 2026-10-23: an unquoted namespace symbol was refused as a source mismatch). The specification is not run and is not accepted. "
               ":expected must be {:exit 0}, the passing run after repair; do not predict test or assertion counts "
@@ -468,6 +469,43 @@
                (string? source))
       (source-read-result source))))
 
+(declare hex-sha256)
+
+(defn- acceptance-source-location [worktree path]
+  (when (and (nonblank? worktree) (nonblank? path))
+    (let [root (.getCanonicalFile (io/file worktree))
+          file (.getCanonicalFile (io/file root path))]
+      (when (and (str/starts-with? (.getPath file) (str (.getPath root) java.io.File/separator))
+                 (str/starts-with? path "test/")
+                 (str/ends-with? path ".clj"))
+        file))))
+
+(defn- hydrate-acceptance-source
+  "Replace a file-backed proposal's digest with the exact authored bytes. Inline
+   text remains an explicit compatibility fallback only when the file is absent."
+  [operation request parsed]
+  (if-not (and (= :acceptance-proposal operation) (= :proposed (:status parsed)))
+    {:status :unchanged :value parsed}
+    (let [source (get-in parsed [:acceptance-test :source])
+          file (acceptance-source-location (:acceptance-worktree request) (:path source))]
+      (cond
+        (and file (.isFile file))
+        (let [bytes (java.nio.file.Files/readAllBytes (.toPath file))
+              actual (hex-sha256 bytes)]
+          (if (= (:sha256 source) actual)
+            {:status :file :value (assoc-in parsed [:acceptance-test :source :text]
+                                            (String. bytes "UTF-8"))}
+            {:status :refused :reason :meta-self-heal/acceptance-source-sha-mismatch
+             :expected (:sha256 source) :actual actual :path (:path source)}))
+
+        (string? (:text source))
+        {:status :inline-fallback :value parsed
+         :source-transport-fallback :meta-self-heal/acceptance-source-file-absent}
+
+        :else
+        {:status :refused :reason :meta-self-heal/acceptance-source-file-absent
+         :path (:path source)}))))
+
 (defn- producer-invoke!
   "Serving adapter for evidence production/admission, separate from repair
   execution.  It returns only the typed map the futon2 producer expects; it
@@ -504,6 +542,8 @@
                         (when (:ok read-second-result) (one-edn-map (:result read-second-result)))
                      first-read)
         envelope-parsed (:value envelope-read)
+        hydrated (hydrate-acceptance-source operation request envelope-parsed)
+        envelope-parsed (:value hydrated)
         first-source-read (proposed-source-read operation envelope-parsed)
         envelope-parsed (if (= :repaired (:status first-source-read))
                           (assoc-in envelope-parsed [:acceptance-test :source :text]
@@ -526,7 +566,9 @@
         final-read (if source-second-result
                      (when (:ok source-second-result) (one-edn-map (:result source-second-result)))
                      envelope-read)
-        parsed (if source-second-result (:value final-read) envelope-parsed)
+        final-hydrated (when source-second-result
+                         (hydrate-acceptance-source operation request (:value final-read)))
+        parsed (if source-second-result (:value final-hydrated) envelope-parsed)
         final-source-read (if source-second-result
                             (proposed-source-read operation parsed)
                             first-source-read)
@@ -543,6 +585,8 @@
                             (:rate-limit-retry read-second-result)
                             (:rate-limit-retry source-second-result))]
     (cond
+      (= :refused (:status hydrated)) hydrated
+      (= :refused (:status final-hydrated)) final-hydrated
       (not agent) {:status :failed :reason :meta-self-heal/producer-seat-unavailable}
       ;; F9 (click wm-click-2b1d568c, 2026-10-19): the transport's own error
       ;; ("Exit 1: exceeded retry limit, last status: 429 Too Many Requests")
@@ -583,6 +627,9 @@
         source-read-error (assoc :source-read-error source-read-error)
         transport-retry (assoc :transport-retry transport-retry))
       :else (cond-> parsed
+              (= :inline-fallback (:status (or final-hydrated hydrated)))
+              (assoc :source-transport-fallback
+                     (:source-transport-fallback (or final-hydrated hydrated)))
               read-retry (assoc :read-retry read-retry)
               read-repair (assoc :read-repair read-repair)
               source-retry (assoc :source-retry source-retry)
@@ -816,6 +863,27 @@
              :path target-worktree :base-sha canonical-base-sha
              :detail (:err created)}))))))
 
+(defn- acceptance-worktree!
+  [repository injury-id]
+  (let [segment (str/replace (str injury-id) #"[^A-Za-z0-9._-]" "-")
+        root (io/file default-self-heal-worktree-root segment)
+        path (io/file root (str "acceptance-" (java.util.UUID/randomUUID)))
+        head (:out (git repository "rev-parse" "HEAD"))]
+    (.mkdirs root)
+    (let [created (git repository "worktree" "add" "--detach" (.getPath path) head)]
+      (if (:ok? created)
+        {:status :created :path (.getCanonicalPath path) :base-sha head}
+        {:status :refused :reason :acceptance-worktree-create-failed
+         :path (.getPath path) :detail (:err created)}))))
+
+(defn- acceptance-proposal!
+  [repository seat request]
+  (let [worktree (acceptance-worktree! repository (:injury-id request))]
+    (if-not (= :created (:status worktree))
+      worktree
+      (producer-invoke! seat :acceptance-proposal
+                        (assoc request :acceptance-worktree (:path worktree))))))
+
 (defn enact!
   "Integrate exactly the reviewed patch on canonical HEAD, then reload only
    canonical Clojure sources through the serving JVM's recorded authority."
@@ -919,7 +987,8 @@
        :work-order-identities (work-order-identities ready)
        :agency-invoke-fn agency-invoke!
        :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
-       :meta-acceptance-fn #(producer-invoke! (:author (:cast ready)) :acceptance-proposal %)
+       :meta-acceptance-fn #(acceptance-proposal! (:repository ready)
+                                                  (:author (:cast ready)) %)
        :meta-acceptance-run-fn #(run-acceptance!
                                  (or (:meta-acceptance-timeout-ms opts)
                                      default-acceptance-timeout-ms)

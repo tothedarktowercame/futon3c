@@ -710,14 +710,56 @@
     (is (not (str/includes? prompt "echoing those five exact request values")))))
 
 (deftest acceptance-proposal-prompt-requires-complete-source
-  (let [prompt (#'sut/producer-prompt :acceptance-proposal {:diagnosis {:status :present}})]
+  (let [prompt (#'sut/producer-prompt :acceptance-proposal
+                                     {:diagnosis {:status :present}
+                                      :acceptance-worktree "/tmp/acceptance-worktree"})]
     (is (str/includes? prompt ":source {:namespace"))
+    (is (str/includes? prompt ":sha256 <64-hex>"))
+    (is (str/includes? prompt "do not embed source text in EDN"))
+    (is (str/includes? prompt "/tmp/acceptance-worktree"))
     (is (str/includes? prompt "complete clojure.test file"))
     (is (str/includes? prompt "real production functions"))
     (is (str/includes? prompt "with no stubs"))
     (is (str/includes? prompt ":production-functions"))
     (is (str/includes? prompt "[\"clojure\" \"-M:test\" \"-n\" \"<that-namespace>\"]")
         "the command template quotes the namespace (wm-click-77a24533)")))
+
+(deftest file-backed-acceptance-source-preserves-string-literals
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "acceptance-source" (make-array java.nio.file.attribute.FileAttribute 0)))
+        path "test/proposed/file_source_test.clj"
+        file (io/file root path)
+        source (str "(ns proposed.file-source-test\n"
+                    "  (:require [clojure.test :refer [deftest is run-tests]]))\n"
+                    "(deftest exact-string (is (= \"ab\" (str \"a\" \"b\"))))\n"
+                    "(let [r (run-tests 'proposed.file-source-test)]\n"
+                    "  (when (pos? (+ (:fail r) (:error r))) (System/exit 1)))\n")
+        bytes (.getBytes source "UTF-8")
+        _ (.mkdirs (.getParentFile file))
+        _ (with-open [out (io/output-stream file)] (.write out bytes))
+        proposal {:status :proposed
+                  :acceptance-test {:id "file-source"
+                                    :command ["clojure" "-M:test" "-n"
+                                              "proposed.file-source-test"]
+                                    :expected {:exit 0}
+                                    :source {:namespace "proposed.file-source-test"
+                                             :path path
+                                             :sha256 (#'sut/hex-sha256 bytes)}}}
+        hydrated (#'sut/hydrate-acceptance-source
+                  :acceptance-proposal {:acceptance-worktree (.getPath root)} proposal)
+        lint (clojure.java.shell/sh "clj-kondo" "--lint" (.getPath file))
+        run (clojure.java.shell/sh "clojure" "-M" "-e"
+                                   (str "(load-file " (pr-str (.getPath file)) ")"))]
+    (is (= :file (:status hydrated)))
+    (is (= source (get-in hydrated [:value :acceptance-test :source :text])))
+    (is (= :readable (:status (#'sut/source-read-once source))))
+    (is (zero? (:exit lint)) (:err lint))
+    (is (zero? (:exit run)) (str (:out run) (:err run)))
+    (is (= :meta-self-heal/acceptance-source-sha-mismatch
+           (:reason (#'sut/hydrate-acceptance-source
+                     :acceptance-proposal {:acceptance-worktree (.getPath root)}
+                     (assoc-in proposal [:acceptance-test :source :sha256]
+                               (apply str (repeat 64 "0")))))))))
 
 (deftest diagnosis-prompt-requires-production-functions
   ;; F11b, click wm-click-fca1c921
@@ -1188,12 +1230,13 @@
         (is (nil? (:source-retry result)))
         (is (= 1 (count calls)))))
 
-    (testing "absent and non-string source are left to downstream admission"
+    (testing "absent file without inline text is a typed transport refusal"
       (doseq [answer [(pr-str {:status :proposed :acceptance-test {}})
                       (proposal 42)]]
         (let [{:keys [result calls]}
               (run :acceptance-proposal [{:ok true :result answer :session-id "s"}])]
-          (is (= :proposed (:status result)))
+          (is (= :refused (:status result)))
+          (is (= :meta-self-heal/acceptance-source-file-absent (:reason result)))
           (is (nil? (:source-retry result)))
           (is (= 1 (count calls))))))))
 
