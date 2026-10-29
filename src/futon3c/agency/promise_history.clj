@@ -6,9 +6,8 @@
             [futon3c.agency.promise-outcome :as outcome]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
-            [futon3c.evidence.futon1b-backend])
-  (:import [futon3c.evidence.futon1b_backend Futon1bBackend]
-           [java.time Instant]
+            [futon3c.evidence.futon1b-backend :as f1b])
+  (:import [java.time Instant]
            [java.nio.file Files StandardCopyOption CopyOption]
            [java.util UUID]
            [java.util.concurrent ThreadPoolExecutor TimeUnit LinkedBlockingQueue ThreadFactory]))
@@ -38,7 +37,7 @@
   (or *backend*
       (when-let [v (some-> (find-ns 'futon3c.dev) (ns-resolve '!evidence-store))]
         (let [candidate @(var-get v)]
-          (when (instance? Futon1bBackend candidate) candidate)))
+          (when (f1b/futon1b-backend? candidate) candidate)))
       (throw (ex-info "Evidence backend unavailable" {}))))
 
 (def ^:dynamic *heads* nil)
