@@ -870,6 +870,61 @@
         "a conflict leaves canonical HEAD unchanged")
     (is (= :approved-patch-sha-mismatch (get-in substituted [:payload :reason])))))
 
+(defn- reload-cleanliness-fixture []
+  (let [{:keys [repo]} (committed-readiness-repository)
+        _ (commit-file! repo "src/reload.clj" "(ns reload)\n(def value :base)\n" "base source")
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "self-heal-reload-clean"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/repair/reload-clean/1")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/reload-clean" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        patch (commit-file! worktree "src/reload.clj"
+                            "(ns reload)\n(def value :reviewed)\n" "reviewed source")]
+    {:repo repo :worktree worktree :base base :patch patch
+     :request (enact-request repo worktree base patch)}))
+
+(deftest enact-refuses-dirty-reload-path-on-fresh-cherry-pick
+  (let [{:keys [repo request]} (reload-cleanliness-fixture)
+        hook (io/file repo ".git/hooks/post-commit")
+        loads (atom [])]
+    (spit hook "#!/bin/sh\nprintf '(ns reload)\\n(def value :unreviewed)\\n' > src/reload.clj\n")
+    (.setExecutable hook true)
+    (let [result (with-redefs [code-identity/load-file-recorded!
+                               (fn [path] (swap! loads conj path))]
+                   (sut/enact! request))]
+      (is (= :failed (:status result)))
+      (is (= :canonical-reload-path-dirty (get-in result [:payload :reason])))
+      (is (= ["src/reload.clj"] (get-in result [:payload :paths])))
+      (is (empty? @loads) "dirty canonical bytes are never loaded"))))
+
+(deftest enact-refuses-dirty-reload-path-when-already-integrated
+  (let [{:keys [repo request]} (reload-cleanliness-fixture)
+        clean (with-redefs [code-identity/load-file-recorded! (fn [path] {:path path})]
+                (sut/enact! request))
+        _ (spit (io/file repo "src/reload.clj")
+                "(ns reload)\n(def value :unreviewed)\n")
+        loads (atom [])
+        dirty (with-redefs [code-identity/load-file-recorded!
+                            (fn [path] (swap! loads conj path))]
+                (sut/enact! request))]
+    (is (= :succeeded (:status clean)))
+    (is (= :canonical-reload-path-dirty (get-in dirty [:payload :reason])))
+    (is (= ["src/reload.clj"] (get-in dirty [:payload :paths])))
+    (is (empty? @loads))))
+
+(deftest enact-ignores-unrelated-dirt-and-reloads-clean-reviewed-path
+  (let [{:keys [repo request]} (reload-cleanliness-fixture)
+        _ (spit (io/file repo "unrelated.txt") "untracked and unrelated\n")
+        loads (atom [])
+        result (with-redefs [code-identity/load-file-recorded!
+                             (fn [path] (swap! loads conj path) {:path path})]
+                 (sut/enact! request))]
+    (is (= :succeeded (:status result)))
+    (is (= [(str repo "/src/reload.clj")] @loads))))
+
 (deftest producer-invoke-retries-once-after-a-provider-rate-limit
   "Clicks wm-click-36b47627 and wm-click-fdc08aea (2026-10-19): each was spent
    on a 429 at the review invoke seconds after the author invoke, while the

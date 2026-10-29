@@ -860,14 +860,26 @@
             sources (filter #(and (str/starts-with? % "src/")
                                   (str/ends-with? % ".clj"))
                             (str/split-lines changed))
-            receipts (mapv #(code-identity/load-file-recorded!
-                             (str repo "/" %)) sources)
-                retry-click (retry-click-id (:repair-id work-order)
-                                            (:attempt work-order) 0 patch)]
-            {:status :succeeded
-             :payload {:patch-sha patch :retry-click retry-click
-                       :integration-commit integration
-                       :reload-receipts receipts}}))))))
+                dirty-sources
+                (->> sources
+                     (remove #(and (:ok? (git repo "cat-file" "-e"
+                                             (str integration ":" %)))
+                                   (:ok? (git repo "diff" "--quiet"
+                                             integration "--" %))))
+                     vec)]
+            (if (seq dirty-sources)
+              {:status :failed
+               :payload {:reason :canonical-reload-path-dirty
+                         :patch-sha patch :integration-commit integration
+                         :paths dirty-sources}}
+              (let [receipts (mapv #(code-identity/load-file-recorded!
+                                     (str repo "/" %)) sources)
+                    retry-click (retry-click-id (:repair-id work-order)
+                                                (:attempt work-order) 0 patch)]
+                {:status :succeeded
+                 :payload {:patch-sha patch :retry-click retry-click
+                           :integration-commit integration
+                           :reload-receipts receipts}}))))))))
 
 (defn work-order-identities
   "The caller-supplied identities coordinator/prepare needs on its work order,
