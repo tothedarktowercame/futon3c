@@ -989,14 +989,17 @@
                            "Your test source does not read:"))
         (is (str/includes? (:prompt (second calls)) "at 135:87"))))
 
-    (testing "a second unreadable source is retained for admission and review"
+    (testing "a second unreadable source is a typed static failure"
       (let [{:keys [result calls]}
             (run :acceptance-proposal
                  [{:ok true
                    :result (proposal (str/replace click-4-source #"\n$" ")\n"))
                    :session-id "s"}
                   {:ok true :result (proposal "(ns still.bad)))") :session-id "s"}])]
-        (is (= :proposed (:status result)))
+        (is (= :failed (:status result)))
+        (is (= :meta-self-heal/acceptance-static-source-unreadable (:reason result)))
+        (is (= "(ns still.bad)))" (:proposed-source result)))
+        (is (= :reader (get-in result [:static-diagnostics 0 :type])))
         (is (some? (:source-retry result)))
         (is (str/includes? (:source-read-error result) "Unmatched delimiter"))
         (is (re-find #" at [0-9]+:[0-9]+$" (:source-read-error result)))
