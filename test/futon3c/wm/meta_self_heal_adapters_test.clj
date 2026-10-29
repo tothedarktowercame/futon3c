@@ -175,9 +175,12 @@
         _ (sh ["add" "src/fixture/retry.clj"])
         _ (sh ["commit" "-qm" "patch"])
         patch (:out (sh ["rev-parse" "HEAD"]))
-        work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root}
+        work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root
+                    :canonical-base-sha (str/trim (:out (sh ["rev-parse" (str (str/trim patch) "^")]))) }
         request {:work-order work-order
-                 :transaction {:receipts [{:payload {:patch-sha (str/trim patch)}}]}}
+                 :transaction {:receipts [{:payload {:patch-sha (str/trim patch)}}
+                                          {:payload {:patch-sha (str/trim patch)
+                                                     :reviewer-sha (str/trim patch)}}]}}
         result (with-redefs [code-identity/load-file-recorded!
                              (fn [path] {:status :loaded :path path})]
                  (sut/enact! request))]
@@ -211,8 +214,13 @@
 (defn- enact-with [root patch]
   (with-redefs [code-identity/load-file-recorded!
                 (fn [path] {:status :loaded :path path})]
-    (sut/enact! {:work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root}
-                 :transaction {:receipts [{:payload {:patch-sha patch}}]}})))
+    (let [base (str/trim (:out (clojure.java.shell/sh "git" "-C" root
+                                                     "rev-parse" (str patch "^"))))]
+      (sut/enact! {:work-order {:repair-id "repair-alpha" :attempt 1
+                                :target-repository root :canonical-base-sha base}
+                   :transaction {:receipts [{:payload {:patch-sha patch}}
+                                            {:payload {:patch-sha patch
+                                                       :reviewer-sha patch}}]}}))))
 
 (deftest enact-accepts-a-patch-integrated-below-head
   ;; F37 (claude-5 review tests, 2026-10-20): the repair for injury d755c886 is
@@ -235,7 +243,7 @@
       (is (not (contains? payload :reload-receipt))
           "the singular key would be copied onto the :enacted ledger entry"))))
 
-(deftest enact-refuses-a-patch-off-the-canonical-branch
+(deftest enact-cherry-picks-a-reviewed-patch-off-the-canonical-branch
   (let [{:keys [root patch sh]} (enact-fixture-repo)
         canonical (sh "rev-parse" "--abbrev-ref" "HEAD")]
     (sh "checkout" "-q" "-b" "other")
@@ -245,10 +253,9 @@
     (let [other (sh "rev-parse" "HEAD")
           _ (sh "checkout" "-q" canonical)
           result (enact-with root other)]
-      (is (= :failed (:status result)))
-      (is (= :patch-not-on-canonical-branch (get-in result [:payload :reason])))
+      (is (= :succeeded (:status result)))
       (is (= other (get-in result [:payload :patch-sha])))
-      (is (= patch (get-in result [:payload :canonical-head]))))))
+      (is (not= patch (get-in result [:payload :integration-commit]))))))
 
 (deftest enact-payload-seals-into-an-enacted-ledger-entry
   ;; The live pin of the Lean rev 25 prediction (enactEvidence_beforeF37Refused):
@@ -788,6 +795,77 @@
     (is (= "committed\n" (slurp tracked)) "canonical main remains byte-identical")
     (is (.exists (io/file worktree ".git")) "failed-attempt evidence is retained")))
 
+(defn- commit-file! [repo path text message]
+  (let [file (io/file repo path)]
+    (.mkdirs (.getParentFile file))
+    (spit file text)
+    (doseq [args [["add" path] ["commit" "-qm" message]]]
+      (let [result (apply clojure.java.shell/sh
+                          (concat ["git" "-C" repo] args))]
+        (assert (zero? (:exit result)) (:err result))))
+    (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))))
+
+(defn- enact-request [repo worktree base patch]
+  {:work-order {:target-repository repo :target-worktree worktree
+                :canonical-base-sha base :repair-id "repair/enact" :attempt 1}
+   :transaction {:receipts [{:payload {:patch-sha patch :worktree worktree}}
+                            {:payload {:patch-sha patch :reviewer-sha patch}}]}})
+
+(deftest enact-cherry-picks-reviewed-sha-idempotently-and-reloads-canonical-only
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "self-heal-enact" (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/repair/enact/1")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/enact" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        patch (commit-file! worktree "src/repair.clj" "(ns repair)\n" "repair")
+        request (enact-request repo worktree base patch)
+        loaded (atom [])
+        first-result (with-redefs [code-identity/load-file-recorded!
+                                   (fn [path] (swap! loaded conj path) {:path path})]
+                       (sut/enact! request))
+        first-head (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                         "rev-parse" "HEAD")))
+        second-result (with-redefs [code-identity/load-file-recorded!
+                                    (fn [path] {:path path})]
+                        (sut/enact! request))]
+    (is (= :succeeded (:status first-result)))
+    (is (= patch (get-in first-result [:payload :patch-sha])))
+    (is (= first-head (get-in first-result [:payload :integration-commit])))
+    (is (string? (get-in first-result [:payload :integration-commit])))
+    (is (= [(str repo "/src/repair.clj")] @loaded)
+        "reload authority sees canonical paths only")
+    (is (= :succeeded (:status second-result)))
+    (is (= first-head (get-in second-result [:payload :integration-commit]))
+        "already integrated repair is idempotent")))
+
+(deftest enact-refuses-substitution-and-real-git-conflict
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "self-heal-conflict" (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/repair/conflict/1")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/conflict" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        patch (commit-file! worktree "tracked.txt" "author\n" "author repair")
+        _ (commit-file! repo "tracked.txt" "canonical moved\n" "move canonical")
+        moved-head (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                         "rev-parse" "HEAD")))
+        request (enact-request repo worktree base patch)
+        conflict (sut/enact! request)
+        substituted (sut/enact! (assoc-in request
+                                           [:transaction :receipts 1 :payload :patch-sha]
+                                           (apply str (repeat 40 "f"))))]
+    (is (= :failed (:status conflict)))
+    (is (= :canonical-head-moved-conflict (get-in conflict [:payload :reason])))
+    (is (= moved-head (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                           "rev-parse" "HEAD"))))
+        "a conflict leaves canonical HEAD unchanged")
+    (is (= :approved-patch-sha-mismatch (get-in substituted [:payload :reason])))))
+
 (deftest producer-invoke-retries-once-after-a-provider-rate-limit
   "Clicks wm-click-36b47627 and wm-click-fdc08aea (2026-10-19): each was spent
    on a 429 at the review invoke seconds after the author invoke, while the
@@ -1198,10 +1276,15 @@
   ;; bound as the canonical root, and the seal is the coordinator's own.
   (let [{:keys [root patch]} (enact-fixture-repo)
         work-order {:injury-id "injury/f39" :repair-id "repair-alpha" :attempt 1
-                    :target-repository root}
+                    :target-repository root
+                    :canonical-base-sha (str/trim (:out (clojure.java.shell/sh
+                                                         "git" "-C" root "rev-parse"
+                                                         (str patch "^"))))}
         request {:work-order work-order :phase :enact
                  :predecessor-pin {:path "p" :sha256 (apply str (repeat 64 "b"))}
-                 :transaction {:receipts [{:payload {:patch-sha patch}}]}}
+                 :transaction {:receipts [{:payload {:patch-sha patch}}
+                                          {:payload {:patch-sha patch
+                                                     :reviewer-sha patch}}]}}
         _ (code-identity/reset-for-test!)
         result (binding [code-identity/*futon2-root* root]
                  (sut/enact! request))
