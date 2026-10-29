@@ -398,14 +398,14 @@
               "that you found by reading the repository at /home/joe/code/futon2 (read-only shell commands on that repository, "
               "such as cat, sed -n, grep, ls, git show and git grep, are allowed and expected; nothing that runs code or writes), "
               "and :file is the repo-relative path of the file that defines it. These are the functions the acceptance test "
-              "will exercise. A function you cannot find must be reported in a typed refusal "
+              "will exercise. The diagnosis must also include :cause-entry {:var <public boundary> :file <defining file> :failure-kind <keyword> :failure-stage <keyword> :input {:record-pin <the request source-record-pin> :path <earliest retained carrier path>} :healthy-predicate <closed result predicate>}. The boundary is the raising function, or the earliest public upstream boundary containing the failure. If no retained carrier exists, refuse with :cause-scope-unretained. A function you cannot find must be reported in a typed refusal "
               "({:status :failed :kind :production-function-identity-absent ...}), never invented. "
               "A refusal/failure must be typed. ")
          :acceptance-proposal
          (str "Success must be {:status :proposed :acceptance-test {:id <nonblank-string> :command [<string> ...] :expected <value> "
               ":source {:namespace <namespace-string> :path <test/... .clj> :sha256 <64-hex>}}}. "
               "Write the complete clojure.test file at the declared relative :source :path under :acceptance-worktree, and write no other file. Return its SHA-256; do not embed source text in EDN. "
-              "The source must pin the injury from the diagnosis: it fails for the injury's reason on injured code and passes after repair, using only the real production functions named in the diagnosis's :production-functions, with no stubs. "
+              "The source must contain exactly one deftest whose only body form is (futon2.aif.cause-scope/assert-repair <the exact :cause-scope map in this request>). Do not add assertions or construct intermediate values. The machine-owned harness invokes the declared boundary on the sha-verified retained carrier and applies its closed result predicate, using the real production functions named in :production-functions with no stubs. "
               "The command must be [\"clojure\" \"-M:test\" \"-n\" \"<that-namespace>\"] optionally followed by [\"-v\" \"<var>\"]; every element is a quoted string "
               "(click wm-click-77a24533, 2026-10-23: an unquoted namespace symbol was refused as a source mismatch). The specification is not run and is not accepted. "
               ":expected must be {:exit 0}, the passing run after repair; do not predict test or assertion counts "
@@ -760,6 +760,17 @@
       (compile-diagnostic output)
       (assoc :compile-diagnostic (compile-diagnostic output)))))
 
+(defn- retain-cause-scope-receipt [id source]
+  (let [bytes (Files/readAllBytes (.toPath (io/file source)))
+        digest (hex-sha256 bytes)
+        target (io/file *acceptance-runs-root*
+                        (str (safe-test-id id) "-cause-scope-" digest ".edn"))]
+    (.mkdirs (.getParentFile target))
+    (when-not (.isFile target)
+      (Files/write (.toPath target) bytes (make-array java.nio.file.OpenOption 0)))
+    {:receipt (edn/read-string (String. bytes "UTF-8"))
+     :pin {:path (.getCanonicalPath target) :sha256 digest}}))
+
 (defn executed-command
   "The admitted command is [clojure -M:test -n ns (-v var)].
    Canonical futon2's :test alias owns -m cognitect.test-runner (b463d85cc).
@@ -780,6 +791,9 @@
                              "wm-acceptance-stores-"
                              (make-array FileAttribute 0)))
         store-environment (acceptance-store-environment store-root)
+        cause-receipt-file (str (io/file store-root "cause-scope-receipt.edn"))
+        store-environment (assoc store-environment
+                                 "FUTON_CAUSE_SCOPE_RECEIPT" cause-receipt-file)
         job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))
         unit (str job-id ".service")
         receipt-file (str bounded-test-dir "/" job-id ".receipt.json")
@@ -821,7 +835,13 @@
                           (= "test-failure" (:reason receipt)) :failed
                           :else :errored)]
             (.delete (io/file receipt-file))
-            (write-run-result id output-file output outcome exit))
+            (if (.isFile (io/file cause-receipt-file))
+              (let [{:keys [receipt pin]}
+                    (retain-cause-scope-receipt id cause-receipt-file)]
+                (assoc (write-run-result id output-file output outcome exit)
+                       :cause-scope-receipt receipt
+                       :cause-scope-receipt-pin pin))
+              (write-run-result id output-file output outcome exit)))
           (let [_ (shell/sh "systemctl" "--user" "stop" unit)
                 summary (str "bounded unit " job-id " did not finish within "
                              timeout-seconds "s")]
