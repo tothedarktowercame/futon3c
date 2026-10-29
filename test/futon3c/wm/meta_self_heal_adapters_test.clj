@@ -724,13 +724,18 @@
           (is (.isDirectory (io/file root "test/fixture"))
               "a directory that existed before is left alone"))))))
 
-(deftest executed-command-inserts-the-test-runner-main
-  "F13: futon2's :test alias has no :main-opts; the fixture repo above now
-   mirrors that shape, so the real-unit test exercises this composition."
-  (is (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test"]
+(deftest executed-command-preserves-the-admitted-argv
+  "Since 1082ee474 the repo's :test alias owns -m cognitect.test-runner
+   (b463d85cc); inserting a second -m passes the runner an unknown option,
+   so the port runs the admitted argv verbatim. A bare -v var is still
+   qualified with the admitted namespace (dc1f003b7): cognitect.test-runner
+   resolves -v from user, where a bare name never resolves."
+  (is (= ["clojure" "-M:test" "-n" "a.b-test"]
          (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"])))
-  (is (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"]
-         (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))))
+  (is (= ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]
+         (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"])))
+  (is (= ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]
+         (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "one"]))))
 
 (deftest acceptance-run-existing-source-identity-controls-materialization
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
