@@ -11,8 +11,7 @@
             [futon3c.evidence.store :as store])
   (:import [java.time Instant]
            [java.util UUID]
-           [futon3c.evidence.backend AtomBackend]
-           [futon3c.evidence.futon1b_backend Futon1bBackend]))
+           [futon3c.evidence.backend AtomBackend]))
 
 (def ^:dynamic *test-store* nil)
 (def ^:dynamic *repo-roots* nil)
@@ -31,7 +30,7 @@
                     (when-let [n (find-ns 'futon3c.dev)]
                       (when-let [v (ns-resolve n '!evidence-store)]
                         @(var-get v))))]
-    (if (or (instance? Futon1bBackend backend)
+    (if (or (f1b/futon1b-backend? backend)
             (and *test-store*
                  (or (instance? clojure.lang.IAtom backend)
                      (instance? AtomBackend backend))))
@@ -378,7 +377,7 @@
       ;; Preserve the existing mission graph projection. The decision evidence
       ;; above is authoritative; graph projection retains its canonical-node
       ;; guard and asynchronous behavior, using this backend's URL.
-      (when (and (instance? Futon1bBackend backend)
+      (when (and (f1b/futon1b-backend? backend)
                  (= :clocked (:status persisted))
                  (not= old-clock (:clock persisted))
                  (= (:decision-id persisted)

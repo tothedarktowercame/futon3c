@@ -18,8 +18,7 @@
    Grep for `I-evidence-per-turn` to enumerate enforcement sites."
   (:require [futon3c.evidence.backend :as backend]
             [futon3c.evidence.futon1b-backend :as f1b])
-  (:import [futon3c.evidence.backend AtomBackend]
-           [futon3c.evidence.futon1b_backend Futon1bBackend]))
+  (:import [futon3c.evidence.backend AtomBackend]))
 
 (def I-evidence-per-turn
   "Canonical definition of the invariant. String, intentionally."
@@ -33,7 +32,7 @@
    time, but is not durable on its own."
   [store]
   (cond
-    (instance? Futon1bBackend store) :futon1b
+    (f1b/futon1b-backend? store) :futon1b
     (instance? AtomBackend store) :atom-backend
     (instance? clojure.lang.IAtom store) :raw-atom
     (and store (satisfies? backend/EvidenceBackend store)) :unknown-backend

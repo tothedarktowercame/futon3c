@@ -646,3 +646,13 @@
    http://localhost:7074 (lucy's port — nginx owns :7073 there)."
   ([] (make-futon1b-backend (or (System/getenv "FUTON1B_URL") default-url)))
   ([base-url] (->Futon1bBackend base-url)))
+
+(defn futon1b-backend?
+  "True when X is a Futon1bBackend, compared by class NAME. Reloading this
+   namespace defines a new Futon1bBackend class, and the store built at boot
+   stays an instance of the old one, so `instance?` against the class a caller
+   imported fails after any reload (2026-10-29: every clock decision refused
+   with \"Clock decisions require a durable evidence backend\")."
+  [x]
+  (= "futon3c.evidence.futon1b_backend.Futon1bBackend"
+     (some-> x class .getName)))

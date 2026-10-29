@@ -10,12 +10,11 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.futon1b-backend]
+            [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]
            [java.util UUID]
-           [futon3c.evidence.backend AtomBackend]
-           [futon3c.evidence.futon1b_backend Futon1bBackend]))
+           [futon3c.evidence.backend AtomBackend]))
 
 (def ^:dynamic *test-evidence-store*
   "Explicit unit-test store binding. Production never falls back to an atom."
@@ -35,7 +34,7 @@
   ([] (mesh-evidence-store nil))
   ([store]
    (let [store (or store *test-evidence-store* (dev-evidence-store))]
-     (if (or (instance? Futon1bBackend store)
+     (if (or (f1b/futon1b-backend? store)
              (and *test-evidence-store*
                   (or (instance? clojure.lang.IAtom store)
                       (instance? AtomBackend store))))

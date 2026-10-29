@@ -3755,7 +3755,7 @@
    than answering with something that is not a search."
   [request config]
   (let [store (evidence-store-for-config config)]
-    (if (instance? futon3c.evidence.futon1b_backend.Futon1bBackend store)
+    (if (futon1b-backend/futon1b-backend? store)
       (let [{:keys [status body]} (futon1b-backend/text-search
                                    store (:query-string request))]
         (json-response status body))

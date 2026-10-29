@@ -497,3 +497,17 @@
              (sut/text-search b "q=debugger&limit=5")))
       (is (= "http://futon1b.test/api/alpha/evidence/text-search?q=debugger&limit=5"
              @seen)))))
+
+(deftest futon1b-backend?-survives-a-namespace-reload
+  (testing "a store built before a reload is still recognised after it"
+    (let [store (sut/make-futon1b-backend "http://store.test")
+          before (class store)]
+      (require 'futon3c.evidence.futon1b-backend :reload)
+      (let [after (resolve 'futon3c.evidence.futon1b_backend.Futon1bBackend)]
+        ;; the bad case: the reload defined a new class, so instance? fails
+        (is (not= before after))
+        (is (not (instance? after store)))
+        (is (true? (sut/futon1b-backend? store)))
+        (is (true? (sut/futon1b-backend? (sut/make-futon1b-backend "http://x"))))
+        (is (false? (sut/futon1b-backend? nil)))
+        (is (false? (sut/futon1b-backend? {:base-url "http://x"})))))))
