@@ -6,7 +6,10 @@
   Each clause states, operationally and checkably, how its pattern is
   enacted in this cascade. Clause text is grounded in the pinned
   library source (futon3/library, rev b784e44e2473b468b63b3a2e47ef720cee4130b5);
-  the :source-pin sha256 in each decision cites the exact file body.")
+  the :source-pin sha256 in each decision cites the exact file body."
+  (:require [futon2.aif.load-identity :as load-identity]))
+
+(load-identity/register! *ns* *file*)
 
 
 (def ^:private read-what-exists-first-clause
