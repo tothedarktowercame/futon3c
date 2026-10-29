@@ -1070,13 +1070,15 @@
    self-heal click refused :acceptance-run-port."
   (let [run-fn (fn [_] {:status :ran})
         id-fn (fn [repair-id attempt ordinal] (str repair-id attempt ordinal))
+        equivalent-fn (fn [_ _ _] true)
         resolved {:status :ready
                   :readiness {:status :ready :defects []}
                   :agency-invoke-fn identity :repair-enact-fn identity
                   :repair-retry-fn identity :meta-diagnosis-fn identity
                   :meta-acceptance-fn identity :meta-acceptance-review-fn identity
                   :meta-acceptance-run-fn run-fn
-                  :retry-click-id-fn id-fn}
+                  :retry-click-id-fn id-fn
+                  :repair-integration-equivalent-fn equivalent-fn}
         configured (with-redefs [futon3c.wm.meta-self-heal-adapters/ports
                                  (fn [_] resolved)]
                      (#'service/configure-self-heal-ports {}))]
@@ -1085,6 +1087,9 @@
         "the run port reaches the runtime options")
     (is (identical? id-fn (:retry-click-id-fn configured))
         "M10b-3: the retry click minting function reaches the runtime options")
+    (is (identical? equivalent-fn
+                    (:repair-integration-equivalent-fn configured))
+        "retry verifies the enacted integration before it queues a child")
     (is (every? fn? (map configured [:meta-diagnosis-fn :meta-acceptance-fn
                                      :meta-acceptance-review-fn :agency-invoke-fn
                                      :repair-enact-fn :repair-retry-fn])))))

@@ -238,6 +238,7 @@
                                       :meta-acceptance-review-fn
                                       :meta-acceptance-run-fn
                                       :retry-click-id-fn
+                                      :repair-integration-equivalent-fn
                                       :retry-click-status-fn])
                {:self-heal-concrete-ports? true
                 :self-heal-serving-readiness (:readiness resolved)})

@@ -851,6 +851,21 @@
          (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id))
        "-patch-" patch-sha))
 
+(defn integration-equivalent?
+  "True when integration is retained on canonical main and contains the
+   reviewed patch either by identity/ancestry or by Git patch equivalence."
+  [{:keys [target-repository]} patch-sha integration-commit]
+  (and (nonblank? target-repository)
+       (every? #(and (string? %) (re-matches #"[0-9a-fA-F]{40}" %))
+               [patch-sha integration-commit])
+       (:ok? (git target-repository "merge-base" "--is-ancestor"
+                  integration-commit "HEAD"))
+       (or (= patch-sha integration-commit)
+           (:ok? (git target-repository "merge-base" "--is-ancestor"
+                      patch-sha integration-commit))
+           (str/starts-with? (:out (git target-repository "cherry" integration-commit
+                                       patch-sha)) "-"))))
+
 (defn ensure-author-worktree!
   "Create or verify the sealed work-order-version worktree at its claim-time
    base. Failed and superseded versions are deliberately retained as evidence."
@@ -1020,6 +1035,7 @@
        :repair-enact-fn enact!
        :repair-worktree-fn ensure-author-worktree!
        :retry-click-id-fn retry-click-id
+       :repair-integration-equivalent-fn integration-equivalent?
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]
          (let [transaction (:transaction request)

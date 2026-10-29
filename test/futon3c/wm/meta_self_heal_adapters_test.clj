@@ -954,6 +954,29 @@
     (is (= :author-worktree-base-mismatch (:reason moved))
         "moving the same version off its sealed branch is still refused")))
 
+(deftest integration-equivalence-is-verified-against-real-git
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "integration-equivalence"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/author")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/equivalence" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        patch (commit-file! worktree "repair.txt" "reviewed change\n" "reviewed patch")
+        unrelated (commit-file! repo "main.txt" "main moved\n" "move main")
+        _ (clojure.java.shell/sh "git" "-C" repo "cherry-pick" patch)
+        integration (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                           "rev-parse" "HEAD")))]
+    (is (not= patch integration))
+    (is (true? (sut/integration-equivalent? order patch integration)))
+    (is (false? (sut/integration-equivalent? order patch unrelated))
+        "a canonical-main commit without the reviewed change is not equivalent")
+    (is (true? (sut/integration-equivalent? order integration integration))
+        "the fast-forward/identical integration case remains valid")))
+
 (defn- enact-request [repo worktree base patch]
   {:work-order {:target-repository repo :target-worktree worktree
                 :canonical-base-sha base :repair-id "repair/enact" :attempt 1}
