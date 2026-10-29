@@ -118,15 +118,15 @@
   (when-let [header (table-header-at lines line)]
     (str/includes? (str/lower-case header) "missing")))
 
-(defn- mission-id? [to]
-  (and (string? to) (str/starts-with? to "M-")))
+(defn- task-id? [to]
+  (and (string? to) (boolean (re-find #"^[MET]-" to))))
 
 (defn- edge-class [e]
   (if (contains? e :class)
     (keyword (str/replace (str (:class e)) #"^:" ""))
     :closure))
 
-(defn- edge->pass-edge
+(defn edge->pass-edge
   "Convert one JSON edge against the item id set.  Returns {:edge ...}
   or {:reject ...}.  The quote check and its window are the tickets
   adapter's, reused."
@@ -156,7 +156,7 @@
           (own-missing-column? lines line)
           {:reject {:reject :edge/own-missing-column :edge e}}
 
-          (mission-id? to)
+          (task-id? to)
           (let [to-id (keyword to)]
             (if (contains? item-ids to-id)
               {:edge {:from from :to to-id
