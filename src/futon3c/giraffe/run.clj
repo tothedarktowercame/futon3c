@@ -22,6 +22,7 @@
             [clojure.pprint :as pp]
             [clojure.string :as str]
             [futon3c.giraffe.missions :as gm]
+            [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.tickets :as gt]))
 
@@ -104,8 +105,8 @@
                              {:id id
                               :status (:status r)
                               :reason (:reason r)
-                              :cone (count (get-in pass [:cones id]))
-                              :unblocks (count (get-in pass [:unblocks id]))}))
+                              :cone (when-not (:graph-coverage pass) (count (get-in pass [:cones id])))
+                              :unblocks (when-not (:graph-coverage pass) (count (get-in pass [:unblocks id])))}))
                          open-items)
         edge-sources (frequencies (map #(or (:source %) :unrecorded) edges))
         reject-reasons (frequencies (map :reject adapter-rejected))
@@ -282,7 +283,7 @@
 
 (defn -main
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]
-  [--root <dir>] [--run-id <id>] [--source tickets|missions]
+  [--root <dir>] [--run-id <id>] [--source tickets|missions|missions-excursions]
   [--repos <comma-separated repo roots, missions source only>]
 
   Runs the chosen source adapter (default tickets) plus the edges
@@ -294,20 +295,22 @@
         _ (when (str/blank? (str edges))
             (throw (ex-info "--edges <file> is required"
                             {:kind :giraffe/edges-required})))
-        _ (when-not (contains? #{"tickets" "missions"} source)
+        _ (when-not (contains? #{"tickets" "missions" "missions-excursions"} source)
             (throw (ex-info "--source must be tickets or missions"
                             {:kind :giraffe/unknown-source
                              :source source})))
         only-ids (when only
                    (vec (remove str/blank? (str/split (slurp only) #"\s+"))))
-        missions? (= "missions" source)
+        combined? (= "missions-excursions" source)
+        missions? (or combined? (= "missions" source))
         repo-roots (when missions?
                      (or (when repos
                            (vec (remove str/blank?
                                         (map str/trim (str/split repos #",")))))
                          gm/default-repos))
         adapter-result (if missions?
-                         (gm/missions->input {:repos repo-roots
+                         ((if combined? excursions/missions-and-excursions->input gm/missions->input)
+                          {:repos repo-roots
                                               :edges-file edges
                                               :only only-ids})
                          (gt/tickets->input
@@ -315,7 +318,7 @@
                            :index-file default-index-file
                            :edges-file edges
                            :only only-ids}))
-        pass-output (gp/pass (:input adapter-result))
+        pass-output ((if combined? excursions/combined-pass gp/pass) (:input adapter-result))
         result (write-run! {:root (or root default-root)
                             :run-id run-id
                             :adapter-result adapter-result
