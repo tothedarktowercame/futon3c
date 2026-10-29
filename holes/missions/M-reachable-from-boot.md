@@ -3,10 +3,10 @@
 ## Acceptance checklist (2026-09-30)
 
 - [x] `reachable-from-boot/evidence-store` is operational with implementation, enforcement, and evidence triples. (evidence: 2026-05-01 checkpoint)
-- [ ] `reachable-from-boot/family-check-fns` is operational with full triples in the structural-law inventory.
-- [ ] `reachable-from-boot/agent-registry` is operational with full triples in the structural-law inventory.
-- [ ] `reachable-from-boot/dev-evidence-store` is operational or is explicitly absorbed into the evidence-store sibling with evidence.
-- [ ] `scripts/check-reachable-from-boot.sh` refuses synthesized violations for every registered sibling and passes the clean tree.
+- [x] `reachable-from-boot/family-check-fns` is operational with full triples in the structural-law inventory.
+- [x] `reachable-from-boot/agent-registry` is operational with full triples in the structural-law inventory.
+- [x] `reachable-from-boot/dev-evidence-store` is operational or is explicitly absorbed into the evidence-store sibling with evidence. (operational as its own sibling; not absorbed)
+- [x] `scripts/check-reachable-from-boot.sh` refuses synthesized violations for every registered sibling and passes the clean tree. (verified 2026-10-29, see checkpoint below)
 - [ ] GitHub issue #65 is closed and the stop-the-line checkpoint records that the foundation queue may resume.
 **Family:** `layered-error-hierarchy` (I0)
 **Stop-the-line trigger:** HUD widget showed STUCK on 2026-05-01; diagnosis revealed (a) pipeline-tracer entries lost at JVM restart because registry not bootstrapped, (b) Evidence Landscape lost ~2 weeks of data ~2 weeks ago because `@!store` was reset to in-memory map. Per `~/code/algorithms/next-invariant.md` § "Stop-the-line discipline" — when the HUD reports STUCK and the queue's promise of forward motion is unreliable due to a foundational failure, the queue is *paused* and a hot-fix mission opens at the foundation.
@@ -93,6 +93,34 @@ The HUD widget's STUCK reading was the stop-the-line signal. Per the algorithm i
 INSTANTIATE in progress for the evidence-store sibling. Other phases inverted per the M-invariant-queue-unstuck precedent (well-trodden patterns; PSR/PUR carries the argument; structural checks run inline).
 
 ## Checkpoints
+
+### 2026-10-29 — sibling checkboxes 2–5 verified mechanically (wm-author)
+
+The Codex #65 sibling work (scripts, inventory triples, wrapper, tests) was
+already landed at base HEAD `415e94ba` but the mission checkboxes were never
+ticked. Each was verified before ticking — no claim rests on inspection alone:
+
+- **Inventory triples:** `docs/structural-law-inventory.sexp` lists
+  `reachable-from-boot/family-check-fns`, `…/agent-registry`, and
+  `…/dev-evidence-store` each at `:status operational` with
+  `:implemented-in` / `:enforced-at` / `:evidenced-by` triples
+  (grep `reachable-from-boot` in that file).
+- **Synthesized-violation refusal, all four siblings:** for each of
+  `check-reachable-from-boot.sh`, `…-family-check-fns.sh`,
+  `…-agent-registry.sh`, `…-dev-evidence-store.sh`, a fresh git repo built
+  from `git archive HEAD` with one staged forbidden mutation
+  (`reset! …family-check-fns {}`, `reset! …!registry {}`,
+  `reset! …!evidence-store nil`, `swap! estore/!store …`) refuses with
+  exit 1 and the structured violation banner.
+- **Clean tree:** all four scripts plus `check-pre-commit-wrapper.sh`
+  exit 0 against the untouched working tree.
+- **Tests:** `clojure -M:test -n futon3c.scripts.reachable-from-boot-test`
+  → 4 tests, 16 assertions, 0 failures, 0 errors (covers clean + violation
+  per sibling and the wrapper composition).
+
+Left unticked: GitHub issue #65 closure and the stop-the-line clearance
+checkpoint — not verifiable from this repo and not mine to claim. The mission
+status line stays OPEN until #65 is closed.
 
 ### 2026-05-01 — INSTANTIATE complete for evidence-store sibling; siblings handed to Codex
 
