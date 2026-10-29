@@ -1,4 +1,5 @@
 # Findings
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Topology analysis delivered and self-corrected: method validated against the meter (0.0754 vs 0.0755), the projection finding recorded, and the WS2 unnormalised-Laplacian gaming exposure stated, committed to futon3c. Evidence: e0adbc3a8739e134be0f28227d5ed56e8603c1cc.
 
 **VERDICT (2026-10-09, provisional):** DONE — Analysis delivered and self-corrected: method validated against the meter, one paragraph withdrawn, projection finding and WS2 criterion critique recorded. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 

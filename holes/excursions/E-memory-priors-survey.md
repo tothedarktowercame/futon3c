@@ -1,4 +1,5 @@
 # E-memory-priors-survey — what we actually know before preregistering
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Survey delivered with the witnessed-use census re-run 2026-08-10, evidence for/against by tier, and proposed priors, committed to futon3c. Evidence: af5374c5df574ee07c2763a472ad70fb46ab3870.
 
 **VERDICT (2026-10-09, provisional):** DONE — Survey purpose (make the thinness precise before prereg) fulfilled: census re-run 2026-08-10, figures cited, sources listed. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 

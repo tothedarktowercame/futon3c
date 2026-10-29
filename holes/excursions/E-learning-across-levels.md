@@ -1,4 +1,5 @@
 # E-learning-across-levels — seed for future War Machine operations
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Seed document complete: the L0-L4 concept named, grounded in the codex-sorry-loop evidence, with bounded next steps staked out, and committed to futon3c. Evidence: 8fa468732edc26bce61994f2f5a56e676a0ae1fa.
 
 **VERDICT (2026-10-09, provisional):** DONE — Seed document purpose fulfilled: concept named, grounded in evidence, bounded next steps staked out; nothing inside left unfinished. _(WM status classification by zai-1, low confidence; not yet confirmed by the author.)_
 

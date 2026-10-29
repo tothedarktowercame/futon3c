@@ -1,6 +1,6 @@
 # E-pipeline-pipecleaner — is the invariant-queue pipeline tracer still useful?
 
-Status: PIPE-CLEANED / ROADMAP-DEFERRED
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The stale invariant-queue pipe was cleaned, the preserved tracer rows landed as pipeline-prototype.edn, and the working conclusion (pipeline only as a cascade projection) is recorded; the linear-roadmap question is explicitly deferred, not lost. Evidence: /home/joe/code/futon3c/holes/excursions/pipeline-prototype.edn.
 Parent: `futon7/holes/M-futon-forward-model.md`
 Related: `futon7/holes/missions/M-value-creation-loop.md`
 Opened: 2026-06-16

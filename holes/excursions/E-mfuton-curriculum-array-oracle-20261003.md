@@ -1,4 +1,5 @@
 # E-mfuton-curriculum-array-oracle-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Probe requisition completed: production declaration-resolver probes ran for both Array.extract rows, both fail at i_27, coordinator accepted the baseline evidence and the closing record was committed to futon3c. Evidence: 7ca08af4a351eeca77fb770908af5832f36ff0b4.
 
 **Requisition:** completed — 2026-10-03T02:53:28.523941393Z, job invoke-1790995800473-30681-c56286b0, state done
 

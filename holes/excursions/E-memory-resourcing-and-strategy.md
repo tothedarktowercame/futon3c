@@ -1,4 +1,5 @@
 # E-memory-resourcing-and-strategy — sequencing V3 against live resources
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Strategy doc closed Phase-0: all six recording-side repairs (A1/A3/A4/B2/B4/B5) shipped in commits d48d2000 and dadff8da, backlog dispatch unblocked. Evidence: d48d2000, dadff8da.
 
 **VERDICT (2026-10-09, provisional):** DONE — Doc states 'STATUS 2026-08-01: ALL SHIPPED — Phase-0 closed' with shipped items enumerated. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
 
