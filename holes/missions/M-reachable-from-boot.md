@@ -1,4 +1,4 @@
-**Status:** OPEN — INSTANTIATE complete (2026-05-01) for evidence-store sibling — **STOP-THE-LINE HOT-FIX, outside normal queue cadence.** Three remaining siblings handed to Codex via GitHub issue #65.
+**Status:** CLOSED — stop-the-line cleared (2026-10-29): GitHub issue #65 closed, all four siblings operational, foundation queue may resume from rank-1.
 
 ## Acceptance checklist (2026-09-30)
 
@@ -7,7 +7,7 @@
 - [x] `reachable-from-boot/agent-registry` is operational with full triples in the structural-law inventory.
 - [x] `reachable-from-boot/dev-evidence-store` is operational or is explicitly absorbed into the evidence-store sibling with evidence. (operational as its own sibling; not absorbed)
 - [x] `scripts/check-reachable-from-boot.sh` refuses synthesized violations for every registered sibling and passes the clean tree. (verified 2026-10-29, see checkpoint below)
-- [ ] GitHub issue #65 is closed and the stop-the-line checkpoint records that the foundation queue may resume.
+- [x] GitHub issue #65 is closed and the stop-the-line checkpoint records that the foundation queue may resume. (issue CLOSED 2026-05-01T18:30:15Z, verified via `gh issue view 65` 2026-10-29; clearance checkpoint below)
 **Family:** `layered-error-hierarchy` (I0)
 **Stop-the-line trigger:** HUD widget showed STUCK on 2026-05-01; diagnosis revealed (a) pipeline-tracer entries lost at JVM restart because registry not bootstrapped, (b) Evidence Landscape lost ~2 weeks of data ~2 weeks ago because `@!store` was reset to in-memory map. Per `~/code/algorithms/next-invariant.md` § "Stop-the-line discipline" — when the HUD reports STUCK and the queue's promise of forward motion is unreliable due to a foundational failure, the queue is *paused* and a hot-fix mission opens at the foundation.
 **Sibling missions:** [M-archaeology-control], [M-bounded-disposition], [M-single-locus] — each ships invariants whose live signal silently depends on `!store` being durable and `family-check-fns` being repopulated. This mission's job is to make those dependencies structural-not-trust.
@@ -93,6 +93,41 @@ The HUD widget's STUCK reading was the stop-the-line signal. Per the algorithm i
 INSTANTIATE in progress for the evidence-store sibling. Other phases inverted per the M-invariant-queue-unstuck precedent (well-trodden patterns; PSR/PUR carries the argument; structural checks run inline).
 
 ## Checkpoints
+
+### 2026-10-29 — STOP-THE-LINE CLEARED: foundation queue may resume (wm-author)
+
+Enacted step of the reviewed compiled cascade (selected digest
+`8db4afa8c1653922cdf23c49e537c783495fa74f8b5312989d521f0fb66211a3`,
+compiled digest `0f9c5cfa2b1e8c0a957606905cdf33bf2795ce78e3c12ebaef299bdea0f2c253`,
+requisition `aab759a850cbf03fdda5c253c1ccb7c0bd71df81c29ac946cb74c3a2d78747de`,
+patch `futon2.aif.wm.authored.req-aab759a8/decisions`), closing the mission's
+last open hole.
+
+**Evidence, not assertion.** The checklist item's two conjuncts were verified
+mechanically before ticking:
+
+- `gh issue view 65 --json state,title,closedAt` against origin
+  (`git@github.com:tothedarktowercame/futon3c.git`) returns
+  `{"closedAt":"2026-05-01T18:30:15Z","state":"CLOSED","title":"Codex:
+  complete reachable-from-boot/{family-check-fns,agent-registry,dev-evidence-store}
+  siblings"}` — run 2026-10-29.
+- The sibling operationality conjunct rests on the sibling checkboxes 2–5,
+  each verified mechanically in the checkpoint below (synthesized-violation
+  refusal per sibling script, clean tree, inventory triples, test run).
+
+**Escalation cost vs risk.** The stop-the-line paused the invariant queue
+from 2026-05-01 to this clearance — that is the coordination cost paid. The
+risk it bounded: the data-loss class (Evidence Landscape atom reset) and the
+registry-empty-at-restart class, which every queued invariant silently
+depended on. With all four siblings structurally enforced at pre-commit,
+the residual risk no longer justifies the cost: the queue resumes from
+rank-1 per the algorithm's stop-the-line clause ("Resume the queue at the
+original next-up candidate").
+
+**Foundation queue may resume.** Per the 2026-05-01 clearance condition
+recorded in this mission ("When Codex closes #65, the line is *cleared* …
+and the queue can resume from rank-1"), the line is now cleared. Mission
+status moves to CLOSED; no open holes remain in this file.
 
 ### 2026-10-29 — sibling checkboxes 2–5 verified mechanically (wm-author)
 
