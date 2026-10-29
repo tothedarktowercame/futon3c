@@ -10,6 +10,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon2.aif.meta-injury-store :as injury-store]
+            [futon2.aif.meta-repair-coordinator :as coordinator]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
   (:import (java.security MessageDigest)
@@ -67,7 +68,7 @@
                        (:meta-repair-transaction-path opts)))
         work-order (:work-order transaction)
         dirt-owned? (and (map? work-order)
-                         (some #(= :author (:phase %)) (:receipts transaction)))
+                         (coordinator/current-receipt-for transaction :author))
         observations (cond-> []
                        dirt-owned?
                        (conj {:kind :tracked-worktree-dirty
@@ -304,7 +305,9 @@
                "Any other status is refused. The final answer must be that one EDN map and nothing else."))
         review-contract
         (when review?
-          (let [patch (or (get-in request [:transaction :receipts 0 :payload :patch-sha])
+          (let [patch (or (get-in (coordinator/current-receipt-for
+                                   (:transaction request) :author)
+                                  [:payload :patch-sha])
                           "<patch-sha absent from the transaction>")
                 worktree (get-in request [:work-order :target-worktree])]
             (str "\n\nReviewer answer contract: the commit under review is " patch
@@ -890,10 +893,13 @@
    canonical Clojure sources through the serving JVM's recorded authority."
   [{:keys [work-order] :as request}]
   (let [repo (:target-repository work-order)
-        patch (get-in request [:transaction :receipts 0 :payload :patch-sha])
+        patch (get-in (coordinator/current-receipt-for
+                       (:transaction request) :author) [:payload :patch-sha])
         patch (or patch (:patch-sha request))
-        approved (get-in request [:transaction :receipts 1 :payload :patch-sha])
-        reviewer-head (get-in request [:transaction :receipts 1 :payload :reviewer-sha])
+        approved (get-in (coordinator/current-receipt-for
+                          (:transaction request) :review) [:payload :patch-sha])
+        reviewer-head (get-in (coordinator/current-receipt-for
+                               (:transaction request) :review) [:payload :reviewer-sha])
         base (:canonical-base-sha work-order)
         head (:out (git repo "rev-parse" "HEAD"))
         already-ancestor? (:ok? (git repo "merge-base" "--is-ancestor" patch "HEAD"))
@@ -1000,20 +1006,23 @@
        :retry-click-id-fn retry-click-id
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]
-         (let [retry-click (or (:retry-click request)
-                               (get-in request [:transaction :receipts 2 :payload :retry-click]))]
+         (let [transaction (:transaction request)
+               author (coordinator/current-receipt-for transaction :author)
+               enact (coordinator/current-receipt-for transaction :enact)
+               retry-click (or (:retry-click request)
+                               (get-in enact [:payload :retry-click]))]
            ((:queue-retry-fn opts)
             (cond-> {:repair-id (:repair-id work-order)
                      :injury-id (:injury-id work-order)
                      :attempt (:attempt work-order)
-                     :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                     :patch-sha (get-in author [:payload :patch-sha])
                      :retry-click retry-click
                      :request request}
               (contains? request :requeue-ordinal)
               (assoc :requeue-ordinal (:requeue-ordinal request))))
            {:status :queued
             :payload {:repair-id (:repair-id work-order)
-                      :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                      :patch-sha (get-in author [:payload :patch-sha])
                       :retry-click retry-click}}))}
        ;; One-click frontier (2026-10-22, futon2 3e17ebedb): forward the
        ;; serving side's read-only durable child-status port when the opts

@@ -97,9 +97,9 @@
         work-order {:repair-id "repair/x" :injury-id "injury/x" :attempt 1}
         enact-click "wm-retry-enact-receipt-1"
         base {:work-order work-order
-              :transaction {:receipts [{:payload {:patch-sha "patch"}}
-                                       {}
-                                       {:payload {:retry-click enact-click}}]}}]
+              :transaction {:receipts [{:phase :author :payload {:patch-sha "patch"}}
+                                       {:phase :review}
+                                       {:phase :enact :payload {:retry-click enact-click}}]}}]
     (testing "coordinator-supplied requeue identity wins and carries its ordinal"
       (let [result (retry! (assoc base :retry-click "wm-requeue-1-1-repair/x"
                                   :requeue-ordinal 1))
@@ -410,7 +410,8 @@
         request {:phase :review
                  :work-order {:target-worktree "/home/joe/code/futon2"
                               :acceptance-test {:command ["clojure" "-M:test" "-n" "focused"]}}
-                 :transaction {:receipts [{:payload {:patch-sha patch}}]}}
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha patch}}]}}
         invoke (fn [_ captured _]
                  (reset! prompt captured)
                  {:ok true
@@ -855,8 +856,10 @@
 (defn- enact-request [repo worktree base patch]
   {:work-order {:target-repository repo :target-worktree worktree
                 :canonical-base-sha base :repair-id "repair/enact" :attempt 1}
-   :transaction {:receipts [{:payload {:patch-sha patch :worktree worktree}}
-                            {:payload {:patch-sha patch :reviewer-sha patch}}]}})
+   :transaction {:receipts [{:phase :author
+                             :payload {:patch-sha patch :worktree worktree}}
+                            {:phase :review
+                             :payload {:patch-sha patch :reviewer-sha patch}}]}})
 
 (deftest enact-cherry-picks-reviewed-sha-idempotently-and-reloads-canonical-only
   (let [{:keys [repo]} (committed-readiness-repository)
