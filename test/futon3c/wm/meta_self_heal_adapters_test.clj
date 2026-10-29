@@ -97,9 +97,9 @@
         work-order {:repair-id "repair/x" :injury-id "injury/x" :attempt 1}
         enact-click "wm-retry-enact-receipt-1"
         base {:work-order work-order
-              :transaction {:receipts [{:payload {:patch-sha "patch"}}
-                                       {}
-                                       {:payload {:retry-click enact-click}}]}}]
+              :transaction {:receipts [{:phase :author :payload {:patch-sha "patch"}}
+                                       {:phase :review}
+                                       {:phase :enact :payload {:retry-click enact-click}}]}}]
     (testing "coordinator-supplied requeue identity wins and carries its ordinal"
       (let [result (retry! (assoc base :retry-click "wm-requeue-1-1-repair/x"
                                   :requeue-ordinal 1))
@@ -178,8 +178,10 @@
         work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root
                     :canonical-base-sha (str/trim (:out (sh ["rev-parse" (str (str/trim patch) "^")]))) }
         request {:work-order work-order
-                 :transaction {:receipts [{:payload {:patch-sha (str/trim patch)}}
-                                          {:payload {:patch-sha (str/trim patch)
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha (str/trim patch)}}
+                                          {:phase :review
+                                           :payload {:patch-sha (str/trim patch)
                                                      :reviewer-sha (str/trim patch)}}]}}
         result (with-redefs [code-identity/load-file-recorded!
                              (fn [path] {:status :loaded :path path})]
@@ -218,8 +220,10 @@
                                                      "rev-parse" (str patch "^"))))]
       (sut/enact! {:work-order {:repair-id "repair-alpha" :attempt 1
                                 :target-repository root :canonical-base-sha base}
-                   :transaction {:receipts [{:payload {:patch-sha patch}}
-                                            {:payload {:patch-sha patch
+                   :transaction {:receipts [{:phase :author
+                                             :payload {:patch-sha patch}}
+                                            {:phase :review
+                                             :payload {:patch-sha patch
                                                        :reviewer-sha patch}}]}}))))
 
 (deftest enact-accepts-a-patch-integrated-below-head
@@ -286,10 +290,13 @@
         enacted-entry (fn [enact-payload]
                         (merge {:injury-id injury :state :enacted :attempt 1 :repair-id repair
                                 :retry-click (:retry-click payload)}
-                               (select-keys enact-payload [:reload-receipt :integration-commit])))
+                               (select-keys enact-payload
+                                            [:patch-sha :reload-receipt
+                                             :integration-commit])))
         admitted (ledger/append-transition reviewed (enacted-entry payload))
         old-shape (ledger/append-transition
-                   reviewed (enacted-entry {:integration-commit (:integration-commit payload)
+                   reviewed (enacted-entry {:patch-sha patch
+                                            :integration-commit (:integration-commit payload)
                                             :reload-receipt (:reload-receipts payload)}))]
     (is (= :appended (:status admitted)) (pr-str admitted))
     (is (= :valid (:status (ledger/validate-ledger (:ledger admitted)))))
@@ -410,7 +417,8 @@
         request {:phase :review
                  :work-order {:target-worktree "/home/joe/code/futon2"
                               :acceptance-test {:command ["clojure" "-M:test" "-n" "focused"]}}
-                 :transaction {:receipts [{:payload {:patch-sha patch}}]}}
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha patch}}]}}
         invoke (fn [_ captured _]
                  (reset! prompt captured)
                  {:ok true
@@ -633,7 +641,7 @@
                              :source {:namespace "fixture.acceptance-test"
                                       :path "test/fixture/acceptance_test.clj"
                                       :text "source"}})))))
-      (testing "an existing source is refused and untouched"
+      (testing "a conflicting existing source is refused and untouched"
         (let [file (io/file root "test/fixture/existing_test.clj")
               original (.getBytes "original bytes\n" "UTF-8")
               _ (.mkdirs (.getParentFile file))
@@ -642,9 +650,34 @@
                                  :command ["clojure" "-M:test" "-n" "fixture.existing-test"]
                                  :source {:namespace "fixture.existing-test"
                                           :path "test/fixture/existing_test.clj"
-                                          :text "replacement"}})]
-          (is (= :meta-self-heal/acceptance-source-path-refused (:reason result)))
+                                          :text "replacement"
+                                          :sha256 (#'sut/hex-sha256
+                                                   (.getBytes "replacement" "UTF-8"))}})]
+          (is (= :meta-self-heal/acceptance-source-conflict (:reason result)))
+          (is (not= (:expected result) (:actual result)))
           (is (= (seq original) (seq (.getBytes (slurp file) "UTF-8"))))))
+      (testing "an identical committed source runs in place and remains"
+        (let [file (io/file root "test/fixture/committed_test.clj")
+              text (str "(ns fixture.committed-test "
+                        "(:require [clojure.test :refer [deftest is]]))\n"
+                        "(deftest committed-source (is true))\n")
+              bytes (.getBytes text "UTF-8")
+              _ (spit file text)
+              result (with-redefs [sut/launch-bounded-acceptance!
+                                   (fn [& _] {:status :ran :outcome :passed
+                                              :exit 0 :summary "green"})]
+                       (port 60000 {:id "committed"
+                                    :command ["clojure" "-M:test" "-n"
+                                              "fixture.committed-test"]
+                                    :source {:namespace "fixture.committed-test"
+                                             :path "test/fixture/committed_test.clj"
+                                             :text text
+                                             :sha256 (#'sut/hex-sha256 bytes)}}))]
+          (is (= [:ran :passed 0]
+                 ((juxt :status :outcome :exit) result)))
+          (is (true? (:source-retained? result)))
+          (is (.isFile file))
+          (is (= (seq bytes) (seq (.getBytes (slurp file) "UTF-8"))))))
       (testing "a namespace-derived path outside test is refused"
         (is (= :meta-self-heal/acceptance-source-path-refused
                (:reason (port 1000 {:id "escape"
@@ -695,6 +728,43 @@
          (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test"])))
   (is (= ["clojure" "-M:test" "-m" "cognitect.test-runner" "-n" "a.b-test" "-v" "a.b-test/one"]
          (sut/executed-command ["clojure" "-M:test" "-n" "a.b-test" "-v" "a.b-test/one"]))))
+
+(deftest acceptance-run-existing-source-identity-controls-materialization
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "acceptance-existing-source"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        runs (atom 0)
+        launch (fn [_ _ _]
+                 (swap! runs inc)
+                 {:status :ran :outcome :passed :exit 0 :summary "green"})
+        invoke (fn [source]
+                 (#'sut/run-acceptance! 1000
+                    {:id "source-identity"
+                     :command ["clojure" "-M:test" "-n" (:namespace source)]
+                     :source source}))
+        text "(ns fixture.identity-test)\n"
+        bytes (.getBytes text "UTF-8")
+        source {:namespace "fixture.identity-test"
+                :path "test/fixture/identity_test.clj"
+                :text text :sha256 (#'sut/hex-sha256 bytes)}
+        file (io/file root (:path source))]
+    (binding [sut/*acceptance-repository* (.getPath root)]
+      (with-redefs [sut/launch-bounded-acceptance! launch]
+        (let [absent (invoke source)]
+          (is (= :ran (:status absent)))
+          (is (true? (:source-clean? absent)))
+          (is (not (.exists file))))
+        (.mkdirs (.getParentFile file))
+        (spit file text)
+        (let [identical (invoke source)]
+          (is (= :ran (:status identical)))
+          (is (true? (:source-retained? identical)))
+          (is (= text (slurp file))))
+        (spit file "(ns fixture.changed-test)\n")
+        (let [conflict (invoke source)]
+          (is (= :meta-self-heal/acceptance-source-conflict (:reason conflict)))
+          (is (= "(ns fixture.changed-test)\n" (slurp file))))
+        (is (= 2 @runs) "the conflicting source never launches")))))
 
 (deftest acceptance-review-prompt-describes-pre-repair-result
   (let [prompt (#'sut/producer-prompt :acceptance-review {:result {:status :ran}})]
@@ -852,11 +922,151 @@
         (assert (zero? (:exit result)) (:err result))))
     (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))))
 
+(deftest superseded-work-order-gets-fresh-versioned-worktree
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "self-heal-versioned-worktrees"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        attempt-path (str root "/repair/versioned/4")
+        old-order {:target-repository repo :target-worktree attempt-path
+                   :canonical-base-sha base :repair-id "repair/versioned" :attempt 4}
+        _ (sut/ensure-author-worktree! old-order)
+        old-patch (commit-file! attempt-path "old.txt" "old version\n"
+                                "superseded author commit")
+        version-pin {:path "work-orders/current.edn"
+                     :sha256 (apply str (repeat 64 "a"))}
+        new-path (str attempt-path "-version-" (subs (:sha256 version-pin) 0 12))
+        new-order (assoc old-order
+                         :target-worktree new-path
+                         :work-order-pin version-pin
+                         :superseded-work-order-pin
+                         {:path "work-orders/old.edn"
+                          :sha256 (apply str (repeat 64 "b"))})
+        created (sut/ensure-author-worktree! new-order)
+        new-patch (commit-file! new-path "new.txt" "new version\n"
+                                "current author commit")
+        resumed (sut/ensure-author-worktree! new-order)
+        _ (clojure.java.shell/sh "git" "-C" new-path "checkout" "--detach" base)
+        moved (sut/ensure-author-worktree! new-order)]
+    (is (= :created (:status created)))
+    (is (= base (:base-sha created)))
+    (is (= old-patch (str/trim (:out (clojure.java.shell/sh
+                                      "git" "-C" attempt-path "rev-parse" "HEAD"))))
+        "the superseded worktree and author commit remain untouched")
+    (is (= :present (:status resumed)) "same-version authored HEAD is reused")
+    (is (= new-patch (:base-sha resumed)))
+    (is (= :refused (:status moved)))
+    (is (= :author-worktree-base-mismatch (:reason moved))
+        "moving the same version off its sealed branch is still refused")))
+
+(deftest integration-equivalence-is-verified-against-real-git
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "integration-equivalence"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/author")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/equivalence" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        patch (commit-file! worktree "repair.txt" "reviewed change\n" "reviewed patch")
+        unrelated (commit-file! repo "main.txt" "main moved\n" "move main")
+        _ (clojure.java.shell/sh "git" "-C" repo "cherry-pick" patch)
+        integration (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                           "rev-parse" "HEAD")))]
+    (is (not= patch integration))
+    (is (true? (sut/integration-equivalent? order patch integration)))
+    (is (false? (sut/integration-equivalent? order patch unrelated))
+        "a canonical-main commit without the reviewed change is not equivalent")
+    (is (true? (sut/integration-equivalent? order integration integration))
+        "an exact reviewed commit retained as an ancestor remains valid")))
+
+(deftest integration-equivalence-covers-the-exact-reviewed-range
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "integration-range"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/author")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/range" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        earlier (commit-file! worktree "earlier.txt" "earlier\n" "earlier patch")
+        tip (commit-file! worktree "tip.txt" "reviewed tip\n" "reviewed tip")
+        _ (clojure.java.shell/sh "git" "-C" repo "cherry-pick" earlier)
+        partial-head (str/trim (:out (clojure.java.shell/sh
+                                      "git" "-C" repo "rev-parse" "HEAD")))
+        request {:work-order order
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha tip
+                                                     :worktree worktree}}
+                                          {:phase :review
+                                           :payload {:patch-sha tip
+                                                     :reviewer-sha tip}}]}}]
+    (is (false? (sut/integration-equivalent? order tip partial-head))
+        "a '-' earlier line followed by '+ reviewed-tip' is not integrated")
+    (let [result (with-redefs [code-identity/load-file-recorded!
+                               (fn [path] {:path path})]
+                   (sut/enact! request))
+          integrated-head (str/trim (:out (clojure.java.shell/sh
+                                            "git" "-C" repo "rev-parse" "HEAD")))]
+      (is (= :succeeded (:status result)) (pr-str result))
+      (is (= 1 (Long/parseLong
+                 (str/trim (:out (clojure.java.shell/sh
+                                   "git" "-C" repo "rev-list" "--count"
+                                   (str partial-head ".." integrated-head))))))
+          "enact adds the missing reviewed tip rather than replaying the integrated prefix")
+      (is (true? (sut/integration-equivalent? order tip integrated-head))
+          "all commits in the reviewed range are now '-' or ancestors")
+      (is (.isFile (io/file repo "earlier.txt")))
+      (is (.isFile (io/file repo "tip.txt"))))))
+
+(deftest enact-integrates-every-commit-in-a-reviewed-range
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "enact-range"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/author")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/enact-range" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        _ (commit-file! worktree "one.txt" "one\n" "range one")
+        tip (commit-file! worktree "two.txt" "two\n" "range two")
+        request {:work-order order
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha tip
+                                                     :worktree worktree}}
+                                          {:phase :review
+                                           :payload {:patch-sha tip
+                                                     :reviewer-sha tip}}]}}
+        result (with-redefs [code-identity/load-file-recorded!
+                             (fn [path] {:path path})]
+                 (sut/enact! request))
+        integrated-head (str/trim (:out (clojure.java.shell/sh
+                                          "git" "-C" repo "rev-parse" "HEAD")))]
+    (is (= :succeeded (:status result)) (pr-str result))
+    (is (= 2 (Long/parseLong
+               (str/trim (:out (clojure.java.shell/sh
+                                 "git" "-C" repo "rev-list" "--count"
+                                 (str base ".." integrated-head))))))
+        "the cherry-pick path integrates the whole sealed-base..reviewed-tip range")
+    (is (true? (sut/integration-equivalent? order tip integrated-head)))
+    (is (.isFile (io/file repo "one.txt")))
+    (is (.isFile (io/file repo "two.txt")))))
+
 (defn- enact-request [repo worktree base patch]
   {:work-order {:target-repository repo :target-worktree worktree
                 :canonical-base-sha base :repair-id "repair/enact" :attempt 1}
-   :transaction {:receipts [{:payload {:patch-sha patch :worktree worktree}}
-                            {:payload {:patch-sha patch :reviewer-sha patch}}]}})
+   :transaction {:receipts [{:phase :author
+                             :payload {:patch-sha patch :worktree worktree}}
+                            {:phase :review
+                             :payload {:patch-sha patch :reviewer-sha patch}}]}})
 
 (deftest enact-cherry-picks-reviewed-sha-idempotently-and-reloads-canonical-only
   (let [{:keys [repo]} (committed-readiness-repository)
@@ -1385,8 +1595,10 @@
                                                          (str patch "^"))))}
         request {:work-order work-order :phase :enact
                  :predecessor-pin {:path "p" :sha256 (apply str (repeat 64 "b"))}
-                 :transaction {:receipts [{:payload {:patch-sha patch}}
-                                          {:payload {:patch-sha patch
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha patch}}
+                                          {:phase :review
+                                           :payload {:patch-sha patch
                                                      :reviewer-sha patch}}]}}
         _ (code-identity/reset-for-test!)
         result (binding [code-identity/*futon2-root* root]

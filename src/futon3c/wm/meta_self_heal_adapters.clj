@@ -10,6 +10,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon2.aif.meta-injury-store :as injury-store]
+            [futon2.aif.meta-repair-coordinator :as coordinator]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
   (:import (java.security MessageDigest)
@@ -67,7 +68,7 @@
                        (:meta-repair-transaction-path opts)))
         work-order (:work-order transaction)
         dirt-owned? (and (map? work-order)
-                         (some #(= :author (:phase %)) (:receipts transaction)))
+                         (coordinator/current-receipt-for transaction :author))
         observations (cond-> []
                        dirt-owned?
                        (conj {:kind :tracked-worktree-dirty
@@ -304,7 +305,9 @@
                "Any other status is refused. The final answer must be that one EDN map and nothing else."))
         review-contract
         (when review?
-          (let [patch (or (get-in request [:transaction :receipts 0 :payload :patch-sha])
+          (let [patch (or (get-in (coordinator/current-receipt-for
+                                   (:transaction request) :author)
+                                  [:payload :patch-sha])
                           "<patch-sha absent from the transaction>")
                 worktree (get-in request [:work-order :target-worktree])]
             (str "\n\nReviewer answer contract: the commit under review is " patch
@@ -678,7 +681,7 @@
                 (re-matches command-name-pattern (nth command 3))
                 (re-matches command-name-pattern (nth command 5))))))
 
-(defn- source-location [{:keys [namespace path text]}]
+(defn- source-location [{:keys [namespace path text sha256]}]
   (let [segments (when (string? namespace) (str/split namespace #"\." -1))
         valid? (and (seq segments)
                     (every? #(and (re-matches command-name-pattern %)
@@ -694,7 +697,8 @@
                        (.startsWith (.toPath file) (.toPath test-root))
                        (not= file test-root))]
     (when (and confined? (= derived path) (string? text))
-      {:file file :test-root test-root :derived derived :text text})))
+      {:file file :test-root test-root :derived derived :text text
+       :sha256 (or sha256 (hex-sha256 (.getBytes text "UTF-8")))})))
 
 (defn- create-parent-dirs! [^java.io.File parent]
   (let [missing (loop [dir parent acc []]
@@ -799,12 +803,18 @@
    review and records evidence; it neither interprets :expected nor claims
    acceptance."
   [timeout-ms {:keys [id command source]}]
-  (let [location (source-location source)]
+  (let [location (source-location source)
+        file ^java.io.File (:file location)
+        existing? (boolean (and file (.isFile file)))
+        existing-sha (when existing?
+                       (hex-sha256 (java.nio.file.Files/readAllBytes
+                                    (.toPath file))))]
     (cond
     (not location)
     {:status :failed :reason :meta-self-heal/acceptance-source-path-refused}
-    (.exists ^java.io.File (:file location))
-    {:status :failed :reason :meta-self-heal/acceptance-source-path-refused}
+    (and existing? (not= (:sha256 location) existing-sha))
+    {:status :failed :reason :meta-self-heal/acceptance-source-conflict
+     :path (:derived location) :expected (:sha256 location) :actual existing-sha}
     (not (nonblank? id)) {:status :failed :reason :acceptance-test-id-invalid}
     (not (admissible-acceptance-command? command))
     {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
@@ -813,18 +823,19 @@
     {:status :failed :reason :meta-self-heal/acceptance-command-not-admissible
      :command command}
     :else
-    (let [file ^java.io.File (:file location)
-          created-dirs (create-parent-dirs! (.getParentFile file))
+    (let [created-dirs (when-not existing?
+                         (create-parent-dirs! (.getParentFile file)))
           result (atom nil)]
       (try
-        (spit file (:text location))
+        (when-not existing? (spit file (:text location)))
         (reset! result (launch-bounded-acceptance! timeout-ms id command))
         (catch Throwable t
           (reset! result {:status :failed :reason :acceptance-runner-error
                           :summary (or (.getMessage t) (.getName (class t))) }))
         (finally
-          (remove-materialized! file created-dirs)))
-      (assoc @result :source-clean? (not (.exists file)))))))
+          (when-not existing? (remove-materialized! file created-dirs))))
+      (assoc @result :source-clean? (not (.exists file))
+             :source-retained? existing?)))))
 
 (defn retry-click-id
   "Mint a retry identity from repair, attempt, ordinal and the full patch SHA.
@@ -840,19 +851,61 @@
          (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id))
        "-patch-" patch-sha))
 
+(defn- reviewed-range-status
+  [{:keys [target-repository canonical-base-sha]} patch-sha integration-commit]
+  (when (and (nonblank? target-repository)
+             (every? #(and (string? %) (re-matches #"[0-9a-fA-F]{40}" %))
+                     [canonical-base-sha patch-sha integration-commit])
+             (:ok? (git target-repository "merge-base" "--is-ancestor"
+                        canonical-base-sha patch-sha))
+             (:ok? (git target-repository "merge-base" "--is-ancestor"
+                        integration-commit "HEAD")))
+    (let [commits-result (git target-repository "rev-list" "--reverse"
+                              (str canonical-base-sha ".." patch-sha))
+          cherry-result (git target-repository "cherry" integration-commit patch-sha)
+          cherry-marks (->> (str/split-lines (:out cherry-result))
+                            (keep #(when-let [[_ mark sha]
+                                              (re-matches #"^([+-]) ([0-9a-fA-F]{40})(?: .*)?$" %)]
+                                     [sha mark]))
+                            (into {}))]
+      (when (and (:ok? commits-result) (:ok? cherry-result))
+        (let [commits (str/split-lines (:out commits-result))
+              integrated? (fn [sha]
+                            (or (:ok? (git target-repository "merge-base"
+                                           "--is-ancestor" sha integration-commit))
+                                (= "-" (get cherry-marks sha))))]
+          {:commits commits
+           :missing (vec (remove integrated? commits))
+           :integrated? (and (seq commits) (every? integrated? commits))})))))
+
+(defn integration-equivalent?
+  "True only when canonical main retains every commit from the sealed base
+   through the exact reviewed tip, by ancestry or exact Git cherry identity."
+  [work-order patch-sha integration-commit]
+  (true? (:integrated? (reviewed-range-status work-order patch-sha
+                                              integration-commit))))
+
 (defn ensure-author-worktree!
-  "Create or verify the sealed attempt worktree at its claim-time base.
-   Failed attempts are deliberately retained as evidence."
-  [{:keys [target-repository target-worktree canonical-base-sha repair-id attempt]}]
+  "Create or verify the sealed work-order-version worktree at its claim-time
+   base. Failed and superseded versions are deliberately retained as evidence."
+  [{:keys [target-repository target-worktree canonical-base-sha repair-id attempt
+           work-order-pin superseded-work-order-pin]}]
   (let [worktree-file (io/file target-worktree)
+        version-suffix (when superseded-work-order-pin
+                         (str "-version-" (subs (:sha256 work-order-pin) 0 12)))
         branch (str "self-heal/"
-                    (str/replace repair-id #"[^A-Za-z0-9._-]" "-") "/" attempt)]
+                    (str/replace repair-id #"[^A-Za-z0-9._-]" "-") "/" attempt
+                    version-suffix)]
     (if (.exists (io/file worktree-file ".git"))
-      (let [head (:out (git target-worktree "rev-parse" "HEAD"))]
-        (if (= canonical-base-sha head)
+      (let [head (:out (git target-worktree "rev-parse" "HEAD"))
+            actual-branch (:out (git target-worktree "branch" "--show-current"))
+            base-ancestor? (:ok? (git target-worktree "merge-base" "--is-ancestor"
+                                      canonical-base-sha "HEAD"))]
+        (if (and (= branch actual-branch) base-ancestor?)
           {:status :present :path target-worktree :branch branch :base-sha head}
           {:status :refused :reason :author-worktree-base-mismatch
-           :path target-worktree :expected canonical-base-sha :actual head}))
+           :path target-worktree :expected canonical-base-sha :actual head
+           :expected-branch branch :actual-branch actual-branch}))
       (do
         (.mkdirs (.getParentFile worktree-file))
         (let [created (git target-repository "worktree" "add" "-b" branch
@@ -890,15 +943,16 @@
    canonical Clojure sources through the serving JVM's recorded authority."
   [{:keys [work-order] :as request}]
   (let [repo (:target-repository work-order)
-        patch (get-in request [:transaction :receipts 0 :payload :patch-sha])
+        patch (get-in (coordinator/current-receipt-for
+                       (:transaction request) :author) [:payload :patch-sha])
         patch (or patch (:patch-sha request))
-        approved (get-in request [:transaction :receipts 1 :payload :patch-sha])
-        reviewer-head (get-in request [:transaction :receipts 1 :payload :reviewer-sha])
+        approved (get-in (coordinator/current-receipt-for
+                          (:transaction request) :review) [:payload :patch-sha])
+        reviewer-head (get-in (coordinator/current-receipt-for
+                               (:transaction request) :review) [:payload :reviewer-sha])
         base (:canonical-base-sha work-order)
         head (:out (git repo "rev-parse" "HEAD"))
-        already-ancestor? (:ok? (git repo "merge-base" "--is-ancestor" patch "HEAD"))
-        cherry-equivalent? (and (not already-ancestor?)
-                                (str/starts-with? (:out (git repo "cherry" "HEAD" patch)) "-"))]
+        range-status (reviewed-range-status work-order patch head)]
     (cond
       (not= patch approved)
       {:status :failed :payload {:reason :approved-patch-sha-mismatch
@@ -910,22 +964,23 @@
 
       :else
       (let [integration (cond
-                          (or already-ancestor? cherry-equivalent?) head
-                          :else
-                          (let [picked (git repo "cherry-pick" patch)]
+                          (:integrated? range-status) head
+                          (seq (:missing range-status))
+                          (let [picked (apply git repo "cherry-pick"
+                                              (:missing range-status))]
                             (if (:ok? picked)
                               (:out (git repo "rev-parse" "HEAD"))
                               (do
                                 (git repo "cherry-pick" "--abort")
-                                nil))))]
+                                nil)))
+                          :else nil)]
         (if-not integration
           {:status :failed
            :payload {:reason (if (= head base)
                                :cherry-pick-conflict
                                :canonical-head-moved-conflict)
                      :patch-sha patch :canonical-head head :canonical-base-sha base}}
-          (let [parent (:out (git repo "rev-parse" (str patch "^")))
-            changed (:out (git repo "diff" "--name-only" parent patch))
+          (let [changed (:out (git repo "diff" "--name-only" base patch))
             sources (filter #(and (str/starts-with? % "src/")
                                   (str/ends-with? % ".clj"))
                             (str/split-lines changed))
@@ -998,22 +1053,26 @@
        :repair-enact-fn enact!
        :repair-worktree-fn ensure-author-worktree!
        :retry-click-id-fn retry-click-id
+       :repair-integration-equivalent-fn integration-equivalent?
        :repair-retry-fn
        (fn [{:keys [work-order] :as request}]
-         (let [retry-click (or (:retry-click request)
-                               (get-in request [:transaction :receipts 2 :payload :retry-click]))]
+         (let [transaction (:transaction request)
+               author (coordinator/current-receipt-for transaction :author)
+               enact (coordinator/current-receipt-for transaction :enact)
+               retry-click (or (:retry-click request)
+                               (get-in enact [:payload :retry-click]))]
            ((:queue-retry-fn opts)
             (cond-> {:repair-id (:repair-id work-order)
                      :injury-id (:injury-id work-order)
                      :attempt (:attempt work-order)
-                     :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                     :patch-sha (get-in author [:payload :patch-sha])
                      :retry-click retry-click
                      :request request}
               (contains? request :requeue-ordinal)
               (assoc :requeue-ordinal (:requeue-ordinal request))))
            {:status :queued
             :payload {:repair-id (:repair-id work-order)
-                      :patch-sha (get-in request [:transaction :receipts 0 :payload :patch-sha])
+                      :patch-sha (get-in author [:payload :patch-sha])
                       :retry-click retry-click}}))}
        ;; One-click frontier (2026-10-22, futon2 3e17ebedb): forward the
        ;; serving side's read-only durable child-status port when the opts
