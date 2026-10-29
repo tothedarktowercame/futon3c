@@ -1,4 +1,5 @@
 # E-first-flights typed-grounds closure — producer-side typed grounds
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The W2 producer-side typed-grounds blocker was closed: flight-record emits structured :ground/kind maps and the generated witness EDN exists on disk and conformed under flight_spec_verify. Evidence: /home/joe/code/futon3c/holes/specs/traces/flight-typed-ground-witness.edn.
 
 **VERDICT (2026-10-09, provisional):** DONE — Verdict: CLOSED at producer/spec/witness grain; the producer-side gap is stated closed. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
 

@@ -1,7 +1,7 @@
 # E-deep-research-hardening — background workflows drop on the Claude REPL (vs legacy CLI?)
 
 **Date:** 2026-06-23
-**Status:** TESTED 2026-06-24 (claude-opus-4-8[1m]). Strong hypothesis ("legacy CLI runs the
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The REPL-vs-CLI deep-research investigation was tested to conclusion: strong hypothesis refuted, 604s abort isolated as a -p artifact, warm-REPL survival validated, with the salvaged report preserved. Evidence: /home/joe/code/futon3c/holes/excursions/deep-research-AIF-morphogenesis.md.
 background workflow to completion") **REFUTED**; deeper REPL-is-worse point survives in a sharper form.
 Original OBSERVATION + hypothesis (claude-2) preserved below.
 **Provenance:** the AIF∩morphogenesis deep-research (M-G-over-cascades / E-substrate-2-timetravel) — the

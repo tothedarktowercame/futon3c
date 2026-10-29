@@ -1,4 +1,5 @@
 # E-futon1b latency inventory
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The discovery-only latency inventory was delivered, reviewed with corrections applied, and committed to futon3c (amendment 1095dd8b), with the surviving findings (per-page type-count scan; absent-name ~200x cost) documented and reproduced. Evidence: 1095dd8b.
 
 **VERDICT (2026-10-09, provisional):** DONE — Measurement inventory was delivered, reviewed and mutation-tested, with review commits accepting the retraction speedup; discovery-only scope was met. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
 

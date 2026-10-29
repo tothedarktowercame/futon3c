@@ -1,4 +1,5 @@
 # E-ground-control-pass-to-zone
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Ground-control handover note from claude-7 to ams-claude-1 was delivered, recording the closed 91-to-0 review campaign and four silent-failure gaps with their fixes. Evidence: /home/joe/code/futon6/README-apm-lean-ground-control.md, 26308814, 01d42841.
 
 **VERDICT (2026-10-09, provisional):** DONE — Handover note whose purpose is the transfer itself; it records a closed review campaign, open-state inventory and later corrections — the handover was delivered. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 

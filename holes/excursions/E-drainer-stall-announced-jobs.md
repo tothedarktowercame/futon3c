@@ -1,7 +1,7 @@
 # Excursion: E-drainer-stall-announced-jobs — announced jobs sit `queued` and are never drained
 
 **Date:** 2026-08-22
-**Status:** RESOLVED (cause established 2026-08-22 14:20, ams-claude-fable). Neither
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The announced-job stall was diagnosed to root cause (announce never dispatches; activation requires a second /invoke with the job-id) and the driver fix landed in commit f981f4411. Evidence: f981f4411.
 hypothesis below was it — see "Resolution" at the end. Driver fix:
 futon3c-frame18-control `Activate announced jobs through /invoke`.
 **Repo:** futon3c — `transport/http.clj` (announce + `build-invoke-response`),

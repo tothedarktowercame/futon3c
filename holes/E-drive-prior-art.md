@@ -1,4 +1,5 @@
 # E-drive-prior-art — survey of the stack's previous answers to the drive problem
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The one-shot survey of six prior drive-problem attempts was delivered on 2026-06-11 with its three concrete questions answered and the convergent arc-3 design composed; the survey itself is the deliverable, committed as 834cf4d66. Evidence: 834cf4d66.
 
 **VERDICT (2026-10-09, provisional):** DONE — A one-shot survey of prior drive-problem attempts delivered with conclusions and recommendations; its deliverable is the survey itself, committed 2026-06-11. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
 

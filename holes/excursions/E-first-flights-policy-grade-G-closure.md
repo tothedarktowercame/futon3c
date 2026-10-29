@@ -1,4 +1,5 @@
 # E-first-flights — W1 Phase-B policy-grade G(s,π) closure
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Independent verification closed W1 Phase-B policy-grade G(s,pi): 18/18 test assertions pass on the fold-realized calibration seam and the sorry edit was verified honest, with source commits in both repos. Evidence: 4425876, 2665779, /home/joe/code/futon2/test/fold_realized_zero_coverage_test.clj.
 
 **VERDICT (2026-10-09, provisional):** DONE — Verdict section says CLOSED; conclusion confirms W1 CLOSED with 18/18 tests passing and the sorry justified. _(WM status classification by zai-1, high confidence; not yet confirmed by the author.)_
 

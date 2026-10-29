@@ -1,4 +1,5 @@
 # E-futon1b GC wedge: discovery and proposed repair
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Discovery-only diagnosis was delivered (semaphore leak ruled out; retained heap pinned to XTDB/Arrow field-tree metadata with the five-part repair), and the repair itself landed as futon1b commits with post-restart verification recorded in the excursion. Evidence: 4cd17bc, 8aba53c.
 
 **VERDICT (2026-10-09, provisional):** DONE — Discovery scope was met and a repair receipt with post-restart verification was committed; only unrelated follow-ups remain open. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
 
