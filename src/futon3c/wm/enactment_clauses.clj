@@ -7,7 +7,8 @@
   enacted in this cascade. Clause text is grounded in the pinned
   library source (futon3/library, rev b784e44e2473b468b63b3a2e47ef720cee4130b5);
   the :source-pin sha256 in each decision cites the exact file body."
-  (:require [futon2.aif.load-identity :as load-identity]))
+  (:require [futon2.aif.load-identity :as load-identity]
+            [futon2.aif.wm.authored.req-f0ba279a :as authored]))
 
 (load-identity/register! *ns* *file*)
 
@@ -84,7 +85,10 @@
   (when (not= phase :compile)
     (throw (ex-info "patch bound to phase :compile"
                     {:schema :wm/patch-phase-mismatch :phase phase})))
-  {["cascade-construction/read-what-exists-first" 0]
+  (into {}
+        (map (fn [[id provenance]]
+               [id (merge (get authored/clauses id) provenance)]))
+        {["cascade-construction/read-what-exists-first" 0]
    (decision read-what-exists-first-clause
              "/home/joe/code/futon3/library/cascade-construction/read-what-exists-first.flexiarg"
              "04b442f40edd33be35382de2355944a0135c50dbefce4a7ec5967378ec21d81e")
@@ -119,4 +123,4 @@
    ["apparatus/the-system-stops-on-schedule" 10]
    (decision stops-on-schedule-clause
              "/home/joe/code/futon3/library/apparatus/the-system-stops-on-schedule.flexiarg"
-             "afb63a67df2f5323003c984b67b2db79795ba94d5f4528589892342ad28ef11f")})
+             "afb63a67df2f5323003c984b67b2db79795ba94d5f4528589892342ad28ef11f")}))
