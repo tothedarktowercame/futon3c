@@ -178,8 +178,10 @@
         work-order {:repair-id "repair-alpha" :attempt 1 :target-repository root
                     :canonical-base-sha (str/trim (:out (sh ["rev-parse" (str (str/trim patch) "^")]))) }
         request {:work-order work-order
-                 :transaction {:receipts [{:payload {:patch-sha (str/trim patch)}}
-                                          {:payload {:patch-sha (str/trim patch)
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha (str/trim patch)}}
+                                          {:phase :review
+                                           :payload {:patch-sha (str/trim patch)
                                                      :reviewer-sha (str/trim patch)}}]}}
         result (with-redefs [code-identity/load-file-recorded!
                              (fn [path] {:status :loaded :path path})]
@@ -218,8 +220,10 @@
                                                      "rev-parse" (str patch "^"))))]
       (sut/enact! {:work-order {:repair-id "repair-alpha" :attempt 1
                                 :target-repository root :canonical-base-sha base}
-                   :transaction {:receipts [{:payload {:patch-sha patch}}
-                                            {:payload {:patch-sha patch
+                   :transaction {:receipts [{:phase :author
+                                             :payload {:patch-sha patch}}
+                                            {:phase :review
+                                             :payload {:patch-sha patch
                                                        :reviewer-sha patch}}]}}))))
 
 (deftest enact-accepts-a-patch-integrated-below-head
@@ -286,10 +290,13 @@
         enacted-entry (fn [enact-payload]
                         (merge {:injury-id injury :state :enacted :attempt 1 :repair-id repair
                                 :retry-click (:retry-click payload)}
-                               (select-keys enact-payload [:reload-receipt :integration-commit])))
+                               (select-keys enact-payload
+                                            [:patch-sha :reload-receipt
+                                             :integration-commit])))
         admitted (ledger/append-transition reviewed (enacted-entry payload))
         old-shape (ledger/append-transition
-                   reviewed (enacted-entry {:integration-commit (:integration-commit payload)
+                   reviewed (enacted-entry {:patch-sha patch
+                                            :integration-commit (:integration-commit payload)
                                             :reload-receipt (:reload-receipts payload)}))]
     (is (= :appended (:status admitted)) (pr-str admitted))
     (is (= :valid (:status (ledger/validate-ledger (:ledger admitted)))))
@@ -1588,8 +1595,10 @@
                                                          (str patch "^"))))}
         request {:work-order work-order :phase :enact
                  :predecessor-pin {:path "p" :sha256 (apply str (repeat 64 "b"))}
-                 :transaction {:receipts [{:payload {:patch-sha patch}}
-                                          {:payload {:patch-sha patch
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha patch}}
+                                          {:phase :review
+                                           :payload {:patch-sha patch
                                                      :reviewer-sha patch}}]}}
         _ (code-identity/reset-for-test!)
         result (binding [code-identity/*futon2-root* root]
