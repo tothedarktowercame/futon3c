@@ -39,6 +39,91 @@
       (throw (ex-info "Clock decisions require a durable evidence backend"
                       {:error/code :clock/non-durable-backend})))))
 
+;; futon1b being busy is not a clock-decision problem, and until 2026-09-28
+;; it surfaced in agents' buffers as "Clock decision persistence failed" or
+;; "futon1b read did not obtain evidence". Name the cause and what it means for
+;; the turn; keep the clock-decision message for a write the store refuses.
+(def ^:private busy-read-codes
+  #{:futon1b-read-timeout :futon1b-unreachable :futon1b-read-unavailable})
+
+(def ^:private busy-write-codes
+  #{:store-unavailable :store-timeout :store-unreachable})
+
+(defn- busy-write?
+  "A write receipt that failed because futon1b was busy. The boundary turns an
+  exception thrown inside an append (its read-back included) into
+  :error/code :exception and keeps the thrown code under :invariant/violation,
+  so a busy read there arrives as a nested :futon1b-read-unavailable."
+  [result]
+  (or (busy-write-codes (:error/code result))
+      (busy-read-codes (get-in result [:invariant/violation :error/code]))))
+
+(defn- store-busy-error [what cause-message data cause]
+  (ex-info (str "Turn not started: futon1b was busy while " what
+                " (" cause-message "). Nothing was recorded, so sending the"
+                " message again is safe.")
+           (assoc data :error/code :clock/store-busy)
+           cause))
+
+(def ^:dynamic *store-busy-waits-ms*
+  "Pauses between attempts to record a turn's admission decision while futon1b
+  is busy; about ten minutes in all. On 2026-10-03 a 504 burst refused a
+  codex-18 turn outright (\"Turn not started: futon1b was busy\"): the operator's
+  message was dropped, though a turn is meant to wait its place, not give up
+  because the store is momentarily saturated. `record!` is idempotent on a
+  stable decision id, so retrying is safe; only after the whole schedule is the
+  turn refused."
+  [2000 5000 10000 20000 30000 60000 60000 60000 60000 60000 60000 60000 60000 60000])
+
+(def ^:dynamic *busy-budget* nil)
+
+(defn with-store-busy-budget
+  "One retry allowance across nested clock reads/writes. Ingress supplies a
+   short deadline and no retries; internal operations retain the wait schedule."
+  ([f] (with-store-busy-budget {} f))
+  ([{:keys [waits timeout-ms on-wait] :or {waits *store-busy-waits-ms*} :as options} f]
+   (let [requested-deadline (when timeout-ms (+ (System/nanoTime) (* 1000000 timeout-ms)))
+         inherited-deadline (or (:deadline *busy-budget*) f1b/*read-deadline-ns*)
+         deadline (when-let [ds (seq (keep identity [requested-deadline inherited-deadline]))]
+                    (reduce min ds))
+         budget (assoc (or *busy-budget* {:waits (atom (seq waits))}) :deadline deadline)
+         ;; An ingress nested inside a longer operation may tighten, never
+         ;; renew, the shared retry allowance.
+         _ (when (and *busy-budget* (contains? options :waits))
+             (swap! (:waits budget) #(seq (take (count waits) %))))]
+     (binding [*busy-budget* budget
+               f1b/*read-deadline-ns* (or (:deadline budget) f1b/*read-deadline-ns*)]
+       (letfn [(check-deadline! []
+                 (when (and (:deadline budget) (>= (System/nanoTime) (:deadline budget)))
+                   (throw (ex-info "Clock store operation deadline exhausted"
+                                   {:error/code :clock/store-busy :clock/budget-exhausted? true}))))]
+         (loop []
+           (check-deadline!)
+           (let [outcome (try
+                           (let [v (f)] (check-deadline!) {:value v})
+                           (catch clojure.lang.ExceptionInfo e
+                             (let [code (:error/code (ex-data e))]
+                               (cond
+                                 (busy-read-codes code)
+                                 {:busy (store-busy-error "reading this turn's clock decision"
+                                                         (ex-message e) {:read (ex-data e)} e)}
+                                 (= :clock/store-busy code) {:busy e}
+                                 :else (throw e)))))]
+             (if-let [e (:busy outcome)]
+               (if-let [wait-ms (first @(:waits budget))]
+                 (do
+                   (swap! (:waits budget) next)
+                   (check-deadline!)
+                   (when on-wait (on-wait wait-ms e))
+                   (Thread/sleep (long (if-let [deadline (:deadline budget)]
+                                        (min wait-ms (max 0 (quot (- deadline (System/nanoTime)) 1000000)))
+                                        wait-ms)))
+                   (recur))
+                 (throw e))
+               (:value outcome)))))))))
+
+(defn- busy-read [f] (with-store-busy-budget f))
+
 (defn- recovery-rows
   [backend query]
   ;; Count the SQL-pushed predicates WITHOUT tags: tags are post-filtered in
@@ -75,7 +160,9 @@
    (when-not (seq agent-id)
      (throw (ex-info "Clock recovery requires an agent"
                      {:error/code :clock/missing-identity})))
-   (let [backend (evidence-store supplied)
+   (with-store-busy-budget
+    (fn []
+     (let [backend (evidence-store supplied)
          query (cond-> {:query/author agent-id :query/tags [:clock-decision]}
                  (and session-id (not= ::all session-id))
                  (assoc :query/session-id session-id))
@@ -101,7 +188,7 @@
        (clock/set-decision! aid sid
                             (if (= :unclocked (:status d))
                               (assoc d :clock (clock/empty-clock)) d)))
-     {:restored (count latest)})))
+     {:restored (count latest)})))))
 
 (defn restore-registered!
   "Rebuild all saved sessions for currently registered agents. Called after
@@ -245,44 +332,6 @@
        (UUID/nameUUIDFromBytes
         (.getBytes (pr-str [agent-id session-id turn-id phase event-id]) "UTF-8"))))
 
-;; futon1b being busy is not a clock-decision problem, and until 2026-09-28
-;; it surfaced in agents' buffers as "Clock decision persistence failed" or
-;; "futon1b read did not obtain evidence". Name the cause and what it means for
-;; the turn; keep the clock-decision message for a write the store refuses.
-(def ^:private busy-read-codes
-  #{:futon1b-read-timeout :futon1b-unreachable :futon1b-read-unavailable})
-
-(def ^:private busy-write-codes
-  #{:store-unavailable :store-timeout :store-unreachable})
-
-(defn- busy-write?
-  "A write receipt that failed because futon1b was busy. The boundary turns an
-  exception thrown inside an append (its read-back included) into
-  :error/code :exception and keeps the thrown code under :invariant/violation,
-  so a busy read there arrives as a nested :futon1b-read-unavailable."
-  [result]
-  (or (busy-write-codes (:error/code result))
-      (busy-read-codes (get-in result [:invariant/violation :error/code]))))
-
-(defn- store-busy-error [what cause-message data cause]
-  (ex-info (str "Turn not started: futon1b was busy while " what
-                " (" cause-message "). Nothing was recorded, so sending the"
-                " message again is safe.")
-           (assoc data :error/code :clock/store-busy)
-           cause))
-
-(defn- busy-read
-  "Run F, which reads from the evidence store; a busy store becomes a
-  :clock/store-busy error that says the turn did not start."
-  [f]
-  (try
-    (f)
-    (catch clojure.lang.ExceptionInfo e
-      (if (busy-read-codes (:error/code (ex-data e)))
-        (throw (store-busy-error "reading this turn's clock decision"
-                                 (ex-message e) {:read (ex-data e)} e))
-        (throw e)))))
-
 (defn record!
   "Compute and durably append a decision. Stable event identity makes retries
    idempotent. Returns the persisted decision, then projects it to clock-store."
@@ -291,7 +340,9 @@
     (throw (ex-info "Clock decision lacks turn identity"
                     {:error/code :clock/missing-identity
                      :agent-id agent-id :turn-id turn-id :surface surface})))
-  (let [backend (evidence-store (:evidence-store context))
+  (with-store-busy-budget
+   (fn []
+    (let [backend (evidence-store (:evidence-store context))
         _ (when-not (clock/stored-state agent-id session-id)
             (busy-read #(restore! backend agent-id session-id)))
         eid (decision-id context)
@@ -339,17 +390,7 @@
                                             :decision-id (:decision-id persisted)
                                             :source (:source persisted)
                                             :evidence (:evidence persisted)}})))
-      persisted))
-
-(def ^:dynamic *store-busy-waits-ms*
-  "Pauses between attempts to record a turn's admission decision while futon1b
-  is busy; about ten minutes in all. On 2026-10-03 a 504 burst refused a
-  codex-18 turn outright (\"Turn not started: futon1b was busy\"): the operator's
-  message was dropped, though a turn is meant to wait its place, not give up
-  because the store is momentarily saturated. `record!` is idempotent on a
-  stable decision id, so retrying is safe; only after the whole schedule is the
-  turn refused."
-  [2000 5000 10000 20000 30000 60000 60000 60000 60000 60000 60000 60000 60000 60000])
+      persisted))))
 
 (defn- note-waiting! [agent-id activity]
   (try
@@ -357,32 +398,13 @@
       (update! agent-id activity))
     (catch Throwable _ nil)))
 
-(defn- record-waiting-out-busy-store!
-  "`record!`, retried on :clock/store-busy per `*store-busy-waits-ms*`."
-  [context]
-  (loop [waits (seq *store-busy-waits-ms*)
-         attempt 1]
-    (let [outcome (try
-                    {:decision (record! context)}
-                    (catch clojure.lang.ExceptionInfo e
-                      (if (and waits (= :clock/store-busy (:error/code (ex-data e))))
-                        {:busy e}
-                        (throw e))))]
-      (if-let [e (:busy outcome)]
-        (let [wait-ms (first waits)]
-          (println (str "[clock-decision] futon1b busy at turn admission agent="
-                        (:agent-id context) " turn=" (:turn-id context)
-                        " attempt=" attempt "; retrying in " (quot wait-ms 1000) "s: "
-                        (or (get-in (ex-data e) [:receipt :error/message])
-                            (some-> (ex-cause e) ex-message)
-                            (ex-message e))))
-          (flush)
-          (note-waiting! (:agent-id context)
-                         (str "waiting for futon1b (busy), retry " attempt
-                              " in " (quot wait-ms 1000) "s"))
-          (Thread/sleep (long wait-ms))
-          (recur (next waits) (inc attempt)))
-        (:decision outcome)))))
+(defn- record-waiting-out-busy-store! [context]
+  (with-store-busy-budget
+    {:on-wait (fn [wait-ms _]
+                (note-waiting! (:agent-id context)
+                               (str "waiting for futon1b (busy), retry in "
+                                    (quot wait-ms 1000) "s")))}
+    #(record! context)))
 
 (defn start!
   [agent-id session-id prompt options]

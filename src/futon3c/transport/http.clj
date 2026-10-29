@@ -2277,8 +2277,17 @@
   [request]
   (let [evidence-store (coordination-ledger/mesh-evidence-store (:evidence-store request))
         request (assoc request :inherited-clock
-                       (clock-decision/dispatch-inheritance
-                        evidence-store (:caller request) (:surface request)))
+                       (try
+                         (clock-decision/with-store-busy-budget
+                           {:waits [] :timeout-ms 5000}
+                           #(clock-decision/dispatch-inheritance
+                              evidence-store (:caller request) (:surface request)))
+                         (catch clojure.lang.ExceptionInfo e
+                           (if (= :clock/store-busy (:error/code (ex-data e)))
+                             (throw (ex-info "Clock store busy before job creation"
+                                             {:error/code :clock/store-busy
+                                              :dispatch/not-created? true} e))
+                             (throw e)))))
         controller (configured-invoke-ingress-controller)
         job-id (if controller
                  (let [ticket (invoke-ingress/begin-creation! controller)
@@ -13732,6 +13741,14 @@
                                   "message" (str "Unknown endpoint: "
                                                 (some-> method name str/upper-case)
                                                 " " uri)}))))
+        (catch clojure.lang.ExceptionInfo e
+          (if (and (= :clock/store-busy (:error/code (ex-data e)))
+                   (true? (:dispatch/not-created? (ex-data e))))
+            (assoc-in (json-response 503 {:ok false :error "clock-store-busy"
+                                         :error/code :clock/store-busy
+                                         :dispatch/not-created? true})
+                      [:headers "Retry-After"] "2")
+            (throw e)))
         (catch InterruptedException _
           ;; JVM is tearing down (or a downstream XTDB query thread was
           ;; interrupted). Convert to a clean 503 instead of letting an

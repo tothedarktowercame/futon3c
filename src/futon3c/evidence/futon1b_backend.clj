@@ -265,10 +265,19 @@
                             :transport/evidence :not-obtained}))))
        {:status status :body (read-edn body)})))
 
+(def ^:dynamic *read-deadline-ns*
+  "Optional enclosing operation deadline; all its HTTP reads share it." nil)
+
 (defn- get-edn
   ([url] (get-edn url timeout-ms))
   ([url requested-ms]
-   (let [bound (read-health/timeout-ms requested-ms)
+   (let [remaining (when *read-deadline-ns*
+                     (quot (- *read-deadline-ns* (System/nanoTime)) 1000000))
+         _ (when (and remaining (<= remaining 0))
+             (throw (ex-info "Evidence read operation deadline exhausted"
+                             {:error/code :futon1b-read-timeout})))
+         bound (cond-> (read-health/timeout-ms requested-ms)
+                 remaining (min remaining))
          trace-id (str "evidence-read:" (UUID/randomUUID))]
      (read-health/observe! {:url url :trace-id trace-id :timeout-ms bound}
                           #(raw-get-edn url bound trace-id)))))

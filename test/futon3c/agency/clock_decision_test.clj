@@ -20,7 +20,8 @@
     (reg/reset-registry!)
     (with-redefs [bb/project-agents! (constantly nil)
                   reg/ring-bell-file! (constantly nil)]
-      (try (f) (finally (clock/reset-store!) (reg/reset-registry!))))))
+      (try (binding [decision/*store-busy-waits-ms* []] (f))
+           (finally (clock/reset-store!) (reg/reset-registry!))))))
 
 (defn- context [id]
   {:agent-id "clock-worker" :session-id "clock-session" :turn-id id
