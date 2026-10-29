@@ -1674,3 +1674,10 @@
             (run source)
             (run (assoc source :execution-repository "/counterfactual"))))))
     (is (= [["/canonical" source] ["/counterfactual" source]] @seen))))
+
+(deftest acceptance-environment-includes-repair-publication-roots
+  (let [env (sut/acceptance-store-environment "/tmp/acceptance-stores-test")]
+    (is (= "/tmp/acceptance-stores-test/repair-obligations"
+           (get env "FUTON_WM_REPAIR_OBLIGATION_ROOT")))
+    (is (= "/tmp/acceptance-stores-test/ticket-publication"
+           (get env "FUTON_WM_TICKET_PUBLICATION_ROOT")))))
