@@ -1233,8 +1233,6 @@
     ;; F25 (click 7, 2026-10-20): a seat harness's final-report reserve forces
     ;; prose before the one machine answer, so prose before a trailing fence
     ;; reads the fence. Prose after the fence is still refused.
-    (is (= :proposed (:status (run "Here is the map:\n```edn\n{:status :proposed}\n```")))
-        "prose before a trailing fence reads the fence")
     (let [result (run "```edn\n{:status :proposed}\n```\nHere is the map.")]
       (is (= :meta-self-heal/producer-response-malformed (:reason result))
           "prose after the fence is still refused")
@@ -1244,10 +1242,19 @@
       (is (= :meta-self-heal/producer-response-malformed (:reason result))
           "JSON with unquoted values reads as string-keyed EDN; not a map the caller can act on")
       (is (str/includes? (:detail result) "\"x\": 1")))
-    (is (= :proposed (:status (run "```json\n{:status :proposed}\n```")))
-        "an EDN map under a json fence tag is the map")
-    (is (= :proposed (:status (run "```edn\n{:status :proposed}\n```"))))
-    (is (= :proposed (:status (run "{:status :proposed}"))))))
+    ;; Since 6b1fb81a2 (source transported through a worktree file) a
+    ;; :proposed acceptance proposal carrying no source at all is a typed
+    ;; transport refusal, so these parsing fixtures carry the inline-text
+    ;; compatibility fallback; the shape under test is still the read.
+    (let [proposed (pr-str {:status :proposed
+                            :acceptance-test
+                            {:source {:text "(ns proposed.acceptance-test)"}}})]
+      (is (= :proposed (:status (run (str "Here is the map:\n```edn\n" proposed "\n```"))))
+          "prose before a trailing fence reads the fence")
+      (is (= :proposed (:status (run (str "```json\n" proposed "\n```"))))
+          "an EDN map under a json fence tag is the map")
+      (is (= :proposed (:status (run (str "```edn\n" proposed "\n```")))))
+      (is (= :proposed (:status (run proposed)))))))
 
 (deftest malformed-producer-response-keeps-the-rate-limit-retry-mark
   "A seat that was rate-limited once and then answered with prose: the
