@@ -298,6 +298,7 @@
                ", plus the test namespaces for files you changed. Do not run futon2.aif.full-loop-runner-test or futon2.aif.selection-failure-retention-test; they drive the live stack. "
                "As soon as the acceptance command passes, commit and answer exactly "
                "{:status :succeeded :payload {:patch-sha \"<40-hex sha of the commit in :worktree>\" :worktree \"<path>\"}}. "
+               "If the admitted acceptance test cannot pass after any correct repair, do not report an ordinary author failure and do not change the test. Answer exactly {:status :rejected :payload {:reason :acceptance-test-unsatisfiable :evidence {:assertion \"<the exact failing assertion>\" :reason \"<why no repair can satisfy it>\"}}}. "
                "If that cannot be done, answer {:status :failed :payload {:reason <typed reason>}} or {:status :rejected :payload {:reason <typed reason>}}. "
                "Any other status is refused. The final answer must be that one EDN map and nothing else."))
         review-contract
@@ -385,7 +386,7 @@
               "(click wm-click-c1dcd274, 2026-10-23: a declared {:pass 10} for a test that ran 15 assertions was refused as unattainable). ")
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
-              "Admit it if it pins the injury (fails for the injury's reason) and is the right test for the repair; refuse with a typed reason otherwise. "
+              "Admit it only if it pins the injury (fails for the injury's reason), is the right test for the repair, and every assertion can pass after a correct repair. Inspect assertions for contradictions or impossible ordering constraints. When :author-unsatisfiable-claim is present, evaluate its exact assertion and reason as retained evidence and refuse the old test if the claim is sound. "
               "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test {:id ... :command ... :expected ...}}, "
               "echoing those request values exactly. Do not echo the test source: the proposal pin identifies it "
               "(F24a, click wm-click-a8f4dea6, 2026-10-20: the reviewer's first yes left the 4 KB source out and was refused as an identity mismatch). "
