@@ -432,6 +432,8 @@
       (sut/agency-invoke! {:seat "zai-2" :session-id "declared"
                            :request (assoc request :phase :author)}))
     (is (str/includes? @prompt "Author answer contract"))
+    (is (str/includes? @prompt ":acceptance-test-unsatisfiable"))
+    (is (str/includes? @prompt ":evidence {:assertion"))
     (is (not (str/includes? @prompt "Reviewer answer contract")))
     ;; An absent author receipt is named honestly instead of throwing while
     ;; building the review prompt.
@@ -699,6 +701,8 @@
     (is (str/includes? prompt "run before any repair, in the canonical checkout"))
     (is (str/includes? prompt "result is in :result"))
     (is (str/includes? prompt "fails for the injury's reason"))
+    (is (str/includes? prompt "every assertion can pass after a correct repair"))
+    (is (str/includes? prompt ":author-unsatisfiable-claim"))
     (is (str/includes? prompt "Return exactly one EDN map and no prose"))
     ;; F24a: the reviewer echoes the test's identity, not its source.
     (is (str/includes? prompt ":acceptance-test {:id ... :command ... :expected ...}"))
