@@ -98,8 +98,10 @@
     (assoc base :order rows :ready-set ready :graph-coverage coverage
            :reading-evidence evidence
            :known-subgraph (select-keys base [:cones :unblocks])
-           :cones (into {} (map (juxt :id :cone)) rows)
-           :unblocks (into {} (map (juxt :id :unblocks)) rows)
+           :cones (into {} (map (fn [row] [(:id row) (when (some? (:cone row))
+                                                   (get (:cones base) (:id row)))]) rows))
+           :unblocks (into {} (map (fn [row] [(:id row) (when (some? (:unblocks row))
+                                                      (get (:unblocks base) (:id row)))]) rows))
            :ready-ignoring-externals (filterv (set ready) (:ready-ignoring-externals base))
            :readiness (reduce (fn [m row]
                                (assoc m (:id row) (select-keys row [:status :reason :dependency-reading :graph-terms])))
