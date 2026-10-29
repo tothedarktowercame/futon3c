@@ -851,20 +851,39 @@
          (str "wm-requeue-" requeue-ordinal "-" attempt "-" repair-id))
        "-patch-" patch-sha))
 
+(defn- reviewed-range-status
+  [{:keys [target-repository canonical-base-sha]} patch-sha integration-commit]
+  (when (and (nonblank? target-repository)
+             (every? #(and (string? %) (re-matches #"[0-9a-fA-F]{40}" %))
+                     [canonical-base-sha patch-sha integration-commit])
+             (:ok? (git target-repository "merge-base" "--is-ancestor"
+                        canonical-base-sha patch-sha))
+             (:ok? (git target-repository "merge-base" "--is-ancestor"
+                        integration-commit "HEAD")))
+    (let [commits-result (git target-repository "rev-list" "--reverse"
+                              (str canonical-base-sha ".." patch-sha))
+          cherry-result (git target-repository "cherry" integration-commit patch-sha)
+          cherry-marks (->> (str/split-lines (:out cherry-result))
+                            (keep #(when-let [[_ mark sha]
+                                              (re-matches #"^([+-]) ([0-9a-fA-F]{40})(?: .*)?$" %)]
+                                     [sha mark]))
+                            (into {}))]
+      (when (and (:ok? commits-result) (:ok? cherry-result))
+        (let [commits (str/split-lines (:out commits-result))
+              integrated? (fn [sha]
+                            (or (:ok? (git target-repository "merge-base"
+                                           "--is-ancestor" sha integration-commit))
+                                (= "-" (get cherry-marks sha))))]
+          {:commits commits
+           :missing (vec (remove integrated? commits))
+           :integrated? (and (seq commits) (every? integrated? commits))})))))
+
 (defn integration-equivalent?
-  "True when integration is retained on canonical main and contains the
-   reviewed patch either by identity/ancestry or by Git patch equivalence."
-  [{:keys [target-repository]} patch-sha integration-commit]
-  (and (nonblank? target-repository)
-       (every? #(and (string? %) (re-matches #"[0-9a-fA-F]{40}" %))
-               [patch-sha integration-commit])
-       (:ok? (git target-repository "merge-base" "--is-ancestor"
-                  integration-commit "HEAD"))
-       (or (= patch-sha integration-commit)
-           (:ok? (git target-repository "merge-base" "--is-ancestor"
-                      patch-sha integration-commit))
-           (str/starts-with? (:out (git target-repository "cherry" integration-commit
-                                       patch-sha)) "-"))))
+  "True only when canonical main retains every commit from the sealed base
+   through the exact reviewed tip, by ancestry or exact Git cherry identity."
+  [work-order patch-sha integration-commit]
+  (true? (:integrated? (reviewed-range-status work-order patch-sha
+                                              integration-commit))))
 
 (defn ensure-author-worktree!
   "Create or verify the sealed work-order-version worktree at its claim-time
@@ -933,9 +952,7 @@
                                (:transaction request) :review) [:payload :reviewer-sha])
         base (:canonical-base-sha work-order)
         head (:out (git repo "rev-parse" "HEAD"))
-        already-ancestor? (:ok? (git repo "merge-base" "--is-ancestor" patch "HEAD"))
-        cherry-equivalent? (and (not already-ancestor?)
-                                (str/starts-with? (:out (git repo "cherry" "HEAD" patch)) "-"))]
+        range-status (reviewed-range-status work-order patch head)]
     (cond
       (not= patch approved)
       {:status :failed :payload {:reason :approved-patch-sha-mismatch
@@ -947,22 +964,23 @@
 
       :else
       (let [integration (cond
-                          (or already-ancestor? cherry-equivalent?) head
-                          :else
-                          (let [picked (git repo "cherry-pick" patch)]
+                          (:integrated? range-status) head
+                          (seq (:missing range-status))
+                          (let [picked (apply git repo "cherry-pick"
+                                              (:missing range-status))]
                             (if (:ok? picked)
                               (:out (git repo "rev-parse" "HEAD"))
                               (do
                                 (git repo "cherry-pick" "--abort")
-                                nil))))]
+                                nil)))
+                          :else nil)]
         (if-not integration
           {:status :failed
            :payload {:reason (if (= head base)
                                :cherry-pick-conflict
                                :canonical-head-moved-conflict)
                      :patch-sha patch :canonical-head head :canonical-base-sha base}}
-          (let [parent (:out (git repo "rev-parse" (str patch "^")))
-            changed (:out (git repo "diff" "--name-only" parent patch))
+          (let [changed (:out (git repo "diff" "--name-only" base patch))
             sources (filter #(and (str/starts-with? % "src/")
                                   (str/ends-with? % ".clj"))
                             (str/split-lines changed))

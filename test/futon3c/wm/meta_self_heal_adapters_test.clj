@@ -975,7 +975,83 @@
     (is (false? (sut/integration-equivalent? order patch unrelated))
         "a canonical-main commit without the reviewed change is not equivalent")
     (is (true? (sut/integration-equivalent? order integration integration))
-        "the fast-forward/identical integration case remains valid")))
+        "an exact reviewed commit retained as an ancestor remains valid")))
+
+(deftest integration-equivalence-covers-the-exact-reviewed-range
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "integration-range"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/author")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/range" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        earlier (commit-file! worktree "earlier.txt" "earlier\n" "earlier patch")
+        tip (commit-file! worktree "tip.txt" "reviewed tip\n" "reviewed tip")
+        _ (clojure.java.shell/sh "git" "-C" repo "cherry-pick" earlier)
+        partial-head (str/trim (:out (clojure.java.shell/sh
+                                      "git" "-C" repo "rev-parse" "HEAD")))
+        request {:work-order order
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha tip
+                                                     :worktree worktree}}
+                                          {:phase :review
+                                           :payload {:patch-sha tip
+                                                     :reviewer-sha tip}}]}}]
+    (is (false? (sut/integration-equivalent? order tip partial-head))
+        "a '-' earlier line followed by '+ reviewed-tip' is not integrated")
+    (let [result (with-redefs [code-identity/load-file-recorded!
+                               (fn [path] {:path path})]
+                   (sut/enact! request))
+          integrated-head (str/trim (:out (clojure.java.shell/sh
+                                            "git" "-C" repo "rev-parse" "HEAD")))]
+      (is (= :succeeded (:status result)) (pr-str result))
+      (is (= 1 (Long/parseLong
+                 (str/trim (:out (clojure.java.shell/sh
+                                   "git" "-C" repo "rev-list" "--count"
+                                   (str partial-head ".." integrated-head))))))
+          "enact adds the missing reviewed tip rather than replaying the integrated prefix")
+      (is (true? (sut/integration-equivalent? order tip integrated-head))
+          "all commits in the reviewed range are now '-' or ancestors")
+      (is (.isFile (io/file repo "earlier.txt")))
+      (is (.isFile (io/file repo "tip.txt"))))))
+
+(deftest enact-integrates-every-commit-in-a-reviewed-range
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "enact-range"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        worktree (str root "/author")
+        order {:target-repository repo :target-worktree worktree
+               :canonical-base-sha base :repair-id "repair/enact-range" :attempt 1}
+        _ (sut/ensure-author-worktree! order)
+        _ (commit-file! worktree "one.txt" "one\n" "range one")
+        tip (commit-file! worktree "two.txt" "two\n" "range two")
+        request {:work-order order
+                 :transaction {:receipts [{:phase :author
+                                           :payload {:patch-sha tip
+                                                     :worktree worktree}}
+                                          {:phase :review
+                                           :payload {:patch-sha tip
+                                                     :reviewer-sha tip}}]}}
+        result (with-redefs [code-identity/load-file-recorded!
+                             (fn [path] {:path path})]
+                 (sut/enact! request))
+        integrated-head (str/trim (:out (clojure.java.shell/sh
+                                          "git" "-C" repo "rev-parse" "HEAD")))]
+    (is (= :succeeded (:status result)) (pr-str result))
+    (is (= 2 (Long/parseLong
+               (str/trim (:out (clojure.java.shell/sh
+                                 "git" "-C" repo "rev-list" "--count"
+                                 (str base ".." integrated-head))))))
+        "the cherry-pick path integrates the whole sealed-base..reviewed-tip range")
+    (is (true? (sut/integration-equivalent? order tip integrated-head)))
+    (is (.isFile (io/file repo "one.txt")))
+    (is (.isFile (io/file repo "two.txt")))))
 
 (defn- enact-request [repo worktree base patch]
   {:work-order {:target-repository repo :target-worktree worktree
