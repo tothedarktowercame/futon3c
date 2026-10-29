@@ -7,7 +7,10 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.giraffe.missions :as gm]))
+            [futon3c.giraffe.missions :as gm]
+            [futon3c.giraffe.pass :as pass]
+            [futon3c.giraffe.run :as run]
+            [futon2.aif.mission-registry :as registry]))
 
 (defn- temp-dir [tag]
   (let [d (io/file (System/getProperty "java.io.tmpdir")
@@ -19,6 +22,7 @@
 (defn- spit-mission [root repo id body]
   (let [d (io/file root repo "holes/missions")]
     (.mkdirs d)
+    (.mkdirs (io/file root repo ".git"))
     (spit (io/file d (str id ".md")) body)))
 
 (defn- status-of [body]
@@ -124,9 +128,9 @@
         items (:items input)
         by-id (into {} (map (juxt :id identity) items))
         rejects (frequencies (map :reject rejected))]
-    (testing "duplicate id rejects both rows; neither is picked"
-      (is (not (contains? by-id :M-alpha)))
-      (is (= 2 (get rejects :item/duplicate-id))))
+    (testing "duplicate resolution is the shared registry decision"
+      (is (= "futonX/holes/missions/M-alpha.md" (:file (by-id :M-alpha))))
+      (is (nil? (get rejects :item/duplicate-id))))
     (testing "item shape and order"
       (is (= "futonX" (:repo (by-id :M-gamma))))
       (is (= "futonX/holes/missions/M-gamma.md" (:file (by-id :M-gamma))))
@@ -147,8 +151,8 @@
       (let [ext (first (filter #(= :external (:kind %)) (:edges input)))]
         (is (= "T-car3-queue-routing-design-note" (:external-target ext)))
         (is (false? (:met ext))))
-      (is (= 1 (get rejects :edge/dangling-source))
-          "M-alpha, duplicate-rejected, is not an item"))
+      (is (nil? (get rejects :edge/dangling-source))
+          "M-alpha is retained by the shared registry"))
     (is (vector? unmapped-statuses))
     (is (seq status-mapping))
     (is (every? #(contains? % :mapped?) status-mapping))))
@@ -175,15 +179,31 @@
   (is (= :started (gm/status->group "HEAD and IDENTIFY accepted 2026-09-26 · **MAP closed** 2026-09-26")))
   (is (= :started (gm/status->group "OPEN · HEAD drafted 2026-10-10 · MAP not started (a first-pass"))))
 
-(deftest review-a-doc-without-a-status-line-is-reported
-  ;; wrong: :status-unmapped nil, so the doc counted as an open, unstarted
-  ;; mission and was listed nowhere.  Now it is not an item at all, and is
-  ;; rejected with a typed reason.
+(deftest unknown-status-is-retained-as-the-registry-requires
   (let [root (temp-dir "nostatus")]
     (spit-mission root "futonZ" "M-no-status" "# M-no-status\n\nNo status line here.\n")
-    (let [{:keys [input rejected]}
+    (let [{:keys [input unmapped-statuses]}
           (gm/missions->input {:repos [(str root "/futonZ")]
                                :edges-file (edges-file root [])})]
-      (is (empty? (:items input)))
-      (is (= [:M-no-status]
-             (map :id (filter #(= :item/no-status-line (:reject %)) rejected)))))))
+      (is (= [:M-no-status] (map :id (:items input))))
+      (is (= [{:id :M-no-status :status-unmapped :status/missing}] unmapped-statuses)))))
+
+(deftest real-omissions-and-exclusions-use-registry-authority
+  (let [adapter (gm/missions->input {:edges-file "/home/joe/code/futon3c/holes/missions/giraffe-mission-edges.json"})
+        items (into {} (map (juxt :id identity)) (get-in adapter [:input :items]))
+        actual (set (map (comp name :id) (:order (pass/pass (:input adapter)))))
+        expected (set (map :id (registry/open-missions
+                               (registry/load-missions-from-files "/home/joe/code"))))
+        flat (items :M-G-over-cascades)
+        plain (items :M-象-cascade)
+        written (run/write-run! {:root (temp-dir "output") :adapter-result adapter
+                                 :pass-output (pass/pass (:input adapter))})]
+    (is (= "futon2/holes/M-G-over-cascades.md" (:file flat)))
+    (is (contains? actual "M-G-over-cascades"))
+    (is (contains? actual "M-象-cascade"))
+    (is (= :identify (:registry-status plain)))
+    (is (= expected actual) "independent registry census; no count fixed to a moving registry")
+    (is (seq (:excluded adapter)))
+    (is (not-any? #(contains? actual (:id %)) (:excluded adapter)))
+    (is (.isFile (io/file (:dir written) "excluded.edn")))
+    (is (:ok? (run/verify-run (:dir written))))))
