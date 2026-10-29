@@ -389,6 +389,7 @@
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
               "Admit it only if it pins the injury (fails for the injury's reason), is the right test for the repair, and every assertion can pass after a correct repair. Inspect assertions for contradictions or impossible ordering constraints. When :author-unsatisfiable-claim is present, evaluate its exact assertion and reason as retained evidence and refuse the old test if the claim is sound. "
+              "Every accepted answer must include :satisfiability {:can-pass-after-correct-repair? true :reason <nonblank-string>} explaining why the corrected assertions are satisfiable. "
               "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test {:id ... :command ... :expected ...}}, "
               "echoing those request values exactly. Do not echo the test source: the proposal pin identifies it "
               "(F24a, click wm-click-a8f4dea6, 2026-10-20: the reviewer's first yes left the 4 KB source out and was refused as an identity mismatch). "

@@ -702,6 +702,7 @@
     (is (str/includes? prompt "result is in :result"))
     (is (str/includes? prompt "fails for the injury's reason"))
     (is (str/includes? prompt "every assertion can pass after a correct repair"))
+    (is (str/includes? prompt ":can-pass-after-correct-repair? true"))
     (is (str/includes? prompt ":author-unsatisfiable-claim"))
     (is (str/includes? prompt "Return exactly one EDN map and no prose"))
     ;; F24a: the reviewer echoes the test's identity, not its source.
