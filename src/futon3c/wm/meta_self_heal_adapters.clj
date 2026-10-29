@@ -844,18 +844,26 @@
        "-patch-" patch-sha))
 
 (defn ensure-author-worktree!
-  "Create or verify the sealed attempt worktree at its claim-time base.
-   Failed attempts are deliberately retained as evidence."
-  [{:keys [target-repository target-worktree canonical-base-sha repair-id attempt]}]
+  "Create or verify the sealed work-order-version worktree at its claim-time
+   base. Failed and superseded versions are deliberately retained as evidence."
+  [{:keys [target-repository target-worktree canonical-base-sha repair-id attempt
+           work-order-pin superseded-work-order-pin]}]
   (let [worktree-file (io/file target-worktree)
+        version-suffix (when superseded-work-order-pin
+                         (str "-version-" (subs (:sha256 work-order-pin) 0 12)))
         branch (str "self-heal/"
-                    (str/replace repair-id #"[^A-Za-z0-9._-]" "-") "/" attempt)]
+                    (str/replace repair-id #"[^A-Za-z0-9._-]" "-") "/" attempt
+                    version-suffix)]
     (if (.exists (io/file worktree-file ".git"))
-      (let [head (:out (git target-worktree "rev-parse" "HEAD"))]
-        (if (= canonical-base-sha head)
+      (let [head (:out (git target-worktree "rev-parse" "HEAD"))
+            actual-branch (:out (git target-worktree "branch" "--show-current"))
+            base-ancestor? (:ok? (git target-worktree "merge-base" "--is-ancestor"
+                                      canonical-base-sha "HEAD"))]
+        (if (and (= branch actual-branch) base-ancestor?)
           {:status :present :path target-worktree :branch branch :base-sha head}
           {:status :refused :reason :author-worktree-base-mismatch
-           :path target-worktree :expected canonical-base-sha :actual head}))
+           :path target-worktree :expected canonical-base-sha :actual head
+           :expected-branch branch :actual-branch actual-branch}))
       (do
         (.mkdirs (.getParentFile worktree-file))
         (let [created (git target-repository "worktree" "add" "-b" branch

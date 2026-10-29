@@ -853,6 +853,45 @@
         (assert (zero? (:exit result)) (:err result))))
     (str/trim (:out (clojure.java.shell/sh "git" "-C" repo "rev-parse" "HEAD")))))
 
+(deftest superseded-work-order-gets-fresh-versioned-worktree
+  (let [{:keys [repo]} (committed-readiness-repository)
+        base (str/trim (:out (clojure.java.shell/sh "git" "-C" repo
+                                                    "rev-parse" "HEAD")))
+        root (.toString (java.nio.file.Files/createTempDirectory
+                         "self-heal-versioned-worktrees"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        attempt-path (str root "/repair/versioned/4")
+        old-order {:target-repository repo :target-worktree attempt-path
+                   :canonical-base-sha base :repair-id "repair/versioned" :attempt 4}
+        _ (sut/ensure-author-worktree! old-order)
+        old-patch (commit-file! attempt-path "old.txt" "old version\n"
+                                "superseded author commit")
+        version-pin {:path "work-orders/current.edn"
+                     :sha256 (apply str (repeat 64 "a"))}
+        new-path (str attempt-path "-version-" (subs (:sha256 version-pin) 0 12))
+        new-order (assoc old-order
+                         :target-worktree new-path
+                         :work-order-pin version-pin
+                         :superseded-work-order-pin
+                         {:path "work-orders/old.edn"
+                          :sha256 (apply str (repeat 64 "b"))})
+        created (sut/ensure-author-worktree! new-order)
+        new-patch (commit-file! new-path "new.txt" "new version\n"
+                                "current author commit")
+        resumed (sut/ensure-author-worktree! new-order)
+        _ (clojure.java.shell/sh "git" "-C" new-path "checkout" "--detach" base)
+        moved (sut/ensure-author-worktree! new-order)]
+    (is (= :created (:status created)))
+    (is (= base (:base-sha created)))
+    (is (= old-patch (str/trim (:out (clojure.java.shell/sh
+                                      "git" "-C" attempt-path "rev-parse" "HEAD"))))
+        "the superseded worktree and author commit remain untouched")
+    (is (= :present (:status resumed)) "same-version authored HEAD is reused")
+    (is (= new-patch (:base-sha resumed)))
+    (is (= :refused (:status moved)))
+    (is (= :author-worktree-base-mismatch (:reason moved))
+        "moving the same version off its sealed branch is still refused")))
+
 (defn- enact-request [repo worktree base patch]
   {:work-order {:target-repository repo :target-worktree worktree
                 :canonical-base-sha base :repair-id "repair/enact" :attempt 1}
