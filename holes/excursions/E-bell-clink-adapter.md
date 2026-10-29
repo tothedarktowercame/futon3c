@@ -1,7 +1,7 @@
 # Excursion: E-bell-clink-adapter — a pull delivery lane for CLI seats ("clink" = CLI Link)
 
 **Date:** 2026-08-26
-**Status:** BUILT, awaiting a restart to finish. P1 (`f6462999`) + P2 (`66858f5a`) by
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Pull delivery lane P1+P2 was built, reviewed, and demonstrated end-to-end on 2026-08-26. Evidence: f6462999, 66858f5a, dd3a9e61, 3f842893.
 codex-20, review fixes `dd3a9e61` and `3f842893`. The pull lane is live and was
 demonstrated end-to-end on 2026-08-26; the ack endpoint is written and tested but is a
 NEW ROUTE, so the running JVM cannot serve it until Joe restarts. See "What was built"

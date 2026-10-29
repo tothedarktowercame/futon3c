@@ -1,4 +1,5 @@
 # E-2026-08-10-learnings — one day of instrumented ground control
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The day-level synthesis was written and delivered, with its batch specifics recorded in the closed batch-1 report. Evidence: 1f5d0ef97, /home/joe/code/futon3c/holes/labs/M-zai-learning-loop/batch-1-report.md.
 
 **VERDICT (2026-10-09, provisional):** DONE — Day-level synthesis document with findings written and delivered — its stated purpose is the synthesis itself, which is present. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
 

@@ -1,4 +1,5 @@
 # E-APM-f10-defects — defect inventory for the APM demonstration, through frame 10
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The scoped defect inventory D1–D26 was delivered and later findings continued in the separate frame-11 excursion. Evidence: aa13f5e3a, 2a7435a6, /home/joe/code/futon3c/holes/excursions/E-APM-f11-defects.md.
 
 **VERDICT (2026-10-09, provisional):** DONE — Scoped defect inventory through f10 was delivered (D1-D26) and explicitly continued in a separate f11 file rather than left pending. _(WM status classification by zai-3, medium confidence; not yet confirmed by the author.)_
 

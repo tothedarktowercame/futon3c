@@ -1,7 +1,7 @@
 # Excursion: E-agency-ws-cutover — let the Emacs observer clear the WS ready-handshake so server→Emacs broadcasts (incl. `park-ready`) land live
 
 **Date:** 2026-06-30 (re-diagnosed 2026-07-01)
-**Status:** VERIFIED LIVE 2026-07-01 (INSTANTIATE). Root cause re-diagnosed live (original IDENTIFY
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The WS observer cutover was built, gated, and verified live end-to-end. Evidence: /home/joe/code/futon3c/src/futon3c/transport/ws.clj, /home/joe/code/futon3c/emacs/futon-agency-ws.el.
 premise was wrong — see below); fix built, gated, and confirmed end-to-end on a fresh JVM boot with
 the real `emacs-hud` connector registered as a broadcast-only observer. Split out of
 [[E-repl-continuations]] as the tracked WS follow-on — the park-continuation ships on **polling**,

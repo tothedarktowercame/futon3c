@@ -1,4 +1,5 @@
 # E-mfuton-array-binder-repair-20261003
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The historical binder-identity repair was applied and reviewed in mfuton-share. Evidence: 798319b3ceeef0d432a9924ca82d06eae45ddf91.
 
 **Requisition:** completed — reviewed and committed as 798319b; Python owner passes, member advances to publication mismatch; no Lisp credit.
 

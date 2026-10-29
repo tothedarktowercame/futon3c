@@ -1,4 +1,5 @@
 # E-bell-clink-adapter P2 report
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The P2 report records the landed Clink inbox consumption-acknowledgements implementation and its acceptance, regression, static, and CLI checks. Evidence: 66858f5a.
 
 **VERDICT (2026-10-09, provisional):** DONE — P2 report of a landed implementation commit with gates reported and no requested behavior impossible. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
 

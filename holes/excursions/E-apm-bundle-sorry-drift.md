@@ -1,4 +1,5 @@
 # E-apm-bundle-sorry-drift
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The reproducible discovery-only sorry-drift census over 443 APM problem bundles was completed. Evidence: /home/joe/code/futon3c/scripts/apm_bundle_sorry_census.py.
 
 **VERDICT (2026-10-09, provisional):** DONE — Discovery-only excursion with a full Result section (the drift census) documented and committed. _(WM status classification by zai-4, high confidence; not yet confirmed by the author.)_
 

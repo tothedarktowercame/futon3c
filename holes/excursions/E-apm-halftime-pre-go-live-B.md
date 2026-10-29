@@ -1,4 +1,5 @@
 # E-apm-halftime-pre-go-live-B — "Retrieval is not wired", as handoff packets
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Section B was elaborated into dispatch-ready handoff packets B1–B5 with every number re-verified 2026-08-14. Evidence: 9499e7e11, /home/joe/code/futon6/scripts/cas_select.py.
 
 **VERDICT (2026-10-09, provisional):** DONE — Its task — elaborate section B into dispatch-ready handoff packets — was completed and every number re-verified 2026-08-14; packet processing is downstream work. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 

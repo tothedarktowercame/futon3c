@@ -1,4 +1,5 @@
 # E-agency-work-orders step 1 discovery: bells as turns
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Discovery step 1 delivered hook points, volume and cost figures, and one traced bell chain with every claim marked checked or inferred. Evidence: 9ead762de3b76cb975ce0cdd727a558e42d43183, /tmp/futon3c-invoke-jobs.edn.
 
 **VERDICT (2026-10-09, provisional):** DONE — Discovery-only deliverable complete: every claim marked [checked]/[inferred], hook points, volume and cost findings all written; recent. _(WM status classification by zai-1, high confidence; not yet confirmed by the author.)_
 

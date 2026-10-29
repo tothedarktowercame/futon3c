@@ -1,4 +1,5 @@
 # E-bell-clink-adapter P1 report
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): The P1 implementation report records the landed pull-only Agency inbox delivery. Evidence: f6462999, /home/joe/code/futon3c/src/futon3c/agency/inbox.clj, /home/joe/code/futon3c/test/futon3c/agency/inbox_test.clj.
 
 **VERDICT (2026-10-09, provisional):** DONE — P1 report of a landed implementation commit stating no part of the requested behavior was impossible, i.e. full delivery. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
 

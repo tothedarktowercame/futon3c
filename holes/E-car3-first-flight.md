@@ -1,4 +1,5 @@
 # E-car3-first-flight — does the WM hit the Car-3 criteria? (a logged pilot flight)
+**Status:** DONE — confirmed 2026-10-29 (Giraffe closing check): Both pilot flights flew and were logged, and the three Car-3 seams were built and live-verified. Evidence: /home/joe/code/futon5a/data/pilot-inhabitations.edn, /home/joe/code/futon2/scripts/futon2/report/war_machine.clj.
 
 **VERDICT (2026-10-09, provisional):** DONE — Flight log records Part A and Part B (a) executor built and verified end-to-end with gates cleared on 2026-06-24; the charter's flight was flown and logged. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
