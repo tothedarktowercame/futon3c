@@ -14,7 +14,9 @@
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
   (:import (java.security MessageDigest)
-           (java.time Instant)))
+           (java.time Instant)
+           (java.nio.file Files)
+           (java.nio.file.attribute FileAttribute)))
 
 (def default-cast
   {:author "wm-author" :reviewer "wm-reviewer"
@@ -28,6 +30,23 @@
 (def ^:private bounded-test-dir "/tmp/futon-bounded-tests")
 (def ^:private bounded-test-runner "/home/joe/code/futon3c/scripts/bounded_test_job.py")
 (def ^:private command-name-pattern #"(?!-)[A-Za-z0-9._-]+")
+
+(defn acceptance-store-environment
+  "Environment for one acceptance JVM. Every default store that runner tests
+   may write is placed beneath ROOT; the run-record directory also contains
+   the reading-policy class-history index."
+  [root]
+  {"FUTON_WM_TRACE_DIR" (str (io/file root "trace"))
+   "FUTON_WM_RUN_RECORD_DIR" (str (io/file root "run-records"))
+   "FUTON_WM_PHASE_REPLAY_INPUT_ROOT" (str (io/file root "phase-replay-inputs"))
+   "FUTON_WM_LEARNING_TRIAL_LEDGER_ROOT" (str (io/file root "learning-ledger"))
+   "FUTON_WM_MORNING_BRIEF_ROOT" (str (io/file root "morning-brief"))
+   "FUTON_WM_META_INJURY_ROOT" (str (io/file root "meta-injuries"))})
+
+(defn- remove-tree! [root]
+  (doseq [file (reverse (file-seq (io/file root)))]
+    (io/delete-file file true))
+  (not (.exists (io/file root))))
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- available-seat-state? [status]
@@ -755,7 +774,11 @@
     command))
 
 (defn- launch-bounded-acceptance! [timeout-ms id command]
-  (let [job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))
+  (let [store-root (.toFile (Files/createTempDirectory
+                             "wm-acceptance-stores-"
+                             (make-array FileAttribute 0)))
+        store-environment (acceptance-store-environment store-root)
+        job-id (str "wm-acceptance-" (safe-test-id id) "-" (System/currentTimeMillis))
         unit (str job-id ".service")
         receipt-file (str bounded-test-dir "/" job-id ".receipt.json")
         output-file (str *acceptance-runs-root* "/." job-id ".pending.log")
@@ -768,15 +791,19 @@
         launch ["systemd-run" "--user" "--collect" (str "--unit=" unit)
                 "--slice=futon-testing.slice" "--property=TasksMax=1280"
                 (str "--property=RuntimeMaxSec=" timeout-seconds "s")
-                "--property=KillMode=control-group" "python3" bounded-test-runner
+                "--property=KillMode=control-group"]
+        launch (into launch (map (fn [[name value]]
+                                   (str "--setenv=" name "=" value)))
+                     store-environment)
+        launch (into launch ["python3" bounded-test-runner
                 "--receipt" receipt-file "--output" output-file
-                "--cwd" *acceptance-repository* command-text]
+                "--cwd" *acceptance-repository* command-text])
         _receipt-dir (.mkdirs (io/file bounded-test-dir))
         _output-dir (.mkdirs (io/file *acceptance-runs-root*))
-        submitted (apply shell/sh launch)]
-    (if-not (zero? (:exit submitted))
-      {:status :failed :reason :meta-self-heal/acceptance-unit-launch-failed}
-      (let [deadline (+ (System/currentTimeMillis) timeout-ms)
+        submitted (apply shell/sh launch)
+        result (if-not (zero? (:exit submitted))
+                 {:status :failed :reason :meta-self-heal/acceptance-unit-launch-failed}
+                 (let [deadline (+ (System/currentTimeMillis) timeout-ms)
             receipt (loop []
                       (cond
                         (.isFile (io/file receipt-file))
@@ -796,7 +823,13 @@
           (let [_ (shell/sh "systemctl" "--user" "stop" unit)
                 summary (str "bounded unit " job-id " did not finish within "
                              timeout-seconds "s")]
-            (write-run-result id output-file (str summary "\n") :errored -1)))))))
+            (write-run-result id output-file (str summary "\n") :errored -1)))))
+        removed? (remove-tree! store-root)]
+    (assoc result :store-isolation
+           {:status :isolated
+            :root (.getCanonicalPath store-root)
+            :environment store-environment
+            :removed? removed?})))
 
 (defn- run-acceptance!
   "Bounded, argv-only acceptance runner for wm-click-6cdf2a7c. It runs before
