@@ -259,18 +259,64 @@
 (def ^:private run-files
   ["input.edn" "rejected.edn" "pass.edn" "work-clusters.json" "report.md"])
 
+(def ^:private legacy-run-files
+  "Baseline for run directories written before work-clusters.json joined
+  the sealed file set.  The first code that wrote work-clusters.json is
+  commit e90fe14bb; run manifests record the git sha of the code that
+  wrote them, so the manifest's own :git-sha is the format witness."
+  ["input.edn" "rejected.edn" "pass.edn" "report.md"])
+
+(def ^:private work-clusters-sha
+  "e90fe14bb3c181964f8d8b239e5bff16225dff37")
+
+(defn- git-descends-from-work-clusters?
+  "Decide a run manifest's format from its recorded :git-sha by asking
+  the repository at REPO-DIR.  Returns true (sha resolves and
+  work-clusters-sha is an ancestor: current format), false (sha
+  resolves, not an ancestor: legacy format) or nil (sha missing,
+  malformed, unresolvable, or git unavailable: format undecidable —
+  callers fail closed)."
+  [repo-dir sha]
+  (when (and (string? sha) (re-matches #"[0-9a-f]{40}" sha))
+    (try
+      (let [resolved (shell/sh "git" "rev-parse" "--verify" "--quiet"
+                               (str sha "^{commit}") :dir repo-dir)]
+        (when (zero? (:exit resolved))
+          (let [anc (shell/sh "git" "merge-base" "--is-ancestor"
+                              work-clusters-sha sha :dir repo-dir)]
+            (cond (zero? (:exit anc)) true
+                  (= 1 (:exit anc)) false
+                  :else nil))))
+      (catch Exception _ nil))))
+
 (defn verify-run
   "Recompute the sha256 of every file the manifest recorded in this run
   directory; {:ok? true :mismatches []} or the list of files whose
   bytes no longer match.  A file planted or edited after the write is
-  reported, never silently re-sealed."
+  reported, never silently re-sealed.
+
+  Format rule: the manifest's own :git-sha decides which baseline file
+  set the manifest must list.  A run whose git-sha resolves in the repo
+  and does NOT descend from e90fe14bb predates work-clusters.json and
+  verifies its ORIGINAL sealed list (legacy baseline); a run at or after
+  e90fe14bb must list work-clusters.json (current baseline).  A missing
+  or unresolvable git-sha is undecidable and fails closed to the current
+  baseline — a stripped current manifest is never accepted as legacy on
+  the mere absence of the artifact.  Whatever the format, every file the
+  manifest lists is sha-verified, so a legacy run that happens to list
+  extra files still has them verified."
   [dir]
   (let [manifest (with-open [r (java.io.PushbackReader.
                                 (io/reader (io/file dir "manifest.edn")))]
                    (edn/read r))
         listed (set (map :file (:files manifest)))
-        unlisted (vec (for [f run-files :when (not (listed f))]
-                        {:file f :missing-from-manifest true}))
+        format (git-descends-from-work-clusters?
+                (System/getProperty "user.dir") (:git-sha manifest))
+        legacy? (false? format)
+        required (if legacy? legacy-run-files run-files)
+        unlisted (vec (for [f required :when (not (listed f))]
+                        (cond-> {:file f :missing-from-manifest true}
+                          (nil? format) (assoc :format-undecidable true))))
         mismatches (into unlisted
                          (for [{:keys [file] :as entry} (:files manifest)
                               :let [f (io/file dir file)
