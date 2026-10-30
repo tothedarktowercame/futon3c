@@ -292,12 +292,13 @@
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]
   [--root <dir>] [--run-id <id>] [--source tickets|missions|missions-excursions]
   [--repos <comma-separated repo roots, missions source only>]
+  [--readings-root <checked-reading-directory>]
 
   Runs the chosen source adapter (default tickets) plus the edges
   file, the Giraffe pass, and writes one run directory.  Prints the
   run dir and manifest path."
   [& args]
-  (let [{:strs [edges only root run-id source repos]} (merge-args args)
+  (let [{:strs [edges only root run-id source repos readings-root]} (merge-args args)
         source (or source "tickets")
         _ (when (str/blank? (str edges))
             (throw (ex-info "--edges <file> is required"
@@ -315,11 +316,31 @@
                            (vec (remove str/blank?
                                         (map str/trim (str/split repos #",")))))
                          gm/default-repos))
+        reading-batches (when readings-root
+                          (->> (file-seq (io/file readings-root))
+                               (filter #(.isFile %))
+                               (filter #(re-matches #"batch-.*\.jsonl" (.getName %)))
+                               (sort-by #(.getName %))
+                               (mapv #(.getAbsolutePath %))))
+        _ (when (and readings-root (not combined?))
+            (throw (ex-info "--readings-root requires --source missions-excursions"
+                            {:kind :giraffe/readings-source-mismatch})))
+        _ (when (and readings-root (empty? reading-batches))
+            (throw (ex-info "--readings-root contains no batch-*.jsonl files"
+                            {:kind :giraffe/readings-empty :root readings-root})))
         adapter-result (if missions?
                          ((if combined? excursions/missions-and-excursions->input gm/missions->input)
                           {:repos repo-roots
-                                              :edges-file edges
-                                              :only only-ids})
+                           :edges-file edges
+                           :only only-ids
+                           :include-tickets (boolean readings-root)
+                           :reading-checker (when readings-root
+                                              (str (io/file readings-root "check_edges.py")))
+                           :members-file (when readings-root
+                                           (str (io/file readings-root "members.json")))
+                           :reading-batches reading-batches
+                           :reading-scope (when readings-root
+                                            :population/missions-excursions-tickets)})
                          (gt/tickets->input
                           {:tickets-dir default-tickets-dir
                            :index-file default-index-file
