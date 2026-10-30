@@ -46,7 +46,8 @@
   items are reported with their lifecycle state (:done, :cancelled) so the
   per-item record covers every item; they take no place in :order."
   (:require [futon3c.diagramprover.causal.open-theory :as ot]
-            [futon3c.diagramprover.causal.scm :as scm]))
+            [futon3c.diagramprover.causal.scm :as scm]
+            [clojure.string :as str]))
 
 (def ^:private closed-groups #{:completed :cancelled})
 
@@ -151,6 +152,72 @@
   [es]
   (mapv #(select-keys % [:from :to :kind :class :source :quote :file :line
                          :external-target]) es))
+
+(defn- component-id [members]
+  (let [text (str/join "\n" (map name members))
+        digest (doto (java.security.MessageDigest/getInstance "SHA-256")
+                 (.update (.getBytes text "UTF-8")))]
+    (str "work-cluster/"
+         (subs (apply str (map #(format "%02x" %) (.digest digest))) 0 12))))
+
+(defn work-clusters
+  "Deterministic non-singleton weak components of accepted item planning
+  edges.  Every cluster retains the edges and evidence bases that caused its
+  members to be connected.  Direction is preserved in :edges even though
+  membership uses undirected reachability."
+  [item-ids edges]
+  (let [planning (->> edges
+                      (filter #(and (= :item (:kind %))
+                                    (contains? item-ids (:from %))
+                                    (contains? item-ids (:to %))
+                                    (not= :alternative (edge-class %))))
+                      (sort-by (juxt (comp name :from) (comp name :to)
+                                     #(name (edge-class %))
+                                     #(str (or (:source %) :unrecorded)))))
+        neighbours (reduce (fn [m {:keys [from to]}]
+                             (-> m (update from (fnil conj #{}) to)
+                                 (update to (fnil conj #{}) from)))
+                           {} planning)
+        connected
+        (loop [remaining (set (keys neighbours)) out []]
+          (if-let [seed (first (sort remaining))]
+            (let [members (loop [seen #{} todo [seed]]
+                            (if-let [x (first todo)]
+                              (if (seen x)
+                                (recur seen (rest todo))
+                                (recur (conj seen x)
+                                       (concat (rest todo) (get neighbours x))))
+                              seen))]
+              (recur (apply disj remaining members) (conj out members)))
+            out))
+        clusters
+        (->> connected
+             (filter #(< 1 (count %)))
+             (map (fn [member-set]
+                    (let [members (vec (sort member-set))
+                          member? (set members)
+                          cluster-edges (->> planning
+                                             (filter #(and (member? (:from %))
+                                                           (member? (:to %))))
+                                             (mapv #(select-keys %
+                                                       [:from :to :class :source
+                                                        :basis :reading-kind
+                                                        :quote :file :line
+                                                        :evidence-pin])))]
+                      {:id (component-id members)
+                       :members members
+                       :edges cluster-edges
+                       :basis-counts (into (sorted-map)
+                                           (frequencies
+                                            (map #(or (:basis %) :unspecified)
+                                                 cluster-edges)))})))
+             (sort-by :id)
+             vec)]
+    {:clusters clusters
+     :by-item (into (sorted-map)
+                    (mapcat (fn [{:keys [id members]}]
+                              (map (fn [member] [member id]) members))
+                            clusters))}))
 
 (defn- readiness-entry
   "One item's readiness record."
@@ -283,6 +350,7 @@
                                        :when (open-fn j)
                                        :when (and (not (ready-val j)) (w-ready j))]
                                    j))))]))
+        work (work-clusters item-ids all-edges)
         ready-ignoring-externals
         (vec (sort (for [id (sort item-ids)
                          :when (and (open-fn id) (ext-ready-val id))]
@@ -331,6 +399,8 @@
      :readiness readiness
      :cones cones
      :unblocks unblocks
+     :work-clusters (:clusters work)
+     :work-cluster-by-item (:by-item work)
      :cycles cycles
      :anomalies anomalies
      :order order}))

@@ -130,6 +130,27 @@
 
 (defn cone [out id] (count (get-in out [:cones id])))
 
+(deftest work-clusters-retain-edge-evidence-and-leave-isolates-unclustered
+  (let [items [{:id :E-orphan :state-group :unstarted :source-order 0}
+               {:id :M-next :state-group :unstarted :source-order 1}
+               {:id :T-after :state-group :unstarted :source-order 2}
+               {:id :M-isolated :state-group :unstarted :source-order 3}]
+        edges [{:from :M-next :to :E-orphan :kind :item :class :closure
+                :source :prose-reading :basis :declared :file "M-next.md" :line 7}
+               ;; Historical accepted edges can omit :class/:source; cluster
+               ;; derivation must honor the pass defaults rather than crash.
+               {:from :T-after :to :M-next :kind :item
+                :basis :inferred :file "T-after.md" :line 9}]
+        out (gp/pass {:as-of "2026-10-30" :items items :edges edges})
+        cluster (first (:work-clusters out))]
+    (is (= 1 (count (:work-clusters out))))
+    (is (= [:E-orphan :M-next :T-after] (:members cluster)))
+    (is (= {:declared 1 :inferred 1} (:basis-counts cluster)))
+    (is (= #{:declared :inferred} (set (map :basis (:edges cluster)))))
+    (is (= (:id cluster) (get-in out [:work-cluster-by-item :E-orphan])))
+    (is (nil? (get-in out [:work-cluster-by-item :M-isolated]))
+        "an unrelated item must not be pulled into a work cluster")))
+
 (deftest pilot-2-reading-a-reproduces-the-scored-result
   (let [out (gp/pass (pilot2->input :all-closure))]
     (testing "bullet 1: 29 open; 8 ready ignoring externals, 7 counting them"

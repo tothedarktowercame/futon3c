@@ -17,6 +17,7 @@
   part and produce byte-identical pass.edn (maps are normalized to
   sorted maps before printing)."
   (:require [clojure.edn :as edn]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
@@ -230,6 +231,12 @@
         excluded-entry (when (contains? adapter-result :excluded)
                          (write! "excluded.edn" (print-edn (:excluded adapter-result))))
         pass-entry (write! "pass.edn" (print-edn pass-output))
+        clusters-entry (write! "work-clusters.json"
+                               (json/generate-string
+                                {:run_id run-id
+                                 :clusters (:work-clusters pass-output)
+                                 :by_item (:work-cluster-by-item pass-output)}
+                                {:pretty true}))
         report-entry (write! "report.md"
                              (report {:input input
                                       :adapter-rejected rejected
@@ -237,7 +244,7 @@
         manifest {:run-id run-id
                   :git-sha (or git-sha (git-head-sha))
                   :files (cond-> [(dissoc input-entry :bytes)
-                                  rejected-entry pass-entry report-entry]
+                                  rejected-entry pass-entry clusters-entry report-entry]
                            excluded-entry (conj excluded-entry))
                   :sources (cond-> {}
                              index-file (assoc :tickets-index
@@ -250,7 +257,7 @@
     {:run-id run-id :dir (str dir) :manifest manifest}))
 
 (def ^:private run-files
-  ["input.edn" "rejected.edn" "pass.edn" "report.md"])
+  ["input.edn" "rejected.edn" "pass.edn" "work-clusters.json" "report.md"])
 
 (defn verify-run
   "Recompute the sha256 of every file the manifest recorded in this run

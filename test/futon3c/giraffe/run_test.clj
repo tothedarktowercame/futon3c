@@ -2,6 +2,7 @@
   "M-giraffe stage 1 packet 3 acceptance tests: the run writer.  All
   writes go to a temp root, never the real storage root."
   (:require [clojure.edn :as edn]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -47,13 +48,20 @@
         dir (io/file (:dir written))]
     (testing "every file exists"
       (doseq [f ["input.edn" "rejected.edn" "pass.edn" "report.md"
-                 "manifest.edn"]]
+                 "work-clusters.json" "manifest.edn"]]
         (is (.isFile (io/file dir f)) (str f " missing"))))
     (testing "every manifest sha matches the file on disk"
       (is (:ok? (gr/verify-run (str dir))))
       (is (= [] (:mismatches (gr/verify-run (str dir))))))
     (testing "pass.edn round-trips to a value equal to the pass output"
       (is (= pass-output (edn/read-string (slurp (io/file dir "pass.edn"))))))
+    (testing "the browser projection carries the same cluster membership"
+      (let [projection (json/parse-string
+                        (slurp (io/file dir "work-clusters.json")) true)]
+        (is (= (count (:work-clusters pass-output))
+               (count (:clusters projection))))
+        (is (= (:work-cluster-by-item pass-output)
+               (:by_item projection)))))
     (testing "input.edn round-trips to the adapter's pass input"
       (is (= (:input adapter-result)
              (edn/read-string (slurp (io/file dir "input.edn"))))))
