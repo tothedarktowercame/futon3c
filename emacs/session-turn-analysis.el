@@ -368,7 +368,14 @@ turn-*.json file the `files' recorder writes, so the stepper, painter
 and xiang-trace keep reading it.  The policy decision is computed here
 and sent as analysis-requested, so 象-off (policy `never') keeps the
 record `not-requested' and no seat is ever belled for it."
-  (let* ((record (session-mode--structure-turn
+  (let* ((clock-metadata
+          (when (fboundp 'agent-chat--mission-body-fields)
+            (mapcar (lambda (field)
+                      (cons (intern (replace-regexp-in-string
+                                     "-" "_" (symbol-name (car field))))
+                            (cdr field)))
+                    (agent-chat--mission-body-fields))))
+         (record (session-mode--structure-turn
                   (session-mode--elide-quotes
                    (cdr (agent-chat-split-surface-marker
                          (car (session-mode--redact-secrets text)))))))
@@ -388,6 +395,7 @@ record `not-requested' and no seat is ever belled for it."
                                                   agent-chat--last-evidence-id-pending)))
                           ,(cond (agent-chat--last-evidence-id '(evidence-delivery . "acked"))
                                  (agent-chat--last-evidence-id-pending '(evidence-delivery . "queued")))
+                          ,@clock-metadata
                           (failed . ,(if failed t :json-false))
                           (analysis-requested . ,(if requested t :json-false))
                           ;; The reading starts at send: the JVM dispatches
@@ -445,6 +453,13 @@ The addressed agent has already received the original turn and is out of scope."
                                      (cdr (agent-chat-split-surface-marker original-text)))
                                (setq session-mode--last-quotes quotes))))
          (record (session-mode--structure-turn text))
+         (clock-metadata
+          (when (fboundp 'agent-chat--mission-body-fields)
+            (mapcar (lambda (field)
+                      (cons (intern (replace-regexp-in-string
+                                     "-" "_" (symbol-name (car field))))
+                            (cdr field)))
+                    (agent-chat--mission-body-fields))))
          (directory (file-name-as-directory session-mode-turn-analysis-directory)))
     (make-directory directory t)
     (set-file-modes directory #o700)
@@ -477,7 +492,7 @@ The addressed agent has already received the original turn and is out of scope."
       (condition-case err
           (with-temp-file path
             (let ((coding-system-for-write 'utf-8-unix))
-              (insert (json-encode (append record metadata))))
+              (insert (json-encode (append record metadata clock-metadata))))
             (when quotes
               (let ((coding-system-for-write 'utf-8-unix))
                 (write-region (json-encode (vconcat quotes)) nil
