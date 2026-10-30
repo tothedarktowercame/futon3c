@@ -50,6 +50,7 @@
      FUTON3_INBOX_ZERO_WITNESS_DIR — immutable exact-seat tool-edit witness intake
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
+            [futon3c.agents.claude-platform :as claude-platform]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle :as tickle]
@@ -3629,9 +3630,10 @@ RESPOND WITH ONLY:
                          shorter timeout (120s) via invoke-timeout-ms.
      :model            — Claude model override (e.g. \"claude-haiku-4-5-20251001\").
                          When nil, uses the CLI default."
-  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model cwd]
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model cwd
+           platform-stateless? platform-key-file platform-ledger monthly-limit-usd max-budget-usd]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
-         timeout-ms 3600000}}]
+         timeout-ms 3600000 monthly-limit-usd 200.0}}]
   (if-let [codex-opts (mfuton-invoke-override/claude-role-codex-opts
                        {:agent-id agent-id
                         :session-file session-file
@@ -3659,7 +3661,15 @@ RESPOND WITH ONLY:
           buf-name (str "*invoke: " agent-id "*")
           bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
       (letfn [(invoke-once [prompt session-id]
-                (let [prompt-str (cond
+                (let [_ (when (and platform-stateless? max-budget-usd
+                                   (> (+ (claude-platform/ledger-month-cost
+                                          (or platform-ledger claude-platform/default-ledger))
+                                         max-budget-usd)
+                                      monthly-limit-usd))
+                          (throw (ex-info "Claude Platform monthly budget cannot reserve this turn"
+                                          {:monthly-limit-usd monthly-limit-usd
+                                           :max-budget-usd max-budget-usd})))
+                      prompt-str (cond
                            (string? prompt) prompt
                            (map? prompt)    (or (:prompt prompt) (:text prompt)
                                                 (json/generate-string prompt))
@@ -3671,10 +3681,13 @@ RESPOND WITH ONLY:
               ;; --resume and let the CLI mint the UUID; we read it back from
               ;; the result stream (see :session_id capture into result-sid
               ;; below).
-              effective-sid (preferred-session-id session-file session-id session-id-atom)
+              effective-sid (when-not platform-stateless?
+                              (preferred-session-id session-file session-id session-id-atom))
               args (cond-> [claude-bin "-p"
                             "--permission-mode" permission-mode
                             "--output-format" "stream-json" "--verbose"]
+                     platform-stateless? (into ["--bare" "--no-session-persistence"])
+                     max-budget-usd (into ["--max-budget-usd" (str max-budget-usd)])
                      model         (into ["--model" model])
                      effective-sid (into ["--resume" (str effective-sid)])
                      :always       (into ["--" prompt-str]))
@@ -3709,6 +3722,10 @@ RESPOND WITH ONLY:
                                               (java.io.File.
                                                 (if (.contains (.toLowerCase (System/getProperty "os.name")) "win")
                                                   "NUL" "/dev/null")))))]
+                      (when platform-stateless?
+                        (.put (.environment pb*) "ANTHROPIC_API_KEY"
+                              (claude-platform/read-api-key
+                               (or platform-key-file claude-platform/default-key-file))))
                       (when-let [d (cwd/resolve-cwd cwd)] (.directory pb* (java.io.File. d)))
                       pb*)
               proc (.start pb)
@@ -3856,9 +3873,11 @@ RESPOND WITH ONLY:
                   ok? (and (zero? exit) (not @result-error))]
               ;; Persist session ID — only on success, to prevent
               ;; failed invokes from corrupting the session file (I-1)
-              (when (and ok? session-file final-sid (not (str/blank? final-sid)))
+              (when (and (not platform-stateless?) ok? session-file final-sid
+                         (not (str/blank? final-sid)))
                 (persist-session-id! session-file final-sid))
-              (when (and ok? session-id-atom final-sid (not (str/blank? final-sid)))
+              (when (and (not platform-stateless?) ok? session-id-atom final-sid
+                         (not (str/blank? final-sid)))
                 (reset! session-id-atom final-sid))
               ;; Inbox-zero turn-end promotion fires HERE, once per completed
               ;; turn, and only on success with a session id the CLI reported.
@@ -3880,6 +3899,14 @@ RESPOND WITH ONLY:
                                                 (str "exit-" exit))}
                                      :session-id final-sid
                                      :tags ["invoke-complete"])
+              (when (and platform-stateless? ok?)
+                (claude-platform/record-receipt!
+                 (or platform-ledger claude-platform/default-ledger)
+                 {:schema "claude-platform-invoke.v1" :at (str (Instant/now))
+                  :agent-id agent-id :model model
+                  :request-id (:request_id @result-event)
+                  :usage (:usage @result-event)
+                  :cost-usd (double (or (:total_cost_usd @result-event) 0.0))}))
               ;; Final blackboard update with result summary
               (try
                 (bb/blackboard! buf-name

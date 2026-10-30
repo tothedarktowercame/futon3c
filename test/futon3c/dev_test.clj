@@ -461,6 +461,53 @@
       (is (not (re-find #"incoming-stale" argv)))
       (is (not (re-find #"atom-sid" argv))))))
 
+(deftest make-claude-invoke-fn-platform-profile-is-bare-budgeted-and-stateless
+  (let [key-file (doto (java.io.File/createTempFile "platform-key-" ".txt")
+                   (.deleteOnExit))
+        argv-file (doto (java.io.File/createTempFile "platform-argv-" ".txt")
+                    (.deleteOnExit))
+        env-file (doto (java.io.File/createTempFile "platform-env-" ".txt")
+                   (.deleteOnExit))
+        claude-bin (doto (java.io.File/createTempFile "platform-claude-" ".sh")
+                     (.deleteOnExit))
+        _ (spit key-file "platform-test-key")
+        _ (.setReadable key-file false false)
+        _ (.setReadable key-file true true)
+        _ (.setWritable key-file false false)
+        _ (.setWritable key-file true true)
+        _ (spit claude-bin
+                (str "#!/usr/bin/env bash\n"
+                     "printf '%s\\n' \"$*\" > \"" (.getPath argv-file) "\"\n"
+                     "printf '%s' \"$ANTHROPIC_API_KEY\" > \"" (.getPath env-file) "\"\n"
+                     "printf '{\"type\":\"result\",\"session_id\":\"fresh-platform\",\"is_error\":false}\\n'\n"))
+        _ (.setExecutable claude-bin true)
+        sid (atom "must-not-be-used")
+        invoke-fn (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                                (constantly nil)
+                                dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                                dev/emit-invoke-evidence! (fn [& _] nil)
+                                dev/context-retrieval! (fn [& _] nil)
+                                dev/register-invoke-control! (fn [& _] nil)
+                                agent-pouch/enabled? (constantly false)
+                                turn-queue/enabled? (constantly false)
+                                futon3c.blackboard/blackboard! (fn [& _] nil)]
+                    (dev/make-claude-invoke-fn
+                     {:claude-bin (.getPath claude-bin) :agent-id "象-sonnet"
+                      :session-id-atom sid :platform-stateless? true
+                      :platform-key-file (.getPath key-file) :max-budget-usd 0.50
+                      :timeout-ms 5000}))
+        result (with-redefs [agent-pouch/enabled? (constantly false)
+                             turn-queue/enabled? (constantly false)]
+                 (invoke-fn "analyse this turn" "old-session"))
+        argv (slurp argv-file)]
+    (is (= "fresh-platform" (:session-id result)))
+    (is (re-find #"--bare" argv))
+    (is (re-find #"--no-session-persistence" argv))
+    (is (re-find #"--max-budget-usd 0.5" argv))
+    (is (not (re-find #"--resume" argv)))
+    (is (= "platform-test-key" (slurp env-file)))
+    (is (= "must-not-be-used" @sid) "a stateless turn does not persist its session")))
+
 (deftest make-claude-invoke-fn-uses-turn-queue-when-flag-on
   (testing "Car-3 queue path is load-dark but wired when the flag is enabled"
     (let [queued (atom nil)]

@@ -4466,6 +4466,7 @@
 (def ^:private default-capabilities
   {:claude [:explore :edit :test :coordination/execute]
    :claude-platform [:observe]
+   :claude-platform-tools [:observe]
    :codex  [:edit :test :coordination/execute]
    :zai    [:explore :edit :test :coordination/execute]
    :kimi   [:explore :edit :test :coordination/execute]
@@ -4567,6 +4568,19 @@
       (claude-platform/make-reader-invoke-fn
        (cond-> {:agent-id agent-id}
          model (assoc :model model)))
+
+      :claude-platform-tools
+      (when (= "象-sonnet" agent-id)
+        (try
+          (require 'futon3c.dev)
+          (when-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
+            (@make-fn {:agent-id agent-id
+                       :model (or model "claude-sonnet-5-5")
+                       :platform-stateless? true
+                       :max-budget-usd 1.0
+                       :permission-mode "bypassPermissions"
+                       :cwd (or requested-cwd "/home/joe/code")}))
+          (catch Throwable _ nil)))
 
       :claude
       (try

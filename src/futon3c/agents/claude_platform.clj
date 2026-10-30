@@ -91,10 +91,10 @@
      :model (:model parsed)
      :request-id (some-> response .headers (.firstValue "request-id") (.orElse nil))}))
 
-(defn- append-receipt! [path receipt]
+(defn record-receipt! [path receipt]
   (let [f (io/file (expand-home path))]
     (.mkdirs (.getParentFile f))
-    (locking append-receipt!
+    (locking record-receipt!
       (spit f (str (json/generate-string receipt) "\n") :append true))))
 
 (defn- current-month [] (subs (str (Instant/now)) 0 7))
@@ -156,7 +156,7 @@
             (throw (ex-info "Claude Platform response contained no text" {})))
           (swap! month-spend + (- cost bound))
           (reset! reserved 0.0)
-          (append-receipt! ledger receipt)
+          (record-receipt! ledger receipt)
           {:result text :session-id sid :usage (:usage response)
            :cost-usd cost :request-id (:request-id response)}))
           (catch Throwable t
