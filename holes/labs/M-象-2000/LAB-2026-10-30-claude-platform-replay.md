@@ -1,7 +1,8 @@
 # Claude Platform replay pilot
 
-**Date:** 2026-10-30  
-**Status:** initial 40-request pilot complete  
+**Date:** 2026-10-30
+
+**Status:** initial 40-request pilot complete
 **Question:** Can the bounded 馬 and 驴 readings move from accumulating Claude
 Code sessions to stateless Claude Platform requests without losing their
 checked outputs, and can Haiku replace Sonnet on either task?
@@ -79,3 +80,15 @@ still needs outcome scoring against later pattern verdicts: disagreement with
 the historical rerank is not itself an error, while the two truncations may be
 addressed by a bounded retry or a larger output allowance only if that policy
 is tested explicitly.
+
+An attempted join against the ten records' stored `pattern_verdicts` exposed a
+limit in that proposed outcome test: all 30 historical top-three picks were
+scored, but only 14/24 parsed Haiku replay picks and 16/30 Sonnet replay picks
+were scored.  The verdict set was made for the historical candidate union; it
+is not an open-world later label set for every replay choice.  On the covered
+subset Haiku had 4 picks and Sonnet 7 picks with `chain_mapped >= 2`, but those
+figures are not comparable because coverage depends on overlap with the old
+arm.  A valid next experiment must form the union of all arms first and have
+that frozen union judged blind (or obtain operator labels); it must not count
+missing replay verdicts as void or silently compare the differently covered
+subsets.
