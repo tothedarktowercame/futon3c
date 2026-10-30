@@ -143,3 +143,52 @@ criterion "twice, not as a streak".
 6. Track the ordinary-path defect rate per 10 clicks; the campaign is
    working when it falls below 3, and the honest stop condition is when it
    does not fall over 30 clicks.
+
+## 7. Addendum (2026-10-30): one change made from here, no click spent
+
+Of the levers in §5, one is mechanical, local to the ordinary route, and
+testable without a click: **an existing-artifact claim must cite the
+selected target before a reviewer is dispatched.** It is prepared as a
+futon2 change on the local branch `claude/claim-cites-selected-target`
+(this session has read access to futon2 only; the patch is attached as
+`TN-wm-next-50-clicks-audit-2026-10-30.patch` beside this note).
+
+What it does, in `src/futon2/aif/full_loop_runner.clj`:
+
+- `claimed-commit-cites-target` (pure): the claimed commit cites the target
+  when its message contains the target id, or a changed file is the selected
+  mission's source file by name, or a changed path carries the target id.
+  It never approves; a citing commit still goes to the reviewer.
+- `review-already-satisfied-claim!` runs that check after the completion
+  source pin is verified and before the first `charge!`. A non-citing claim
+  returns `:guardrail-refusal` / `:claimed-artifact-not-on-selected-target`
+  with `:claim-refused-before-review? true` and the citation evidence under
+  `:claim-citation`; no reviewer seat is dispatched or charged. The reviewer
+  path is unchanged otherwise and now also carries `:claim-citation`.
+- The author prompt's requirement 7 states the rule to the author.
+- `stop_line/no-finding-required?` and
+  `meta_terminal_injury/explicit-non-injury-kinds` treat the new kind like
+  `:reviewed-claim-refused`: the author's answer is wrong, not the apparatus,
+  so no stop-line finding and no injury.
+
+Replay against click 50 (fc2e27e3): the claimed commit futon3c `7aac5ca07`
+has message `inbox-zero: promote 1 path(s) for claude-16 / Mission:
+M-giraffe` and one file, `holes/excursions/E-argument-game-search.md`; the
+check refuses it with no dispatch. Against click 14's retained shape (the
+claimed commit touches `holes/missions/M-recommendation-bindings.md`) the
+claim still reaches review. Test:
+`test/futon2/aif/author_claim_cites_target_test.clj`, 7 tests, 32
+assertions, green on the resolved `:test` classpath in this container.
+
+Effect on the §2 estimates: it does not raise the useful-click rate. It
+converts each "author claims an unrelated artifact" click (estimated 3 of
+the next 50) from a reviewer dispatch plus hours of wait into a
+sub-second typed refusal, and removes that reviewer charge from the medic
+and self-heal overhead line. The author still spent the click; the next
+lever, which this change does not attempt, is the selector's E3 behaviour
+on the re-pick that follows.
+
+Hole left open: `explicit-non-injury-kinds` transcribes a vocabulary that
+`DarkTower/WarMachine/AlreadySatisfiedArtifactRefSeam.lean` models with
+three `FailureKind` values; the new kind needs a row there before the
+classifier's Lean correspondence is claimed again.

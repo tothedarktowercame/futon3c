@@ -1,0 +1,342 @@
+From f14fae14e95001a1cf1a823887b4a76e66c83dac Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 30 Oct 2026 05:17:22 +0000
+Subject: [PATCH] wm: refuse an existing-artifact claim that does not cite the
+ selected target before review
+
+Click fc2e27e3 (2026-10-30, M-typed-memories) claimed futon3c 7aac5ca07,
+whose message says `Mission: M-giraffe` and whose only file is an
+unrelated excursion. Commit existence alone qualified it for review, a
+reviewer seat was dispatched and charged, and the click closed
+:reviewed-claim-refused four hours later.
+
+claimed-commit-cites-target decides mechanically whether the claimed
+commit is visibly work on the selected target (message names the target
+id, or a changed file is the mission's source file, or a changed path
+carries the target id). review-already-satisfied-claim! runs it after
+the completion source pin is verified and before the first charge; a
+non-citing claim returns :guardrail-refusal /
+:claimed-artifact-not-on-selected-target with the citation evidence and
+no dispatch. A citing claim still goes to the reviewer unchanged.
+
+The author prompt's requirement 7 states the rule. stop-line and the
+terminal classifier treat the new kind as non-injury, like
+:reviewed-claim-refused: the author's answer is wrong, not the
+apparatus. AlreadySatisfiedArtifactRefSeam.lean does not yet carry the
+new FailureKind; that is a hole, not a claim.
+
+Test: author_claim_cites_target_test, 7 tests / 32 assertions, replaying
+click 50's commit (refused, no charge) and click 14's shape (reaches
+review).
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DcURqCM4rXHzJMaHCQ8AhG
+---
+ src/futon2/aif/full_loop_runner.clj           |  82 +++++++++-
+ src/futon2/aif/meta_terminal_injury.clj       |   1 +
+ src/futon2/aif/stop_line.clj                  |   6 +-
+ .../aif/author_claim_cites_target_test.clj    | 147 ++++++++++++++++++
+ 4 files changed, 232 insertions(+), 4 deletions(-)
+ create mode 100644 test/futon2/aif/author_claim_cites_target_test.clj
+
+diff --git a/src/futon2/aif/full_loop_runner.clj b/src/futon2/aif/full_loop_runner.clj
+index 0bcb022f..9d688b9f 100644
+--- a/src/futon2/aif/full_loop_runner.clj
++++ b/src/futon2/aif/full_loop_runner.clj
+@@ -4110,7 +4110,10 @@
+        "   runner reads that sha as the grounded commit). End exactly with:\n"
+        "   FULL_LOOP_AUTHOR: REFUSE :already-satisfied-at-base-head. This reports only\n"
+        "   the selected construction's existing evidence; it does not claim that the\n"
+-       "   whole mission is complete.\n"
++       "   whole mission is complete. The existing commit must visibly be work on the\n"
++       "   SELECTED target: its message names the target id, or it touches the\n"
++       "   target's mission file or a path carrying the target id. A commit that\n"
++       "   does none of these is refused mechanically before any reviewer reads it.\n"
+        "If no safe substantive parcel is possible, make no commit and finish with "
+        "FULL_LOOP_AUTHOR: REFUSE <typed reason>.")))
+ 
+@@ -4877,9 +4880,51 @@
+     (resolve-fn commit)
+     (resolve-build commit target-repo)))
+ 
++(defn- commit-message
++  "The full message of COMMIT in REPO, or nil when Git cannot show it."
++  [repo commit]
++  (let [r (git repo "log" "-1" "--format=%B" commit)]
++    (when (zero? (:exit r)) (:out r))))
++
++(defn claimed-commit-cites-target
++  "Whether an existing-artifact claim's commit is visibly work on the
++  selected target. It cites the target when its MESSAGE contains the target
++  id, or one of its changed FILES is the selected mission's source file (by
++  file name), or one of its changed FILES carries the target id in its path.
++
++  Click fc2e27e3 (2026-10-30, run 2026-10-30-e5f08d91, M-typed-memories):
++  the author answered in 27 s by claiming futon3c 7aac5ca07, an inbox-zero
++  promotion whose message says `Mission: M-giraffe` and whose only file is
++  `holes/excursions/E-argument-game-search.md`. The claim qualified for
++  review on commit existence alone, a reviewer seat was dispatched and
++  charged, and the click closed :reviewed-claim-refused four hours later.
++  This check refuses such a claim before any dispatch. It never approves:
++  a citing commit still goes to the reviewer, who judges satisfaction."
++  [{:keys [target source-path message files]}]
++  (let [target (str target)
++        files (vec (or files []))
++        source-name (when (string? source-path) (.getName (io/file source-path)))
++        message-cites? (and (not (str/blank? target)) (string? message)
++                            (str/includes? message target))
++        source-file (when source-name
++                      (some #(when (= source-name (.getName (io/file %))) %) files))
++        target-path (when-not (str/blank? target)
++                      (some #(when (str/includes? % target) %) files))]
++    {:cites? (boolean (or message-cites? source-file target-path))
++     :target target
++     :message-cites-target? (boolean message-cites?)
++     :source-file source-file
++     :target-path target-path
++     :files files}))
++
++(declare review-cited-already-satisfied-claim!)
++
+ (defn review-already-satisfied-claim!
+   "Review an existing-artifact claim through the ordinary dispatch/poll ports.
+-  Existence qualifies the claim for review; it does not supply the verdict."
++  Existence qualifies the claim for review; it does not supply the verdict.
++  A claimed commit that does not cite the selected target
++  (`claimed-commit-cites-target`) is refused here, before any reviewer is
++  dispatched or charged, as `:claimed-artifact-not-on-selected-target`."
+   [opts phase-context prompt-opts target mission construction author-job classification charge!]
+   (let [grounded (:grounded-commit classification)
+         commit (:sha grounded)
+@@ -4902,7 +4947,37 @@
+             (throw (ex-info "Selected completion definition changed before review"
+                             {:outcome :build-failed :failure-kind :review-completion-source-mismatch})))
+         completion-text (String. source-bytes "UTF-8")
+-        prompt (str (reviewer-prompt prompt-opts target construction repo commit author-job [])
++        citation (claimed-commit-cites-target
++                  {:target target
++                   :source-path (:path source)
++                   :message ((or (:commit-message-fn opts) commit-message) repo commit)
++                   :files files})]
++    (if-not (:cites? citation)
++      {:outcome :guardrail-refusal
++       :failure-kind :claimed-artifact-not-on-selected-target
++       :failure-stage :author-wait
++       :target target :commit commit :grounded-commit grounded
++       :author-job author-job
++       :claim-citation citation
++       :refusal-reason (str "Claimed existing commit " commit " in " (:repo grounded)
++                            " does not cite the selected target " (pr-str target)
++                            ": its message does not name the target and its "
++                            (count files) " changed file(s) are neither the target's "
++                            "mission file nor a path carrying the target id. "
++                            "Refused before reviewer dispatch.")
++       :reviewed-claim-refused? false
++       :claim-refused-before-review? true}
++      (review-cited-already-satisfied-claim!
++       opts phase-context prompt-opts target mission construction author-job
++       charge! grounded commit repo files completion-text citation))))
++
++(defn- review-cited-already-satisfied-claim!
++  "The reviewer dispatch for an existing-artifact claim whose commit cites
++  the selected target. Split from `review-already-satisfied-claim!` so the
++  mechanical citation refusal sits before the first charge."
++  [opts phase-context prompt-opts target mission construction author-job
++   charge! grounded commit repo files completion-text citation]
++  (let [prompt (str (reviewer-prompt prompt-opts target construction repo commit author-job [])
+                     "\nALREADY-SATISFIED CLAIM: no new implementation is claimed. Judge whether "
+                     "this exact existing commit satisfies the selected task, not merely whether it exists.\n"
+                     "SELECTED TASK COMPLETION DEFINITION / RETAINED MISSION:\n" (pr-str mission) "\n" completion-text
+@@ -4931,6 +5006,7 @@
+     {:outcome outcome :failure-kind kind :failure-stage :author-wait
+      :target target :commit commit :grounded-commit grounded
+      :author-job author-job :review-job job :review-verdict verdict :review-gate gate
++     :claim-citation citation
+      :refusal-reason (when-not accepted? (or apparatus (job-text job)))
+      :reviewed-claim-refused? (boolean refused?)}))
+ 
+diff --git a/src/futon2/aif/meta_terminal_injury.clj b/src/futon2/aif/meta_terminal_injury.clj
+index d4df416e..9f1e1963 100644
+--- a/src/futon2/aif/meta_terminal_injury.clj
++++ b/src/futon2/aif/meta_terminal_injury.clj
+@@ -11,6 +11,7 @@
+ (def explicit-non-injury-kinds
+   {:author-response-unparseable :author-response-unparseable
+    :reviewed-claim-refused :reviewed-claim-refused
++   :claimed-artifact-not-on-selected-target :claimed-artifact-not-on-selected-target
+    :abstained :ordinary-selection-abstention
+    :operator-cancelled :operator-cancelled
+    :declared-no-work :declared-no-work
+diff --git a/src/futon2/aif/stop_line.clj b/src/futon2/aif/stop_line.clj
+index f9eeccb6..480af520 100644
+--- a/src/futon2/aif/stop_line.clj
++++ b/src/futon2/aif/stop_line.clj
+@@ -31,7 +31,11 @@
+   [{:keys [outcome failure-kind grounded-commit reviewed-claim-refused?]}]
+   (or (and (= :guardrail-refusal outcome)
+            (or (true? reviewed-claim-refused?)
+-               (= :author-response-unparseable failure-kind)))
++               (= :author-response-unparseable failure-kind)
++               ;; An existing-artifact claim refused mechanically before
++               ;; review because its commit does not cite the selected
++               ;; target: the author's answer, not the apparatus, is wrong.
++               (= :claimed-artifact-not-on-selected-target failure-kind)))
+       (contains? #{:grounded-change
+                    :grounded-progress
+                    :historical-verification-awaiting-validation}
+diff --git a/test/futon2/aif/author_claim_cites_target_test.clj b/test/futon2/aif/author_claim_cites_target_test.clj
+new file mode 100644
+index 00000000..ee5df9b7
+--- /dev/null
++++ b/test/futon2/aif/author_claim_cites_target_test.clj
+@@ -0,0 +1,147 @@
++(ns futon2.aif.author-claim-cites-target-test
++  "An existing-artifact claim must cite the selected target before a
++  reviewer is dispatched.  The negative case is retained from click
++  fc2e27e3 (2026-10-30, run 2026-10-30-e5f08d91, M-typed-memories): the
++  author claimed futon3c 7aac5ca07, whose message is
++  `inbox-zero: promote 1 path(s) for claude-16 / Mission: M-giraffe` and
++  whose only file is `holes/excursions/E-argument-game-search.md`.  The
++  positive cases are the retained click-14 shape (the claimed commit touches
++  the selected mission's own file) and a message that names the target."
++  (:require [clojure.java.io :as io]
++            [clojure.string :as str]
++            [clojure.test :refer [deftest is]]
++            [futon2.aif.full-loop-runner :as runner]
++            [futon2.aif.meta-terminal-injury :as terminal]
++            [futon2.aif.stop-line :as stop])
++  (:import [java.nio.file Files]
++           [java.nio.file.attribute FileAttribute]))
++
++(def click-50-message
++  "inbox-zero: promote 1 path(s) for claude-16\n\nholes/excursions/E-argument-game-search.md\n\nMission: M-giraffe\n")
++(def click-50-files ["holes/excursions/E-argument-game-search.md"])
++(def click-50-sha "7aac5ca0705e38d49b9c7f105e28ba1a41c8e9dd")
++
++(deftest click-50-claim-does-not-cite-the-selected-target
++  (let [citation (runner/claimed-commit-cites-target
++                  {:target "M-typed-memories"
++                   :source-path "/home/joe/code/futon3c/holes/missions/M-typed-memories.md"
++                   :message click-50-message
++                   :files click-50-files})]
++    (is (false? (:cites? citation)))
++    (is (false? (:message-cites-target? citation)))
++    (is (nil? (:source-file citation)))
++    (is (nil? (:target-path citation)))))
++
++(deftest claim-cites-target-through-the-mission-file
++  ;; Click 14's shape: the already-satisfied commit touched the selected
++  ;; mission's own record.
++  (let [citation (runner/claimed-commit-cites-target
++                  {:target "M-recommendation-bindings"
++                   :source-path "/home/joe/code/futon5a/holes/missions/M-recommendation-bindings.md"
++                   :message "bindings: land :binds-to for THE-STACK and leaf invariants"
++                   :files ["holes/missions/M-recommendation-bindings.md"
++                           "holes/stories/THE-STACK.aif.edn"]})]
++    (is (true? (:cites? citation)))
++    (is (= "holes/missions/M-recommendation-bindings.md" (:source-file citation)))))
++
++(deftest claim-cites-target-through-the-message
++  (let [citation (runner/claimed-commit-cites-target
++                  {:target "M-typed-memories"
++                   :source-path "/home/joe/code/futon3c/holes/missions/M-typed-memories.md"
++                   :message "memories: typed capture for the APM run\n\nMission: M-typed-memories\n"
++                   :files ["src/futon3c/memory/typed.clj"]})]
++    (is (true? (:cites? citation)))
++    (is (true? (:message-cites-target? citation)))))
++
++(deftest claim-cites-target-through-a-path-carrying-the-id
++  (let [citation (runner/claimed-commit-cites-target
++                  {:target "M-typed-memories"
++                   :source-path nil
++                   :message nil
++                   :files ["docs/M-typed-memories/notes.md"]})]
++    (is (true? (:cites? citation)))
++    (is (= "docs/M-typed-memories/notes.md" (:target-path citation)))))
++
++(deftest blank-target-never-cites
++  (is (false? (:cites? (runner/claimed-commit-cites-target
++                        {:target "" :message "anything" :files ["a"]})))))
++
++(defn- temp-mission [target text]
++  (let [dir (.toFile (Files/createTempDirectory "claim-cites-" (make-array FileAttribute 0)))
++        file (io/file dir (str target ".md"))]
++    (spit file text)
++    {:id target
++     :source {:path (.getPath file)
++              :sha256 (#'runner/sha256-bytes (.getBytes text "UTF-8"))}}))
++
++(deftest non-citing-claim-is-refused-before-any-reviewer-dispatch
++  (let [target "M-typed-memories"
++        mission (temp-mission target "# M-typed-memories\n\nwant: typed memories\n")
++        author {:job-id "author-fc2e27e3" :state "done"
++                :artifact-ref click-50-sha
++                :result (str "FULL_LOOP_FEATURE_CARD: {:built \"already satisfied\" "
++                             ":want-coverage \"already satisfied at " click-50-sha "\" "
++                             ":matches-intent? true :things-to-try [] "
++                             ":proof-ref \"" click-50-sha "\"}\n"
++                             "FULL_LOOP_AUTHOR: REFUSE :already-satisfied-at-base-head")}
++        classification {:outcome :already-satisfied
++                        :grounded-commit {:repo "futon3c" :sha click-50-sha}}
++        contacts (atom [])
++        charge (atom 0)
++        result (runner/review-already-satisfied-claim!
++                {:phase-log-fn (fn [_])
++                 :resolve-build-fn (fn [commit]
++                                     (is (= click-50-sha commit))
++                                     {:repo "/nonexistent/futon3c" :files click-50-files})
++                 :commit-message-fn (fn [_repo commit]
++                                      (is (= click-50-sha commit))
++                                      click-50-message)
++                 :dispatch-fn (fn [& args] (swap! contacts conj args) {:job-id "must-not-run"})
++                 :poll-fn (fn [_ id] {:job-id id :state "done" :result "FULL_LOOP_REVIEW: APPROVE"})}
++                {} {:author "wm-author" :reviewer "wm-reviewer"}
++                target mission {} author classification #(swap! charge inc))]
++    (is (= 0 @charge) "no reviewer seat is charged")
++    (is (empty? @contacts) "no reviewer is dispatched")
++    (is (= :guardrail-refusal (:outcome result)))
++    (is (= :claimed-artifact-not-on-selected-target (:failure-kind result)))
++    (is (= :author-wait (:failure-stage result)))
++    (is (= click-50-sha (:commit result)))
++    (is (true? (:claim-refused-before-review? result)))
++    (is (false? (:reviewed-claim-refused? result)))
++    (is (false? (get-in result [:claim-citation :cites?])))
++    (is (str/includes? (:refusal-reason result) "does not cite the selected target"))
++    (is (stop/no-finding-required? result) "the author's answer, not the apparatus, is wrong")
++    (is (contains? terminal/explicit-non-injury-kinds (:failure-kind result)))))
++
++(deftest citing-claim-still-reaches-the-reviewer
++  (let [target "M-typed-memories"
++        mission (temp-mission target "# M-typed-memories\n\nwant: typed memories\n")
++        sha "0123456789abcdef0123456789abcdef01234567"
++        author {:job-id "author-citing" :state "done" :artifact-ref sha
++                :result (str "FULL_LOOP_FEATURE_CARD: {:built \"already satisfied\" "
++                             ":want-coverage \"ok\" :matches-intent? true :things-to-try [] "
++                             ":proof-ref \"" sha "\"}\n"
++                             "FULL_LOOP_AUTHOR: REFUSE :already-satisfied-at-base-head")}
++        classification {:outcome :already-satisfied :grounded-commit {:repo "futon3c" :sha sha}}
++        contacts (atom [])
++        charge (atom 0)
++        result (runner/review-already-satisfied-claim!
++                {:phase-log-fn (fn [_])
++                 :resolve-build-fn (fn [_] {:repo "/nonexistent/futon3c"
++                                            :files ["holes/missions/M-typed-memories.md"]})
++                 :commit-message-fn (fn [_ _] "memories: close the capture want")
++                 :dispatch-fn (fn [_ seat _ t prompt]
++                                (swap! contacts conj {:seat seat :target t :prompt prompt})
++                                {:job-id "claim-review"})
++                 :poll-fn (fn [_ id] {:job-id id :state "done"
++                                      :result "FULL_LOOP_REVIEW: REJECT not the selected want"
++                                      :execution {:executed true :tool-events 1}})}
++                {} {:author "wm-author" :reviewer "wm-reviewer"}
++                target mission {} author classification #(swap! charge inc))]
++    (is (= 1 @charge))
++    (is (= 1 (count @contacts)))
++    (is (= "wm-reviewer" (:seat (first @contacts))))
++    (is (= :guardrail-refusal (:outcome result)))
++    (is (= :reviewed-claim-refused (:failure-kind result)))
++    (is (true? (get-in result [:claim-citation :cites?])))
++    (is (= "holes/missions/M-typed-memories.md" (get-in result [:claim-citation :source-file])))))
+-- 
+2.43.0
+
