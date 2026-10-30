@@ -144,6 +144,7 @@
             [futon3c.portfolio.core :as portfolio]
             [futon3c.agents.zai-api :as zai-api]
             [futon3c.agents.kimi-api :as kimi-api]
+            [futon3c.agents.claude-platform :as claude-platform]
             [futon3c.aif.live-recommendation :as live-recommendation]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
@@ -4464,6 +4465,7 @@
 
 (def ^:private default-capabilities
   {:claude [:explore :edit :test :coordination/execute]
+   :claude-platform [:observe]
    :codex  [:edit :test :coordination/execute]
    :zai    [:explore :edit :test :coordination/execute]
    :kimi   [:explore :edit :test :coordination/execute]
@@ -4561,6 +4563,11 @@
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
+      :claude-platform
+      (claude-platform/make-reader-invoke-fn
+       (cond-> {:agent-id agent-id}
+         model (assoc :model model)))
+
       :claude
       (try
         (require 'futon3c.dev)
