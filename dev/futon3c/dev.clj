@@ -3959,7 +3959,11 @@ RESPOND WITH ONLY:
               (invoke-warm-or-cold [prompt session-id]
                 (let [warm-sid (preferred-session-id session-file session-id session-id-atom)]
                   (cond
-                    (not (agent-pouch/enabled?))
+                    ;; A Platform-stateless invocation must reach the fresh
+                    ;; `claude --bare` process built by invoke-once. Reusing a
+                    ;; subscription-authenticated pouch would bypass both the
+                    ;; selected credential and the no-session contract.
+                    (or platform-stateless? (not (agent-pouch/enabled?)))
                     (invoke-once prompt session-id)
 
                     ;; Context gate: a session over joey-max-tokens is first compacted

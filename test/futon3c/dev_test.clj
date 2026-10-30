@@ -496,7 +496,10 @@
                       :session-id-atom sid :platform-stateless? true
                       :platform-key-file (.getPath key-file) :max-budget-usd 0.50
                       :timeout-ms 5000}))
-        result (with-redefs [agent-pouch/enabled? (constantly false)
+        result (with-redefs [agent-pouch/enabled? (constantly true)
+                             agent-pouch/feed-turn!
+                             (fn [& _]
+                               (throw (ex-info "stateless Platform entered the warm pouch" {})))
                              turn-queue/enabled? (constantly false)]
                  (invoke-fn "analyse this turn" "old-session"))
         argv (slurp argv-file)]
