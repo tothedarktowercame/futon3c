@@ -10,6 +10,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon2.aif.meta-injury-store :as injury-store]
+            [futon2.aif.pinned-file-delivery :as delivery]
             [futon2.aif.meta-repair-coordinator :as coordinator]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
@@ -515,13 +516,15 @@
           file (acceptance-source-location (:acceptance-worktree request) (:path source))]
       (cond
         (and file (.isFile file))
-        (let [bytes (java.nio.file.Files/readAllBytes (.toPath file))
-              actual (hex-sha256 bytes)]
-          (if (= (:sha256 source) actual)
+        (let [result (delivery/read-file file (:sha256 source))]
+          (if (= :file (:status result))
             {:status :file :value (assoc-in parsed [:acceptance-test :source :text]
-                                            (String. bytes "UTF-8"))}
-            {:status :refused :reason :meta-self-heal/acceptance-source-sha-mismatch
-             :expected (:sha256 source) :actual actual :path (:path source)}))
+                                            (:text result))}
+            (assoc (dissoc result :text)
+                   :reason (if (= :sha-mismatch (:reason result))
+                             :meta-self-heal/acceptance-source-sha-mismatch
+                             :meta-self-heal/acceptance-source-file-absent)
+                   :path (:path source))))
 
         (string? (:text source))
         {:status :inline-fallback :value parsed
