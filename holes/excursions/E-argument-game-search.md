@@ -85,6 +85,35 @@ What follows for this excursion:
 4. **The WM has this shape too.** The cascade proposes; G scores. Whether the pattern
    step saves search there could be measured with no new game at all.
 
+## How would a living thing compute G? (Joe, 2026-10-30)
+
+If organisms minimise expected free energy as routinely as Friston claims, they cannot be
+enumerating policies; the cost grows exponentially with the horizon. From memory, not yet
+checked: the active inference literature gives three ways out.
+
+- **Hierarchy.** Deep temporal models: each level chooses among a few short policies,
+  and its choice sets the context for the level below.
+- **Pruning.** Sophisticated inference (Friston et al. 2021) is a recursive tree search
+  that drops branches of low probability.
+- **Amortisation through habit.** The habit prior E (Friston et al. 2016) is learned by
+  counting the policies actually chosen, so with time it mirrors what G would pick.
+  Deep active inference work amortises further: Fountas et al. 2020 run MCTS over G
+  with a habitual network that prunes it, which is AlphaZero's policy network in active
+  inference terms; Millidge 2020 learns a bootstrapped estimate of G, like a Q-function.
+
+This is the chess-chunk story in biological terms: E is the fast pattern step and G is
+the slow check, run only where E is uncertain. Optimising a policy network against G
+is the route the literature already takes, so it is not new; what we might add is
+*where the training data comes from*.
+
+The WM has the ingredients. `DarkTower/AIF/Terms.lean` defines E (`Habit`) and the
+tempered posterior σ(ln E − F − γG); futon2 `aif/strategic_habit.clj` accumulates E as
+counts of strategic selections, behind an opt-in. That is the 2016 counting habit, not
+an amortised G. A measurable question with no new game: on recorded clicks, how often
+does the habit's top policy agree with G's, and when they agree, how much scoring could
+have been skipped? If agreement rises with experience, the WM is amortising, as an
+organism would.
+
 ## What would make it critical-path
 
 - The AIF work (WM active inference) needs a policy search it cannot do by enumeration.
