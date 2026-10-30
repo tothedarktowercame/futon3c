@@ -35,7 +35,9 @@
          written (gr/write-run! {:root root
                                  :adapter-result adapter-result
                                  :pass-output pass-output
-                                 :git-sha (apply str (repeat 40 \0))
+                                 ;; a real current-format sha: the first
+                                 ;; commit whose writer seals work-clusters.json
+                                 :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"
                                  :index-file index-file
                                  :edges-file edges-file})]
      {:adapter-result adapter-result
@@ -135,3 +137,113 @@
     ;; every edge line is one line: no quote breaks out of its bullet
     (is (not-any? #(str/starts-with? % "**")
                 (str/split-lines report)))))
+
+;; --------------------------------------------------------------- verify-run
+;; format compatibility (zai-4 repair, 2026-10-31): e90fe14bb added
+;; work-clusters.json to the sealed file set, which made verify-run
+;; reject every historical run whose manifest predates it.  These tests
+;; copy REAL run directories from the canonical storage root (read-only
+;; source, copy-then-mutate) so both formats are exercised in their
+;; actual on-disk shapes.
+
+(def storage-root "/home/joe/code/storage/giraffe/")
+
+(def legacy-run-ids
+  ["20261028T154151.285Z-b916cd4e"   ;; git-sha ff0734e1 (pre-e90fe14bb); pinned by live pending f74df9cc
+   "20261029T230756.734Z-3fa8fa14"   ;; git-sha e1eea834
+   "20261030T193432.152Z-dc280cbf"]) ;; git-sha deeae229
+
+(def current-run-id "20261030T213938.828Z-dc280cbf") ;; git-sha 6b5597d03
+
+(defn- copy-run [run-id tag]
+  (let [dest (io/file (temp-root tag) run-id)]
+    (when (.isDirectory (io/file storage-root run-id))
+      (.mkdirs dest)
+      (doseq [f (file-seq (io/file storage-root run-id))
+              :when (.isFile f)]
+        (io/copy f (io/file dest (.getName f))))
+      (str dest))))
+
+(defn- run-dir-exists? [run-id]
+  (.isDirectory (io/file storage-root run-id)))
+
+(deftest legacy-runs-verify-their-original-sealed-files
+  (doseq [id legacy-run-ids
+          :when (run-dir-exists? id)]
+    (when-let [copy (copy-run id "legacy-ok")]
+      (testing id
+        (is (:ok? (gr/verify-run copy)))
+        (is (= [] (:mismatches (gr/verify-run copy))))))))
+
+(deftest current-run-verifies-with-work-clusters
+  (when-let [copy (and (run-dir-exists? current-run-id)
+                       (copy-run current-run-id "current-ok"))]
+    (is (:ok? (gr/verify-run copy)))
+    (is (= [] (:mismatches (gr/verify-run copy))))))
+
+(deftest legacy-run-with-edited-bytes-fails
+  (when-let [copy (and (run-dir-exists? (first legacy-run-ids))
+                       (copy-run (first legacy-run-ids) "legacy-edit"))]
+    (spit (io/file copy "pass.edn") "(planted)")
+    (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
+      (is (not ok?))
+      (is (= ["pass.edn"] (map :file mismatches)))
+      (is (not-any? :missing-from-manifest mismatches)
+          "the file is listed; this is a hash mismatch, not a format gap"))))
+
+(deftest legacy-run-with-missing-original-artifact-fails
+  (when-let [copy (and (run-dir-exists? (first legacy-run-ids))
+                       (copy-run (first legacy-run-ids) "legacy-missing"))]
+    (.delete (io/file copy "pass.edn"))
+    (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
+      (is (not ok?))
+      (is (= ["pass.edn"] (map :file mismatches))))))
+
+(deftest current-run-with-missing-work-clusters-fails
+  (when-let [copy (and (run-dir-exists? current-run-id)
+                       (copy-run current-run-id "current-missing"))]
+    (.delete (io/file copy "work-clusters.json"))
+    (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
+      (is (not ok?))
+      (is (= ["work-clusters.json"] (map :file mismatches))))))
+
+(deftest current-run-with-corrupt-work-clusters-fails
+  (when-let [copy (and (run-dir-exists? current-run-id)
+                       (copy-run current-run-id "current-corrupt"))]
+    (spit (io/file copy "work-clusters.json") "{\"clusters\": []}")
+    (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
+      (is (not ok?))
+      (is (= ["work-clusters.json"] (map :file mismatches))))))
+
+(deftest current-manifest-stripped-of-work-clusters-row-is-not-legacy
+  ;; a current-format manifest (git-sha descends from e90fe14bb) with the
+  ;; work-clusters.json row removed must fail: format is decided by the
+  ;; git-sha, not by the artifact's absence
+  (when-let [copy (and (run-dir-exists? current-run-id)
+                       (copy-run current-run-id "current-stripped"))]
+    (let [mf (io/file copy "manifest.edn")
+          m (edn/read-string (slurp mf))]
+      (.delete (io/file copy "work-clusters.json"))
+      (spit mf (pr-str (update m :files
+                               (fn [fs]
+                                 (vec (remove #(= "work-clusters.json" (:file %))
+                                              fs))))))
+      (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
+        (is (not ok?))
+        (is (= [{:file "work-clusters.json" :missing-from-manifest true}]
+               mismatches)))))
+
+  ;; an unresolvable git-sha is undecidable and fails closed to the
+  ;; current baseline
+  (when-let [copy (and (run-dir-exists? (first legacy-run-ids))
+                       (copy-run (first legacy-run-ids) "undecidable"))]
+    (let [mf (io/file copy "manifest.edn")
+          m (edn/read-string (slurp mf))]
+      (spit mf (pr-str (assoc m :git-sha
+                              (apply str (repeat 40 \a)))))
+      (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
+        (is (not ok?))
+        (is (= [{:file "work-clusters.json"
+                 :missing-from-manifest true
+                 :format-undecidable true}]
+               mismatches))))))
