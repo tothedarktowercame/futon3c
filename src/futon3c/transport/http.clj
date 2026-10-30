@@ -12284,6 +12284,12 @@
                            ;; "acked" or "queued": whether futon1b had the row
                            ;; when the record was made (Emacs outbox, 2026-10-14).
                            :evidence-delivery (some-> (:evidence-delivery payload) str)
+                           :campaign-id (some-> (:campaign-id payload) str)
+                           :mission-id (some-> (:mission-id payload) str)
+                           :excursion-id (some-> (:excursion-id payload) str)
+                           :ticket-id (some-> (:ticket-id payload) str)
+                           :clocked-target (some-> (:clocked-target payload) str)
+                           :auto-clock-witness (:auto-clock-witness payload)
                            :surface (some-> (:surface payload) str)
                            :failed? (boolean (:failed payload))
                            :origin (or (some-> (:origin payload) str) "operator")

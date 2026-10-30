@@ -467,7 +467,8 @@
    :now-ms, :redact (fn text -> {:text :kinds}; default `redact-secrets`),
    :analysis-requested? (fn record -> bool; default: every turn)."
   [{:keys [text original-text agent-id session-id turn-id evidence-id evidence-delivery surface
-           failed? origin vocabulary now-ms redact analysis-requested? operator-id author]
+           failed? origin vocabulary now-ms redact analysis-requested? operator-id author
+           campaign-id mission-id excursion-id ticket-id clocked-target auto-clock-witness]
     :or {origin "operator" vocabulary default-vocabulary
          redact redact-secrets}}]
   (let [text-scan (redact (str text))
@@ -491,6 +492,12 @@
                       {:author a})
                     (when operator-id {:operator_id operator-id})
                     (when evidence-delivery {:evidence_delivery evidence-delivery})
+                    (when campaign-id {:campaign_id campaign-id})
+                    (when mission-id {:mission_id mission-id})
+                    (when excursion-id {:excursion_id excursion-id})
+                    (when ticket-id {:ticket_id ticket-id})
+                    (when clocked-target {:clocked_target clocked-target})
+                    (when auto-clock-witness {:auto_clock_witness auto-clock-witness})
                     {:created_at (iso-now (or now-ms (System/currentTimeMillis)))
                      :vocabulary_version vocabulary-version
                      :interpretation_version interpretation-version

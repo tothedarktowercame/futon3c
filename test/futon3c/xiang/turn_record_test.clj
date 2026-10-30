@@ -90,7 +90,10 @@
   (let [{:keys [record redacted quotes]}
         (tr/make-record {:text "🗣 I agree. token=ghp_abcdefghijklmnopqrstuvwxyz0123\n>>> shown\n>>>\nDone?"
                          :agent-id "claude-1" :session-id "s" :turn-id "t1"
-                         :evidence-id "ev1" :now-ms 0})]
+                         :evidence-id "ev1" :now-ms 0
+                         :excursion-id "E-implementing-G-over-cascades"
+                         :clocked-target "E-implementing-G-over-cascades"
+                         :auto-clock-witness {:rule "explicit-resolved-target"}})]
     (is (= ["github-token"] redacted (:secrets_redacted record)))
     (is (= "dictated" (:surface record)))
     (is (= "requested" (:analysis_status record)))
@@ -100,6 +103,9 @@
     (is (= 1 (:quote_count record)))
     (is (= "1970-01-01T00:00:00Z" (:created_at record)))
     (is (= "ev1" (:evidence_id record)))
+    (is (= "E-implementing-G-over-cascades" (:excursion_id record)))
+    (is (= "E-implementing-G-over-cascades" (:clocked_target record)))
+    (is (= {:rule "explicit-resolved-target"} (:auto_clock_witness record)))
     (is (= 1 (:version record)))
     (is (str/includes? (:source_text record) "QUOTE"))
     (is (not (str/includes? (:source_text record) "🗣")))
