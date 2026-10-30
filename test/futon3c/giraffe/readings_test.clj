@@ -71,3 +71,28 @@
     (is (= [:declared :inferred] [(:basis forward) (:basis backward)]))
     (is (= :closure (:class forward) (:class backward)))
     (is (= (:evidence edge) (:evidence-pin forward)))))
+
+(deftest scope-defaults-to-missions-excursions-and-flows-into-graph-terms
+  (let [result (readings/consume options)
+        input {:as-of "scope-test"
+               :items [{:id :E-a :state-group :unstarted :source-order 0}]
+               :edges []
+               :graph-coverage (dissoc (:coverage result) :members)
+               :reading-evidence {:edges [] :links [] :out-of-scope []
+                                  :rejected [] :unresolved []}}
+        pass (excursions/combined-pass input)]
+    (is (= :population/missions-excursions (:scope (:coverage result))))
+    (is (every? #(= :population/missions-excursions (get-in % [:graph-terms :scope])) (:order pass)))))
+
+(deftest explicit-scope-labels-certificate-and-graph-terms
+  (let [result (readings/consume (assoc options :scope :population/missions-excursions-tickets))
+        input {:as-of "scope-test"
+               :items [{:id :E-a :state-group :unstarted :source-order 0}]
+               :edges []
+               :graph-coverage (assoc (dissoc (:coverage result) :members)
+                                      :status :incomplete)
+               :reading-evidence {:edges [] :links [] :out-of-scope []
+                                  :rejected [] :unresolved []}}
+        pass (excursions/combined-pass input)]
+    (is (= :population/missions-excursions-tickets (:scope (:coverage result))))
+    (is (every? #(= :population/missions-excursions-tickets (get-in % [:graph-terms :scope])) (:order pass)))))
