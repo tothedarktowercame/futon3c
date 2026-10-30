@@ -8,7 +8,7 @@
             [futon3c.giraffe.readings :as readings]))
 
 (defn- census-input
-  [{:keys [code-root] :as opts}]
+  [{:keys [code-root include-tickets] :as opts}]
   (let [code-root (or code-root registry/default-code-root)
         mission-input (missions/missions->input opts)
         loaded (registry/load-excursions code-root)
@@ -29,15 +29,50 @@
                       :dependency-reading {:status :unknown :reason :dependency-coverage-not-reviewed
                                            :producer :dependency-reader-reviewer
                                            :source-pin (:source entry)}})
-                   (range) entries declarations)]
+                   (range) entries declarations)
+        ;; Tickets: shared registry readers only (load-tickets, live-ticket?,
+        ;; target-source-declarations, completion/describe). Enumerated only
+        ;; under :include-tickets — default M/E census is byte-preserved.
+        ticket-state (when include-tickets
+                       (let [loaded-tickets {:tickets (:tickets (registry/load-tickets code-root))}
+                             live-entries (vec (sort-by :id (filter registry/live-ticket?
+                                                                    (:tickets loaded-tickets))))]
+                         {:loaded loaded-tickets :entries live-entries
+                          :declarations (sources/target-source-declarations
+                                         (mapv :id live-entries)
+                                         {:loaded-missions {:missions []} :loaded-excursions loaded
+                                          :loaded-tickets loaded-tickets
+                                          :ticket-targets (mapv :id live-entries)})
+                          :excluded (mapv #(assoc (select-keys % [:id :status-class :source])
+                                                  :reason (:status-class %))
+                                          (remove registry/live-ticket? (:tickets loaded-tickets)))}))
+        ticket-offset (+ offset (count entries))
+        ticket-rows (mapv (fn [i entry declaration]
+                            (when (:source-absent declaration)
+                              (throw (ex-info "Ticket source unresolved"
+                                              {:kind :ticket/source-unavailable :target (:id entry)
+                                               :declaration declaration})))
+                            {:id (keyword (:id entry)) :state-group :unstarted
+                             :source-order (+ ticket-offset i)
+                             :source-pin (:source entry) :source-declaration declaration
+                             :declared-status (:status-class entry)
+                             :completion (completion/describe entry)
+                             :dependency-reading {:status :unknown
+                                                  :reason :dependency-coverage-not-reviewed
+                                                  :producer :dependency-reader-reviewer
+                                                  :source-pin (:source entry)}})
+                          (range) (:entries ticket-state) (:declarations ticket-state))]
     (-> mission-input
-        (update-in [:input :items] into rows)
+        (update-in [:input :items] into (concat rows ticket-rows))
         (assoc-in [:input :graph-coverage]
-                  {:status :incomplete :unknown-targets (mapv :id entries)
+                  {:status :incomplete
+                   :unknown-targets (concat (mapv :id entries) (mapv :id (:entries ticket-state)))
                    :producer :dependency-reader-reviewer})
         (update :excluded into
-                (map #(assoc (select-keys % [:id :status-class :source]) :reason (:status-class %))
-                     (remove registry/live-excursion? (:excursions loaded)))))))
+                (concat
+                 (map #(assoc (select-keys % [:id :status-class :source]) :reason (:status-class %))
+                      (remove registry/live-excursion? (:excursions loaded)))
+                 (:excluded ticket-state))))))
 
 (defn missions-and-excursions->input
   [{:keys [reading-batches reading-checker members-file repos reading-scope] :as opts}]
