@@ -235,7 +235,9 @@
                                (json/generate-string
                                 {:run_id run-id
                                  :clusters (:work-clusters pass-output)
-                                 :by_item (:work-cluster-by-item pass-output)}
+                                 :by_item (:work-cluster-by-item pass-output)
+                                 :interpretation
+                                 (:work-cluster-interpretation pass-output)}
                                 {:pretty true}))
         report-entry (write! "report.md"
                              (report {:input input

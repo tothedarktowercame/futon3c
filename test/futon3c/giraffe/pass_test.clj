@@ -147,9 +147,36 @@
     (is (= [:E-orphan :M-next :T-after] (:members cluster)))
     (is (= {:declared 1 :inferred 1} (:basis-counts cluster)))
     (is (= #{:declared :inferred} (set (map :basis (:edges cluster)))))
+    (is (= {:excursion 1 :mission 1 :ticket 1}
+           (get-in cluster [:interpretation :kind-counts])))
+    (is (= :tickets-with-planned-work
+           (get-in cluster [:interpretation :shape])))
+    (is (= [:E-orphan]
+           (get-in cluster [:interpretation :prerequisite-roots])))
+    (is (= [:T-after]
+           (get-in cluster [:interpretation :dependent-frontier])))
+    (is (= :connected-to-planned-work
+           (get-in cluster [:interpretation :ticket-role :T-after])))
     (is (= (:id cluster) (get-in out [:work-cluster-by-item :E-orphan])))
+    (is (= {:analyzed 1 :clustered 1 :unlinked []}
+           (get-in out [:work-cluster-interpretation :tickets])))
     (is (nil? (get-in out [:work-cluster-by-item :M-isolated]))
         "an unrelated item must not be pulled into a work cluster")))
+
+(deftest work-cluster-interpretation-distinguishes-unlinked-tickets
+  (let [items [{:id :T-one :state-group :unstarted :source-order 0}
+               {:id :T-two :state-group :unstarted :source-order 1}
+               {:id :T-unlinked :state-group :unstarted :source-order 2}]
+        edges [{:from :T-two :to :T-one :kind :item :class :closure
+                :source :prose-reading :basis :declared}]
+        out (gp/pass {:as-of "2026-10-30" :items items :edges edges})
+        cluster (first (:work-clusters out))]
+    (is (= :tickets-only (get-in cluster [:interpretation :shape])))
+    (is (= {:T-one :connected-only-to-tickets
+            :T-two :connected-only-to-tickets}
+           (get-in cluster [:interpretation :ticket-role])))
+    (is (= {:analyzed 3 :clustered 2 :unlinked [:T-unlinked]}
+           (get-in out [:work-cluster-interpretation :tickets])))))
 
 (deftest pilot-2-reading-a-reproduces-the-scored-result
   (let [out (gp/pass (pilot2->input :all-closure))]
