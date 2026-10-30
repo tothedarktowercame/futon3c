@@ -198,3 +198,17 @@ check never approves, `nonInjury` carries the classifier reading, and
 witness pair with `click14_still_reviewed` as control. The module has no
 imports and checks standalone under `leanprover/lean4:v4.31.0-rc1` (done
 in this container; the full `lake build` of DarkTower was not run here).
+
+## 8. Further no-click levers (proposal, not built)
+
+Three more levers were found and written up as futon2
+`holes/labs/wm-contract/PROPOSAL-no-click-efficiency-levers-2026-10-30.md`
+on branch `claude/claim-cites-selected-target`, under the 2026-10-18 ground
+rule that a Claude session proposes and Codex decides. In order of credits
+saved: a read-only self-heal admission preview (16 of 35 self-heal clicks
+were refused before any repair, after the ration was spent; a
+specification question, SelfHealRoute.lean's open hole); exclusion of the
+pending selection's target after a refused run on an unchanged field (GRID
+v2 E3 outer case, which would change click 51's pre-registered selection);
+and an executed-inspection requirement on already-satisfied claims,
+record-only until Zai lane telemetry is confirmed.
