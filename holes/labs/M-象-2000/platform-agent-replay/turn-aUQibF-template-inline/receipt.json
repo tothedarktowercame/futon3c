@@ -1,0 +1,48 @@
+{
+  "schema": "xiang-platform-agent-replay.v1",
+  "source_uuid": "30eb5004-f960-4906-8515-4ef61a849fe7",
+  "source_timestamp": "2026-10-23T14:56:07.409Z",
+  "record": "turn-aUQibF.json",
+  "model": "claude-sonnet-5-5",
+  "claude_exit": 0,
+  "validation_exit": 1,
+  "validation_stdout": "",
+  "validation_stderr": "Analysis not published: display cues must leave most of a sentence unmarked: s1 marks 5 of 9 words (55%); the budget here is 4 words, so drop about 1. Cues on it: '5 more clicks', 'awarded', 'yes'\n",
+  "cost_usd": 0.10020849999999999,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 29357,
+    "cache_read_input_tokens": 9940,
+    "output_tokens": 2581,
+    "output_tokens_details": {
+      "thinking_tokens": 932
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 29357
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2438,
+        "cache_read_input_tokens": 8992,
+        "cache_creation_input_tokens": 21313,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 21313,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "duration_ms": 19329,
+  "num_turns": 2
+}

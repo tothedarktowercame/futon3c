@@ -1,0 +1,41 @@
+{
+  "source_text" : "yes, 5 more clicks are awarded for research purposes.  as the improvements come back I would appreciate narrative summary comments, i.e. \"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers).",
+  "fragments" : [ {
+    "guesses" : [ "approve", "propose" ],
+    "sentence" : "s1",
+    "precision" : 0.86,
+    "basis" : "model",
+    "start" : 0,
+    "sure" : true,
+    "intent" : "approve",
+    "end" : 53,
+    "text" : "yes, 5 more clicks are awarded for research purposes."
+  }, {
+    "guesses" : [ "ask-action", "propose" ],
+    "sentence" : "s2",
+    "precision" : 0.537,
+    "basis" : "model",
+    "start" : 55,
+    "sure" : true,
+    "intent" : "ask-action",
+    "end" : 136,
+    "text" : "as the improvements come back I would appreciate narrative summary comments, i.e."
+  }, {
+    "guesses" : [ "propose", "constrain" ],
+    "sentence" : "s3",
+    "precision" : 0.294,
+    "basis" : "model",
+    "start" : 137,
+    "sure" : false,
+    "intent" : null,
+    "end" : 238,
+    "text" : "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers)."
+  } ],
+  "method" : "xiaoxiang-naive-bayes",
+  "source_sha256" : "94676f6d97abddbd616834e43ffda2b67811f36eff6d835feb5891a6fd316d97",
+  "status" : "drafted",
+  "version" : 1,
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-10-23T14:56:05.487Z",
+  "labeller" : "小象"
+}

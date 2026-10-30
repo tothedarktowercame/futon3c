@@ -1,0 +1,119 @@
+{
+  "labeller": "platform-sonnet-replay",
+  "reusable_cues": [
+    {
+      "start": 71,
+      "end": 104,
+      "text": "I would appreciate narrative summary",
+      "intent": "ask-action",
+      "rationale": "A polite 'I would appreciate X' phrasing is a soft request for a standing way of reporting."
+    }
+  ],
+  "rnode_cues": [],
+  "sentences": [
+    {
+      "id": "s1",
+      "fragments": [
+        {
+          "start": 0,
+          "end": 53,
+          "text": "yes, 5 more clicks are awarded for research purposes.",
+          "intent": "approve",
+          "target": "claude-7-turn-118-r-2 request for a grant of 5 ordinary clicks",
+          "rationale": "Agrees to the agent's earlier budget request and grants five clicks, with the purpose (research) as the condition. The draft's approve label is kept.",
+          "relations": [
+            "action",
+            "rationale"
+          ],
+          "pattern_refs": [],
+          "pattern_rejections": [
+            {
+              "id": "apparatus/recorded-failures-before-live-runs",
+              "reason": "It concerns proving a route on recorded failures before spending a live click. Joe is granting click budget, not saying how clicks get spent.",
+              "query": "yes, 5 more clicks are awarded for research purposes."
+            }
+          ],
+          "display_cues": [
+            {
+              "start": 12,
+              "end": 30,
+              "text": "clicks are awarded"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    },
+    {
+      "id": "s2",
+      "fragments": [
+        {
+          "start": 55,
+          "end": 136,
+          "text": "as the improvements come back I would appreciate narrative summary comments, i.e.",
+          "intent": "constrain",
+          "target": "how the agent reports returned improvements (standing reporting format)",
+          "rationale": "Joe sets a standing preference: each returning improvement should get a narrative summary comment. The draft said ask-action. I relabelled it constrain because the request is conditional ('as the improvements come back') and ongoing. The agent's reply also saved it as a standing preference.",
+          "relations": [
+            "condition",
+            "action"
+          ],
+          "pattern_refs": [],
+          "pattern_rejections": [
+            {
+              "id": "peripherals/read-existing-seam-before-implementing",
+              "reason": "It is about locating canonical seams before building a peripheral. This is a reporting-style preference, so only the BM25 token overlap fits.",
+              "query": "as the improvements come back I would appreciate narrative summary comments, i.e"
+            }
+          ],
+          "display_cues": [
+            {
+              "start": 104,
+              "end": 130,
+              "text": "narrative summary comments"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    },
+    {
+      "id": "s3",
+      "fragments": [
+        {
+          "start": 137,
+          "end": 238,
+          "text": "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers).",
+          "intent": "constrain",
+          "target": "wording of the summary comments: name the capability in plain terms, not just packet numbers",
+          "rationale": "This gives an example sentence form and a success criterion for the s2 comments: the capability must be spelled out comprehensibly, and packet numbers alone are not enough. It continues s2's standing constraint.",
+          "relations": [
+            "action",
+            "condition"
+          ],
+          "pattern_refs": [],
+          "pattern_rejections": [
+            {
+              "id": "code-coherence/subsumption-claim-discipline",
+              "reason": "It concerns 'X subsumes Y' claims in design docs. Joe wants capability announcements in plain language.",
+              "query": "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers)"
+            }
+          ],
+          "display_cues": [
+            {
+              "start": 191,
+              "end": 211,
+              "text": "comprehensible terms"
+            },
+            {
+              "start": 213,
+              "end": 236,
+              "text": "not just packet numbers"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    }
+  ]
+}

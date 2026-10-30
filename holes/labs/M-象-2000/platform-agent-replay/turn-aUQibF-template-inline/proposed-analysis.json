@@ -1,0 +1,141 @@
+{
+  "labeller": "platform-sonnet-replay",
+  "reusable_cues": [
+    {
+      "start": 104,
+      "end": 130,
+      "text": "narrative summary comments",
+      "intent": "constrain",
+      "rationale": "Names the requested form of reporting; reusable as a cue for a standing preference about report style."
+    },
+    {
+      "start": 213,
+      "end": 236,
+      "text": "not just packet numbers",
+      "intent": "constrain",
+      "rationale": "Negative success criterion: reports must not be bare internal identifiers."
+    }
+  ],
+  "rnode_cues": [],
+  "sentences": [
+    {
+      "id": "s1",
+      "fragments": [
+        {
+          "start": 0,
+          "end": 53,
+          "text": "yes, 5 more clicks are awarded for research purposes.",
+          "intent": "approve",
+          "target": "agent's request for a grant of 5 ordinary clicks (claude-7-turn-118-r-2)",
+          "rationale": "Accepts the agent's earlier budget request and grants it, with the purpose stated. Agrees with the draft's approve label. The grant is operative: the agent committed the budget change.",
+          "relations": [
+            "action",
+            "rationale"
+          ],
+          "pattern_refs": [],
+          "pattern_rejections": [
+            {
+              "id": "apparatus/recorded-failures-before-live-runs",
+              "reason": "It concerns proving a route on recorded failures before spending a live run. Joe is granting a click budget, not prescribing how clicks get spent.",
+              "query": "yes, 5 more clicks are awarded for research purposes."
+            },
+            {
+              "id": "vsatelier/cluster-as-agenda",
+              "reason": "Surfaced only on lexical overlap with 'research purposes'. The move is unrelated.",
+              "query": "yes, 5 more clicks are awarded for research purposes."
+            }
+          ],
+          "display_cues": [
+            {
+              "start": 0,
+              "end": 3,
+              "text": "yes"
+            },
+            {
+              "start": 5,
+              "end": 18,
+              "text": "5 more clicks"
+            },
+            {
+              "start": 23,
+              "end": 30,
+              "text": "awarded"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    },
+    {
+      "id": "s2",
+      "fragments": [
+        {
+          "start": 55,
+          "end": 136,
+          "text": "as the improvements come back I would appreciate narrative summary comments, i.e.",
+          "intent": "constrain",
+          "target": "how the agent reports returning improvements from now on",
+          "rationale": "Politely worded, but it sets a standing preference on report form: a narrative summary on each return. The draft said ask-action. I relabelled it constrain because it governs ongoing reporting rather than requesting one act. The agent treated it as a standing preference.",
+          "relations": [
+            "condition",
+            "action"
+          ],
+          "pattern_refs": [],
+          "pattern_rejections": [
+            {
+              "id": "peripherals/read-existing-seam-before-implementing",
+              "reason": "It concerns locating existing seams before building a peripheral. This is a reporting-style preference with no implementation question.",
+              "query": "as the improvements come back I would appreciate narrative summary comments"
+            }
+          ],
+          "display_cues": [
+            {
+              "start": 104,
+              "end": 130,
+              "text": "narrative summary comments"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    },
+    {
+      "id": "s3",
+      "fragments": [
+        {
+          "start": 137,
+          "end": 238,
+          "text": "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers).",
+          "intent": "constrain",
+          "target": "wording of the improvement summaries: capability stated in plain terms",
+          "rationale": "Gives an example sentence form and a success criterion. A capability must be stated comprehensibly, and bare packet identifiers do not suffice. It carries on from s2 as the same standing constraint.",
+          "relations": [
+            "goal",
+            "condition"
+          ],
+          "pattern_refs": [],
+          "pattern_rejections": [
+            {
+              "id": "code-coherence/subsumption-claim-discipline",
+              "reason": "It is about claims that X subsumes Y needing both sides live. Joe is asking for plain-language capability reports, not testing a derivation claim.",
+              "query": "now we have capability X online spelled out in comprehensible terms"
+            }
+          ],
+          "display_cues": [
+            {
+              "start": 191,
+              "end": 211,
+              "text": "comprehensible terms"
+            },
+            {
+              "start": 213,
+              "end": 236,
+              "text": "not just packet numbers"
+            }
+          ]
+        }
+      ],
+      "unresolved_reason": ""
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "xiang-platform-agent-replay.v1",
+  "source_uuid": "30eb5004-f960-4906-8515-4ef61a849fe7",
+  "source_timestamp": "2026-10-23T14:56:07.409Z",
+  "record": "turn-aUQibF.json",
+  "model": "claude-sonnet-5-5",
+  "claude_exit": 0,
+  "validation_exit": 1,
+  "validation_stdout": "",
+  "validation_stderr": "Analysis not published: sentences must be an array\n",
+  "cost_usd": 0.0894624,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 28584,
+    "cache_read_input_tokens": 8304,
+    "output_tokens": 1716,
+    "output_tokens_details": {
+      "thinking_tokens": 202
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 28584
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1508,
+        "cache_read_input_tokens": 7356,
+        "cache_creation_input_tokens": 22176,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 22176,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "duration_ms": 14749,
+  "num_turns": 3
+}

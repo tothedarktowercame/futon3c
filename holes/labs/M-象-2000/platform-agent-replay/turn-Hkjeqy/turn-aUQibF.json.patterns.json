@@ -1,0 +1,92 @@
+{
+  "yes, 5 more clicks are awarded for research purposes." : [ {
+    "id" : "vsatelier/cluster-as-agenda",
+    "score" : 13.34,
+    "title" : "Cluster as Agenda Item",
+    "context" : "You are bridging spatial perception and collective decision-making. This does not apply when the constellation is used purely for exhibition or archival purposes."
+  }, {
+    "id" : "hdm/hyperreal-capital",
+    "score" : 10.84,
+    "title" : "HDM - Hyperreal Capital",
+    "context" : "You are turning mathematical knowledge into operational skill for more people."
+  }, {
+    "id" : "t4r/rationale",
+    "score" : 10.01,
+    "title" : "1 Rationale for the choice of research subject area",
+    "context" : "You are establishing the foundational justification for the programme.",
+    "conclusion" : "talk4real is justified as an infrastructure for collective intelligence because it converts accumulative, non-reflective research systems into learning systems that can redesign themselves. [🚴/了]"
+  }, {
+    "id" : "apparatus/recorded-failures-before-live-runs",
+    "score" : 9.42,
+    "title" : "The Route Is Proved On Recorded Failures Before A Live Run Is Bought",
+    "context" : "An apparatus runs a costly unit of work (a WM click, a campaign slice, a deployment) whose failures are recorded as pinned bytes, and the route under repair spans several stages and several participants.",
+    "conclusion" : "A multi-stage route is proved end to end on recorded failures and fake participants before a live run is spent on it; the live run then confirms a trace shape the harness has already produced, and never discovers the route."
+  }, {
+    "id" : "or2/steward-emporium",
+    "score" : 9.26,
+    "title" : "Steward of the Open Research Emporium",
+    "context" : "You are naming library stewardship as the infrastructure that makes OR navigable.",
+    "conclusion" : "Steward of the Open Research Emporium"
+  } ],
+  "as the improvements come back I would appreciate narrative summary comments, i.e." : [ {
+    "id" : "peripherals/read-existing-seam-before-implementing",
+    "score" : 16.99,
+    "title" : "Read Existing Seam Before Implementing",
+    "context" : "A mission has been authored that calls for a new peripheral —",
+    "conclusion" : "When a mission proposes building a peripheral, the first move is not to design the peripheral — it is to locate the canonical seams in the existing stack the peripheral must thread through. If the mission as written would fork those seams, rewrite the mission before writing any code."
+  }, {
+    "id" : "iching/hexagram-43-guai",
+    "score" : 16.4,
+    "title" : "䷪ 夬 (Guài) - Breakthrough",
+    "context" : "A system is ready to remove a final blockage.",
+    "conclusion" : "Breakthrough removes obstruction; decisive action clears the way."
+  }, {
+    "id" : "structure/whose-question-is-this",
+    "score" : 16.4,
+    "title" : "Whose Question Is This?",
+    "context" : "The question-pool is public. The answers are not. A pool"
+  }, {
+    "id" : "invariant-coherence/single-locus",
+    "score" : 16.14,
+    "title" : "Single-Locus: Uniqueness of Attribute per Identity",
+    "context" : "Many invariants in the futon stack are uniqueness claims: every agent-id resolves to ONE routing entry; every active work item has ONE home repo; every artifact has ONE live copy; every write-class has ONE boundary. These look distinct on the surface (different identities, different attributes, diff",
+    "conclusion" : "For an identity I and an attribute A, the system carries exactly one record `(I, A) → R`. The shape is uniqueness-of-mapping per (identity, attribute) pair: no two simultaneously-active records may exist for the same (I, A). Each artifact-class is a sibling invariant under the relevant family with n"
+  }, {
+    "id" : "peripherals/hot-reload-as-default-fix-path",
+    "score" : 15.23,
+    "title" : "Hot-Reload As Default Fix Path",
+    "context" : "A peripheral (or anything else running inside the futon3c JVM)",
+    "conclusion" : "When fixing a peripheral or any code running inside the serving JVM, hot-reload via Drawbridge nREPL is the default fix path. Restart is the exception, taken only when the change crosses a documented reload-safety boundary."
+  } ],
+  "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers)." : [ {
+    "id" : "code-coherence/subsumption-claim-discipline",
+    "score" : 16.39,
+    "title" : "Subsumption-Claim Discipline (Both Sides Live, or Both Flagged)",
+    "context" : "A mission or design doc asserts a derivation chain — \"subsumes\", \"becomes free\",",
+    "conclusion" : "When prose claims \"X subsumes Y\" / \"Y becomes free given X\" / \"Y falls out of X\", REQUIRE that BOTH X and the subsumed Y are actually live (implemented + verified), or BOTH are explicitly flagged deferred. A chained-claim verb standing between two absent things papers over a DOUBLE absence — and rea"
+  }, {
+    "id" : "collaboration-coherence/misunderstanding-power-laws",
+    "score" : 16.25,
+    "title" : "Respect the Long Tail; Design Against the Bargain You Strike With It",
+    "context" : "Asynchronous online groups invariably show steeply unequal participation: a few power contributors, a layer of occasional ones, a long tail of lurkers.  The same shape governs city sizes, word frequency, energy use, and most network phenomena.  Communities repeatedly attempt to flatten it (\"wouldn't",
+    "conclusion" : "Participation in voluntary online collaboration follows a power law (90/9/1, Zipf, long-tail) as a structural property of networks, not as a defect of any particular community.  The pattern is to acknowledge this explicitly, design with the power-law shape in mind, and resist provisionist responses "
+  }, {
+    "id" : "eight-gates/elbow-immediate",
+    "score" : 15.7,
+    "title" : "Elbow: Immediate Intervention",
+    "context" : "A pattern is not just theoretically harmful but is actively causing harm right now. Normal escalation is too slow. We need to stop the action immediately.",
+    "conclusion" : "Close-range immediate intervention when a pattern is actively causing harm — stop the action first, investigate later."
+  }, {
+    "id" : "collaboration-coherence/magical-thinking",
+    "score" : 13.99,
+    "title" : "Expect Process Cost; Name the Friction",
+    "context" : "Voluntary peer-learning projects routinely reach for the next tool / framework / process under the implicit hope that adoption will dissolve the underlying problem.  Sometimes adoption helps; often it just relocates the problem (now we have the same coordination issue, plus a new tool to learn).  Th",
+    "conclusion" : "Problem-solving in collaborative work always takes time, attention, and friction; expecting tools, platforms, or processes to come pre-built (or to \"just work\" once installed) is the failure mode that strips a project of its own learning.  The pattern is to name the magical assumption explicitly, es"
+  }, {
+    "id" : "efficiency/split-by-shared-dependency",
+    "score" : 13.82,
+    "title" : "Split By Shared Dependency, Not By Conclusion",
+    "context" : "A theorem, repair plan or audit is too large for one seat and is being cut into units that separate seats will take in parallel.",
+    "conclusion" : "Split a body of work by the facts its pieces would each have to establish, not by the conclusions they reach; each shared fact becomes its own unit that the others depend on."
+  } ]
+}

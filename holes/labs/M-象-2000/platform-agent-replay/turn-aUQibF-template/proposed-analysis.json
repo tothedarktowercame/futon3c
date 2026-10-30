@@ -1,0 +1,122 @@
+{
+  "labeller": "platform-sonnet-replay",
+  "source_sha256": "94676f6d97abddbd616834e43ffda2b67811f36eff6d835feb5891a6fd316d97",
+  "version": 1,
+  "interpretation_version": 3,
+  "fragments": [
+    {
+      "sentence": "s1",
+      "start": 0,
+      "end": 53,
+      "text": "yes, 5 more clicks are awarded for research purposes.",
+      "intent": "approve",
+      "draft_status": "agreed",
+      "target": "claude-7-turn-118-r-2",
+      "display_cues": [
+        "yes",
+        "5 more clicks are awarded",
+        "for research purposes"
+      ],
+      "rationale": "Joe grants the budget request from the agent's prior turn (118-r-2: 'Can I have a grant of 5 ordinary clicks?'). 'yes' accepts the request. The 'for research purposes' clause records the purpose of the grant.",
+      "relations": [
+        {
+          "type": "action",
+          "text": "award 5 more clicks"
+        },
+        {
+          "type": "rationale",
+          "text": "for research purposes"
+        }
+      ],
+      "pattern_refs": [],
+      "pattern_rejections": [
+        {
+          "id": "apparatus/recorded-failures-before-live-runs",
+          "reason": "This pattern is about proving a route on recorded failures before a live run is bought. Joe is only granting click budget and does not discuss how the route is proved.",
+          "query": "yes, 5 more clicks are awarded for research purposes."
+        }
+      ]
+    },
+    {
+      "sentence": "s2",
+      "start": 55,
+      "end": 136,
+      "text": "as the improvements come back I would appreciate narrative summary comments, i.e.",
+      "intent": "constrain",
+      "draft_status": "relabelled",
+      "target": "agent reporting style",
+      "display_cues": [
+        "I would appreciate",
+        "narrative summary comments"
+      ],
+      "rationale": "The draft read this as ask-action. I relabelled it to constrain. It is not a one-off request. It sets a standing preference for how every improvement report should read, which the agent saved as a standing preference. The condition is 'as the improvements come back'.",
+      "relations": [
+        {
+          "type": "condition",
+          "text": "as the improvements come back"
+        },
+        {
+          "type": "action",
+          "text": "give narrative summary comments"
+        }
+      ],
+      "pattern_refs": [],
+      "pattern_rejections": [
+        {
+          "id": "peripherals/read-existing-seam-before-implementing",
+          "reason": "Surfaced on lexical overlap only. The pattern is about locating existing seams before building a peripheral, not about report style.",
+          "query": "as the improvements come back I would appreciate narrative summary comments"
+        }
+      ]
+    },
+    {
+      "sentence": "s3",
+      "start": 137,
+      "end": 238,
+      "text": "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers).",
+      "intent": "constrain",
+      "draft_status": "relabelled",
+      "target": "wording of summary comments",
+      "display_cues": [
+        "now we have cability X online",
+        "spelled out in comprehensible terms",
+        "not just packet numbers"
+      ],
+      "rationale": "The draft left this as propose or constrain. I chose constrain. Joe gives an example sentence form, then states a success criterion: capabilities named in plain terms, with packet numbers not enough on their own. It continues and clarifies s2.",
+      "relations": [
+        {
+          "type": "context",
+          "text": "example of the narrative form"
+        },
+        {
+          "type": "condition",
+          "text": "comprehensible terms, not just packet numbers"
+        }
+      ],
+      "pattern_refs": [],
+      "pattern_rejections": [
+        {
+          "id": "code-coherence/subsumption-claim-discipline",
+          "reason": "This pattern is about a prose claim that X subsumes Y. Joe's request is for capability-level reporting. It does not make a derivation claim.",
+          "query": "\"now we have capability X online\" (to be spelled out in comprehensible terms"
+        }
+      ]
+    }
+  ],
+  "reusable_cues": [
+    {
+      "text": "I would appreciate",
+      "start": 79,
+      "end": 97,
+      "intent": "constrain",
+      "rationale": "A polite phrasing that sets a standing preference, as opposed to a one-off request."
+    },
+    {
+      "text": "not just packet numbers",
+      "start": 215,
+      "end": 237,
+      "intent": "constrain",
+      "rationale": "A 'not just X' phrase that marks the success criterion."
+    }
+  ]
+}

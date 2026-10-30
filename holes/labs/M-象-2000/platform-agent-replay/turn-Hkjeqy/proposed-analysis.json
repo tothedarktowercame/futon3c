@@ -1,0 +1,114 @@
+{
+  "labeller": "platform-sonnet-replay",
+  "source_sha256": "94676f6d97abddbd616834e43ffda2b67811f36eff6d835feb5891a6fd316d97",
+  "fragments": [
+    {
+      "sentence": "s1",
+      "start": 0,
+      "end": 53,
+      "text": "yes, 5 more clicks are awarded for research purposes.",
+      "intent": "approve",
+      "target": "claude-7-turn-118-r-2",
+      "display_cues": [
+        "5 more clicks are awarded",
+        "for research purposes"
+      ],
+      "rationale": "Agrees with the agent's request for a grant of 5 ordinary clicks. The grant is also a standing budget allocation, with its purpose stated as research. The draft label 'approve' is kept.",
+      "relations": [
+        {
+          "type": "rationale",
+          "text": "for research purposes"
+        }
+      ],
+      "pattern_refs": [],
+      "pattern_rejections": [
+        {
+          "id": "apparatus/recorded-failures-before-live-runs",
+          "reason": "That pattern is about proving a route on recorded failures before a live click is spent. Joe is only granting budget and does not discuss how clicks are spent.",
+          "query": "yes, 5 more clicks are awarded for research purposes."
+        },
+        {
+          "id": "vsatelier/cluster-as-agenda",
+          "reason": "The hit matches on 'research purposes' only and concerns an unrelated domain.",
+          "query": "yes, 5 more clicks are awarded for research purposes."
+        }
+      ]
+    },
+    {
+      "sentence": "s2",
+      "start": 55,
+      "end": 136,
+      "text": "as the improvements come back I would appreciate narrative summary comments, i.e.",
+      "intent": "constrain",
+      "target": "agent reporting style for returning improvements",
+      "display_cues": [
+        "as the improvements come back",
+        "narrative summary comments"
+      ],
+      "rationale": "Relabelled from the draft's ask-action. This is a polite standing preference about the form of future reports, triggered whenever an improvement returns. It is not a one-off request. The agent also treated it as a standing preference.",
+      "relations": [
+        {
+          "type": "condition",
+          "text": "as the improvements come back"
+        }
+      ],
+      "pattern_refs": [],
+      "pattern_rejections": [
+        {
+          "id": "peripherals/read-existing-seam-before-implementing",
+          "reason": "That pattern is about locating existing seams before building a peripheral. Joe is asking for a report format, not for implementation.",
+          "query": "as the improvements come back I would appreciate narrative summary comments"
+        }
+      ]
+    },
+    {
+      "sentence": "s3",
+      "start": 137,
+      "end": 238,
+      "text": "\"now we have cability X online\" (to be spelled out in comprehensible terms, not just packet numbers).",
+      "intent": "constrain",
+      "target": "wording of the summary comments",
+      "display_cues": [
+        "now we have cability X online",
+        "comprehensible terms",
+        "not just packet numbers"
+      ],
+      "rationale": "Gives an example and a success criterion for the summaries. Each one names the new capability in plain language, and packet ids alone do not meet the criterion. The draft's intent was null. 'constrain' fits better than 'propose' because it limits how the reports are worded.",
+      "relations": [
+        {
+          "type": "context",
+          "text": "example of the narrative form"
+        },
+        {
+          "type": "condition",
+          "text": "not just packet numbers"
+        }
+      ],
+      "pattern_refs": [],
+      "pattern_rejections": [
+        {
+          "id": "code-coherence/subsumption-claim-discipline",
+          "reason": "The hit matches on the 'X online' claim wording. That pattern requires both sides of a derivation claim to be live. Joe is asking for plain-language capability statements, not auditing a subsumption claim.",
+          "query": "\"now we have capability X online\" spelled out in comprehensible terms"
+        }
+      ]
+    }
+  ],
+  "candidates_note": "No existing pattern names the move of asking for progress reports phrased as plain-language capability statements rather than internal ids. Proposed candidate (parent: peripherals/read-existing-seam-before-implementing is a weak fit, so parent is null; no close ancestor was found): id reporting/capability-sentence-before-packet-id. IF an agent reports returning work by internal ids. HOWEVER the operator cannot tell what the system can now do. THEN lead each report with one plain sentence naming the new capability, and put the ids in brackets after it. BECAUSE the operator tracks capability, not packet numbering.",
+  "reusable_cues": [
+    {
+      "text": "I would appreciate",
+      "start": 90,
+      "end": 108,
+      "intent": "constrain",
+      "rationale": "A polite phrasing that introduces a standing preference."
+    },
+    {
+      "text": "not just packet numbers",
+      "start": 215,
+      "end": 237,
+      "intent": "constrain",
+      "rationale": "A negative constraint that rules out an insufficient form of reporting."
+    }
+  ]
+}
