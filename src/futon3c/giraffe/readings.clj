@@ -55,7 +55,7 @@
   "Each record invokes the exact checker. Duplicate members are ambiguous even
   when each individual record passes. Certificate hashes bind checker, member
   inventory and the exact JSONL line bytes (excluding LF delimiter)."
-  [{:keys [checker members-file batches repos]}]
+  [{:keys [checker members-file batches repos scope]}]
   (let [checker-text (slurp checker)
         members-text (slurp members-file)
         checker-members (io/file (.getParentFile (io/file checker)) "members.json")
@@ -90,7 +90,7 @@
                                   (map #(assoc % :reading-member (:id record)) (:unresolved record))) admitted))
         counts (frequencies (map :status rows))
         certificate {:schema :giraffe/reading-coverage-v1
-                     :scope :population/missions-excursions
+                     :scope (or scope :population/missions-excursions)
                      :population-sha (sha256 members-text)
                      :checker-sha (sha256 checker-text)
                      :record-byte-convention :utf8-line-without-lf

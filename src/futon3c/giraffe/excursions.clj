@@ -40,12 +40,13 @@
                      (remove registry/live-excursion? (:excursions loaded)))))))
 
 (defn missions-and-excursions->input
-  [{:keys [reading-batches reading-checker members-file repos] :as opts}]
+  [{:keys [reading-batches reading-checker members-file repos reading-scope] :as opts}]
   (let [adapter (census-input opts)]
     (if-not reading-batches
       adapter
       (let [reading (readings/consume {:checker reading-checker :members-file members-file
-                                      :batches reading-batches :repos (or repos missions/default-repos)})
+                                      :batches reading-batches :repos (or repos missions/default-repos)
+                                      :scope reading-scope})
             coverage (:coverage reading)
             by-id (into {} (map (juxt :id identity)) (:members coverage))
             open-items (remove #(#{:completed :cancelled} (:state-group %))
@@ -86,7 +87,7 @@
                            (map #(assoc % :absence :out-of-scope-prerequisite)
                                 (filter #(= "depends-on" (:kind %)) (:out-of-scope evidence)))))
         unknowns (set (keys missing))
-        scope {:scope :population/missions-excursions
+        scope {:scope (:scope coverage)
                :population-sha (:population-sha coverage)
                :coverage (select-keys coverage [:status :member-count :counts :checker-sha])}
         rows (mapv (fn [row]
