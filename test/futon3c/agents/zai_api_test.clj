@@ -794,3 +794,11 @@
     (is (= 128000 (zai/default-zai-context-cap-tokens))))
   (with-redefs [zai/getenv (fn [_] nil)]
     (is (= 128000 (zai/default-zai-context-cap-tokens)))))
+
+(deftest invoke-exposes-only-captured-reader-configuration
+  (let [invoke (make-invoke {:model "configured-model" :max-tokens 4096})
+        config (:reader/configuration (meta invoke))]
+    (is (= {:provider :zai-api-compatible :model "configured-model" :output-budget 4096} config))
+    (is (= #{:reader/configuration} (set (keys (meta invoke)))))
+    (is (= 8192 (get-in (meta (make-invoke {:model "configured-model"}))
+                        [:reader/configuration :output-budget])))))

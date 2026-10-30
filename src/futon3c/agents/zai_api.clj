@@ -32,6 +32,7 @@
   "https://api.z.ai/api/coding/paas/v4")
 
 (def ^:private default-model "glm-5.3")
+(def ^:private default-output-budget 8192)
 
 (def default-context-policy
   "Default requisition policy for Z.AI seats. Zai seats were long built with
@@ -1036,7 +1037,7 @@
                        ;; 8192: 4096 truncated large tool-call arguments in
                        ;; transit (zai-10's write_file loop, claude-18's
                        ;; diagnosis 2026-07-04) — big file writes need headroom.
-                       :max_tokens (or max-tokens 8192)}
+                       :max_tokens (or max-tokens default-output-budget)}
                 ;; A summary call sends plain text and must answer in text.
                 (not no-tools?) (assoc :tools (openai-tools memory-mode vision?)
                                        :tool_choice "auto")
@@ -2298,7 +2299,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                    :evidence-store evidence-store
                    :memory-domain memory-domain*
                    :session-id-atom !session-id}]
-    (fn invoke
+    (with-meta (fn invoke
       ([prompt incoming-session-id]
        (invoke prompt incoming-session-id {}))
       ([prompt incoming-session-id invoke-context]
@@ -2563,4 +2564,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                 (:error second-result))}
                    second-result)))))
           (finally
-            (invoke-controls/deregister! agent-id interrupt-token))))))))))
+            (invoke-controls/deregister! agent-id interrupt-token))))))))
+      {:reader/configuration {:provider :zai-api-compatible
+                              :model (:model opts)
+                              :output-budget (or (:max-tokens opts) default-output-budget)}})))
