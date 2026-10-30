@@ -164,7 +164,15 @@
   ;; is unsuccessful. The prior unspent credit remains; no charge is reset.
   ;; Authority: renewal-7 document, criteria-completeness grant section, and
   ;; E-wm-criteria-completeness.md.
-  228)
+  ;; Joe to codex-11, 2026-10-30, relayed as an explicit operator authorization
+  ;; for execution by zai-4: "i would like to add 15 click credits, with
+  ;; repairs to be done between as needed". Fifteen additional ordinary
+  ;; clicks under the renewal-7 standing mechanism; repairs between clicks
+  ;; are authorized as an operational rule. No click is dispatched by the
+  ;; grant itself. Issue-time accounting and the no-refund rule are
+  ;; unchanged; no prior charge is reset. E4 remains parked and the
+  ;; one-attempt injury rule stands unless superseded explicitly.
+  243)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
