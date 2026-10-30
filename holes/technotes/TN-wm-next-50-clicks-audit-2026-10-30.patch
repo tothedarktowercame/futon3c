@@ -1,4 +1,4 @@
-From f14fae14e95001a1cf1a823887b4a76e66c83dac Mon Sep 17 00:00:00 2001
+From 3216b63c6d0d98a340c1353d980013e5b656df88 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Fri, 30 Oct 2026 05:17:22 +0000
 Subject: [PATCH] wm: refuse an existing-artifact claim that does not cite the
@@ -22,8 +22,14 @@ no dispatch. A citing claim still goes to the reviewer unchanged.
 The author prompt's requirement 7 states the rule. stop-line and the
 terminal classifier treat the new kind as non-injury, like
 :reviewed-claim-refused: the author's answer is wrong, not the
-apparatus. AlreadySatisfiedArtifactRefSeam.lean does not yet carry the
-new FailureKind; that is a hole, not a claim.
+apparatus.
+
+Lean first: DarkTower/WarMachine/AlreadySatisfiedReview.lean revision 2
+(mathlib4 darktower) adds Evidence.citesTarget and
+Result.claimNotOnTarget; noncited_closes_without_review,
+close_eq_closeByReview_of_cites and alreadySatisfied_iff_reviewed are
+what this commit conforms to, and click50_refused_before_review /
+click50_revision1_reviewed are the witness pair.
 
 Test: author_claim_cites_target_test, 7 tests / 32 assertions, replaying
 click 50's commit (refused, no charge) and click 14's shape (reaches
@@ -32,15 +38,15 @@ review).
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01DcURqCM4rXHzJMaHCQ8AhG
 ---
- src/futon2/aif/full_loop_runner.clj           |  82 +++++++++-
- src/futon2/aif/meta_terminal_injury.clj       |   1 +
+ src/futon2/aif/full_loop_runner.clj           |  85 +++++++++-
+ src/futon2/aif/meta_terminal_injury.clj       |   2 +
  src/futon2/aif/stop_line.clj                  |   6 +-
  .../aif/author_claim_cites_target_test.clj    | 147 ++++++++++++++++++
- 4 files changed, 232 insertions(+), 4 deletions(-)
+ 4 files changed, 236 insertions(+), 4 deletions(-)
  create mode 100644 test/futon2/aif/author_claim_cites_target_test.clj
 
 diff --git a/src/futon2/aif/full_loop_runner.clj b/src/futon2/aif/full_loop_runner.clj
-index 0bcb022f..9d688b9f 100644
+index 0bcb022..0ccdd17 100644
 --- a/src/futon2/aif/full_loop_runner.clj
 +++ b/src/futon2/aif/full_loop_runner.clj
 @@ -4110,7 +4110,10 @@
@@ -55,7 +61,7 @@ index 0bcb022f..9d688b9f 100644
         "If no safe substantive parcel is possible, make no commit and finish with "
         "FULL_LOOP_AUTHOR: REFUSE <typed reason>.")))
  
-@@ -4877,9 +4880,51 @@
+@@ -4877,9 +4880,54 @@
      (resolve-fn commit)
      (resolve-build commit target-repo)))
  
@@ -78,7 +84,10 @@ index 0bcb022f..9d688b9f 100644
 +  review on commit existence alone, a reviewer seat was dispatched and
 +  charged, and the click closed :reviewed-claim-refused four hours later.
 +  This check refuses such a claim before any dispatch. It never approves:
-+  a citing commit still goes to the reviewer, who judges satisfaction."
++  a citing commit still goes to the reviewer, who judges satisfaction.
++  Lean: `DarkTower/WarMachine/AlreadySatisfiedReview.lean` revision 2,
++  `Evidence.citesTarget` and `Result.claimNotOnTarget`
++  (`noncited_closes_without_review`, `close_eq_closeByReview_of_cites`)."
 +  [{:keys [target source-path message files]}]
 +  (let [target (str target)
 +        files (vec (or files []))
@@ -108,7 +117,7 @@ index 0bcb022f..9d688b9f 100644
    [opts phase-context prompt-opts target mission construction author-job classification charge!]
    (let [grounded (:grounded-commit classification)
          commit (:sha grounded)
-@@ -4902,7 +4947,37 @@
+@@ -4902,7 +4950,37 @@
              (throw (ex-info "Selected completion definition changed before review"
                              {:outcome :build-failed :failure-kind :review-completion-source-mismatch})))
          completion-text (String. source-bytes "UTF-8")
@@ -147,7 +156,7 @@ index 0bcb022f..9d688b9f 100644
                      "\nALREADY-SATISFIED CLAIM: no new implementation is claimed. Judge whether "
                      "this exact existing commit satisfies the selected task, not merely whether it exists.\n"
                      "SELECTED TASK COMPLETION DEFINITION / RETAINED MISSION:\n" (pr-str mission) "\n" completion-text
-@@ -4931,6 +5006,7 @@
+@@ -4931,6 +5009,7 @@
      {:outcome outcome :failure-kind kind :failure-stage :author-wait
       :target target :commit commit :grounded-commit grounded
       :author-job author-job :review-job job :review-verdict verdict :review-gate gate
@@ -156,19 +165,20 @@ index 0bcb022f..9d688b9f 100644
       :reviewed-claim-refused? (boolean refused?)}))
  
 diff --git a/src/futon2/aif/meta_terminal_injury.clj b/src/futon2/aif/meta_terminal_injury.clj
-index d4df416e..9f1e1963 100644
+index d4df416..240b73c 100644
 --- a/src/futon2/aif/meta_terminal_injury.clj
 +++ b/src/futon2/aif/meta_terminal_injury.clj
-@@ -11,6 +11,7 @@
+@@ -11,6 +11,8 @@
  (def explicit-non-injury-kinds
    {:author-response-unparseable :author-response-unparseable
     :reviewed-claim-refused :reviewed-claim-refused
++   ;; AlreadySatisfiedReview.lean rev 2: `nonInjury .claimNotOnTarget = true`.
 +   :claimed-artifact-not-on-selected-target :claimed-artifact-not-on-selected-target
     :abstained :ordinary-selection-abstention
     :operator-cancelled :operator-cancelled
     :declared-no-work :declared-no-work
 diff --git a/src/futon2/aif/stop_line.clj b/src/futon2/aif/stop_line.clj
-index f9eeccb6..480af520 100644
+index f9eeccb..480af52 100644
 --- a/src/futon2/aif/stop_line.clj
 +++ b/src/futon2/aif/stop_line.clj
 @@ -31,7 +31,11 @@
@@ -186,7 +196,7 @@ index f9eeccb6..480af520 100644
                     :historical-verification-awaiting-validation}
 diff --git a/test/futon2/aif/author_claim_cites_target_test.clj b/test/futon2/aif/author_claim_cites_target_test.clj
 new file mode 100644
-index 00000000..ee5df9b7
+index 0000000..ee5df9b
 --- /dev/null
 +++ b/test/futon2/aif/author_claim_cites_target_test.clj
 @@ -0,0 +1,147 @@

@@ -148,9 +148,9 @@ criterion "twice, not as a streak".
 
 Of the levers in §5, one is mechanical, local to the ordinary route, and
 testable without a click: **an existing-artifact claim must cite the
-selected target before a reviewer is dispatched.** It is prepared as a
-futon2 change on the local branch `claude/claim-cites-selected-target`
-(this session has read access to futon2 only; the patch is attached as
+selected target before a reviewer is dispatched.** It is pushed as futon2
+branch `claude/claim-cites-selected-target` (one commit on top of
+`cffe497d`; the same commit is attached as
 `TN-wm-next-50-clicks-audit-2026-10-30.patch` beside this note).
 
 What it does, in `src/futon2/aif/full_loop_runner.clj`:
@@ -188,7 +188,13 @@ and self-heal overhead line. The author still spent the click; the next
 lever, which this change does not attempt, is the selector's E3 behaviour
 on the re-pick that follows.
 
-Hole left open: `explicit-non-injury-kinds` transcribes a vocabulary that
-`DarkTower/WarMachine/AlreadySatisfiedArtifactRefSeam.lean` models with
-three `FailureKind` values; the new kind needs a row there before the
-classifier's Lean correspondence is claimed again.
+Lean first: `DarkTower/WarMachine/AlreadySatisfiedReview.lean` revision 2
+(mathlib4 branch `claude/claim-cites-selected-target` off `darktower`
+`2b89e588`) adds `Evidence.citesTarget` and `Result.claimNotOnTarget`.
+`noncited_closes_without_review` and `close_eq_closeByReview_of_cites` are
+what the Clojure conforms to, `alreadySatisfied_iff_reviewed` shows the
+check never approves, `nonInjury` carries the classifier reading, and
+`click50_refused_before_review` / `click50_revision1_reviewed` are the
+witness pair with `click14_still_reviewed` as control. The module has no
+imports and checks standalone under `leanprover/lean4:v4.31.0-rc1` (done
+in this container; the full `lake build` of DarkTower was not run here).
