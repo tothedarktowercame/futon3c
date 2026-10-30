@@ -120,3 +120,33 @@ organism would.
 - The argument graph (`apex.edn`) grows to where choosing which sorry to discharge next
   is itself a search problem with a computable payoff.
 - A venue (Mozilla or another funder) wants the argument-technology line specifically.
+
+## Literature check (2026-10-30)
+
+The survey the "not yet surveyed" notes above asked for has been run:
+`M-argument-game-search-lit` → `deep-research-argument-game-search.md` (report, with a
+verdict table per memory-claim and a verification legend) and
+`deep-research-argument-game-search.notes/` (six thread notes). Headline corrections to
+the from-memory paragraphs above, each cited in the report:
+
+- **"Experts search less, not deeper" overstates de Groot.** Campitelli & Gobet 2004:
+  experts search *more and deeper* on hard positions, recognition on easy ones. Measure
+  nodes-to-solve split by familiar vs unfamiliar, not averaged.
+- **Friston 2016's habit E accumulates the policy *posterior*** (`e ← e + η·π` in SPM),
+  not a count of chosen policies. futon2's `strategic_habit.clj` selection counter is a
+  hard-count variant, not the 2016 rule; they agree only where the posterior is sharp.
+- **Fountas 2020's habitual network is a PUCT prior, not a pruner.** Stopping is a
+  separate threshold (T_dec = 0.8); leaves use explicit EFE terms, no learned value.
+- **"Name a subtree as a known chunk with a known value" has no source.** Chess chunks
+  suggest moves; search evaluates them. Present as our own synthesis.
+- Deep temporal models is 2017 (NBR 77), not 2018.
+
+What already exists: the computed-win Dung game (step 2's game is off the shelf: grounded
+game, Dung 1995 / Modgil & Caminada 2009, polynomial win check; ICCMA solvers; stable
+semantics is a degenerate-reward trap). What does not: the arithmetic hole-filling game as
+a benchmark (Countdown / Stream of Search and symbolic regression cover its halves), any
+self-play that *builds* a framework until a semantics accepts the claim, any argumentation
+semantics as RL reward for an LLM proposer, and any habit-vs-G agreement curve. Rob's
+caution is the best-supported claim in the file, and it moves: with an LLM proposing
+attack edges, the judged reward returns at each edge. No peer-reviewed CPU-only AlphaZero
+budget exists; Connect Four is the practical edge (≈ a day on one desktop + GPU, [BLOG]).

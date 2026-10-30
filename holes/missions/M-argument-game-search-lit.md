@@ -1,5 +1,5 @@
 # Mission: M-argument-game-search-lit — literature catch-up for E-argument-game-search
-**Status:** IDENTIFY → MAP (deep-research run 2026-10-30, Opus researchers; report in
+**Status:** MAP DONE — deep-research run 2026-10-30 (6 Opus researchers + 1 writer); report in
 `holes/excursions/deep-research-argument-game-search.md`)
 **Parent:** `holes/excursions/E-argument-game-search.md` (IDEA, not critical path; Joe's go
 is required before any *building*). This mission is the survey the excursion itself asks
