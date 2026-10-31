@@ -221,4 +221,15 @@
  :head "657aa7d1e",
  :namespaces ["futon3c.wm.runner-service"],
  :loaded? true}
+{:id "C-21",
+ :at "2026-10-31T02:52Z",
+ :by "象-2",
+ :kind :reload,
+ :note
+ "one-attempt cap integration: reloaded from canonical futon2 main (merge 5197d9f6c of f358bfe5c) under runner-service acceptance-lock at idle (provider {generation 0, provider nil})",
+ :head "38b82e63a",
+ :namespaces
+ ["futon2.aif.meta-repair-coordinator"
+  "futon2.aif.meta-self-heal-production"],
+ :loaded? true}
 ]
