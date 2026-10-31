@@ -254,3 +254,77 @@
                  :missing-from-manifest true
                  :format-undecidable true}]
                mismatches))))))
+
+;; ---------------------------------------------------------- freshness
+
+(defn- field-run!
+  "Write a missions-style field run (no :tickets-index in :sources) into
+  ROOT from the pilot adapter result."
+  [root]
+  (let [adapter-result (gt/tickets->input
+                        {:tickets-dir tickets-dir :index-file index-file
+                         :edges-file edges-file :only pilot1-ids})
+        pass-output (gp/pass (:input adapter-result))]
+    (gr/write-run! {:root root
+                    :adapter-result adapter-result
+                    :pass-output pass-output
+                    :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"
+                    ;; deliberately NO :index-file -- a field manifest
+                    :edges-file edges-file})))
+
+(deftest check-freshness-matching-run-is-fresh
+  (let [root (temp-root "fresh")
+        written (field-run! root)
+        adapter-result (gt/tickets->input
+                        {:tickets-dir tickets-dir :index-file index-file
+                         :edges-file edges-file :only pilot1-ids})
+        result (gr/check-freshness {:root root :adapter-result adapter-result})]
+    (is (:fresh? result))
+    (is (= (:run-id written) (:run-id (:newest result))))
+    (is (= (gr/sha256 (io/file (:dir written) "input.edn"))
+           (:adapter-input-sha256 result)))))
+
+(deftest check-freshness-different-input-is-stale
+  (let [root (temp-root "stale")]
+    (field-run! root)
+    (let [adapter-result (gt/tickets->input
+                          {:tickets-dir tickets-dir :index-file index-file
+                           :edges-file edges-file :only []})
+          result (gr/check-freshness {:root root
+                                      :adapter-result adapter-result})]
+      (is (not (:fresh? result))))))
+
+(deftest check-freshness-empty-root-is-stale
+  (let [root (temp-root "empty")
+        adapter-result (gt/tickets->input
+                        {:tickets-dir tickets-dir :index-file index-file
+                         :edges-file edges-file :only pilot1-ids})
+        result (gr/check-freshness {:root root :adapter-result adapter-result})]
+    (is (not (:fresh? result)))
+    (is (nil? (:newest result)))))
+
+(deftest tickets-run-is-not-a-field-run
+  ;; A run whose manifest carries :tickets-index fed the tickets adapter;
+  ;; the field reader must not see it, so the newest-field-run scan skips it.
+  (let [root (temp-root "tickets-only")
+        empty (temp-root "tickets-empty")
+        field (field-run! root)
+        ;; a tickets run whose INPUT DIFFERS (so its run-id, timestamp
+        ;; plus input hash, cannot collide with the field run's) and
+        ;; whose manifest carries :tickets-index, written after the
+        ;; field run.  Only the manifest filter keeps the scan on the
+        ;; field run.
+        tickets-adapter (gt/tickets->input
+                         {:tickets-dir tickets-dir :index-file index-file
+                          :edges-file edges-file :only []})
+        tickets (gr/write-run! {:root root
+                                :adapter-result tickets-adapter
+                                :pass-output (gp/pass (:input tickets-adapter))
+                                :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"
+                                :index-file index-file
+                                :edges-file edges-file})]
+    (is (nil? (gr/newest-field-run empty)))
+    (is (not= (:run-id field) (:run-id tickets)))
+    (is (pos? (compare (:run-id tickets) (:run-id field)))
+        "fixture ordering: the tickets run has the newer directory name")
+    (is (= (:run-id field) (:run-id (gr/newest-field-run root))))))
