@@ -523,14 +523,14 @@ With prefix argument, prompt for a clock TARGET."
              ids)
         (dolist (pair (alist-get 'agents data) (nreverse ids))
           (let ((id (symbol-name (car pair))))
-            (when (string-prefix-p "kimi" id)
+            (when (equal (alist-get 'type (cdr pair)) "kimi")
               (push id ids)))))
     (error nil)))
 
 (defun kimi-repl--read-attach-agent-id ()
   "Prompt for a registered Kimi agent with completion."
   (let* ((agent-ids (kimi-repl--roster-kimi-ids))
-         (default (or (car agent-ids) "kimi-1")))
+         (default (or (car agent-ids) "象-1")))
     (if agent-ids
         (completing-read (format "Attach Kimi agent (default %s): " default)
                          agent-ids nil t nil nil default)
