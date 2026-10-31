@@ -49,6 +49,7 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
             [futon3c.xiang.reply-target :as rt]
+            [futon3c.xiang.relationship-review :as relationship-review]
             [futon3c.xiang.scope-rules :as scope-rules]
             [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-record :as tr]
@@ -392,6 +393,31 @@
     (:session_id record) (assoc :session-id (:session_id record))
     (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
 
+(declare sha1-hex)
+
+(defn relationship-review-evidence-entries
+  "Durable proposed relationship reviews for a settled operator turn.
+  Explicit M-/E-/T- mentions are supported here; an evidenced alias resolver
+  can supply additional references in a later slice."
+  [id record]
+  (mapv (fn [{:keys [clocked-work discussed-work evidence] :as review}]
+          (cond-> {:evidence-id
+                   (str "e-xiang-relationship-"
+                        (sha1-hex (str (:evidence_id record) "|" clocked-work "|"
+                                       discussed-work "|" (:quote evidence))))
+                   :subject {:ref/type :thread :ref/id id}
+                   :type :coordination
+                   :claim-type :proposal
+                   :author "xiang-turn-service"
+                   :body (assoc review :turn-record-id id)
+                   :tags [:xiang-relationship-review :relationship-review-proposed]}
+            (:session_id record) (assoc :session-id (:session_id record))
+            (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
+        (relationship-review/relationship-reviews
+         {:clocked-target (:clocked_target record)
+          :operator-evidence-id (:evidence_id record)
+          :operator-text (:source_text record)})))
+
 (declare append-evidence! compute-ports!)
 
 (defn- sha1-hex [s]
@@ -484,8 +510,11 @@
   (let [store (cfg svc :store)
         write! (fn []
                  ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-                  #(let [r (append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
+                  #(let [record (ts/read-record store id)
+                         r (append-evidence! svc (turn-evidence-entry id record reading how)
                                              (cfg svc :store-busy-delays))]
+                     (doseq [entry (relationship-review-evidence-entries id record)]
+                       (append-evidence! svc entry (cfg svc :store-busy-delays)))
                      ;; A duplicate append (the same settled packet written
                      ;; again) changed nothing a listener could show.
                      (when-not (or (:idempotent? r) (= :duplicate-id (:error/code r)))
@@ -541,6 +570,183 @@
                        (str (:evidence-id entry)
                             ": evidence append failed; the file record is the source of truth"))
           result))))
+
+(def ^:private relationship-resolution-fields
+  {:formalized-edge [:relation :edge-evidence-id]
+   :reclocked [:new-clock :clock-decision-id]
+   :ticket-created [:ticket-id :ticket-evidence-id]
+   :completion-revised [:work-id :revision-evidence-id]
+   :incidental [:rationale]
+   :unresolved [:rationale]})
+
+(defn- required-resolution-witness!
+  [resolution witness]
+  (when-not (map? witness)
+    (throw (ex-info "Relationship resolution requires a witness map"
+                    {:reason :invalid-relationship-resolution :field :witness})))
+  (doseq [field (cons :resolution-evidence-id
+                      (get relationship-resolution-fields resolution))]
+    (when (str/blank? (str (get witness field)))
+      (throw (ex-info (str "Relationship resolution witness requires " field)
+                      {:reason :invalid-relationship-resolution :field field}))))
+  witness)
+
+(defn resolve-relationship!
+  "Resolve one relationship-review derivable from turn record ID.
+
+  The file record is the source of truth and is updated before the evidence
+  append. Repeating the same resolution is idempotent; a different resolution
+  for the same review is refused rather than silently rewriting history."
+  [svc id {:keys [review-evidence-id resolution witness]}]
+  (let [store (cfg svc :store)
+        record (or (ts/read-record store id)
+                   (throw (ex-info "Turn record not found"
+                                   {:reason :record-not-found :id id})))
+        resolution (some-> resolution name keyword)
+        _ (when-not (contains? relationship-resolution-fields resolution)
+            (throw (ex-info "Unknown relationship resolution"
+                            {:reason :invalid-relationship-resolution
+                             :field :resolution})))
+        _ (when (str/blank? (str review-evidence-id))
+            (throw (ex-info "Relationship resolution requires review-evidence-id"
+                            {:reason :invalid-relationship-resolution
+                             :field :review-evidence-id})))
+        review (some #(when (= review-evidence-id (:evidence-id %)) %)
+                     (relationship-review-evidence-entries id record))
+        _ (when-not review
+            (throw (ex-info "Review is not derivable from this turn"
+                            {:reason :relationship-review-not-found
+                             :review-evidence-id review-evidence-id})))
+        witness (required-resolution-witness! resolution witness)
+        event-id (str "e-xiang-relationship-resolution-"
+                      (sha1-hex (str review-evidence-id "|" (name resolution) "|"
+                                     (:resolution-evidence-id witness))))
+        resolved-at (iso (now-ms svc))
+        stored {:evidence_id event-id
+                :review_evidence_id review-evidence-id
+                :resolution (name resolution)
+                :witness witness
+                :resolved_at resolved-at}
+        existing (some #(when (= review-evidence-id (:review_evidence_id %)) %)
+                       (:relationship_resolutions record))]
+    (when (and existing (not= event-id (:evidence_id existing)))
+      (throw (ex-info "Relationship review already has a different resolution"
+                      {:reason :relationship-already-resolved
+                       :review-evidence-id review-evidence-id})))
+    (when-not existing
+      (ts/update-record! store id
+                         #(update % :relationship_resolutions (fnil conj []) stored)))
+    (let [entry {:evidence-id event-id
+                 :in-reply-to review-evidence-id
+                 :subject {:ref/type :thread :ref/id id}
+                 :type :coordination
+                 :claim-type :assert
+                 :author "xiang-turn-service"
+                 :session-id (:session_id record)
+                 :body {:event :relationship-resolution
+                        :turn-record-id id
+                        :review-evidence-id review-evidence-id
+                        :resolution resolution
+                        :witness witness
+                        :resolved-at resolved-at}
+                 :tags [:xiang-relationship-resolution
+                        (keyword (str "relationship-resolution-" (name resolution)))]}
+          append-result (append-evidence! svc entry (cfg svc :store-busy-delays))]
+      {:id id :resolution stored :evidence entry
+       :idempotent? (boolean existing) :append append-result})))
+
+(def ^:private pattern-outcome-fields
+  {:applied [:use-evidence-id :effect]
+   :adapted [:residual-evidence-id :residual-quote :adaptation]
+   :rejected [:residual-evidence-id :residual-quote :reason]
+   :obvious [:rationale]})
+
+(defn- required-pattern-outcome-witness!
+  [outcome witness]
+  (when-not (map? witness)
+    (throw (ex-info "Pattern outcome requires a witness map"
+                    {:reason :invalid-pattern-outcome :field :witness})))
+  (doseq [field (cons :outcome-evidence-id (get pattern-outcome-fields outcome))]
+    (when (str/blank? (str (get witness field)))
+      (throw (ex-info (str "Pattern outcome witness requires " field)
+                      {:reason :invalid-pattern-outcome :field field}))))
+  witness)
+
+(defn- retrieved-patterns
+  [store id pattern-id]
+  (->> (ts/read-pattern-candidates store id)
+       (mapcat (fn [[query hits]]
+                 (for [candidate hits
+                       :when (= pattern-id (str (:id candidate)))]
+                   {:query (name query)
+                    :candidate (select-keys candidate [:id :score :title])})))
+       (sort-by :query)
+       vec))
+
+(defn record-pattern-outcome!
+  "Record what happened to one pattern actually retrieved for a settled turn.
+
+  The candidate sidecar is authoritative: an arbitrary pattern id is refused.
+  Repeating an identical outcome is idempotent; changing it is refused so that
+  later learning sees an observation history rather than an overwritten label."
+  [svc id {:keys [pattern-id outcome witness]}]
+  (let [store (cfg svc :store)
+        record (or (ts/read-record store id)
+                   (throw (ex-info "Turn record not found"
+                                   {:reason :record-not-found :id id})))
+        _ (when-not (and (contains? #{"analyzed" "drafted"} (:analysis_status record))
+                         (:happened_summary record))
+            (throw (ex-info "Pattern outcomes require a settled turn"
+                            {:reason :turn-not-settled :id id})))
+        pattern-id (str pattern-id)
+        _ (when (str/blank? pattern-id)
+            (throw (ex-info "Pattern outcome requires pattern-id"
+                            {:reason :invalid-pattern-outcome :field :pattern-id})))
+        outcome (some-> outcome name keyword)
+        _ (when-not (contains? pattern-outcome-fields outcome)
+            (throw (ex-info "Unknown pattern outcome"
+                            {:reason :invalid-pattern-outcome :field :outcome})))
+        retrievals (retrieved-patterns store id pattern-id)
+        _ (when-not (seq retrievals)
+            (throw (ex-info "Pattern was not retrieved for this turn"
+                            {:reason :pattern-candidate-not-found :pattern-id pattern-id})))
+        witness (required-pattern-outcome-witness! outcome witness)
+        event-id (str "e-xiang-pattern-outcome-"
+                      (sha1-hex (str id "|" pattern-id "|" (name outcome) "|"
+                                     (pr-str (into (sorted-map) witness)))))
+        recorded-at (iso (now-ms svc))
+        stored {:evidence_id event-id
+                :pattern_id pattern-id
+                :outcome (name outcome)
+                :retrievals retrievals
+                :witness witness
+                :recorded_at recorded-at}
+        existing (some #(when (= pattern-id (:pattern_id %)) %)
+                       (:pattern_outcomes record))]
+    (when (and existing (not= event-id (:evidence_id existing)))
+      (throw (ex-info "Retrieved pattern already has a different outcome"
+                      {:reason :pattern-outcome-exists :pattern-id pattern-id})))
+    (when-not existing
+      (ts/update-record! store id #(update % :pattern_outcomes (fnil conj []) stored)))
+    (let [entry {:evidence-id event-id
+                 :in-reply-to (:evidence_id record)
+                 :subject {:ref/type :thread :ref/id id}
+                 :type :coordination
+                 :claim-type :assert
+                 :author "xiang-turn-service"
+                 :session-id (:session_id record)
+                 :body {:event :pattern-outcome
+                        :turn-record-id id
+                        :pattern-id pattern-id
+                        :retrievals retrievals
+                        :outcome outcome
+                        :witness witness
+                        :recorded-at recorded-at}
+                 :tags [:xiang-pattern-outcome
+                        (keyword (str "pattern-outcome-" (name outcome)))]}
+          append-result (append-evidence! svc entry (cfg svc :store-busy-delays))]
+      {:id id :outcome stored :evidence entry
+       :idempotent? (boolean existing) :append append-result})))
 
 ;; ---------------------------------------------------------------------------
 ;; Ports (the HAPPENED / DIDN'T HAPPEN heads-up display)

@@ -63,7 +63,14 @@
         (is (= (count (:work-clusters pass-output))
                (count (:clusters projection))))
         (is (= (:work-cluster-by-item pass-output)
-               (:by_item projection)))))
+               (:by_item projection)))
+        (is (= (get-in pass-output
+                       [:work-cluster-interpretation :tickets :analyzed])
+               (get-in projection [:interpretation :tickets :analyzed])))
+        (is (= (mapv name
+                     (get-in pass-output
+                             [:work-cluster-interpretation :tickets :unlinked]))
+               (get-in projection [:interpretation :tickets :unlinked])))))
     (testing "input.edn round-trips to the adapter's pass input"
       (is (= (:input adapter-result)
              (edn/read-string (slurp (io/file dir "input.edn"))))))

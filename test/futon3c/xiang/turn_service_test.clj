@@ -712,6 +712,163 @@
       (is (some #{:xiang-turn-analyzed} (:tags e)))
       (is (= "sess-1" (:session-id e))))))
 
+(deftest settled-clock-topic-mismatch-is-durable-proposed-evidence
+  ;; Exact bad case: the clock says one piece of work while the operator names
+  ;; another.  Exercise the real record -> settle -> evidence path, not the
+  ;; pure detector alone.
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]}
+        (turn! h {:text (str "Please continue with E-prove-memory-useful and compare M-giraffe. "
+                             "I withdraw that pattern.")
+                  :clocked-target "E-prove-memory-useful"})]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "noted" :commits []})
+    (is (= 2 (count @appended)) "settled turn plus one proposed relationship review")
+    (let [review (first (filter #(some #{:xiang-relationship-review} (:tags %))
+                                @appended))]
+      (is (= "emacs-abc" (:in-reply-to review)))
+      (is (= :proposal (:claim-type review)))
+      (is (= {:event :relationship-review
+              :status :proposed
+              :relation :unresolved
+              :clocked-work "E-prove-memory-useful"
+              :discussed-work "M-giraffe"
+              :evidence {:operator-evidence-id "emacs-abc"
+                         :quote "M-giraffe"
+                         :reference-basis :explicit-id}
+              :turn-record-id id}
+             (:body review))))))
+
+(deftest relationship-resolution-cites-a-real-review-and-persists-before-append
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]}
+        (turn! h {:text (str "Please continue with E-prove-memory-useful and compare M-giraffe. "
+                             "I withdraw that pattern.")
+                  :clocked-target "E-prove-memory-useful"})
+        store (get-in (:svc h) [:config :store])]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "noted" :commits []})
+    (let [review (first (filter #(some #{:xiang-relationship-review} (:tags %))
+                                @appended))
+          result (svc/resolve-relationship!
+                  (:svc h) id
+                  {:review-evidence-id (:evidence-id review)
+                   :resolution :incidental
+                   :witness {:resolution-evidence-id "e-operator-resolution"
+                             :rationale "The comparison did not change either work item."}})
+          stored (first (:relationship_resolutions (ts/read-record store id)))
+          resolution (:evidence result)]
+      (is (= (:evidence-id resolution) (:evidence_id stored))
+          "the file record is the durable source before/if append retries")
+      (is (= (:evidence-id review) (:in-reply-to resolution)))
+      (is (= :incidental (get-in resolution [:body :resolution])))
+      (is (= "e-operator-resolution"
+             (get-in resolution [:body :witness :resolution-evidence-id])))
+      (is (= 3 (count @appended)) "settled turn, review, then resolution")
+      (is (:idempotent?
+           (svc/resolve-relationship!
+            (:svc h) id
+            {:review-evidence-id (:evidence-id review)
+             :resolution :incidental
+             :witness {:resolution-evidence-id "e-operator-resolution"
+                       :rationale "The comparison did not change either work item."}})))
+      (is (= 1 (count (:relationship_resolutions (ts/read-record store id))))
+          "a retry cannot duplicate the durable resolution")
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"different resolution"
+           (svc/resolve-relationship!
+            (:svc h) id
+            {:review-evidence-id (:evidence-id review)
+             :resolution :reclocked
+             :witness {:resolution-evidence-id "e-later"
+                       :new-clock "M-giraffe"
+                       :clock-decision-id "clock-2"}}))))))
+
+(deftest relationship-resolution-refuses-unrelated-review-and-weak-witness
+  (let [h (harness)
+        {:keys [id record]}
+        (turn! h {:text (str "Please continue with E-prove-memory-useful and compare M-giraffe. "
+                             "I withdraw that pattern.")
+                  :clocked-target "E-prove-memory-useful"})]
+    (testing "a caller cannot resolve a review that this turn did not produce"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"not derivable"
+           (svc/resolve-relationship!
+            (:svc h) id {:review-evidence-id "e-made-up"
+                         :resolution :incidental
+                         :witness {:resolution-evidence-id "e-1" :rationale "no"}}))))
+    (testing "each resolution requires its typed witness"
+      (let [entry (first (svc/relationship-review-evidence-entries id record))]
+        (is (thrown-with-msg?
+             clojure.lang.ExceptionInfo #"edge-evidence-id"
+             (svc/resolve-relationship!
+              (:svc h) id {:review-evidence-id (:evidence-id entry)
+                           :resolution :formalized-edge
+                           :witness {:resolution-evidence-id "e-1"
+                                     :relation "depends-on"}})))))))
+
+(deftest pattern-outcome-cites-the-retrieved-candidate-and-persists
+  (let [appended (atom [])
+        h (harness {:draft fake-draft
+                    :pattern-candidates
+                    (fn [queries]
+                      (into {} (map (fn [q] [q [{:id "social/x" :score 0.9 :title "X"}]])
+                                    queries)))
+                    :evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]} (turn! h {:dispatch :now})
+        store (get-in (:svc h) [:config :store])]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "used X" :commits []})
+    (let [request {:pattern-id "social/x"
+                   :outcome :applied
+                   :witness {:outcome-evidence-id "e-assessment-1"
+                             :use-evidence-id "e-use-1"
+                             :effect "The port retained the pattern's retry boundary."}}
+          result (svc/record-pattern-outcome! (:svc h) id request)
+          stored (first (:pattern_outcomes (ts/read-record store id)))]
+      (is (= "social/x" (:pattern_id stored)))
+      (is (seq (:retrievals stored)))
+      (is (every? #(= {:id "social/x" :score 0.9 :title "X"} (:candidate %))
+                  (:retrievals stored)))
+      (is (= (:evidence-id (:evidence result)) (:evidence_id stored)))
+      (is (= :applied (get-in result [:evidence :body :outcome])))
+      (is (:idempotent? (svc/record-pattern-outcome! (:svc h) id request)))
+      (is (= 1 (count (:pattern_outcomes (ts/read-record store id)))))
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"different outcome"
+           (svc/record-pattern-outcome!
+            (:svc h) id
+            (assoc-in request [:witness :effect] "A rewritten effect.")))))))
+
+(deftest pattern-outcome-refuses-invented-candidates-and-unwitnessed-residuals
+  (let [h (harness)
+        {:keys [id record]} (turn! h {:dispatch :none})
+        store (get-in (:svc h) [:config :store])]
+    (ts/write-pattern-candidates! store id
+                                  {"turn query" [{:id "pattern/real" :score 0.8}]})
+    (testing "outcomes cannot be attached before the turn settles"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"settled turn"
+                            (svc/record-pattern-outcome!
+                             (:svc h) id {:pattern-id "pattern/real" :outcome :obvious
+                                          :witness {:outcome-evidence-id "e-1"
+                                                    :rationale "Already explicit."}}))))
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "done" :commits []})
+    (testing "the candidate id must come from the actual sidecar"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not retrieved"
+                            (svc/record-pattern-outcome!
+                             (:svc h) id {:pattern-id "pattern/invented" :outcome :obvious
+                                          :witness {:outcome-evidence-id "e-2"
+                                                    :rationale "No new information."}}))))
+    (testing "adaptation cannot hide what failed to fit"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"residual-evidence-id"
+                            (svc/record-pattern-outcome!
+                             (:svc h) id {:pattern-id "pattern/real" :outcome :adapted
+                                          :witness {:outcome-evidence-id "e-3"
+                                                    :adaptation "Broaden it."}}))))))
+
 (deftest an-analysed-turn-posts-classical-scope-hyperedges
   (let [edges (atom [])
         h (harness {:scope-async! (fn [f] (f))

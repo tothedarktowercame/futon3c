@@ -160,6 +160,41 @@
     (str "work-cluster/"
          (subs (apply str (map #(format "%02x" %) (.digest digest))) 0 12))))
 
+(defn- item-kind [id]
+  (let [n (name id)]
+    (cond
+      (str/starts-with? n "M-") :mission
+      (str/starts-with? n "E-") :excursion
+      (str/starts-with? n "T-") :ticket
+      :else :other)))
+
+(defn- interpret-cluster [members edges]
+  (let [kinds (frequencies (map item-kind members))
+        kind-set (set (keys kinds))
+        froms (set (map :from edges))
+        tos (set (map :to edges))
+        shape (cond
+                (= kind-set #{:ticket}) :tickets-only
+                (= kind-set #{:mission}) :missions-only
+                (= kind-set #{:excursion}) :excursions-only
+                (and (kind-set :ticket)
+                     (or (kind-set :mission) (kind-set :excursion)))
+                :tickets-with-planned-work
+                (and (kind-set :mission) (kind-set :excursion))
+                :missions-with-excursions
+                :else :mixed)]
+    {:shape shape
+     :kind-counts (into (sorted-map) kinds)
+     ;; A needs B is stored A -> B.  Roots therefore have no outgoing need
+     ;; inside this component; frontier items have no internal dependents.
+     :prerequisite-roots (vec (sort (remove froms members)))
+     :dependent-frontier (vec (sort (remove tos members)))
+     :ticket-role (into (sorted-map)
+                        (for [ticket (filter #(= :ticket (item-kind %)) members)]
+                          [ticket (if (= kind-set #{:ticket})
+                                    :connected-only-to-tickets
+                                    :connected-to-planned-work)]))}))
+
 (defn work-clusters
   "Deterministic non-singleton weak components of accepted item planning
   edges.  Every cluster retains the edges and evidence bases that caused its
@@ -207,6 +242,7 @@
                       {:id (component-id members)
                        :members members
                        :edges cluster-edges
+                       :interpretation (interpret-cluster members cluster-edges)
                        :basis-counts (into (sorted-map)
                                            (frequencies
                                             (map #(or (:basis %) :unspecified)
@@ -217,7 +253,16 @@
      :by-item (into (sorted-map)
                     (mapcat (fn [{:keys [id members]}]
                               (map (fn [member] [member id]) members))
-                            clusters))}))
+                            clusters))
+     :interpretation
+     (let [tickets (vec (sort (filter #(= :ticket (item-kind %)) item-ids)))
+           clustered (set (mapcat :members clusters))
+           clustered-tickets (vec (filter clustered tickets))]
+       {:items-analyzed (count item-ids)
+        :clusters (count clusters)
+        :tickets {:analyzed (count tickets)
+                  :clustered (count clustered-tickets)
+                  :unlinked (vec (remove clustered tickets))}})}))
 
 (defn- readiness-entry
   "One item's readiness record."
@@ -401,6 +446,7 @@
      :unblocks unblocks
      :work-clusters (:clusters work)
      :work-cluster-by-item (:by-item work)
+     :work-cluster-interpretation (:interpretation work)
      :cycles cycles
      :anomalies anomalies
      :order order}))
