@@ -237,7 +237,9 @@
                                  :clusters (:work-clusters pass-output)
                                  :by_item (:work-cluster-by-item pass-output)
                                  :interpretation
-                                 (:work-cluster-interpretation pass-output)}
+                                 (:work-cluster-interpretation pass-output)
+                                 :ticket_provenance
+                                 (:ticket-provenance pass-output)}
                                 {:pretty true}))
         report-entry (write! "report.md"
                              (report {:input input

@@ -5,6 +5,7 @@
             [futon2.aif.wm.construction-inputs :as sources]
             [futon3c.giraffe.missions :as missions]
             [futon3c.giraffe.pass :as pass]
+            [futon3c.giraffe.provenance :as provenance]
             [futon3c.giraffe.readings :as readings]))
 
 (defn- census-input
@@ -108,6 +109,7 @@
   pass/downstream-cone inverts those edges. Partial coverage never implies zero."
   [input]
   (let [base (pass/pass input)
+        ticket-provenance (provenance/project input)
         items (into {} (map (juxt :id identity)) (:items input))
         coverage (:graph-coverage input)
         incomplete? (not= :complete (:status coverage))
@@ -140,6 +142,7 @@
                                          :cone nil :unblocks nil)))) (:order base))
         ready (mapv :id (filter #(= :ready (:status %)) rows))]
     (assoc base :order rows :ready-set ready :graph-coverage coverage
+           :ticket-provenance ticket-provenance
            :reading-evidence evidence
            :known-subgraph (select-keys base [:cones :unblocks])
            :cones (into {} (map (fn [row] [(:id row) (when (some? (:cone row))

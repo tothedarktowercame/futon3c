@@ -52,8 +52,39 @@ The Step 1 mismatch can now be closed as `incidental`, citing a later operator
 evidence row and rationale. Evidence Landscape receives a resolution whose
 `in-reply-to` is the proposed review; the turn file carries the same resolution.
 
-## Next: Step 3
+## Step 3 — ticket provenance and current relevance
 
-Publish ticket provenance and relevance separately from planning dependencies,
-starting with the 45 explicit `Parent:` statements and the four checked-reading
-omissions found in the recovery audit.
+The combined Giraffe pass now projects ticket provenance separately from
+planning dependencies and publishes it inside the already sealed
+`work-clusters.json` projection.
+
+- `part-of`, `motivated-by`, and `relates-to` links remain lineage/context;
+  they do not affect readiness or cluster membership.
+- Source-pinned `Parent:` declarations are extracted alongside checked-reading
+  links. Matching statements merge as two attestations; a source-only parent
+  remains visible instead of disappearing.
+- Source SHA drift fails the projection rather than being interpreted as no
+  parent.
+- Every ticket receives a current-relevance state. A typed witness with an
+  Evidence Landscape ID can establish `current`, `obsolete`, or `superseded`.
+  Without one, the ticket is `review-required`; a closed/cancelled origin gives
+  the more specific reason `closed-origin-open-ticket`.
+
+### Demo made possible
+
+On the sealed 188-ticket population, 51 tickets have lineage/context, 45 have
+an explicit origin, and all 188 require current-relevance review because no
+typed relevance witnesses were supplied. Four open repair tickets have a
+completed/cancelled origin and are specifically classified
+`closed-origin-open-ticket`.
+
+`T-evidence-pinned-to-mutable-prose-26082026` carries two matching attestations
+for `part-of E-R8-red-ring-fill` (checked reading plus pinned source). The
+population currently calls that excursion `unstarted`, not closed, so this
+projection reports `no-current-relevance-witness`; it exposes rather than
+silently repairs the lifecycle disagreement.
+
+## Next: Step 4
+
+Record retrieved-pattern outcomes (`applied`, `adapted`, `rejected`, `obvious`)
+and the exact residual that justified adaptation or rejection.
