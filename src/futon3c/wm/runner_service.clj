@@ -114,18 +114,28 @@
                                (:identity resolved)
                                {:status :absent})}
         resolution (:resolution resolved)
-        verifier (if resolution
+        ;; P1 single shared resolution: when no provider resolution exists we
+        ;; must NOT install a deny-all placeholder verifier. The pre-ration
+        ;; preflight (meta-self-heal-preflight!) runs BEFORE the runtime, and
+        ;; futon2.aif.meta-self-heal-production/medic-authority-verifier
+        ;; prefers an opts verifier over the standing resolver — a deny-all
+        ;; placeholder here made every no-provider click refuse with
+        ;; :meta-self-heal/ledger-unreadable against valid pinned ledger bytes
+        ;; (live refusal run 2026-10-31-bc036e43-6bd8-40db-aaa2-2002da1654cd).
+        ;; With no verifier installed, every read path composes the standing
+        ;; resolver, which is itself fail-closed (unknown/doctored authority
+        ;; and tampered bytes refuse).
+        verifier (when resolution
                    ((requiring-resolve
                      'futon2.aif.meta-medic-authority/resolution-verifier)
-                    resolution)
-                   (constantly false))]
+                    resolution))]
     (when (and (not= ::initial expected) (not= expected identity))
       (throw (ex-info "Medic authority changed between admission and worker"
                       {:status 503 :error :meta-medic-authority-context-drift
                        :before-ration-spend? true})))
-    (cond-> (assoc clean :meta-medic-authority-identity identity
-                         :meta-medic-authority-verifier verifier)
-      resolution (assoc :meta-medic-authority-resolution resolution)))))
+    (cond-> (assoc clean :meta-medic-authority-identity identity)
+      resolution (assoc :meta-medic-authority-resolution resolution
+                        :meta-medic-authority-verifier verifier)))))
 
 (defn- assert-provider-current! [opts]
   (let [expected (:meta-medic-authority-identity opts)
