@@ -571,6 +571,90 @@
                             ": evidence append failed; the file record is the source of truth"))
           result))))
 
+(def ^:private relationship-resolution-fields
+  {:formalized-edge [:relation :edge-evidence-id]
+   :reclocked [:new-clock :clock-decision-id]
+   :ticket-created [:ticket-id :ticket-evidence-id]
+   :completion-revised [:work-id :revision-evidence-id]
+   :incidental [:rationale]
+   :unresolved [:rationale]})
+
+(defn- required-resolution-witness!
+  [resolution witness]
+  (when-not (map? witness)
+    (throw (ex-info "Relationship resolution requires a witness map"
+                    {:reason :invalid-relationship-resolution :field :witness})))
+  (doseq [field (cons :resolution-evidence-id
+                      (get relationship-resolution-fields resolution))]
+    (when (str/blank? (str (get witness field)))
+      (throw (ex-info (str "Relationship resolution witness requires " field)
+                      {:reason :invalid-relationship-resolution :field field}))))
+  witness)
+
+(defn resolve-relationship!
+  "Resolve one relationship-review derivable from turn record ID.
+
+  The file record is the source of truth and is updated before the evidence
+  append. Repeating the same resolution is idempotent; a different resolution
+  for the same review is refused rather than silently rewriting history."
+  [svc id {:keys [review-evidence-id resolution witness]}]
+  (let [store (cfg svc :store)
+        record (or (ts/read-record store id)
+                   (throw (ex-info "Turn record not found"
+                                   {:reason :record-not-found :id id})))
+        resolution (some-> resolution name keyword)
+        _ (when-not (contains? relationship-resolution-fields resolution)
+            (throw (ex-info "Unknown relationship resolution"
+                            {:reason :invalid-relationship-resolution
+                             :field :resolution})))
+        _ (when (str/blank? (str review-evidence-id))
+            (throw (ex-info "Relationship resolution requires review-evidence-id"
+                            {:reason :invalid-relationship-resolution
+                             :field :review-evidence-id})))
+        review (some #(when (= review-evidence-id (:evidence-id %)) %)
+                     (relationship-review-evidence-entries id record))
+        _ (when-not review
+            (throw (ex-info "Review is not derivable from this turn"
+                            {:reason :relationship-review-not-found
+                             :review-evidence-id review-evidence-id})))
+        witness (required-resolution-witness! resolution witness)
+        event-id (str "e-xiang-relationship-resolution-"
+                      (sha1-hex (str review-evidence-id "|" (name resolution) "|"
+                                     (:resolution-evidence-id witness))))
+        resolved-at (iso (now-ms svc))
+        stored {:evidence_id event-id
+                :review_evidence_id review-evidence-id
+                :resolution (name resolution)
+                :witness witness
+                :resolved_at resolved-at}
+        existing (some #(when (= review-evidence-id (:review_evidence_id %)) %)
+                       (:relationship_resolutions record))]
+    (when (and existing (not= event-id (:evidence_id existing)))
+      (throw (ex-info "Relationship review already has a different resolution"
+                      {:reason :relationship-already-resolved
+                       :review-evidence-id review-evidence-id})))
+    (when-not existing
+      (ts/update-record! store id
+                         #(update % :relationship_resolutions (fnil conj []) stored)))
+    (let [entry {:evidence-id event-id
+                 :in-reply-to review-evidence-id
+                 :subject {:ref/type :thread :ref/id id}
+                 :type :coordination
+                 :claim-type :assert
+                 :author "xiang-turn-service"
+                 :session-id (:session_id record)
+                 :body {:event :relationship-resolution
+                        :turn-record-id id
+                        :review-evidence-id review-evidence-id
+                        :resolution resolution
+                        :witness witness
+                        :resolved-at resolved-at}
+                 :tags [:xiang-relationship-resolution
+                        (keyword (str "relationship-resolution-" (name resolution)))]}
+          append-result (append-evidence! svc entry (cfg svc :store-busy-delays))]
+      {:id id :resolution stored :evidence entry
+       :idempotent? (boolean existing) :append append-result})))
+
 ;; ---------------------------------------------------------------------------
 ;; Ports (the HAPPENED / DIDN'T HAPPEN heads-up display)
 

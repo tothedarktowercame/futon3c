@@ -30,9 +30,30 @@ Given clock `E-prove-memory-useful` and operator text explicitly naming
 review linked to the operator turn. A subsequent step can record how that
 tension was resolved.
 
-## Next: Step 2
+## Step 2 — record the resolution
 
-Define resolution acts that cite a relationship-review event:
+The turn action `POST /api/alpha/xiang/turns/:id/resolution` records resolution
+acts that cite a relationship-review event:
 `formalized-edge`, `reclocked`, `ticket-created`, `completion-revised`,
-`incidental`, or `unresolved`. Do not infer a resolution merely because the
-next clock differs.
+`incidental`, or `unresolved`.
+
+- Every act requires `resolution-evidence-id` and a type-specific witness.
+  For example, `reclocked` requires the new target and clock-decision ID;
+  `formalized-edge` requires its relation and edge evidence ID.
+- The cited review must be derivable from the authoritative turn record.
+- The file record is updated before the Evidence Landscape append and remains
+  the source of truth if that append needs retrying.
+- A byte-identical retry is idempotent. A different resolution for the same
+  review is refused; history cannot be silently rewritten.
+
+### Demo made possible
+
+The Step 1 mismatch can now be closed as `incidental`, citing a later operator
+evidence row and rationale. Evidence Landscape receives a resolution whose
+`in-reply-to` is the proposed review; the turn file carries the same resolution.
+
+## Next: Step 3
+
+Publish ticket provenance and relevance separately from planning dependencies,
+starting with the 45 explicit `Parent:` statements and the four checked-reading
+omissions found in the recovery audit.

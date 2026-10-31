@@ -740,6 +740,75 @@
               :turn-record-id id}
              (:body review))))))
 
+(deftest relationship-resolution-cites-a-real-review-and-persists-before-append
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]}
+        (turn! h {:text (str "Please continue with E-prove-memory-useful and compare M-giraffe. "
+                             "I withdraw that pattern.")
+                  :clocked-target "E-prove-memory-useful"})
+        store (get-in (:svc h) [:config :store])]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "noted" :commits []})
+    (let [review (first (filter #(some #{:xiang-relationship-review} (:tags %))
+                                @appended))
+          result (svc/resolve-relationship!
+                  (:svc h) id
+                  {:review-evidence-id (:evidence-id review)
+                   :resolution :incidental
+                   :witness {:resolution-evidence-id "e-operator-resolution"
+                             :rationale "The comparison did not change either work item."}})
+          stored (first (:relationship_resolutions (ts/read-record store id)))
+          resolution (:evidence result)]
+      (is (= (:evidence-id resolution) (:evidence_id stored))
+          "the file record is the durable source before/if append retries")
+      (is (= (:evidence-id review) (:in-reply-to resolution)))
+      (is (= :incidental (get-in resolution [:body :resolution])))
+      (is (= "e-operator-resolution"
+             (get-in resolution [:body :witness :resolution-evidence-id])))
+      (is (= 3 (count @appended)) "settled turn, review, then resolution")
+      (is (:idempotent?
+           (svc/resolve-relationship!
+            (:svc h) id
+            {:review-evidence-id (:evidence-id review)
+             :resolution :incidental
+             :witness {:resolution-evidence-id "e-operator-resolution"
+                       :rationale "The comparison did not change either work item."}})))
+      (is (= 1 (count (:relationship_resolutions (ts/read-record store id))))
+          "a retry cannot duplicate the durable resolution")
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"different resolution"
+           (svc/resolve-relationship!
+            (:svc h) id
+            {:review-evidence-id (:evidence-id review)
+             :resolution :reclocked
+             :witness {:resolution-evidence-id "e-later"
+                       :new-clock "M-giraffe"
+                       :clock-decision-id "clock-2"}}))))))
+
+(deftest relationship-resolution-refuses-unrelated-review-and-weak-witness
+  (let [h (harness)
+        {:keys [id record]}
+        (turn! h {:text (str "Please continue with E-prove-memory-useful and compare M-giraffe. "
+                             "I withdraw that pattern.")
+                  :clocked-target "E-prove-memory-useful"})]
+    (testing "a caller cannot resolve a review that this turn did not produce"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"not derivable"
+           (svc/resolve-relationship!
+            (:svc h) id {:review-evidence-id "e-made-up"
+                         :resolution :incidental
+                         :witness {:resolution-evidence-id "e-1" :rationale "no"}}))))
+    (testing "each resolution requires its typed witness"
+      (let [entry (first (svc/relationship-review-evidence-entries id record))]
+        (is (thrown-with-msg?
+             clojure.lang.ExceptionInfo #"edge-evidence-id"
+             (svc/resolve-relationship!
+              (:svc h) id {:review-evidence-id (:evidence-id entry)
+                           :resolution :formalized-edge
+                           :witness {:resolution-evidence-id "e-1"
+                                     :relation "depends-on"}})))))))
+
 (deftest an-analysed-turn-posts-classical-scope-hyperedges
   (let [edges (atom [])
         h (harness {:scope-async! (fn [f] (f))

@@ -12241,8 +12241,11 @@
         status (case reason
                  :invalid-analysis 400
                  :invalid-record-id 400
+                 :invalid-relationship-resolution 400
                  :record-not-found 404
+                 :relationship-review-not-found 404
                  :analysis-exists 409
+                 :relationship-already-resolved 409
                  500)]
     (json-response status (merge {:ok false :reason reason :message (.getMessage e)}
                                  (select-keys data [:field :sentence])))))
@@ -12353,6 +12356,16 @@
         (let [raw (or (:fragments payload) (:draft payload))
               draft (xiang-turns/store-draft! svc id raw)]
           (json-response 201 {:ok true :id id :draft draft}))
+
+        "resolution"
+        (let [result (xiang-turns/resolve-relationship!
+                      svc id {:review-evidence-id (some-> (:review-evidence-id payload) str)
+                              :resolution (:resolution payload)
+                              :witness (:witness payload)})]
+          (json-response (if (:idempotent? result) 200 201)
+                         {:ok true :id id
+                          :resolution (:resolution result)
+                          :idempotent (:idempotent? result)}))
 
         (json-response 404 {:ok false :reason :unknown-action :action action}))
       (catch clojure.lang.ExceptionInfo e (xiang-refusal e)))))
