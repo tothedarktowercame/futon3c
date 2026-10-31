@@ -49,6 +49,7 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
             [futon3c.xiang.reply-target :as rt]
+            [futon3c.xiang.relationship-review :as relationship-review]
             [futon3c.xiang.scope-rules :as scope-rules]
             [futon3c.xiang.turn-acts :as turn-acts]
             [futon3c.xiang.turn-record :as tr]
@@ -392,6 +393,31 @@
     (:session_id record) (assoc :session-id (:session_id record))
     (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
 
+(declare sha1-hex)
+
+(defn relationship-review-evidence-entries
+  "Durable proposed relationship reviews for a settled operator turn.
+  Explicit M-/E-/T- mentions are supported here; an evidenced alias resolver
+  can supply additional references in a later slice."
+  [id record]
+  (mapv (fn [{:keys [clocked-work discussed-work evidence] :as review}]
+          (cond-> {:evidence-id
+                   (str "e-xiang-relationship-"
+                        (sha1-hex (str (:evidence_id record) "|" clocked-work "|"
+                                       discussed-work "|" (:quote evidence))))
+                   :subject {:ref/type :thread :ref/id id}
+                   :type :coordination
+                   :claim-type :proposal
+                   :author "xiang-turn-service"
+                   :body (assoc review :turn-record-id id)
+                   :tags [:xiang-relationship-review :relationship-review-proposed]}
+            (:session_id record) (assoc :session-id (:session_id record))
+            (:evidence_id record) (assoc :in-reply-to (:evidence_id record))))
+        (relationship-review/relationship-reviews
+         {:clocked-target (:clocked_target record)
+          :operator-evidence-id (:evidence_id record)
+          :operator-text (:source_text record)})))
+
 (declare append-evidence! compute-ports!)
 
 (defn- sha1-hex [s]
@@ -484,8 +510,11 @@
   (let [store (cfg svc :store)
         write! (fn []
                  ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-                  #(let [r (append-evidence! svc (turn-evidence-entry id (ts/read-record store id) reading how)
+                  #(let [record (ts/read-record store id)
+                         r (append-evidence! svc (turn-evidence-entry id record reading how)
                                              (cfg svc :store-busy-delays))]
+                     (doseq [entry (relationship-review-evidence-entries id record)]
+                       (append-evidence! svc entry (cfg svc :store-busy-delays)))
                      ;; A duplicate append (the same settled packet written
                      ;; again) changed nothing a listener could show.
                      (when-not (or (:idempotent? r) (= :duplicate-id (:error/code r)))

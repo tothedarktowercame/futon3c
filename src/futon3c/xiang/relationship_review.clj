@@ -4,7 +4,8 @@
   clock or asserts what the relationship means."
   (:require [clojure.string :as str]))
 
-(def ^:private work-id-pattern #"(?<![A-Za-z0-9_-])([MET]-[A-Za-z0-9][A-Za-z0-9._-]*)")
+(def ^:private work-id-pattern
+  #"(?<![A-Za-z0-9_-])([MET]-[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?)")
 
 (defn explicit-work-references
   "Exact M-/E-/T- identifiers and their verbatim mention in TEXT."

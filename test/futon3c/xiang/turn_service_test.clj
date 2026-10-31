@@ -712,6 +712,34 @@
       (is (some #{:xiang-turn-analyzed} (:tags e)))
       (is (= "sess-1" (:session-id e))))))
 
+(deftest settled-clock-topic-mismatch-is-durable-proposed-evidence
+  ;; Exact bad case: the clock says one piece of work while the operator names
+  ;; another.  Exercise the real record -> settle -> evidence path, not the
+  ;; pure detector alone.
+  (let [appended (atom [])
+        h (harness {:evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]}
+        (turn! h {:text (str "Please continue with E-prove-memory-useful and compare M-giraffe. "
+                             "I withdraw that pattern.")
+                  :clocked-target "E-prove-memory-useful"})]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "noted" :commits []})
+    (is (= 2 (count @appended)) "settled turn plus one proposed relationship review")
+    (let [review (first (filter #(some #{:xiang-relationship-review} (:tags %))
+                                @appended))]
+      (is (= "emacs-abc" (:in-reply-to review)))
+      (is (= :proposal (:claim-type review)))
+      (is (= {:event :relationship-review
+              :status :proposed
+              :relation :unresolved
+              :clocked-work "E-prove-memory-useful"
+              :discussed-work "M-giraffe"
+              :evidence {:operator-evidence-id "emacs-abc"
+                         :quote "M-giraffe"
+                         :reference-basis :explicit-id}
+              :turn-record-id id}
+             (:body review))))))
+
 (deftest an-analysed-turn-posts-classical-scope-hyperedges
   (let [edges (atom [])
         h (harness {:scope-async! (fn [f] (f))
