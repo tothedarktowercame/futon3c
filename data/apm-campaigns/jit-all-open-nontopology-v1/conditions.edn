@@ -212,4 +212,13 @@
  :head "b0bbb2a0",
  :loaded? true,
  :sha "b0bbb2a0"}
+{:id "C-20",
+ :at "2026-10-31T01:02Z",
+ :by "zai-4",
+ :kind :reload,
+ :note
+ "merge 657aa7d1e: approved fix b132d2878 no-provider preflight verifier; WM idle, defonce state preserved",
+ :head "657aa7d1e",
+ :namespaces ["futon3c.wm.runner-service"],
+ :loaded? true}
 ]
