@@ -11,6 +11,21 @@
                     (.digest (java.security.MessageDigest/getInstance "SHA-256")
                              (.getBytes ^String text "UTF-8")))))
 
+(defn- scrubbed-result
+  "The checker is invoked on a per-record temp file whose random name must not
+  enter the recorded output.  Coverage certificates -- and so the adapter
+  input.edn and its sha256, from which the run id is minted -- embed
+  :checker-results; a random /tmp path inside them makes the input digest
+  differ on every mint over an identical corpus, which keeps the freshness
+  probe permanently stale (2026-10-31: two mints in one click launch, each
+  re-probe 'fresh: false').  Replace the temp path with a stable token."
+  [result path]
+  (into {} (map (fn [[k v]]
+                  [k (if (#{:out :err} k)
+                       (str/replace (str v) path "giraffe-reading-line")
+                       v)]))
+        (select-keys result [:exit :out :err])))
+
 (defn- checked-record [checker batch line-number line]
   (let [file (java.io.File/createTempFile "giraffe-reading-" ".jsonl")
         pin {:sha256 (sha256 line) :batch (str batch) :line line-number}]
@@ -19,7 +34,7 @@
       (let [result (shell/sh "python3" "-I" (str checker) (.getPath file))
             record (try (json/parse-string line true) (catch Exception _ nil))]
         {:record record :record-pin pin
-         :checker-result (select-keys result [:exit :out :err])
+         :checker-result (scrubbed-result result (.getPath file))
          :passed? (and (zero? (:exit result)) (map? record))})
       (finally (.delete file)))))
 
