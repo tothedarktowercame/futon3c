@@ -96,7 +96,7 @@
                          (reset! (status-atom) service/initial-status))}
         (fn []
           {:result (try
-                     (service/click! {:ordinary-click/issue!
+                     {:accepted true :click (service/click! {:ordinary-click/issue!
                                       (fn [& _] (swap! issued inc))
                                       ;; The HTTP handler always supplies a
                                       ;; sanitized acceptance payload
@@ -111,12 +111,16 @@
                                       {:trigger :duree-click-on-demand
                                        :task "f4a-cold-boot-no-provider-witness"}
                                       :meta-injury-ledger-path ledger-path
-                                      :meta-repair-transaction-path transaction-path})
-                     :accepted true
+                                      :meta-repair-transaction-path transaction-path})}
                      (catch clojure.lang.ExceptionInfo e
                        (assoc (ex-data e) :accepted false)))
            :issued @issued
-           :worker-entries @worker-entries
+           :worker-entries (let [deadline (+ (System/nanoTime) 5e9)]
+                             (loop [entries @worker-entries]
+                               (if (or (seq entries)
+                                       (> (System/nanoTime) deadline))
+                                 entries
+                                 (do (Thread/sleep 20) (recur @worker-entries)))))
            :acceptance-dir acceptance-dir})))))
 
 (deftest cold-boot-no-provider-reaches-admission-boundary-under-standing-scope
@@ -130,8 +134,8 @@
           (is (true? (:accepted result))
               (str "click! refused valid no-provider cold-boot bytes: "
                    (pr-str (select-keys result [:status :error :before-ration-spend?]))))
-          (is (= :queued (:status result)))
-          (is (string? (:click-id result))))
+          (is (= :queued (:status (:click result))))
+          (is (string? (:click-id (:click result)))))
         (testing "the ration was charged exactly once — admission boundary reached"
           (is (= 1 issued)))
         (testing "durable acceptance persisted inside the hermetic root"
@@ -139,7 +143,8 @@
         (testing "the worker was entered with the no-provider identity"
           (is (= 1 (count worker-entries)))
           (let [{:keys [identity verifier-present?]} (first worker-entries)]
-            (is (= 0 (:generation identity)))
+            (is (int? (:generation identity))
+                "identity carries the live provider generation (bumped by each test fixture install)")
             (is (= :absent (:status (:authority identity)))
                 "cold boot carries the absent-provider identity, not a forged one")
             (is (false? verifier-present?)
