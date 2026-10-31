@@ -68,9 +68,14 @@ ALLOWED_PATHS=(
 )
 
 # Pattern: reset! / swap! / reset-store! targeting !store or !evidence-store.
+# Character class is [[:alnum:]_./-] (C4, 2026-10-31): the previous
+# [a-z./-] omitted digits, so a fully-qualified mutation like
+# (reset! futon3c.evidence.store/!store {}) passed the guard while the
+# alias form (estore/!store) refused. Digits and underscore now match,
+# same class as the three sibling scripts.
 # Skip lines starting with `;` (comments), and the docstring lines that
 # discuss the pattern.
-PATTERN='(reset!|swap!|reset-store!)[[:space:]]*\(?[a-z./-]*!store\b|estore/reset-store!|store/reset-store!|reset-store!\)'
+PATTERN='(reset!|swap!|reset-store!)[[:space:]]*\(?[[:alnum:]_./-]*!store\b|estore/reset-store!|store/reset-store!|reset-store!\)'
 
 VIOLATIONS=""
 VIOLATION_COUNT=0

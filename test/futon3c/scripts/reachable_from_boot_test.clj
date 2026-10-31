@@ -6,7 +6,18 @@
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]))
 
-(def repo-root "/home/joe/code/futon3c")
+;; Checkout-relative (C4, 2026-10-31): the tests must exercise THIS
+;; checkout's scripts, so a worktree run validates the worktree's guard
+;; rather than silently copying the canonical checkout's copy.
+;; *file* is test/futon3c/scripts/reachable_from_boot_test.clj relative to
+;; the classpath, so four parents up from the file is the checkout root.
+(def repo-root (-> (io/resource *file*)
+                   (io/file)
+                   (.getParentFile)  ; scripts/
+                   (.getParentFile)  ; futon3c/
+                   (.getParentFile)  ; test/
+                   (.getParentFile)  ; checkout root
+                   (.getPath)))
 
 (defn- temp-dir
   [prefix]
@@ -108,6 +119,45 @@
       (let [{:keys [exit out]} (run-script! repo "scripts/check-reachable-from-boot-dev-evidence-store.sh")]
         (is (= 1 exit))
         (is (re-find #"reachable-from-boot/dev-evidence-store VIOLATION" out))))))
+
+(deftest evidence-store-guard-fully-qualified-alias-and-clean-controls
+  ;; C4 (2026-10-31): the evidence-store guard's old character class
+  ;; [a-z./-] omitted digits, so a fully-qualified mutation —
+  ;; (reset! futon3c.evidence.store/!store {}) — passed the guard while
+  ;; the alias form refused. The real guard entry point (the pre-commit
+  ;; script, driven over a staged file in a fresh git repo) must refuse
+  ;; BOTH forms and pass a clean control.
+  (let [repo (-> (temp-dir "reachable-evidence-store-c4-")
+                 (init-git-repo!)
+                 (minimal-futon3c-layout!))]
+    (copy-into-repo! repo "scripts/check-reachable-from-boot.sh")
+    (testing "clean tree passes"
+      (let [{:keys [exit err]} (run-script! repo "scripts/check-reachable-from-boot.sh")]
+        (is (zero? exit) (str "expected clean pass, got err=" err))))
+    (testing "staged fully-qualified !store mutation is refused (the C4 loophole)"
+      (write-file! repo "src/futon3c/some_bad.clj"
+                   "(ns futon3c.some-bad)\n(reset! futon3c.evidence.store/!store {})\n")
+      (stage-file! repo "src/futon3c/some_bad.clj")
+      (let [{:keys [exit out]} (run-script! repo "scripts/check-reachable-from-boot.sh")]
+        (is (= 1 exit))
+        (is (re-find #"reachable-from-boot/evidence-store VIOLATION" out))))
+    (testing "staged alias-form !store mutation is still refused"
+      (write-file! repo "src/futon3c/some_bad2.clj"
+                   "(ns futon3c.some-bad2)\n(require '[futon3c.evidence.store :as estore])\n(swap! estore/!store assoc :x 1)\n")
+      (stage-file! repo "src/futon3c/some_bad2.clj")
+      (let [{:keys [exit out]} (run-script! repo "scripts/check-reachable-from-boot.sh")]
+        (is (= 1 exit))
+        (is (re-find #"reachable-from-boot/evidence-store VIOLATION" out))))
+    (testing "an ordinary staged Clojure file is not flagged (clean control, fresh repo)"
+      (let [repo2 (-> (temp-dir "reachable-evidence-store-c4-clean-")
+                      (init-git-repo!)
+                      (minimal-futon3c-layout!))]
+        (copy-into-repo! repo2 "scripts/check-reachable-from-boot.sh")
+        (write-file! repo2 "src/futon3c/innocent.clj"
+                     "(ns futon3c.innocent)\n(defn f [x] (reset! (atom x) 3))\n(reset! some-other/!counter 0)\n")
+        (stage-file! repo2 "src/futon3c/innocent.clj")
+        (let [{:keys [exit err]} (run-script! repo2 "scripts/check-reachable-from-boot.sh")]
+          (is (zero? exit) (str "ordinary staged file must pass, got err=" err)))))))
 
 (deftest pre-commit-wrapper-runs-all-reachable-from-boot-checks
   (let [repo (-> (temp-dir "reachable-wrapper-")
