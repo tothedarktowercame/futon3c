@@ -75,34 +75,93 @@
                       (remove registry/live-excursion? (:excursions loaded)))
                  (:excluded ticket-state))))))
 
+(defn reading-drift
+  "Classify drift between the adapter's open items and the checked reading
+  corpus (claude-1, 2026-10-31).  The population check used to demand exact
+  equality, so ONE new item blocked the whole field on every click -- and
+  members drift daily.  Drift is partial instead: an open item with no
+  current reading is :unread-new; one whose source sha changed is
+  :reading-source-changed; a corpus member that is no longer open is
+  ignored (:members-not-open, reported, never silently dropped); everything
+  else is :read.  Nothing passes as read that was not: the source-pin
+  equality is still demanded of every item that counts as read."
+  [open-items coverage]
+  (let [by-id (into {} (map (juxt :id identity)) (:members coverage))
+        classified (group-by (fn [item]
+                               (let [m (get by-id (name (:id item)))]
+                                 (cond
+                                   (nil? m) :unread-new
+                                   (not= :read (:status m)) :unread-new
+                                   (not= (:source-pin item) (:source m)) :reading-source-changed
+                                   :else :read)))
+                             open-items)
+        open-names (set (map #(name (:id %)) open-items))]
+    {:read (mapv :id (:read classified))
+     :unread-new (mapv :id (:unread-new classified))
+     :reading-source-changed (mapv :id (:reading-source-changed classified))
+     :members-not-open (vec (sort (remove open-names (map :id (:members coverage)))))}))
+
 (defn missions-and-excursions->input
   [{:keys [reading-batches reading-checker members-file repos reading-scope] :as opts}]
   (let [adapter (census-input opts)]
     (if-not reading-batches
       adapter
       (let [reading (readings/consume {:checker reading-checker :members-file members-file
-                                      :batches reading-batches :repos (or repos missions/default-repos)
-                                      :scope reading-scope})
+                                       :batches reading-batches :repos (or repos missions/default-repos)
+                                       :scope reading-scope})
             coverage (:coverage reading)
             by-id (into {} (map (juxt :id identity)) (:members coverage))
             open-items (remove #(#{:completed :cancelled} (:state-group %))
                                (get-in adapter [:input :items]))
-            _ (when-not (= (set (keys by-id)) (set (map (comp name :id) open-items)))
-                (throw (ex-info "Reading population differs from adapter"
-                                {:kind :reading/adapter-population-mismatch})))
-            _ (doseq [item open-items]
-                (when-not (= (:source-pin item) (:source (get by-id (name (:id item)))))
-                  (throw (ex-info "Reading source differs from adapter"
-                                  {:kind :reading/adapter-source-mismatch :id (:id item)}))))]
+            drift (reading-drift open-items coverage)
+            read-ids (set (:read drift))
+            excluded-ids (set (concat (:unread-new drift)
+                                      (:reading-source-changed drift)))
+            partial? (or (seq (:unread-new drift)) (seq (:reading-source-changed drift)))
+            member-status (into {} (map (juxt :id :status)) (:members coverage))
+            ;; Coverage says PARTIAL with exact counts when any open item
+            ;; stayed out; a corpus member that is no longer open does not
+            ;; count against completeness (it is ignored, but reported).
+            coverage' (assoc coverage
+                             :status (if partial? :partial :complete)
+                             :open-item-count (count open-items)
+                             :drift-counts {:read (count read-ids)
+                                            :unread-new (count (:unread-new drift))
+                                            :reading-source-changed
+                                            (count (:reading-source-changed drift))
+                                            :members-not-open
+                                            (count (:members-not-open drift))}
+                             :drift (select-keys drift [:unread-new
+                                                        :reading-source-changed
+                                                        :members-not-open]))]
         (-> adapter
             (assoc :reading-evidence reading)
+            (assoc :reading-drift {:status (:status coverage')
+                                   :open-item-count (:open-item-count coverage')
+                                   :drift-counts (:drift-counts coverage')
+                                   :drift (:drift coverage')})
+            ;; Excluded, never silently dropped: every drifted open item is
+            ;; a typed exclusion row (excluded.edn carries it into the run).
+            (update :excluded into
+                    (concat (map (fn [id] {:id id :reason :unread-new
+                                           :member-status (get member-status id)})
+                                 (:unread-new drift))
+                            (map (fn [id] {:id id :reason :reading-source-changed})
+                                 (:reading-source-changed drift))))
             (assoc-in [:input :edges] (:edges reading))
-            (assoc-in [:input :graph-coverage] coverage)
+            (assoc-in [:input :graph-coverage] coverage')
             (assoc-in [:input :reading-evidence] (dissoc reading :checked-records))
+            ;; Drifted items stay OUT of the graph: only read items remain,
+            ;; each still pinned to the exact member record (source-pin
+            ;; equality held for every one of them).
             (update-in [:input :items]
                        (fn [items]
-                         (mapv #(assoc % :dependency-reading
-                                       (get by-id (name (:id %)))) items))))))))
+                         (mapv (fn [item]
+                                 (if (contains? read-ids (:id item))
+                                   (assoc item :dependency-reading
+                                          (get by-id (name (:id item))))
+                                   item))
+                               (remove #(contains? excluded-ids (:id %)) items)))))))))
 
 (defn combined-pass
   "Compute population-relative terms from the complete checked outgoing graph.
@@ -112,7 +171,6 @@
         ticket-provenance (provenance/project input)
         items (into {} (map (juxt :id identity)) (:items input))
         coverage (:graph-coverage input)
-        incomplete? (not= :complete (:status coverage))
         evidence (:reading-evidence input)
         ;; Missing/unresolved/out-of-scope prerequisites remain unknown for their
         ;; reading member. Non-prerequisite links do not enter readiness.
@@ -126,14 +184,21 @@
         unknowns (set (keys missing))
         scope {:scope (:scope coverage)
                :population-sha (:population-sha coverage)
-               :coverage (select-keys coverage [:status :member-count :counts :checker-sha])}
+               :coverage (select-keys coverage [:status :member-count :counts
+                                                :checker-sha :open-item-count
+                                                :drift-counts])}
         rows (mapv (fn [row]
                      (let [item (get items (:id row))
-                           unknown? (or incomplete? (contains? unknowns (name (:id row))))]
+                           ;; Partial drift (claude-1, 2026-10-31) zeroes
+                           ;; nothing wholesale: a row is unknown exactly
+                           ;; when its own reading is not :read or one of
+                           ;; its prerequisite readings is missing/rejected.
+                           unread? (not= :read (get-in item [:dependency-reading :status]))
+                           unknown? (or unread? (contains? unknowns (name (:id row))))]
                        (cond-> (assoc row :dependency-reading (:dependency-reading item)
                                           :graph-terms (cond-> (assoc scope :status (if unknown? :unknown :known))
-                                                         unknown? (assoc :reason (if incomplete?
-                                                                                  :population-reading-incomplete
+                                                         unknown? (assoc :reason (if unread?
+                                                                                  :dependency-reading-unread
                                                                                   :prerequisite-unresolved)
                                                                          :prerequisites (vec (get missing (name (:id row))))
                                                                          :producer :dependency-reader-reviewer)))
