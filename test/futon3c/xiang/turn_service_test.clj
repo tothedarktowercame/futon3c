@@ -809,6 +809,66 @@
                            :witness {:resolution-evidence-id "e-1"
                                      :relation "depends-on"}})))))))
 
+(deftest pattern-outcome-cites-the-retrieved-candidate-and-persists
+  (let [appended (atom [])
+        h (harness {:draft fake-draft
+                    :pattern-candidates
+                    (fn [queries]
+                      (into {} (map (fn [q] [q [{:id "social/x" :score 0.9 :title "X"}]])
+                                    queries)))
+                    :evidence! (fn [e] (swap! appended conj e) {:ok true})})
+        {:keys [id record]} (turn! h {:dispatch :now})
+        store (get-in (:svc h) [:config :store])]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "used X" :commits []})
+    (let [request {:pattern-id "social/x"
+                   :outcome :applied
+                   :witness {:outcome-evidence-id "e-assessment-1"
+                             :use-evidence-id "e-use-1"
+                             :effect "The port retained the pattern's retry boundary."}}
+          result (svc/record-pattern-outcome! (:svc h) id request)
+          stored (first (:pattern_outcomes (ts/read-record store id)))]
+      (is (= "social/x" (:pattern_id stored)))
+      (is (seq (:retrievals stored)))
+      (is (every? #(= {:id "social/x" :score 0.9 :title "X"} (:candidate %))
+                  (:retrievals stored)))
+      (is (= (:evidence-id (:evidence result)) (:evidence_id stored)))
+      (is (= :applied (get-in result [:evidence :body :outcome])))
+      (is (:idempotent? (svc/record-pattern-outcome! (:svc h) id request)))
+      (is (= 1 (count (:pattern_outcomes (ts/read-record store id)))))
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"different outcome"
+           (svc/record-pattern-outcome!
+            (:svc h) id
+            (assoc-in request [:witness :effect] "A rewritten effect.")))))))
+
+(deftest pattern-outcome-refuses-invented-candidates-and-unwitnessed-residuals
+  (let [h (harness)
+        {:keys [id record]} (turn! h {:dispatch :none})
+        store (get-in (:svc h) [:config :store])]
+    (ts/write-pattern-candidates! store id
+                                  {"turn query" [{:id "pattern/real" :score 0.8}]})
+    (testing "outcomes cannot be attached before the turn settles"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"settled turn"
+                            (svc/record-pattern-outcome!
+                             (:svc h) id {:pattern-id "pattern/real" :outcome :obvious
+                                          :witness {:outcome-evidence-id "e-1"
+                                                    :rationale "Already explicit."}}))))
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (svc/attach-happened! (:svc h) id {:reply "done" :commits []})
+    (testing "the candidate id must come from the actual sidecar"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not retrieved"
+                            (svc/record-pattern-outcome!
+                             (:svc h) id {:pattern-id "pattern/invented" :outcome :obvious
+                                          :witness {:outcome-evidence-id "e-2"
+                                                    :rationale "No new information."}}))))
+    (testing "adaptation cannot hide what failed to fit"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"residual-evidence-id"
+                            (svc/record-pattern-outcome!
+                             (:svc h) id {:pattern-id "pattern/real" :outcome :adapted
+                                          :witness {:outcome-evidence-id "e-3"
+                                                    :adaptation "Broaden it."}}))))))
+
 (deftest an-analysed-turn-posts-classical-scope-hyperedges
   (let [edges (atom [])
         h (harness {:scope-async! (fn [f] (f))

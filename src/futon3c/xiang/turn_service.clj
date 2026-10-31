@@ -655,6 +655,99 @@
       {:id id :resolution stored :evidence entry
        :idempotent? (boolean existing) :append append-result})))
 
+(def ^:private pattern-outcome-fields
+  {:applied [:use-evidence-id :effect]
+   :adapted [:residual-evidence-id :residual-quote :adaptation]
+   :rejected [:residual-evidence-id :residual-quote :reason]
+   :obvious [:rationale]})
+
+(defn- required-pattern-outcome-witness!
+  [outcome witness]
+  (when-not (map? witness)
+    (throw (ex-info "Pattern outcome requires a witness map"
+                    {:reason :invalid-pattern-outcome :field :witness})))
+  (doseq [field (cons :outcome-evidence-id (get pattern-outcome-fields outcome))]
+    (when (str/blank? (str (get witness field)))
+      (throw (ex-info (str "Pattern outcome witness requires " field)
+                      {:reason :invalid-pattern-outcome :field field}))))
+  witness)
+
+(defn- retrieved-patterns
+  [store id pattern-id]
+  (->> (ts/read-pattern-candidates store id)
+       (mapcat (fn [[query hits]]
+                 (for [candidate hits
+                       :when (= pattern-id (str (:id candidate)))]
+                   {:query (name query)
+                    :candidate (select-keys candidate [:id :score :title])})))
+       (sort-by :query)
+       vec))
+
+(defn record-pattern-outcome!
+  "Record what happened to one pattern actually retrieved for a settled turn.
+
+  The candidate sidecar is authoritative: an arbitrary pattern id is refused.
+  Repeating an identical outcome is idempotent; changing it is refused so that
+  later learning sees an observation history rather than an overwritten label."
+  [svc id {:keys [pattern-id outcome witness]}]
+  (let [store (cfg svc :store)
+        record (or (ts/read-record store id)
+                   (throw (ex-info "Turn record not found"
+                                   {:reason :record-not-found :id id})))
+        _ (when-not (and (contains? #{"analyzed" "drafted"} (:analysis_status record))
+                         (:happened_summary record))
+            (throw (ex-info "Pattern outcomes require a settled turn"
+                            {:reason :turn-not-settled :id id})))
+        pattern-id (str pattern-id)
+        _ (when (str/blank? pattern-id)
+            (throw (ex-info "Pattern outcome requires pattern-id"
+                            {:reason :invalid-pattern-outcome :field :pattern-id})))
+        outcome (some-> outcome name keyword)
+        _ (when-not (contains? pattern-outcome-fields outcome)
+            (throw (ex-info "Unknown pattern outcome"
+                            {:reason :invalid-pattern-outcome :field :outcome})))
+        retrievals (retrieved-patterns store id pattern-id)
+        _ (when-not (seq retrievals)
+            (throw (ex-info "Pattern was not retrieved for this turn"
+                            {:reason :pattern-candidate-not-found :pattern-id pattern-id})))
+        witness (required-pattern-outcome-witness! outcome witness)
+        event-id (str "e-xiang-pattern-outcome-"
+                      (sha1-hex (str id "|" pattern-id "|" (name outcome) "|"
+                                     (pr-str (into (sorted-map) witness)))))
+        recorded-at (iso (now-ms svc))
+        stored {:evidence_id event-id
+                :pattern_id pattern-id
+                :outcome (name outcome)
+                :retrievals retrievals
+                :witness witness
+                :recorded_at recorded-at}
+        existing (some #(when (= pattern-id (:pattern_id %)) %)
+                       (:pattern_outcomes record))]
+    (when (and existing (not= event-id (:evidence_id existing)))
+      (throw (ex-info "Retrieved pattern already has a different outcome"
+                      {:reason :pattern-outcome-exists :pattern-id pattern-id})))
+    (when-not existing
+      (ts/update-record! store id #(update % :pattern_outcomes (fnil conj []) stored)))
+    (let [entry {:evidence-id event-id
+                 :in-reply-to (:evidence_id record)
+                 :subject {:ref/type :thread :ref/id id}
+                 :type :coordination
+                 :claim-type :assert
+                 :author "xiang-turn-service"
+                 :session-id (:session_id record)
+                 :body {:event :pattern-outcome
+                        :turn-record-id id
+                        :pattern-id pattern-id
+                        :retrievals retrievals
+                        :outcome outcome
+                        :witness witness
+                        :recorded-at recorded-at}
+                 :tags [:xiang-pattern-outcome
+                        (keyword (str "pattern-outcome-" (name outcome)))]}
+          append-result (append-evidence! svc entry (cfg svc :store-busy-delays))]
+      {:id id :outcome stored :evidence entry
+       :idempotent? (boolean existing) :append append-result})))
+
 ;; ---------------------------------------------------------------------------
 ;; Ports (the HAPPENED / DIDN'T HAPPEN heads-up display)
 

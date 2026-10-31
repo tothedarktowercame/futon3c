@@ -78,6 +78,29 @@ typed relevance witnesses were supplied. Four open repair tickets have a
 completed/cancelled origin and are specifically classified
 `closed-origin-open-ticket`.
 
+## Step 4 — record retrieved-pattern outcomes
+
+The turn action `POST /api/alpha/xiang/turns/:id/pattern-outcome` records what
+happened to a pattern retrieved for that specific turn: `applied`, `adapted`,
+`rejected`, or `obvious`.
+
+- The pattern ID must occur in the turn's candidate sidecar. A caller cannot
+  manufacture a positive or negative observation for an unretrieved pattern.
+- Outcomes are accepted only after the analyzed/drafted turn has a happened
+  summary, so retrieval is compared with an observed result.
+- Every outcome cites an assessment evidence ID. Application also cites use
+  evidence and its effect; adaptation and rejection cite the unresolved text
+  and its evidence; `obvious` records why the retrieval added no information.
+- The file record is updated before Evidence Landscape. An identical retry is
+  idempotent, while a conflicting label is refused.
+
+### Demo made possible
+
+For a settled turn whose sidecar retrieved `social/x`, the service can record
+that it was applied and cite the concrete effect. An invented pattern ID is
+refused, and an adaptation without an evidenced residual is refused. This
+creates attested use observations without treating retrieval itself as use.
+
 `T-evidence-pinned-to-mutable-prose-26082026` carries two matching attestations
 for `part-of E-R8-red-ring-fill` (checked reading plus pinned source). The
 population currently calls that excursion `unstarted`, not closed, so this

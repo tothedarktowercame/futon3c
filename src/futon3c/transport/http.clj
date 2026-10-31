@@ -12242,10 +12242,14 @@
                  :invalid-analysis 400
                  :invalid-record-id 400
                  :invalid-relationship-resolution 400
+                 :invalid-pattern-outcome 400
                  :record-not-found 404
                  :relationship-review-not-found 404
+                 :pattern-candidate-not-found 404
                  :analysis-exists 409
                  :relationship-already-resolved 409
+                 :turn-not-settled 409
+                 :pattern-outcome-exists 409
                  500)]
     (json-response status (merge {:ok false :reason reason :message (.getMessage e)}
                                  (select-keys data [:field :sentence])))))
@@ -12365,6 +12369,16 @@
           (json-response (if (:idempotent? result) 200 201)
                          {:ok true :id id
                           :resolution (:resolution result)
+                          :idempotent (:idempotent? result)}))
+
+        "pattern-outcome"
+        (let [result (xiang-turns/record-pattern-outcome!
+                      svc id {:pattern-id (some-> (:pattern-id payload) str)
+                              :outcome (:outcome payload)
+                              :witness (:witness payload)})]
+          (json-response (if (:idempotent? result) 200 201)
+                         {:ok true :id id
+                          :outcome (:outcome result)
                           :idempotent (:idempotent? result)}))
 
         (json-response 404 {:ok false :reason :unknown-action :action action}))
@@ -12683,8 +12697,8 @@
             (json-response 404 {:ok false :reason :record-not-found :id id}))
           (catch clojure.lang.ExceptionInfo e (xiang-refusal e))))
 
-      (and (= :post method) (re-matches #"/api/alpha/xiang/turns/([^/]+)/([a-z]+)" uri))
-      (let [[_ raw action] (re-find #"/api/alpha/xiang/turns/([^/]+)/([a-z]+)" uri)]
+      (and (= :post method) (re-matches #"/api/alpha/xiang/turns/([^/]+)/([a-z-]+)" uri))
+      (let [[_ raw action] (re-find #"/api/alpha/xiang/turns/([^/]+)/([a-z-]+)" uri)]
         (handle-xiang-turn-action request config (enc/decode-uri-component raw) action))
 
       :else nil)))
