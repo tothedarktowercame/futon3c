@@ -472,6 +472,13 @@
                             :edges-file edges})]
     (println "run dir:" (:dir result))
     (println "run id:" (:run-id result))
+    ;; The mint's own input digest, same convention as check-freshness, so
+    ;; the caller can confirm the write matches the input it probed with
+    ;; WITHOUT a third JVM start (2026-10-31: probe+mint+re-probe took the
+    ;; click preparation past five minutes when it minted twice).
+    (println "input-sha256:" (sha256 (.getBytes ^String
+                                              (print-edn (:input adapter-result))
+                                              "UTF-8")))
     (println "open:" (get-in pass-output [:counts :open])
              "ready:" (get-in pass-output [:counts :ready])
              "ready ignoring externals:"

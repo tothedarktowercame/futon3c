@@ -40,6 +40,42 @@
       (is (every? #(and (nil? (:cone %)) (nil? (:unblocks %))) (:order pass)))
       (is (every? #(= (:population-sha coverage) (get-in % [:graph-terms :population-sha])) (:order pass))))))
 
+(deftest checker-results-are-temp-path-free-and-deterministic
+  ;; The checker runs on a random temp file; its output used to embed that
+  ;; path, making the coverage certificate -- and so input.edn's sha256 and
+  ;; the minted run id -- differ on every run over an identical corpus.  Two
+  ;; consumes over the same fixture must agree byte-for-byte.
+  (let [dir (java.nio.file.Files/createTempDirectory "giraffe-scrub-" (make-array java.nio.file.attribute.FileAttribute 0))
+        checker (.getPath (io/file (str dir) "check_edges.py"))
+        members (.getPath (io/file (str dir) "members.json"))
+        batch (.getPath (io/file (str dir) "batch-00.jsonl"))
+        line "{\"id\":\"E-a\",\"edges\":[],\"unresolved\":[]}"]
+    (try
+      (spit checker (str "#!/usr/bin/env python3\n"
+                         "import sys\n"
+                         "sys.stderr.write(sys.argv[1] + ':1 E-a source file changed since the census\\n')\n"
+                         "print(sys.argv[1] + ':1 E-a source file changed since the census')\n"
+                         "sys.exit(1)\n"))
+      (spit members "[{\"id\":\"E-a\",\"path\":\"x\",\"sha256\":\"00\"}]")
+      (spit batch (str line "\n"))
+      (let [opts {:checker checker :members-file members :batches [batch]
+                  :repos missions/default-repos}
+            one (readings/consume opts)
+            two (readings/consume opts)
+            text (pr-str (:coverage one))
+            messages (mapcat #(mapcat (juxt :out :err) (:checker-results %))
+                             (get-in one [:coverage :members]))]
+        (is (= (:coverage one) (:coverage two)))
+        (is (= (:checked-records one) (:checked-records two)))
+        (is (= 1 (get-in one [:coverage :counts :unread])))
+        (is (pos? (count messages)))
+        (is (every? #(str/includes? % "giraffe-reading-line:1 E-a") messages))
+        (is (nil? (re-find #"giraffe-reading-\d+" text))))
+      (finally
+        (run! #(try (io/delete-file %) (catch Exception _))
+              [checker members batch])
+        (.delete (.toFile dir))))))
+
 (deftest duplicate-pilot-record-is-ambiguous
   (let [file (java.io.File/createTempFile "giraffe-duplicate-" ".jsonl")
         line (first (str/split-lines (slurp (str root "batch-00.jsonl"))))]
