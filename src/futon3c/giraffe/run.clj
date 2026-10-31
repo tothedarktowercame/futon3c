@@ -245,18 +245,24 @@
                              (report {:input input
                                       :adapter-rejected rejected
                                       :pass pass-output}))
-        manifest {:run-id run-id
-                  :git-sha (or git-sha (git-head-sha))
-                  :files (cond-> [(dissoc input-entry :bytes)
-                                  rejected-entry pass-entry clusters-entry report-entry]
-                           excluded-entry (conj excluded-entry))
-                  :sources (cond-> {}
-                             index-file (assoc :tickets-index
-                                               {:path (str index-file)
-                                                :sha256 (sha256 (io/file index-file))})
-                             edges-file (assoc :edges
-                                               {:path (str edges-file)
-                                                :sha256 (sha256 (io/file edges-file))}))}]
+        manifest (cond-> {:run-id run-id
+                          :git-sha (or git-sha (git-head-sha))
+                          :files (cond-> [(dissoc input-entry :bytes)
+                                          rejected-entry pass-entry clusters-entry report-entry]
+                                   excluded-entry (conj excluded-entry))
+                          :sources (cond-> {}
+                                     index-file (assoc :tickets-index
+                                                       {:path (str index-file)
+                                                        :sha256 (sha256 (io/file index-file))})
+                                     edges-file (assoc :edges
+                                                       {:path (str edges-file)
+                                                        :sha256 (sha256 (io/file edges-file))}))}
+                    ;; Reading drift is reported in the manifest (partial,
+                    ;; with exact counts) so a run never passes as fully
+                    ;; read what was not -- and drifted items stay visibly
+                    ;; excluded (excluded.edn), never silently dropped.
+                    (:reading-drift adapter-result)
+                    (assoc :reading-drift (:reading-drift adapter-result)))]
     (write! "manifest.edn" (print-edn manifest))
     {:run-id run-id :dir (str dir) :manifest manifest}))
 
