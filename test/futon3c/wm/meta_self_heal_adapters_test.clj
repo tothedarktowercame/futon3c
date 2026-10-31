@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell]
             [clojure.string :as str]
+            [futon2.aif.cause-scope :as cause-scope]
             [futon2.aif.meta-injury-ledger :as ledger]
             [futon2.aif.meta-injury-store :as injury-store]
             [futon2.aif.meta-repair-coordinator :as coordinator]
@@ -854,6 +855,72 @@
                "Return exactly one EDN map and no prose"
                "Bind every returned identity and pin to this request"]]
       (is (str/includes? prompt s) s))))
+
+(deftest diagnosis-prompt-states-the-complete-cause-scope-grammar
+  ;; P4 click wm-click-0930ccf1 (2026-10-31): the prompt asked for a
+  ;; '<closed result predicate>' without stating the op-map grammar that
+  ;; cause-scope/predicate? accepts, so the diagnosis seat
+  ;; returned a fn-literal STRING and the boundary refused
+  ;; :cause-scope/predicate-not-result-derived. The prompt must now carry
+  ;; the complete existing grammar inline (zai-5 review 3bbfeabe7, branch
+  ;; futon2 review/p4-diagnosis-evidence-correction).
+  (let [prompt (#'sut/producer-prompt :diagnosis {:injury {:id "injury/x"}})]
+    (doseq [s [":result-path-equals" ":result-path-present" ":result-path-absent"
+               ;; map-only, no code/functions/function-strings:
+               "never code, a function, or a function string"
+               ;; input/result semantics: :path is evaluated on the RETURN
+               ;; VALUE of the named boundary applied to the pinned retained
+               ;; carrier, not on the original record:
+               "RETURN VALUE of the named boundary applied to the pinned retained carrier"
+               "NOT on the original record"
+               ;; :value required for equals, nil a valid value:
+               "REQUIRED for :result-path-equals"
+               "nil is a valid value"
+               ;; op semantics:
+               ":result-path-present means the path has an entry (value may be nil or false)"
+               ":result-path-absent means the path has no entry"
+               ;; boundary must accept the actual carrier:
+               "it must accept the actual retained carrier named by :input"
+               ;; justified choice, refusal if none:
+               "Choose a meaningful result-derived condition"
+               "refuse with :cause-scope-unretained"
+               ;; no prescription for this injury:
+               "No predicate is prescribed for you"
+               "no example op is implied as correct for this injury"]]
+      (is (str/includes? prompt s) s))
+    (is (not (str/includes? prompt ":path [:failure]"))
+        "the prompt must not imply any specific predicate for this injury")))
+
+(deftest prompt-grammar-agrees-with-the-real-cause-scope-predicate-verifier
+  ;; The prompt contract and the real verifier must agree: the actual
+  ;; response shape from click 0930ccf1 (a fn-literal string) is refused by
+  ;; the real cause-scope/predicate?; every documented map shape
+  ;; is admitted; malformed maps are rejected; equals-missing-value vs
+  ;; equals-present-nil are distinguished.
+  (let [actual-0930ccf1-response "(fn [record] (nil? (:failure record)))"]
+    (is (false? (cause-scope/predicate? actual-0930ccf1-response))
+        "the actual returned function string is refused by the real verifier")
+    (testing "every documented map grammar is admitted"
+      (doseq [p [{:op :result-path-equals :path [:a :b] :value 1}
+                 {:op :result-path-equals :path [:a] :value nil}
+                 {:op :result-path-present :path [:a]}
+                 {:op :result-path-absent :path [:a :b :c]}]]
+        (is (true? (cause-scope/predicate? p)) (pr-str p))))
+    (testing "malformed maps are rejected"
+      (doseq [p [{}
+                 {:op :unknown-op :path [:a]}
+                 {:op :result-path-equals :path [:a]}          ;; missing :value
+                 {:op :result-path-equals :value 1}            ;; missing :path
+                 {:op :result-path-equals :path "not-a-vector" :value 1}]]
+        (is (false? (cause-scope/predicate? p)) (pr-str p))))
+    (testing "extra keys are tolerated by the existing verifier (open map)"
+      (is (true? (cause-scope/predicate?
+                  {:op :result-path-present :path [:a] :extra :ignored}))))
+    (testing "equals-missing-value vs equals-present-nil are distinguished"
+      (is (true? (cause-scope/predicate?
+                  {:op :result-path-equals :path [:a] :value nil})))
+      (is (false? (cause-scope/predicate?
+                   {:op :result-path-equals :path [:a]}))))))
 
 (deftest work-order-identities-complete-the-production-work-order
   "Click wm-click-c78d0f27 (2026-10-19): the service forwarded only port
