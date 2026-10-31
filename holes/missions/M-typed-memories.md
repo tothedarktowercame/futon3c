@@ -84,7 +84,7 @@ use. Phases 1–3 are accepted live; Phase 4 is next.
 - [x] P0 records typed memories from a real Zai session and retrieves them through the memory substrate. (evidence: this file, “P0 ACCEPTANCE MET”)
 - [x] P1 surfaces an earlier memory during pattern selection, records its cited use, and attaches an independently witnessed outcome. (evidence: `holes/missions/M-shared-memory-control-build-test.md`, accepted Phases 1–3)
 - [ ] P1b produces a traceable candidate pattern when every bounded R6 candidate is rejected, and a later witnessed trial changes that candidate's status or precision.
-- [ ] P2 demonstrates supersession with correct current and as-of answers while retaining the correction event.
+- [x] P2 demonstrates supersession with correct current and as-of answers while retaining the correction event. (evidence: `test/futon3c/peripheral/memory_supersession_asof_test.clj` — production `supersede-memory!`/`recall-by-endpoint` over a bitemporal graph fixture; current recall returns only the correcting memory, as-of before the correction returns the original, the challenge episode is retained, and the original edge survives as a superseded version)
 - [ ] P3 performs a facet split as a graph operation without rewriting any memory.
 - [ ] P4 records a real declare → record → attach → fill → promote arc and its measured time-to-fill.
 
