@@ -331,6 +331,58 @@
                            :actual-sha256 actual}))]
     {:ok? (empty? mismatches) :mismatches (vec mismatches)}))
 
+;; -------------------------------------------------- freshness (no write)
+
+(defn- field-run?
+  "Does this run's manifest describe the missions Giraffe field (not a
+  tickets-only run)?  Mirrors the consumer-side filter
+  futon2.aif.full-loop-runtime/missions-giraffe-manifest?: a manifest
+  whose :sources carries :tickets-index fed the tickets adapter and is
+  not the field a click consumes."
+  [manifest]
+  (not (contains? (:sources manifest) :tickets-index)))
+
+(defn newest-field-run
+  "The newest verified run under ROOT whose manifest describes the
+  missions field (runs are ordered by directory name, the same
+  newest-first order futon2's find-giraffe-run uses).  Returns
+  {:run-id ... :input-sha256 ...} for the first run that verifies
+  under verify-run, or nil when none does.  Read-only."
+  [root]
+  (->> (io/file root)
+       (file-seq)
+       (filter #(.isDirectory ^java.io.File %))
+       (remove #(= (io/file root) %))
+       (sort-by #(.getName ^java.io.File %) #(compare %2 %1))
+       (some (fn [dir]
+               (try
+                 (let [manifest (edn/read-string
+                                 (slurp (io/file dir "manifest.edn")))]
+                   (when (and (field-run? manifest)
+                              (:ok? (verify-run dir)))
+                     {:run-id (.getName ^java.io.File dir)
+                      :input-sha256 (sha256 (io/file dir "input.edn"))}))
+                 (catch Exception _ nil))))))
+
+(defn check-freshness
+  "Compare the adapter input freshly computed from the same sources the
+  field is minted from with the input of the newest verified field run
+  under ROOT.  Prints one machine-readable block and writes NOTHING --
+  this is the staleness probe the WM click preparation gates its mint
+  on (deficits row Q1-GIRAFFE-FIELD-STALENESS)."
+  [{:keys [root adapter-result]}]
+  (let [adapter-sha (sha256 (.getBytes ^String (print-edn (:input adapter-result))
+                                       "UTF-8"))
+        newest (newest-field-run root)
+        newest-sha (:input-sha256 newest)
+        fresh? (boolean (and newest-sha (= newest-sha adapter-sha)))]
+    (println "giraffe-check-fresh")
+    (println "adapter-input-sha256:" adapter-sha)
+    (println "newest-verified-run-id:" (or (:run-id newest) "-"))
+    (println "newest-verified-input-sha256:" (or newest-sha "-"))
+    (println "fresh:" (if fresh? "true" "false"))
+    {:fresh? fresh? :newest newest :adapter-input-sha256 adapter-sha}))
+
 ;; ---------------------------------------------------------------- main
 
 (defn- merge-args [args]
@@ -346,9 +398,13 @@
 
   Runs the chosen source adapter (default tickets) plus the edges
   file, the Giraffe pass, and writes one run directory.  Prints the
-  run dir and manifest path."
+  run dir and manifest path.  With --check-fresh computes the adapter
+  input, compares it with the newest verified field run under --root,
+  prints the freshness block and writes NOTHING (staleness probe)."
   [& args]
-  (let [{:strs [edges only root run-id source repos readings-root]} (merge-args args)
+  (let [check-fresh? (some #{ "--check-fresh" } args)
+        {:strs [edges only root run-id source repos readings-root]}
+        (merge-args (remove #{"--check-fresh"} args))
         source (or source "tickets")
         _ (when (str/blank? (str edges))
             (throw (ex-info "--edges <file> is required"
@@ -397,6 +453,10 @@
                            :edges-file edges
                            :only only-ids}))
         pass-output ((if combined? excursions/combined-pass gp/pass) (:input adapter-result))
+        _ (when check-fresh?
+            (check-freshness {:root (or root default-root)
+                              :adapter-result adapter-result})
+            (System/exit 0))
         result (write-run! {:root (or root default-root)
                             :run-id run-id
                             :adapter-result adapter-result
