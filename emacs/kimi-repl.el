@@ -523,7 +523,8 @@ With prefix argument, prompt for a clock TARGET."
              ids)
         (dolist (pair (alist-get 'agents data) (nreverse ids))
           (let ((id (symbol-name (car pair))))
-            (when (equal (alist-get 'type (cdr pair)) "kimi")
+            (when (or (equal (alist-get 'type (cdr pair)) "kimi")
+                      (string-prefix-p "kimi" id))
               (push id ids)))))
     (error nil)))
 
