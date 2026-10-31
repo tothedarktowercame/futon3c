@@ -144,11 +144,17 @@
           (is (zero? @spent)))))))
 
 (deftest default-provider-denies-and-request-cannot-install-trust
+  ;; Contract after the preflight-standing-verifier fix: with no provider,
+  ;; admission installs NO verifier at all (nil) — the standing resolver is
+  ;; composed downstream by futon2's medic-authority-verifier (P1) and is
+  ;; itself fail-closed. A deny-all placeholder here used to poison the
+  ;; pre-ration preflight ledger read (run 2026-10-31-bc036e43).
   (let [resolved (#'service/acquire-medic-authority
                   {:meta-medic-authority-context context
                    :meta-medic-authority-verifier (constantly true)})]
     (is (= {:status :absent}
            (get-in resolved [:meta-medic-authority-identity :authority])))
     (is (nil? (:meta-medic-authority-resolution resolved)))
-    (is (false? ((:meta-medic-authority-verifier resolved) {})))
+    (is (nil? (:meta-medic-authority-verifier resolved))
+        "no-provider admission must not install any verifier — deny-all or otherwise")
     (is (nil? (:meta-medic-authority-context resolved)))))
