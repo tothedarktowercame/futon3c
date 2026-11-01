@@ -426,6 +426,7 @@
                              :order/not-ready-by-source-order)
                    :status (:status r)
                    :unblocks unb-n :cone cone-n
+                   :stale-markers (get-in items-by-id [id :stale-markers] [])
                    :source-order (source-order id)}))
               (sort-by (fn [id]
                          [(if (= :ready (:status (get readiness id))) 0 1)
