@@ -101,6 +101,36 @@
                            "round budget exhausted mid-task"))
         (is (some #(= {:type "text" :text "[auto-continue 1/8]"} %) @events)))))))
 
+(defn- truncated-response
+  [text]
+  (assoc-in (text-response text) [:choices 0 :finish_reason] "length"))
+
+(deftest reply-cut-off-at-output-limit-continues-rather-than-ending
+  (let [calls (atom [])
+        responses (atom [(truncated-response "long reasoning") (text-response "done")])
+        invoke (make-invoke {})]
+    (with-redefs-fn {#'zai/chat! (fn [_client _opts messages]
+                                   (swap! calls conj messages)
+                                   (let [resp (first @responses)]
+                                     (swap! responses rest)
+                                     resp))}
+      (fn []
+        (let [result (invoke "go" nil)
+              nudges (filter #(and (= "user" (:role %))
+                                   (str/starts-with? (:content %) "[harness output-limit "))
+                             (last @calls))]
+          (is (= 2 (count @calls)) "the turn must not end on the cut-off reply")
+          (is (= "done" (:result result)))
+          (is (nil? (:error result)))
+          (is (= 1 (count nudges))))))))
+
+(deftest reply-cut-off-with-no-continuations-left-is-an-error-not-done
+  (let [invoke (make-invoke {:auto-continue-max 1})]
+    (with-redefs-fn {#'zai/chat! (fn [_client _opts _messages]
+                                   (truncated-response "long reasoning"))}
+      (fn []
+        (is (= "output-truncated" (:error (invoke "go" nil))))))))
+
 (deftest natural-completion-does-not-inject-auto-continue
   (let [calls (atom [])
         invoke (make-invoke {})]

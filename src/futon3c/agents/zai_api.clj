@@ -1899,6 +1899,13 @@ CALLS contains maps of tool name, arguments, and result digest."
    (or x (getenv "FUTON3C_ZAI_AUTO_CONTINUE_MAX"))
    default-auto-continue-max))
 
+(defn- output-limit-message
+  [n cap]
+  (str "[harness output-limit " n "/" cap
+       ": your last reply was cut off at the output limit, and it made no tool call, "
+       "so nothing from it was saved. Do not repeat it. Take the next concrete step "
+       "with a tool now, and keep replies short.]"))
+
 (defn- auto-continue-message
   [n cap]
   (if (= n cap)
@@ -2165,15 +2172,34 @@ CALLS contains maps of tool name, arguments, and result digest."
                      (or (:retained-images opts) default-retained-images))
                   (recur (dec remaining) (str final-text text) auto-continues true
                          (inc round-n) report-reserved?)))
-                (do
-                  (persist-round! {:evidence-store (:evidence-store ctx)
-                                   :agent-id agent-id :sid sid
-                                   :turn-id (:turn-id ctx) :profile (:profile ctx)
-                                   :round round-n
-                                   :text (if (str/blank? text) final-text text)
-                                   :calls [] :final? true :usage usage})
-                  {:result (if (str/blank? text) final-text text)
-                   :session-id sid}))))))))
+                ;; A reply cut off at max_tokens has no tool calls, so it used to
+                ;; pass as the final answer and the job ended `done` with nothing
+                ;; saved (found live 2026-10-31: four kimi lemma jobs).
+                (let [truncated? (= "length" (get-in resp [:choices 0 :finish_reason]))]
+                  (if (and truncated? (< auto-continues auto-continue-max))
+                    (let [n (inc auto-continues)]
+                      (persist-round! {:evidence-store (:evidence-store ctx)
+                                       :agent-id agent-id :sid sid
+                                       :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                       :round round-n
+                                       :text text
+                                       :calls [] :usage usage})
+                      (swap! !messages conj {:role "user"
+                                             :content (output-limit-message n auto-continue-max)})
+                      (sink! agent-id {:type "text"
+                                       :text (str "[output-limit " n "/" auto-continue-max "]")})
+                      (recur remaining (str final-text text) n false
+                             (inc round-n) report-reserved?))
+                    (do
+                      (persist-round! {:evidence-store (:evidence-store ctx)
+                                       :agent-id agent-id :sid sid
+                                       :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                       :round round-n
+                                       :text (if (str/blank? text) final-text text)
+                                       :calls [] :final? true :usage usage})
+                      (cond-> {:result (if (str/blank? text) final-text text)
+                               :session-id sid}
+                        truncated? (assoc :error "output-truncated"))))))))))))
       ;; Every turn ends with exactly one final round row: the normal end
       ;; writes it above; the interrupted, wall-clock and max-rounds exits
       ;; write it here, with :stop. It is the turn's finalising row
