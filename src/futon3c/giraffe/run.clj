@@ -25,6 +25,7 @@
             [futon3c.giraffe.missions :as gm]
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
+            [futon3c.giraffe.stale-markers :as stale]
             [futon3c.giraffe.tickets :as gt]))
 
 (def default-root "/home/joe/code/storage/giraffe/")
@@ -155,6 +156,27 @@
              src-entries
              (concat order (repeat {:id :none-listed :status :none
                                     :reason :none :cone 0 :unblocks 0})))
+        [""
+         "## Needs operator disposition"
+         ""]
+        (let [marked (filter (comp seq :stale-markers) order)]
+          (if (seq marked)
+            (mapcat (fn [{:keys [rank id status stale-markers]}]
+                      (concat [(format "### %s (rank %s, status %s)"
+                                       (name id) rank (name status))]
+                              (map (fn [marker]
+                                     (case (:kind marker)
+                                       :body-closeout
+                                       (format "- body-closeout, line %s: \"%s\""
+                                               (:line marker) (:quote marker))
+                                       :timebox-expired
+                                       (format "- timebox-expired: %s + %s weeks (expired %s)"
+                                               (:date marker) (:weeks marker)
+                                               (:expired-on marker))))
+                                   stale-markers)
+                              [""]))
+                    marked)
+            ["- none"]))
         [""]
         (let [waiting (for [{:keys [id]} order
                             :let [r (get readiness id)]
@@ -458,6 +480,7 @@
                            :index-file default-index-file
                            :edges-file edges
                            :only only-ids}))
+        adapter-result (update adapter-result :input stale/annotate-input)
         pass-output ((if combined? excursions/combined-pass gp/pass) (:input adapter-result))
         _ (when check-fresh?
             (check-freshness {:root (or root default-root)
