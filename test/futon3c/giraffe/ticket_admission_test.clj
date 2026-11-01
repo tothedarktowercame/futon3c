@@ -45,7 +45,7 @@
     (is (every? #(= :dependency-reader-reviewer (get-in % [:dependency-reading :producer])) rows))
     ;; typed completion: schema + producer present; A4 contract absence is
     ;; typed (:completion-definition-not-found), never a synthesized class.
-    (is (every? #(= :wm/completion-surface-v1 (:schema (:completion %))) rows))
+    (is (every? #(= :wm/completion-surface-v2 (:schema (:completion %))) rows))
     (is (every? #(contains? #{:task-completion-author :completion-locator-author}
                             (:producer (:completion %))) rows))
     (is (every? #(contains? #{:completion-definition-not-found :checkbox-locators-with-retained-prose
