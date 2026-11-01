@@ -252,3 +252,23 @@
     (is (contains? (set (:reading-source-changed drift)) :E-bad))
     (is (not (contains? (set (:read drift)) :E-bad)))
     (is (= ["E-gone"] (:members-not-open drift)))))
+
+(deftest open-retained-out-of-scope-prerequisite-is-typed-not-refused
+  ;; Bad case for the resolution: the checked reading calls the dependency out
+  ;; of scope while the population retains the target as open. Reader and
+  ;; population disagree; the pass must not refuse (that would stop every
+  ;; click), the member stays undetermined under a typed reason.
+  (let [input (gr-1-fixture)
+        input' (update input :items
+                       (fn [items]
+                         (mapv #(if (= :M-interest-network-coupling (:id %))
+                                  (assoc % :state-group :started)
+                                  %)
+                               items)))
+        row (row-by-id (e/combined-pass input') :M-interim-director)
+        prerequisite (interim-prerequisite row)]
+    (is (= :inconsistent (:resolution prerequisite)))
+    (is (= :inconsistent-out-of-scope-prerequisite (:absence prerequisite)))
+    (is (= :started (:target-state-group prerequisite)))
+    (is (= :undetermined (:status row)))
+    (is (= :needs/dependency-reading (:reason row)))))

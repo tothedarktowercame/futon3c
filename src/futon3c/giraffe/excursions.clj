@@ -184,16 +184,19 @@
                                    (= :completed state) :met
                                    (= :cancelled state) :cancelled
                                    (nil? target) :absent
-                                   :else
-                                   (throw (ex-info "Out-of-scope prerequisite is retained but not closed"
-                                                   {:kind :giraffe/inconsistent-out-of-scope-prerequisite
-                                                    :reading-member (:reading-member row)
-                                                    :target (:to row)
-                                                    :state-group state})))]
+                                   ;; Retained and open, yet the checked reading
+                                   ;; called it out of scope: the reader and the
+                                   ;; population disagree. Typed, never a refusal
+                                   ;; (a refusal here would stop every click on a
+                                   ;; reader/population drift); the member stays
+                                   ;; undetermined under this reason.
+                                   :else :inconsistent)]
                   (cond-> (assoc row :resolution resolution)
                     (:source-pin target) (assoc :source-pin (:source-pin target))
+                    (= :inconsistent resolution) (assoc :target-state-group state)
                     (= :cancelled resolution) (assoc :absence :prerequisite-cancelled)
-                    (= :absent resolution) (assoc :absence :out-of-scope-prerequisite))))
+                    (= :absent resolution) (assoc :absence :out-of-scope-prerequisite)
+                    (= :inconsistent resolution) (assoc :absence :inconsistent-out-of-scope-prerequisite))))
               (filter #(= "depends-on" (:kind %)) (:out-of-scope evidence)))
         resolutions-by-member (group-by :reading-member prerequisite-resolutions)
         ;; Missing/unresolved/cancelled/absent prerequisites remain unknown for
@@ -220,7 +223,7 @@
                            unread? (not= :read (get-in item [:dependency-reading :status]))
                            member (name (:id row))
                            prerequisites (vec (concat (get resolutions-by-member member)
-                                                      (remove #(contains? #{:met :cancelled :absent}
+                                                      (remove #(contains? #{:met :cancelled :absent :inconsistent}
                                                                           (:resolution %))
                                                               (get missing member))))
                            cancelled? (some #(= :cancelled (:resolution %)) prerequisites)
