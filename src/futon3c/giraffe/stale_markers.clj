@@ -43,8 +43,7 @@
                                 (let [i (.indexOf ^java.util.List lines line)]
                                   (and (or (nil? header-status) (> i header-status))
                                        (re-find #"(?i)^\s*\*\*Status:?\*\*.*\b(CLOSED|DONE)\b"
-                                                line)))))
-                (indexed-line lines #(re-find #"(?i)^##+\s+.*Close-out\b" %)))
+                                                line))))))
             (assoc :kind :body-closeout))))
 
 (defn- field-date [lines]

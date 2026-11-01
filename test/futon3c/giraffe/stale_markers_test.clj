@@ -56,3 +56,14 @@
     (is (= (mapv :id marked) reported))
     (is (= (sort (map :rank marked)) (map :rank marked)))
     (is (every? #(str/includes? section (str "status " (name (:status %)))) marked))))
+
+(deftest a-phase-closeout-heading-is-not-a-mission-closeout
+  ;; Bad case: mission templates carry "## … close-out" sections for a phase
+  ;; (M-giraffe line 171, "## MAP close-out (claude-11, 2026-10-26)"); the
+  ;; mission is open work. Only READY-TO-CLOSE or a body Status CLOSED/DONE marks.
+  (let [f (java.io.File/createTempFile "phase-closeout" ".md")]
+    (spit f "# Mission: M-x\n\n**Status:** OPEN\n\n## MAP close-out (claude-11, 2026-10-26)\n\nphase notes\n")
+    (let [bytes (java.nio.file.Files/readAllBytes (.toPath f))
+          sha (let [md (java.security.MessageDigest/getInstance "SHA-256")]
+                (apply str (map #(format "%02x" %) (.digest md bytes))))]
+      (is (= [] (stale/markers "2026-11-01" {:source-pin {:path (.getPath f) :sha256 sha}}))))))
