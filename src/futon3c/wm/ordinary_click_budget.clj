@@ -172,7 +172,18 @@
   ;; grant itself. Issue-time accounting and the no-refund rule are
   ;; unchanged; no prior charge is reset. E4 remains parked and the
   ;; one-attempt injury rule stands unless superseded explicitly.
-  243)
+  ;; Joe to claude-2, 2026-11-01 (hold on clicks lifted after the Lean-led
+  ;; outer-selection restoration): "yes, let's lift the hold. for te budgest,
+  ;; we can record 50 clicks available, however for the strategy I think we
+  ;; should make continuous repairs as needed not a series of trials. each
+  ;; repair should be logged and committed so that we have a trail of what
+  ;; has been done. the old notion of criteria complete is superseded by
+  ;; moving to full lean compliance." Read as: available becomes 50, so the
+  ;; 5 unspent are folded in and allocated rises by 45 (243 -> 288). Lane:
+  ;; wm_click_repair_loop.py --continuous, owner claude-2; each click's
+  ;; two-run Lean verdict is the criterion; repairs land as commits between
+  ;; clicks. Issue-time accounting and the no-refund rule are unchanged.
+  288)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
