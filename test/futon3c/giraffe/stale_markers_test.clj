@@ -10,9 +10,6 @@
 (def live-pass
   "/home/joe/code/storage/giraffe/20261101T195517.913Z-c38bc009/input.edn")
 
-(def live-pass-output
-  "/home/joe/code/storage/giraffe/20261101T195517.913Z-c38bc009/pass.edn")
-
 (defn- marked-pass []
   (let [input (stale/annotate-input (edn/read-string (slurp live-pass)))]
     {:input input :pass (excursions/combined-pass input)}))
@@ -34,8 +31,11 @@
     (testing "an ordinary pinned file is explicitly unmarked"
       (is (= [] (get-in by-id [:M-aif4iad :stale-markers]))))
     (testing "markers change no disposition or rank"
+      ;; Compare against the same pass code on the unannotated input, not the
+      ;; retained pass.edn: that file predates GR-1 (met prerequisites), so its
+      ;; ranks and statuses differ for reasons that have nothing to do with markers.
       (is (= (mapv #(select-keys % [:rank :id :status])
-                   (:order (edn/read-string (slurp live-pass-output))))
+                   (:order (excursions/combined-pass (edn/read-string (slurp live-pass)))))
              (mapv #(select-keys % [:rank :id :status]) (:order pass)))))))
 
 (deftest report-lists-exactly-the-marked-order-rows-in-rank-order
