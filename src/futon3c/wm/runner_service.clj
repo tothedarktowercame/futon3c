@@ -15,6 +15,7 @@
             [futon3c.test-registry.local-port]
             [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
             [futon3c.wm.meta-self-heal-adapters :as self-heal-adapters]
+            [futon3c.wm.ordinary-click-budget :as ordinary-budget]
             [futon3c.wm.run4-historical-projection :as run4-historical]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
   (:import [java.security MessageDigest]
@@ -1248,9 +1249,108 @@
              (catch Throwable _ nil))
         (assoc binding :route-check (assoc failure :status :failed))))))
 
+(defn medic-click-disposition?
+  "Joe, 2026-10-31, stated twice: medic clicks do not take credits. A click
+   whose terminal runtime disposition is on the open-out-of-band medic route
+   -- discharged or held -- is one. The producer shapes are pinned:
+   futon2.aif.meta-self-heal-production/open-out-of-band-route! returns
+   {:status :discharged :route :open-out-of-band-medic ...} on discharge and
+   {:status :held :phase :open-out-of-band ...} on every held leg (reason,
+   medic-write, artifact-unavailable). Anything else is an ordinary click."
+  [result]
+  (and (contains? #{:discharged :held} (:status result))
+       (or (= :open-out-of-band-medic (:route result))
+           (= :open-out-of-band (:phase result)))))
+
+(defn refund-medic-click!
+  "Refund one medic-route click at the moment its runtime disposition is
+   recorded (result-summary). Exactly-once by ledger design: refund! refuses
+   an unknown or already-refunded click id, and both typed refusals are
+   reported, never thrown -- the click's terminal outcome is already closed
+   and cannot be rewritten by the refund's fate. A click not charged under
+   the ordinary authority (commissioned/RUN4) refunds nothing. Returns a
+   typed receipt attached to the summary as :medic-refund."
+  [click-id result]
+  (when (medic-click-disposition? result)
+    (try
+      {:status :refunded
+       :receipt (ordinary-budget/refund!
+                 click-id (str (Instant/now)) :runner-service
+                 "medic clicks take no credit (Joe 2026-10-31, stated twice)")}
+      (catch Throwable t
+        (let [data (ex-data t)]
+          (cond
+            (= :ordinary-click-already-refunded (:error data))
+            {:status :already-refunded :click-id click-id}
+            (= :ordinary-click-refund-unknown (:error data))
+            {:status :not-charged :reason (:error data) :click-id click-id}
+            :else {:status :failed
+                   :error-class (.getName (class t))
+                   :message (or (ex-message t) (.getName (class t)))}))))))
+
+(defn medic-rescue-admissible?
+  "Can the open-out-of-band medic route certifiably run NOW? Used only after
+   an exhaustion refusal: an active open injury with an admitted out-of-band
+   artifact would otherwise be stranded at zero credits, because the click
+   that discharges (and thereby refunds) it can never issue. Admissible means
+   exactly the triple open-out-of-band-route! itself requires -- a loaded
+   durable injury ledger, an open selected injury, and one admitted artifact
+   for it -- computed by the same futon2 functions. Fail-closed: any missing
+   store, resolver, or open injury is false, so an ordinary click never
+   passes the ration on this path."
+  [opts]
+  (boolean
+   (try
+     (let [ctx-fn (*resolve-var* 'futon2.aif.meta-self-heal-production/diagnosis-context)
+           artifact-fn (*resolve-var* 'futon2.aif.out-of-band-fix/artifact-for)]
+       (when (and ctx-fn artifact-fn)
+         (let [ctx (ctx-fn (cond-> opts
+                             (nil? (:meta-injury-ledger-path opts))
+                             (assoc :meta-injury-ledger-path
+                                    (str injury-store/default-root "/ledger.edn"))))
+               injury-id (or (get-in ctx [:injury-selection :injury-id])
+                             (first (sort (keys (get-in ctx
+                                                        [:active-injuries :injuries])))))
+               entry (some-> (get-in ctx [:active-injuries :injuries injury-id])
+                             (assoc :injury-id injury-id))]
+           (and (= :loaded (get-in ctx [:durable-ledger :status]))
+                (= :open (:state entry))
+                (try (some? (artifact-fn (or (:meta-acceptance-root opts)
+                                             (str injury-store/default-root
+                                                  "/acceptances"))
+                                         injury-id))
+                     (catch Throwable _ false))))))
+     (catch Throwable _ false))))
+
+(defn- medic-rescue-issue!
+  "Issue one ordinary click at zero credits through the medic rescue, then
+   refund it in the same breath. The charge keeps the ledger's append-only
+   shape and history; the immediate refund enforces Joe's rule; both appends
+   serialize on the budget's lock. Availability is unchanged by the pair, and
+   the click then runs and records its own disposition (whose own refund call
+   will typed-refuse :already-refunded -- exactly-once holds)."
+  [click-id started-at issuing-caller]
+  (let [entry (ordinary-budget/consume!
+               click-id started-at (or issuing-caller :caller-unknown)
+               {:medic-rescue? true})
+        ;; entry is a plain charge map, never a medic disposition, so the
+        ;; disposition-time refund cannot fire here; refund explicitly.
+        receipt (try
+                  {:status :refunded
+                   :receipt (ordinary-budget/refund!
+                             click-id (str (Instant/now)) :runner-service
+                             "medic rescue: issued and refunded at zero credit (Joe 2026-10-31)")}
+                  (catch Throwable t
+                    {:status :failed :error-class (.getName (class t))}))]
+    {:schema :wm/medic-click-rescue-v1
+     :click-id click-id
+     :charge entry
+     :refund receipt}))
+
 (defn- result-summary
   [click-id result fallback-attempt-id]
-  (let [binding (persist-click-run-binding! click-id result)
+  (let [medic-refund (refund-medic-click! click-id result)
+        binding (persist-click-run-binding! click-id result)
         ;; This hook is deliberately after the close binding's atomic write.
         ;; Generation is local; publication is launched under the durable JVM
         ;; parent and is never awaited by the click.
@@ -1296,7 +1396,13 @@
       (assoc :duplicate-of-clicks (:duplicate-of-clicks binding))
 
       (:report-card binding)
-      (assoc :report-card (:report-card binding)))))
+      (assoc :report-card (:report-card binding))
+
+      ;; Joe's rule made mechanical: the medic refund's receipt travels with
+      ;; the disposition it compensates, so a failed or skipped refund is
+      ;; visible in every projection of this click. Skipped entirely for an
+      ;; ordinary click (medic-refund is nil).
+      medic-refund (assoc :medic-refund medic-refund))))
 
 ;; ---------------------------------------------------------------------------
 ;; Park signals. An agent waiting on a click parks on these dep ids instead of
@@ -1594,13 +1700,27 @@
                       (try
                         (issue! click-id started-at)
                         (catch Throwable t
-                          (atomic-edn! (acceptance-file click-id)
-                                       (assoc accepted :status :refused
-                                              :refused-at (str (Instant/now))
-                                              :reason (or (:error (ex-data t))
-                                                          :ration-charge-failed)))
-                          (compare-and-set! !status next-status current)
-                          (throw t))))
+                          (if-not (and (= :ordinary-click-budget-exhausted
+                                           (:error (ex-data t)))
+                                       (medic-rescue-admissible? opts))
+                            (do (atomic-edn! (acceptance-file click-id)
+                                             (assoc accepted :status :refused
+                                                    :refused-at (str (Instant/now))
+                                                    :reason (or (:error (ex-data t))
+                                                                :ration-charge-failed)))
+                                (compare-and-set! !status next-status current)
+                                (throw t))
+                            ;; Zero-credit medic rescue (Joe: medic clicks
+                            ;; take no credits; a stranded admitted
+                            ;; out-of-band artifact must still be able to
+                            ;; discharge). Ordinary clicks never reach here:
+                            ;; the rescue requires the medic-route triple.
+                            (let [rescue (medic-rescue-issue!
+                                          click-id started-at
+                                          (get-in (acceptance-payload opts)
+                                                  [:issuing-caller]))]
+                              (atomic-edn! (acceptance-file click-id)
+                                           (assoc accepted :ration rescue)))))))
                   _ (reset! !completion {:click-id click-id
                                          :completion completion})
                   runnable (bound-fn [] (run-click! click-id opts completion admission))

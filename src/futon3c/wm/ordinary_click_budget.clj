@@ -222,9 +222,21 @@
 
 (defn consume!
   "Append and force consumption before the worker starts. Serialize the count
-   and append across threads and processes; failed runs never refund a grant."
-  [click-id issued-at caller]
-  (locking issue-lock
+   and append across threads and processes; failed runs never refund a grant.
+
+   MEDIC-RESCUE (Joe, 2026-10-31, stated twice: medic clicks do not take
+   credits): an ordinary click can be REQUIRED at zero credits -- an active
+   open injury with an admitted out-of-band artifact would be stranded if
+   issue refused, because the discharge that would refund it never runs.
+   The caller may pass {:medic-rescue? true} ONLY after certifying that the
+   medic route is reachable (runner-service/medic-rescue-admissible?); the
+   charge is then issued past exhaustion and immediately refunded by the
+   caller, so availability is unchanged. An ordinary click never passes:
+   without the flag the exhaustion refusal stands."
+  ([click-id issued-at caller]
+   (consume! click-id issued-at caller nil))
+  ([click-id issued-at caller {:keys [medic-rescue?]}]
+   (locking issue-lock
     (let [file (io/file *ledger-path*)]
       (io/make-parents file)
       (with-open [channel (FileChannel/open
@@ -235,7 +247,7 @@
                   _file-lock (.lock channel)]
         (let [entries (ledger-entries file)
               consumed (count (charged-click-ids entries))]
-          (when (>= consumed allocated)
+          (when (and (>= consumed allocated) (not medic-rescue?))
             (throw (ex-info
                     (str "Ordinary click budget exhausted. Return to Joe for renewal. Authority: "
                          (:path authorization) " @ " (:sha authorization))
@@ -257,7 +269,7 @@
                                      (.toPath dir)
                                      (into-array StandardOpenOption [StandardOpenOption/READ]))]
                 (.force directory true)))
-            entry))))))
+            entry)))))))
 
 (defn refund!
   "Append a compensating event for one previously consumed ordinary click.
