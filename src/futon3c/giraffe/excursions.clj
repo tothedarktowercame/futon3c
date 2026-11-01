@@ -172,15 +172,39 @@
         items (into {} (map (juxt :id identity)) (:items input))
         coverage (:graph-coverage input)
         evidence (:reading-evidence input)
-        ;; Missing/unresolved/out-of-scope prerequisites remain unknown for their
-        ;; reading member. Non-prerequisite links do not enter readiness.
+        ;; The reading corpus contains open members only. An out-of-scope
+        ;; prerequisite may therefore still be a retained closed population
+        ;; item: completed is met, cancelled is explicitly unresolved, and a
+        ;; target absent from the population remains out of scope.
+        prerequisite-resolutions
+        (mapv (fn [row]
+                (let [target (get items (keyword (:to row)))
+                      state (:state-group target)
+                      resolution (cond
+                                   (= :completed state) :met
+                                   (= :cancelled state) :cancelled
+                                   (nil? target) :absent
+                                   :else
+                                   (throw (ex-info "Out-of-scope prerequisite is retained but not closed"
+                                                   {:kind :giraffe/inconsistent-out-of-scope-prerequisite
+                                                    :reading-member (:reading-member row)
+                                                    :target (:to row)
+                                                    :state-group state})))]
+                  (cond-> (assoc row :resolution resolution)
+                    (:source-pin target) (assoc :source-pin (:source-pin target))
+                    (= :cancelled resolution) (assoc :absence :prerequisite-cancelled)
+                    (= :absent resolution) (assoc :absence :out-of-scope-prerequisite))))
+              (filter #(= "depends-on" (:kind %)) (:out-of-scope evidence)))
+        resolutions-by-member (group-by :reading-member prerequisite-resolutions)
+        ;; Missing/unresolved/cancelled/absent prerequisites remain unknown for
+        ;; their reading member. Completed prerequisites are recorded but met.
+        ;; Non-prerequisite links do not enter readiness.
         missing (group-by :reading-member
                           (concat
                            (map #(assoc % :absence :rejected-dependency-reading) (:rejected evidence))
                            (map #(assoc % :absence :unresolved-prerequisite)
                                 (filter #(#{"depends-on" "unblocks"} (:kind %)) (:unresolved evidence)))
-                           (map #(assoc % :absence :out-of-scope-prerequisite)
-                                (filter #(= "depends-on" (:kind %)) (:out-of-scope evidence)))))
+                           (remove #(= :met (:resolution %)) prerequisite-resolutions)))
         unknowns (set (keys missing))
         scope {:scope (:scope coverage)
                :population-sha (:population-sha coverage)
@@ -194,16 +218,28 @@
                            ;; when its own reading is not :read or one of
                            ;; its prerequisite readings is missing/rejected.
                            unread? (not= :read (get-in item [:dependency-reading :status]))
-                           unknown? (or unread? (contains? unknowns (name (:id row))))]
+                           member (name (:id row))
+                           prerequisites (vec (concat (get resolutions-by-member member)
+                                                      (remove #(contains? #{:met :cancelled :absent}
+                                                                          (:resolution %))
+                                                              (get missing member))))
+                           cancelled? (some #(= :cancelled (:resolution %)) prerequisites)
+                           unknown? (or unread? (contains? unknowns member))]
                        (cond-> (assoc row :dependency-reading (:dependency-reading item)
                                           :graph-terms (cond-> (assoc scope :status (if unknown? :unknown :known))
+                                                         (seq prerequisites)
+                                                         (assoc :prerequisites prerequisites)
                                                          unknown? (assoc :reason (if unread?
                                                                                   :dependency-reading-unread
-                                                                                  :prerequisite-unresolved)
-                                                                         :prerequisites (vec (get missing (name (:id row))))
+                                                                                  (if cancelled?
+                                                                                    :prerequisite-cancelled
+                                                                                    :prerequisite-unresolved))
                                                                          :producer :dependency-reader-reviewer)))
                          (:completion item) (assoc :completion (:completion item))
-                         unknown? (assoc :status :undetermined :reason :needs/dependency-reading
+                         unknown? (assoc :status :undetermined
+                                         :reason (if cancelled?
+                                                   :prerequisite-cancelled
+                                                   :needs/dependency-reading)
                                          :cone nil :unblocks nil)))) (:order base))
         ready (mapv :id (filter #(= :ready (:status %)) rows))]
     (assoc base :order rows :ready-set ready :graph-coverage coverage

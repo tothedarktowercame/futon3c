@@ -11,6 +11,63 @@
             [futon2.aif.outer-observation :as observation]
             [futon2.aif.mission-registry :as registry]))
 
+(def gr-1-input
+  "/home/joe/code/storage/giraffe/20261101T195517.913Z-c38bc009/input.edn")
+
+(defn gr-1-fixture []
+  (edn/read-string (slurp gr-1-input)))
+
+(defn row-by-id [pass-output id]
+  (first (filter #(= id (:id %)) (:order pass-output))))
+
+(defn interim-prerequisite [row]
+  (first (filter #(= "M-interest-network-coupling" (:to %))
+                 (get-in row [:graph-terms :prerequisites]))))
+
+(deftest completed-out-of-scope-prerequisite-is-met-from-retained-population
+  (let [input (gr-1-fixture)
+        target (get (into {} (map (juxt :id identity)) (:items input))
+                    :M-interest-network-coupling)
+        row (row-by-id (e/combined-pass input) :M-interim-director)
+        prerequisite (interim-prerequisite row)]
+    ;; Exact bad case from the retained 2026-11-01 pass: the checked reading
+    ;; calls this dependency out of scope, while the population retains its
+    ;; CLOSED mission record.
+    (is (= :completed (:state-group target)))
+    (is (= :met (:resolution prerequisite)))
+    (is (= (:source-pin target) (:source-pin prerequisite)))
+    (is (= :ready (:status row)))
+    (is (not= :needs/dependency-reading (:reason row)))))
+
+(deftest cancelled-out-of-scope-prerequisite-is-typed
+  (let [input (gr-1-fixture)
+        input' (update input :items
+                       (fn [items]
+                         (mapv #(if (= :M-interest-network-coupling (:id %))
+                                  (assoc % :state-group :cancelled)
+                                  %)
+                               items)))
+        row (row-by-id (e/combined-pass input') :M-interim-director)
+        prerequisite (interim-prerequisite row)]
+    (is (= 1 (count (get-in row [:graph-terms :prerequisites]))))
+    (is (= :cancelled (:resolution prerequisite)))
+    (is (= :prerequisite-cancelled (:absence prerequisite)))
+    (is (= :undetermined (:status row)))
+    (is (= :prerequisite-cancelled (:reason row)))))
+
+(deftest absent-out-of-scope-prerequisite-remains-unresolved
+  (let [input (gr-1-fixture)
+        input' (update input :items
+                       #(filterv (fn [item]
+                                   (not= :M-interest-network-coupling (:id item)))
+                                 %))
+        row (row-by-id (e/combined-pass input') :M-interim-director)
+        prerequisite (interim-prerequisite row)]
+    (is (= :absent (:resolution prerequisite)))
+    (is (= :out-of-scope-prerequisite (:absence prerequisite)))
+    (is (= :undetermined (:status row)))
+    (is (= :needs/dependency-reading (:reason row)))))
+
 (deftest frozen-census-retains-real-completion-classes-and-unknown-graph
   (let [adapter (e/missions-and-excursions->input
                  {:edges-file "/home/joe/code/futon3c/holes/missions/giraffe-mission-edges.json"})
