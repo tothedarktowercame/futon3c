@@ -6,6 +6,7 @@
             [clojure.edn :as edn] [clojure.set :as set]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.excursions :as e]
+            [futon3c.giraffe.pass :as pass]
             [futon3c.giraffe.run :as writer]
             [futon2.aif.outer-score :as score]
             [futon2.aif.outer-observation :as observation]
@@ -23,6 +24,45 @@
 (defn interim-prerequisite [row]
   (first (filter #(= "M-interest-network-coupling" (:to %))
                  (get-in row [:graph-terms :prerequisites]))))
+
+(deftest reading-stage-reranks-the-pinned-pass
+  (let [input (gr-1-fixture)
+        base (pass/pass input)
+        result (e/combined-pass input)
+        rows (:order result)
+        ready (filter #(= :ready (:status %)) rows)
+        undetermined (filter #(= :undetermined (:status %)) rows)
+        post-ready-order (mapv :id ready)
+        post-ready? (set post-ready-order)
+        base-ready-order (mapv :id (filter #(post-ready? (:id %)) (:order base)))
+        demoted (row-by-id result :M-apm-capability-ratchet)]
+    (is (every? #(= :after-reading (:rank-basis %)) rows))
+    (is (< (apply max (map :rank ready))
+           (apply min (map :rank undetermined))))
+    (is (= :undetermined (:status demoted)))
+    (is (> (:rank demoted) (count ready)))
+    (is (= base-ready-order post-ready-order))))
+
+(deftest report-giraffe-column-agrees-with-post-reading-order
+  (let [input (gr-1-fixture)
+        result (e/combined-pass input)
+        root (str (java.nio.file.Files/createTempDirectory
+                   "giraffe-gr-2-report-"
+                   (make-array java.nio.file.attribute.FileAttribute 0)))
+        written (writer/write-run! {:root root
+                                    :adapter-result {:input input :rejected []}
+                                    :pass-output result})
+        table-lines (filter #(str/starts-with? % "|")
+                            (str/split-lines
+                             (slurp (io/file (:dir written) "report.md"))))
+        data-lines (take (count (:order result)) (drop 2 table-lines))
+        giraffe-ids (mapv (fn [line]
+                            (-> (str/split line #"\|")
+                                (nth 6)
+                                str/trim
+                                keyword))
+                          data-lines)]
+    (is (= (mapv :id (:order result)) giraffe-ids))))
 
 (deftest completed-out-of-scope-prerequisite-is-met-from-retained-population
   (let [input (gr-1-fixture)
