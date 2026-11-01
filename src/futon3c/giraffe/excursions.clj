@@ -163,6 +163,19 @@
                                    item))
                                (remove #(contains? excluded-ids (:id %)) items)))))))))
 
+(defn- after-reading-order
+  "Re-rank the pass after checked reading has changed row statuses."
+  [rows]
+  (->> rows
+       (sort-by (fn [{:keys [status unblocks cone source-order]}]
+                  (case status
+                    :ready [0 (- unblocks) (- cone) source-order]
+                    :undetermined [1 0 0 source-order]
+                    [2 0 0 source-order])))
+       (map-indexed (fn [i row]
+                      (assoc row :rank (inc i) :rank-basis :after-reading)))
+       vec))
+
 (defn combined-pass
   "Compute population-relative terms from the complete checked outgoing graph.
   pass/downstream-cone inverts those edges. Partial coverage never implies zero."
@@ -214,36 +227,37 @@
                :coverage (select-keys coverage [:status :member-count :counts
                                                 :checker-sha :open-item-count
                                                 :drift-counts])}
-        rows (mapv (fn [row]
-                     (let [item (get items (:id row))
-                           ;; Partial drift (claude-1, 2026-10-31) zeroes
-                           ;; nothing wholesale: a row is unknown exactly
-                           ;; when its own reading is not :read or one of
-                           ;; its prerequisite readings is missing/rejected.
-                           unread? (not= :read (get-in item [:dependency-reading :status]))
-                           member (name (:id row))
-                           prerequisites (vec (concat (get resolutions-by-member member)
-                                                      (remove #(contains? #{:met :cancelled :absent :inconsistent}
-                                                                          (:resolution %))
-                                                              (get missing member))))
-                           cancelled? (some #(= :cancelled (:resolution %)) prerequisites)
-                           unknown? (or unread? (contains? unknowns member))]
-                       (cond-> (assoc row :dependency-reading (:dependency-reading item)
-                                          :graph-terms (cond-> (assoc scope :status (if unknown? :unknown :known))
-                                                         (seq prerequisites)
-                                                         (assoc :prerequisites prerequisites)
-                                                         unknown? (assoc :reason (if unread?
-                                                                                  :dependency-reading-unread
-                                                                                  (if cancelled?
-                                                                                    :prerequisite-cancelled
-                                                                                    :prerequisite-unresolved))
-                                                                         :producer :dependency-reader-reviewer)))
-                         (:completion item) (assoc :completion (:completion item))
-                         unknown? (assoc :status :undetermined
-                                         :reason (if cancelled?
-                                                   :prerequisite-cancelled
-                                                   :needs/dependency-reading)
-                                         :cone nil :unblocks nil)))) (:order base))
+        rows (after-reading-order
+              (mapv (fn [row]
+                      (let [item (get items (:id row))
+                            ;; Partial drift (claude-1, 2026-10-31) zeroes
+                            ;; nothing wholesale: a row is unknown exactly
+                            ;; when its own reading is not :read or one of
+                            ;; its prerequisite readings is missing/rejected.
+                            unread? (not= :read (get-in item [:dependency-reading :status]))
+                            member (name (:id row))
+                            prerequisites (vec (concat (get resolutions-by-member member)
+                                                       (remove #(contains? #{:met :cancelled :absent :inconsistent}
+                                                                           (:resolution %))
+                                                               (get missing member))))
+                            cancelled? (some #(= :cancelled (:resolution %)) prerequisites)
+                            unknown? (or unread? (contains? unknowns member))]
+                        (cond-> (assoc row :dependency-reading (:dependency-reading item)
+                                           :graph-terms (cond-> (assoc scope :status (if unknown? :unknown :known))
+                                                          (seq prerequisites)
+                                                          (assoc :prerequisites prerequisites)
+                                                          unknown? (assoc :reason (if unread?
+                                                                                   :dependency-reading-unread
+                                                                                   (if cancelled?
+                                                                                     :prerequisite-cancelled
+                                                                                     :prerequisite-unresolved))
+                                                                          :producer :dependency-reader-reviewer)))
+                          (:completion item) (assoc :completion (:completion item))
+                          unknown? (assoc :status :undetermined
+                                          :reason (if cancelled?
+                                                    :prerequisite-cancelled
+                                                    :needs/dependency-reading)
+                                          :cone nil :unblocks nil)))) (:order base)))
         ready (mapv :id (filter #(= :ready (:status %)) rows))]
     (assoc base :order rows :ready-set ready :graph-coverage coverage
            :ticket-provenance ticket-provenance
