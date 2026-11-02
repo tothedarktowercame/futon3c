@@ -1,0 +1,64 @@
+{
+ "stem": "M-capability-zones-S1.5-acceptance",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654348470-10535-42841422",
+ "at": "2026-11-02T21:21:02+00:00",
+ "row": {
+  "stem": "M-capability-zones-S1.5-acceptance",
+  "kind": "place",
+  "what": {
+   "value": "Acceptance document for the PCA-3 capability-zones partition (pca3-v1), presented as a candidate for an operator walk before deposit into G.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:3",
+   "quote": "Date: 2026-07-19. Candidate partition: `pca3-v1`. Status: **candidate for"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:4",
+   "quote": "operator walk; not deposited into G or any live store**."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:113",
+   "quote": "Thus the no-write property is code- and operation-audited, but"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:112",
+   "quote": "and the typed hyperedge query while its JVM was already CPU-saturated. It was"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:116",
+   "quote": "existing store responds. Deposit remains locked on Joe's explicit acceptance."
+  },
+  "finish": {
+   "value": "Joe performs the walk and explicitly accepts; only then is the partition deposited into G. The after-count on :7073 is an open acceptance gap (store timed out).",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:115",
+   "quote": "the requested after-count remains an explicit acceptance gap until the"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:7",
+   "quote": "The operative object is the Euclidean nearest-seed Voronoi partition after the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

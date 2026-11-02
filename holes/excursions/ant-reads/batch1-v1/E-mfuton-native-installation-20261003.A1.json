@@ -1,0 +1,59 @@
+{
+ "stem": "E-mfuton-native-installation-20261003",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654230458-10527-6b895ac8",
+ "at": "2026-11-02T21:18:59+00:00",
+ "row": {
+  "stem": "E-mfuton-native-installation-20261003",
+  "kind": "place",
+  "what": {
+   "value": "Determine and implement the real handoff between Lisp body compilation/emission and installed-generated-binding in mfuton-sbcl, executing real native installation.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:8",
+   "quote": "Determine the real handoff needed between Lisp body compilation/emission and installed-generated-binding, including execution backend, catalog"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:3",
+   "quote": "**Requisition:** in-progress — invoke-1790999811446-30715-8f3cacac"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:9",
+   "quote": "If producer/runtime mismatch blocks it, deliver an executable contract check against the real APIs with exact missing operation and typed I/O; do no"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:9",
+   "quote": "This job does not earn completion until real installation is executed."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:5",
+   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition header states in-progress with git dispatch on 2026-10-03, within the last 30 days."
+  },
+  "finish": {
+   "value": "Real installation executed: faithful generic installer built/tested with an actual Lisp-produced module and native runtime, differential test run, codex-18 belled with evidence.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:9",
+   "quote": "If implementation is feasible, build and test the generic operation using an actual Lisp-produced module and native runtime, not mock registry inj"
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-native-installation-20261003.md:7",
+   "quote": "Work on the native-installation capability in /home/joe/code/mfuton-sbcl while codex-13 connects compiler scope."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,59 @@
+{
+ "stem": "E-book-of-why-complete",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654007992-10517-1edf4696",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-book-of-why-complete",
+  "kind": "place",
+  "what": {
+   "value": "A capability backlog for the M-diagramprover engine: five blocks (B1–B5) of mfuton-sweep graph-only fixtures, each a codex dispatch with the sweep as regression harness.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:1",
+   "quote": "# E-book-of-why-complete — capability backlog surfaced by the mfuton sweep"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:3",
+   "quote": "Status: **BACKLOG, authored 2026-08-03 (Joe + claude-10).** Source: the"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:8",
+   "quote": "with the sweep as its regression harness (acceptance = the affected"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:8",
+   "quote": "with the sweep as its regression harness (acceptance = the affected"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:13",
+   "quote": "demo needs the class."
+  },
+  "finish": {
+   "value": "Each block's affected fixtures flip from graph-only to fully-converted with oracle agreement, everything already-green stays green.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:8",
+   "quote": "with the sweep as its regression harness (acceptance = the affected"
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:13",
+   "quote": "demo needs the class."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

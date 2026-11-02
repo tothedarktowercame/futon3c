@@ -1,0 +1,59 @@
+{
+ "stem": "E-self-heal-cascade",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654234861-10529-2b06e751",
+ "at": "2026-11-02T21:20:08+00:00",
+ "row": {
+  "stem": "E-self-heal-cascade",
+  "kind": "place",
+  "what": {
+   "value": "Open mission: repair of injuries chosen by the existing G over repair cascades (no fixed pipeline), with pattern-based intake/analysis/extension and per-step receipts.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:16",
+   "quote": "\"we should exercise our normal G-over-cascades mechanism rather than set up a"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:7",
+   "quote": "**Status:** OPEN. Criteria stated; S1 amended 2026-10-28 (drafts stand; practice corrects them); S2 next; nothing built. Proposed as row"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:60",
+   "quote": "2026-10-28: \"make it so we can pinpoint any need to repair or improve the"
+  },
+  "way": {
+   "value": "eat-your-own-tail",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:16",
+   "quote": "\"we should exercise our normal G-over-cascades mechanism rather than set up a"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:7",
+   "quote": "**Status:** OPEN. Criteria stated; S1 amended 2026-10-28 (drafts stand; practice corrects them); S2 next; nothing built. Proposed as row"
+  },
+  "finish": {
+   "value": "Closes when S1–S7 are observed (S2 pipeline-reading discovery next; S3–S7 wait for S2).",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:79",
+   "quote": "Closes when S1–S7 are observed. S3–S7 wait for S2."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:60",
+   "quote": "2026-10-28: \"make it so we can pinpoint any need to repair or improve the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

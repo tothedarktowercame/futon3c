@@ -1,0 +1,59 @@
+{
+ "stem": "E-frontier-experiments",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654007992-10517-1edf4696",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-frontier-experiments",
+  "kind": "place",
+  "what": {
+   "value": "A designed (not yet dispatched) excursion: build Book-of-Why fixtures (X1), a causal crime-scene analysis of git history (X2), and AIF² causal argument maps (X3) to demo the receipts pipeline to Rob and map the engine's frontier.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:4",
+   "quote": "Purpose, per Joe: (a) independently show Rob that the receipts pipeline"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:3",
+   "quote": "Status: **DESIGNED 2026-08-02 (Joe + claude-10). Not yet dispatched.**"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:14",
+   "quote": "receipts as computed EDN with honest refusals; deterministic repro;"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:14",
+   "quote": "receipts as computed EDN with honest refusals; deterministic repro;"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:127",
+   "quote": "Sequencing recommendation: **X1 → X2 → X3.** X1 is days and produces"
+  },
+  "finish": {
+   "value": "X1: every in-scope fixture's receipts oracle-agree; every out-of-scope fixture produces a computed refusal naming what is missing; REPORT presents the coverage table.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:47",
+   "quote": "Acceptance: every in-scope fixture's receipts oracle-agree (NetworkX +"
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:4",
+   "quote": "Purpose, per Joe: (a) independently show Rob that the receipts pipeline"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

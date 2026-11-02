@@ -1,0 +1,71 @@
+{
+ "stem": "M-capability-zones-S1.5-handoff",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654348470-10535-42841422",
+ "at": "2026-11-02T21:21:02+00:00",
+ "row": {
+  "stem": "M-capability-zones-S1.5-handoff",
+  "kind": "place",
+  "what": {
+   "value": "Handoff from claude-3 to codex-10 specifying S1.5 deliverables: deterministic PCA-3 reduction, zone-of-3d, re-assignment with disagreement set, and a zones layer on the live map for Joe's walk.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-handoff.md:3",
+   "quote": "**From:** claude-3 (owner seat) → **To:** codex-10 (you built S1; this continues it)"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:95",
+   "quote": "Playwright evidence: `holes/missions/evidence/capability-zones-pca3-v1.png`."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-handoff.md:7",
+   "quote": "(operative partition in a 3-D reduction; 2-D carpet renders its projection; raw"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-handoff.md:8",
+   "quote": "high-D nearest-seed is diagnostic only; R9-spirit invariant: the object Joe"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:97",
+   "quote": "The automated check observed 269 coloured entities, one 14-class legend, and"
+  },
+  "need_goes_to": {
+   "value": "M-capability-zones-S1.5-acceptance",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-acceptance.md:116",
+   "quote": "existing store responds. Deposit remains locked on Joe's explicit acceptance."
+  },
+  "finish": {
+   "value": "All six acceptance-bar items met: determinism, zone-of-3d tests, replay, disagreement set, Playwright-rendered layer, and zero live-store writes (:7073 count stays 108).",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-handoff.md:76",
+   "quote": "6. ZERO live-store writes; :7073 `wm-hyperparameter-update` count stays 108."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon0/holes/missions/M-capability-zones-S1.5-handoff.md:17",
+   "quote": "accept or reject it BEFORE anything reaches G. Deposit stays locked behind his"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "quote-not-on-line",
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

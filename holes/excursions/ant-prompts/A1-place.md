@@ -13,6 +13,15 @@ Wings (the four therefores of the apex thesis, plus two others):
 - V: stays alive and paid — machines, history, money; the body and energy of the stack.
 - none: not about the stack's ways of working (e.g. a paper's content, an outside commitment).
 
+Place an item by the NEED IT SERVES, not by whether it carries evidence. Every mission carries
+receipts; that does not make warrant its purpose. An item whose purpose is a project outside the
+machine (a compiler port such as mfuton-sbcl, a mathematics proof, a paper's content) is wing `none`
+whatever receipts it has. Wing A and way `records-carry-warrant` are only for items whose purpose
+is warrant itself: test registries, witness and pin machinery, review records whose point is that a
+claim can be checked. `none` is an explicit, correct answer for wing and for way; give it when the
+item serves no way of the stack. (Rule added after claude-16's scoring of batch 1, 2026-11-02 21:2xZ:
+20 of 46 rows had gone to A.)
+
 Ways of working (pick the one the item most serves or most lacks; `none` if no fit):
 records-carry-warrant, inbox-zero, operator-turns-logged (A); one-queryable-self-account,
 backlog-understood (B); feedback-reaches-every-participant, real-users, intents-are-tracked (C);
@@ -44,7 +53,9 @@ Action vocabulary (rulings of 2026-11-02, claude-16's objection before packet 4)
 
 Rules for this kind: a kimi-task requisition (`E-kimi-task-N`) is a record of one dispatch; its
 "what" is the task it carried, its status is the requisition line near the top. A draft mission
-marked NON-LIVE is `held`, not `work`. A requisition still marked in-progress whose answer or
+marked NON-LIVE is `held`, not `work`. A requisition still marked in-progress from a dispatch more
+than thirty days old, with no completion recorded, is a dispatch that ended without its record being
+closed: status `stopped`, action `audit`, and say so in `what`. A requisition still marked in-progress whose answer or
 output path is under `/tmp` is not open work: /tmp is erased at every boot, so give status `stopped`,
 action `unsure`, and say in `what` that the output had no durable home. Do not place an item by its
 filename alone.

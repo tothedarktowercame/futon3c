@@ -1,0 +1,61 @@
+{
+ "stem": "E-wm-criteria-completeness",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654348470-10535-42841422",
+ "at": "2026-11-02T21:21:02+00:00",
+ "row": {
+  "stem": "E-wm-criteria-completeness",
+  "kind": "place",
+  "what": {
+   "value": "A supervised useful-work capability excursion: run bounded Zai-seat click iterations under GRID v2 criteria, recording evidence per run and dispositioning deficits.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:1",
+   "quote": "# E-wm-criteria-completeness — supervised useful-work capability"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:5",
+   "quote": "**Status:** OPEN — GRID v2 adopted 2026-10-28; prospective missions-only attempt is conditional under run001-v2-disposition.md, not released."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:29",
+   "quote": "GRID v2 retains five capabilities and twenty criteria A1–E4. Every run is a new evidence column, not an overwritten verdict."
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:22",
+   "quote": "Issue one click on Zai seats through the established background runner. Retain click/run/job identifiers, author replies, phase records, tripwire firings"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:5",
+   "quote": "**Status:** OPEN — GRID v2 adopted 2026-10-28; prospective missions-only attempt is conditional under run001-v2-disposition.md, not released."
+  },
+  "finish": {
+   "value": "Demonstrate useful task execution and successor consumption without corrective intervention, with explicit task-kind and branch coverage, retaining safe-refusal and self-heal witnesses as separate capabilities.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:39",
+   "quote": "Demonstrate useful task execution and successor consumption without corrective intervention, with explicit task-kind and branch coverage; retain safe refusal"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:13",
+   "quote": "For viable work within a declared supported scope, make a bounded verifiable contribution or establish a specific obstacle and take the appropriate recovery"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok-near",
+  "quote-not-on-line"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

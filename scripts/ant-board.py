@@ -22,14 +22,21 @@ OPEN_UNPLACED = pathlib.Path.home() / "notes/pattern-global/auto/open-unplaced.t
 def open_unplaced(batch):
     rows = [l.split("\t") for l in OPEN_UNPLACED.read_text().splitlines()]
     return [{"id": r[1], "path": r[4], "stated-finish": None, "status": r[5] if len(r) > 5 else ""} for r in rows[1:] if r[0] == str(batch)]
-PROMPT = {"A1": "A1-place.md", "A2": "A2-witness.md", "A5": "A5-rehome.md", "A3": "A3-audit-explain.md", "A4": "A4-lesson.md", "A6": "A6-acceptance-check.md"}
+PROMPT = {"A1r": "A1-place.md",  # reader-against-reader check on already-placed items (claude-16, 2026-11-02)
+          "A1": "A1-place.md", "A2": "A2-witness.md", "A5": "A5-rehome.md", "A3": "A3-audit-explain.md", "A4": "A4-lesson.md", "A6": "A6-acceptance-check.md"}
 def canonical(path):
     """The signals file read futon6-old-copy for two rows; the live tree is futon6."""
     if path.startswith("futon6-old-copy/") and (pathlib.Path("/home/joe/code") / path.replace("futon6-old-copy/", "futon6/", 1)).exists():
         return path.replace("futon6-old-copy/", "futon6/", 1)
     return path
 def main(kind, size, out):
-    if kind == "A1":
+    if kind in ("A1", "A1r") and os.environ.get("A1_IDS"):
+        # explicit id<TAB>path list, one per line, header allowed; the item gets no status hint
+        items = []
+        for l in pathlib.Path(os.environ["A1_IDS"]).read_text().splitlines()[1:]:
+            if l.strip():
+                i, pth = l.split("\t")[:2]; items.append({"id": i, "path": pth, "stated-finish": None, "status": ""}); PATH[i] = pth
+    elif kind == "A1":
         items = open_unplaced(os.environ.get("A1_BATCH", "1"))
         for it in items: PATH[it["id"]] = it["path"]
     else:
@@ -40,7 +47,7 @@ def main(kind, size, out):
     for n, b in enumerate(batches, 1):
         lines = [common, "", kp, "", f"## Items for this batch ({len(b)})", ""]
         for it in b:
-            if kind == "A1":
+            if kind in ("A1", "A1r"):
                 lines.append(f"- `{it['id']}` — file `/home/joe/code/{canonical(PATH.get(it['id'], '?'))}`" + (f" — status line as parsed (verify it): {it['status'][:80]}" if it.get("status") else ""))
             else:
                 lines.append(f"- `{it['id']}` — file `/home/joe/code/{canonical(PATH.get(it["id"], "?"))}` — stated finish (claude-2's reading, verify it): {it.get('stated-finish') or '(none stated)'}")

@@ -1,0 +1,59 @@
+{
+ "stem": "E-mfuton-receiver-matching-20261003",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654230458-10527-6b895ac8",
+ "at": "2026-11-02T21:18:59+00:00",
+ "row": {
+  "stem": "E-mfuton-receiver-matching-20261003",
+  "kind": "place",
+  "what": {
+   "value": "Port ancestor-application and receiver-parameter matching prerequisites for source function member lookup into mfuton-sbcl Lisp.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:7",
+   "quote": "Port the real ancestor-application and receiver-parameter matching prerequisites for source function member lookup in /home/joe/code/mfuton-sb"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:3",
+   "quote": "**Requisition:** in-progress — invoke-1791003172085-30762-80688f91"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:9",
+   "quote": "Existing instance-result-owner-index is only owner names and is NOT substitute authority."
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:11",
+   "quote": "Differential against real source oracle including parameterized inheritance, diamonds/distances, cycles and insufficient args, shadowed/same-sh"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:5",
+   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Header states the requisition is in-progress (dated 2026-10-03, within the last 30 days)."
+  },
+  "finish": {
+   "value": "Both ports implemented, differential against pinned oracle passes with native fixtures, gates (SBCL, check-parens, regressions) pass, exact next missing member query reported.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:11",
+   "quote": "All gates focused differential, relevant regressions, SBCL compile/load, check-parens. Freeze and report exact next missing member query."
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-receiver-matching-20261003.md:7",
+   "quote": "Port the real ancestor-application and receiver-parameter matching prerequisites for source function member lookup in /home/joe/code/mfuton-sb"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}
