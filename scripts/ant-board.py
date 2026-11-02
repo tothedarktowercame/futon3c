@@ -3,7 +3,7 @@
 
 Usage: ant-board.py KIND BATCH_SIZE OUT_DIR
 Writes OUT_DIR/<KIND>-batch-<n>.md (COMMON + kind prompt + the items with paths) and prints
-the batches. KIND in {A2, A5}. Reads futon3c/holes/excursions/giraffe-partition-2026-11-02.json
+the batches. KIND in {A2, A3, A4, A5, A6}. Reads futon3c/holes/excursions/giraffe-partition-2026-11-02.json
 for the rows and ~/notes/commons-map/review-unblockers-2026-11-02-signals.tsv for paths.
 """
 import json, pathlib, sys
@@ -14,8 +14,16 @@ PATH = {r[1]: r[9] for r in SIG[1:] if len(r) > 9}
 SELECT = {
     "A2": lambda it: it["situation"] in ("artifact-landed", "closeable-unverified"),
     "A5": lambda it: (it.get("decision") or {}).get("decision") == "rehome",
+    "A3": lambda it: (it.get("decision") or {}).get("decision") == "audit",
+    "A4": lambda it: (it.get("decision") or {}).get("decision") == "close-as-prototype",
+    "A6": lambda it: it["id"] == "M-superpod-mark2",
 }
-PROMPT = {"A2": "A2-witness.md", "A5": "A5-rehome.md"}
+PROMPT = {"A2": "A2-witness.md", "A5": "A5-rehome.md", "A3": "A3-audit-explain.md", "A4": "A4-lesson.md", "A6": "A6-acceptance-check.md"}
+def canonical(path):
+    """The signals file read futon6-old-copy for two rows; the live tree is futon6."""
+    if path.startswith("futon6-old-copy/") and (pathlib.Path("/home/joe/code") / path.replace("futon6-old-copy/", "futon6/", 1)).exists():
+        return path.replace("futon6-old-copy/", "futon6/", 1)
+    return path
 def main(kind, size, out):
     items = [it for it in PART["items"] if SELECT[kind](it)]
     out = pathlib.Path(out); out.mkdir(parents=True, exist_ok=True)
@@ -24,7 +32,7 @@ def main(kind, size, out):
     for n, b in enumerate(batches, 1):
         lines = [common, "", kp, "", f"## Items for this batch ({len(b)})", ""]
         for it in b:
-            lines.append(f"- `{it['id']}` — file `/home/joe/code/{PATH.get(it["id"], "?")}` — stated finish (claude-2's reading, verify it): {it.get('stated-finish') or '(none stated)'}")
+            lines.append(f"- `{it['id']}` — file `/home/joe/code/{canonical(PATH.get(it["id"], "?"))}` — stated finish (claude-2's reading, verify it): {it.get('stated-finish') or '(none stated)'}")
         (out / f"{kind}-batch-{n}.md").write_text("\n".join(lines) + "\n")
         print(f"{kind}-batch-{n}: " + ", ".join(it["id"] for it in b))
 if __name__ == "__main__":
