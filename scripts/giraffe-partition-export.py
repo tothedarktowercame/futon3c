@@ -15,6 +15,8 @@ import json, pathlib, re, sys, datetime
 LAYERS = json.loads((pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "layers.json").read_text())
 _pp = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "place-probe-2026-11-02.json"
 PLACE = json.loads(_pp.read_text())["rows"] if _pp.exists() else {}
+_dp = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "decisions-2026-11-02.json"
+DECISIONS = json.loads(_dp.read_text())["decisions"] if _dp.exists() else {}
 DEFICIENCY = {k: v for k, v in LAYERS["situation-deficiency"].items() if not k.startswith("_")}
 
 NEEDS = {  # situation -> what the outermost loop still has to do
@@ -43,7 +45,8 @@ def main(sig, sheet, out):
         d = dict(zip(hdr, r))
         sit = d.get("situation", "?")
         need, why = NEEDS.get(sit, ("read", "unclassified"))
-        selectable = (d["action"] == "work" and bool(d["stated-finish"]) and sit == "work")
+        dec = DECISIONS.get(d["id"], {}).get("decision")
+        selectable = (dec == "work") or (dec is None and d["action"] == "work" and bool(d["stated-finish"]) and sit == "work")
         items.append({
             "rank": int(d["rank"]), "id": d["id"], "kind": {"M": "mission", "E": "excursion", "T": "ticket"}.get(d["id"][0], "doc"),
             "repo": (re.match(r"(futon[0-9a-z]*)", d["path"] or "") or [None, None])[1],
@@ -57,6 +60,7 @@ def main(sig, sheet, out):
             "needs": need, "needs-why": why, "selectable-now": selectable,
             "deficient-way": DEFICIENCY.get(sit),
             "place": PLACE.get(d["id"]),
+            "decision": DECISIONS.get(d["id"]),
         })
     items.sort(key=lambda x: x["rank"])
     by_sit, by_wing, by_need, by_def = {}, {}, {}, {}
@@ -71,6 +75,7 @@ def main(sig, sheet, out):
         "exported-at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
         "loop": "outermost: prepares what the War Machine's outer loop may select",
         "count": len(items), "selectable-now": sum(1 for i in items if i["selectable-now"]),
+        "decided": sum(1 for i in items if i["decision"]), "by-decision": (lambda m: m)({k: sum(1 for i in items if (i["decision"] or {}).get("decision","").split(":")[0]==k) for k in sorted(set((i["decision"] or {}).get("decision","").split(":")[0] for i in items if i["decision"]))}),
         "place-probe": {"gone": sum(1 for i in items if i["place"] and i["place"]["alive"] is False), "alive": sum(1 for i in items if i["place"] and i["place"]["alive"]), "probed": sum(1 for i in items if i["place"])},
         "by-situation": by_sit, "by-wing": by_wing, "by-needs": by_need, "by-deficient-way": by_def,
         "items": items}, indent=1, ensure_ascii=False) + "\n")

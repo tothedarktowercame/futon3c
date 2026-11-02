@@ -599,7 +599,16 @@
     el("thesis-body").innerHTML="<div class='thesis-apex'>"+esc(t.apex)+"</div>"+
       "<div class='sub'>As of "+esc(t["as-of"])+" · "+esc(t.status)+" · "+esc(t.provenance)+"</div>"+
       "<div class='thesis-epigraph'>"+esc(t.bergson)+"</div>"+
-      "<div class='thesis-grid'>"+cards+"</div>";
+      "<div class='thesis-grid'>"+cards+"</div><div id='theses-body'></div>";
+    loadTheses();
+  }
+  var EP_THESES="intermediate-theses.json";
+  function loadTheses(){
+    requestJSON("intermediate theses",EP_THESES,true).then(function(d){
+      if(!d) return;
+      var rows=(d.theses||[]).map(function(t){return "<li><b>"+esc(t.id)+"</b> "+esc(t.text)+" <span class='wow-ev'>decided by: "+esc(t["decided-by"])+(t["settled-today"]?" · settled today: "+t["settled-today"]:"")+"</span></li>";}).join("");
+      el("theses-body").innerHTML="<div class='sub' style='margin-top:10px'><b>Intermediate theses</b> — rules of judgement between the apex and a backlog row ("+esc(d.status||"")+")</div><ul style='margin:4px 0 0;padding-left:18px;font-size:12px;color:#c3d0e0'>"+rows+"</ul>";
+    }).catch(function(){});
   }
 
   function renderWow(d){
@@ -647,12 +656,13 @@
     PARTITION=d; renderLayers();
     var items=Array.isArray(d.items)?d.items:[];
     var pp=d["place-probe"]||{};
-    el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+(pp.probed?" · Place probed on "+pp.probed+": "+pp.gone+" gone, "+pp.alive+" alive":"")+" · exported "+(d["exported-at"]||"");
+    el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+" · decided "+(d.decided||0)+" (Joe 2026-11-02, reopenable)"+(pp.probed?" · Place probed on "+pp.probed+": "+pp.gone+" gone, "+pp.alive+" alive":"")+" · exported "+(d["exported-at"]||"");
     function chips(title,obj){return Object.keys(obj||{}).sort(function(a,b){return obj[b]-obj[a];}).map(function(k){return "<span><b>"+esc(k)+"</b> "+obj[k]+"</span>";}).join("");}
     var summary="<div class='part-summary'><span class='muted'>needs:</span>"+chips("needs",d["by-needs"])+"</div>"+
       "<div class='part-summary'><span class='muted'>situation:</span>"+chips("situation",d["by-situation"])+"</div>"+
       "<div class='part-summary'><span class='muted'>wing:</span>"+chips("wing",d["by-wing"])+"</div>"+
-      "<div class='part-summary'><span class='muted'>deficient way:</span>"+chips("deficient",d["by-deficient-way"])+"</div>";
+      "<div class='part-summary'><span class='muted'>deficient way:</span>"+chips("deficient",d["by-deficient-way"])+"</div>"+
+      "<div class='part-summary'><span class='muted'>decisions:</span>"+chips("decision",d["by-decision"])+"</div>";
     function rowHtml(it){
       var clocked=CLOCK_IX?(CLOCK_IX[it.id]||[]):[];
       return "<tr class='"+(it["selectable-now"]?"selectable":"")+"'><td>"+it.rank+"</td>"+
@@ -664,15 +674,17 @@
         "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td>"+
         "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td>"+
         "<td class='wow-ev'>"+esc(it["deficient-way"]||"—")+"</td>"+
+        "<td>"+(it.decision?("<b class='wow-holding'>"+esc(it.decision.decision)+"</b><div class='wow-ev' title='"+esc(it.decision.basis)+"'>"+esc(String(it.decision.basis).slice(0,60))+"</div>"):"<span class='muted'>undecided</span>")+"</td>"+
         "<td class='wow-ev'>"+(it.place?("<span class='"+(it.place.alive===false?"wow-failing":(it.place.alive?"wow-holding":"wow-unknown"))+"'>"+(it.place.alive===false?"gone":(it.place.alive?"alive":"unknown"))+"</span> "+esc(it.place.place)+"<div title='"+esc(it.place.evidence)+"'>"+esc(String(it.place.evidence).slice(0,70))+"</div>"):"<span class='muted'>—</span>")+"</td></tr>";
     }
-    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th><th>Place (probed)</th></tr></thead>";
+    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th><th>decision (Joe, reopenable)</th><th>Place (probed)</th></tr></thead>";
     var seen={};
     var groups=DRAIN.map(function(g){
       var rs=items.filter(function(it){return it.needs===g.need;}); rs.forEach(function(it){seen[it.id]=1;});
       if(!rs.length) return "";
       var pg=rs.filter(function(it){return it.place&&it.place.alive===false;}).length, pa=rs.filter(function(it){return it.place&&it.place.alive;}).length;
       var probeNote=(pg||pa)?" · probed: "+pg+" gone, "+pa+" alive":"";
+      var dn=rs.filter(function(it){return it.decision;}).length; probeNote+=" · decided "+dn+" of "+rs.length;
       return "<details class='part-group'"+(g.open?" open":"")+"><summary><b>"+esc(g.label)+"</b> · "+rs.length+" rows"+probeNote+" · needs <span class='need need-"+esc(g.need)+"'>"+esc(g.need)+"</span> · <span class='who'>who acts: "+esc(g.who)+" · claude-16 bucket: "+esc(g.action)+"</span><div class='wow-ev'>"+esc(g.text)+"</div></summary>"+
         "<div class='scrollx'><table class='part-table'>"+head+"<tbody>"+rs.map(rowHtml).join("")+"</tbody></table></div></details>";
     }).join("");

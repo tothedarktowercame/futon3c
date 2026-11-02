@@ -1,0 +1,12 @@
+{
+  "schema": "intermediate-theses-v1",
+  "as-of": "2026-11-02",
+  "status": "DRAFT by claude-2 at Joe's direction (\"we may need some intermediate theses for me to make more immediate judgements ... and you too\"); each one is a rule of judgement that sits between the apex thesis and a backlog row, and names the record that decides it",
+  "theses": [
+    {"id": "IT-1", "text": "A mission whose Place is down is not open work; it is rehomed or retired.", "decided-by": "the Place probe (port, process, cron, file, host)", "settled-today": 12},
+    {"id": "IT-2", "text": "A closure without an independent witness is a reading, not a completion.", "decided-by": "a registry warrant, a cascade-real arrow, or a commit that produced the named artifact (C6: 0 of 12 live-gap closings had one)", "settled-today": 0},
+    {"id": "IT-3", "text": "A held item is open only if the holder and the un-hold condition are both named.", "decided-by": "the hold reason in the mission file; otherwise it is retired or merged", "settled-today": 15},
+    {"id": "IT-4", "text": "Completed work is attested upward: every closure names the therefore it served and the witness, so the thesis box can count what has been done, not only what is open.", "decided-by": "an attestation per closed row, rendered under its therefore", "settled-today": 0},
+    {"id": "IT-5", "text": "The War Machine may select only from the set that survives IT-1 to IT-3 and names who acts.", "decided-by": "the outermost loop's selectable count on this page", "settled-today": 3}
+  ]
+}

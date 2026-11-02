@@ -76,6 +76,7 @@ snapshot = {
     "ways-of-working-live.json":            json.loads((work / "wow.json").read_text()),
     "giraffe-partition-2026-11-02.json":    json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/giraffe-partition-2026-11-02.json").read_text()),
     "layers.json":                          json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/layers.json").read_text()),
+    "intermediate-theses.json":             json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/intermediate-theses.json").read_text()),
 }
 stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 
