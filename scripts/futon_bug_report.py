@@ -4,7 +4,7 @@
 Called by `report-futon-bug' (emacs/report-futon-bug.el); usable alone:
 
     futon_bug_report.py --summary "what went wrong" [--emacs-context FILE]
-                        [--out-dir DIR] [--minutes 30]
+                        [--out-dir DIR] [--minutes 10] [--zone-health]
 
 Prints the path of the report it wrote.  The report is meant to be read by an
 agent on another host, so it carries everything inline: the operator's
@@ -101,7 +101,7 @@ def services(minutes):
         state = run(["systemctl", "--user", "is-active", u], 5)
         out.append(f"### {u}: {state}\n")
         log = run(["journalctl", "--user", "-u", u, "--since", f"-{minutes}min",
-                   "-n", "40", "--no-pager", "-o", "short-iso"], 15)
+                   "-n", "20", "--no-pager", "-o", "short-iso"], 15)
         out.append("```\n" + (log or "(no journal lines)") + "\n```\n")
     return "\n".join(out)
 
@@ -125,8 +125,11 @@ def main():
     ap.add_argument("--summary", required=True)
     ap.add_argument("--emacs-context", help="file of Emacs-side context (markdown)")
     ap.add_argument("--out-dir", default=os.path.join(HOME, "notes", "futon-bugs"))
-    ap.add_argument("--minutes", type=int, default=30, help="journal window")
-    ap.add_argument("--no-zone-health", action="store_true")
+    ap.add_argument("--minutes", type=int, default=10, help="journal window")
+    ap.add_argument("--zone-health", action="store_true",
+                    help="include the broad, potentially 90-second zone audit")
+    ap.add_argument("--no-zone-health", action="store_true",
+                    help=argparse.SUPPRESS)  # compatibility; omission is now the default
     a = ap.parse_args()
 
     now = dt.datetime.now(dt.timezone.utc)
@@ -168,7 +171,7 @@ def main():
         "",
         services(a.minutes),
     ]
-    if not a.no_zone_health:
+    if a.zone_health and not a.no_zone_health:
         parts += ["## zone-health", "", "```", zone_health(), "```", ""]
 
     text, n = scrub("\n".join(parts))

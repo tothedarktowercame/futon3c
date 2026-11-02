@@ -7,11 +7,10 @@
 ;;
 ;; `report-futon-bug' collects the Emacs side (region or REPL tail,
 ;; *Messages*, *Backtrace*), hands it to scripts/futon_bug_report.py, which
-;; adds health, journal excerpts, repo HEADs and zone-health, scrubs secrets
-;; and writes one markdown file under ~/notes/futon-bugs/.  The report is
-;; opened for review; optionally it is belled, whole, to an Agency agent with
-;; --mode work.  The bell carries the full text, so a reader on another host
-;; needs nothing else.  Which agent to send to is left open (routing later).
+;; adds health, short journal excerpts, repo HEADs and optional zone-health, scrubs secrets
+;; and writes one markdown file under ~/notes/futon-bugs/.  Collection and
+;; optional Agency delivery both run outside Emacs's UI path.  The bell carries
+;; the full text, so a reader on another host needs nothing else.
 ;;
 ;; Origin: futon0/holes/missions/M-landscape-positioning.md §5.
 
@@ -46,11 +45,11 @@ the result is read from the job, or the triage agent reports where told."
   "Private file naming the agent subscribed to completed bug reports."
   :type 'file)
 
-(defcustom report-futon-bug-buffer-lines 150
+(defcustom report-futon-bug-buffer-lines 80
   "Lines of the current buffer included when no region is active."
   :type 'integer)
 
-(defcustom report-futon-bug-messages-lines 60
+(defcustom report-futon-bug-messages-lines 30
   "Lines from the end of *Messages* included in the report."
   :type 'integer)
 
@@ -76,7 +75,9 @@ the result is read from the job, or the triage agent reports where told."
                      (buffer-local-value 'agent-chat--agent-id buf)))
          (region (and (use-region-p)
                       (buffer-substring-no-properties (region-beginning) (region-end))))
-         (backtrace (get-buffer "*Backtrace*")))
+         ;; A long-lived *Backtrace* is usually evidence for an older incident.
+         ;; Include it only when that is the buffer the operator is reporting.
+         (backtrace (and (equal (buffer-name buf) "*Backtrace*") buf)))
     (concat
      (format "- buffer: %s (%s)\n" (buffer-name buf) major-mode)
      (when agent (format "- REPL agent: %s\n" agent))
@@ -91,11 +92,12 @@ the result is read from the job, or the triage agent reports where told."
      (when backtrace
        (format "### *Backtrace*\n\n%s\n\n"
                (report-futon-bug--fence (report-futon-bug--tail backtrace 80))))
-     (format "### *Messages* (last %d lines)\n\n%s\n"
-             report-futon-bug-messages-lines
-             (report-futon-bug--fence
-              (report-futon-bug--tail (messages-buffer)
-                                      report-futon-bug-messages-lines))))))
+     (unless (eq buf (messages-buffer))
+       (format "### *Messages* (last %d lines)\n\n%s\n"
+               report-futon-bug-messages-lines
+               (report-futon-bug--fence
+                (report-futon-bug--tail (messages-buffer)
+                                        report-futon-bug-messages-lines)))))))
 
 (defun report-futon-bug--agents ()
   "Agent ids on the local Agency roster, or nil if it cannot be read."
@@ -168,7 +170,7 @@ a replacement when the seat is retired."
 ;;;###autoload
 (defun futon-bug-feed-detach ()
   "Stop pushing completed bug reports to an agent.
-Reports remain durable under ~/notes/futon-bugs and continue to open in Emacs."
+Reports remain durable under ~/notes/futon-bugs."
   (interactive)
   (let ((old (futon-bug-feed--attached-agent)))
     (when (file-exists-p futon-bug-feed-attachment-file)
@@ -189,21 +191,47 @@ Reports remain durable under ~/notes/futon-bugs and continue to open in Emacs."
       (message "Futon bug feed is detached"))
     agent))
 
-(defun report-futon-bug--bell (agent path)
-  "Bell the report at PATH, whole, to AGENT.  Return the sender's output."
-  (with-temp-buffer
-    (insert (format "A futon bug report follows. Read it in full; it is \
-self-contained. Do what its \"What the reader is asked to do\" section says, \
-then reply with what you checked and what you found.\n\n"))
-    (insert-file-contents path nil nil nil nil)
-    (goto-char (point-max))
-    (let ((status (call-process-region
-                   (point-min) (point-max) "python3" t t nil
-                   report-futon-bug-sender "--to" agent
-                   "--from" report-futon-bug-from
-                   "--kind" "bell" "--mode" "work")))
-      (format "exit %s: %s" status
-              (string-trim (buffer-substring (point-min) (min (point-max) 400)))))))
+(defun report-futon-bug--bell-finish-async (process _event)
+  "Report completion of background bell PROCESS without retaining its buffer."
+  (when (memq (process-status process) '(exit signal))
+    (let ((buffer (process-buffer process))
+          (agent (process-get process 'report-futon-bug-agent))
+          (path (process-get process 'report-futon-bug-path)))
+      (unwind-protect
+          (if (zerop (process-exit-status process))
+              (message "report-futon-bug: %s; belled %s" path agent)
+            (display-warning
+             'report-futon-bug
+             (format "Bug report delivery to %s failed: %s" agent
+                     (if (buffer-live-p buffer)
+                         (with-current-buffer buffer
+                           (string-trim (buffer-string)))
+                       "no sender output"))
+             :warning))
+        (when (buffer-live-p buffer) (kill-buffer buffer))))))
+
+(defun report-futon-bug--bell-async (agent path)
+  "Bell report PATH to AGENT in a separate process and return immediately."
+  (let* ((buffer (generate-new-buffer " *futon-bug-sender*"))
+         (process (make-process
+                   :name "futon-bug-sender" :buffer buffer :noquery t
+                   :connection-type 'pipe
+                   :command (list "python3" report-futon-bug-sender
+                                  "--to" agent "--from" report-futon-bug-from
+                                  "--kind" "bell" "--mode" "work")
+                   :sentinel #'report-futon-bug--bell-finish-async)))
+    (process-put process 'report-futon-bug-agent agent)
+    (process-put process 'report-futon-bug-path path)
+    (process-send-string
+     process
+     (concat "A futon bug report follows. Read it in full; it is self-contained. "
+             "Do what its \"What the reader is asked to do\" section says, "
+             "then reply with what you checked and what you found.\n\n"))
+    (with-temp-buffer
+      (insert-file-contents path)
+      (process-send-region process (point-min) (point-max)))
+    (process-send-eof process)
+    process))
 
 (defun report-futon-bug--finish-async (process event)
   "Finish an asynchronous bug collection PROCESS after EVENT."
@@ -217,12 +245,11 @@ then reply with what you checked and what you found.\n\n"))
           (if (and (zerop (process-exit-status process))
                    path (file-exists-p path))
               (progn
-                ;; Collection is a background observation.  Register the file
-                ;; with Emacs without stealing the operator's selected window.
-                (find-file-noselect path)
                 (if agent
-                    (message "report-futon-bug: %s; belled %s (%s)" path agent
-                             (report-futon-bug--bell agent path))
+                    (progn
+                      (report-futon-bug--bell-async agent path)
+                      (message "report-futon-bug: wrote %s; delivery queued to %s"
+                               path agent))
                   (message "report-futon-bug: wrote %s (not sent)" path)))
             (display-warning
              'report-futon-bug
@@ -259,11 +286,10 @@ input file; slow health and journal reads happen outside the UI request."
 
 ;;;###autoload
 (defun report-futon-bug (summary &optional agent)
-  "Write a self-contained futon bug report for SUMMARY; optionally bell AGENT.
-Collects the region (or the tail of the current buffer), *Messages* and
-*Backtrace*, then service health, journal excerpts, repo HEADs and
-zone-health, with secrets scrubbed.  The report opens for review.  With an
-empty agent at the prompt, nothing is sent."
+  "Queue a self-contained futon bug report for SUMMARY and optional AGENT.
+The command returns after its small Emacs snapshot is durable.  Health,
+journals, repository state and delivery are all collected in background
+processes.  With an empty agent at the prompt, nothing is sent."
   (interactive
    (list (read-string "Bug, in one line: ")
          (let ((choice (completing-read
@@ -273,30 +299,7 @@ empty agent at the prompt, nothing is sent."
                         (report-futon-bug--agents) nil nil nil nil
                         report-futon-bug-default-agent)))
            (unless (string-empty-p (or choice "")) choice))))
-  (when (string-empty-p (string-trim summary))
-    (user-error "A one-line summary is needed"))
-  (let* ((context (report-futon-bug--emacs-context)) ; read before any temp buffer
-         (ctx-file (make-temp-file "futon-bug-emacs-" nil ".md"))
-         (path nil))
-    (unwind-protect
-        (progn
-          (with-temp-file ctx-file (insert context))
-          (message "report-futon-bug: collecting (health, journals, zone-health)...")
-          (setq path (string-trim
-                      (with-output-to-string
-                        (with-current-buffer standard-output
-                          (call-process "python3" nil t nil report-futon-bug-collector
-                                        "--summary" summary
-                                        "--emacs-context" ctx-file))))))
-      (delete-file ctx-file))
-    (unless (and path (file-exists-p path))
-      (error "report-futon-bug: collector failed: %s" path))
-    (find-file-other-window path)
-    (if agent
-        (message "report-futon-bug: %s; belled %s (%s)" path agent
-                 (report-futon-bug--bell agent path))
-      (message "report-futon-bug: wrote %s (not sent)" path))
-    path))
+  (report-futon-bug-async summary agent))
 
 (provide 'report-futon-bug)
 ;;; report-futon-bug.el ends here

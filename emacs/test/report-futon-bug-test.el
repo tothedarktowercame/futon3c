@@ -18,5 +18,21 @@
           (should-not (file-exists-p futon-bug-feed-attachment-file)))
       (delete-directory dir t))))
 
+(ert-deftest report-futon-bug-command-delegates-to-background-entry-point ()
+  (let (seen)
+    (cl-letf (((symbol-function 'report-futon-bug-async)
+               (lambda (summary agent)
+                 (setq seen (list summary agent))
+                 '(:accepted t :process 42))))
+      (should (equal '(:accepted t :process 42)
+                     (report-futon-bug "slow UI" "codex-7")))
+      (should (equal '("slow UI" "codex-7") seen)))))
+
+(ert-deftest report-futon-bug-messages-buffer-is-not-copied-twice ()
+  (with-current-buffer (messages-buffer)
+    (let ((context (report-futon-bug--emacs-context)))
+      (should (string-match-p "Last 80 lines of \\*Messages\\*" context))
+      (should-not (string-match-p "### \\*Messages\\* (last" context)))))
+
 (provide 'report-futon-bug-test)
 ;;; report-futon-bug-test.el ends here
