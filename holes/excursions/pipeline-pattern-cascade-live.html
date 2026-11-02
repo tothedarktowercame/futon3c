@@ -100,12 +100,6 @@
     <div id="layers-body"><div class="gap">Loading layers…</div></div>
   </section>
 
-  <section class="panel" id="partition-panel">
-    <h2>The outermost loop — preparing what can be selected (the Giraffe partition over the review sheet) <span class="muted" id="partition-count"></span></h2>
-    <div class="sub" style="margin-bottom:10px">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. Each row is an item from the review sheet of blocked unblockers, with its wing (the therefore it sits under), its situation (a state of the action situation, read from evidence), the advisory reading, and <b>what it still needs</b> before it could be selected. Readings are not decisions; nothing is applied.</div>
-    <div id="partition-body"><div class="gap">Loading partition data…</div></div>
-  </section>
-
   <section class="panel" id="section-status-panel" style="display:none">
     <h2>Dimension read status</h2>
     <div class="sub" style="margin-bottom:10px">Green zero means the substrate was read successfully and contained no rows. Red <b>READ FAILED</b> means the dimension is unavailable, not empty.</div>
@@ -165,10 +159,14 @@
   </section>
 
   <section class="panel" id="tickets-panel" style="display:none">
-    <h2>Tickets <span class="muted" id="tickets-count"></span></h2>
-    <div class="sub" style="margin-bottom:8px">This pile is the evidence of the failing way of working <b>backlog-understood</b> above: items with no placement under any way of working. It stays on the page until that invariant holds.</div>
+    <h2>Preparing what can be selected — tickets, placements, and the review rows <span class="muted" id="tickets-count"></span></h2>
+    <div class="sub" style="margin-bottom:8px">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. One section, placed low (Joe, 2026-11-02: the outermost loop near the top read as a second Tickets section). The tree is the draw pile placed by ways of working; the pile is the evidence of the failing way <b>backlog-understood</b> above and stays here until that invariant holds. Rows marked <span class="wow-holding">review</span> are the 47 review-sheet rows, listed in full below the tree.</div>
     <div class="sub" style="margin-bottom:10px">unclocked = no clock lineage, live or durable · claim by clocking (<code>bell --mission &lt;id&gt;</code> or 3 doc-edits &lt;10 min)</div>
     <div id="tickets-body"></div>
+    <details class="part-group" id="partition-details"><summary><b>The 47 review rows</b> — the Giraffe partition over the review sheet <span class="muted" id="partition-count"></span></summary>
+      <div class="sub" style="margin:8px 0">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. Each row is an item from the review sheet of blocked unblockers, with its wing (the therefore it sits under), its situation (a state of the action situation, read from evidence), the advisory reading, and <b>what it still needs</b> before it could be selected. Readings are not decisions; nothing is applied.</div>
+      <div id="partition-body"><div class="gap">Loading partition data…</div></div>
+    </details>
   </section>
 </main>
 
@@ -517,7 +515,7 @@
   // Tickets as a tree (Joe's judgement 2026-11-02 via claude-16): status > way or wing > cluster > item;
   // requisitions (E-kimi-task-*) apart as history, not tickets; repair tickets one class; unplaced shown live;
   // an item with two ways sits under the first and carries `also` (shown as a marker, so the tree claims no more than the data).
-  var TREE=null;
+  var TREE=null; var REVIEW_IDS={};
   function treeCount(n){ var c=(n._items||[]).length; Object.keys(n).forEach(function(k){ if(k!=="_items") c+=treeCount(n[k]); }); return c; }
   function treeNode(name,n,depth,open){
     var kids=Object.keys(n).filter(function(k){return k!=="_items";}).sort(function(a,b){return treeCount(n[b])-treeCount(n[a]);});
@@ -528,7 +526,8 @@
     if(items.length){
       body+="<div class='wow-ev' style='margin-left:"+(12)+"px'>"+items.map(function(it){
         var id=(typeof it==="string")?it:it.id; var also=(typeof it==="object"&&it.also)?it.also:null;
-        return "<code>"+esc(id)+"</code>"+(also?" <span class='wow-unknown' title='second way, as true as the first'>also: "+esc(also.join(", "))+"</span>":"");
+        var rev=REVIEW_IDS[id]?" <span class='wow-holding' title='one of the 47 review-sheet rows; see the list below the tree'>review</span>":"";
+        return "<code>"+esc(id)+"</code>"+rev+(also?" <span class='wow-unknown' title='second way, as true as the first'>also: "+esc(also.join(", "))+"</span>":"");
       }).join(" · ")+"</div>";
     }
     return "<details class='part-group'"+(open?" open":"")+" style='margin-left:"+(depth*10)+"px'>"+head+body+"</details>";
@@ -690,6 +689,7 @@
     {need:"place",label:"unplaced",who:"claude-16",action:"—",open:false,text:"no placement at all"}];
   function renderPartition(d){
     PARTITION=d; renderLayers();
+    REVIEW_IDS={}; (d.items||[]).forEach(function(it){REVIEW_IDS[it.id]=1;}); if(TREE&&LAST_G){ renderTree(TREE); renderTickets(LAST_G); }
     var items=Array.isArray(d.items)?d.items:[];
     var pp=d["place-probe"]||{};
     el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+" · decided "+(d.decided||0)+" (Joe 2026-11-02, reopenable)"+(pp.probed?" · Place probed on "+pp.probed+": "+pp.gone+" gone, "+pp.alive+" alive":"")+" · exported "+(d["exported-at"]||"");
@@ -754,7 +754,7 @@
   }
   function loadPartition(){
     requestJSON("partition data",EP_PARTITION).then(renderPartition).catch(function(err){
-      el("partition-body").innerHTML="<div class='gap'>Partition data unavailable: "+esc(err&&err.message||err)+"</div>";
+      el("partition-body").innerHTML="<div class='gap'>Partition data unavailable: "+esc(err&&err.message||err)+"</div>"; el("tickets-panel").style.display="";
     });
   }
 
