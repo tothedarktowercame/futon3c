@@ -204,7 +204,9 @@
    "patterns": [],
    "shape": "real-users(population, thing, hops) -> value in {none, asked, tried, uses, depends}, dated, sourced",
    "scope-note": "only the fluent's shape is published; no monitor state is claimed and no population or value appears on the page"
-  }
- ],
+  },
+    {"id": "intents-are-tracked", "name": "What was asked stays open until it is met or withdrawn", "therefore": "C", "problem": "Intents are spoken in turns and then live only in the operator's head, so work that misses them is caught only if he notices.", "invariant": "Each operator intent is a tracked act, and work that does not match it can be noticed, flagged, revoked or reworked.", "declared-in": "futon3c/holes/missions/M-象-2000.md; Joe 2026-11-02", "built": ["futon3c 象 turn records with ports and acts", "M-象-2000 as-of view, act stamps, withdrawal"], "probe": "none", "pattern": "ways-of-working/intents-are-tracked", "patterns": ["象/言即行", "象/诺必践", "象/欠与被欠", "象/收回亦是行", "象/要约与接受", "象/象不忘"]},
+    {"id": "stays-alive-and-paid", "name": "The work stays alive and paid for", "therefore": null, "problem": "Every other way depends on machines, history and money that can stop.", "invariant": "Bills are paid, a verified off-box copy of the evidence exists, failures reach the operator unasked, and runway is known.", "declared-in": "~/notes/commons-map/PLAN-november-2026.md invariants; Joe 2026-11-01", "built": ["futon0/scripts/zone-health.bb"], "probe": "none", "pattern": "ways-of-working/stays-alive-and-paid", "patterns": [], "position": "below-the-therefores"}
+  ],
  "pattern-texts": "library ids; texts live in futon3/library/ways-of-working/ (claude-16, draft 2026-11-02, uncommitted in futon3 as of 17:41Z; each text carries a + VALIDATION: clause, which is the probe's question); the `patterns` arrays are claude-16's advisory reading of 馬-attested patterns (~/notes/pattern-global/ways-cascade-draft.md), a reading of what surfaced, not a measurement"
 }

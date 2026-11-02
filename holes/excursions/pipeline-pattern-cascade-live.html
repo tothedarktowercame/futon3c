@@ -605,7 +605,7 @@
           return "<li><code>"+esc(v.repo)+"</code> untracked "+v.untracked+" · modified "+v.modified+" · unpushed "+v.ahead+"</li>";}).join("")+"</ul></details>";
       }
       return "<tr><td><b>"+esc(w.name)+"</b><div class='wow-ev'>"+esc(w.problem)+"</div></td>"+
-        "<td>"+(w.therefore?esc(w.therefore):"<span class='muted'>above the therefores</span>")+"</td>"+
+        "<td>"+(w.therefore?esc(w.therefore):"<span class='muted'>"+esc(w.position?String(w.position).replace(/-/g," "):"no therefore")+"</span>")+"</td>"+
         "<td class='wow-"+esc(l.monitor)+"'>"+esc(l.monitor)+"</td>"+
         "<td class='wow-"+esc(l.invariant)+"'>"+esc(l.invariant)+(viol?" · "+viol:"")+(l.denominator?"<div class='wow-ev'>"+esc(l.denominator)+"</div>":"")+"</td>"+
         "<td class='wow-ev'>"+esc(l["last-observation"]||"never")+"</td>"+
