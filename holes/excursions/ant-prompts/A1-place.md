@@ -25,11 +25,23 @@ Output per item:
  "status": {"value": "open|closed|stopped|unsure", "cite": "path:line", "quote": "<the status line or the line that shows it>"},
  "wing": {"value": "A|B|C|D|V|none", "cite": "path:line", "quote": "<the line that most shows which therefore it serves>"},
  "way": {"value": "<way id or none>", "cite": "path:line", "quote": "..."},
- "action": {"value": "work|close|retire|held|merge-into:<id>|unsure", "cite": "path:line", "quote": "<the line that supports the action>"},
+ "action": {"value": "work|close|retire|held|rehome|cluster:<name>|merge-into:<id>|audit|unsure", "cite": "path:line", "quote": "<the line that supports the action>"},
+ "need_goes_to": {"value": "<item id that now carries the need, or 'solved'>", "cite": "path:line", "quote": "..."} OR {"unsure": "..."}   (REQUIRED when action is close or retire; omit otherwise),
  "finish": {"value": "<what done would look like, from the file>", "cite": "path:line", "quote": "..."} OR {"unsure": "no finish stated"},
  "beneficiary": {"value": "self|company|grant-math|product|job|unsure", "cite": "path:line", "quote": "..."},
  "confidence": "high|medium|low"}
 ```
+Action vocabulary (rulings of 2026-11-02, claude-16's objection before packet 4):
+- `work`: open, finish stated, nothing stops it. `held`: someone is holding it; say who, in `what` or `finish`.
+- `rehome`: the mechanism it depends on is down and not coming back (futon1a on :7071 is the case) but the need stands.
+  A gone mechanism alone is NEVER grounds for `retire`. A blocker must be something that can return; futon1a is never a blocker.
+- `retire`: only when the problem it addresses is actually solved; then `need_goes_to` is "solved" with the citation that shows it.
+- `close`: the stated finish is met; `need_goes_to` names the item that carries any residue, or "solved".
+- `cluster:<name>`: belongs with others under one name, each keeping its own meaning (e.g. `cluster:superpod-work`).
+- `merge-into:<id>`: only for real supersession, where the other item says the same thing better. When in doubt, cluster.
+- `audit`: you cannot say from the file what it accomplished; say what you looked for.
+- Whether something is "a prototype we can learn from" is the operator's call: give `unsure` there, with what you saw.
+
 Rules for this kind: a kimi-task requisition (`E-kimi-task-N`) is a record of one dispatch; its
 "what" is the task it carried, its status is the requisition line near the top. A draft mission
 marked NON-LIVE is `held`, not `work`. Do not place an item by its filename alone.
