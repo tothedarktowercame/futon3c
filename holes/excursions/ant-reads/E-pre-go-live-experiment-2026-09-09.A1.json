@@ -1,59 +1,63 @@
 {
  "stem": "E-pre-go-live-experiment-2026-09-09",
  "kind": "A1",
- "seat": "kimi-2",
- "job": "invoke-1793654231851-10528-e4638c0d",
- "at": "2026-11-02T21:22:06+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654787373-10550-7af7951b",
+ "at": "2026-11-02T21:28:06+00:00",
  "row": {
   "stem": "E-pre-go-live-experiment-2026-09-09",
   "kind": "place",
   "what": {
-   "value": "Brief for a dogfooded e-pre-go-live cascade experiment: prepare an evidence-backed pre-go-live disposition for the find-closure and separated-risk chain.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:22",
-   "quote": "Prepare an evidence-backed pre-go-live disposition for the **find closure and"
+   "value": "Design brief for an e-pre-go-live cascade experiment: an evidence-backed pre-go-live disposition produced via a reviewed interpretation of five apparatus patterns; commissioned by Joe but no experiment has run.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:3",
+   "quote": "Status: task commissioned by Joe; executable interpretation proposed for independent"
   },
   "status": {
    "value": "open",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:3",
-   "quote": "Status: task commissioned by Joe; executable interpretation proposed for independent"
-  },
-  "wing": {
-   "value": "A",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:24",
-   "quote": "which prerequisites are reviewed, which checks actually ran, and which actions"
-  },
-  "way": {
-   "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:25",
-   "quote": "remain blocked. It must not claim readiness solely because code was committed."
-  },
-  "action": {
-   "value": "work",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:92",
-   "quote": "Codex-17 authors the executable interpretation and experiment manifest from"
-  },
-  "finish": {
-   "value": "An executed, reviewed before/after experiment producing a preparation disposition with all six O4 fields and honest acting-order record; no run yet.",
    "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:4",
    "quote": "library-lane review. No experiment has run. This brief is not an O4 witness."
   },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:23",
+   "quote": "The output must tell the operator which prerequisites are reviewed, which checks actually ran, and which actions remain blocked."
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:26",
+   "quote": "It must not claim readiness solely because code was committed."
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:99",
+   "quote": "Codex-17 authors the executable interpretation and experiment manifest from these spans; claude-1 routes an independent library-lane review and pin before execution."
+  },
+  "finish": {
+   "value": "Reviewed manifest pinned, both primary arms executed with O4 obligations preserved, disposition published without claiming self-acceptance.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:29",
+   "quote": "Organise itself and final config adoption remain explicit external dependencies: the experiment cannot certify its own acceptance or authorize a live run."
+  },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:3",
-   "quote": "Status: task commissioned by Joe; executable interpretation proposed for independent"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-experiment-2026-09-09.md:9",
+   "quote": "Well, I always love to dog feed these systems, so why don't we look at the tasks that we have right in front of us"
   },
   "confidence": "medium"
  },
  "checks": [
   "ok",
   "ok",
-  "ok-near",
-  "ok-near",
+  "quote-not-on-line",
   "ok",
-  "ok",
-  "ok"
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok-near"
  ],
- "ok": 7,
+ "ok": 4,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
 }

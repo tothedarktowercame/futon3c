@@ -1,48 +1,48 @@
 {
  "stem": "E-mfuton-type-environment-20261003",
  "kind": "A1",
- "seat": "kimi-1",
- "job": "invoke-1793654230458-10527-6b895ac8",
- "at": "2026-11-02T21:18:59+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654787373-10550-7af7951b",
+ "at": "2026-11-02T21:28:06+00:00",
  "row": {
   "stem": "E-mfuton-type-environment-20261003",
   "kind": "place",
   "what": {
-   "value": "Port compiler_type_environment prerequisite for _module_declaration_drafts into mfuton-sbcl Lisp against the pinned Python oracle.",
+   "value": "Port compiler_type_environment prerequisite for _module_declaration_drafts into mfuton-sbcl with differential evidence.",
    "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:7",
-   "quote": "Port the real compiler_type_environment prerequisite for _module_declaration_drafts from /tmp/mfs-blank@f5d45940f10e54b8608da0cee9b6bf724e5d8a2e"
+   "quote": "Port the real compiler_type_environment prerequisite for _module_declaration_drafts"
   },
   "status": {
-   "value": "open",
+   "value": "stopped",
    "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:3",
    "quote": "**Requisition:** in-progress — invoke-1791001708071-30743-bfdbbc58"
   },
   "wing": {
-   "value": "A",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:9",
-   "quote": "Do not let definition of a carrier masquerade as completed semantic constructor or body compilation."
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:7",
+   "quote": "Port the real compiler_type_environment prerequisite for _module_declaration_drafts"
   },
   "way": {
-   "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:9",
-   "quote": "Pin exact source path+revision of Python oracle; no old baseline. Run focused differential, relevant tests, SBCL compile/load and check-parens"
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:7",
+   "quote": "Port the real compiler_type_environment prerequisite for _module_declaration_drafts"
   },
   "action": {
-   "value": "work",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:5",
-   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition header says in-progress and the requisition was recorded 2026-10-03, well within 30"
+   "value": "audit",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:3",
+   "quote": "**Requisition:** in-progress — invoke-1791001708071-30743-bfdbbc58"
   },
   "finish": {
-   "value": "Environment construction ported (or first bounded reusable operation with named remaining calls); differential pins oracle revision over native Array owner plus binder/default/substitution fixtures; gates pass; freeze and bell codex-18.",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:9",
-   "quote": "If full constructor needs unported generic operations, implement the first bounded reusable operation with real differential and name exact r"
+   "value": "Bounded reusable operation or full constructor with real differential, named remaining calls, gates pass, freeze and bell codex-18.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:21",
+   "quote": "- [ ] If the full constructor needs unported operations, deliver the first bounded reusable operation with real differential and name the exact remaining calls."
   },
   "beneficiary": {
    "value": "product",
    "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-type-environment-20261003.md:7",
-   "quote": "Port the real compiler_type_environment prerequisite for _module_declaration_drafts from /tmp/mfs-blank@f5d45940f10e54b8608da0cee9b6bf724e5d8a2e"
+   "quote": "Port the real compiler_type_environment prerequisite for _module_declaration_drafts"
   },
-  "confidence": "high"
+  "confidence": "medium"
  },
  "checks": [
   "ok",
@@ -50,10 +50,12 @@
   "ok",
   "ok",
   "ok",
-  "ok",
+  "line-out-of-range",
   "ok"
  ],
- "ok": 7,
+ "ok": 6,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "line-out-of-range"
+ ]
 }

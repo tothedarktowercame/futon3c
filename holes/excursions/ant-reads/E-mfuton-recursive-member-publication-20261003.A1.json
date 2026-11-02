@@ -1,59 +1,61 @@
 {
  "stem": "E-mfuton-recursive-member-publication-20261003",
  "kind": "A1",
- "seat": "kimi-1",
- "job": "invoke-1793654230458-10527-6b895ac8",
- "at": "2026-11-02T21:18:59+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654787373-10550-7af7951b",
+ "at": "2026-11-02T21:28:06+00:00",
  "row": {
   "stem": "E-mfuton-recursive-member-publication-20261003",
   "kind": "place",
   "what": {
-   "value": "Repair the generic local-recursive member publication/catalog mismatch in mfuton-sbcl (codex-14 executing, codex-18 reviewing).",
+   "value": "Repair the generic local-recursive member publication/catalog mismatch in mfuton-sbcl with a generic regression and oracle probes.",
    "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:9",
    "quote": "Repair the generic local-recursive member publication/catalog mismatch in /home/joe/code/mfuton-sbcl."
   },
   "status": {
-   "value": "open",
+   "value": "stopped",
    "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:3",
    "quote": "**Requisition:** in-progress — codex-14 job invoke-1790996617066-30693-4fb14695"
   },
   "wing": {
-   "value": "A",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:13",
-   "quote": "Record exact commands, hashes, stdout/stderr/exits. Run relevant existing publication/catalog gates."
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:9",
+   "quote": "Repair the generic local-recursive member publication/catalog mismatch in /home/joe/code/mfuton-sbcl."
   },
   "way": {
-   "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:11",
-   "quote": "Choose one consistent generic naming contract; no Array-specific aliases, fake module registry, relaxed exact binding, or fallback that con"
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:9",
+   "quote": "Repair the generic local-recursive member publication/catalog mismatch in /home/joe/code/mfuton-sbcl."
   },
   "action": {
-   "value": "work",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:5",
-   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition header says in-progress under codex-14, recorded 2026-10-03 within the last 30 day"
+   "value": "audit",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:3",
+   "quote": "**Requisition:** in-progress — codex-14 job invoke-1790996617066-30693-4fb14695"
   },
   "finish": {
-   "value": "Mismatch repaired generically with regression test (namespaced owner, private alias, nonrecursive members); fresh isolated strict_probe.py probes confirm both rows; codex-18 belled, reviews and commits.",
-   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:13",
-   "quote": "exact production resolver fresh isolated probes BOTH rows using oracle/strict_probe.py with correct checkout and pinned source/runtime."
+   "value": "Mismatch repaired, generic regression added, strict_probe confirms both rows, codex-18 reviews and commits.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:27",
+   "quote": "- [ ] Fresh isolated probes via oracle/strict_probe.py confirm both rows; codex-18 reviews and commits."
   },
   "beneficiary": {
    "value": "product",
    "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-recursive-member-publication-20261003.md:9",
-   "quote": "Joe authorized continuing both Array curriculum targets; codex-18 reviews and commits."
+   "quote": "Repair the generic local-recursive member publication/catalog mismatch in /home/joe/code/mfuton-sbcl."
   },
-  "confidence": "high"
+  "confidence": "medium"
  },
  "checks": [
   "ok",
   "ok",
-  "ok-near",
-  "ok-near",
   "ok",
-  "ok-near",
+  "ok",
+  "ok",
+  "line-out-of-range",
   "ok"
  ],
- "ok": 7,
+ "ok": 6,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "line-out-of-range"
+ ]
 }
