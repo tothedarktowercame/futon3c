@@ -674,7 +674,7 @@
         "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td>"+
         "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td>"+
         "<td class='wow-ev'>"+esc(it["deficient-way"]||"—")+"</td>"+
-        "<td>"+(it.decision?("<b class='wow-holding'>"+esc(it.decision.decision)+"</b><div class='wow-ev' title='"+esc(it.decision.basis)+"'>"+esc(String(it.decision.basis).slice(0,60))+"</div>"):"<span class='muted'>undecided</span>")+"</td>"+
+        "<td>"+(it.decision?("<b class='wow-holding'>"+esc(it.decision.decision)+"</b><div class='wow-ev' title='"+esc(it.decision.basis)+"'>"+esc(String(it.decision.basis).slice(0,60))+"</div>"+(it.decision.carry?"<div class='wow-ev'>need → <span class='"+(it.decision.carry.kind==="needs-joe"?"wow-unknown":(it.decision.carry.kind==="no-home"?"wow-failing":"wow-holding"))+"'>"+esc(it.decision.carry.kind)+"</span> "+esc(it.decision.carry.to)+"</div>":"")):"<span class='muted'>undecided</span>")+"</td>"+
         "<td class='wow-ev'>"+(it.place?("<span class='"+(it.place.alive===false?"wow-failing":(it.place.alive?"wow-holding":"wow-unknown"))+"'>"+(it.place.alive===false?"gone":(it.place.alive?"alive":"unknown"))+"</span> "+esc(it.place.place)+"<div title='"+esc(it.place.evidence)+"'>"+esc(String(it.place.evidence).slice(0,70))+"</div>"):"<span class='muted'>—</span>")+"</td></tr>";
     }
     var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th><th>decision (Joe, reopenable)</th><th>Place (probed)</th></tr></thead>";

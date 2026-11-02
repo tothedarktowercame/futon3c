@@ -56,7 +56,7 @@ def main(sig, sheet, out):
             "commits-since-oct": int(d["substantive-commits-since-oct"] or 0),
             "last-commit": d["last-substantive-commit"] or None,
             "stated-finish": (d["stated-finish"] or "")[:160] or None,
-            "decision-question": decision.get(d["id"]),
+            "decision-question": None if DECISIONS.get(d["id"]) else decision.get(d["id"]),
             "needs": need, "needs-why": why, "selectable-now": selectable,
             "deficient-way": DEFICIENCY.get(sit),
             "place": PLACE.get(d["id"]),

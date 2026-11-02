@@ -61,6 +61,8 @@ def probe_cascade_standards(summary):
     holes = summary.get("holes", {})
     ev = [f"{k}: {v}" for k, v in std.items() if not isinstance(v, dict)]
     ev.append(f"honest holes: {len(holes) if isinstance(holes, (list, dict)) else holes}")
+    failing.append("s6-readable")
+    ev.append("s6-readable: False (Joe 2026-11-02: cannot keep a picture of the whole stack; sampled-question test not built)")
     return {"monitor": "on", "invariant": "failing" if failing else "holding",
             "last-observation": summary.get("s4-evidence", {}).get("as-of") or std.get("s4-evidence", {}).get("as-of"),
             "observed-at": iso(NOW), "violations": failing, "violation-count": len(failing), "evidence": ev}

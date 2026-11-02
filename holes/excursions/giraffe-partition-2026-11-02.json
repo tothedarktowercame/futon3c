@@ -1,7 +1,7 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:13:08+00:00",
+ "exported-at": "2026-11-02T20:17:33+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 3,
@@ -75,7 +75,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L24-28: Joe's verbatims; R1-R12 close checkpoint; one production recommendation",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
@@ -83,7 +83,11 @@
    "place": null,
    "decision": {
     "decision": "retire",
-    "basis": "carry the one production recommendation into the plan"
+    "basis": "carry the one production recommendation into the plan",
+    "carry": {
+     "kind": "target",
+     "to": "PLAN-outer-selection-restoration (one production recommendation)"
+    }
    }
   },
   {
@@ -102,7 +106,7 @@
    "commits-since-oct": 2,
    "last-commit": "2026-10-09",
    "stated-finish": "L559-560: experiment table; P1-P3 gate",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
@@ -129,7 +133,7 @@
    "commits-since-oct": 2,
    "last-commit": "2026-10-09",
    "stated-finish": "L160-161: HEAD answered; open rungs",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
@@ -204,7 +208,7 @@
    "commits-since-oct": 2,
    "last-commit": "2026-10-09",
    "stated-finish": "L174-176: retraction path; empty types; negative-space map",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -216,7 +220,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: :7071 not listening"
+    "basis": "Place gone by probe: :7071 not listening",
+    "carry": {
+     "kind": "no-home",
+     "to": "census on futon1b and a gated erase path"
+    }
    }
   },
   {
@@ -259,7 +267,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L224: exit, closes into a chosen mission",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -271,7 +279,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: no cron lane, crontab empty"
+    "basis": "Place gone by probe: no cron lane, crontab empty",
+    "carry": {
+     "kind": "target",
+     "to": "PLAN-coherent-selection-giraffe-wm-2026-11-02.md"
+    }
    }
   },
   {
@@ -314,7 +326,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L330-334: registration; Lean obligations; refusal; witness; versions",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
@@ -341,7 +353,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L7-9: dispositions; gold corpus; logged facet",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -353,7 +365,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: futon1a erase gate down"
+    "basis": "Place gone by probe: futon1a erase gate down",
+    "carry": {
+     "kind": "no-home",
+     "to": "collision resolution after the 15 oriented entries land"
+    }
    }
   },
   {
@@ -372,7 +388,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L145-148: L1 ledger; windows; L3 design",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
@@ -447,7 +463,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L17-19: Cycle-1 pass on working paper; move semantics; README",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": true,
@@ -522,7 +538,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L526-531: batch-002 stages; schema; per-batch loop",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -534,7 +550,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: no forward-solver"
+    "basis": "Place gone by probe: no forward-solver",
+    "carry": {
+     "kind": "needs-joe",
+     "to": "M-superpod-mark3 if a model trained on papers is still a goal, otherwise dropped (rulings question 3)"
+    }
    }
   },
   {
@@ -553,7 +573,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L339-340: structure_loss records; measured stopping rule",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
@@ -561,7 +581,11 @@
    "place": null,
    "decision": {
     "decision": "retire",
-    "basis": "no cycle run; move to claude-14's lane if wanted"
+    "basis": "no cycle run; move to claude-14's lane if wanted",
+    "carry": {
+     "kind": "needs-joe",
+     "to": "claude-14's lane if wanted, otherwise dropped"
+    }
    }
   },
   {
@@ -580,7 +604,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L95-96: approved GPU run; comparison verdict",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
@@ -631,7 +655,7 @@
    "commits-since-oct": 2,
    "last-commit": "2026-10-09",
    "stated-finish": "L450-451: calibration gate or decision; four rungs verified",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
@@ -658,7 +682,7 @@
    "commits-since-oct": 1,
    "last-commit": "2026-10-09",
    "stated-finish": "L100-101: topology written; base-URL fixes or kill",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -670,7 +694,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: Dionysus host unreachable"
+    "basis": "Place gone by probe: Dionysus host unreachable",
+    "carry": {
+     "kind": "target",
+     "to": "E-evidence-flows-everywhere; off-box part to V"
+    }
    }
   },
   {
@@ -811,7 +839,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L830-834: primitives; lifted patterns; witness; endpoint",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
@@ -836,7 +864,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L12-14: contract extraction; graph inventory; benchmark list",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": true,
@@ -861,7 +889,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L9-11: production run; measures; reproducible reports",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
@@ -869,7 +897,11 @@
    "place": null,
    "decision": {
     "decision": "retire",
-    "basis": "TPG line untouched"
+    "basis": "TPG line untouched",
+    "carry": {
+     "kind": "needs-joe",
+     "to": "M-xor-coupling-probe's run, otherwise dropped"
+    }
    }
   },
   {
@@ -886,7 +918,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L424-425: missing categories; content-graph export",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
@@ -911,7 +943,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L221-222: calibration clears G-SIM; arrow-witness clears G-REWARD",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
@@ -936,7 +968,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L296-301: categories; widgets; alarm ribbon; rename",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -948,7 +980,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: HUD default :7071 not listening"
+    "basis": "Place gone by probe: HUD default :7071 not listening",
+    "carry": {
+     "kind": "no-home",
+     "to": "V4 alerts, an owner gap"
+    }
    }
   },
   {
@@ -965,7 +1001,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L483-485: penholder; operator-action substrate; digest",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -977,7 +1013,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: futon1a service down (penholder code remains)"
+    "basis": "Place gone by probe: futon1a service down (penholder code remains)",
+    "carry": {
+     "kind": "target",
+     "to": "R20 step rebuild, SPEC-r20-step-function-2026-10-28.md"
+    }
    }
   },
   {
@@ -1044,7 +1084,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L142-146: canonical-label map; named query; live explainer counts",
-   "decision-question": "close, carry the rest?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -1056,7 +1096,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: :7071 not listening; rehome if futon1a returns"
+    "basis": "Place gone by probe: :7071 not listening; rehome if futon1a returns",
+    "carry": {
+     "kind": "no-home",
+     "to": "D4, D5, D7b"
+    }
    }
   },
   {
@@ -1075,7 +1119,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L9-11: owner review; canary authorised; outcomes recorded",
-   "decision-question": "keep held, or un-hold with what?",
+   "decision-question": null,
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
@@ -1152,7 +1196,7 @@
    "commits-since-oct": 2,
    "last-commit": "2026-10-22",
    "stated-finish": "L2214-2218: ingest, embeddings, landmarks, WebArxana render, operator evaluation",
-   "decision-question": "work: agent or Joe?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -1164,7 +1208,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: futon1a ingest target down; rehome if futon1a returns"
+    "basis": "Place gone by probe: futon1a ingest target down; rehome if futon1a returns",
+    "carry": {
+     "kind": "needs-joe",
+     "to": "commons map, if it meets Joe's need to see the whole (rulings question 1)"
+    }
    }
   },
   {
@@ -1207,7 +1255,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L393-396: WM/VSATARCS record; per-target G; sorrys disposed; ledger",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -1219,7 +1267,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: no R10 cron, sorrys.edn absent"
+    "basis": "Place gone by probe: no R10 cron, sorrys.edn absent",
+    "carry": {
+     "kind": "target",
+     "to": "PLAN-outer-selection-restoration, R10 entry"
+    }
    }
   },
   {
@@ -1238,7 +1290,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L567-569: items landed or deferred; e2e passes; R12 exposed",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -1250,7 +1302,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: futon7 web/war-machine absent"
+    "basis": "Place gone by probe: futon7 web/war-machine absent",
+    "carry": {
+     "kind": "no-home",
+     "to": "operator view of the WM, an owner gap"
+    }
    }
   },
   {
@@ -1269,7 +1325,7 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "none (L5: armed steps on Joe's word)",
-   "decision-question": "retire, or does it still matter?",
+   "decision-question": null,
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
@@ -1281,7 +1337,11 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: no cron lane, crontab empty"
+    "basis": "Place gone by probe: no cron lane, crontab empty",
+    "carry": {
+     "kind": "target",
+     "to": "E-implementing-G-over-cascades"
+    }
    }
   },
   {

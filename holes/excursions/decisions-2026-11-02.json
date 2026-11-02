@@ -1,35 +1,177 @@
 {
-  "schema": "decisions-v1",
-  "source": "Joe, 2026-11-02 ~20:11Z, on claude-2's walkthrough of the held rows: \"the dispositions are pretty much as you've put them ... The only ones I don't agree with right here and now are M-differentiable-code which is research but could in principle be selected for automated work anyway, and M-essays-edit-cycle which does describe my workflow but could be built out via automated methods. Otherwise I would follow your recommendations above (noting that anything marked closed could be reopened if absolutely necessary, and I won't be able to make the final-final judgement until such time as we have the 'activity as inference' worked out a bit further)\"",
-  "reopenable": true,
-  "provisional-until": "intermediate theses under 'activity as inference' let a final judgement be made",
-  "decisions": {
-    "E-clean-up-substrate-2": {"decision": "retire", "basis": "Place gone by probe: :7071 not listening"},
-    "M-populate-substrate-2": {"decision": "retire", "basis": "Place gone by probe: :7071 not listening; rehome if futon1a returns"},
-    "M-stack-geometry": {"decision": "retire", "basis": "Place gone by probe: futon1a ingest target down; rehome if futon1a returns"},
-    "M-stack-hud-refactor": {"decision": "retire", "basis": "Place gone by probe: HUD default :7071 not listening"},
-    "M-the-futon-stack-Q6-r12-design-choices": {"decision": "retire", "basis": "Place gone by probe: futon1a service down (penholder code remains)"},
-    "M-legacy-sorry-cleanup": {"decision": "retire", "basis": "Place gone by probe: futon1a erase gate down"},
-    "E-live-loop-1": {"decision": "retire", "basis": "Place gone by probe: no cron lane, crontab empty"},
-    "E-live-loop-2": {"decision": "retire", "basis": "Place gone by probe: no cron lane, crontab empty"},
-    "M-war-machine-aif-last-mile": {"decision": "retire", "basis": "Place gone by probe: no R10 cron, sorrys.edn absent"},
-    "M-paper-reverse-morphogenesis": {"decision": "retire", "basis": "Place gone by probe: no forward-solver"},
-    "E-evidence-flow": {"decision": "retire", "basis": "Place gone by probe: Dionysus host unreachable"},
-    "M-war-machine-frontend-upgrade1": {"decision": "retire", "basis": "Place gone by probe: futon7 web/war-machine absent"},
-    "M-shared-memory-control-build-test": {"decision": "un-hold", "basis": "authorise the canary; un-holds E-dynamic-queries and the typed-memories chain"},
-    "M-wm-capability-claim": {"decision": "un-hold", "basis": "clicks have run since 2026-11-01; the first gated selection click is its first witness"},
-    "E-70B-on-raw-control-arm": {"decision": "keep-held", "basis": "until the proof-checking checklist it feeds is active; then ask again"},
-    "M-pattern-application-diagnostic": {"decision": "keep-held", "basis": "Joe's; hand-off of the primitives optional"},
-    "M-differentiable-code": {"decision": "work", "basis": "Joe: research, but could in principle be selected for automated work; automation candidate"},
-    "M-war-machine-aif-completion": {"decision": "retire", "basis": "carry the one production recommendation into the plan"},
-    "E-memory-whitepaper-v2-programme": {"decision": "merge-into:E-memory-v3-programme", "basis": "V3 followed it"},
-    "M-experiment-build-match": {"decision": "keep-held", "basis": "un-hold when its consumer M-aif-stack is active"},
-    "E-dynamic-queries": {"decision": "un-hold", "basis": "follows M-shared-memory-control-build-test"},
-    "E-iatc-model": {"decision": "merge-into:E-iatc-exposition", "basis": "same line"},
-    "M-futonzero-generative": {"decision": "keep-held", "basis": "record as blocked-by M-peradam-grounding, an edge not a hold"},
-    "E-queries-and-scopes": {"decision": "close-and-carry", "basis": "head answered; carry the open rungs"},
-    "M-essays-edit-cycle": {"decision": "work", "basis": "Joe: describes his workflow but could be built out via automated methods; automation candidate"},
-    "M-structure-seed-promotion": {"decision": "retire", "basis": "no cycle run; move to claude-14's lane if wanted"},
-    "M-tpg-coupling-evolution": {"decision": "retire", "basis": "TPG line untouched"}
+ "schema": "decisions-v1",
+ "source": "Joe, 2026-11-02 ~20:11Z, on claude-2's walkthrough of the held rows: \"the dispositions are pretty much as you've put them ... The only ones I don't agree with right here and now are M-differentiable-code which is research but could in principle be selected for automated work anyway, and M-essays-edit-cycle which does describe my workflow but could be built out via automated methods. Otherwise I would follow your recommendations above (noting that anything marked closed could be reopened if absolutely necessary, and I won't be able to make the final-final judgement until such time as we have the 'activity as inference' worked out a bit further)\"",
+ "reopenable": true,
+ "provisional-until": "intermediate theses under 'activity as inference' let a final judgement be made",
+ "decisions": {
+  "E-clean-up-substrate-2": {
+   "decision": "retire",
+   "basis": "Place gone by probe: :7071 not listening",
+   "carry": {
+    "kind": "no-home",
+    "to": "census on futon1b and a gated erase path"
+   }
+  },
+  "M-populate-substrate-2": {
+   "decision": "retire",
+   "basis": "Place gone by probe: :7071 not listening; rehome if futon1a returns",
+   "carry": {
+    "kind": "no-home",
+    "to": "D4, D5, D7b"
+   }
+  },
+  "M-stack-geometry": {
+   "decision": "retire",
+   "basis": "Place gone by probe: futon1a ingest target down; rehome if futon1a returns",
+   "carry": {
+    "kind": "needs-joe",
+    "to": "commons map, if it meets Joe's need to see the whole (rulings question 1)"
+   }
+  },
+  "M-stack-hud-refactor": {
+   "decision": "retire",
+   "basis": "Place gone by probe: HUD default :7071 not listening",
+   "carry": {
+    "kind": "no-home",
+    "to": "V4 alerts, an owner gap"
+   }
+  },
+  "M-the-futon-stack-Q6-r12-design-choices": {
+   "decision": "retire",
+   "basis": "Place gone by probe: futon1a service down (penholder code remains)",
+   "carry": {
+    "kind": "target",
+    "to": "R20 step rebuild, SPEC-r20-step-function-2026-10-28.md"
+   }
+  },
+  "M-legacy-sorry-cleanup": {
+   "decision": "retire",
+   "basis": "Place gone by probe: futon1a erase gate down",
+   "carry": {
+    "kind": "no-home",
+    "to": "collision resolution after the 15 oriented entries land"
+   }
+  },
+  "E-live-loop-1": {
+   "decision": "retire",
+   "basis": "Place gone by probe: no cron lane, crontab empty",
+   "carry": {
+    "kind": "target",
+    "to": "PLAN-coherent-selection-giraffe-wm-2026-11-02.md"
+   }
+  },
+  "E-live-loop-2": {
+   "decision": "retire",
+   "basis": "Place gone by probe: no cron lane, crontab empty",
+   "carry": {
+    "kind": "target",
+    "to": "E-implementing-G-over-cascades"
+   }
+  },
+  "M-war-machine-aif-last-mile": {
+   "decision": "retire",
+   "basis": "Place gone by probe: no R10 cron, sorrys.edn absent",
+   "carry": {
+    "kind": "target",
+    "to": "PLAN-outer-selection-restoration, R10 entry"
+   }
+  },
+  "M-paper-reverse-morphogenesis": {
+   "decision": "retire",
+   "basis": "Place gone by probe: no forward-solver",
+   "carry": {
+    "kind": "needs-joe",
+    "to": "M-superpod-mark3 if a model trained on papers is still a goal, otherwise dropped (rulings question 3)"
+   }
+  },
+  "E-evidence-flow": {
+   "decision": "retire",
+   "basis": "Place gone by probe: Dionysus host unreachable",
+   "carry": {
+    "kind": "target",
+    "to": "E-evidence-flows-everywhere; off-box part to V"
+   }
+  },
+  "M-war-machine-frontend-upgrade1": {
+   "decision": "retire",
+   "basis": "Place gone by probe: futon7 web/war-machine absent",
+   "carry": {
+    "kind": "no-home",
+    "to": "operator view of the WM, an owner gap"
+   }
+  },
+  "M-shared-memory-control-build-test": {
+   "decision": "un-hold",
+   "basis": "authorise the canary; un-holds E-dynamic-queries and the typed-memories chain"
+  },
+  "M-wm-capability-claim": {
+   "decision": "un-hold",
+   "basis": "clicks have run since 2026-11-01; the first gated selection click is its first witness"
+  },
+  "E-70B-on-raw-control-arm": {
+   "decision": "keep-held",
+   "basis": "until the proof-checking checklist it feeds is active; then ask again"
+  },
+  "M-pattern-application-diagnostic": {
+   "decision": "keep-held",
+   "basis": "Joe's; hand-off of the primitives optional"
+  },
+  "M-differentiable-code": {
+   "decision": "work",
+   "basis": "Joe: research, but could in principle be selected for automated work; automation candidate"
+  },
+  "M-war-machine-aif-completion": {
+   "decision": "retire",
+   "basis": "carry the one production recommendation into the plan",
+   "carry": {
+    "kind": "target",
+    "to": "PLAN-outer-selection-restoration (one production recommendation)"
+   }
+  },
+  "E-memory-whitepaper-v2-programme": {
+   "decision": "merge-into:E-memory-v3-programme",
+   "basis": "V3 followed it"
+  },
+  "M-experiment-build-match": {
+   "decision": "keep-held",
+   "basis": "un-hold when its consumer M-aif-stack is active"
+  },
+  "E-dynamic-queries": {
+   "decision": "un-hold",
+   "basis": "follows M-shared-memory-control-build-test"
+  },
+  "E-iatc-model": {
+   "decision": "merge-into:E-iatc-exposition",
+   "basis": "same line"
+  },
+  "M-futonzero-generative": {
+   "decision": "keep-held",
+   "basis": "record as blocked-by M-peradam-grounding, an edge not a hold"
+  },
+  "E-queries-and-scopes": {
+   "decision": "close-and-carry",
+   "basis": "head answered; carry the open rungs"
+  },
+  "M-essays-edit-cycle": {
+   "decision": "work",
+   "basis": "Joe: describes his workflow but could be built out via automated methods; automation candidate"
+  },
+  "M-structure-seed-promotion": {
+   "decision": "retire",
+   "basis": "no cycle run; move to claude-14's lane if wanted",
+   "carry": {
+    "kind": "needs-joe",
+    "to": "claude-14's lane if wanted, otherwise dropped"
+   }
+  },
+  "M-tpg-coupling-evolution": {
+   "decision": "retire",
+   "basis": "TPG line untouched",
+   "carry": {
+    "kind": "needs-joe",
+    "to": "M-xor-coupling-probe's run, otherwise dropped"
+   }
   }
+ },
+ "carries-note": "claude-16, 2026-11-02 ~20:16Z: none of the 15 retired rows reads as solved (13 partly, 2 open); a gone mechanism leaves the need, so each retirement names where the need went or that Joe dropped it. Carries are proposed, not ruled; four need Joe's word. A retired row with a carry attests nothing upward (IT-4)."
 }
