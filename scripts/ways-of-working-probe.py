@@ -88,13 +88,28 @@ def probe_draw_pile(graph):
             placed.add(line.split("\t")[0])
     committed = False  # placements live under ~/notes, not on a committed path
     unplaced = len(stems - placed) if stems else max(total - len(placed), 0)  # ids placed but not in the pile must not be subtracted (claude-16)
-    ev = [f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
+    # claude-16 (2026-11-02 21:1xZ): over half the unplaced stems say closed in their own status line.
+    # A closed item needs an attestation upward (IT-4), not a placement; count the two apart.
+    _closed_re = _re.compile(r"^\*{0,2}status\*{0,2}:?\*{0,2}\s*.*\b(done|closed|complete[d]?|retired|superseded)\b", _re.I)
+    path_of = {}
+    for i in items:
+        st, pth = i.get("stem"), i.get("path") or ""
+        if st and st not in path_of or (st and _re.match(r"/home/joe/code/futon[0-9a-z]*/", pth)): path_of[st] = pth
+    closed_unplaced = set()
+    for st in (stems - placed):
+        try:
+            head = pathlib.Path(path_of.get(st, "")).read_text(errors="replace").splitlines()[:15]
+        except Exception:
+            continue
+        if any(_closed_re.search(l) for l in head): closed_unplaced.add(st)
+    open_unplaced = len(stems - placed) - len(closed_unplaced)
+    ev = [f"of the unplaced: {open_unplaced} open (need a placement), {len(closed_unplaced)} closed in their own status line (need an attestation upward, IT-4, not a placement; claude-16 finding 2026-11-02)",f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
           f"placements read by the commons map: {len(placed)} ids, {len(stems & placed) if stems else 0} of them in the pile (advisory; on a committed path: {committed})",
           "the pile on this page is the evidence of this failure"]
     return {"monitor": "on", "invariant": "failing" if unplaced or not committed else "holding",
             "last-observation": iso(NOW), "observed-at": iso(NOW),
-            "violations": [{"unplaced": unplaced}], "violation-count": unplaced, "evidence": ev,
-            "denominator": f"{unplaced} of {total} unplaced"}
+            "violations": [{"unplaced-open": open_unplaced, "unplaced-closed-unattested": len(closed_unplaced)}], "violation-count": unplaced, "evidence": ev,
+            "denominator": f"{unplaced} of {total} unplaced: {open_unplaced} open, {len(closed_unplaced)} closed without attestation"}
 
 def main():
     args = sys.argv[1:]
