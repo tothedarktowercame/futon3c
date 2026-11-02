@@ -32,6 +32,12 @@
    "text": "The War Machine may select only from the set that survives IT-1 to IT-3 and names who acts.",
    "decided-by": "the outermost loop's selectable count on this page",
    "settled-today": 3
+  },
+  {
+   "id": "IT-6",
+   "text": "Dropping a need carries the same explanatory burden as closing it: the record says what it was for and why it is no longer wanted, on the page.",
+   "decided-by": "Joe 2026-11-02: \"'dropped' would also need an explanation for Cascade Live so we can't dodge the explanatory burden\"",
+   "settled-today": 0
   }
  ]
 }

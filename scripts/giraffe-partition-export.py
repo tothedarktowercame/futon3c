@@ -45,6 +45,9 @@ def main(sig, sheet, out):
         d = dict(zip(hdr, r))
         sit = d.get("situation", "?")
         need, why = NEEDS.get(sit, ("read", "unclassified"))
+        _dec = DECISIONS.get(d["id"], {}).get("decision")
+        if _dec == "audit": need, why = "read", "Joe: audit and explain what it accomplished, then close or drop with the explanation"
+        if _dec == "reopen": need, why = "who-acts", "Joe: reopened; immediate need rehomed, long-term finish stands"
         dec = DECISIONS.get(d["id"], {}).get("decision")
         selectable = (dec == "work") or (dec is None and d["action"] == "work" and bool(d["stated-finish"]) and sit == "work")
         items.append({

@@ -21,11 +21,11 @@
    }
   },
   "M-stack-geometry": {
-   "decision": "retire",
-   "basis": "Place gone by probe: futon1a ingest target down; rehome if futon1a returns",
+   "decision": "reopen",
+   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: \"I would believe it when I see it in terms of *my* need, but I think we still couldn't close the mission until we have a validated information geometry of the stack; the map can scaffold that, as we've already seen with the Live Embedding\"",
    "carry": {
-    "kind": "needs-joe",
-    "to": "commons map, if it meets Joe's need to see the whole (rulings question 1)"
+    "kind": "target",
+    "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish"
    }
   },
   "M-stack-hud-refactor": {
@@ -77,11 +77,11 @@
    }
   },
   "M-paper-reverse-morphogenesis": {
-   "decision": "retire",
-   "basis": "Place gone by probe: no forward-solver",
+   "decision": "merge-into:M-superpod-mark8",
+   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: still open; merges into the superpod work, now at mark 8 (mark 3 is out of date). A pattern-theoretic understanding of work already done is itself a reverse-morphogenesis programme, so it relates to the Cascade Live work",
    "carry": {
-    "kind": "needs-joe",
-    "to": "M-superpod-mark3 if a model trained on papers is still a goal, otherwise dropped (rulings question 3)"
+    "kind": "target",
+    "to": "the current superpod mark (no mark-8 mission file under futon6 yet; mark2 and mark3 are the files on disk)"
    }
   },
   "E-evidence-flow": {
@@ -157,21 +157,22 @@
    "basis": "Joe: describes his workflow but could be built out via automated methods; automation candidate"
   },
   "M-structure-seed-promotion": {
-   "decision": "retire",
-   "basis": "no cycle run; move to claude-14's lane if wanted",
+   "decision": "audit",
+   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: open at INSTANTIATE with two acceptance items unchecked (structure_loss records; measured stopping rule); needs a further audit and an explanation of what it accomplishes, then probably closure; dropping would also need an explanation for Cascade Live",
    "carry": {
-    "kind": "needs-joe",
-    "to": "claude-14's lane if wanted, otherwise dropped"
+    "kind": "target",
+    "to": "an audit note explaining what the mission accomplished, then close or drop with the explanation on the page"
    }
   },
   "M-tpg-coupling-evolution": {
    "decision": "retire",
-   "basis": "TPG line untouched",
+   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: happy to carry that to a different TPG-related packet",
    "carry": {
-    "kind": "needs-joe",
-    "to": "M-xor-coupling-probe's run, otherwise dropped"
+    "kind": "target",
+    "to": "a TPG-related packet (claude-16 proposed M-xor-coupling-probe's run)"
    }
   }
  },
- "carries-note": "claude-16, 2026-11-02 ~20:16Z: none of the 15 retired rows reads as solved (13 partly, 2 open); a gone mechanism leaves the need, so each retirement names where the need went or that Joe dropped it. Carries are proposed, not ruled; four need Joe's word. A retired row with a carry attests nothing upward (IT-4)."
+ "carries-note": "claude-16, 2026-11-02 ~20:16Z: none of the 15 retired rows reads as solved (13 partly, 2 open); a gone mechanism leaves the need, so each retirement names where the need went or that Joe dropped it. Carries are proposed, not ruled; four need Joe's word. A retired row with a carry attests nothing upward (IT-4).",
+ "source-2": "Joe, 2026-11-02 ~20:27Z, answering the four needs; the Bergson reading: Cascade Live witnessing its own thesis is question-asking-and-answering; VSATARCS presented a static view of documentation and proposed to keep it up to date (it wasn't); Cascade Live and Giraffe point towards a morphogenetic compression"
 }

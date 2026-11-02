@@ -1,16 +1,18 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:17:33+00:00",
+ "exported-at": "2026-11-02T20:27:45+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 3,
  "decided": 27,
  "by-decision": {
+  "audit": 1,
   "close-and-carry": 1,
   "keep-held": 4,
-  "merge-into": 2,
-  "retire": 15,
+  "merge-into": 3,
+  "reopen": 1,
+  "retire": 12,
   "un-hold": 3,
   "work": 2
  },
@@ -40,14 +42,14 @@
   "unplaced": 1
  },
  "by-needs": {
-  "read": 13,
-  "retire-or-merge": 5,
+  "read": 14,
+  "retire-or-merge": 4,
   "merge": 2,
-  "retire-or-rehome": 13,
+  "retire-or-rehome": 12,
   "close-with-witness": 4,
   "verify-then-close": 4,
   "joe-rules": 4,
-  "who-acts": 1,
+  "who-acts": 2,
   "place": 1
  },
  "by-deficient-way": {
@@ -549,11 +551,11 @@
     "evidence": "files mentioning forward-solver in futon3c/src, futon6: 0"
    },
    "decision": {
-    "decision": "retire",
-    "basis": "Place gone by probe: no forward-solver",
+    "decision": "merge-into:M-superpod-mark8",
+    "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: still open; merges into the superpod work, now at mark 8 (mark 3 is out of date). A pattern-theoretic understanding of work already done is itself a reverse-morphogenesis programme, so it relates to the Cascade Live work",
     "carry": {
-     "kind": "needs-joe",
-     "to": "M-superpod-mark3 if a model trained on papers is still a goal, otherwise dropped (rulings question 3)"
+     "kind": "target",
+     "to": "the current superpod mark (no mark-8 mission file under futon6 yet; mark2 and mark3 are the files on disk)"
     }
    }
   },
@@ -574,17 +576,17 @@
    "last-commit": null,
    "stated-finish": "L339-340: structure_loss records; measured stopping rule",
    "decision-question": null,
-   "needs": "retire-or-merge",
-   "needs-why": "nothing downstream benefits; retire or merge",
+   "needs": "read",
+   "needs-why": "Joe: audit and explain what it accomplished, then close or drop with the explanation",
    "selectable-now": false,
    "deficient-way": "real-users",
    "place": null,
    "decision": {
-    "decision": "retire",
-    "basis": "no cycle run; move to claude-14's lane if wanted",
+    "decision": "audit",
+    "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: open at INSTANTIATE with two acceptance items unchecked (structure_loss records; measured stopping rule); needs a further audit and an explanation of what it accomplishes, then probably closure; dropping would also need an explanation for Cascade Live",
     "carry": {
-     "kind": "needs-joe",
-     "to": "claude-14's lane if wanted, otherwise dropped"
+     "kind": "target",
+     "to": "an audit note explaining what the mission accomplished, then close or drop with the explanation on the page"
     }
    }
   },
@@ -897,10 +899,10 @@
    "place": null,
    "decision": {
     "decision": "retire",
-    "basis": "TPG line untouched",
+    "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: happy to carry that to a different TPG-related packet",
     "carry": {
-     "kind": "needs-joe",
-     "to": "M-xor-coupling-probe's run, otherwise dropped"
+     "kind": "target",
+     "to": "a TPG-related packet (claude-16 proposed M-xor-coupling-probe's run)"
     }
    }
   },
@@ -1197,8 +1199,8 @@
    "last-commit": "2026-10-22",
    "stated-finish": "L2214-2218: ingest, embeddings, landmarks, WebArxana render, operator evaluation",
    "decision-question": null,
-   "needs": "retire-or-rehome",
-   "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
+   "needs": "who-acts",
+   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -1207,11 +1209,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "retire",
-    "basis": "Place gone by probe: futon1a ingest target down; rehome if futon1a returns",
+    "decision": "reopen",
+    "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: \"I would believe it when I see it in terms of *my* need, but I think we still couldn't close the mission until we have a validated information geometry of the stack; the map can scaffold that, as we've already seen with the Live Embedding\"",
     "carry": {
-     "kind": "needs-joe",
-     "to": "commons map, if it meets Joe's need to see the whole (rulings question 1)"
+     "kind": "target",
+     "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish"
     }
    }
   },
