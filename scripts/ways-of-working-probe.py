@@ -87,9 +87,9 @@ def probe_draw_pile(graph):
             if i == 0 or not line.strip(): continue
             placed.add(line.split("\t")[0])
     committed = False  # placements live under ~/notes, not on a committed path
-    unplaced = max(total - len(placed), 0)
+    unplaced = len(stems - placed) if stems else max(total - len(placed), 0)  # ids placed but not in the pile must not be subtracted (claude-16)
     ev = [f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
-          f"placements read by the commons map: {len(placed)} ids (advisory; on a committed path: {committed})",
+          f"placements read by the commons map: {len(placed)} ids, {len(stems & placed) if stems else 0} of them in the pile (advisory; on a committed path: {committed})",
           "the pile on this page is the evidence of this failure"]
     return {"monitor": "on", "invariant": "failing" if unplaced or not committed else "holding",
             "last-observation": iso(NOW), "observed-at": iso(NOW),
