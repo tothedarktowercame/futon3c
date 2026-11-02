@@ -1,0 +1,59 @@
+{
+ "stem": "E-mfuton-scope-extension-20261003",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654230458-10527-6b895ac8",
+ "at": "2026-11-02T21:18:59+00:00",
+ "row": {
+  "stem": "E-mfuton-scope-extension-20261003",
+  "kind": "place",
+  "what": {
+   "value": "Implement extend-compiler-type-scope for the owner path in mfuton-sbcl Lisp, porting SourceTypeclassScope.extend against the pinned Python oracle.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:7",
+   "quote": "Implement extend-compiler-type-scope for owner path in /home/joe/code/mfuton-sbcl using /tmp/mfs-blank@f5d45940f10e54b8608da0cee9b6bf724e5d8a2"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:3",
+   "quote": "**Requisition:** in-progress — invoke-1791000436540-30723-f13e6e78"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:9",
+   "quote": "Demonstrate persistent parent, changed occurrence invalidation, cache sharing/copying rules and dynamic kernel injection with real successor P"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:9",
+   "quote": "No dummy authorities. Run focused differential, constructor and csimp regressions, SBCL and check-parens. Report next missing body call and p"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:5",
+   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition in-progress (invoke-1791000436540) dispatched 2026-10-03 within the last 30 days;"
+  },
+  "finish": {
+   "value": "extend-compiler-type-scope implemented using coordinator's merge-source-kind-layouts; differential demonstrates persistence/invalidation/cache/kernel semantics; gates pass; next missing body call and limits reported; codex-18 belled.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:9",
+   "quote": "Run focused differential, constructor and csimp regressions, SBCL and check-parens. Report next missing body call and precise limits."
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-scope-extension-20261003.md:7",
+   "quote": "Implement extend-compiler-type-scope for owner path in /home/joe/code/mfuton-sbcl using /tmp/mfs-blank@f5d45940f10e54b8608da0cee9b6bf724e5d8a2"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}
