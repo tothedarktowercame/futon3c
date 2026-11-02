@@ -57,6 +57,9 @@
   .wow-table{width:100%;border-collapse:collapse;font-size:11.5px} .wow-table th{color:#7b8698;text-align:left;font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)} .wow-table td{padding:5px 6px;border-bottom:1px solid #1e2430;vertical-align:top;color:#c3d0e0}
   .wow-on,.wow-holding{color:#3ddc84;font-weight:800} .wow-off,.wow-failing,.wow-broken{color:#ff6b6b;font-weight:800} .wow-not-built,.wow-unknown{color:#e0a63b;font-weight:800}
   .wow-ev{color:#8fa0b6;font-size:10.5px} .wow-ev li{margin:1px 0}
+  .part-table{width:100%;border-collapse:collapse;font-size:11px} .part-table th{color:#7b8698;text-align:left;font-weight:600;padding:3px 5px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#12151b} .part-table td{padding:3px 5px;border-bottom:1px solid #1e2430;vertical-align:top;color:#c3d0e0}
+  .part-table tr.selectable td{background:#15261c} .need{font-weight:700} .need-joe-rules{color:#e0a63b} .need-read{color:#93bdf8} .need-retire-or-rehome,.need-retire-or-merge{color:#ff9c9c} .need-close-with-witness,.need-verify-then-close{color:#3ddc84} .need-who-acts,.need-place,.need-merge{color:#cdd6e4}
+  .part-summary{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px} .part-summary span{background:#181c23;border:1px solid var(--line);border-radius:10px;padding:2px 8px;font-size:11px;color:#aeb8c7}
   .thesis-apex{font-size:17px;line-height:1.5;color:#eef2f8;max-width:980px;margin:3px 0 8px}
   .thesis-epigraph{color:var(--dim);font-style:italic;margin:7px 0 11px}
   .thesis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;margin-top:11px}
@@ -86,6 +89,12 @@
     <h2>Declared ways of working — which are on, off, broken or not built <span class="muted" id="wow-count"></span></h2>
     <div class="sub" style="margin-bottom:10px">Each row is a way of working the stack has declared (the institution one layer under a therefore of the thesis). <b>monitor</b> says whether anything is watching it; <b>invariant</b> says whether what it promises holds right now. A way with no probe is prose until one is built, and is shown as such rather than guessed.</div>
     <div id="wow-body"><div class="gap">Loading ways-of-working data…</div></div>
+  </section>
+
+  <section class="panel" id="partition-panel">
+    <h2>The outermost loop — preparing what can be selected (the Giraffe partition over the review sheet) <span class="muted" id="partition-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. Each row is an item from the review sheet of blocked unblockers, with its wing (the therefore it sits under), its situation (a state of the action situation, read from evidence), the advisory reading, and <b>what it still needs</b> before it could be selected. Readings are not decisions; nothing is applied.</div>
+    <div id="partition-body"><div class="gap">Loading partition data…</div></div>
   </section>
 
   <section class="panel" id="section-status-panel" style="display:none">
@@ -163,6 +172,7 @@
   var EP_WIP="wip-cards.json";
   var EP_THESIS="apex-thesis.json";
   var EP_WOW="ways-of-working-live.json";
+  var EP_PARTITION="giraffe-partition-2026-11-02.json";
   var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
@@ -610,6 +620,32 @@
     });
   }
 
+  function renderPartition(d){
+    var items=Array.isArray(d.items)?d.items:[];
+    el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+" · exported "+(d["exported-at"]||"");
+    function chips(title,obj){return Object.keys(obj||{}).sort(function(a,b){return obj[b]-obj[a];}).map(function(k){return "<span><b>"+esc(k)+"</b> "+obj[k]+"</span>";}).join("");}
+    var summary="<div class='part-summary'><span class='muted'>needs:</span>"+chips("needs",d["by-needs"])+"</div>"+
+      "<div class='part-summary'><span class='muted'>situation:</span>"+chips("situation",d["by-situation"])+"</div>"+
+      "<div class='part-summary'><span class='muted'>wing:</span>"+chips("wing",d["by-wing"])+"</div>";
+    var rows=items.map(function(it){
+      return "<tr class='"+(it["selectable-now"]?"selectable":"")+"'><td>"+it.rank+"</td>"+
+        "<td><code>"+esc(it.id)+"</code><div class='wow-ev'>"+esc(it.kind)+(it.repo?" · "+esc(it.repo):"")+" · cone "+it.cone+"</div></td>"+
+        "<td>"+esc(it.wing)+"</td><td>"+esc(it.situation)+"</td><td>"+esc(it.action)+"</td>"+
+        "<td class='need need-"+esc(it.needs)+"' title='"+esc(it["needs-why"])+"'>"+esc(it.needs)+"</td>"+
+        "<td>"+esc(it.phase)+"</td><td>"+it["commits-since-oct"]+(it["last-commit"]?"<div class='wow-ev'>"+esc(it["last-commit"])+"</div>":"")+"</td>"+
+        "<td class='wow-ev'>"+esc(it["stated-finish"]||"—")+"</td>"+
+        "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td></tr>";
+    }).join("");
+    el("partition-body").innerHTML=summary+"<div class='sub' style='margin-bottom:6px'>"+esc(d.source||"")+"</div>"+
+      "<div class='scrollx' style='max-height:520px;overflow:auto'><table class='part-table'><thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th></tr></thead><tbody>"+rows+"</tbody></table></div>";
+  }
+
+  function loadPartition(){
+    requestJSON("partition data",EP_PARTITION).then(renderPartition).catch(function(err){
+      el("partition-body").innerHTML="<div class='gap'>Partition data unavailable: "+esc(err&&err.message||err)+"</div>";
+    });
+  }
+
   function loadThesis(){
     requestJSON("live-thesis data",EP_THESIS).then(renderThesis).catch(function(err){
       el("thesis-body").innerHTML="<div class='gap'>Live-thesis data unavailable: "+esc(err&&err.message||err)+"</div>";
@@ -658,6 +694,7 @@
 
   loadThesis();
   loadWow();
+  loadPartition();
   loadWip();
   loadAll();
   setInterval(loadAll,60000);
