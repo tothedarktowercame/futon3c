@@ -72,7 +72,14 @@ def probe_draw_pile(graph):
         return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
                 "violations": [], "violation-count": 0, "evidence": ["graph.json absent"]}
     t = graph.get("tickets", {})
-    total = t.get("count-total") or len(t.get("items", []))
+    # the endpoint lists worktree copies (futon2-<branch>, futon3c-index-check, ...) as separate items;
+    # one stem is one piece of work, so count distinct stems, preferring canonical repo paths (claude-16, 2026-11-02)
+    import re as _re
+    items = t.get("items", [])
+    stems = {i.get("stem") for i in items if i.get("stem")}
+    raw_total = t.get("count-total") or len(items)
+    total = len(stems) if stems else raw_total
+    canonical = {i.get("stem") for i in items if _re.match(r"/home/joe/code/futon[0-9a-z]*/", i.get("path") or "")}
     placed = set()
     for f in (HOME / "notes" / "commons-map").glob("placements-*.tsv"):
         if f.name.startswith("placements-who"): continue
@@ -81,7 +88,7 @@ def probe_draw_pile(graph):
             placed.add(line.split("\t")[0])
     committed = False  # placements live under ~/notes, not on a committed path
     unplaced = max(total - len(placed), 0)
-    ev = [f"draw pile (unclocked missions, excursions, tickets): {total}",
+    ev = [f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
           f"placements read by the commons map: {len(placed)} ids (advisory; on a committed path: {committed})",
           "the pile on this page is the evidence of this failure"]
     return {"monitor": "on", "invariant": "failing" if unplaced or not committed else "holding",
