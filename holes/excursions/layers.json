@@ -1,0 +1,41 @@
+{
+  "schema": "layers-v1",
+  "as-of": "2026-11-02",
+  "status": "DRAFT reading by claude-2 at Joe's direction (2026-11-02 ~18:10Z); an organisational reading beside the institutional one; nothing adopted until Joe rules",
+  "provenance": "Beer, Brain of the Firm (viable system model, systems 1-5 and 3*); PBESA loop stages as the turn feed defines them (futon3/src-cljs/futon3/turnfeed/core.cljs loop-stages); ways from ways-of-working.json; backlog situations from giraffe-partition-2026-11-02.json",
+  "stages": {
+    "PERCEIVE": "what the agent observes",
+    "BELIEVE": "what it takes to be the case, and how sure it is",
+    "EVALUATE": "how it scores what could happen",
+    "SELECT": "which course it commits to, and over what horizon",
+    "ACT": "what it does, and who certifies it"
+  },
+  "systems": [
+    {"id": "S5", "name": "Policy", "beer": "identity and purpose; closes the 3-4 debate", "stage": "EVALUATE", "pbesa": "where the preferences come from: the thesis and its therefores; the operator rules",
+     "ways": ["stays-alive-and-paid", "eat-your-own-tail"], "stack": "the apex thesis, the four therefores, Joe's rulings"},
+    {"id": "S4", "name": "Intelligence", "beer": "the outside and the future", "stage": "BELIEVE", "pbesa": "beliefs about what exists, what is open and who benefits, before anything is scored",
+     "ways": ["backlog-understood", "real-users", "one-queryable-self-account"], "stack": "the outermost loop: Giraffe passes, the commons map, Cascade Live itself"},
+    {"id": "S3", "name": "Control", "beer": "the inside and now; allocates resources", "stage": "SELECT", "pbesa": "which task the machine commits a seat and budget to, and over what horizon",
+     "ways": ["selection-gives-a-reason"], "stack": "the War Machine's outer loop (G over policies), the click budget"},
+    {"id": "S3*", "name": "Audit", "beer": "sporadic direct inspection of operations", "stage": "PERCEIVE", "pbesa": "reads records that operations did not write for it",
+     "ways": ["operator-turns-logged", "records-carry-warrant"], "stack": "the ways-of-working probes, the test registry's record check, the injury ledger's medic"},
+    {"id": "S2", "name": "Coordination", "beer": "damps oscillation between operations", "stage": "PERCEIVE", "pbesa": "how participants observe each other's asks and answers",
+     "ways": ["feedback-reaches-every-participant", "intents-are-tracked"], "stack": "Agency bells, parks and bellbacks; the reply proforma; 象's open-asks list"},
+    {"id": "S1", "name": "Operations", "beer": "the parts that do the work", "stage": "ACT", "pbesa": "what the seats do, and who certifies it",
+     "ways": ["inbox-zero"], "stack": "the War Machine's inner loop, the seats, commits and warrants"}
+  ],
+  "situation-deficiency": {
+    "_note": "secondary alignment: each backlog situation read as the failure of one way of working for that row",
+    "place-gone": "one-queryable-self-account",
+    "unread": "backlog-understood",
+    "merge": "backlog-understood",
+    "unplaced": "backlog-understood",
+    "awaiting-ruling": "intents-are-tracked",
+    "no-consumer": "real-users",
+    "artifact-landed": "records-carry-warrant",
+    "closeable-unverified": "records-carry-warrant",
+    "held-other": "backlog-understood",
+    "work": "selection-gives-a-reason"
+  },
+  "wing-therefore": {"A": "A", "B": "B", "C": "C", "D": "D", "none": null}
+}

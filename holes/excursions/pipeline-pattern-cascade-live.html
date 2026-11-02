@@ -94,6 +94,12 @@
     <div id="wow-body"><div class="gap">Loading ways-of-working data…</div></div>
   </section>
 
+  <section class="panel" id="layers-panel">
+    <h2>The layers — Beer's systems read as perceive, believe, evaluate, select, act <span class="muted" id="layers-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">An organisational reading beside the institutional one (draft; nothing adopted). Each layer names its stage, the ways of working that live in it with their state, how many attested patterns stand beneath them (claude-16's reading: thin means little has surfaced), and the backlog rows whose situation is a deficiency of one of its ways. The last column is the secondary alignment: situation → the way of working that failed for that row.</div>
+    <div id="layers-body"><div class="gap">Loading layers…</div></div>
+  </section>
+
   <section class="panel" id="partition-panel">
     <h2>The outermost loop — preparing what can be selected (the Giraffe partition over the review sheet) <span class="muted" id="partition-count"></span></h2>
     <div class="sub" style="margin-bottom:10px">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. Each row is an item from the review sheet of blocked unblockers, with its wing (the therefore it sits under), its situation (a state of the action situation, read from evidence), the advisory reading, and <b>what it still needs</b> before it could be selected. Readings are not decisions; nothing is applied.</div>
@@ -176,6 +182,7 @@
   var EP_THESIS="apex-thesis.json";
   var EP_WOW="ways-of-working-live.json";
   var EP_PARTITION="giraffe-partition-2026-11-02.json";
+  var EP_LAYERS="layers.json";
   var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
@@ -596,6 +603,7 @@
   }
 
   function renderWow(d){
+    WOW=d; renderLayers();
     var ways=Array.isArray(d.ways)?d.ways:[];
     var counts=d.counts||{};
     el("wow-count").textContent="· "+ways.length+" declared · "+Object.keys(counts).sort().map(function(k){return counts[k]+" "+k;}).join(", ")+" · probed "+(d["probed-at"]||"");
@@ -636,13 +644,14 @@
     {need:"who-acts",label:"work: who acts?",who:"Joe or an agent",action:"work",open:true,text:"a work reading with a finish; the only rows the outer loop could see"},
     {need:"place",label:"unplaced",who:"claude-16",action:"—",open:false,text:"no placement at all"}];
   function renderPartition(d){
-    PARTITION=d;
+    PARTITION=d; renderLayers();
     var items=Array.isArray(d.items)?d.items:[];
     el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+" · exported "+(d["exported-at"]||"");
     function chips(title,obj){return Object.keys(obj||{}).sort(function(a,b){return obj[b]-obj[a];}).map(function(k){return "<span><b>"+esc(k)+"</b> "+obj[k]+"</span>";}).join("");}
     var summary="<div class='part-summary'><span class='muted'>needs:</span>"+chips("needs",d["by-needs"])+"</div>"+
       "<div class='part-summary'><span class='muted'>situation:</span>"+chips("situation",d["by-situation"])+"</div>"+
-      "<div class='part-summary'><span class='muted'>wing:</span>"+chips("wing",d["by-wing"])+"</div>";
+      "<div class='part-summary'><span class='muted'>wing:</span>"+chips("wing",d["by-wing"])+"</div>"+
+      "<div class='part-summary'><span class='muted'>deficient way:</span>"+chips("deficient",d["by-deficient-way"])+"</div>";
     function rowHtml(it){
       var clocked=CLOCK_IX?(CLOCK_IX[it.id]||[]):[];
       return "<tr class='"+(it["selectable-now"]?"selectable":"")+"'><td>"+it.rank+"</td>"+
@@ -652,9 +661,10 @@
         "<td>"+esc(it.phase)+"</td><td>"+it["commits-since-oct"]+(it["last-commit"]?"<div class='wow-ev'>"+esc(it["last-commit"])+"</div>":"")+"</td>"+
         "<td class='wow-ev'>"+esc(it["stated-finish"]||"—")+"</td>"+
         "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td>"+
-        "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td></tr>";
+        "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td>"+
+        "<td class='wow-ev'>"+esc(it["deficient-way"]||"—")+"</td></tr>";
     }
-    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th></tr></thead>";
+    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th></tr></thead>";
     var seen={};
     var groups=DRAIN.map(function(g){
       var rs=items.filter(function(it){return it.needs===g.need;}); rs.forEach(function(it){seen[it.id]=1;});
@@ -712,6 +722,40 @@
     });
   }
 
+  var LAYERS=null, WOW=null;
+  function renderLayers(){
+    if(!LAYERS||!WOW||!PARTITION) return;
+    var wayById={}; (WOW.ways||[]).forEach(function(w){wayById[w.id]=w;});
+    var defRows={}; (PARTITION.items||[]).forEach(function(it){var k=it["deficient-way"]||"none"; (defRows[k]=defRows[k]||[]).push(it);});
+    var wingRows={}; (PARTITION.items||[]).forEach(function(it){wingRows[it.wing]=(wingRows[it.wing]||0)+1;});
+    var placed={};
+    var rows=(LAYERS.systems||[]).map(function(s){
+      var ways=(s.ways||[]).map(function(id){var w=wayById[id]; if(!w) return "<li><code>"+esc(id)+"</code> <span class='muted'>(not declared)</span></li>";
+        placed[id]=1; var l=w.live||{}; var att=(w.patterns||[]).length;
+        return "<li><b>"+esc(w.name)+"</b> <span class='wow-"+esc(l.monitor)+"'>"+esc(l.monitor)+"</span> / <span class='wow-"+esc(l.invariant)+"'>"+esc(l.invariant)+"</span>"+
+          " · <span class='wow-ev'>"+att+" attested"+(att<=3?" (thin)":"")+"</span>"+(w.therefore?" · <span class='wow-ev'>therefore "+esc(w.therefore)+"</span>":"")+"</li>";}).join("");
+      var defs=(s.ways||[]).map(function(id){var rs=defRows[id]||[]; if(!rs.length) return ""; var bySit={}; rs.forEach(function(it){bySit[it.situation]=(bySit[it.situation]||0)+1;});
+        return "<li>"+rs.length+" rows fail <code>"+esc(id)+"</code>: "+Object.keys(bySit).map(function(k){return esc(k)+" "+bySit[k];}).join(", ")+"</li>";}).join("");
+      var n=(s.ways||[]).reduce(function(a,id){return a+((defRows[id]||[]).length);},0);
+      var attTotal=(s.ways||[]).reduce(function(a,id){return a+(((wayById[id]||{}).patterns||[]).length);},0);
+      return "<tr><td><b>"+esc(s.id)+" · "+esc(s.name)+"</b><div class='wow-ev'>"+esc(s.beer)+"</div></td>"+
+        "<td><b>"+esc(s.stage)+"</b><div class='wow-ev'>"+esc(s.pbesa)+"</div></td>"+
+        "<td class='wow-ev'>"+esc(s.stack)+"</td>"+
+        "<td><ul style='margin:0;padding-left:16px'>"+ways+"</ul><div class='wow-ev'>"+attTotal+" attested patterns in this layer"+(attTotal<=3?" · thin":"")+"</div></td>"+
+        "<td><b>"+n+"</b> of "+(PARTITION.items||[]).length+(defs?"<ul class='wow-ev' style='margin:2px 0 0;padding-left:16px'>"+defs+"</ul>":"")+"</td></tr>";
+    }).join("");
+    var unplacedWays=(WOW.ways||[]).filter(function(w){return !placed[w.id];}).map(function(w){return "<code>"+esc(w.id)+"</code>";});
+    var none=(defRows["none"]||[]).length;
+    el("layers-count").textContent="· "+(LAYERS.systems||[]).length+" layers · "+esc(LAYERS.status||"");
+    el("layers-body").innerHTML="<div class='scrollx'><table class='wow-table'><thead><tr><th>system</th><th>stage</th><th>on the stack</th><th>ways of working in it (monitor / invariant · attested patterns)</th><th>backlog rows whose situation is a deficiency of this layer</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
+      "<div class='wow-ev' style='margin-top:6px'>Rows by wing (the therefore the work serves, claude-16's reading): "+Object.keys(wingRows).sort().map(function(k){return esc(k)+" "+wingRows[k];}).join(" · ")+". Rows with no deficiency read: "+none+"."+(unplacedWays.length?" Ways in no layer: "+unplacedWays.join(", ")+".":"")+"</div>";
+  }
+  function loadLayers(){
+    requestJSON("layers data",EP_LAYERS).then(function(d){LAYERS=d; renderLayers();}).catch(function(err){
+      el("layers-body").innerHTML="<div class='gap'>Layers data unavailable: "+esc(err&&err.message||err)+"</div>";
+    });
+  }
+
   function loadThesis(){
     requestJSON("live-thesis data",EP_THESIS).then(renderThesis).catch(function(err){
       el("thesis-body").innerHTML="<div class='gap'>Live-thesis data unavailable: "+esc(err&&err.message||err)+"</div>";
@@ -763,6 +807,7 @@
   loadThesis();
   loadWow();
   loadPartition();
+  loadLayers();
   loadWip();
   loadAll();
   setInterval(loadAll,60000);

@@ -12,6 +12,9 @@ nothing here is a decision.
 """
 import json, pathlib, re, sys, datetime
 
+LAYERS = json.loads((pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "layers.json").read_text())
+DEFICIENCY = {k: v for k, v in LAYERS["situation-deficiency"].items() if not k.startswith("_")}
+
 NEEDS = {  # situation -> what the outermost loop still has to do
     "place-gone":           ("retire-or-rehome", "the Place no longer exists (port, cron or client gone); retire, or name the live substrate"),
     "awaiting-ruling":      ("joe-rules", "held on an act of Joe's: spend, verbatims, or a design choice"),
@@ -50,20 +53,22 @@ def main(sig, sheet, out):
             "stated-finish": (d["stated-finish"] or "")[:160] or None,
             "decision-question": decision.get(d["id"]),
             "needs": need, "needs-why": why, "selectable-now": selectable,
+            "deficient-way": DEFICIENCY.get(sit),
         })
     items.sort(key=lambda x: x["rank"])
-    by_sit, by_wing, by_need = {}, {}, {}
+    by_sit, by_wing, by_need, by_def = {}, {}, {}, {}
     for it in items:
         by_sit[it["situation"]] = by_sit.get(it["situation"], 0) + 1
         by_wing[it["wing"]] = by_wing.get(it["wing"], 0) + 1
         by_need[it["needs"]] = by_need.get(it["needs"], 0) + 1
+        by_def[it["deficient-way"] or "none"] = by_def.get(it["deficient-way"] or "none", 0) + 1
     pathlib.Path(out).write_text(json.dumps({
         "schema": "giraffe-partition-v1",
         "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
         "exported-at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
         "loop": "outermost: prepares what the War Machine's outer loop may select",
         "count": len(items), "selectable-now": sum(1 for i in items if i["selectable-now"]),
-        "by-situation": by_sit, "by-wing": by_wing, "by-needs": by_need,
+        "by-situation": by_sit, "by-wing": by_wing, "by-needs": by_need, "by-deficient-way": by_def,
         "items": items}, indent=1, ensure_ascii=False) + "\n")
     print(f"{len(items)} rows; selectable now {sum(1 for i in items if i['selectable-now'])}; needs {by_need}")
 
