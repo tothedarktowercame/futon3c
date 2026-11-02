@@ -110,9 +110,12 @@
                (:endpoints (first @posted))))))))
 
 (deftest ingest-excursion-doc-emits-vertex-and-parent-edge
-  (let [posted (atom [])]
+  (let [posted (atom [])
+        posted-entity (atom nil)]
     (with-redefs [sut/post-hyperedge! (fn [& _] {:ok? true})
-                  sut/post-entity! (fn [& _] {:ok? true})
+                  sut/post-entity! (fn [entity]
+                                     (reset! posted-entity entity)
+                                     {:ok? true})
                   sut/post-hyperedge-doc! (fn [doc]
                                             (swap! posted conj doc)
                                             {:ok? true})]
@@ -127,7 +130,11 @@
                (:hx-type (first @posted))))
         (is (= ["futon3c-d/excursion/support-coverage"
                 "futon3c-d/mission/war-machine-pilot"]
-               (:endpoints (first @posted))))))))
+               (:endpoints (first @posted))))
+        (is (= "futon3c"
+               (get-in @posted-entity [:props "provenance/repo"])))
+        (is (= "/home/joe/code/futon3c/holes/missions/E-support-coverage.md"
+               (get-in @posted-entity [:props "provenance/path"])))))))
 
 (deftest fixture-roundtrip-stays-lossless-on-three-cases
   (let [report (sut/fixture-sorry-roundtrip {:path "/home/joe/code/futon2/resources/sorrys.edn"

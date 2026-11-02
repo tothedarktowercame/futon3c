@@ -122,7 +122,7 @@
                                  (update acc (if (:ok? resp) :emitted :failed) inc)))
                              {:emitted 0 :failed 0}
                              plans)
-        entity-stats (reduce (fn [acc {:keys [vertex-doc excursion]}]
+        entity-stats (reduce (fn [acc {:keys [vertex-doc excursion path label]}]
                                (let [resp (ingest/post-entity!
                                            {:name (first (:endpoints vertex-doc))
                                             :type "excursion/doc"
@@ -132,7 +132,9 @@
                                                     "excursion/title" (:excursion/title excursion)
                                                     "excursion/status" (when-let [s (:excursion/status excursion)]
                                                                          (name s))
-                                                    "excursion/parent-mission" (:excursion/parent-mission excursion)}})]
+                                                    "excursion/parent-mission" (:excursion/parent-mission excursion)
+                                                    "provenance/repo" (name (label->repo-keyword label))
+                                                    "provenance/path" path}})]
                                  (update acc (if (:ok? resp) :emitted :failed) inc)))
                              {:emitted 0 :failed 0}
                              plans)

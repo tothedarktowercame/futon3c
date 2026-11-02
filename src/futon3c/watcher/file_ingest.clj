@@ -1055,7 +1055,9 @@
                                       "excursion/title" (:excursion/title excursion)
                                       "excursion/status" (when-let [s (:excursion/status excursion)]
                                                            (name s))
-                                      "excursion/parent-mission" (:excursion/parent-mission excursion)}})))
+                                      "excursion/parent-mission" (:excursion/parent-mission excursion)
+                                      "provenance/repo" (name (label->repo-keyword label))
+                                      "provenance/path" path}})))
         edge-stats (if hx-ok?
                      (reduce (fn [acc doc]
                                (let [resp (post-hyperedge-doc! doc)]
