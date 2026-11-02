@@ -1,0 +1,59 @@
+{
+ "stem": "E-apm-A3-ingest-efficiency",
+ "kind": "A1r",
+ "seat": "kimi-1",
+ "job": "invoke-1793654685897-10546-f27c5631",
+ "at": "2026-11-02T21:28:29+00:00",
+ "row": {
+  "stem": "E-apm-A3-ingest-efficiency",
+  "kind": "place",
+  "what": {
+   "value": "Decomposition of locked-list item A3 into handoffs to get the 16k-document flexiarg ingest under 30 minutes; the mechanism (unindexed name scan) is proven and fix H7 is specified but not stated as delivered.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:3",
+   "quote": "**VERDICT (2026-10-09, provisional):** OPEN — Decomposition of A3 into handoffs with design detail recorded but no stated delivery of the 30-minute ingest target"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:3",
+   "quote": "**VERDICT (2026-10-09, provisional):** OPEN — Decomposition of A3 into handoffs with design detail recorded but no stated delivery of the 30-minute ingest target"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:53",
+   "quote": "## H1 — ✅ ANSWERED 2026-08-14 (codex-4) — verified by claude-2. **30 min is back on.**"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:53",
+   "quote": "## H1 — ✅ ANSWERED 2026-08-14 (codex-4) — verified by claude-2. **30 min is back on.**"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:106",
+   "quote": "## H7 — FIX: make `ingest-flexiarg!` supply explicit ids (from H1)"
+  },
+  "finish": {
+   "value": "Apply H7 (ingest-flexiarg! passes explicit qualified-name ids), bringing ingest to ~20.5 minutes sequential; H1/H3/H4/H5 already done and verified.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:106",
+   "quote": "## H7 — FIX: make `ingest-flexiarg!` supply explicit ids (from H1)"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:5",
+   "quote": "**Created 2026-08-13 (claude-2) at Joe's request:** *\"let's focus on getting"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

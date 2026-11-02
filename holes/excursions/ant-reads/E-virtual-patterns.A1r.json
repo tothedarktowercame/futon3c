@@ -1,0 +1,59 @@
+{
+ "stem": "E-virtual-patterns",
+ "kind": "A1r",
+ "seat": "kimi-1",
+ "job": "invoke-1793654685897-10546-f27c5631",
+ "at": "2026-11-02T21:28:29+00:00",
+ "row": {
+  "stem": "E-virtual-patterns",
+  "kind": "place",
+  "what": {
+   "value": "An honest, queryable inventory of 38 pattern names the cascade induces but that are not formalized pattern/library nodes, parked awaiting fold backing.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:9",
+   "quote": "A **virtual pattern** is a pattern the build *names or implies* but that does **not"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:6",
+   "quote": "**VERDICT (2026-10-09, provisional):** OPEN — Inventory delivered but the gated next step (fold the virtuals into formalized patterns) is explicitly still pending"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:6",
+   "quote": "**VERDICT (2026-10-09, provisional):** OPEN — Inventory delivered but the gated next step (fold the virtuals into formalized patterns) is explicitly still pending"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:6",
+   "quote": "**VERDICT (2026-10-09, provisional):** OPEN — Inventory delivered but the gated next step (fold the virtuals into formalized patterns) is explicitly still pending"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:58",
+   "quote": "## Next step (gated on the fold)"
+  },
+  "finish": {
+   "value": "Feed the top-cited virtual patterns to the fold as construction targets, record each ΔG score, and promote any whose fold discharges to a formalized pattern/library node.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:69",
+   "quote": "- [ ] Feed the top-cited virtual patterns to the fold as construction targets and record each one's ΔG score"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-virtual-patterns.md:60",
+   "quote": "Feed the top-cited virtuals (`interest-event-vocabulary`, `read-existing-seam-before-implementing`,"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

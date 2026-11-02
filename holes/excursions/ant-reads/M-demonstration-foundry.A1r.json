@@ -1,0 +1,59 @@
+{
+ "stem": "M-demonstration-foundry",
+ "kind": "A1r",
+ "seat": "kimi-1",
+ "job": "invoke-1793654685897-10546-f27c5631",
+ "at": "2026-11-02T21:28:29+00:00",
+ "row": {
+  "stem": "M-demonstration-foundry",
+  "kind": "place",
+  "what": {
+   "value": "Mechanize the serendipitous PR-#83 exemplar: a daily scan that hunts fixable issues in the dogfood dependency corpus, with proof-of-work and operator-sent PRs feeding peradam fruit-witness and the outbox strawman slot.",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:20",
+   "quote": "This mission mechanizes the serendipity: **scan for issues we could fix"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:3",
+   "quote": "**Status:** OPEN — ARGUE (DERIVE complete 2026-07-06; ARGUE in progress)."
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:20",
+   "quote": "This mission mechanizes the serendipity: **scan for issues we could fix"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:20",
+   "quote": "This mission mechanizes the serendipity: **scan for issues we could fix"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:3",
+   "quote": "**Status:** OPEN — ARGUE (DERIVE complete 2026-07-06; ARGUE in progress)."
+  },
+  "finish": {
+   "value": "Completion criteria P1, P2, P3, and E1 met (dogfood corpus, issue probes, one operator-selected bounded fix with proof-of-work and merged-PR fruit-witness path).",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:60",
+   "quote": "- **Completion criteria:** P1, P2, P3, and E1 below."
+  },
+  "beneficiary": {
+   "value": "job",
+   "cite": "/home/joe/code/futon7/holes/M-demonstration-foundry.md:20",
+   "quote": "This mission mechanizes the serendipity: **scan for issues we could fix"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

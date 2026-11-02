@@ -1,0 +1,59 @@
+{
+ "stem": "M-experiment-build-match",
+ "kind": "A1r",
+ "seat": "kimi-1",
+ "job": "invoke-1793654685897-10546-f27c5631",
+ "at": "2026-11-02T21:28:29+00:00",
+ "row": {
+  "stem": "M-experiment-build-match",
+  "kind": "place",
+  "what": {
+   "value": "Generalise the existing three-layer fold/proof verification stack (render gate, build-match, operational witness) so experiments are registered from one EDN source, making Lean/harness divergence impossible by construction.",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:36",
+   "quote": "generalised them to **experiments**, so an experiment is currently the least"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:4",
+   "quote": "**Status:** OPEN — SPEC. Deliberately named after `M-actuator-spec-build-match.md`,"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:36",
+   "quote": "generalised them to **experiments**, so an experiment is currently the least"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:36",
+   "quote": "generalised them to **experiments**, so an experiment is currently the least"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:117",
+   "quote": "**S1: register Slice 5's confirmation run** — the one codex-8 says can still be"
+  },
+  "finish": {
+   "value": "S1: register Slice 5's confirmation run as experiment.clean.edn, render it, and make the harness validate against it — one experiment, all three layers, end to end.",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:117",
+   "quote": "**S1: register Slice 5's confirmation run** — the one codex-8 says can still be"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:36",
+   "quote": "generalised them to **experiments**, so an experiment is currently the least"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,59 @@
+{
+ "stem": "E-turn-dsl",
+ "kind": "A1r",
+ "seat": "kimi-1",
+ "job": "invoke-1793654685897-10546-f27c5631",
+ "at": "2026-11-02T21:28:29+00:00",
+ "row": {
+  "stem": "E-turn-dsl",
+  "kind": "place",
+  "what": {
+   "value": "Design seed for a turn-prefix DSL (E→/E:/OT:) on the operator's REPL turns unifying explicit clocking, per-turn attribution, and the phatic escape hatch over M-autoclock-in's fuzzy auto-clock.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:22",
+   "quote": "A small prefix-DSL on the operator's REPL turns. The prefix has a **clocking side-effect** and the agent"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:4",
+   "quote": "**Status:** IDENTIFY (design seed; captured by claude-6 + Joe, emacs-repl). No code yet."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:22",
+   "quote": "A small prefix-DSL on the operator's REPL turns. The prefix has a **clocking side-effect** and the agent"
+  },
+  "way": {
+   "value": "operator-turns-logged",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:22",
+   "quote": "A small prefix-DSL on the operator's REPL turns. The prefix has a **clocking side-effect** and the agent"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:81",
+   "quote": "## Proposed first slice"
+  },
+  "finish": {
+   "value": "First slice implemented: E→/M→/C→ transition prefix + OT: unclocked marker on agent-chat-send-input riding agent-chat-set-clock!; then the E: one-off field and create-if-needed stub template.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:81",
+   "quote": "## Proposed first slice"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:22",
+   "quote": "A small prefix-DSL on the operator's REPL turns. The prefix has a **clocking side-effect** and the agent"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}
