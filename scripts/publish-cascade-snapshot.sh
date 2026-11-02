@@ -55,8 +55,8 @@ if ! python3 /home/joe/code/futon3c/scripts/ways-of-working-probe.py "$WOW_DECL"
   echo 'null' > "$WORK/wow.json"
 fi
 
-# regrow the tickets tree from the latest placements (claude-16's script; cwd matters: it reads its siblings by name)
-( cd /home/joe/notes/pattern-global/auto && python3 partition_tree.py >&2 ) || echo "WARN: partition_tree.py failed; inlining the previous partition-tree.json" >&2
+# regrow the tickets tree from the latest placements and the graph just fetched (claude-16's script, in the repo since 2eb1a4187)
+python3 "$(dirname "$0")/partition-tree.py" "$WORK/graph.json" "$WORK/partition-tree.json" >&2 || { echo "FATAL: partition-tree.py failed" >&2; exit 1; }
 python3 - "$SRC" "$WIP" "$THESIS" "$WORK" "$OUT" "$BASE" <<'PY'
 import json, pathlib, sys, datetime
 
@@ -81,7 +81,7 @@ snapshot = {
     "intermediate-theses.json":             json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/intermediate-theses.json").read_text()),
     # claude-16's tickets tree (status > way or wing > cluster > item; requisitions apart; repair tickets one class;
     # unplaced live), regrown from A1-placements.tsv just before inlining (Joe's judgement on the Tickets section, 2026-11-02)
-    "partition-tree.json":                  json.loads(pathlib.Path("/home/joe/notes/pattern-global/auto/partition-tree.json").read_text()),
+    "partition-tree.json":                  json.loads((work / "partition-tree.json").read_text()),
 }
 stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 
