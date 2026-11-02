@@ -1,0 +1,61 @@
+{
+ "stem": "M-f10-u83-blockage-reconciliation",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654348470-10535-42841422",
+ "at": "2026-11-02T21:21:02+00:00",
+ "row": {
+  "stem": "M-f10-u83-blockage-reconciliation",
+  "kind": "place",
+  "what": {
+   "value": "Draft mission to produce one reconciliation record each for worklist rows :F10 and :U83, dispositioning every recorded blocker claim and proposing (not applying) row corrections.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:12",
+   "quote": "Produce one reconciliation record per row that dispositions every claim the"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:3",
+   "quote": "Status: DRAFT — NON-LIVE; independent review and explicit activation required"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:6",
+   "quote": "Source: worklist `:F10` (:blocked, class :F) and `:U83` (:blocked, class :I,"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:7",
+   "quote": "deps `[]`); issue-board blockages both typed \"superseded — verify/reconcile\""
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:1",
+   "quote": "# M-f10-u83-blockage-reconciliation — DRAFT — NON-LIVE; independent review and explicit activation required"
+  },
+  "finish": {
+   "value": "Both reconciliation records delivered with checks green and no source mutated; adoption of proposed row changes is Joe's separate act.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:38",
+   "quote": "Both records delivered, checks green, no source mutated. Adoption of any"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-f10-u83-blockage-reconciliation.md:8",
+   "quote": "(as-of 2026-09-10). Ordinary record-reconciliation work; **proposals only —"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

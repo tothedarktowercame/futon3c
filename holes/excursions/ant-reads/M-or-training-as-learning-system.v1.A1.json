@@ -1,0 +1,61 @@
+{
+ "stem": "M-or-training-as-learning-system.v1",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654348470-10535-42841422",
+ "at": "2026-11-02T21:21:02+00:00",
+ "row": {
+  "stem": "M-or-training-as-learning-system.v1",
+  "kind": "place",
+  "what": {
+   "value": "IDENTIFY-stage draft mission to verify the ORP evaluation's candidate framings (Krowne tetrahedron, MVSG, patterns-as-attractors, active-inference cyber-ant) before UKRN-S design commitments.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:5",
+   "quote": "Evaluating open-research training as a learning system: structured verification of the candidate framings produced by the ORP evaluation"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:1",
+   "quote": "**Status:** IDENTIFY (2026-05-05, draft 1)"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:11",
+   "quote": "The UK Reproducibility Network's Open Research Programme (ORP) has concluded a train-the-trainer effort across approximately twenty-five UK"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:11",
+   "quote": "The UK Reproducibility Network's Open Research Programme (ORP) has concluded a train-the-trainer effort across approximately twenty-five UK"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:88",
+   "quote": "The mission's owners have read this proposal and agree the gap is real and the scope is right."
+  },
+  "finish": {
+   "value": "Each ORP output and candidate framing carries a recorded robustness/verification verdict, bootstrap actions specified, design commitments stated with named evidence, and a plain-language argument written; mission closes at VERIFY ready for T1-wave evidence.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:60",
+   "quote": "1. Each ORP output (T1 instrument, population model, role codebook, five institution-level patterns, three programme-level patterns, logic model) has"
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.v1.md:12",
+   "quote": "higher-education institutions. UKRN Services (UKRN-S), now established as a Community Interest Company, inherits the analytical infrastructure"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}
