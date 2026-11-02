@@ -20,19 +20,41 @@ def text_of(j):
             for kk in ("text", "answer", "content", "message"):
                 if isinstance(v.get(kk), str) and v[kk].strip(): return v[kk]
     return json.dumps(j)
+def _first_line(q):
+    for ln in (q or "").splitlines():
+        if ln.strip(): return ln.strip()[:60]
+    return ""
 def check_cite(c):
+    """ok | ok-range | ok-path | ok-absent are accepted; everything else is a failure.
+    Forms: path:line (quote on that line); path:a-b (quote on some line in a..b);
+    bare path + quote found in the file (ok-path, weaker); bare path to a file that
+    does not exist with value false or an `ls: cannot access` quote (ok-absent)."""
     if not isinstance(c, dict): return "not-an-object"
     if "unsure" in c: return "unsure"
     cite, quote = c.get("cite", ""), c.get("quote", "")
-    m = re.match(r"^(/[^:]+|[^:]+):(\d+)$", cite or "")
-    if not m: return "no-cite" if not cite else "cite-not-path:line"
-    p, ln = m.group(1), int(m.group(2))
+    if not cite: return "no-cite"
+    q = _first_line(quote)
+    m = re.match(r"^(/[^:]+|[^:]+):(\d+)(?:-(\d+))?$", cite)
+    if not m:
+        if ":" in cite or " " in cite.strip(): return "cite-not-path:line"
+        p = cite if cite.startswith("/") else "/home/joe/code/" + cite
+        path = pathlib.Path(p)
+        if not path.exists():
+            absent = c.get("value") is False or (quote or "").startswith("ls: cannot access")
+            return "ok-absent" if absent else "path-missing"
+        if path.is_dir(): return "ok-path" if c.get("value") is not False else "value-false-but-exists"
+        try: body = path.read_text(errors="replace")
+        except Exception: return "unreadable"
+        return "ok-path" if q and q in body else "quote-not-in-file"
+    p, a, b = m.group(1), int(m.group(2)), int(m.group(3) or m.group(2))
     if not p.startswith("/"): p = "/home/joe/code/" + p
     try: lines = pathlib.Path(p).read_text(errors="replace").splitlines()
     except Exception: return "path-missing"
-    if ln < 1 or ln > len(lines): return "line-out-of-range"
-    if quote and quote.strip() and quote.strip()[:60] not in lines[ln - 1]: return "quote-not-on-line"
-    return "ok"
+    if a < 1 or b > len(lines) or b < a: return "line-out-of-range"
+    if not q: return "ok" if a == b else "ok-range"
+    for i in range(a, b + 1):
+        if q in lines[i - 1]: return "ok" if a == b else "ok-range"
+    return "quote-not-on-line"
 def walk(obj, out):
     if isinstance(obj, dict):
         if "cite" in obj or "unsure" in obj: out.append(check_cite(obj)); return
@@ -52,8 +74,8 @@ def main(job, kind, seat):
         checks = []; walk(row, checks)
         stem = row.get("stem", "?")
         rec = {"stem": stem, "kind": kind, "seat": seat, "job": job, "at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
-               "row": row, "checks": checks, "ok": sum(1 for c in checks if c == "ok"), "unsure": sum(1 for c in checks if c == "unsure"),
-               "failed": [c for c in checks if c not in ("ok", "unsure")]}
+               "row": row, "checks": checks, "ok": sum(1 for c in checks if c.startswith("ok")), "unsure": sum(1 for c in checks if c == "unsure"),
+               "failed": [c for c in checks if not c.startswith("ok") and c != "unsure"]}
         (HERE / f"{stem}.{kind}.json").write_text(json.dumps(rec, indent=1, ensure_ascii=False) + "\n")
         summary.append((stem, f"ok {rec['ok']} unsure {rec['unsure']} failed {len(rec['failed'])}", ",".join(rec["failed"])))
     print(f"job {job} state {state}; reply {len(txt)} chars; blocks {len(blocks)}")

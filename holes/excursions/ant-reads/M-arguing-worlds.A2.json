@@ -1,0 +1,39 @@
+{
+ "stem": "M-arguing-worlds",
+ "kind": "A2",
+ "seat": "kimi-2",
+ "job": "invoke-1793653085767-10492-2778afc8",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-arguing-worlds",
+  "kind": "witness",
+  "finish": {
+   "value": "A preregistered grounded retrial compares dialectic and single-best buildouts against recorded closure-fold outcomes; the frame decision and rationale are recorded and futonzero-alphazero.md §1 no longer labels the question 'open, early' (both unchecked)",
+   "cite": "/home/joe/code/futon2/holes/M-arguing-worlds.md:245",
+   "quote": "- [ ] A preregistered grounded retrial compares dialectic and single-best buildouts against recorded closure-fold outcomes, including failed folds."
+  },
+  "artifact": {
+   "value": "a preregistered retrial record + a frame-decision entry updating futon2/docs/futonzero-alphazero.md §1",
+   "cite": "/home/joe/code/futon2/holes/M-arguing-worlds.md:246",
+   "quote": "- [ ] The resulting frame decision and rationale are recorded and `futon2/docs/futonzero-alphazero.md` §1 no longer labels the question “open, early”."
+  },
+  "exists": {
+   "unsure": "no preregistered-retrial record or frame decision appears in the mission file (only the STANDARD-VERIFY yardstick ratification at L227-236, which enables but does not run the retrial); the phrase 'open, early' is absent from futonzero-alphazero.md §1 today, but the mission file records no frame decision and both checkboxes stay [ ] with Status OPEN (L3)"
+  },
+  "residue": {
+   "value": "Status: 'OPEN — v0 built and reviewed PASS; grounded closure-fold retrial and frame decision remain open.'",
+   "cite": "/home/joe/code/futon2/holes/M-arguing-worlds.md:3",
+   "quote": "**Status:** OPEN — v0 built and reviewed PASS; grounded closure-fold retrial and frame decision remain open."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "unsure",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 1,
+ "failed": []
+}

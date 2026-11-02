@@ -1,0 +1,67 @@
+{
+ "stem": "M-populate-substrate-2",
+ "kind": "A5",
+ "seat": "kimi-3",
+ "job": "invoke-1793653086189-10493-6cf9c248",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-populate-substrate-2",
+  "kind": "rehome",
+  "dependencies": [
+   {
+    "what": {
+     "value": "substrate-2 XTDB hypergraph on :7071 (futon1a) — the entire mission subject; live census grounding",
+     "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:16",
+     "quote": "Substrate-2 — the XTDB hypergraph on `:7071` (futon1a) — is named for *inference over a live model of the stack*."
+    },
+    "futon1b": {
+     "value": "futon1b server on :7073 against migration-store (same substrate, rehomed)",
+     "cite": "/home/joe/code/futon1b/README.md:25",
+     "quote": "clojure -M:node -m futon1b-server --store-dir migration-store --port 7073"
+    }
+   },
+   {
+    "what": {
+     "value": "hyperedges-by-type route (futon1a routes.clj) — census/count-pushdown for the explainer's live counts",
+     "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:242",
+     "quote": "**Root cause of the false zeros:** `hyperedges-by-type` (futon1a routes.clj)"
+    },
+    "futon1b": {
+     "value": "GET /api/alpha/hyperedges?type=…&limit=…&as-of=… with include-total count-pushdown; plus GET /api/alpha/census",
+     "cite": "/home/joe/code/futon1b/API-CONTRACT.md:457",
+     "quote": "### GET /api/alpha/hyperedges?type=…&end=…&limit=…&as-of=…"
+    }
+   },
+   {
+    "what": {
+     "value": "substrate-2-explainer.html rendering counts queried live from :7071 (exit item D5)",
+     "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:132",
+     "quote": "Make `substrate-2-explainer.html` auto-generated: counts queried live from `:7071`, not hand-typed."
+    },
+    "futon1b": {
+     "value": "same queries against :7073; e.g. /api/alpha/hyperedges?type=…&include-total=true&system-as-of=$ts returns :count",
+     "cite": "/home/joe/code/futon1b/README-backlog-catchup.md:24",
+     "quote": "curl -s \"localhost:7073/api/alpha/hyperedges?type=mission-scope/loose-section&limit=1&include-total=true&system-as-of=$ts\" | grep -o ':count [0-9]*'"
+    }
+   }
+  ],
+  "port-size": {
+   "value": "large",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:146",
+   "quote": "- [ ] `substrate-2-explainer.html` renders live counts without hand-typed numbers."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

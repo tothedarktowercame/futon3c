@@ -18,6 +18,18 @@ PLACE = json.loads(_pp.read_text())["rows"] if _pp.exists() else {}
 _dp = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "decisions-2026-11-02.json"
 DECISIONS = json.loads(_dp.read_text())["decisions"] if _dp.exists() else {}
 DEFICIENCY = {k: v for k, v in LAYERS["situation-deficiency"].items() if not k.startswith("_")}
+_ar = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "ant-reads"
+ANTS = {}  # stem -> [harvested ant rows], one per kind; reading-only, citation-checked, never a decision
+for _f in sorted(_ar.glob("*.json")) if _ar.exists() else []:
+    _d = json.loads(_f.read_text()); _row = _d.get("row") or {}
+    _gist = None
+    if _d["kind"] == "A2":
+        _ex = _row.get("exists") or {}
+        _gist = "artifact " + ("unsure" if "unsure" in _ex else ("exists" if _ex.get("value") else "absent")) + " · " + str(_row.get("confidence") or "")
+    elif _d["kind"] == "A5":
+        _gist = str(len(_row.get("dependencies") or [])) + " deps to rehome · port " + str((_row.get("port-size") or {}).get("value") or "?")
+    ANTS.setdefault(_d["stem"], []).append({"kind": _d["kind"], "seat": _d["seat"], "job": _d["job"], "at": _d["at"],
+        "ok": _d["ok"], "unsure": _d["unsure"], "failed": _d["failed"], "gist": _gist, "row": _row})
 
 NEEDS = {  # situation -> what the outermost loop still has to do
     "place-gone":           ("retire-or-rehome", "the Place no longer exists (port, cron or client gone); retire, or name the live substrate"),
@@ -67,6 +79,7 @@ def main(sig, sheet, out):
             "deficient-way": DEFICIENCY.get(sit),
             "place": PLACE.get(d["id"]),
             "decision": DECISIONS.get(d["id"]),
+            "ants": ANTS.get(d["id"], []),
         })
     items.sort(key=lambda x: x["rank"])
     by_sit, by_wing, by_need, by_def = {}, {}, {}, {}
@@ -83,6 +96,9 @@ def main(sig, sheet, out):
         "count": len(items), "selectable-now": sum(1 for i in items if i["selectable-now"]),
         "decided": sum(1 for i in items if i["decision"]), "by-decision": (lambda m: m)({k: sum(1 for i in items if (i["decision"] or {}).get("decision","").split(":")[0]==k) for k in sorted(set((i["decision"] or {}).get("decision","").split(":")[0] for i in items if i["decision"]))}),
         "place-probe": {"gone": sum(1 for i in items if i["place"] and i["place"]["alive"] is False), "alive": sum(1 for i in items if i["place"] and i["place"]["alive"]), "probed": sum(1 for i in items if i["place"])},
+        "ant-reads": {"rows": sum(len(i["ants"]) for i in items), "items": sum(1 for i in items if i["ants"]),
+                      "citations": {"ok": sum(a["ok"] for i in items for a in i["ants"]), "unsure": sum(a["unsure"] for i in items for a in i["ants"]), "failed": sum(len(a["failed"]) for i in items for a in i["ants"])},
+                      "by-kind": {k: sum(1 for i in items for a in i["ants"] if a["kind"] == k) for k in sorted(set(a["kind"] for i in items for a in i["ants"]))}},
         "by-situation": by_sit, "by-wing": by_wing, "by-needs": by_need, "by-deficient-way": by_def,
         "items": items}, indent=1, ensure_ascii=False) + "\n")
     print(f"{len(items)} rows; selectable now {sum(1 for i in items if i['selectable-now'])}; needs {by_need}")

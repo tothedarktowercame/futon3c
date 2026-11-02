@@ -662,7 +662,17 @@
       "<div class='part-summary'><span class='muted'>situation:</span>"+chips("situation",d["by-situation"])+"</div>"+
       "<div class='part-summary'><span class='muted'>wing:</span>"+chips("wing",d["by-wing"])+"</div>"+
       "<div class='part-summary'><span class='muted'>deficient way:</span>"+chips("deficient",d["by-deficient-way"])+"</div>"+
-      "<div class='part-summary'><span class='muted'>decisions:</span>"+chips("decision",d["by-decision"])+"</div>";
+      "<div class='part-summary'><span class='muted'>decisions:</span>"+chips("decision",d["by-decision"])+"</div>"+
+      (d["ant-reads"]?"<div class='part-summary'><span class='muted'>ant reads:</span><span><b>rows</b> "+d["ant-reads"].rows+" on "+d["ant-reads"].items+" items</span>"+chips("kind",d["ant-reads"]["by-kind"])+"<span><b>citations</b> "+d["ant-reads"].citations.ok+" ok · "+d["ant-reads"].citations.unsure+" unsure · <span class='"+(d["ant-reads"].citations.failed?"wow-failing":"wow-holding")+"'>"+d["ant-reads"].citations.failed+" failed</span></span></div>":"");
+    function antsHtml(ants){
+      if(!ants||!ants.length) return "<span class='muted'>unread</span>";
+      return ants.map(function(a){
+        var r=a.row||{}; var res=(r.residue&&r.residue.value)||""; var fails=a.failed||[];
+        var cls=fails.length?(fails.length>a.ok?"wow-failing":"wow-unknown"):"wow-holding";
+        return "<div><b>"+esc(a.kind)+"</b> "+esc(a.gist||"")+" <span class='"+cls+"' title='"+esc(fails.join(", "))+"'>"+a.ok+" ok · "+a.unsure+" unsure · "+fails.length+" failed</span>"+
+          "<div class='muted' title='"+esc(res)+"'>"+esc(String(res).slice(0,80))+(res.length>80?"…":"")+"</div><div class='muted'>"+esc(a.seat)+" · "+esc(String(a.at).slice(0,16))+"</div></div>";
+      }).join("");
+    }
     function rowHtml(it){
       var clocked=CLOCK_IX?(CLOCK_IX[it.id]||[]):[];
       return "<tr class='"+(it["selectable-now"]?"selectable":"")+"'><td>"+it.rank+"</td>"+
@@ -674,10 +684,11 @@
         "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td>"+
         "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td>"+
         "<td class='wow-ev'>"+esc(it["deficient-way"]||"—")+"</td>"+
+        "<td class='wow-ev'>"+antsHtml(it.ants)+"</td>"+
         "<td>"+(it.decision?("<b class='wow-holding'>"+esc(it.decision.decision)+"</b><div class='wow-ev' title='"+esc(it.decision.basis)+"'>"+esc(String(it.decision.basis).slice(0,60))+"</div>"+(it.decision.carry?"<div class='wow-ev'>need → <span class='"+(it.decision.carry.kind==="needs-joe"?"wow-unknown":(it.decision.carry.kind==="no-home"?"wow-failing":"wow-holding"))+"'>"+esc(it.decision.carry.kind)+"</span> "+esc(it.decision.carry.to)+"</div>":"")):"<span class='muted'>undecided</span>")+"</td>"+
         "<td class='wow-ev'>"+(it.place?("<span class='"+(it.place.alive===false?"wow-failing":(it.place.alive?"wow-holding":"wow-unknown"))+"'>"+(it.place.alive===false?"gone":(it.place.alive?"alive":"unknown"))+"</span> "+esc(it.place.place)+"<div title='"+esc(it.place.evidence)+"'>"+esc(String(it.place.evidence).slice(0,70))+"</div>"):"<span class='muted'>—</span>")+"</td></tr>";
     }
-    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th><th>decision (Joe, reopenable)</th><th>Place (probed)</th></tr></thead>";
+    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th><th>ant reads (Kimi, citation-checked)</th><th>decision (Joe, reopenable)</th><th>Place (probed)</th></tr></thead>";
     var seen={};
     var groups=DRAIN.map(function(g){
       var rs=items.filter(function(it){return it.needs===g.need;}); rs.forEach(function(it){seen[it.id]=1;});

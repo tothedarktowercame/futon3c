@@ -1,0 +1,41 @@
+{
+ "stem": "M-actuator-spec-A3-executor",
+ "kind": "A2",
+ "seat": "kimi-1",
+ "job": "invoke-1793653085441-10491-d1eb6f8a",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-actuator-spec-A3-executor",
+  "kind": "witness",
+  "finish": {
+   "value": "One content-free executor for all four blueprints; witness-gate tests reject missing/unresolved evidence refs; dry-run over all four blueprints is deterministic with no dispatch",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:7",
+   "quote": "- [ ] One content-free executor extracts build packages for all four named corpus blueprints without per-blueprint branches."
+  },
+  "artifact": {
+   "value": "executor source /home/joe/code/futon2/src/futon2/aif/actuator_a3.clj (implied; doc names only the log /home/joe/code/futon2/logs/actuator-a3.log)",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:56",
+   "quote": "**Log** the actuation + dial deltas + witnesses to"
+  },
+  "exists": {
+   "value": true,
+   "cite": "/home/joe/code/futon2/src/futon2/aif/actuator_a3.clj",
+   "quote": "(ns futon2.aif.actuator-a3"
+  },
+  "residue": {
+   "value": "Status line still OPEN with all acceptance boxes unchecked; log shows two live :mode :dispatch runs (2026-07-07) despite the doc's 'Do NOT live-fire builders' rule; tests exist (actuator_a3_test.clj:306-390 incl. dry-run-determinism) but pass/clj-kondo status not recorded in the doc",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:3",
+   "quote": "**Status:** OPEN — No prior status was recorded."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-path",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": []
+}

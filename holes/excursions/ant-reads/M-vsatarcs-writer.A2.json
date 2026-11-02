@@ -1,0 +1,41 @@
+{
+ "stem": "M-vsatarcs-writer",
+ "kind": "A2",
+ "seat": "kimi-2",
+ "job": "invoke-1793653085767-10492-2778afc8",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-vsatarcs-writer",
+  "kind": "witness",
+  "finish": {
+   "value": "Acceptance checklist rows L9-11: R5 EFE ranking with named G-term breakdown (replacing single-candidate bypass); attention/mission-trust budgets + quantitative abstention enforced and test-covered; operator confirm/reject/ignore feeding back through the L5 observation channel (all unchecked)",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:9",
+   "quote": "- [ ] Writer-action candidates carry and use an implemented R5 EFE ranking with the named G-term breakdown rather than the single-candidate bypass."
+  },
+  "artifact": {
+   "value": "an implemented R5 EFE ranking with G-risk/G-info/G-ambiguity breakdown, budget-enforcement tests, and an L5 operator-response observation channel",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:11",
+   "quote": "- [ ] Operator confirm, reject, and ignore responses feed back through the L5 observation channel and update writer-action precision."
+  },
+  "exists": {
+   "value": false,
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:9",
+   "quote": "- [ ] Writer-action candidates carry and use an implemented R5 EFE ranking ... (checkbox unchecked; no EFE-ranking artifact is cited anywhere in the file — the only budgets mention, L547, names budgets as an unmodelled DERIVE gap)"
+  },
+  "residue": {
+   "value": "L9-12 all remain unchecked; Status is OPEN — INSTANTIATE; the file itself notes 'a gap in DERIVE — the design doesn't currently model budgets' (L547)",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:3",
+   "quote": "**Status:** OPEN — OPEN — INSTANTIATE (started 2026-05-20)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": []
+}

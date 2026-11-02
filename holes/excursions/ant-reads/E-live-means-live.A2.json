@@ -1,0 +1,41 @@
+{
+ "stem": "E-live-means-live",
+ "kind": "A2",
+ "seat": "kimi-2",
+ "job": "invoke-1793653085767-10492-2778afc8",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "E-live-means-live",
+  "kind": "witness",
+  "finish": {
+   "value": "Closure criteria (provisional, 2026-10-09): (1) commit coverage becomes live (watcher/in-process), not manual-batch ingest; (2) land the reachable-from-boot/substrate-2-commit-coverage invariant sibling in futon3c; (3) backfill :source-file onto pre-B-4 var-vertices — all three unchecked",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-live-means-live.md:600",
+   "quote": "- [ ] Commit coverage becomes live (watcher/in-process), not manual-batch ingest"
+  },
+  "artifact": {
+   "value": "the invariant sibling file reachable-from-boot/substrate-2-commit-coverage in futon3c (nominally futon3c/src/futon3c/logic/reachable_from_boot.clj) plus a live-watcher ingestion path",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-live-means-live.md:601",
+   "quote": "- [ ] Land the reachable-from-boot/substrate-2-commit-coverage invariant sibling in futon3c"
+  },
+  "exists": {
+   "value": false,
+   "cite": "/home/joe/code/futon3c/src/futon3c/logic/reachable_from_boot.clj",
+   "quote": "ls: cannot access '/home/joe/code/futon3c/src/futon3c/logic/reachable_from_boot.clj': No such file or directory"
+  },
+  "residue": {
+   "value": "All three closure items are unchecked in the file and Status remains 'open' (L4); the file itself says the sibling may live 'wherever the family's existing siblings are housed — verify', so a different path was not ruled out by this check",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-live-means-live.md:4",
+   "quote": "**Status:** open"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-absent",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": []
+}

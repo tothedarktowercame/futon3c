@@ -1,0 +1,67 @@
+{
+ "stem": "E-clean-up-substrate-2",
+ "kind": "A5",
+ "seat": "kimi-3",
+ "job": "invoke-1793653086189-10493-6cf9c248",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "E-clean-up-substrate-2",
+  "kind": "rehome",
+  "dependencies": [
+   {
+    "what": {
+     "value": "live census of the type registry via futon1a /census on :7071",
+     "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:47",
+     "quote": "## 2. MAP — the live census (port 7071, 2026-06-26)"
+    },
+    "futon1b": {
+     "value": "GET /api/alpha/census?type=…|?entity-type=… on :7073 (routes/census, count-pushdown)",
+     "cite": "/home/joe/code/futon1b/API-CONTRACT.md:735",
+     "quote": "### GET /api/alpha/census?type=… | ?entity-type=…"
+    }
+   },
+   {
+    "what": {
+     "value": "gated retraction/deletion path for registry types (none exists; raw xtdb/delete forbidden, must ride run-write!)",
+     "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:100",
+     "quote": "A raw `xtdb/delete` is forbidden** (bypasses the mandated pipeline; futon1a CLAUDE.md; no precedent). So pruning requires **new gated code**."
+    },
+    "futon1b": {
+     "value": "POST /api/alpha/documents/retract — gated batch retraction, penholder-required, atomic XTDB tx, covers :entities/:hyperedges/:relations",
+     "cite": "/home/joe/code/futon1b/API-CONTRACT.md:588",
+     "quote": "### POST /api/alpha/documents/retract\nGated batch retraction for substrate-maintenance clients."
+    }
+   },
+   {
+    "what": {
+     "value": "substrate-2 XTDB store itself on :7071 (the thing being cleaned)",
+     "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:12",
+     "quote": "**Repos:** futon1a (`:7071` substrate-2; `src/futon1a/model/type_registry.clj` — the derived registry"
+    },
+    "futon1b": {
+     "value": "futon1b serving JVM, default port 7073, store-dir migration-store",
+     "cite": "/home/joe/code/futon1b/README.md:25",
+     "quote": "clojure -M:node -m futon1b-server --store-dir migration-store --port 7073"
+    }
+   }
+  ],
+  "port-size": {
+   "value": "medium",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:174",
+   "quote": "- [ ] Decide and build a gated retraction/deletion path for the type registry (no retract-type! exists today)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

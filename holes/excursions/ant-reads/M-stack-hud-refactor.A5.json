@@ -1,0 +1,51 @@
+{
+ "stem": "M-stack-hud-refactor",
+ "kind": "A5",
+ "seat": "kimi-3",
+ "job": "invoke-1793653086189-10493-6cf9c248",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-stack-hud-refactor",
+  "kind": "rehome",
+  "dependencies": [
+   {
+    "what": {
+     "value": "FUTON1A_URL env var, default http://localhost:7071, backing all HUD widget data fetchers",
+     "cite": "/home/joe/code/futon0/holes/missions/M-stack-hud-refactor.md:282",
+     "quote": "- Widget data fetchers all rely on `FUTON1A_URL` (default\n  `http://localhost:7071`)."
+    },
+    "futon1b": {
+     "unsure": "no FUTON1B_URL convention found in /home/joe/code/futon1b; futon1b default port 7073 (README.md:25, futon1b_server.clj:1587) but the env-var rename lives in the futon0 client, not futon1b"
+    }
+   },
+   {
+    "what": {
+     "value": "per-pattern, per-session, sessions-in-flight live data via futon1a HTTP evidence endpoints (incl. :7071/evidence-viewer)",
+     "cite": "/home/joe/code/futon0/holes/missions/M-stack-hud-refactor.md:175",
+     "quote": "| futon0 (HUD widgets) | futon1a (HTTP :7071) | per-pattern, per-session, sessions-in-flight live data |"
+    },
+    "futon1b": {
+     "value": "GET /api/alpha/evidence?…, /api/alpha/evidence/count, /api/alpha/evidence/sessions on :7073",
+     "cite": "/home/joe/code/futon1b/API-CONTRACT.md:351",
+     "quote": "### GET /api/alpha/evidence/sessions"
+    }
+   }
+  ],
+  "port-size": {
+   "value": "large",
+   "cite": "/home/joe/code/futon0/holes/missions/M-stack-hud-refactor.md:298",
+   "quote": "- [ ] Services, git, vitality, liveness, reminders, voice, and hot-reload render as `stack-hud-2` widgets, with toggle-button support in `stack-hud-2-mode-map`."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "unsure",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 1,
+ "failed": []
+}

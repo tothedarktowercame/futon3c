@@ -1,0 +1,41 @@
+{
+ "stem": "M-self-documenting-stack",
+ "kind": "A2",
+ "seat": "kimi-2",
+ "job": "invoke-1793653085767-10492-2778afc8",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-self-documenting-stack",
+  "kind": "witness",
+  "finish": {
+   "value": "A recorded manual browser walk-through shows the LC1 mission-search surface returning and opening ranked mission results",
+   "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:13",
+   "quote": "- [ ] A recorded manual browser walk-through shows the LC1 mission-search surface returning and opening ranked mission results."
+  },
+  "artifact": {
+   "value": "the recorded walk-through itself: 'Closure summary — live walk-through completed' section in this file, claude-2's live walk-through against the WebArxana server (port 3100) on 2026-05-21, including a real bug found and fixed in server/mission_search.clj",
+   "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:1785",
+   "quote": "claude-2 ran a live walk-through against the running WebArxana server (port 3100) 2026-05-21. Outcomes:"
+  },
+  "exists": {
+   "value": true,
+   "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:1783",
+   "quote": "### Closure summary — live walk-through completed"
+  },
+  "residue": {
+   "value": "The finish artifact exists in the file (the walk-through is recorded with outcomes), yet the L13 checkbox is still [ ]; the companion DOCUMENT-pass row (L14) is checked. Remaining open residue is the deferred-item tickets section (L1817 onward: default-result flooding, fusion-weighting issue) and final closure",
+   "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:5",
+   "quote": "manual browser walk-through + DOCUMENT pass remain before closure"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": []
+}

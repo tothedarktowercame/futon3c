@@ -1,0 +1,41 @@
+{
+ "stem": "E-kimi-task-138",
+ "kind": "A2",
+ "seat": "kimi-1",
+ "job": "invoke-1793653085441-10491-d1eb6f8a",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "E-kimi-task-138",
+  "kind": "witness",
+  "finish": {
+   "value": "annotate ten historical turns from the pack into /tmp/claude17/answers/chunk4-kimi.json (all ten, or note omissions); NOT 'published with task-139' — the file explicitly forbids publishing",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-138.md:20",
+   "quote": "Do all ten, one at a time. If a turn truly cannot be read from the pack, leave it out and say why."
+  },
+  "artifact": {
+   "value": "/tmp/claude17/answers/chunk4-kimi.json (JSON array with a turn_id per finished turn)",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-138.md:16",
+   "quote": "rewrite /tmp/claude17/answers/chunk4-kimi.json as a JSON array containing every turn finished so far"
+  },
+  "exists": {
+   "value": false,
+   "cite": "/tmp/claude17/answers/chunk4-kimi.json",
+   "quote": "ls: cannot access '/tmp/claude17/answers/chunk4-kimi.json': No such file or directory"
+  },
+  "residue": {
+   "value": "Requisition header records state done (2026-09-30T17:53:59Z) but the artifact lived in /tmp and is gone; no in-file record of how many turns were completed or left out",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-138.md:3",
+   "quote": "**Requisition:** completed — 2026-09-30T17:53:59Z, job invoke-1790790415888-29260-1efdf051, state done"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-absent",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": []
+}

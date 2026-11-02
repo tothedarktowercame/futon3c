@@ -1,0 +1,44 @@
+{
+ "stem": "E-btoa-evidence-sample-mapping-v0",
+ "kind": "A2",
+ "seat": "kimi-1",
+ "job": "invoke-1793653085441-10491-d1eb6f8a",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "E-btoa-evidence-sample-mapping-v0",
+  "kind": "witness",
+  "finish": {
+   "value": "hand-label a sample of B->A turns and map each to candidate families, motifs, and Strategic SORRY handles",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:4",
+   "quote": "**Purpose:** test whether a small sample of live B->A turns from the"
+  },
+  "artifact": {
+   "value": "the worked-sample mapping table recorded in the file itself (6 evidence ids mapped)",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:32",
+   "quote": "| `e-32ccfa99-4803-4766-8f35-f0b13f4ee687` | \"closure conditions for missions need to match Operator expectations\" ..."
+  },
+  "exists": {
+   "value": true,
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:32-38",
+   "quote": "Worked Sample table with 6 rows mapping evidence ids to families/motifs/SORRYs"
+  },
+  "residue": {
+   "value": "'not yet an automated classifier'; verdict is provisional — 'WM status classification by zai-4, medium confidence; not yet confirmed by the author'",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:11",
+   "quote": "**VERDICT (2026-10-09, provisional):** DONE — The v0 purpose (hand-label a sample and map it) is recorded as delivered"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

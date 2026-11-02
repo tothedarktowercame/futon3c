@@ -1,0 +1,43 @@
+{
+ "stem": "M-essay-corpus-substrate",
+ "kind": "A2",
+ "seat": "kimi-1",
+ "job": "invoke-1793653085441-10491-d1eb6f8a",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-essay-corpus-substrate",
+  "kind": "witness",
+  "finish": {
+   "value": "essay projector dispatched by file_ingest; focused projector tests pass; WebArxana shows 16 annotations for arxana/essay/operator-foreword-v1",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:13",
+   "quote": "- [ ] `futon3c.watcher.projections.essay` is dispatched only for essay-home Markdown paths and preserves arbitrary-arity annotation endpoints."
+  },
+  "artifact": {
+   "value": "/home/joe/code/futon3c/src/futon3c/watcher/projections/essay.clj + test /home/joe/code/futon3c/test/futon3c/watcher/projections/essay_test.clj",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:134",
+   "quote": "- `/home/joe/code/futon3c/src/futon3c/watcher/projections/essay.clj` — the projector namespace."
+  },
+  "exists": {
+   "value": true,
+   "cite": "/home/joe/code/futon3c/src/futon3c/watcher/projections/essay.clj and file_ingest.clj:30,548-550,1104",
+   "quote": "[futon3c.watcher.projections.essay :as essay]"
+  },
+  "residue": {
+   "value": "Doc Status still OPEN, D2 marked outstanding; checkboxes L13-15 unchecked; 16-annotations-in-WebArxana (L15) is a live endpoint I cannot verify from files; test pass status not recorded",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:4",
+   "quote": "**Status:** OPEN — Stage 1 partial-complete. D1 (home convention) + D3 (first-essay migration) landed; D2 ... is the outstanding work"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "cite-not-path:line",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "cite-not-path:line"
+ ]
+}

@@ -1,0 +1,53 @@
+{
+ "stem": "M-legacy-sorry-cleanup",
+ "kind": "A5",
+ "seat": "kimi-3",
+ "job": "invoke-1793653086189-10493-6cf9c248",
+ "at": "2026-11-02T21:02:19+00:00",
+ "row": {
+  "stem": "M-legacy-sorry-cleanup",
+  "kind": "rehome",
+  "dependencies": [
+   {
+    "what": {
+     "value": "gated destructive path futon1a/scripts/erase.bb (penholder joe, --reason, dry-run first) for evicting sorry hyperedges",
+     "cite": "/home/joe/code/futon2/holes/M-legacy-sorry-cleanup.md:46",
+     "quote": "destructive path only (`futon1a/scripts/erase.bb`, penholder `joe`, `--reason`; dry-run first). Never raw evict."
+    },
+    "futon1b": {
+     "value": "no erase.bb script exists under /home/joe/code/futon1b/scripts; the gated equivalent is POST /api/alpha/documents/retract (penholder-gated, batch, atomic, idempotent)",
+     "cite": "/home/joe/code/futon1b/API-CONTRACT.md:588",
+     "quote": "### POST /api/alpha/documents/retract\nGated batch retraction for substrate-maintenance clients. Body requires"
+    }
+   },
+   {
+    "what": {
+     "value": "the 23 code/v05/sorry hyperedges stored in XTDB on :7071 (snapshot taken 2026-07-02, originals untouched)",
+     "cite": "/home/joe/code/futon2/holes/M-legacy-sorry-cleanup.md:12",
+     "quote": "(the 23 `code/v05/sorry` hyperedges pulled from `:7071` on 2026-07-02, sha256 `d242066d…`; XTDB originals untouched)."
+    },
+    "futon1b": {
+     "value": "same hyperedges served by futon1b store on :7073 (hyperedge read/write routes)",
+     "cite": "/home/joe/code/futon1b/futon1b_server.clj:13",
+     "quote": ";;   POST /api/alpha/hyperedge        → watcher-compatible payload:"
+    }
+   }
+  ],
+  "port-size": {
+   "value": "small",
+   "cite": "/home/joe/code/futon2/holes/M-legacy-sorry-cleanup.md:10",
+   "quote": "- [ ] Every eviction uses the gated `futon1a/scripts/erase.bb` path with its reason recorded while the original snapshot remains as an audit trail."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,7 +1,7 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:45:59+00:00",
+ "exported-at": "2026-11-02T21:03:20+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 4,
@@ -23,6 +23,19 @@
   "gone": 12,
   "alive": 1,
   "probed": 13
+ },
+ "ant-reads": {
+  "rows": 12,
+  "items": 12,
+  "citations": {
+   "ok": 51,
+   "unsure": 2,
+   "failed": 3
+  },
+  "by-kind": {
+   "A2": 8,
+   "A5": 4
+  }
  },
  "by-situation": {
   "held-other": 6,
@@ -93,7 +106,8 @@
      "kind": "target",
      "to": "PLAN-outer-selection-restoration (one production recommendation)"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 2,
@@ -120,7 +134,8 @@
    "decision": {
     "decision": "merge-into:E-memory-v3-programme",
     "basis": "V3 followed it"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 3,
@@ -147,7 +162,8 @@
    "decision": {
     "decision": "close-and-carry",
     "basis": "head answered; carry the open rungs"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 4,
@@ -171,7 +187,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 5,
@@ -202,7 +219,8 @@
      "kind": "target",
      "to": "cluster node 'superpod work' (mark2, mark3, M-mark8, M-paper-reverse-morphogenesis); first step of the cluster-level refactor: check mark2's four unchecked acceptance items (M-superpod-mark2.md:205-210, 2026-09-30) against marks 7 and 8: (1) pipeline completes on an all-arXiv-math corpus of 200,000+ papers; (2) stage 9b cosine-similarity sd > 0.10 and validation accuracy < 90%; (3) a learn-to-swim or LeanDojo pilot shows structural/hybrid retrieval finding technique-relevant papers BGE-only missed; (4) corpus_ws_bridge.py serves a FAISS index whose measured precision exceeds the Mark 1 BGE-only baseline. Mark3's checklist covers neither scale nor retrieval precision, so items 1 and 4 need an owner in the cluster (claude-16)"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 6,
@@ -238,7 +256,67 @@
      "to": "work: repoint the census at futon1b :7073, then add a gated erase path there (claude-16: small); cluster: substrate-2"
     },
     "selectable": true
-   }
+   },
+   "ants": [
+    {
+     "kind": "A5",
+     "seat": "kimi-3",
+     "job": "invoke-1793653086189-10493-6cf9c248",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 7,
+     "unsure": 0,
+     "failed": [],
+     "gist": "3 deps to rehome · port medium",
+     "row": {
+      "stem": "E-clean-up-substrate-2",
+      "kind": "rehome",
+      "dependencies": [
+       {
+        "what": {
+         "value": "live census of the type registry via futon1a /census on :7071",
+         "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:47",
+         "quote": "## 2. MAP — the live census (port 7071, 2026-06-26)"
+        },
+        "futon1b": {
+         "value": "GET /api/alpha/census?type=…|?entity-type=… on :7073 (routes/census, count-pushdown)",
+         "cite": "/home/joe/code/futon1b/API-CONTRACT.md:735",
+         "quote": "### GET /api/alpha/census?type=… | ?entity-type=…"
+        }
+       },
+       {
+        "what": {
+         "value": "gated retraction/deletion path for registry types (none exists; raw xtdb/delete forbidden, must ride run-write!)",
+         "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:100",
+         "quote": "A raw `xtdb/delete` is forbidden** (bypasses the mandated pipeline; futon1a CLAUDE.md; no precedent). So pruning requires **new gated code**."
+        },
+        "futon1b": {
+         "value": "POST /api/alpha/documents/retract — gated batch retraction, penholder-required, atomic XTDB tx, covers :entities/:hyperedges/:relations",
+         "cite": "/home/joe/code/futon1b/API-CONTRACT.md:588",
+         "quote": "### POST /api/alpha/documents/retract\nGated batch retraction for substrate-maintenance clients."
+        }
+       },
+       {
+        "what": {
+         "value": "substrate-2 XTDB store itself on :7071 (the thing being cleaned)",
+         "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:12",
+         "quote": "**Repos:** futon1a (`:7071` substrate-2; `src/futon1a/model/type_registry.clj` — the derived registry"
+        },
+        "futon1b": {
+         "value": "futon1b serving JVM, default port 7073, store-dir migration-store",
+         "cite": "/home/joe/code/futon1b/README.md:25",
+         "quote": "clojure -M:node -m futon1b-server --store-dir migration-store --port 7073"
+        }
+       }
+      ],
+      "port-size": {
+       "value": "medium",
+       "cite": "/home/joe/code/futon3c/holes/excursions/E-clean-up-substrate-2.md:174",
+       "quote": "- [ ] Decide and build a gated retraction/deletion path for the type registry (no retract-type! exists today)"
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 7,
@@ -262,7 +340,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 8,
@@ -297,7 +376,8 @@
      "kind": "target",
      "to": "PLAN-coherent-selection-giraffe-wm-2026-11-02.md"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 9,
@@ -321,7 +401,44 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-1",
+     "job": "invoke-1793653085441-10491-d1eb6f8a",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 4,
+     "unsure": 0,
+     "failed": [],
+     "gist": "artifact exists · medium",
+     "row": {
+      "stem": "M-actuator-spec-A3-executor",
+      "kind": "witness",
+      "finish": {
+       "value": "One content-free executor for all four blueprints; witness-gate tests reject missing/unresolved evidence refs; dry-run over all four blueprints is deterministic with no dispatch",
+       "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:7",
+       "quote": "- [ ] One content-free executor extracts build packages for all four named corpus blueprints without per-blueprint branches."
+      },
+      "artifact": {
+       "value": "executor source /home/joe/code/futon2/src/futon2/aif/actuator_a3.clj (implied; doc names only the log /home/joe/code/futon2/logs/actuator-a3.log)",
+       "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:56",
+       "quote": "**Log** the actuation + dial deltas + witnesses to"
+      },
+      "exists": {
+       "value": true,
+       "cite": "/home/joe/code/futon2/src/futon2/aif/actuator_a3.clj",
+       "quote": "(ns futon2.aif.actuator-a3"
+      },
+      "residue": {
+       "value": "Status line still OPEN with all acceptance boxes unchecked; log shows two live :mode :dispatch runs (2026-07-07) despite the doc's 'Do NOT live-fire builders' rule; tests exist (actuator_a3_test.clj:306-390 incl. dry-run-determinism) but pass/clj-kondo status not recorded in the doc",
+       "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:3",
+       "quote": "**Status:** OPEN — No prior status was recorded."
+      },
+      "confidence": "medium"
+     }
+    }
+   ]
   },
   {
    "rank": 10,
@@ -348,7 +465,8 @@
    "decision": {
     "decision": "keep-held",
     "basis": "un-hold when its consumer M-aif-stack is active"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 11,
@@ -383,7 +501,55 @@
      "kind": "target",
      "to": "port the erase gate to a futon1b erase path; waits on landing the 15 oriented entries"
     }
-   }
+   },
+   "ants": [
+    {
+     "kind": "A5",
+     "seat": "kimi-3",
+     "job": "invoke-1793653086189-10493-6cf9c248",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 5,
+     "unsure": 0,
+     "failed": [],
+     "gist": "2 deps to rehome · port small",
+     "row": {
+      "stem": "M-legacy-sorry-cleanup",
+      "kind": "rehome",
+      "dependencies": [
+       {
+        "what": {
+         "value": "gated destructive path futon1a/scripts/erase.bb (penholder joe, --reason, dry-run first) for evicting sorry hyperedges",
+         "cite": "/home/joe/code/futon2/holes/M-legacy-sorry-cleanup.md:46",
+         "quote": "destructive path only (`futon1a/scripts/erase.bb`, penholder `joe`, `--reason`; dry-run first). Never raw evict."
+        },
+        "futon1b": {
+         "value": "no erase.bb script exists under /home/joe/code/futon1b/scripts; the gated equivalent is POST /api/alpha/documents/retract (penholder-gated, batch, atomic, idempotent)",
+         "cite": "/home/joe/code/futon1b/API-CONTRACT.md:588",
+         "quote": "### POST /api/alpha/documents/retract\nGated batch retraction for substrate-maintenance clients. Body requires"
+        }
+       },
+       {
+        "what": {
+         "value": "the 23 code/v05/sorry hyperedges stored in XTDB on :7071 (snapshot taken 2026-07-02, originals untouched)",
+         "cite": "/home/joe/code/futon2/holes/M-legacy-sorry-cleanup.md:12",
+         "quote": "(the 23 `code/v05/sorry` hyperedges pulled from `:7071` on 2026-07-02, sha256 `d242066d…`; XTDB originals untouched)."
+        },
+        "futon1b": {
+         "value": "same hyperedges served by futon1b store on :7073 (hyperedge read/write routes)",
+         "cite": "/home/joe/code/futon1b/futon1b_server.clj:13",
+         "quote": ";;   POST /api/alpha/hyperedge        → watcher-compatible payload:"
+        }
+       }
+      ],
+      "port-size": {
+       "value": "small",
+       "cite": "/home/joe/code/futon2/holes/M-legacy-sorry-cleanup.md:10",
+       "quote": "- [ ] Every eviction uses the gated `futon1a/scripts/erase.bb` path with its reason recorded while the original snapshot remains as an audit trail."
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 12,
@@ -410,7 +576,8 @@
    "decision": {
     "decision": "un-hold",
     "basis": "clicks have run since 2026-11-01; the first gated selection click is its first witness"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 13,
@@ -434,7 +601,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 14,
@@ -458,7 +626,46 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-1",
+     "job": "invoke-1793653085441-10491-d1eb6f8a",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 3,
+     "unsure": 0,
+     "failed": [
+      "cite-not-path:line"
+     ],
+     "gist": "artifact exists · medium",
+     "row": {
+      "stem": "M-essay-corpus-substrate",
+      "kind": "witness",
+      "finish": {
+       "value": "essay projector dispatched by file_ingest; focused projector tests pass; WebArxana shows 16 annotations for arxana/essay/operator-foreword-v1",
+       "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:13",
+       "quote": "- [ ] `futon3c.watcher.projections.essay` is dispatched only for essay-home Markdown paths and preserves arbitrary-arity annotation endpoints."
+      },
+      "artifact": {
+       "value": "/home/joe/code/futon3c/src/futon3c/watcher/projections/essay.clj + test /home/joe/code/futon3c/test/futon3c/watcher/projections/essay_test.clj",
+       "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:134",
+       "quote": "- `/home/joe/code/futon3c/src/futon3c/watcher/projections/essay.clj` — the projector namespace."
+      },
+      "exists": {
+       "value": true,
+       "cite": "/home/joe/code/futon3c/src/futon3c/watcher/projections/essay.clj and file_ingest.clj:30,548-550,1104",
+       "quote": "[futon3c.watcher.projections.essay :as essay]"
+      },
+      "residue": {
+       "value": "Doc Status still OPEN, D2 marked outstanding; checkboxes L13-15 unchecked; 16-annotations-in-WebArxana (L15) is a live endpoint I cannot verify from files; test pass status not recorded",
+       "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:4",
+       "quote": "**Status:** OPEN — Stage 1 partial-complete. D1 (home convention) + D3 (first-essay migration) landed; D2 ... is the outstanding work"
+      },
+      "confidence": "medium"
+     }
+    }
+   ]
   },
   {
    "rank": 15,
@@ -485,7 +692,8 @@
    "decision": {
     "decision": "work",
     "basis": "Joe: describes his workflow but could be built out via automated methods; automation candidate"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 16,
@@ -516,7 +724,8 @@
      "kind": "target",
      "to": "an explanation of what the prototype taught (IT-6); outreach itself lives in futon7"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 17,
@@ -540,7 +749,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 18,
@@ -575,7 +785,8 @@
      "kind": "target",
      "to": "a cluster node 'superpod work' above M-mark8 and this mission (and the earlier marks), each keeping its own meaning; the pattern-theoretic reading of finished work still goes to the cascade side"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 19,
@@ -606,7 +817,8 @@
      "kind": "target",
      "to": "an audit note explaining what the mission accomplished, then close or drop with the explanation on the page"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 20,
@@ -633,7 +845,8 @@
    "decision": {
     "decision": "keep-held",
     "basis": "until the proof-checking checklist it feeds is active; then ask again"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 21,
@@ -657,7 +870,47 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-1",
+     "job": "invoke-1793653085441-10491-d1eb6f8a",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 2,
+     "unsure": 0,
+     "failed": [
+      "quote-not-on-line",
+      "quote-not-on-line"
+     ],
+     "gist": "artifact exists · high",
+     "row": {
+      "stem": "E-btoa-evidence-sample-mapping-v0",
+      "kind": "witness",
+      "finish": {
+       "value": "hand-label a sample of B->A turns and map each to candidate families, motifs, and Strategic SORRY handles",
+       "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:4",
+       "quote": "**Purpose:** test whether a small sample of live B->A turns from the"
+      },
+      "artifact": {
+       "value": "the worked-sample mapping table recorded in the file itself (6 evidence ids mapped)",
+       "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:32",
+       "quote": "| `e-32ccfa99-4803-4766-8f35-f0b13f4ee687` | \"closure conditions for missions need to match Operator expectations\" ..."
+      },
+      "exists": {
+       "value": true,
+       "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:32-38",
+       "quote": "Worked Sample table with 6 rows mapping evidence ids to families/motifs/SORRYs"
+      },
+      "residue": {
+       "value": "'not yet an automated classifier'; verdict is provisional — 'WM status classification by zai-4, medium confidence; not yet confirmed by the author'",
+       "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-evidence-sample-mapping-v0.md:11",
+       "quote": "**VERDICT (2026-10-09, provisional):** DONE — The v0 purpose (hand-label a sample and map it) is recorded as delivered"
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 22,
@@ -684,7 +937,8 @@
    "decision": {
     "decision": "un-hold",
     "basis": "follows M-shared-memory-control-build-test"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 23,
@@ -719,7 +973,8 @@
      "kind": "target",
      "to": "E-evidence-flows-everywhere; off-box part to V"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 24,
@@ -743,7 +998,44 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-1",
+     "job": "invoke-1793653085441-10491-d1eb6f8a",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 4,
+     "unsure": 0,
+     "failed": [],
+     "gist": "artifact absent · medium",
+     "row": {
+      "stem": "E-kimi-task-138",
+      "kind": "witness",
+      "finish": {
+       "value": "annotate ten historical turns from the pack into /tmp/claude17/answers/chunk4-kimi.json (all ten, or note omissions); NOT 'published with task-139' — the file explicitly forbids publishing",
+       "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-138.md:20",
+       "quote": "Do all ten, one at a time. If a turn truly cannot be read from the pack, leave it out and say why."
+      },
+      "artifact": {
+       "value": "/tmp/claude17/answers/chunk4-kimi.json (JSON array with a turn_id per finished turn)",
+       "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-138.md:16",
+       "quote": "rewrite /tmp/claude17/answers/chunk4-kimi.json as a JSON array containing every turn finished so far"
+      },
+      "exists": {
+       "value": false,
+       "cite": "/tmp/claude17/answers/chunk4-kimi.json",
+       "quote": "ls: cannot access '/tmp/claude17/answers/chunk4-kimi.json': No such file or directory"
+      },
+      "residue": {
+       "value": "Requisition header records state done (2026-09-30T17:53:59Z) but the artifact lived in /tmp and is gone; no in-file record of how many turns were completed or left out",
+       "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-138.md:3",
+       "quote": "**Requisition:** completed — 2026-09-30T17:53:59Z, job invoke-1790790415888-29260-1efdf051, state done"
+      },
+      "confidence": "medium"
+     }
+    }
+   ]
   },
   {
    "rank": 25,
@@ -767,7 +1059,44 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-2",
+     "job": "invoke-1793653085767-10492-2778afc8",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 4,
+     "unsure": 0,
+     "failed": [],
+     "gist": "artifact absent · medium",
+     "row": {
+      "stem": "E-live-means-live",
+      "kind": "witness",
+      "finish": {
+       "value": "Closure criteria (provisional, 2026-10-09): (1) commit coverage becomes live (watcher/in-process), not manual-batch ingest; (2) land the reachable-from-boot/substrate-2-commit-coverage invariant sibling in futon3c; (3) backfill :source-file onto pre-B-4 var-vertices — all three unchecked",
+       "cite": "/home/joe/code/futon3/holes/excursions/E-live-means-live.md:600",
+       "quote": "- [ ] Commit coverage becomes live (watcher/in-process), not manual-batch ingest"
+      },
+      "artifact": {
+       "value": "the invariant sibling file reachable-from-boot/substrate-2-commit-coverage in futon3c (nominally futon3c/src/futon3c/logic/reachable_from_boot.clj) plus a live-watcher ingestion path",
+       "cite": "/home/joe/code/futon3/holes/excursions/E-live-means-live.md:601",
+       "quote": "- [ ] Land the reachable-from-boot/substrate-2-commit-coverage invariant sibling in futon3c"
+      },
+      "exists": {
+       "value": false,
+       "cite": "/home/joe/code/futon3c/src/futon3c/logic/reachable_from_boot.clj",
+       "quote": "ls: cannot access '/home/joe/code/futon3c/src/futon3c/logic/reachable_from_boot.clj': No such file or directory"
+      },
+      "residue": {
+       "value": "All three closure items are unchecked in the file and Status remains 'open' (L4); the file itself says the sibling may live 'wherever the family's existing siblings are housed — verify', so a different path was not ruled out by this check",
+       "cite": "/home/joe/code/futon3/holes/excursions/E-live-means-live.md:4",
+       "quote": "**Status:** open"
+      },
+      "confidence": "medium"
+     }
+    }
+   ]
   },
   {
    "rank": 26,
@@ -795,7 +1124,8 @@
     "alive": true,
     "evidence": "futon3c/holes/E-efe-education.md: exists; futon3c/holes/excursions/E-efe-education.md: absent; futon0/holes/excursions/E-efe-education.md: absent; futon2/holes/E-efe-education.md: absent"
    },
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 27,
@@ -819,7 +1149,8 @@
    "selectable-now": true,
    "deficient-way": "selection-gives-a-reason",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 28,
@@ -843,7 +1174,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 31,
@@ -868,7 +1200,8 @@
    "decision": {
     "decision": "keep-held",
     "basis": "Joe's; hand-off of the primitives optional"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 34,
@@ -893,7 +1226,8 @@
    "decision": {
     "decision": "work",
     "basis": "Joe: research, but could in principle be selected for automated work; automation candidate"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 35,
@@ -922,7 +1256,8 @@
      "kind": "target",
      "to": "a TPG-related packet (claude-16 proposed M-xor-coupling-probe's run)"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 38,
@@ -947,7 +1282,8 @@
    "decision": {
     "decision": "merge-into:E-iatc-exposition",
     "basis": "same line"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 40,
@@ -972,7 +1308,8 @@
    "decision": {
     "decision": "keep-held",
     "basis": "record as blocked-by M-peradam-grounding, an edge not a hold"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 45,
@@ -1005,7 +1342,53 @@
      "kind": "target",
      "to": "port the HUD's default from futon1a :7071 to futon1b; V4 alerts owner gap remains"
     }
-   }
+   },
+   "ants": [
+    {
+     "kind": "A5",
+     "seat": "kimi-3",
+     "job": "invoke-1793653086189-10493-6cf9c248",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 4,
+     "unsure": 1,
+     "failed": [],
+     "gist": "2 deps to rehome · port large",
+     "row": {
+      "stem": "M-stack-hud-refactor",
+      "kind": "rehome",
+      "dependencies": [
+       {
+        "what": {
+         "value": "FUTON1A_URL env var, default http://localhost:7071, backing all HUD widget data fetchers",
+         "cite": "/home/joe/code/futon0/holes/missions/M-stack-hud-refactor.md:282",
+         "quote": "- Widget data fetchers all rely on `FUTON1A_URL` (default\n  `http://localhost:7071`)."
+        },
+        "futon1b": {
+         "unsure": "no FUTON1B_URL convention found in /home/joe/code/futon1b; futon1b default port 7073 (README.md:25, futon1b_server.clj:1587) but the env-var rename lives in the futon0 client, not futon1b"
+        }
+       },
+       {
+        "what": {
+         "value": "per-pattern, per-session, sessions-in-flight live data via futon1a HTTP evidence endpoints (incl. :7071/evidence-viewer)",
+         "cite": "/home/joe/code/futon0/holes/missions/M-stack-hud-refactor.md:175",
+         "quote": "| futon0 (HUD widgets) | futon1a (HTTP :7071) | per-pattern, per-session, sessions-in-flight live data |"
+        },
+        "futon1b": {
+         "value": "GET /api/alpha/evidence?…, /api/alpha/evidence/count, /api/alpha/evidence/sessions on :7073",
+         "cite": "/home/joe/code/futon1b/API-CONTRACT.md:351",
+         "quote": "### GET /api/alpha/evidence/sessions"
+        }
+       }
+      ],
+      "port-size": {
+       "value": "large",
+       "cite": "/home/joe/code/futon0/holes/missions/M-stack-hud-refactor.md:298",
+       "quote": "- [ ] Services, git, vitality, liveness, reminders, voice, and hot-reload render as `stack-hud-2` widgets, with toggle-button support in `stack-hud-2-mode-map`."
+      },
+      "confidence": "medium"
+     }
+    }
+   ]
   },
   {
    "rank": 46,
@@ -1038,7 +1421,8 @@
      "kind": "target",
      "to": "R20 step rebuild, SPEC-r20-step-function-2026-10-28.md"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 546,
@@ -1062,7 +1446,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 549,
@@ -1086,7 +1471,42 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-2",
+     "job": "invoke-1793653085767-10492-2778afc8",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 3,
+     "unsure": 1,
+     "failed": [],
+     "gist": "artifact unsure · high",
+     "row": {
+      "stem": "M-arguing-worlds",
+      "kind": "witness",
+      "finish": {
+       "value": "A preregistered grounded retrial compares dialectic and single-best buildouts against recorded closure-fold outcomes; the frame decision and rationale are recorded and futonzero-alphazero.md §1 no longer labels the question 'open, early' (both unchecked)",
+       "cite": "/home/joe/code/futon2/holes/M-arguing-worlds.md:245",
+       "quote": "- [ ] A preregistered grounded retrial compares dialectic and single-best buildouts against recorded closure-fold outcomes, including failed folds."
+      },
+      "artifact": {
+       "value": "a preregistered retrial record + a frame-decision entry updating futon2/docs/futonzero-alphazero.md §1",
+       "cite": "/home/joe/code/futon2/holes/M-arguing-worlds.md:246",
+       "quote": "- [ ] The resulting frame decision and rationale are recorded and `futon2/docs/futonzero-alphazero.md` §1 no longer labels the question “open, early”."
+      },
+      "exists": {
+       "unsure": "no preregistered-retrial record or frame decision appears in the mission file (only the STANDARD-VERIFY yardstick ratification at L227-236, which enables but does not run the retrial); the phrase 'open, early' is absent from futonzero-alphazero.md §1 today, but the mission file records no frame decision and both checkboxes stay [ ] with Status OPEN (L3)"
+      },
+      "residue": {
+       "value": "Status: 'OPEN — v0 built and reviewed PASS; grounded closure-fold retrial and frame decision remain open.'",
+       "cite": "/home/joe/code/futon2/holes/M-arguing-worlds.md:3",
+       "quote": "**Status:** OPEN — v0 built and reviewed PASS; grounded closure-fold retrial and frame decision remain open."
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 555,
@@ -1121,7 +1541,67 @@
      "kind": "target",
      "to": "port the futon1a dependency to futon1b; D4 and D5 open with unchecked prerequisites (check before selecting); cluster: substrate-2"
     }
-   }
+   },
+   "ants": [
+    {
+     "kind": "A5",
+     "seat": "kimi-3",
+     "job": "invoke-1793653086189-10493-6cf9c248",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 7,
+     "unsure": 0,
+     "failed": [],
+     "gist": "3 deps to rehome · port large",
+     "row": {
+      "stem": "M-populate-substrate-2",
+      "kind": "rehome",
+      "dependencies": [
+       {
+        "what": {
+         "value": "substrate-2 XTDB hypergraph on :7071 (futon1a) — the entire mission subject; live census grounding",
+         "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:16",
+         "quote": "Substrate-2 — the XTDB hypergraph on `:7071` (futon1a) — is named for *inference over a live model of the stack*."
+        },
+        "futon1b": {
+         "value": "futon1b server on :7073 against migration-store (same substrate, rehomed)",
+         "cite": "/home/joe/code/futon1b/README.md:25",
+         "quote": "clojure -M:node -m futon1b-server --store-dir migration-store --port 7073"
+        }
+       },
+       {
+        "what": {
+         "value": "hyperedges-by-type route (futon1a routes.clj) — census/count-pushdown for the explainer's live counts",
+         "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:242",
+         "quote": "**Root cause of the false zeros:** `hyperedges-by-type` (futon1a routes.clj)"
+        },
+        "futon1b": {
+         "value": "GET /api/alpha/hyperedges?type=…&limit=…&as-of=… with include-total count-pushdown; plus GET /api/alpha/census",
+         "cite": "/home/joe/code/futon1b/API-CONTRACT.md:457",
+         "quote": "### GET /api/alpha/hyperedges?type=…&end=…&limit=…&as-of=…"
+        }
+       },
+       {
+        "what": {
+         "value": "substrate-2-explainer.html rendering counts queried live from :7071 (exit item D5)",
+         "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:132",
+         "quote": "Make `substrate-2-explainer.html` auto-generated: counts queried live from `:7071`, not hand-typed."
+        },
+        "futon1b": {
+         "value": "same queries against :7073; e.g. /api/alpha/hyperedges?type=…&include-total=true&system-as-of=$ts returns :count",
+         "cite": "/home/joe/code/futon1b/README-backlog-catchup.md:24",
+         "quote": "curl -s \"localhost:7073/api/alpha/hyperedges?type=mission-scope/loose-section&limit=1&include-total=true&system-as-of=$ts\" | grep -o ':count [0-9]*'"
+        }
+       }
+      ],
+      "port-size": {
+       "value": "large",
+       "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.md:146",
+       "quote": "- [ ] `substrate-2-explainer.html` renders live counts without hand-typed numbers."
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 556,
@@ -1148,7 +1628,8 @@
    "decision": {
     "decision": "un-hold",
     "basis": "authorise the canary; un-holds E-dynamic-queries and the typed-memories chain"
-   }
+   },
+   "ants": []
   },
   {
    "rank": 559,
@@ -1174,7 +1655,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   },
   {
    "rank": 563,
@@ -1198,7 +1680,44 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-2",
+     "job": "invoke-1793653085767-10492-2778afc8",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 4,
+     "unsure": 0,
+     "failed": [],
+     "gist": "artifact absent · high",
+     "row": {
+      "stem": "M-vsatarcs-writer",
+      "kind": "witness",
+      "finish": {
+       "value": "Acceptance checklist rows L9-11: R5 EFE ranking with named G-term breakdown (replacing single-candidate bypass); attention/mission-trust budgets + quantitative abstention enforced and test-covered; operator confirm/reject/ignore feeding back through the L5 observation channel (all unchecked)",
+       "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:9",
+       "quote": "- [ ] Writer-action candidates carry and use an implemented R5 EFE ranking with the named G-term breakdown rather than the single-candidate bypass."
+      },
+      "artifact": {
+       "value": "an implemented R5 EFE ranking with G-risk/G-info/G-ambiguity breakdown, budget-enforcement tests, and an L5 operator-response observation channel",
+       "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:11",
+       "quote": "- [ ] Operator confirm, reject, and ignore responses feed back through the L5 observation channel and update writer-action precision."
+      },
+      "exists": {
+       "value": false,
+       "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:9",
+       "quote": "- [ ] Writer-action candidates carry and use an implemented R5 EFE ranking ... (checkbox unchecked; no EFE-ranking artifact is cited anywhere in the file — the only budgets mention, L547, names budgets as an unmodelled DERIVE gap)"
+      },
+      "residue": {
+       "value": "L9-12 all remain unchecked; Status is OPEN — INSTANTIATE; the file itself notes 'a gap in DERIVE — the design doesn't currently model budgets' (L547)",
+       "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:3",
+       "quote": "**Status:** OPEN — OPEN — INSTANTIATE (started 2026-05-20)"
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 567,
@@ -1233,7 +1752,8 @@
      "kind": "target",
      "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish; its futon1a ingest target ports to futon1b (futon1a cannot be a dependency)"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 577,
@@ -1257,7 +1777,44 @@
    "selectable-now": false,
    "deficient-way": "records-carry-warrant",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": [
+    {
+     "kind": "A2",
+     "seat": "kimi-2",
+     "job": "invoke-1793653085767-10492-2778afc8",
+     "at": "2026-11-02T21:02:19+00:00",
+     "ok": 4,
+     "unsure": 0,
+     "failed": [],
+     "gist": "artifact exists · high",
+     "row": {
+      "stem": "M-self-documenting-stack",
+      "kind": "witness",
+      "finish": {
+       "value": "A recorded manual browser walk-through shows the LC1 mission-search surface returning and opening ranked mission results",
+       "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:13",
+       "quote": "- [ ] A recorded manual browser walk-through shows the LC1 mission-search surface returning and opening ranked mission results."
+      },
+      "artifact": {
+       "value": "the recorded walk-through itself: 'Closure summary — live walk-through completed' section in this file, claude-2's live walk-through against the WebArxana server (port 3100) on 2026-05-21, including a real bug found and fixed in server/mission_search.clj",
+       "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:1785",
+       "quote": "claude-2 ran a live walk-through against the running WebArxana server (port 3100) 2026-05-21. Outcomes:"
+      },
+      "exists": {
+       "value": true,
+       "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:1783",
+       "quote": "### Closure summary — live walk-through completed"
+      },
+      "residue": {
+       "value": "The finish artifact exists in the file (the walk-through is recorded with outcomes), yet the L13 checkbox is still [ ]; the companion DOCUMENT-pass row (L14) is checked. Remaining open residue is the deferred-item tickets section (L1817 onward: default-result flooding, fusion-weighting issue) and final closure",
+       "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:5",
+       "quote": "manual browser walk-through + DOCUMENT pass remain before closure"
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 579,
@@ -1292,7 +1849,8 @@
      "kind": "target",
      "to": "PLAN-outer-selection-restoration, R10 entry"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 580,
@@ -1327,7 +1885,8 @@
      "kind": "target",
      "to": "superseded by Cascade Live and Giraffe (the operator view of the WM is this page)"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 590,
@@ -1362,7 +1921,8 @@
      "kind": "target",
      "to": "E-implementing-G-over-cascades"
     }
-   }
+   },
+   "ants": []
   },
   {
    "rank": 593,
@@ -1387,7 +1947,8 @@
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": null,
+   "ants": []
   }
  ]
 }
