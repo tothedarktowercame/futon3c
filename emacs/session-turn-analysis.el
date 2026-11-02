@@ -403,29 +403,37 @@ record `not-requested' and no seat is ever belled for it."
                           ;; turn carries no dispatch key and is never read.
                           ,(when requested '(dispatch . "soon")))))
          (response (session-mode--xiang-request "POST" "/api/alpha/xiang/turns" payload)))
-    (unless (and response (eq t (alist-get 'ok response)))
-      (error "象 turn recording was refused: %s" (or response "no answer")))
-    (when-let* ((kinds (alist-get 'redacted response)))
-      (display-warning
-       'session-mode
-       (format "Redacted secrets (%s) from your turn before capture; the turn itself still reached %s unredacted."
-               (string-join (mapcar #'format kinds) ", ")
-               (or agent-chat--agent-id "the addressed agent"))
-       :warning))
-    (let ((path (alist-get 'path response)))
-      (unless (stringp path)
-        (error "象 turn recording returned no path: %s" response))
-      (setq session-mode--last-analysis-request path)
-      ;; Let consumers read the record through their own canonical path.
-      ;; This runs after every successful record, including a slow draft;
-      ;; a refused response never reaches it.
-      (run-hook-with-args 'session-mode-turn-recorded-functions path)
-      ;; The reading started at send: ask about it until it settles.  It may
-      ;; land before the agent's reply ends; that is the point.
-      (when requested
-        (session-mode--jvm-poll-turn (file-name-base path) path
-                                     session-mode-turn-jvm-poll-tries))
-      path)))
+    (if (not (and response (eq t (alist-get 'ok response))))
+        ;; The operator's turn has already gone to its agent.  A slow or down
+        ;; JVM must not make the observation itself disappear: fall back to
+        ;; the established private file recorder, whose own dispatcher can
+        ;; deliver the analysis later.  This can conservatively duplicate a
+        ;; POST whose response alone was lost, but losing the only record is
+        ;; the worse storage-layer outcome.
+        (progn
+          (display-warning
+           'session-mode
+           (format "象 did not acknowledge turn recording (%s); recorded locally for retry"
+                   (or response "no answer"))
+           :warning)
+          (session-mode--record-turn-via-files text failed original-text))
+      (when-let* ((kinds (alist-get 'redacted response)))
+        (display-warning
+         'session-mode
+         (format "Redacted secrets (%s) from your turn before capture; the turn itself still reached %s unredacted."
+                 (string-join (mapcar #'format kinds) ", ")
+                 (or agent-chat--agent-id "the addressed agent"))
+         :warning))
+      (let ((path (alist-get 'path response)))
+        (unless (stringp path)
+          (error "象 turn recording returned no path: %s" response))
+        (setq session-mode--last-analysis-request path)
+        ;; Let consumers read the record through their own canonical path.
+        (run-hook-with-args 'session-mode-turn-recorded-functions path)
+        (when requested
+          (session-mode--jvm-poll-turn (file-name-base path) path
+                                       session-mode-turn-jvm-poll-tries))
+        path))))
 
 (defun session-mode--record-turn-via-files (text failed original-text)
   "Persist TEXT's structure before requesting interpretation; return its path.
