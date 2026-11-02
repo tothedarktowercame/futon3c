@@ -182,6 +182,7 @@
   var EP_THESIS="apex-thesis.json";
   var EP_WOW="ways-of-working-live.json";
   var EP_PARTITION="giraffe-partition-2026-11-02.json";
+  var EP_TREE="partition-tree.json";  // claude-16's tickets tree, regrown at publish from A1-placements.tsv
   var EP_LAYERS="layers.json";
   var FETCH_TIMEOUT_MS=20000;
 
@@ -513,17 +514,52 @@
     el("forward-panel").style.display="";
   }
 
+  // Tickets as a tree (Joe's judgement 2026-11-02 via claude-16): status > way or wing > cluster > item;
+  // requisitions (E-kimi-task-*) apart as history, not tickets; repair tickets one class; unplaced shown live;
+  // an item with two ways sits under the first and carries `also` (shown as a marker, so the tree claims no more than the data).
+  var TREE=null;
+  function treeCount(n){ var c=(n._items||[]).length; Object.keys(n).forEach(function(k){ if(k!=="_items") c+=treeCount(n[k]); }); return c; }
+  function treeNode(name,n,depth,open){
+    var kids=Object.keys(n).filter(function(k){return k!=="_items";}).sort(function(a,b){return treeCount(n[b])-treeCount(n[a]);});
+    var items=(n._items||[]);
+    var cls=/^decided/.test(name)?"wow-holding":(name==="unplaced"?"wow-failing":(/^requisitions/.test(name)?"muted":(name==="finished"||name==="stopped"?"wow-unknown":"")));
+    var head="<summary><b class='"+cls+"'>"+esc(name)+"</b> <span class='muted'>"+treeCount(n)+"</span></summary>";
+    var body=kids.map(function(k){return treeNode(k,n[k],depth+1,false);}).join("");
+    if(items.length){
+      body+="<div class='wow-ev' style='margin-left:"+(12)+"px'>"+items.map(function(it){
+        var id=(typeof it==="string")?it:it.id; var also=(typeof it==="object"&&it.also)?it.also:null;
+        return "<code>"+esc(id)+"</code>"+(also?" <span class='wow-unknown' title='second way, as true as the first'>also: "+esc(also.join(", "))+"</span>":"");
+      }).join(" · ")+"</div>";
+    }
+    return "<details class='part-group'"+(open?" open":"")+" style='margin-left:"+(depth*10)+"px'>"+head+body+"</details>";
+  }
+  function renderTree(tree){
+    TREE=tree; var top=Object.keys(tree).sort(function(a,b){return treeCount(tree[b])-treeCount(tree[a]);});
+    var total=top.reduce(function(s,k){return s+treeCount(tree[k]);},0);
+    var req=tree["requisitions (history, not tickets)"]?treeCount(tree["requisitions (history, not tickets)"]):0;
+    var unplaced=0; top.forEach(function(k){ if(tree[k].unplaced) unplaced+=treeCount(tree[k].unplaced); });
+    el("tickets-count").textContent="· "+(total-req)+" items in the tree, "+req+" dispatch requisitions apart as history · unplaced (live): "+unplaced;
+    var note="<div class='sub' style='margin-bottom:6px'>status › way (or wing for rows not yet re-read) › cluster › item. Requisitions are records of one dispatch each and are not tickets (Joe, 2026-11-02); an unmet need belongs to the parent item. Repair tickets are one class. <code>also:</code> marks a second way as true as the first. Tree regrown at publish from the ant placements; status from claude-16's status regex.</div>";
+    el("tickets-body").innerHTML=note+top.map(function(k){return treeNode(k,tree[k],0,k==="open");}).join("");
+    el("tickets-panel").style.display="";
+  }
   function renderTickets(g){
     var tickets=(g.tickets&&g.tickets.items)||[];
     var total=(g.tickets&&g.tickets["count-total"])||tickets.length;
+    if(TREE){
+      // the endpoint's flat pile stays reachable, folded, as the raw source the tree is drawn from
+      var rows=tickets.slice(0,400).map(function(t){return "<tr><td><code>"+esc(t.stem)+"</code></td><td>"+esc(t.kind)+"</td><td>"+esc(t.repo)+"</td><td class='muted'>"+ago(t["mtime-ms"])+"</td></tr>";});
+      el("tickets-body").innerHTML+="<details class='part-group'><summary><b>raw draw pile from the endpoint</b> <span class='muted'>"+tickets.length+" of "+total+" (first 400 shown)</span></summary><div class='scrollx'><table><tr><th>stem</th><th>kind</th><th>repo</th><th>last-touched</th></tr>"+rows.join("")+"</table></div></details>";
+      return;
+    }
     el("tickets-count").textContent="· "+tickets.length+" of "+total;
     if(!tickets.length){
       el("tickets-body").innerHTML="<span class='muted'>no unclocked mission/excursion docs found</span>";
     }else{
-      var rows=tickets.map(function(t){
+      var rows2=tickets.map(function(t){
         return "<tr><td><code>"+esc(t.stem)+"</code></td><td>"+esc(t.kind)+"</td><td>"+esc(t.repo)+"</td><td class='muted' title='"+esc(new Date(t["mtime-ms"]).toLocaleString())+"'>"+ago(t["mtime-ms"])+"</td></tr>";
       });
-      el("tickets-body").innerHTML="<table><tr><th>stem</th><th>kind</th><th>repo</th><th>last-touched</th></tr>"+rows.join("")+"</table>";
+      el("tickets-body").innerHTML="<table><tr><th>stem</th><th>kind</th><th>repo</th><th>last-touched</th></tr>"+rows2.join("")+"</table>";
     }
     el("tickets-panel").style.display="";
   }
@@ -710,6 +746,12 @@
     return ix;
   }
 
+  var LAST_G=null;
+  function loadTree(){
+    requestJSON("tickets tree",EP_TREE).then(function(tree){ renderTree(tree); if(LAST_G) renderTickets(LAST_G); }).catch(function(err){
+      el("tickets-body").innerHTML="<div class='gap'>Tickets tree unavailable: "+esc(err&&err.message||err)+" (showing the raw draw pile)</div>"; TREE=null; if(LAST_G) renderTickets(LAST_G);
+    });
+  }
   function loadPartition(){
     requestJSON("partition data",EP_PARTITION).then(renderPartition).catch(function(err){
       el("partition-body").innerHTML="<div class='gap'>Partition data unavailable: "+esc(err&&err.message||err)+"</div>";
@@ -814,7 +856,7 @@
       renderHeld(g);
       renderLineage(g);
       renderForward(res[2]);
-      renderTickets(g);
+      LAST_G=g; renderTickets(g);
       CLOCK_IX=clockIndex(g); if(PARTITION) renderPartition(PARTITION);
       applyFolds();
       hasRendered=true;
@@ -833,7 +875,7 @@
 
   loadThesis();
   loadWow();
-  loadPartition();
+  loadPartition(); loadTree();
   loadLayers();
   loadWip();
   loadAll();
