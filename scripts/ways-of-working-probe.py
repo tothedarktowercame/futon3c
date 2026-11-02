@@ -86,7 +86,18 @@ def probe_draw_pile(graph):
         for i, line in enumerate(f.read_text().splitlines()):
             if i == 0 or not line.strip(): continue
             placed.add(line.split("\t")[0])
-    committed = False  # placements live under ~/notes, not on a committed path
+    # ant placements (claude-16, 2026-11-02 21:3xZ): an item counts as placed if a reader gave it a what,
+    # a status and a cited way; those rows are committed under futon3c/holes/excursions/ant-reads/
+    import json as _json
+    ant_dir = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "ant-reads"
+    ant_placed = set()
+    for f in ant_dir.glob("*.A1.json") if ant_dir.exists() else []:
+        try: r = _json.loads(f.read_text()).get("row") or {}
+        except Exception: continue
+        if all(isinstance(r.get(k), dict) and ("value" in r[k]) for k in ("what", "status", "way")) and r["way"].get("cite"):
+            ant_placed.add(r.get("stem") or f.name.split(".")[0])
+    placed |= ant_placed
+    committed = bool(ant_placed)  # the ant rows are on a committed path; the commons-map TSVs are not
     unplaced = len(stems - placed) if stems else max(total - len(placed), 0)  # ids placed but not in the pile must not be subtracted (claude-16)
     # claude-16 (2026-11-02 21:1xZ): over half the unplaced stems say closed in their own status line.
     # A closed item needs an attestation upward (IT-4), not a placement; count the two apart.
@@ -104,7 +115,7 @@ def probe_draw_pile(graph):
         if any(_closed_re.search(l) for l in head): closed_unplaced.add(st)
     open_unplaced = len(stems - placed) - len(closed_unplaced)
     ev = [f"of the unplaced: {open_unplaced} open (need a placement), {len(closed_unplaced)} closed in their own status line (need an attestation upward, IT-4, not a placement; claude-16 finding 2026-11-02)",f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
-          f"placements read by the commons map: {len(placed)} ids, {len(stems & placed) if stems else 0} of them in the pile (advisory; on a committed path: {committed})",
+          f"placements read by the commons map: {len(placed) - len(ant_placed)} ids (advisory, under ~/notes) plus {len(ant_placed)} ant placements (what + status + cited way; committed under ant-reads/); {len(stems & placed) if stems else 0} of all placed ids are in the pile",
           "the pile on this page is the evidence of this failure"]
     return {"monitor": "on", "invariant": "failing" if unplaced or not committed else "holding",
             "last-observation": iso(NOW), "observed-at": iso(NOW),

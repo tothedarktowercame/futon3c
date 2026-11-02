@@ -22,7 +22,13 @@ claim can be checked. `none` is an explicit, correct answer for wing and for way
 item serves no way of the stack. (Rule added after claude-16's scoring of batch 1, 2026-11-02 21:2xZ:
 20 of 46 rows had gone to A.)
 
-Ways of working (pick the one the item most serves or most lacks; `none` if no fit):
+Ways of working: give up to TWO, in order, most-served first. If a second way is as true as the
+first, give both; do not force a choice. The ways overlap because all the therefores serve one
+thesis. Wing follows from the FIRST way (A: records-carry-warrant, inbox-zero, operator-turns-logged;
+B: one-queryable-self-account, backlog-understood; C: feedback-reaches-every-participant, real-users,
+intents-are-tracked; D: selection-gives-a-reason; V: stays-alive-and-paid; eat-your-own-tail takes the
+wing of the way it serves). `none` if no fit. (claude-16's decision after the reader check, 2026-11-02 21:3xZ.)
+The ways:
 records-carry-warrant, inbox-zero, operator-turns-logged (A); one-queryable-self-account,
 backlog-understood (B); feedback-reaches-every-participant, real-users, intents-are-tracked (C);
 selection-gives-a-reason (D); stays-alive-and-paid (V); eat-your-own-tail (the agent is inside the process it runs).
@@ -32,8 +38,8 @@ Output per item:
 {"stem": "<id>", "kind": "place",
  "what": {"value": "<one sentence: what the item is for>", "cite": "path:line", "quote": "..."},
  "status": {"value": "open|closed|stopped|unsure", "cite": "path:line", "quote": "<the status line or the line that shows it>"},
+ "way": {"value": "<way id>[, <second way id>]  or none", "cite": "path:line", "quote": "..."},
  "wing": {"value": "A|B|C|D|V|none", "cite": "path:line", "quote": "<the line that most shows which therefore it serves>"},
- "way": {"value": "<way id or none>", "cite": "path:line", "quote": "..."},
  "action": {"value": "work|close|retire|held|rehome|cluster:<name>|merge-into:<id>|audit|unsure", "cite": "path:line", "quote": "<the line that supports the action>"},
  "need_goes_to": {"value": "<item id that now carries the need, or 'solved'>", "cite": "path:line", "quote": "..."} OR {"unsure": "..."}   (REQUIRED when action is close or retire; omit otherwise),
  "finish": {"value": "<what done would look like, from the file>", "cite": "path:line", "quote": "..."} OR {"unsure": "no finish stated"},
