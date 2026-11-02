@@ -1,0 +1,65 @@
+{
+ "stem": "E-pre-go-live-manifest-review-2026-09-10",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654234861-10529-2b06e751",
+ "at": "2026-11-02T21:20:08+00:00",
+ "row": {
+  "stem": "E-pre-go-live-manifest-review-2026-09-10",
+  "kind": "place",
+  "what": {
+   "value": "Codex-17's independent review of the F12 manifest: all 12 pins match, only legal order is ARD, accepted as a diagnostic negative-control design only.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:10",
+   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:32",
+   "quote": "No new Joe purpose ruling is needed; no O4 or organise closure is claimed."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:10",
+   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:10",
+   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:32",
+   "quote": "No new Joe purpose ruling is needed; no O4 or organise closure is claimed."
+  },
+  "need_goes_to": {
+   "value": "E-pre-go-live-manifest-2026-09-10",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:29",
+   "quote": "propose the smallest separately reviewed task slice. Keep the current manifest"
+  },
+  "finish": {
+   "value": "Review delivered with disposition and named next bounded design work; the manifest is kept as the flat-effect/guard control.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:17",
+   "quote": "Next bounded design work: find two independent, useful checks within Joe's"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:17",
+   "quote": "Next bounded design work: find two independent, useful checks within Joe's"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 8,
+ "unsure": 0,
+ "failed": []
+}

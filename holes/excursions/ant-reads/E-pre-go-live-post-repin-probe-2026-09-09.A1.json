@@ -1,0 +1,65 @@
+{
+ "stem": "E-pre-go-live-post-repin-probe-2026-09-09",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654234861-10529-2b06e751",
+ "at": "2026-11-02T21:20:08+00:00",
+ "row": {
+  "stem": "E-pre-go-live-post-repin-probe-2026-09-09",
+  "kind": "place",
+  "what": {
+   "value": "Record of a post-repin rerun of the find-organise authority-reader probe: VERDICT READY, all nine lines GREEN, explicitly diagnostic and ungraded.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:9",
+   "quote": "Result: **VERDICT: READY**, all nine readiness lines GREEN. The earlier"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:13",
+   "quote": "intervention. Both probes remain diagnostic transcript rounds, ungraded;"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:9",
+   "quote": "Result: **VERDICT: READY**, all nine readiness lines GREEN. The earlier"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:13",
+   "quote": "intervention. Both probes remain diagnostic transcript rounds, ungraded;"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:9",
+   "quote": "Result: **VERDICT: READY**, all nine readiness lines GREEN. The earlier"
+  },
+  "need_goes_to": {
+   "value": "E-pre-go-live-manifest-2026-09-10",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:25",
+   "quote": "reviewed baseline/intervention/primary-score manifest. That design work remains"
+  },
+  "finish": {
+   "value": "Probe rerun with full receipt retained and recorded; done as a diagnostic round, no O4 claim.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:4",
+   "quote": "was rerun after find retirement bf79f988b3, contract emission 8b38ceec46 and"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-post-repin-probe-2026-09-09.md:25",
+   "quote": "reviewed baseline/intervention/primary-score manifest. That design work remains"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 8,
+ "unsure": 0,
+ "failed": []
+}

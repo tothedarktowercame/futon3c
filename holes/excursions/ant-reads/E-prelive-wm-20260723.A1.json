@@ -1,0 +1,63 @@
+{
+ "stem": "E-prelive-wm-20260723",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654234861-10529-2b06e751",
+ "at": "2026-11-02T21:20:08+00:00",
+ "row": {
+  "stem": "E-prelive-wm-20260723",
+  "kind": "place",
+  "what": {
+   "value": "Pre-live rollback and readiness record authorising a fully live War Machine click with fresh zai-8/codex-6, incl. pushed rollback branches for every repo.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:4",
+   "quote": "**Operator decision:** Joe authorised a fully live War Machine click using fresh"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:80",
+   "quote": "- HTTP `200`;"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:32",
+   "quote": "For every repository except `p4ng`, the remote rollback branch"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:105",
+   "quote": "Stop conditions are: endpoint/scheduler degradation, repository drift outside"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:80",
+   "quote": "- HTTP `200`;"
+  },
+  "need_goes_to": {
+   "unsure": "Readiness record is complete; the file does not name the item that recorded the live click's outcome."
+  },
+  "finish": {
+   "value": "All repos pushed with rollback branches, preflight repaired, live endpoint check HTTP 200 with scheduler error-count 0.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:80",
+   "quote": "- HTTP `200`;"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-typed-memories/E-prelive-wm-20260723.md:4",
+   "quote": "**Operator decision:** Joe authorised a fully live War Machine click using fresh"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "unsure",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 1,
+ "failed": []
+}

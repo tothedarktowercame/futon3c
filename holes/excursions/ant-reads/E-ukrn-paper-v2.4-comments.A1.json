@@ -1,0 +1,59 @@
+{
+ "stem": "E-ukrn-paper-v2.4-comments",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654234861-10529-2b06e751",
+ "at": "2026-11-02T21:20:08+00:00",
+ "row": {
+  "stem": "E-ukrn-paper-v2.4-comments",
+  "kind": "place",
+  "what": {
+   "value": "Comment-response sheet for the UKRN open-research-training paper: per-thread co-author comments with patterns and draft revisions awaiting sign-off.",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Working convention: each entry shows the anchored span, the co-author comment, a candidate writing-coherence pattern (or `?` for candidate-new), and a d"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Edit freely — accept, reject, rewrite. Once you sign off, I will apply approved edits to a fresh .docx for upload."
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Working convention: each entry shows the anchored span, the co-author comment, a candidate writing-coherence pattern (or `?` for candidate-new), and a d"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Working convention: each entry shows the anchored span, the co-author comment, a candidate writing-coherence pattern (or `?` for candidate-new), and a d"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Edit freely — accept, reject, rewrite. Once you sign off, I will apply approved edits to a fresh .docx for upload."
+  },
+  "finish": {
+   "value": "Joe signs off on the draft revisions; approved edits applied to a fresh .docx for upload.",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Edit freely — accept, reject, rewrite. Once you sign off, I will apply approved edits to a fresh .docx for upload."
+  },
+  "beneficiary": {
+   "value": "job",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:5",
+   "quote": "Working convention: each entry shows the anchored span, the co-author comment, a candidate writing-coherence pattern (or `?` for candidate-new), and a d"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

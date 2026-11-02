@@ -1,0 +1,59 @@
+{
+ "stem": "E-pre-go-live-manifest-2026-09-10",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654234861-10529-2b06e751",
+ "at": "2026-11-02T21:20:08+00:00",
+ "row": {
+  "stem": "E-pre-go-live-manifest-2026-09-10",
+  "kind": "place",
+  "what": {
+   "value": "Bounded design manifest for an F12 find/separated-risk preparation experiment (frozen inputs, authority/replay/disposition firing, disposition constructor).",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
+   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:3",
+   "quote": "Status: **proposed for codex-17 independent review; no primary execution**."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
+   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:3",
+   "quote": "Status: **proposed for codex-17 independent review; no primary execution**."
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:3",
+   "quote": "Status: **proposed for codex-17 independent review; no primary execution**."
+  },
+  "finish": {
+   "value": "Held awaiting codex-17 independent review; done is one evidence-backed preparation disposition showing owning readiness answer, replay agreement and blockers.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
+   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
+   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}
