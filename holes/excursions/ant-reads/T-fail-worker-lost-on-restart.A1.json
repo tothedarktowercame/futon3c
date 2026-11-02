@@ -1,0 +1,59 @@
+{
+ "stem": "T-fail-worker-lost-on-restart",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654531186-10541-fc8c1d6d",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-worker-lost-on-restart",
+  "kind": "place",
+  "what": {
+   "value": "Failure-census ticket for worker-lost-on-restart; 3 occurrences stuck in `delivering`, quiescent, to be closed after a delivery-retry cap for restart-orphaned jobs.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:3",
+   "quote": "Exactly the ticketed 3 (last 08-23), all stuck in `delivering`. Close as non-reproducing after a delivery-retry cap"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:3",
+   "quote": "**Status (triaged 2026-09-01): PARTIAL, quiescent.**"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:12",
+   "quote": "- **source**: `GET /api/alpha/invoke/jobs`, field `terminal-code`"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:17",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:3",
+   "quote": "Close as non-reproducing after a delivery-retry cap for restart-orphaned jobs."
+  },
+  "finish": {
+   "value": "Delivery-retry cap for restart-orphaned jobs exists, then close as non-reproducing.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:3",
+   "quote": "Close as non-reproducing after a delivery-retry cap for restart-orphaned jobs."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-worker-lost-on-restart.md:17",
+   "quote": "failure lands in the queue without anyone noticing it first. Everything above"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

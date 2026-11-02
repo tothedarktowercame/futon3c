@@ -1,0 +1,66 @@
+{
+ "stem": "T-forward-model-vs-active-work",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654531186-10541-fc8c1d6d",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-forward-model-vs-active-work",
+  "kind": "place",
+  "what": {
+   "value": "Finding ticket: the 23-rung cascade forward model and actual clocked attention had empty intersection; the ask is a channel for operator-supplied mission mappings, explicitly not a hotfix.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:5",
+   "quote": "**Status: FINDING, not a defect. Do not hotfix.** Joe's call, and the reason is"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:66",
+   "quote": "Expand `M-points-de-fuite` and the FTS methods to cover operator-supplied"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:44",
+   "quote": "Joe: \"these not-written-down facts that I'm talking about now are signals coming"
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:69",
+   "quote": "turn and is lost at the end of it."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:66",
+   "quote": "Expand `M-points-de-fuite` and the FTS methods to cover operator-supplied"
+  },
+  "finish": {
+   "value": "A channel where operator statements like \"X is a successor to Y\" can be deposited and read back when the forward model is scored.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:67",
+   "quote": "mappings of this kind — a channel where \"X is a successor to Y\", \"X serves"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-forward-model-vs-active-work.md:47",
+   "quote": "the loop records observables about the operator it never consults, and the missing"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

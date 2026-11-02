@@ -1,0 +1,59 @@
+{
+ "stem": "T-fail-invoke-interrupted",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654531186-10541-fc8c1d6d",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-invoke-interrupted",
+  "kind": "place",
+  "what": {
+   "value": "Failure-census ticket for the invoke-interrupted terminal class; open decision whether interruption is a defect or an expected terminal class.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, rare.** 4 occurrences, latest 08-31. Decide whether interruption is a defect or an expected terminal class."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, rare.**"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:17",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:12",
+   "quote": "- **source**: `GET /api/alpha/invoke/jobs`, field `terminal-code`"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:3",
+   "quote": "Decide whether interruption is a defect or an expected terminal class."
+  },
+  "finish": {
+   "value": "A recorded decision classifying invoke-interrupted as defect or expected terminal class; no formal promotion test stated.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:27",
+   "quote": "(unstated -- until it is, this class has no promotion test and cannot reach SELECT)"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-interrupted.md:17",
+   "quote": "failure lands in the queue without anyone noticing it first. Everything above"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

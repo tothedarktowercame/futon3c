@@ -1,0 +1,59 @@
+{
+ "stem": "T-fail-operator-cancelled",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654531186-10541-fc8c1d6d",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-operator-cancelled",
+  "kind": "place",
+  "what": {
+   "value": "Failure-census ticket for operator-cancelled; mostly deliberate watchdog cancels, proposing census-exemption as expected behaviour rather than a fix.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:3",
+   "quote": "19 at review, mostly deliberate watchdog cancels. Propose census-exempting operator cancellation as expected behaviour"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:3",
+   "quote": "**Status (triaged 2026-09-01): RECLASSIFY CANDIDATE.**"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:12",
+   "quote": "- **source**: `GET /api/alpha/invoke/jobs`, field `terminal-code`"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:3",
+   "quote": "Propose census-exempting operator cancellation as expected behaviour rather than fixing anything."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:3",
+   "quote": "Propose census-exempting operator cancellation as expected behaviour rather than fixing anything."
+  },
+  "finish": {
+   "value": "Reclassification proposal made and decided; no formal close test stated.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:27",
+   "quote": "(unstated -- until it is, this class has no promotion test and cannot reach SELECT)"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-operator-cancelled.md:17",
+   "quote": "failure lands in the queue without anyone noticing it first. Everything above"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

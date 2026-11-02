@@ -1,0 +1,65 @@
+{
+ "stem": "T-devmap-forward-model-calibration",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654529188-10540-bb222608",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-devmap-forward-model-calibration",
+  "kind": "place",
+  "what": {
+   "value": "Design-complete ticket to grade 27 frozen @next clauses in the nine 2026-04-27 devmaps against outcomes, as SI evidence for the futon-2026 paper.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:6",
+   "quote": "**Status: DESIGNED, NOT STARTED.** Joe's call: ticket it rather than deep-dive"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:6",
+   "quote": "**Status: DESIGNED, NOT STARTED.** Joe's call: ticket it rather than deep-dive"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:60",
+   "quote": "- **evidence** — every score cites an artifact (path, sha, run record) or"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:61",
+   "quote": "explicitly records `no-artifact-found`. Never blank."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:82",
+   "quote": "2. A Codex agent grades all 27 **blind to the expected result**, citing evidence"
+  },
+  "finish": {
+   "value": "A Codex agent grades all 27 clauses blind, citing evidence per clause; claude-13 reviews the grades; distribution reported, never a mean.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:82",
+   "quote": "2. A Codex agent grades all 27 **blind to the expected result**, citing evidence"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-devmap-forward-model-calibration.md:43",
+   "quote": "Why it belongs in the paper (SI, not the body)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

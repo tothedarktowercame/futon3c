@@ -1,0 +1,62 @@
+{
+ "stem": "T-fail-agent-not-found",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654529188-10540-bb222608",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-agent-not-found",
+  "kind": "place",
+  "what": {
+   "value": "Auto-generated failure ticket for the worsening agent-not-found class (72→145); mitigation so far is process-only, candidate fixes are auto-register pull-only seats or fail-fast at send.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:3",
+   "quote": "STILL-OPEN, worsening.** 72 at ticketing -> 145 at review (latest 09-01T17:23); mitigation is process-only"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, worsening.**"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:3",
+   "quote": "Candidate fixes: auto-register pull-only seats (E-bell-clink-adapter) or fail-fast at send with a roster hint."
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:9",
+   "quote": "- **most often**: `claude-cli` <- `codex-10`"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:3",
+   "quote": "Candidate fixes: auto-register pull-only seats (E-bell-clink-adapter) or fail-fast at send with a roster hint."
+  },
+  "finish": {
+   "value": "No close criterion stated in file; done would be implementing one of the named candidate fixes so sends to unregistered seats stop failing.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:20",
+   "quote": "(unstated -- until it is, this class has no promotion test and cannot reach"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-agent-not-found.md:14",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

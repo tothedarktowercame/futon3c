@@ -1,0 +1,63 @@
+{
+ "stem": "T-fail-invoke-error",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654529188-10540-bb222608",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-invoke-error",
+  "kind": "place",
+  "what": {
+   "value": "Auto-generated failure ticket for the invoke-error class, now the second-heaviest (2→111); needs exception-payload triage before any close criterion can be stated.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:3",
+   "quote": "2 -> 111 at review (latest 09-01T03:06); now the second-heaviest class. Needs exception-payload triage"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN.**"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:14",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:15",
+   "quote": "failure lands in the queue without anyone noticing it first. Everything above"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:3",
+   "quote": "Needs exception-payload triage before a close criterion can be stated."
+  },
+  "finish": {
+   "value": "Exception-payload triage of the 111 occurrences, after which a close criterion can be stated (promotion test currently unstated).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:3",
+   "quote": "Needs exception-payload triage before a close criterion can be stated."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-invoke-error.md:14",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

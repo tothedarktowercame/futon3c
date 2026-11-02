@@ -1,0 +1,59 @@
+{
+ "stem": "T-fail-no-execution-evidence",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654531186-10541-fc8c1d6d",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-no-execution-evidence",
+  "kind": "place",
+  "what": {
+   "value": "Failure-census ticket for no-execution-evidence; a job can be functionally successful yet state:failed, and closure waits on defect-register C3's state-semantics decision.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:3",
+   "quote": "22 occurrences; TN-apm-defect-register C3 records a job can be functionally successful yet state:failed under this code."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:3",
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- merge with defect C3.**"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:3",
+   "quote": "a job can be functionally successful yet state:failed under this code"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:12",
+   "quote": "- **source**: `GET /api/alpha/invoke/jobs`, field `terminal-code`"
+  },
+  "action": {
+   "value": "merge-into:TN-apm-defect-register-C3",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:3",
+   "quote": "PARTIAL -- merge with defect C3"
+  },
+  "finish": {
+   "value": "The C3 state-semantics decision lands; census alone cannot close it.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:3",
+   "quote": "The state semantics need the C3 decision; census alone cannot close it."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-no-execution-evidence.md:17",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

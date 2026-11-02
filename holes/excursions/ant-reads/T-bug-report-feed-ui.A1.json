@@ -1,0 +1,59 @@
+{
+ "stem": "T-bug-report-feed-ui",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654527159-10539-25bc6e42",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-bug-report-feed-ui",
+  "kind": "place",
+  "what": {
+   "value": "Fix the UI contracts exposed by the first live use of the spoken bug-report cue at the Voxterm/Emacs/Agency boundary (ghost previews, cursor theft, wrong context, invisible attachment).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:7",
+   "quote": "The spoken `🐞 BUG REPORT` cue durably collects a self-contained report and can"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:3",
+   "quote": "**Status (2026-11-02): ACTIVE. Owner: codex-7.**"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:16",
+   "quote": "- attachment was invisible where Joe reads agent responsibility: the per-turn"
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:35",
+   "quote": "and one pushed request reaches `codex-7`. Detaching removes the marker and"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:3",
+   "quote": "**Status (2026-11-02): ACTIVE. Owner: codex-7.**"
+  },
+  "finish": {
+   "value": "Acceptance: continuous-mode 'bug report … rocket' leaves focus in the REPL, Cooked line shows the bug marker, report names the REPL as context, one pushed request reaches codex-7.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:32",
+   "quote": "In continuous mode, say “bug report … rocket” while `codex-7` is attached."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-bug-report-feed-ui.md:1",
+   "quote": "# T-bug-report-feed-ui — voice bug reports behave unlike normal Voxterm turns"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

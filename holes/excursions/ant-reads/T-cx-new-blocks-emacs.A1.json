@@ -1,0 +1,62 @@
+{
+ "stem": "T-cx-new-blocks-emacs",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654529188-10540-bb222608",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-cx-new-blocks-emacs",
+  "kind": "place",
+  "what": {
+   "value": "Ticket for the UX annoyance that `cx new` blocks Joe's Emacs (synchronous poll and emacsclient evals), parked pending Joe's go-ahead and a timing repro.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:3",
+   "quote": "STILL-OPEN, deferred by design.** cx at HEAD still runs the synchronous wait_for_agency poll (up to 30 s) and blocking emacsclient evals"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, deferred by design.**"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:31",
+   "quote": "Deferred. Bounded UX annoyance, not a correctness bug. Revisit after the drainer fix lands."
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:5",
+   "quote": "Observed by Joe, 2026-06-10. Parking for \"another time\" — do NOT pick up without"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:3",
+   "quote": "The ticket's own DO-NOT-PICK-UP note stands -- needs Joe's go-ahead plus a timing repro separating the wait from the first turn."
+  },
+  "finish": {
+   "value": "Held by Joe: no async conversion exists; done would be a timing repro plus async conversion of the synchronous wait/emacsclient path.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:15",
+   "quote": "whether it can be made async (spawn + return, let the first real turn happen"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-cx-new-blocks-emacs.md:8",
+   "quote": "Running `cx new` (mint a fresh codex agent) blocks/freezes Joe's Emacs for a"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

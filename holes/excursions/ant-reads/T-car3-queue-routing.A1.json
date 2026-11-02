@@ -1,0 +1,68 @@
+{
+ "stem": "T-car3-queue-routing",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654527159-10539-25bc6e42",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-car3-queue-routing",
+  "kind": "place",
+  "what": {
+   "value": "Phase-1 ticket for a durable per-agent turn queue with ordered drain, per-surface reply routing, idempotency, and causal reconciliation; the implementation later shipped, superseding the stop-for-ratification state.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:1",
+   "quote": "# T-car3-queue-routing — durable queue, ordered drain, per-surface reply routing"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:3",
+   "quote": "**Status (triaged 2026-09-01): SUPERSEDED.** The Phase-1 stop-for-ratification state no longer describes HEAD:"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:24",
+   "quote": "- **C3-R1 Per-surface reply routing** — a turn's reply is delivered to the surface"
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:22",
+   "quote": "- **C3-Q2 No-drop** — a turn to a busy agent is durably enqueued and eventually"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:3",
+   "quote": "the implementation shipped (turn_queue.clj accept!/drain/reply-route; invoke wiring dev.clj:4083). Triage codex-5"
+  },
+  "need_goes_to": {
+   "value": "T-car3-queue-routing-design-note",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:3",
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- mechanism landed, capture-gap fallback still tolerated.** Persisted route + seq"
+  },
+  "finish": {
+   "value": "Phase 1 done = bell claude-6 with model + design note for ratification; that phase shipped and the ticket was triaged SUPERSEDED.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:56",
+   "quote": "## Done (Phase 1) = bell claude-6 back"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing.md:5",
+   "quote": "Parent: `M-agency-hardening.md` (W2 execution guarantees, invariant #5/#6)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok-near",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

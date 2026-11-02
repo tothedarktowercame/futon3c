@@ -1,0 +1,70 @@
+{
+ "stem": "T-fail-activation-authority-unavailable",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654529188-10540-bb222608",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fail-activation-authority-unavailable",
+  "kind": "place",
+  "what": {
+   "value": "Auto-generated failure ticket for the activation-authority-unavailable class (1 occurrence ever); real residue is delivery-retry terminal handling since the job is stuck in `delivering`.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:3",
+   "quote": "the job is stuck in state `delivering`, so the real residue is delivery-retry terminal handling."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, quiescent.** 1 occurrence ever (08-22), none since;"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:14",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:15",
+   "quote": "failure lands in the queue without anyone noticing it first. Everything above"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:3",
+   "quote": "Close as non-reproducing, reopen on second occurrence."
+  },
+  "need_goes_to": {
+   "value": "solved",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:3",
+   "quote": "Close as non-reproducing, reopen on second occurrence."
+  },
+  "finish": {
+   "value": "File states closure is warranted as non-reproducing; the unstated 'what would close this' promotion test is the residue (delivery-retry terminal handling).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:20",
+   "quote": "(unstated -- until it is, this class has no promotion test and cannot reach"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fail-activation-authority-unavailable.md:14",
+   "quote": "Written by `scripts/failure-tickets.py` from the invoke-job ledger, so a typed"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

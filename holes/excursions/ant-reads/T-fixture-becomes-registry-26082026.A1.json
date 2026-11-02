@@ -1,0 +1,63 @@
+{
+ "stem": "T-fixture-becomes-registry-26082026",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654531186-10541-fc8c1d6d",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-fixture-becomes-registry-26082026",
+  "kind": "place",
+  "what": {
+   "value": "Anti-pattern ticket: a test fixture of four missions became the production grounding domain; repair landed, and the residue is an operator product decision (bind CLeans for WM-selected missions or record sample-only as contract).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:3",
+   "quote": "Remaining item is a product decision: bind CLeans for WM-selected missions or record sample-only as the contract."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:6",
+   "quote": "diagnosing why R8 has been red since July. Status: open — the fix is a design"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:35",
+   "quote": "**A producer declares its domain, and a substitution may not shrink it"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:37",
+   "quote": "`realized-outcome-grounded` has domain *four missions*. That contraction is"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:6",
+   "quote": "Status: open — the fix is a design call, not a patch."
+  },
+  "finish": {
+   "value": "Operator (Joe) makes the product decision: bind CLeans for WM-selected missions or record sample-only as the contract.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:3",
+   "quote": "Remaining item is a product decision: bind CLeans for WM-selected missions or record sample-only as the contract."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-fixture-becomes-registry-26082026.md:6",
+   "quote": "diagnosing why R8 has been red since July. Status: open — the fix is a design"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

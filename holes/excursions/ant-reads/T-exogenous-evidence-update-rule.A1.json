@@ -1,0 +1,65 @@
+{
+ "stem": "T-exogenous-evidence-update-rule",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654529188-10540-bb222608",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-exogenous-evidence-update-rule",
+  "kind": "place",
+  "what": {
+   "value": "Design-constraint ticket: an emission-driven estimator cannot carry an exogenous evidence class; needs an event-driven update rule where silence ticks neither α nor β.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:6",
+   "quote": "**Status: DESIGN CONSTRAINT. Blocked on a prior question — see Blocker.**"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:6",
+   "quote": "**Status: DESIGN CONSTRAINT. Blocked on a prior question — see Blocker.**"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:48",
+   "quote": "So closing the loop over the operator is not only de-confounding the existing"
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:44",
+   "quote": "Separating *missing* from *negative* requires knowing the counterparty was"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:69",
+   "quote": "**The loop has been dead since 2026-07-14.** Daily from 05-22, then one"
+  },
+  "finish": {
+   "value": "Held by the blocker: the wm-full-loop is dead since 2026-07-14; whether it comes back, and why it stopped, must be settled before any calibration.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:71",
+   "quote": "Five weeks. Calibrating a policy that is not running is a paper exercise, so"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-exogenous-evidence-update-rule.md:79",
+   "quote": "Paper: `p4ng/sec-operator.tex` (`fig:wr-overlay` caption carries the death"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

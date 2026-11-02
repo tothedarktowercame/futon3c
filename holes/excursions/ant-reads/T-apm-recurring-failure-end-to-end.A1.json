@@ -1,0 +1,63 @@
+{
+ "stem": "T-apm-recurring-failure-end-to-end",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654527159-10539-25bc6e42",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-apm-recurring-failure-end-to-end",
+  "kind": "place",
+  "what": {
+   "value": "End-to-end analysis of why the jit-all-open-v3 campaign stalls undetected, with a four-part fix list (two-authority join, watchdog frame visibility, wait deadlines, futon1b latency).",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:101",
+   "quote": "## What to fix, at the seam rather than the consumer"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:148",
+   "quote": "C and B before A: a bounded wait plus a working detector make the remaining failures visible, and visibility is the precondition for judging whether A is"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:17",
+   "quote": "is not failing to do proofs.  It is failing to *record* that it did them, and"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:83",
+   "quote": "strip reports `state: ok` with no alert.  The campaign can be dead and green."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:126",
+   "quote": "**C. Give indefinite waits a deadline.**  `:awaiting-substrate` currently has no"
+  },
+  "finish": {
+   "value": "Fixes C, B, A applied at the seam (plus D in futon1b in parallel) so stalls surface instead of sitting indefinitely.",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:150",
+   "quote": "D in parallel, different repo, no contention."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/T-apm-recurring-failure-end-to-end.md:1",
+   "quote": "# Why jit-all-open-v3 does not converge: the recurring failures end to end"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "quote-not-on-line",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

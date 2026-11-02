@@ -1,0 +1,62 @@
+{
+ "stem": "T-argument-outside-of-proof",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654527159-10539-25bc6e42",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-argument-outside-of-proof",
+  "kind": "place",
+  "what": {
+   "value": "Ticket for the gap where theorem statements with no adjacent proof are read by no pipeline layer (20 of 124+25 statements mined by nothing), awaiting Joe's choice among three remedies.",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:27",
+   "quote": "2. **No layer reads this statement at all.** This is the open part."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:5",
+   "quote": "`/wip/mark7-0806.1324-margin.html`. **Status:** open, parked deliberately."
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:48",
+   "quote": "13% of the run's statements are mined by nothing. Krause's theorem is one."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:61",
+   "quote": "Three options, none free:"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:81",
+   "quote": "Joe to choose between the three, or to reject the premise (a statement with no"
+  },
+  "finish": {
+   "value": "Joe picks one of the three options (or rejects the premise); held on his decision, nothing being built meanwhile.",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:83",
+   "quote": "being built in the meantime."
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon6/holes/T-argument-outside-of-proof.md:9",
+   "quote": "In Krause, *Localization theory for triangulated categories* (0806.1324), the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

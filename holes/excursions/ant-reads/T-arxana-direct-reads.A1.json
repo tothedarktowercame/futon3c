@@ -1,0 +1,63 @@
+{
+ "stem": "T-arxana-direct-reads",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654527159-10539-25bc6e42",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-arxana-direct-reads",
+  "kind": "place",
+  "what": {
+   "value": "Make Arxana's hypergraph browser read futon1b hyperedges live instead of via exported files, with endpoints openable as documents.",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:1",
+   "quote": "# T-arxana-direct-reads — Arxana browses futon1b hyperedges live, not via exported files"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:6",
+   "quote": "**Status:** open, parked. The file exporter ships first (lean-docs-align, the"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:11",
+   "quote": "- **Edges are in the store.** 13 `lean/doc-source` hyperedges in futon1b"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:45",
+   "quote": "renders the live edges from :7073 with no export step, and following a"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:7",
+   "quote": "`lean/doc-source` edges) so browsing is not blocked on this."
+  },
+  "finish": {
+   "value": "An M-x hypergraph view renders live edges from :7073 with no export step, a source endpoint opens the file at pinned commit/line range, and a planted edge appears on refresh.",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:47",
+   "quote": "Acceptance includes a planted case: an edge written after the view was opened"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:55",
+   "quote": "read path is what lets that checker and a human look at the same edges."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

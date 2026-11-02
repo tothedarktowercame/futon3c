@@ -1,0 +1,59 @@
+{
+ "stem": "T-car3-queue-routing-design-note",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654527159-10539-25bc6e42",
+ "at": "2026-11-02T21:24:45+00:00",
+ "row": {
+  "stem": "T-car3-queue-routing-design-note",
+  "kind": "place",
+  "what": {
+   "value": "Design note for the car-3 turn queue: durable per-agent FIFO queue, seq markers, per-surface reply routing from persisted origin, msg-id dedupe; mechanism now landed with a tolerated capture-gap fallback.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:1",
+   "quote": "# T-car3-queue-routing — Phase 1 design note"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:3",
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- mechanism landed, capture-gap fallback still tolerated.** Persisted route + seq"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:38",
+   "quote": "4. **Per-surface reply routing**"
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:40",
+   "quote": "   - Persist origin `:surface` and caller identity on the queue entry. Reply"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:3",
+   "quote": "Close after either proving all accept sites supply stable :from/:surface/:msg-id or accepting the fallback as the"
+  },
+  "finish": {
+   "value": "Close after either proving all accept sites supply stable :from/:surface/:msg-id or accepting the 'unknown'-fallback as the contract.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:3",
+   "quote": "Close after either proving all accept sites supply stable :from/:surface/:msg-id or accepting the fallback as the"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:11",
+   "quote": "1. **Durable per-agent turn queue**"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}
