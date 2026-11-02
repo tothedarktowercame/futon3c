@@ -60,6 +60,9 @@
   .part-table{width:100%;border-collapse:collapse;font-size:11px} .part-table th{color:#7b8698;text-align:left;font-weight:600;padding:3px 5px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#12151b} .part-table td{padding:3px 5px;border-bottom:1px solid #1e2430;vertical-align:top;color:#c3d0e0}
   .part-table tr.selectable td{background:#15261c} .need{font-weight:700} .need-joe-rules{color:#e0a63b} .need-read{color:#93bdf8} .need-retire-or-rehome,.need-retire-or-merge{color:#ff9c9c} .need-close-with-witness,.need-verify-then-close{color:#3ddc84} .need-who-acts,.need-place,.need-merge{color:#cdd6e4}
   .part-summary{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px} .part-summary span{background:#181c23;border:1px solid var(--line);border-radius:10px;padding:2px 8px;font-size:11px;color:#aeb8c7}
+  .panel h2.fold{cursor:pointer;user-select:none} .panel h2.fold:before{content:"▾ ";color:#7b8698} .panel.folded h2.fold:before{content:"▸ "} .panel.folded > :not(h2):not(.inference){display:none !important}
+  .inference{color:#8fa0b6;font-size:11px;margin:-4px 0 6px 0} .panel.folded .inference{margin-bottom:0}
+  .part-group{margin:6px 0} .part-group > summary{cursor:pointer;color:#cdd6e4;font-size:12px;padding:4px 0} .part-group > summary b{color:#eaf1ff} .part-group .who{color:#7b8698;font-size:11px}
   .thesis-apex{font-size:17px;line-height:1.5;color:#eef2f8;max-width:980px;margin:3px 0 8px}
   .thesis-epigraph{color:var(--dim);font-style:italic;margin:7px 0 11px}
   .thesis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;margin-top:11px}
@@ -467,7 +470,8 @@
 
   function renderLineage(g){
     var lin=g.lineage||[];
-    el("lineage-count").textContent="· "+lin.length+" currently-clocked (single-active, durable XTDB)";
+    var agents={},targets={}; lin.forEach(function(e){agents[e.agent]=1;targets[e.target]=1;});
+    el("lineage-count").textContent="· "+lin.length+" clocked · "+Object.keys(agents).length+" agents on "+Object.keys(targets).length+" missions (single-active, durable XTDB)";
     var rows=lin.map(function(e){
       return "<tr><td><span class='dot badge-clock' style='background:#3ddc84'></span>"+esc(e.agent)+"</td>"+
         "<td>"+esc(shortMission(e.target))+" <span class='muted'>("+esc(e.target)+")</span></td>"+
@@ -620,29 +624,91 @@
     });
   }
 
+  var PARTITION=null, CLOCK_IX=null;
+  var DRAIN=[
+    {need:"joe-rules",label:"awaiting a ruling",who:"Joe",action:"held",open:true,text:"held on an act of Joe's: spend, verbatims, a design choice"},
+    {need:"retire-or-rehome",label:"the Place is gone",who:"mechanical: a liveness probe",action:"retire",open:false,text:"port, cron or client gone; a probe turns the retire reading into a fact, or names the live substrate"},
+    {need:"read",label:"not yet read",who:"an agent, when dispatches resume",action:"not-read / held",open:false,text:"no reading yet, or held for a reason that needs one"},
+    {need:"close-with-witness",label:"artifact landed",who:"an agent attaches the witness",action:"close-and-carry",open:false,text:"the Product exists; attach the witness, close, carry the residue"},
+    {need:"verify-then-close",label:"closeable, unverified",who:"an agent reads for the artifact",action:"close / close-and-carry",open:false,text:"a close reading with no artifact named yet"},
+    {need:"retire-or-merge",label:"no consumer",who:"a reading, then Joe",action:"retire / merge-into",open:false,text:"nothing downstream benefits"},
+    {need:"merge",label:"merge",who:"an agent",action:"merge-into",open:false,text:"merge into the named successor"},
+    {need:"who-acts",label:"work: who acts?",who:"Joe or an agent",action:"work",open:true,text:"a work reading with a finish; the only rows the outer loop could see"},
+    {need:"place",label:"unplaced",who:"claude-16",action:"—",open:false,text:"no placement at all"}];
   function renderPartition(d){
+    PARTITION=d;
     var items=Array.isArray(d.items)?d.items:[];
     el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+" · exported "+(d["exported-at"]||"");
     function chips(title,obj){return Object.keys(obj||{}).sort(function(a,b){return obj[b]-obj[a];}).map(function(k){return "<span><b>"+esc(k)+"</b> "+obj[k]+"</span>";}).join("");}
     var summary="<div class='part-summary'><span class='muted'>needs:</span>"+chips("needs",d["by-needs"])+"</div>"+
       "<div class='part-summary'><span class='muted'>situation:</span>"+chips("situation",d["by-situation"])+"</div>"+
       "<div class='part-summary'><span class='muted'>wing:</span>"+chips("wing",d["by-wing"])+"</div>";
-    var rows=items.map(function(it){
+    function rowHtml(it){
+      var clocked=CLOCK_IX?(CLOCK_IX[it.id]||[]):[];
       return "<tr class='"+(it["selectable-now"]?"selectable":"")+"'><td>"+it.rank+"</td>"+
         "<td><code>"+esc(it.id)+"</code><div class='wow-ev'>"+esc(it.kind)+(it.repo?" · "+esc(it.repo):"")+" · cone "+it.cone+"</div></td>"+
         "<td>"+esc(it.wing)+"</td><td>"+esc(it.situation)+"</td><td>"+esc(it.action)+"</td>"+
         "<td class='need need-"+esc(it.needs)+"' title='"+esc(it["needs-why"])+"'>"+esc(it.needs)+"</td>"+
         "<td>"+esc(it.phase)+"</td><td>"+it["commits-since-oct"]+(it["last-commit"]?"<div class='wow-ev'>"+esc(it["last-commit"])+"</div>":"")+"</td>"+
         "<td class='wow-ev'>"+esc(it["stated-finish"]||"—")+"</td>"+
-        "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td></tr>";
+        "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td>"+
+        "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td></tr>";
+    }
+    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th></tr></thead>";
+    var seen={};
+    var groups=DRAIN.map(function(g){
+      var rs=items.filter(function(it){return it.needs===g.need;}); rs.forEach(function(it){seen[it.id]=1;});
+      if(!rs.length) return "";
+      return "<details class='part-group'"+(g.open?" open":"")+"><summary><b>"+esc(g.label)+"</b> · "+rs.length+" rows · needs <span class='need need-"+esc(g.need)+"'>"+esc(g.need)+"</span> · <span class='who'>who acts: "+esc(g.who)+" · claude-16 bucket: "+esc(g.action)+"</span><div class='wow-ev'>"+esc(g.text)+"</div></summary>"+
+        "<div class='scrollx'><table class='part-table'>"+head+"<tbody>"+rs.map(rowHtml).join("")+"</tbody></table></div></details>";
     }).join("");
-    el("partition-body").innerHTML=summary+"<div class='sub' style='margin-bottom:6px'>"+esc(d.source||"")+"</div>"+
-      "<div class='scrollx' style='max-height:520px;overflow:auto'><table class='part-table'><thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th></tr></thead><tbody>"+rows+"</tbody></table></div>";
+    var rest=items.filter(function(it){return !seen[it.id];});
+    if(rest.length) groups+="<details class='part-group'><summary><b>other</b> · "+rest.length+" rows</summary><div class='scrollx'><table class='part-table'>"+head+"<tbody>"+rest.map(rowHtml).join("")+"</tbody></table></div></details>";
+    el("partition-body").innerHTML=summary+"<div class='sub' style='margin-bottom:6px'>"+esc(d.source||"")+" · groups are in drain order: what settles first is listed first; the last open group is what the outer loop could see.</div>"+groups;
+  }
+  function clockIndex(g){
+    var ix={}; (g.lineage||[]).forEach(function(e){var k=shortMission(e.target); var id=null;
+      ["M-","E-","T-"].forEach(function(p){ if(PARTITION&&PARTITION.items.some(function(it){return it.id===p+k;})) id=p+k; });
+      if(id){(ix[id]=ix[id]||[]); if(ix[id].indexOf(e.agent)<0) ix[id].push(e.agent);} });
+    return ix;
   }
 
   function loadPartition(){
     requestJSON("partition data",EP_PARTITION).then(renderPartition).catch(function(err){
       el("partition-body").innerHTML="<div class='gap'>Partition data unavailable: "+esc(err&&err.message||err)+"</div>";
+    });
+  }
+
+  // Folding along the narrative: the problem, how we work and what is being prepared stay open;
+  // the substrate sections fold to one line saying what inference they support.
+  var FOLD_DEFAULT={"section-status-panel":true,"header-panel":true,"basins-panel":true,"cascade-panel":true,
+    "patterns-panel":true,"holes-panel":false,"held-panel":true,"lineage-panel":true,"forward-panel":true,
+    "wip-panel":true,"tickets-panel":true};
+  var INFERENCE={
+    "section-status-panel":"Supports: was every substrate dimension readable? A failed read is a hole, not a zero.",
+    "header-panel":"Supports: how large each dimension is and how they compose; no selection reads this directly.",
+    "basins-panel":"Supports: which mission clusters are warranted by which patterns; a hole-basin names a missing pattern to seed.",
+    "cascade-panel":"Supports: for one basin, which missions it holds and what each cites, holds, or has clocked.",
+    "patterns-panel":"Supports: which patterns are cited by which missions (the back-link layer); the cascade's edges, not its nodes.",
+    "holes-panel":"Supports: declared absences; empty means checked and none, not unread.",
+    "held-panel":"Supports: what is parked under a mission and why; a held reason names what would un-hold it.",
+    "lineage-panel":"Supports: who is clocked on what right now. An item with a clocked agent is being worked; nothing else here changes a selection. The clocked agent is shown on the outermost-loop rows above.",
+    "forward-panel":"Supports: ROI and traction per mission from the forward model; a ranking input, not a reading of the backlog.",
+    "wip-panel":"Supports: the WIP cards and their registers (plan, built, ran, live).",
+    "tickets-panel":"Supports: the size of what is not yet placed under any way of working; the evidence of backlog-understood failing."
+  };
+  var FOLD_STATE={};
+  function applyFolds(){
+    Object.keys(INFERENCE).forEach(function(id){
+      var p=document.getElementById(id); if(!p) return;
+      var h2=p.querySelector("h2"); if(!h2) return;
+      if(!h2.classList.contains("fold")){
+        h2.classList.add("fold");
+        h2.addEventListener("click",function(){FOLD_STATE[id]=!p.classList.contains("folded");p.classList.toggle("folded");});
+        var inf=document.createElement("div"); inf.className="inference"; inf.textContent=INFERENCE[id]; h2.insertAdjacentElement("afterend",inf);
+      }
+      var folded=(id in FOLD_STATE)?FOLD_STATE[id]:FOLD_DEFAULT[id];
+      p.classList.toggle("folded",!!folded);
     });
   }
 
@@ -678,6 +744,8 @@
       renderLineage(g);
       renderForward(res[2]);
       renderTickets(g);
+      CLOCK_IX=clockIndex(g); if(PARTITION) renderPartition(PARTITION);
+      applyFolds();
       hasRendered=true;
     }).catch(function(err){
       if(!hasRendered){
