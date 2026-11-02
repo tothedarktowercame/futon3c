@@ -83,7 +83,7 @@
     "aif/interoceptive-tripwires",
     "apparatus/the-system-stops-on-schedule"
    ],
-   "scope-note": "s1-s5 test that the map regenerates and carries evidence, not that it can be read; s6 readability is failing on Joe's own statement today and has no sampled-question test yet"
+   "scope-note": "s1-s5 test that the map regenerates and carries evidence, not that it can be read; s6 readability is failing on Joe's own statement today and has no sampled-question test yet; a second measure for s6 (claude-16 from Joe's remark): a reader holding only the page can reach a point and rebuild its context; same sampled test, a fresh agent first and Joe second"
   },
   {
    "id": "feedback-reaches-every-participant",

@@ -1,7 +1,7 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:44:55+00:00",
+ "exported-at": "2026-11-02T20:45:59+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 4,
@@ -200,7 +200,7 @@
     "basis": "Joe, 2026-11-02 ~20:52Z: \"I'm surprised that M-superpod-mark2 has any open work given ... we've moved on to mark 8 by now, but if it does have anything open in it, what we could do is 'cluster then refactor at the cluster level'\"",
     "carry": {
      "kind": "target",
-     "to": "cluster node 'superpod work' (mark2, mark3, M-mark8, M-paper-reverse-morphogenesis); then refactor open items at the cluster level"
+     "to": "cluster node 'superpod work' (mark2, mark3, M-mark8, M-paper-reverse-morphogenesis); first step of the cluster-level refactor: check mark2's four unchecked acceptance items (M-superpod-mark2.md:205-210, 2026-09-30) against marks 7 and 8: (1) pipeline completes on an all-arXiv-math corpus of 200,000+ papers; (2) stage 9b cosine-similarity sd > 0.10 and validation accuracy < 90%; (3) a learn-to-swim or LeanDojo pilot shows structural/hybrid retrieval finding technique-relevant papers BGE-only missed; (4) corpus_ws_bridge.py serves a FAISS index whose measured precision exceeds the Mark 1 BGE-only baseline. Mark3's checklist covers neither scale nor retrieval precision, so items 1 and 4 need an owner in the cluster (claude-16)"
     }
    }
   },
