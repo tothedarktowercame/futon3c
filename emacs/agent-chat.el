@@ -3353,7 +3353,7 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
 
 (defun agent-chat--session-header-text ()
   "Return the formatted session header text with turn counts."
-  (format "(session: %s%s%s) %s"
+  (format "(session: %s%s%s) %s%s"
           (or agent-chat--session-id "pending")
           (if (numberp agent-chat--session-turn-count)
               (format ", turns: %d" agent-chat--session-turn-count)
@@ -3361,7 +3361,10 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
           (if agent-chat--evidence-delivery-status
               (format ", %s" agent-chat--evidence-delivery-status)
             "")
-          (agent-chat-mission-segment)))
+          (agent-chat-mission-segment)
+          (if (fboundp 'futon-bug-feed-segment)
+              (futon-bug-feed-segment agent-chat--agent-id)
+            "")))
 
 (defun agent-chat--update-session-header-line ()
   "Refresh the session header line (session id + turns)."

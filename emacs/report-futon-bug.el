@@ -124,6 +124,23 @@ the result is read from the job, or the triage agent reports where told."
        (not (string-empty-p agent-chat--agent-id))
        agent-chat--agent-id))
 
+(defun futon-bug-feed-segment (agent)
+  "Return a pocket segment when AGENT owns the bug feed, otherwise empty."
+  (if (and (stringp agent)
+           (equal agent (futon-bug-feed--attached-agent)))
+      " · 🐞 bugs attached"
+    ""))
+
+(defun futon-bug-feed--refresh-repls ()
+  "Refresh the durable pocket text in every live agent REPL."
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (and (boundp 'agent-chat--agent-id)
+                 (stringp agent-chat--agent-id))
+        (when (fboundp 'agent-chat--update-session-header-line)
+          (agent-chat--update-session-header-line))
+        (force-mode-line-update t)))))
+
 ;;;###autoload
 (defun futon-bug-feed-attach (agent)
   "Push future completed bug reports to AGENT.
@@ -142,6 +159,7 @@ a replacement when the seat is retired."
   (make-directory (file-name-directory futon-bug-feed-attachment-file) t)
   (with-temp-file futon-bug-feed-attachment-file (insert agent "\n"))
   (set-file-modes futon-bug-feed-attachment-file #o600)
+  (futon-bug-feed--refresh-repls)
   (message "Futon bug feed attached to %s" agent)
   agent)
 
@@ -153,6 +171,7 @@ Reports remain durable under ~/notes/futon-bugs and continue to open in Emacs."
   (let ((old (futon-bug-feed--attached-agent)))
     (when (file-exists-p futon-bug-feed-attachment-file)
       (delete-file futon-bug-feed-attachment-file))
+    (futon-bug-feed--refresh-repls)
     (if old
         (message "Futon bug feed detached from %s" old)
       (message "Futon bug feed was already detached"))
@@ -196,7 +215,9 @@ then reply with what you checked and what you found.\n\n"))
           (if (and (zerop (process-exit-status process))
                    path (file-exists-p path))
               (progn
-                (find-file-other-window path)
+                ;; Collection is a background observation.  Register the file
+                ;; with Emacs without stealing the operator's selected window.
+                (find-file-noselect path)
                 (if agent
                     (message "report-futon-bug: %s; belled %s (%s)" path agent
                              (report-futon-bug--bell agent path))
