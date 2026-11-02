@@ -1,0 +1,70 @@
+{
+ "stem": "T-wm-excessive-guardrails-19092026",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655563816-10581-3d0f6fcc",
+ "at": "2026-11-02T21:48:26+00:00",
+ "row": {
+  "stem": "T-wm-excessive-guardrails-19092026",
+  "kind": "place",
+  "what": {
+   "value": "Record of the 2026-09-19 defusal day when composed guardrails made the War Machine unrunable, plus Joe's ruling inverting the guardrail presumption.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:1",
+   "quote": "# T-wm-excessive-guardrails-19092026 — the day the safety layer stopped the machine"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:116",
+   "quote": "Enacted the same day: witness halts are now OPT-IN"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:15",
+   "quote": "From 2026-09-15 to 2026-09-19 the War Machine did not complete a single"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:6",
+   "quote": "> excessive security. We haven't even been able to run the machine, and we've"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:116",
+   "quote": "Enacted the same day: witness halts are now OPT-IN"
+  },
+  "need_goes_to": {
+   "value": "solved",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:116",
+   "quote": "Enacted the same day: witness halts are now OPT-IN"
+  },
+  "finish": {
+   "value": "Defusal commits landed and the opt-in halt flag enacted; the note is the record of the lesson.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:119",
+   "quote": "anti-pile-up property (one report, not 205) is kept in both modes."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm-excessive-guardrails-19092026.md:94",
+   "quote": "— zai-14, for the 2026-09-19 defusal crew (zai-10, zai-11, zai-12, zai-13,"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "quote-not-on-line",
+  "ok-near",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

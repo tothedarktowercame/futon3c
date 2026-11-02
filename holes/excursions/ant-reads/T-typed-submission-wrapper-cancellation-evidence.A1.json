@@ -1,0 +1,67 @@
+{
+ "stem": "T-typed-submission-wrapper-cancellation-evidence",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655563816-10581-3d0f6fcc",
+ "at": "2026-11-02T21:48:26+00:00",
+ "row": {
+  "stem": "T-typed-submission-wrapper-cancellation-evidence",
+  "kind": "place",
+  "what": {
+   "value": "Completed discovery note: where session-id and terminal-state evidence go when the typed-submission wrapper cancels a job, concluding the cancellation is correct.",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:1",
+   "quote": "# Typed-submission wrapper cancellation: where the evidence goes"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:3",
+   "quote": "Discovery only, 2026-09-07.  No behaviour was changed."
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:7",
+   "quote": "The two observations called “destroyed evidence” have different causes."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:7",
+   "quote": "The two observations called “destroyed evidence” have different causes."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:146",
+   "quote": "Leave the cancellation behavior alone.  It correctly terminates redundant"
+  },
+  "need_goes_to": {
+   "value": "solved",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:146",
+   "quote": "Leave the cancellation behavior alone.  It correctly terminates redundant"
+  },
+  "finish": {
+   "value": "Analysis delivered with recommendation; two upstream refinements named only as separate changes.",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:154",
+   "quote": "Two upstream refinements are defensible as separate changes: publish session"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/T-typed-submission-wrapper-cancellation-evidence.md:3",
+   "quote": "Discovery only, 2026-09-07.  No behaviour was changed."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

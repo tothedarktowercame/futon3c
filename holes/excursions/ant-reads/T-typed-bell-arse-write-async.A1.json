@@ -1,0 +1,63 @@
+{
+ "stem": "T-typed-bell-arse-write-async",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655563816-10581-3d0f6fcc",
+ "at": "2026-11-02T21:48:26+00:00",
+ "row": {
+  "stem": "T-typed-bell-arse-write-async",
+  "kind": "place",
+  "what": {
+   "value": "Watch-item: move the synchronous typed-bell ArSE write off the bell request thread once the typed-bells flag is live and volume grows.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:1",
+   "quote": "# T-typed-bell-arse-write-async — move the typed-bell ArSE write off the bell request thread (WATCH, flag-ON only)"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:4",
+   "quote": "**Status: WATCH — not a defect, no action while `FUTON3C_TYPED_BELLS` is OFF.**"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:29",
+   "quote": "hazard recorded in `blackboard-backpressure` / `feedback_no_server_restart`: a"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:28",
+   "quote": "O(file), and it lands on a **hot coordination path** — the same backpressure"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:5",
+   "quote": "Pick up only if/when the flag is live AND typed-bell volume grows."
+  },
+  "finish": {
+   "value": "ArSE write moved off the request thread (async worker with TB-5/TB-7 preserved) or arse-save-entities made append-only, with invariant tests re-run.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:41",
+   "quote": "query, replay-safe) — async must not reorder these. Re-run"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-typed-bell-arse-write-async.md:3",
+   "quote": "Surfaced by the Claude-owner review of M-typed-bells (`b4ed15f`), 2026-06-11."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

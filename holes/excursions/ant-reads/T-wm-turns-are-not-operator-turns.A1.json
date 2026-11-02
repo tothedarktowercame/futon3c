@@ -1,0 +1,62 @@
+{
+ "stem": "T-wm-turns-are-not-operator-turns",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655563816-10581-3d0f6fcc",
+ "at": "2026-11-02T21:48:26+00:00",
+ "row": {
+  "stem": "T-wm-turns-are-not-operator-turns",
+  "kind": "place",
+  "what": {
+   "value": "WM ticks lack the durable, queryable, annotatable storage operator turns have; corrected diagnosis says an emitter exists but is switched off, so the repair is a switch plus verification.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:8",
+   "quote": "\"Correction\" below. The repair is a switch and a verification, not a build.**"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:7",
+   "quote": "**Status:** open. **Diagnosis substantially corrected 2026-08-27 — see"
+  },
+  "way": {
+   "value": "one-queryable-self-account, records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:62",
+   "quote": "**The WM's analogue of C1 is false by construction.** *\"Every WM tick is stored"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:62",
+   "quote": "**The WM's analogue of C1 is false by construction.** *\"Every WM tick is stored"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:47",
+   "quote": "1. Set `FUTON2_WM_EMIT_EVIDENCE` and run a click."
+  },
+  "finish": {
+   "value": "WM ticks written as typed evidence records with declared shape, retrievable via the operator query surface, making 'every WM tick is stored' computable.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:83",
+   "quote": "1. A WM tick is written to the Evidence Landscape as a typed event with its own"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:3",
+   "quote": "**Opened:** 2026-08-27 · claude-13, from Joe: *\"my point was to try and align the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

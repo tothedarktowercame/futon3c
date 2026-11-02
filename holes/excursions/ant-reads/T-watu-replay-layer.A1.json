@@ -1,0 +1,63 @@
+{
+ "stem": "T-watu-replay-layer",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655563816-10581-3d0f6fcc",
+ "at": "2026-11-02T21:48:26+00:00",
+ "row": {
+  "stem": "T-watu-replay-layer",
+  "kind": "place",
+  "what": {
+   "value": "Build the WATU replay layer: a hindsight-screened reconstruction of what was knowable at decision time over past runs (superpod et al.), not a log dump.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:32",
+   "quote": "it must support is: replay an action that was lost, infer from the wreckage what"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:7",
+   "quote": "**Status: SCOPED, NOT STARTED.**"
+  },
+  "way": {
+   "value": "one-queryable-self-account, records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:36",
+   "quote": "corpus: **record what was knowable at decision time**, not what we know now."
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:14",
+   "quote": "- **WATU is the past** — what ran, what happened, and why. A different room with"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:60",
+   "quote": "Add a `watu` field to the WIP cards, null today, exactly as `promotion_test` is"
+  },
+  "finish": {
+   "value": "Run history reviewed and reconstructed per decision, reusing the calibration rubric; cheap first step is the null `watu` field on WIP cards.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:56",
+   "quote": "`T-devmap-forward-model-calibration.md` is already a WATU exercise in miniature"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:3",
+   "quote": "Raised by joe + claude-13, 2026-08-24. Fourth in the series with"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

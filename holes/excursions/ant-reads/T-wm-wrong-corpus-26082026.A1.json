@@ -1,0 +1,61 @@
+{
+ "stem": "T-wm-wrong-corpus-26082026",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655563816-10581-3d0f6fcc",
+ "at": "2026-11-02T21:48:26+00:00",
+ "row": {
+  "stem": "T-wm-wrong-corpus-26082026",
+  "kind": "place",
+  "what": {
+   "value": "Recorded null results must name the corpus (path/query) they are null about, because three parties drew nulls from the wrong archive.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:1",
+   "quote": "# T-wm-wrong-corpus-26082026 — a null result must name the corpus it is null about"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:3",
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- convention adopted, not enforced.**"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:33",
+   "quote": "A recorded null result must carry the corpus it was drawn from, as a path, in"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:34",
+   "quote": "the same artefact that states it. A note saying \"zero X\" without a path is not"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:3",
+   "quote": "Close by documenting the two runner archives and/or requiring the corpus-path field."
+  },
+  "finish": {
+   "value": "Two runner archives documented and/or a corpus-path field required on recorded null results, checkable by grep or gen-wip-cards.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:37",
+   "quote": "is a writing discipline, not a code change — but it is checkable by grep, and"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:5",
+   "quote": "Parent: `E-R8-red-ring-fill.md`. Found 2026-08-26 by claude-13, independently by"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}
