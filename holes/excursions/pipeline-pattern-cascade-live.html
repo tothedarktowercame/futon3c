@@ -646,7 +646,8 @@
   function renderPartition(d){
     PARTITION=d; renderLayers();
     var items=Array.isArray(d.items)?d.items:[];
-    el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+" · exported "+(d["exported-at"]||"");
+    var pp=d["place-probe"]||{};
+    el("partition-count").textContent="· "+items.length+" rows · selectable now "+(d["selectable-now"]||0)+(pp.probed?" · Place probed on "+pp.probed+": "+pp.gone+" gone, "+pp.alive+" alive":"")+" · exported "+(d["exported-at"]||"");
     function chips(title,obj){return Object.keys(obj||{}).sort(function(a,b){return obj[b]-obj[a];}).map(function(k){return "<span><b>"+esc(k)+"</b> "+obj[k]+"</span>";}).join("");}
     var summary="<div class='part-summary'><span class='muted'>needs:</span>"+chips("needs",d["by-needs"])+"</div>"+
       "<div class='part-summary'><span class='muted'>situation:</span>"+chips("situation",d["by-situation"])+"</div>"+
@@ -662,14 +663,17 @@
         "<td class='wow-ev'>"+esc(it["stated-finish"]||"—")+"</td>"+
         "<td class='wow-ev'>"+(it.unblocks||[]).map(function(u){return "<code>"+esc(u)+"</code>";}).join(" ")+"</td>"+
         "<td class='wow-ev'>"+(clocked.length?clocked.map(esc).join(", "):"<span class='muted'>—</span>")+"</td>"+
-        "<td class='wow-ev'>"+esc(it["deficient-way"]||"—")+"</td></tr>";
+        "<td class='wow-ev'>"+esc(it["deficient-way"]||"—")+"</td>"+
+        "<td class='wow-ev'>"+(it.place?("<span class='"+(it.place.alive===false?"wow-failing":(it.place.alive?"wow-holding":"wow-unknown"))+"'>"+(it.place.alive===false?"gone":(it.place.alive?"alive":"unknown"))+"</span> "+esc(it.place.place)+"<div title='"+esc(it.place.evidence)+"'>"+esc(String(it.place.evidence).slice(0,70))+"</div>"):"<span class='muted'>—</span>")+"</td></tr>";
     }
-    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th></tr></thead>";
+    var head="<thead><tr><th>rank</th><th>item</th><th>wing</th><th>situation</th><th>reading</th><th>needs</th><th>phase</th><th>commits since Oct</th><th>stated finish</th><th>unblocks</th><th>clocked</th><th>deficient way</th><th>Place (probed)</th></tr></thead>";
     var seen={};
     var groups=DRAIN.map(function(g){
       var rs=items.filter(function(it){return it.needs===g.need;}); rs.forEach(function(it){seen[it.id]=1;});
       if(!rs.length) return "";
-      return "<details class='part-group'"+(g.open?" open":"")+"><summary><b>"+esc(g.label)+"</b> · "+rs.length+" rows · needs <span class='need need-"+esc(g.need)+"'>"+esc(g.need)+"</span> · <span class='who'>who acts: "+esc(g.who)+" · claude-16 bucket: "+esc(g.action)+"</span><div class='wow-ev'>"+esc(g.text)+"</div></summary>"+
+      var pg=rs.filter(function(it){return it.place&&it.place.alive===false;}).length, pa=rs.filter(function(it){return it.place&&it.place.alive;}).length;
+      var probeNote=(pg||pa)?" · probed: "+pg+" gone, "+pa+" alive":"";
+      return "<details class='part-group'"+(g.open?" open":"")+"><summary><b>"+esc(g.label)+"</b> · "+rs.length+" rows"+probeNote+" · needs <span class='need need-"+esc(g.need)+"'>"+esc(g.need)+"</span> · <span class='who'>who acts: "+esc(g.who)+" · claude-16 bucket: "+esc(g.action)+"</span><div class='wow-ev'>"+esc(g.text)+"</div></summary>"+
         "<div class='scrollx'><table class='part-table'>"+head+"<tbody>"+rs.map(rowHtml).join("")+"</tbody></table></div></details>";
     }).join("");
     var rest=items.filter(function(it){return !seen[it.id];});

@@ -1,10 +1,15 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T18:10:58+00:00",
+ "exported-at": "2026-11-02T18:27:31+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 1,
+ "place-probe": {
+  "gone": 12,
+  "alive": 1,
+  "probed": 13
+ },
  "by-situation": {
   "held-other": 6,
   "no-consumer": 5,
@@ -65,7 +70,8 @@
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 2,
@@ -87,7 +93,8 @@
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 3,
@@ -109,7 +116,8 @@
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
-   "deficient-way": "real-users"
+   "deficient-way": "real-users",
+   "place": null
   },
   {
    "rank": 4,
@@ -131,7 +139,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 5,
@@ -153,7 +162,8 @@
    "needs": "merge",
    "needs-why": "merge into the named successor",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 6,
@@ -175,7 +185,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "futon1a census and registry on :7071",
+    "alive": false,
+    "evidence": "port :7071 listening: False"
+   }
   },
   {
    "rank": 7,
@@ -197,7 +212,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 8,
@@ -219,7 +235,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "July arming lane and hourly WM cron",
+    "alive": false,
+    "evidence": "crontab/timer entries matching 'wm\\|war\\|arm': 0 (crontab has 0 lines)"
+   }
   },
   {
    "rank": 9,
@@ -241,7 +262,8 @@
    "needs": "close-with-witness",
    "needs-why": "the Product exists; attach the witness and close, carrying the residue",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 10,
@@ -263,7 +285,8 @@
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 11,
@@ -285,7 +308,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "futon1a erase gate (E-futon1a-archivist)",
+    "alive": false,
+    "evidence": "port :7071 listening: False"
+   }
   },
   {
    "rank": 12,
@@ -307,7 +335,8 @@
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 13,
@@ -329,7 +358,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 14,
@@ -351,7 +381,8 @@
    "needs": "verify-then-close",
    "needs-why": "a close reading with no artifact named yet",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 15,
@@ -373,7 +404,8 @@
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
-   "deficient-way": "real-users"
+   "deficient-way": "real-users",
+   "place": null
   },
   {
    "rank": 16,
@@ -395,7 +427,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 17,
@@ -417,7 +450,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 18,
@@ -439,7 +473,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "APM forward-solver consumer",
+    "alive": false,
+    "evidence": "files mentioning forward-solver in futon3c/src, futon6: 0"
+   }
   },
   {
    "rank": 19,
@@ -461,7 +500,8 @@
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
-   "deficient-way": "real-users"
+   "deficient-way": "real-users",
+   "place": null
   },
   {
    "rank": 20,
@@ -483,7 +523,8 @@
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
-   "deficient-way": "intents-are-tracked"
+   "deficient-way": "intents-are-tracked",
+   "place": null
   },
   {
    "rank": 21,
@@ -505,7 +546,8 @@
    "needs": "verify-then-close",
    "needs-why": "a close reading with no artifact named yet",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 22,
@@ -527,7 +569,8 @@
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 23,
@@ -549,7 +592,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "laptop/Dionysus mesh",
+    "alive": false,
+    "evidence": "host dionysus: resolves=False, pings=False"
+   }
   },
   {
    "rank": 24,
@@ -571,7 +619,8 @@
    "needs": "verify-then-close",
    "needs-why": "a close reading with no artifact named yet",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 25,
@@ -593,7 +642,8 @@
    "needs": "close-with-witness",
    "needs-why": "the Product exists; attach the witness and close, carrying the residue",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 26,
@@ -615,7 +665,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "parent charter E-efe-education",
+    "alive": true,
+    "evidence": "futon3c/holes/E-efe-education.md: exists; futon3c/holes/excursions/E-efe-education.md: absent; futon0/holes/excursions/E-efe-education.md: absent; futon2/holes/E-efe-education.md: absent"
+   }
   },
   {
    "rank": 27,
@@ -637,7 +692,8 @@
    "needs": "who-acts",
    "needs-why": "a work reading; decide whether an agent or Joe acts",
    "selectable-now": true,
-   "deficient-way": "selection-gives-a-reason"
+   "deficient-way": "selection-gives-a-reason",
+   "place": null
   },
   {
    "rank": 28,
@@ -659,7 +715,8 @@
    "needs": "place",
    "needs-why": "no placement at all",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 31,
@@ -679,7 +736,8 @@
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
-   "deficient-way": "intents-are-tracked"
+   "deficient-way": "intents-are-tracked",
+   "place": null
   },
   {
    "rank": 34,
@@ -699,7 +757,8 @@
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
-   "deficient-way": "intents-are-tracked"
+   "deficient-way": "intents-are-tracked",
+   "place": null
   },
   {
    "rank": 35,
@@ -719,7 +778,8 @@
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
-   "deficient-way": "real-users"
+   "deficient-way": "real-users",
+   "place": null
   },
   {
    "rank": 38,
@@ -739,7 +799,8 @@
    "needs": "read",
    "needs-why": "held for a reason that needs a per-row reading",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 40,
@@ -759,7 +820,8 @@
    "needs": "retire-or-merge",
    "needs-why": "nothing downstream benefits; retire or merge",
    "selectable-now": false,
-   "deficient-way": "real-users"
+   "deficient-way": "real-users",
+   "place": null
   },
   {
    "rank": 45,
@@ -779,7 +841,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "HUD daemon's default futon1a :7071",
+    "alive": false,
+    "evidence": "port :7071 listening: False"
+   }
   },
   {
    "rank": 46,
@@ -799,7 +866,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "futon1a penholder (code present, service down?)",
+    "alive": false,
+    "evidence": "port :7071 listening: False"
+   }
   },
   {
    "rank": 546,
@@ -821,7 +893,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 549,
@@ -843,7 +916,8 @@
    "needs": "close-with-witness",
    "needs-why": "the Product exists; attach the witness and close, carrying the residue",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 555,
@@ -865,7 +939,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "futon1a census on :7071",
+    "alive": false,
+    "evidence": "port :7071 listening: False"
+   }
   },
   {
    "rank": 556,
@@ -887,7 +966,8 @@
    "needs": "joe-rules",
    "needs-why": "held on an act of Joe's: spend, verbatims, or a design choice",
    "selectable-now": false,
-   "deficient-way": "intents-are-tracked"
+   "deficient-way": "intents-are-tracked",
+   "place": null
   },
   {
    "rank": 559,
@@ -911,7 +991,8 @@
    "needs": "read",
    "needs-why": "no reading yet; read it first",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   },
   {
    "rank": 563,
@@ -933,7 +1014,8 @@
    "needs": "close-with-witness",
    "needs-why": "the Product exists; attach the witness and close, carrying the residue",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 567,
@@ -955,7 +1037,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "futon1a ingest target on :7071",
+    "alive": false,
+    "evidence": "port :7071 listening: False"
+   }
   },
   {
    "rank": 577,
@@ -977,7 +1064,8 @@
    "needs": "verify-then-close",
    "needs-why": "a close reading with no artifact named yet",
    "selectable-now": false,
-   "deficient-way": "records-carry-warrant"
+   "deficient-way": "records-carry-warrant",
+   "place": null
   },
   {
    "rank": 579,
@@ -999,7 +1087,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "R10 cron and futon2/data/sorrys.edn",
+    "alive": false,
+    "evidence": "crontab/timer entries matching 'r10\\|wm': 0 (crontab has 0 lines); futon2/data/sorrys.edn: absent"
+   }
   },
   {
    "rank": 580,
@@ -1021,7 +1114,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "futon7 web/war-machine client",
+    "alive": false,
+    "evidence": "futon7/web/war-machine: absent"
+   }
   },
   {
    "rank": 590,
@@ -1043,7 +1141,12 @@
    "needs": "retire-or-rehome",
    "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
    "selectable-now": false,
-   "deficient-way": "one-queryable-self-account"
+   "deficient-way": "one-queryable-self-account",
+   "place": {
+    "place": "July microstep lane (cron)",
+    "alive": false,
+    "evidence": "crontab/timer entries matching 'wm\\|war\\|microstep': 0 (crontab has 0 lines)"
+   }
   },
   {
    "rank": 593,
@@ -1066,7 +1169,8 @@
    "needs": "merge",
    "needs-why": "merge into the named successor",
    "selectable-now": false,
-   "deficient-way": "backlog-understood"
+   "deficient-way": "backlog-understood",
+   "place": null
   }
  ]
 }

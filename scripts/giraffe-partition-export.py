@@ -13,6 +13,8 @@ nothing here is a decision.
 import json, pathlib, re, sys, datetime
 
 LAYERS = json.loads((pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "layers.json").read_text())
+_pp = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "place-probe-2026-11-02.json"
+PLACE = json.loads(_pp.read_text())["rows"] if _pp.exists() else {}
 DEFICIENCY = {k: v for k, v in LAYERS["situation-deficiency"].items() if not k.startswith("_")}
 
 NEEDS = {  # situation -> what the outermost loop still has to do
@@ -54,6 +56,7 @@ def main(sig, sheet, out):
             "decision-question": decision.get(d["id"]),
             "needs": need, "needs-why": why, "selectable-now": selectable,
             "deficient-way": DEFICIENCY.get(sit),
+            "place": PLACE.get(d["id"]),
         })
     items.sort(key=lambda x: x["rank"])
     by_sit, by_wing, by_need, by_def = {}, {}, {}, {}
@@ -68,6 +71,7 @@ def main(sig, sheet, out):
         "exported-at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
         "loop": "outermost: prepares what the War Machine's outer loop may select",
         "count": len(items), "selectable-now": sum(1 for i in items if i["selectable-now"]),
+        "place-probe": {"gone": sum(1 for i in items if i["place"] and i["place"]["alive"] is False), "alive": sum(1 for i in items if i["place"] and i["place"]["alive"]), "probed": sum(1 for i in items if i["place"])},
         "by-situation": by_sit, "by-wing": by_wing, "by-needs": by_need, "by-deficient-way": by_def,
         "items": items}, indent=1, ensure_ascii=False) + "\n")
     print(f"{len(items)} rows; selectable now {sum(1 for i in items if i['selectable-now'])}; needs {by_need}")

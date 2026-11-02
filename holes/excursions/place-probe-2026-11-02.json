@@ -1,0 +1,74 @@
+{
+ "schema": "place-probe-v1",
+ "probed-at": "2026-11-02T18:27:31+00:00",
+ "gone": 12,
+ "alive": 1,
+ "unknown": 0,
+ "rows": {
+  "E-clean-up-substrate-2": {
+   "place": "futon1a census and registry on :7071",
+   "alive": false,
+   "evidence": "port :7071 listening: False"
+  },
+  "M-populate-substrate-2": {
+   "place": "futon1a census on :7071",
+   "alive": false,
+   "evidence": "port :7071 listening: False"
+  },
+  "M-stack-geometry": {
+   "place": "futon1a ingest target on :7071",
+   "alive": false,
+   "evidence": "port :7071 listening: False"
+  },
+  "M-stack-hud-refactor": {
+   "place": "HUD daemon's default futon1a :7071",
+   "alive": false,
+   "evidence": "port :7071 listening: False"
+  },
+  "M-the-futon-stack-Q6-r12-design-choices": {
+   "place": "futon1a penholder (code present, service down?)",
+   "alive": false,
+   "evidence": "port :7071 listening: False"
+  },
+  "M-legacy-sorry-cleanup": {
+   "place": "futon1a erase gate (E-futon1a-archivist)",
+   "alive": false,
+   "evidence": "port :7071 listening: False"
+  },
+  "E-live-loop-1": {
+   "place": "July arming lane and hourly WM cron",
+   "alive": false,
+   "evidence": "crontab/timer entries matching 'wm\\|war\\|arm': 0 (crontab has 0 lines)"
+  },
+  "E-live-loop-2": {
+   "place": "July microstep lane (cron)",
+   "alive": false,
+   "evidence": "crontab/timer entries matching 'wm\\|war\\|microstep': 0 (crontab has 0 lines)"
+  },
+  "M-war-machine-aif-last-mile": {
+   "place": "R10 cron and futon2/data/sorrys.edn",
+   "alive": false,
+   "evidence": "crontab/timer entries matching 'r10\\|wm': 0 (crontab has 0 lines); futon2/data/sorrys.edn: absent"
+  },
+  "M-paper-reverse-morphogenesis": {
+   "place": "APM forward-solver consumer",
+   "alive": false,
+   "evidence": "files mentioning forward-solver in futon3c/src, futon6: 0"
+  },
+  "E-evidence-flow": {
+   "place": "laptop/Dionysus mesh",
+   "alive": false,
+   "evidence": "host dionysus: resolves=False, pings=False"
+  },
+  "M-war-machine-frontend-upgrade1": {
+   "place": "futon7 web/war-machine client",
+   "alive": false,
+   "evidence": "futon7/web/war-machine: absent"
+  },
+  "E-possible-world-regulator": {
+   "place": "parent charter E-efe-education",
+   "alive": true,
+   "evidence": "futon3c/holes/E-efe-education.md: exists; futon3c/holes/excursions/E-efe-education.md: absent; futon0/holes/excursions/E-efe-education.md: absent; futon2/holes/E-efe-education.md: absent"
+  }
+ }
+}
