@@ -1,0 +1,62 @@
+{
+ "stem": "E-mfuton-compiler-scope-connection-20261003",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654009017-10519-ac1911d7",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-mfuton-compiler-scope-connection-20261003",
+  "kind": "place",
+  "what": {
+   "value": "Implement build-compiler-type-scope for deferred-binder owner-body compilation in mfuton-sbcl Lisp, with differential test vs the pinned Python oracle.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:7",
+   "quote": "Implement the missing compiler type-scope connection for owner-body compilation in /home/joe/code/mfuton-sbcl."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:3",
+   "quote": "**Requisition:** in-progress — invoke-1790999748711-30714-3f4d1ebb"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:7",
+   "quote": "Implement build-compiler-type-scope on the actual deferred-binder owner path from python_types_compiler_scope.py"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:7",
+   "quote": "Goal is a working generic constructor necessary for body compilation, not full owner credit."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:5",
+   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition header says in-progress, recorded 2026-10-03 within the last 30 days."
+  },
+  "finish": {
+   "value": "Closure criteria ticked: scope builder implemented, differential vs /tmp/mfs-blank oracle passes, gates green, report names next missing body call and load order.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:16",
+   "quote": "- [ ] Report names the next missing body call and the proposed load order."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-compiler-scope-connection-20261003.md:7",
+   "quote": "Implement the missing compiler type-scope connection for owner-body compilation in /home/joe/code/mfuton-sbcl."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

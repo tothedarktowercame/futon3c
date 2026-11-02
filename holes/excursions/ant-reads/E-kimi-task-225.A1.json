@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-225",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654008504-10518-498d9748",
+ "at": "2026-11-02T21:16:44+00:00",
+ "row": {
+  "stem": "E-kimi-task-225",
+  "kind": "place",
+  "what": {
+   "value": "A dispatch to repair the statement of problem m95A04 in apm-lean: add a root-namespace theorem apm_m95a04 stating every clause of problem.md with concrete distributional W1p definitions, so a new outside grade passes.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:1",
+   "quote": "# E-kimi-task-225 — statement repair m95A04 in apm-lean: concrete W1p"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:3",
+   "quote": "**Requisition:** completed — 2026-11-02T00:37:05Z, job invoke-1793576594787-9930-b629dc19, state done"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:9",
+   "quote": "Statement repair in apm-lean. This problem has a finished, sorry-free proof, but an outside grader graded its statement narrower"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:9",
+   "quote": "Close the gap the grader named, without narrowing anything."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:3",
+   "quote": "completed — 2026-11-02T00:37:05Z, job invoke-1793576594787-9930-b629dc19, state done"
+  },
+  "finish": {
+   "value": "0 errors, no sorry, temporary #print axioms apm_<id> shows no sorryAx; bell claude-14 with PROVED and theorem text.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:16",
+   "quote": "Acceptance: 0 errors, no sorry, and a temporary `#print axioms apm_<id>` showing no sorryAx, removed afterwards."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-225.md:1",
+   "quote": "statement repair m95A04 in apm-lean"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

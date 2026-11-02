@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-229",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654009017-10519-ac1911d7",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-kimi-task-229",
+  "kind": "place",
+  "what": {
+   "value": "Dispatch to add a complex-λ clause to apm_m95a04 in apm-lean, generalising the real distribution constructions to ℂ.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:9",
+   "quote": "Follow-up on m95A04 in ~/worktrees/apm-lean/lemmas, problems/m95A04/lean/Main.lean."
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:3",
+   "quote": "**Requisition:** completed — 2026-11-02T00:39:20Z, job invoke-1793579949906-10008-2bee744e, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:11",
+   "quote": "Add to `apm_m95a04` a clause for complex λ: for every λ : ℂ, the causal function x ↦ 1_{x>0} e^{-λx} defines a complex distribution"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:9",
+   "quote": "Same rules: only that file, no commit, no registry."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:3",
+   "quote": "**Requisition:** completed — 2026-11-02T00:39:20Z, job invoke-1793579949906-10008-2bee744e, state failed"
+  },
+  "finish": {
+   "value": "0 errors, no sorry, #print axioms apm_m95a04 exactly propext, Classical.choice and Quot.sound.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:14",
+   "quote": "Acceptance: 0 errors, no sorry, `#print axioms apm_m95a04` exactly propext, Classical.choice and Quot.sound, on a copy."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-229.md:9",
+   "quote": "Follow-up on m95A04 in ~/worktrees/apm-lean/lemmas, problems/m95A04/lean/Main.lean."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

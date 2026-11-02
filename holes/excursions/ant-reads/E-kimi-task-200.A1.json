@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-200",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654008504-10518-498d9748",
+ "at": "2026-11-02T21:16:44+00:00",
+ "row": {
+  "stem": "E-kimi-task-200",
+  "kind": "place",
+  "what": {
+   "value": "A dispatch for one Kimi seat to prove the Lean lemma apm_m01J04_rellich_translate_smooth_aux_classical in apm-lean.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:1",
+   "quote": "# E-kimi-task-200 — prove lemma apm_m01J04_rellich_translate_smooth_aux_classical in apm-lean, one leaf"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:3",
+   "quote": "**Requisition:** completed — 2026-11-01T15:38:25Z, job invoke-1793543869239-9374-0777d2bf, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:10",
+   "quote": "From claude-14 (Joe's go, 2026-10-13): prove ONE lemma of an apm-lean blueprint."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:10",
+   "quote": "prove ONE lemma of an apm-lean blueprint"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:3",
+   "quote": "completed — 2026-11-01T15:38:25Z, job invoke-1793543869239-9374-0777d2bf, state failed"
+  },
+  "finish": {
+   "value": "File compiles and #print axioms NAME shows no sorryAx; reply PROVED (or PARTIAL with banked helpers).",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:28",
+   "quote": "DONE when the file compiles and `#print axioms NAME` (add it temporarily, then remove it) shows no sorryAx."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-200.md:1",
+   "quote": "prove lemma apm_m01J04_rellich_translate_smooth_aux_classical in apm-lean"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

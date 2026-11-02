@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-228",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654009017-10519-ac1911d7",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-kimi-task-228",
+  "kind": "place",
+  "what": {
+   "value": "Dispatch to repair apm-lean problem m96J05's statement (physical difference operators) so an outside grader's named gap is closed without narrowing.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:9",
+   "quote": "Statement repair in apm-lean. This problem has a finished, sorry-free proof, but an outside grader graded its statement narrower"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:3",
+   "quote": "**Requisition:** completed — 2026-11-02T00:38:27Z, job invoke-1793579270000-9994-9b858c79, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:24",
+   "quote": "THIS JOB: ID = m96J05. Grades file: holes/labs/statement-registry/backlog-1024/grades-06.md, held.md, triage note g3.md."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:9",
+   "quote": "Close the gap the grader named, without narrowing anything."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:3",
+   "quote": "**Requisition:** completed — 2026-11-02T00:38:27Z, job invoke-1793579270000-9994-9b858c79, state failed"
+  },
+  "finish": {
+   "value": "0 errors, no sorry, and #print axioms apm_m96j05 showing exactly propext, Classical.choice and Quot.sound, check removed.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:18",
+   "quote": "Acceptance: 0 errors, no sorry, and a temporary `#print axioms apm_<id>` showing no sorryAx, removed afterwards."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-228.md:9",
+   "quote": "Statement repair in apm-lean. This problem has a finished, sorry-free proof, but an outside grader graded its statement narrower"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

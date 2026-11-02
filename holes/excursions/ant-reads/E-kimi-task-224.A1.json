@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-224",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654008504-10518-498d9748",
+ "at": "2026-11-02T21:16:44+00:00",
+ "row": {
+  "stem": "E-kimi-task-224",
+  "kind": "place",
+  "what": {
+   "value": "A dispatch to extend the apm_m95j02 theorem in apm-lean with the missing Euler-step clauses (radial harmonic functions r^s and log r) after an outside grader narrowed it.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:1",
+   "quote": "# E-kimi-task-224 — m95J02: Euler step clauses, retry"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:3",
+   "quote": "**Requisition:** completed — 2026-11-01T23:42:55Z, job invoke-1793576273613-9922-73056fea, state done"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:9",
+   "quote": "Follow-up on m95J02 in ~/worktrees/apm-lean/lemmas, problems/m95J02/lean/Main.lean."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:11",
+   "quote": "the Euler step of the printed problem is missing from the theorem"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:3",
+   "quote": "completed — 2026-11-01T23:42:55Z, job invoke-1793576273613-9922-73056fea, state done"
+  },
+  "finish": {
+   "value": "Main.lean compiles with 0 errors, no sorry, #print axioms apm_m95j02 exactly propext, Classical.choice, Quot.sound.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:21",
+   "quote": "Acceptance: 0 errors, no sorry, `#print axioms apm_m95j02` exactly propext, Classical.choice and Quot.sound."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-224.md:1",
+   "quote": "m95J02: Euler step clauses, retry"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

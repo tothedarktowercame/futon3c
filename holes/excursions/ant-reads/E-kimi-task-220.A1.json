@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-220",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654008504-10518-498d9748",
+ "at": "2026-11-02T21:16:44+00:00",
+ "row": {
+  "stem": "E-kimi-task-220",
+  "kind": "place",
+  "what": {
+   "value": "A dispatch to finish problem a96A04 in apm-lean by proving the two remaining sorrys (L² limit clause (c) and smoothness clause (a)) in Main.lean.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:1",
+   "quote": "# E-kimi-task-220 — finish reform a96A04 in apm-lean"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:3",
+   "quote": "**Requisition:** completed — 2026-11-01T23:21:56Z, job invoke-1793574059439-9860-f7980833, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:9",
+   "quote": "Finish a96A04 in ~/worktrees/apm-lean/lemmas, problems/a96A04/lean/Main.lean."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:9",
+   "quote": "It is a compiling draft with two `sorry`s in `apm_a96a04`"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:3",
+   "quote": "completed — 2026-11-01T23:21:56Z, job invoke-1793574059439-9860-f7980833, state failed"
+  },
+  "finish": {
+   "value": "Main.lean compiles with 0 errors, no sorry, axioms exactly propext, Classical.choice, Quot.sound.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:15",
+   "quote": "Acceptance: 0 errors, no sorry, axioms exactly propext, Classical.choice and Quot.sound."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-220.md:1",
+   "quote": "finish reform a96A04 in apm-lean"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

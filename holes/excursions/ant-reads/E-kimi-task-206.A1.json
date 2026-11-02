@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-206",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654008504-10518-498d9748",
+ "at": "2026-11-02T21:16:44+00:00",
+ "row": {
+  "stem": "E-kimi-task-206",
+  "kind": "place",
+  "what": {
+   "value": "A dispatch for one Kimi seat to prove the Lean lemma kleinPlaneQuotient_double_self_cover (Klein bottle double cover by torus) in apm-lean.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:1",
+   "quote": "# E-kimi-task-206 — prove lemma kleinPlaneQuotient_double_self_cover in apm-lean, one leaf"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:3",
+   "quote": "**Requisition:** completed — 2026-11-01T18:17:43Z, job invoke-1793555284558-9511-17a8a5e8, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:10",
+   "quote": "prove ONE lemma of an apm-lean blueprint"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:10",
+   "quote": "prove ONE lemma of an apm-lean blueprint"
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:3",
+   "quote": "completed — 2026-11-01T18:17:43Z, job invoke-1793555284558-9511-17a8a5e8, state failed"
+  },
+  "finish": {
+   "value": "File compiles and #print axioms NAME shows no sorryAx; reply PROVED or PARTIAL.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:28",
+   "quote": "DONE when the file compiles and `#print axioms NAME` (add it temporarily, then remove it) shows no sorryAx."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-206.md:1",
+   "quote": "prove lemma kleinPlaneQuotient_double_self_cover in apm-lean"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

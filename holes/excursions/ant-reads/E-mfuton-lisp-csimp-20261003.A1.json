@@ -1,0 +1,62 @@
+{
+ "stem": "E-mfuton-lisp-csimp-20261003",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654009017-10519-ac1911d7",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-mfuton-lisp-csimp-20261003",
+  "kind": "place",
+  "what": {
+   "value": "Port csimp replacement and post-replacement scope rebuild to mfuton-sbcl Lisp, differential-tested against the pinned Python oracle.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:7",
+   "quote": "Implement Lisp csimp replacement and scope rebuilding in /home/joe/code/mfuton-sbcl, following Joe's instruction to catch up with Codex-17's Python port"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:3",
+   "quote": "**Requisition:** in-progress — codex-13 job invoke-1790998522127-30707-8bdc3bb9"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:7",
+   "quote": "Ground truth Lean4 v4.29.0 Lean/Compiler/CSimpAttr.lean."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:7",
+   "quote": "Port generic raw and compact theorem decoding, rejection errors, namespace/source-path/before-line resolution"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:5",
+   "quote": "**VERDICT (2026-10-09, provisional):** ACTIVE — Requisition in-progress on codex-13 dispatched 2026-10-03"
+  },
+  "finish": {
+   "value": "Closure criteria ticked: csimp replacement + scope rebuild implemented, differential vs oracle passes, gates green, report states csimp-replacement acceptance.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:16",
+   "quote": "- [ ] Report states which curriculum csimp-replacement acceptance passes and any missing rebuilding behavior."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-lisp-csimp-20261003.md:7",
+   "quote": "Implement Lisp csimp replacement and scope rebuilding in /home/joe/code/mfuton-sbcl"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

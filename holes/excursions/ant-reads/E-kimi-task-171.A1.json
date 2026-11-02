@@ -1,0 +1,63 @@
+{
+ "stem": "E-kimi-task-171",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654007992-10517-1edf4696",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-kimi-task-171",
+  "kind": "place",
+  "what": {
+   "value": "A requisition dispatching kimi-1 to prove one apm-lean blueprint leaf lemma (apm_t02A04_solidTorus_prism_model_aux_surjective) in a shared lemmas worktree.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:1",
+   "quote": "# E-kimi-task-171 — prove lemma apm_t02A04_solidTorus_prism_model_aux_surjective in apm-lean, one leaf"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:3",
+   "quote": "**Requisition:** completed — 2026-10-31T17:14:36Z, job invoke-1793462616993-8771-ff289dae, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:8",
+   "quote": "From claude-14 (Joe's go, 2026-10-13): prove ONE lemma of an apm-lean blueprint. Other seats are proving the other lemmas of the same problem at the same time, each in its own file."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:8",
+   "quote": "From claude-14 (Joe's go, 2026-10-13): prove ONE lemma of an apm-lean blueprint. Other seats are proving the other lemmas of the same problem at the same time, each in its own file."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:3",
+   "quote": "**Requisition:** completed — 2026-10-31T17:14:36Z, job invoke-1793462616993-8771-ff289dae, state failed"
+  },
+  "finish": {
+   "value": "The lemma's file compiles and #print axioms shows no sorryAx; job ended state failed, so the lemma itself likely still needs a fresh dispatch.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:29",
+   "quote": "DONE when the file compiles and `#print axioms NAME` (add it temporarily, then remove it) shows no sorryAx."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-171.md:8",
+   "quote": "From claude-14 (Joe's go, 2026-10-13): prove ONE lemma of an apm-lean blueprint. Other seats are proving the other lemmas of the same problem at the same time, each in its own file."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

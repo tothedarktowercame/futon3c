@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-226",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654008504-10518-498d9748",
+ "at": "2026-11-02T21:16:44+00:00",
+ "row": {
+  "stem": "E-kimi-task-226",
+  "kind": "place",
+  "what": {
+   "value": "A dispatch to continue a96A04 in apm-lean by proving the last remaining sorry heatConvN_contDiff (heat-kernel convolution smoothness, clause (a)) via kernel bounds, one fderiv step, induction, and contDiff_infty assembly.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:1",
+   "quote": "# E-kimi-task-226 — a96A04 clause (a): heat kernel smoothness"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:3",
+   "quote": "**Requisition:** completed — 2026-11-02T00:38:17Z, job invoke-1793578739621-9985-f28f2bba, state failed"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:9",
+   "quote": "Continue a96A04 in ~/worktrees/apm-lean/lemmas, problems/a96A04/lean/Main.lean"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:9",
+   "quote": "One `sorry` is left, `heatConvN_contDiff`, clause (a)."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:3",
+   "quote": "completed — 2026-11-02T00:38:17Z, job invoke-1793578739621-9985-f28f2bba, state failed"
+  },
+  "finish": {
+   "value": "0 errors, no sorry, #print axioms apm_a96a04 exactly propext, Classical.choice, Quot.sound; update PRELIM-DEFECT.md if stale.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:17",
+   "quote": "Acceptance: 0 errors, no sorry, `#print axioms apm_a96a04` exactly propext, Classical.choice and Quot.sound, checked on a copy."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-226.md:1",
+   "quote": "a96A04 clause (a): heat kernel smoothness"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

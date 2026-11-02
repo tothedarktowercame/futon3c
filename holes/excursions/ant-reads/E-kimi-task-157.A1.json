@@ -1,0 +1,59 @@
+{
+ "stem": "E-kimi-task-157",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793654007992-10517-1edf4696",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-kimi-task-157",
+  "kind": "place",
+  "what": {
+   "value": "A requisition dispatching kimi-5 to annotate 10 of Joe's historical turns (the 象 backfill) from one prepared pack file against the closed intent list.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:10",
+   "quote": "From claude-17, for Joe: annotate 10 of Joe's historical turns (the 象 backfill) from ONE prepared file, with no searches."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:3",
+   "quote": "**Requisition:** in-progress — dispatched 2026-10-01T20:41:37Z to kimi-5 as invoke-1790887297157-29825-2f868d59"
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:10",
+   "quote": "From claude-17, for Joe: annotate 10 of Joe's historical turns (the 象 backfill) from ONE prepared file, with no searches."
+  },
+  "way": {
+   "value": "intents-are-tracked",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:10",
+   "quote": "From claude-17, for Joe: annotate 10 of Joe's historical turns (the 象 backfill) from ONE prepared file, with no searches."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:18",
+   "quote": "Do all 10, one at a time. If a turn truly cannot be read from the pack, leave it out and say why."
+  },
+  "finish": {
+   "value": "All 10 turns annotated into /tmp/claude17/loop/kimi-5-1790887296.answer.json, which the loop reads itself; no bell, no commit.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:20",
+   "quote": "No reply is needed and nobody should be belled: the loop reads the answer file itself. End your turn with one line giving the answer path and the turn count."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-157.md:10",
+   "quote": "From claude-17, for Joe: annotate 10 of Joe's historical turns (the 象 backfill) from ONE prepared file, with no searches."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,61 @@
+{
+ "stem": "E-live-strategic-discovery-2026-09-09",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654009017-10519-ac1911d7",
+ "at": "2026-11-02T21:16:54+00:00",
+ "row": {
+  "stem": "E-live-strategic-discovery-2026-09-09",
+  "kind": "place",
+  "what": {
+   "value": "Discovery and two-arm decision sheet on whether/how learned E reaches the live strategic selection path (Item 19c/21a).",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:1",
+   "quote": "# Item 19c: E on the live strategic path — discovery and decision sheet"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:285",
+   "quote": "That choice returns to Joe; Item 21a's registry addendum to"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:84",
+   "quote": "replaces the action and labels the final boundary `:reason-bearing-strategic-policy`."
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:13",
+   "quote": "**Item 19c does not reduce to flipping the controller's flag.** The final reason-bearing strategic selector replaces the controller action."
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:262",
+   "quote": "## Addendum 2026-09-09 (claude-1): phase-2 promotion REFUSED at requirement 5"
+  },
+  "finish": {
+   "value": "Joe rules the arm/path (reconstruct strategic-grain E, forward-accumulate grain-labelled counts, or retain fixture E_S) and the registry addendum records it.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:281",
+   "quote": "The prerequisite is either a reviewed reconstruction of a"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-live-strategic-discovery-2026-09-09.md:1",
+   "quote": "# Item 19c: E on the live strategic path — discovery and decision sheet"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok-near",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}
