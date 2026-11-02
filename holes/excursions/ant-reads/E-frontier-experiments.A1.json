@@ -1,16 +1,16 @@
 {
  "stem": "E-frontier-experiments",
  "kind": "A1",
- "seat": "kimi-1",
- "job": "invoke-1793654007992-10517-1edf4696",
- "at": "2026-11-02T21:16:54+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654687439-10548-6ee0eaa1",
+ "at": "2026-11-02T21:26:27+00:00",
  "row": {
   "stem": "E-frontier-experiments",
   "kind": "place",
   "what": {
-   "value": "A designed (not yet dispatched) excursion: build Book-of-Why fixtures (X1), a causal crime-scene analysis of git history (X2), and AIF² causal argument maps (X3) to demo the receipts pipeline to Rob and map the engine's frontier.",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:4",
-   "quote": "Purpose, per Joe: (a) independently show Rob that the receipts pipeline"
+   "value": "Designed set of frontier experiments (X1 BoW demo, X2 causal code-forensics, X3 AIF² causal arguments) to demo the receipts pipeline and pick M-diagramprover's direction.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:3",
+   "quote": "Status: **DESIGNED 2026-08-02 (Joe + claude-10). Not yet dispatched.**"
   },
   "status": {
    "value": "open",
@@ -18,42 +18,46 @@
    "quote": "Status: **DESIGNED 2026-08-02 (Joe + claude-10). Not yet dispatched.**"
   },
   "wing": {
-   "value": "A",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:14",
-   "quote": "receipts as computed EDN with honest refusals; deterministic repro;"
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:5",
+   "quote": "(b) decide M-diagramprover's next direction by building out from the"
   },
   "way": {
-   "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:14",
-   "quote": "receipts as computed EDN with honest refusals; deterministic repro;"
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:6",
+   "quote": "frontier — the experiments MAP the frontier, and the refusals they"
   },
   "action": {
    "value": "work",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:127",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:115",
    "quote": "Sequencing recommendation: **X1 → X2 → X3.** X1 is days and produces"
   },
   "finish": {
-   "value": "X1: every in-scope fixture's receipts oracle-agree; every out-of-scope fixture produces a computed refusal naming what is missing; REPORT presents the coverage table.",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:47",
+   "value": "X1 run with oracle-agreeing receipts and computed refusals naming what is missing, presented in a REPORT coverage table.",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:45",
    "quote": "Acceptance: every in-scope fixture's receipts oracle-agree (NetworkX +"
   },
   "beneficiary": {
-   "value": "product",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:4",
-   "quote": "Purpose, per Joe: (a) independently show Rob that the receipts pipeline"
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-frontier-experiments.md:107",
+   "quote": "setting, feeds the categorical/compositional grant story and the"
   },
-  "confidence": "high"
+  "confidence": "medium"
  },
  "checks": [
   "ok",
   "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok"
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
  ],
- "ok": 7,
+ "ok": 4,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
 }

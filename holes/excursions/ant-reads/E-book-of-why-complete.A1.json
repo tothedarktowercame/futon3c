@@ -1,14 +1,14 @@
 {
  "stem": "E-book-of-why-complete",
  "kind": "A1",
- "seat": "kimi-1",
- "job": "invoke-1793654007992-10517-1edf4696",
- "at": "2026-11-02T21:16:54+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654687439-10548-6ee0eaa1",
+ "at": "2026-11-02T21:26:27+00:00",
  "row": {
   "stem": "E-book-of-why-complete",
   "kind": "place",
   "what": {
-   "value": "A capability backlog for the M-diagramprover engine: five blocks (B1–B5) of mfuton-sweep graph-only fixtures, each a codex dispatch with the sweep as regression harness.",
+   "value": "Capability backlog for the diagramprover causal engine: 20 graph-only mfuton sweep fixtures priced as future codex dispatches.",
    "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:1",
    "quote": "# E-book-of-why-complete — capability backlog surfaced by the mfuton sweep"
   },
@@ -18,42 +18,45 @@
    "quote": "Status: **BACKLOG, authored 2026-08-03 (Joe + claude-10).** Source: the"
   },
   "wing": {
-   "value": "A",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:8",
-   "quote": "with the sweep as its regression harness (acceptance = the affected"
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:5",
+   "quote": "20 graph-only rows of the mfuton 60-fixture sweep — each conversion boundary is a capability the engine lacks"
   },
   "way": {
-   "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:8",
-   "quote": "with the sweep as its regression harness (acceptance = the affected"
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:10",
+   "quote": "NOT prerequisites for the V3/retrieval work (discrete/structural machinery suffices"
   },
   "action": {
    "value": "work",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:13",
-   "quote": "demo needs the class."
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:11",
+   "quote": "there); pull from this list when a slice's fixtures matter or the"
   },
   "finish": {
-   "value": "Each block's affected fixtures flip from graph-only to fully-converted with oracle agreement, everything already-green stays green.",
+   "value": "Each capability dispatch accepted when its fixtures flip from graph-only to fully-converted with oracle agreement and greens stay green.",
    "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:8",
    "quote": "with the sweep as its regression harness (acceptance = the affected"
   },
   "beneficiary": {
-   "value": "product",
-   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:13",
-   "quote": "demo needs the class."
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon3c/holes/labs/M-diagramprover/E-book-of-why-complete.md:22",
+   "quote": "Biggest single win: it is ALSO the formal home of \"does this result"
   },
-  "confidence": "medium"
+  "confidence": "high"
  },
  "checks": [
   "ok",
   "ok",
-  "ok",
-  "ok",
-  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok-near",
   "ok",
   "ok"
  ],
- "ok": 7,
+ "ok": 5,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
 }

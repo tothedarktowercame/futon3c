@@ -2,15 +2,15 @@
  "stem": "E-kimi-task-67",
  "kind": "A1",
  "seat": "kimi-3",
- "job": "invoke-1793654009017-10519-ac1911d7",
- "at": "2026-11-02T21:16:54+00:00",
+ "job": "invoke-1793654687439-10548-6ee0eaa1",
+ "at": "2026-11-02T21:26:27+00:00",
  "row": {
   "stem": "E-kimi-task-67",
   "kind": "place",
   "what": {
-   "value": "Dispatch to write first-layer wire tests for 8 wires of the wm matrix lane 7b Selection (refusals, failure record) in futon3c.",
-   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:9",
-   "quote": "# Wire tests for one block of the matrix: lane 7b Selection: refusals, failure record (⟨2⟩3 of PROOF-2a-PLAN)"
+   "value": "Requisition for first-layer wire tests (8 wires, lane 7b Selection: refusals/failure record) in the wm wire ledger; the dispatch ended in failed state.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:3",
+   "quote": "**Requisition:** completed — 2026-09-26T15:35:28Z, job invoke-1790433637769-24898-6fd5ce03, state failed"
   },
   "status": {
    "value": "closed",
@@ -19,43 +19,44 @@
   },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:11",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:9",
    "quote": "VERIFIED when a live record carries both ends, WITNESSED-HERMETICALLY when a test drives writer through reader"
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:11",
-   "quote": "a live record pinned by sha256 before it is read, both ends off that record, a typed absence at the reader failing the wire"
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:24",
+   "quote": "and register warrants for each namespace and the ledger:"
   },
   "action": {
-   "value": "close",
+   "value": "work",
    "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:3",
    "quote": "**Requisition:** completed — 2026-09-26T15:35:28Z, job invoke-1790433637769-24898-6fd5ce03, state failed"
   },
   "finish": {
-   "value": "Each wire tested with status + witness, ledger counts before/after, warrants registered, ledger committed.",
-   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:13",
+   "value": "Each of the 8 wires VERIFIED or hermetically witnessed, ledger counts updated, warrants registered, gates green.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:26",
    "quote": "Report: for each wire its status and the record or call that witnessed it; the ledger's counts before and after; the shas and warrant ids."
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:11",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-67.md:7",
    "quote": "You are writing first-layer wire tests for the wires listed below, in futon3c."
   },
-  "confidence": "high"
+  "confidence": "medium"
  },
  "checks": [
-  "ok-near",
   "ok",
-  "ok-near",
-  "quote-not-on-line",
   "ok",
   "quote-not-on-line",
-  "ok-near"
+  "quote-not-on-line",
+  "ok",
+  "ok-near",
+  "quote-not-on-line"
  ],
- "ok": 5,
+ "ok": 4,
  "unsure": 0,
  "failed": [
+  "quote-not-on-line",
   "quote-not-on-line",
   "quote-not-on-line"
  ]
