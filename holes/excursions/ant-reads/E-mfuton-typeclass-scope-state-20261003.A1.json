@@ -1,0 +1,59 @@
+{
+ "stem": "E-mfuton-typeclass-scope-state-20261003",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654231851-10528-e4638c0d",
+ "at": "2026-11-02T21:22:06+00:00",
+ "row": {
+  "stem": "E-mfuton-typeclass-scope-state-20261003",
+  "kind": "place",
+  "what": {
+   "value": "Dispatch to port mfuton's SourceTypeclassScope state construction and instance-result-owner index to SBCL Lisp with a real Python differential.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:10",
+   "quote": "Implement the next real compiler-scope dependency: SourceTypeclassScope state construction around accepted declaration"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:3",
+   "quote": "**Requisition:** in-progress — codex-13 job invoke-1790996880103-30698-7aafbdaf"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:10",
+   "quote": "including instance_result_owner_source_kinds in python_typeclass_instance_owner_resolution.py. Trace existing hydration"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:10",
+   "quote": "reuse real production operations, never substitute empty maps or fake callback-only scopes"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:5",
+   "quote": "ACTIVE — Requisition marked in-progress and dispatched 2026-10-03 within the last 30 days; no completion or failure"
+  },
+  "finish": {
+   "value": "Gates pass (check-parens, SBCL, focused tests), differential retained, exact new callable and next missing operation reported; codex-13 executor holds it and bells codex-18.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:12",
+   "quote": "Retain revisions/hashes/commands/exits. Run check-parens, SBCL and focused relevant tests."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mfuton-typeclass-scope-state-20261003.md:9",
+   "quote": "Continue in /home/joe/code/mfuton-sbcl from accepted index commit 97479d0."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,61 @@
+{
+ "stem": "M-typed-holes-mathlib-handoff",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654408549-10538-9da513a0",
+ "at": "2026-11-02T21:21:50+00:00",
+ "row": {
+  "stem": "M-typed-holes-mathlib-handoff",
+  "kind": "place",
+  "what": {
+   "value": "Dispatched Codex audit classifying each of 10 typed-holes manifest concepts as PRESENT/PARTIAL/ABSENT in mathlib4 plus cross-system formalisations; audit delivered, claude-2's review disposition still unrecorded.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:5",
+   "quote": "decide its mathlib4 status (PRESENT / PARTIAL / ABSENT); for anything not fully"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:3",
+   "quote": "**Status:** OPEN — DISPATCHED to Codex (2026-06-14). **Owner of result:** claude-2"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:13",
+   "quote": "classifies all ten manifest concepts and includes summary counts plus a critical path"
+  },
+  "way": {
+   "value": "backlog-understood",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:27",
+   "quote": "- `:build-scope` — for :partial/:absent: what mathlib gives you to build on +"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:16",
+   "quote": "- [ ] A result record shows claude-2's review disposition and receipt of the audit path with summary counts."
+  },
+  "finish": {
+   "value": "All four acceptance boxes checked, i.e. claude-2 records a review disposition and receipt of the audit path with summary counts.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:16",
+   "quote": "- [ ] A result record shows claude-2's review disposition and receipt of the audit path with summary counts."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:22",
+   "quote": "- `futon3c/holes/missions/M-typed-holes.md` — context (the Poly framing)."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

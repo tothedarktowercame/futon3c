@@ -1,0 +1,65 @@
+{
+ "stem": "M-run4-outer-loop-successor",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654408549-10538-9da513a0",
+ "at": "2026-11-02T21:21:50+00:00",
+ "row": {
+  "stem": "M-run4-outer-loop-successor",
+  "kind": "place",
+  "what": {
+   "value": "Non-live draft mission to build one isolated fixture-scoped AIF outer-loop experiment in futon2 demonstrating a full decision→execution→outcome→next-use cycle (RUN4 Trial 4).",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:11",
+   "quote": "the proposed AIF successor has not yet demonstrated one complete decision"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:3",
+   "quote": "**Status:** DRAFT — NON-LIVE; independent review and explicit activation required"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:23",
+   "quote": "3. Record an AIF selection that actually consumes explicit preference and"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:60",
+   "quote": "- The AIF record proves which preference, prediction, and learned-state inputs"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:68",
+   "quote": "Moving an independently reviewed revision into a primary `holes/missions/` directory and"
+  },
+  "finish": {
+   "value": "First milestone: reviewed, frozen fixture experiment passing Trial 4 product and preserved-behavior checks, with distinct author/reviewer and no live execution.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:54",
+   "quote": "## Acceptance for the first milestone"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-run4-outer-loop-successor.md:9",
+   "quote": "The existing War Machine build loop has eight observable responsibilities, but"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

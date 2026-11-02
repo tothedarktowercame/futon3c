@@ -1,0 +1,65 @@
+{
+ "stem": "E-pre-go-live-independent-pair-review-2026-09-10",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654231851-10528-e4638c0d",
+ "at": "2026-11-02T21:22:06+00:00",
+ "row": {
+  "stem": "E-pre-go-live-independent-pair-review-2026-09-10",
+  "kind": "place",
+  "what": {
+   "value": "Codex-17's independent review accepting the F/S preparation-integrity pair and six-instance population for adapter implementation.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:1",
+   "quote": "# Independent-pair review: named contextual instances"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:5",
+   "quote": "its proposed six-instance population are accepted for adapter implementation."
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:3",
+   "quote": "Codex-17, 2026-09-10. Reviewed af6f39c8 against the applied carrier and shared"
+  },
+  "way": {
+   "value": "feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:5",
+   "quote": "its proposed six-instance population are accepted for adapter implementation."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:33",
+   "quote": "Next: qualify actual command I/O in a labelled diagnostic; implement a bounded"
+  },
+  "need_goes_to": {
+   "value": "E-pre-go-live-independent-pair-2026-09-10",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:33",
+   "quote": "adapter using the existing shared fire and organise paths, with source-pinned"
+  },
+  "finish": {
+   "value": "Review delivered with verdict and next steps; it supplies no parent-level O4 witness and authorizes no execution.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:6",
+   "quote": "Primary execution remains behind the frozen manifest/adapter review."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-review-2026-09-10.md:3",
+   "quote": "Codex-17, 2026-09-10. Reviewed af6f39c8 against the applied carrier and shared"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok",
+  "ok"
+ ],
+ "ok": 8,
+ "unsure": 0,
+ "failed": []
+}

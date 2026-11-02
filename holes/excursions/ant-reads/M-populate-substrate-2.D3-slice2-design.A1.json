@@ -1,0 +1,63 @@
+{
+ "stem": "M-populate-substrate-2.D3-slice2-design",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793654408549-10538-9da513a0",
+ "at": "2026-11-02T21:21:50+00:00",
+ "row": {
+  "stem": "M-populate-substrate-2.D3-slice2-design",
+  "kind": "place",
+  "what": {
+   "value": "Design note for D3 slice 2: replay all commits in 14 watched repos to re-emit the structural code graph at valid-time so db-as-of(t) is historically true, removal-accurate.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:8",
+   "quote": "Replay every commit in all 14 watched repos and re-emit the **structural code"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:3",
+   "quote": "**Status:** DRAFT for claude-2 sign-off (do not code until ack)"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:11",
+   "quote": "so `db-as-of(t)` recovers the code structure *as it actually stood at commit t*"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:15",
+   "quote": "Slice 2 makes it **historically true and complete**."
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:3",
+   "quote": "**Status:** DRAFT for claude-2 sign-off (do not code until ack)"
+  },
+  "finish": {
+   "value": "Historical replay driver plus retract directive built per §7's open decisions after claude-2 sign-off, so db-as-of across full history is removal-accurate; sign-off itself is the gate.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:136",
+   "quote": "## 7. Open decisions for your sign-off"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-populate-substrate-2.D3-slice2-design.md:4",
+   "quote": "**Builds on:** D3 slice 1 (futon1a `a525adb`, futon3c `e916975`) — valid-time plumbing, forward."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

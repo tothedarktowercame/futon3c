@@ -1,0 +1,61 @@
+{
+ "stem": "E-outer-selection-landscape",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793654231851-10528-e4638c0d",
+ "at": "2026-11-02T21:22:06+00:00",
+ "row": {
+  "stem": "E-outer-selection-landscape",
+  "kind": "place",
+  "what": {
+   "value": "Research record of how the War Machine outer loop actually chooses a target (funnel S0–S6) and what G can and cannot see about the mission landscape.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:1",
+   "quote": "# E-outer-selection-landscape — how the outer loop chooses, and what it can see"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:5",
+   "quote": "**Status:** OPEN. Capture C1–C3 landed (C3 reviewed 2026-10-26); C4 split into C4a (projection, landed `bc7ad6c93`,"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:15",
+   "quote": "choose what to work on, and does it know enough about the state of the mission"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:19",
+   "quote": "be based on Cascade Live for that reason. Joe has not seen how the canonical G"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:231",
+   "quote": "reviewed in §9. Status: C1–C4 all landed (C1 `f12700102`+`5637a787d`,"
+  },
+  "finish": {
+   "value": "C1–C4 capture landed (done); remaining done = next run's capture answers open hypotheses H1–H3.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:5",
+   "quote": "hypotheses H1–H3 open, H4 answered (no, by hand-read; §5); §10 answers Joe's 2026-10-26 questions."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-outer-selection-landscape.md:4",
+   "quote": "**Owner:** claude-9 (research question, record, conclusions). Implementation may go to zai-2."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}
