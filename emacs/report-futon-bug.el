@@ -118,6 +118,55 @@ then reply with what you checked and what you found.\n\n"))
       (format "exit %s: %s" status
               (string-trim (buffer-substring (point-min) (min (point-max) 400)))))))
 
+(defun report-futon-bug--finish-async (process event)
+  "Finish an asynchronous bug collection PROCESS after EVENT."
+  (when (memq (process-status process) '(exit signal))
+    (let* ((buffer (process-buffer process))
+           (agent (process-get process 'report-futon-bug-agent))
+           (path (and (buffer-live-p buffer)
+                      (with-current-buffer buffer
+                        (string-trim (buffer-string))))))
+      (unwind-protect
+          (if (and (zerop (process-exit-status process))
+                   path (file-exists-p path))
+              (progn
+                (find-file-other-window path)
+                (if agent
+                    (message "report-futon-bug: %s; belled %s (%s)" path agent
+                             (report-futon-bug--bell agent path))
+                  (message "report-futon-bug: wrote %s (not sent)" path)))
+            (display-warning
+             'report-futon-bug
+             (format "Bug collection failed (%s): %s" (string-trim event)
+                     (or path "no collector output"))
+             :warning))
+        (when (buffer-live-p buffer) (kill-buffer buffer))
+        (when-let* ((ctx (process-get process 'report-futon-bug-context-file)))
+          (ignore-errors (delete-file ctx)))))))
+
+;;;###autoload
+(defun report-futon-bug-async (summary &optional agent)
+  "Capture SUMMARY now and collect its report asynchronously.
+AGENT, when non-nil, receives the completed report.  This entry point is for
+low-friction surfaces such as Voxterm: returning successfully means the
+operator's words and Emacs context are already durable in the collector's
+input file; slow health and journal reads happen outside the UI request."
+  (when (string-empty-p (string-trim summary))
+    (user-error "A one-line summary is needed"))
+  (let ((ctx-file (make-temp-file "futon-bug-emacs-" nil ".md"))
+        (buffer (generate-new-buffer " *futon-bug-collector*")))
+    (with-temp-file ctx-file (insert (report-futon-bug--emacs-context)))
+    (let ((process
+           (make-process
+            :name "futon-bug-collector" :buffer buffer :noquery t
+            :command (list "python3" report-futon-bug-collector
+                           "--summary" summary "--emacs-context" ctx-file)
+            :sentinel #'report-futon-bug--finish-async)))
+      (process-put process 'report-futon-bug-agent agent)
+      (process-put process 'report-futon-bug-context-file ctx-file)
+      (message "BUG REPORT captured; collecting context in the background")
+      (list :accepted t :process (process-id process)))))
+
 ;;;###autoload
 (defun report-futon-bug (summary &optional agent)
   "Write a self-contained futon bug report for SUMMARY; optionally bell AGENT.

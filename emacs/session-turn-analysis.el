@@ -1831,9 +1831,16 @@ TRIES bounds the asking; there is no busy loop and nothing blocks the UI."
          (session-mode--analysis-note-done path)
          (session-mode--set-analysis-health
           'failing (format "%s: job refused or failed" id))
-         (display-warning 'session-mode
-                          (format "Turn analysis was not done for %s (%s)" id status)
-                          :warning))
+         (let* ((dispatch (and answer
+                               (alist-get 'analysis_dispatch
+                                          (alist-get 'record answer))))
+                (outcome (and dispatch (alist-get 'outcome dispatch)))
+                (reason (and outcome (alist-get 'reason outcome))))
+           (display-warning
+            'session-mode
+            (format "Turn analysis was not done for %s (%s%s)"
+                    id status (if reason (format ": %s" reason) ""))
+            :warning)))
         ;; Settled without a reading (routine draft, declared, policy off):
         ;; nothing more will land.
         ((member status '("drafted" "declared" "not-requested"))
