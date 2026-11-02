@@ -139,6 +139,8 @@ the result is read from the job, or the triage agent reports where told."
                  (stringp agent-chat--agent-id))
         (when (fboundp 'agent-chat--update-session-header-line)
           (agent-chat--update-session-header-line))
+        (when (fboundp 'agent-chat--annotate-turn-flair!)
+          (agent-chat--annotate-turn-flair!))
         (force-mode-line-update t)))))
 
 ;;;###autoload

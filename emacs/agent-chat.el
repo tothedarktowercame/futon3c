@@ -582,6 +582,13 @@ priced last turn (fresh session, Codex, Zai, script failure)."
          (format " · cold — resuming costs ~$%.2f"
                  (plist-get basis :per_turn_cold_usd)))))))
 
+(defun agent-chat-turn-flair-suffix ()
+  "Dynamic responsibility and cost text for the current Cooked line."
+  (concat (agent-chat-cost-flair-suffix)
+          (if (fboundp 'futon-bug-feed-segment)
+              (futon-bug-feed-segment agent-chat--agent-id)
+            "")))
+
 (defun agent-chat--fetch-pouch-state! (buffer generation)
   "Ask the Agency whether BUFFER's agent runs in a warm pouch; annotate on reply.
 GENERATION guards against a reply landing after a newer refresh."
@@ -643,7 +650,7 @@ worth seeing before you type."
 (defun agent-chat--annotate-turn-flair! ()
   "Append the last-turn cost to the \"Cooked for\" line just before the prompt.
 Idempotent: an earlier suffix on the same line is replaced."
-  (let ((suffix (agent-chat-cost-flair-suffix))
+  (let ((suffix (agent-chat-turn-flair-suffix))
         (prompt-pos (and (markerp agent-chat--prompt-marker)
                          (marker-position agent-chat--prompt-marker))))
     (when (and prompt-pos (not (string-empty-p suffix)))
@@ -1264,8 +1271,9 @@ window points all end up after the new prompt with typed input untouched."
           (delete-region (line-beginning-position)
                          (min (point-max) (1+ (line-end-position)))))
         (when (numberp elapsed)
-          (insert (propertize (format "Cooked for %s\n"
-                                      (agent-chat--format-duration elapsed))
+          (insert (propertize (format "Cooked for %s%s\n"
+                                      (agent-chat--format-duration elapsed)
+                                      (agent-chat-turn-flair-suffix))
                               'face 'agent-chat-turn-flair-face)))
         (insert (propertize rule 'face 'agent-chat-turn-flair-face)
                 " "
@@ -3353,7 +3361,7 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
 
 (defun agent-chat--session-header-text ()
   "Return the formatted session header text with turn counts."
-  (format "(session: %s%s%s) %s%s"
+  (format "(session: %s%s%s) %s"
           (or agent-chat--session-id "pending")
           (if (numberp agent-chat--session-turn-count)
               (format ", turns: %d" agent-chat--session-turn-count)
@@ -3361,10 +3369,7 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
           (if agent-chat--evidence-delivery-status
               (format ", %s" agent-chat--evidence-delivery-status)
             "")
-          (agent-chat-mission-segment)
-          (if (fboundp 'futon-bug-feed-segment)
-              (futon-bug-feed-segment agent-chat--agent-id)
-            "")))
+          (agent-chat-mission-segment)))
 
 (defun agent-chat--update-session-header-line ()
   "Refresh the session header line (session id + turns)."
