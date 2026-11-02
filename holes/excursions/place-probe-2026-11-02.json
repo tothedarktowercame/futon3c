@@ -1,12 +1,12 @@
 {
  "schema": "place-probe-v1",
- "probed-at": "2026-11-02T18:27:31+00:00",
+ "probed-at": "2026-11-02T20:44:55+00:00",
  "gone": 12,
  "alive": 1,
  "unknown": 0,
  "rows": {
   "E-clean-up-substrate-2": {
-   "place": "futon1a census and registry on :7071",
+   "place": "futon1a census and registry on :7071 (futon1a superseded by futon1b, Joe 2026-11-02)",
    "alive": false,
    "evidence": "port :7071 listening: False"
   },

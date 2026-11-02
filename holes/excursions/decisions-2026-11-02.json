@@ -5,19 +5,20 @@
  "provisional-until": "intermediate theses under 'activity as inference' let a final judgement be made",
  "decisions": {
   "E-clean-up-substrate-2": {
-   "decision": "reopen",
-   "basis": "Joe, 2026-11-02 ~20:40Z: has a three-item acceptance checklist; \"looks like a pretty standard open excursion to me, could cluster with other substrate-2 items\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+   "decision": "rehome",
+   "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"; three-item acceptance checklist stands",
    "carry": {
     "kind": "target",
-    "to": "needs rehoming (work, per claude-16): repoint the census at futon1b :7073, then add a gated erase path there; cluster: substrate-2; blocked-by futon1a only if futon1a is coming back"
-   }
+    "to": "work: repoint the census at futon1b :7073, then add a gated erase path there (claude-16: small); cluster: substrate-2"
+   },
+   "selectable": true
   },
   "M-populate-substrate-2": {
-   "decision": "reopen",
-   "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\"; cluster with other substrate-2 items (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+   "decision": "rehome",
+   "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"",
    "carry": {
     "kind": "target",
-    "to": "liveness half met on futon1b; D4 and D5 open with unchecked prerequisites, so possibly blocked on something other than :7071; cluster: substrate-2"
+    "to": "port the futon1a dependency to futon1b; D4 and D5 open with unchecked prerequisites (check before selecting); cluster: substrate-2"
    }
   },
   "M-stack-geometry": {
@@ -25,15 +26,15 @@
    "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: \"I would believe it when I see it in terms of *my* need, but I think we still couldn't close the mission until we have a validated information geometry of the stack; the map can scaffold that, as we've already seen with the Live Embedding\"",
    "carry": {
     "kind": "target",
-    "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish"
+    "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish; its futon1a ingest target ports to futon1b (futon1a cannot be a dependency)"
    }
   },
   "M-stack-hud-refactor": {
-   "decision": "reopen",
-   "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+   "decision": "rehome",
+   "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"",
    "carry": {
     "kind": "target",
-    "to": "V4 alerts; blocked-by futon1a :7071 only if futon1a is coming back, else needs rehoming (unread closely)"
+    "to": "port the HUD's default from futon1a :7071 to futon1b; V4 alerts owner gap remains"
    }
   },
   "M-the-futon-stack-Q6-r12-design-choices": {
@@ -45,11 +46,11 @@
    }
   },
   "M-legacy-sorry-cleanup": {
-   "decision": "reopen",
-   "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+   "decision": "rehome",
+   "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"",
    "carry": {
     "kind": "target",
-    "to": "waits on landing the 15 oriented entries; eviction waits on a futon1b erase path; neither is :7071"
+    "to": "port the erase gate to a futon1b erase path; waits on landing the 15 oriented entries"
    }
   },
   "E-live-loop-1": {
@@ -179,13 +180,19 @@
     "kind": "target",
     "to": "an explanation of what the prototype taught (IT-6); outreach itself lives in futon7"
    }
+  },
+  "M-superpod-mark2": {
+   "decision": "cluster:superpod-work",
+   "basis": "Joe, 2026-11-02 ~20:52Z: \"I'm surprised that M-superpod-mark2 has any open work given ... we've moved on to mark 8 by now, but if it does have anything open in it, what we could do is 'cluster then refactor at the cluster level'\"",
+   "carry": {
+    "kind": "target",
+    "to": "cluster node 'superpod work' (mark2, mark3, M-mark8, M-paper-reverse-morphogenesis); then refactor open items at the cluster level"
+   }
   }
  },
  "carries-note": "claude-16, 2026-11-02 ~20:16Z: none of the 15 retired rows reads as solved (13 partly, 2 open); a gone mechanism leaves the need, so each retirement names where the need went or that Joe dropped it. Carries are proposed, not ruled; four need Joe's word. A retired row with a carry attests nothing upward (IT-4).",
  "source-2": "Joe, 2026-11-02 ~20:27Z, answering the four needs; the Bergson reading: Cascade Live witnessing its own thesis is question-asking-and-answering; VSATARCS presented a static view of documentation and proposed to keep it up to date (it wasn't); Cascade Live and Giraffe point towards a morphogenetic compression",
  "source-3": "Joe, 2026-11-02 ~20:40Z; also: codex built `M-x futon-find-work` at Joe's request; Giraffe could ultimately help agents find work quickly, and as a stretch help people find paid work; disposition vocabulary: 'prototype we can learn from' vs 'feature under development'",
- "open-for-joe": [
-  "Is futon1a expected back? If not, the reopened futon1a rows read 'needs rehoming' (work), not blocked.",
-  "M-superpod-mark2: cluster under 'superpod work' with mark3 and M-mark8 (one word), rather than merge into mark3?"
- ]
+ "open-for-joe": [],
+ "source-4": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"; Place: Joe likes the use of the Place concept from his theory for how work is organised (cf. 2002 Arxana where places were types; manageable now with the hypergraph); Cascade Live as a map of the entire stack with quick access to each point and quick reconstitution of context, for agents as for Joe"
 }

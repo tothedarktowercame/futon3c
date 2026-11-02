@@ -48,10 +48,11 @@ def main(sig, sheet, out):
         _dec = DECISIONS.get(d["id"], {}).get("decision")
         if _dec == "audit": need, why = "read", "Joe: audit and explain what it accomplished, then close or drop with the explanation"
         if _dec == "reopen": need, why = "who-acts", "Joe: reopened; immediate need rehomed, long-term finish stands"
+        if _dec == "rehome": need, why = "who-acts", "Joe: futon1a is superseded by futon1b and cannot be a dependency; port it (work)"
         if _dec and _dec.startswith("cluster:"): need, why = "place", "Joe: combine upward into a cluster node without supersession"
         if _dec == "close-as-prototype": need, why = "close-with-witness", "Joe: a prototype we can learn from; close with what it taught"
         dec = DECISIONS.get(d["id"], {}).get("decision")
-        selectable = (dec == "work") or (dec is None and d["action"] == "work" and bool(d["stated-finish"]) and sit == "work")
+        selectable = (dec == "work") or bool(DECISIONS.get(d["id"], {}).get("selectable")) or (dec is None and d["action"] == "work" and bool(d["stated-finish"]) and sit == "work")
         items.append({
             "rank": int(d["rank"]), "id": d["id"], "kind": {"M": "mission", "E": "excursion", "T": "ticket"}.get(d["id"][0], "doc"),
             "repo": (re.match(r"(futon[0-9a-z]*)", d["path"] or "") or [None, None])[1],

@@ -45,7 +45,7 @@ def anyof(*checks):
     res = [c() for c in checks]; return any(r[0] for r in res), "; ".join(r[1] for r in res)
 
 PROBES = {
-    "E-clean-up-substrate-2":             ("futon1a census and registry on :7071", lambda: port(7071)),
+    "E-clean-up-substrate-2":             ("futon1a census and registry on :7071 (futon1a superseded by futon1b, Joe 2026-11-02)", lambda: port(7071)),
     "M-populate-substrate-2":             ("futon1a census on :7071",              lambda: port(7071)),
     "M-stack-geometry":                   ("futon1a ingest target on :7071",       lambda: port(7071)),
     "M-stack-hud-refactor":               ("HUD daemon's default futon1a :7071",   lambda: port(7071)),

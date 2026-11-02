@@ -6,7 +6,7 @@
   {
    "id": "IT-1",
    "text": "A mission whose Place is down is blocked only if the Place is coming back; otherwise it needs rehoming, which is work. It is retired only when its need is met elsewhere or dropped with an explanation.",
-   "decided-by": "the Place probe for the fact; Joe 2026-11-02 on the futon1a rows (\"still look open to me\"): a standing acceptance checklist keeps an item open while its Place is down; claude-16 2026-11-02: a blocker means something only if the thing could come back",
+   "decided-by": "the Place probe for the fact; Joe 2026-11-02 on the futon1a rows (\"still look open to me\"): a standing acceptance checklist keeps an item open while its Place is down; claude-16 2026-11-02: a blocker means something only if the thing could come back; Joe 2026-11-02: futon1a is superseded by futon1b and cannot be a dependency, so its rows need rehoming",
    "settled-today": "12 probed: 6 retired with a target, 5 reopened as blocked, 1 clustered"
   },
   {

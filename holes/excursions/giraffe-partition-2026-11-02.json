@@ -1,19 +1,20 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:39:36+00:00",
+ "exported-at": "2026-11-02T20:44:55+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
- "selectable-now": 3,
- "decided": 28,
+ "selectable-now": 4,
+ "decided": 29,
  "by-decision": {
   "audit": 1,
   "close-and-carry": 1,
   "close-as-prototype": 1,
-  "cluster": 1,
+  "cluster": 2,
   "keep-held": 4,
   "merge-into": 2,
-  "reopen": 5,
+  "rehome": 4,
+  "reopen": 1,
   "retire": 8,
   "un-hold": 3,
   "work": 2
@@ -46,13 +47,13 @@
  "by-needs": {
   "read": 13,
   "retire-or-merge": 4,
-  "merge": 2,
+  "place": 3,
   "who-acts": 6,
   "retire-or-rehome": 7,
   "close-with-witness": 5,
   "verify-then-close": 4,
-  "place": 2,
-  "joe-rules": 4
+  "joe-rules": 4,
+  "merge": 1
  },
  "by-deficient-way": {
   "backlog-understood": 16,
@@ -188,13 +189,20 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "L207-209: 200,000 papers; similarity bar; retrieval pilot",
-   "decision-question": "merge?",
-   "needs": "merge",
-   "needs-why": "merge into the named successor",
+   "decision-question": null,
+   "needs": "place",
+   "needs-why": "Joe: combine upward into a cluster node without supersession",
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": {
+    "decision": "cluster:superpod-work",
+    "basis": "Joe, 2026-11-02 ~20:52Z: \"I'm surprised that M-superpod-mark2 has any open work given ... we've moved on to mark 8 by now, but if it does have anything open in it, what we could do is 'cluster then refactor at the cluster level'\"",
+    "carry": {
+     "kind": "target",
+     "to": "cluster node 'superpod work' (mark2, mark3, M-mark8, M-paper-reverse-morphogenesis); then refactor open items at the cluster level"
+    }
+   }
   },
   {
    "rank": 6,
@@ -214,21 +222,22 @@
    "stated-finish": "L174-176: retraction path; empty types; negative-space map",
    "decision-question": null,
    "needs": "who-acts",
-   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
-   "selectable-now": false,
+   "needs-why": "Joe: futon1a is superseded by futon1b and cannot be a dependency; port it (work)",
+   "selectable-now": true,
    "deficient-way": "one-queryable-self-account",
    "place": {
-    "place": "futon1a census and registry on :7071",
+    "place": "futon1a census and registry on :7071 (futon1a superseded by futon1b, Joe 2026-11-02)",
     "alive": false,
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: has a three-item acceptance checklist; \"looks like a pretty standard open excursion to me, could cluster with other substrate-2 items\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+    "decision": "rehome",
+    "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"; three-item acceptance checklist stands",
     "carry": {
      "kind": "target",
-     "to": "needs rehoming (work, per claude-16): repoint the census at futon1b :7073, then add a gated erase path there; cluster: substrate-2; blocked-by futon1a only if futon1a is coming back"
-    }
+     "to": "work: repoint the census at futon1b :7073, then add a gated erase path there (claude-16: small); cluster: substrate-2"
+    },
+    "selectable": true
    }
   },
   {
@@ -359,7 +368,7 @@
    "stated-finish": "L7-9: dispositions; gold corpus; logged facet",
    "decision-question": null,
    "needs": "who-acts",
-   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
+   "needs-why": "Joe: futon1a is superseded by futon1b and cannot be a dependency; port it (work)",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -368,11 +377,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+    "decision": "rehome",
+    "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"",
     "carry": {
      "kind": "target",
-     "to": "waits on landing the 15 oriented entries; eviction waits on a futon1b erase path; neither is :7071"
+     "to": "port the erase gate to a futon1b erase path; waits on landing the 15 oriented entries"
     }
    }
   },
@@ -981,7 +990,7 @@
    "stated-finish": "L296-301: categories; widgets; alarm ribbon; rename",
    "decision-question": null,
    "needs": "who-acts",
-   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
+   "needs-why": "Joe: futon1a is superseded by futon1b and cannot be a dependency; port it (work)",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -990,11 +999,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+    "decision": "rehome",
+    "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"",
     "carry": {
      "kind": "target",
-     "to": "V4 alerts; blocked-by futon1a :7071 only if futon1a is coming back, else needs rehoming (unread closely)"
+     "to": "port the HUD's default from futon1a :7071 to futon1b; V4 alerts owner gap remains"
     }
    }
   },
@@ -1097,7 +1106,7 @@
    "stated-finish": "L142-146: canonical-label map; named query; live explainer counts",
    "decision-question": null,
    "needs": "who-acts",
-   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
+   "needs-why": "Joe: futon1a is superseded by futon1b and cannot be a dependency; port it (work)",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -1106,11 +1115,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\"; cluster with other substrate-2 items (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
+    "decision": "rehome",
+    "basis": "Joe, 2026-11-02 ~20:52Z: \"futon1a is utterly superseded by futon1b, anything that depends on it could in principle be ported over, but futon1a cannot be a dependency, 'needs rehoming' is correct\"",
     "carry": {
      "kind": "target",
-     "to": "liveness half met on futon1b; D4 and D5 open with unchecked prerequisites, so possibly blocked on something other than :7071; cluster: substrate-2"
+     "to": "port the futon1a dependency to futon1b; D4 and D5 open with unchecked prerequisites (check before selecting); cluster: substrate-2"
     }
    }
   },
@@ -1222,7 +1231,7 @@
     "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: \"I would believe it when I see it in terms of *my* need, but I think we still couldn't close the mission until we have a validated information geometry of the stack; the map can scaffold that, as we've already seen with the Live Embedding\"",
     "carry": {
      "kind": "target",
-     "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish"
+     "to": "immediate need: the commons map (scaffold); long-term need: a validated information geometry of the stack (Live Embedding), which is this mission's finish; its futon1a ingest target ports to futon1b (futon1a cannot be a dependency)"
     }
    }
   },
