@@ -77,11 +77,11 @@
    }
   },
   "M-paper-reverse-morphogenesis": {
-   "decision": "merge-into:M-superpod-mark8",
-   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: still open; merges into the superpod work, now at mark 8 (mark 3 is out of date). A pattern-theoretic understanding of work already done is itself a reverse-morphogenesis programme, so it relates to the Cascade Live work",
+   "decision": "merge-into:M-mark8",
+   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: still open; merges into the superpod work, now at mark 8 (mark 3 is out of date). A pattern-theoretic understanding of work already done is itself a reverse-morphogenesis programme, so it relates to the Cascade Live work | claude-16 2026-11-02 ~20:28Z: mark 8 is futon6/holes/M-mark8.md (open, last commit d45fbb6 2026-10-01); it is about allocating a fixed model-call budget observably and states neither 'morphogen' nor 'forward', so the need (a model trained on papers proposing techniques for new problems) vanishes unless the merge adds it",
    "carry": {
     "kind": "target",
-    "to": "the current superpod mark (no mark-8 mission file under futon6 yet; mark2 and mark3 are the files on disk)"
+    "to": "two places: (1) the paper-trained technique-proposing model, to be written into M-mark8 at merge time or it is lost; (2) the pattern-theoretic reading of finished work as reverse morphogenesis, to the cascade side (ways-of-working / the basin join)"
    }
   },
   "E-evidence-flow": {
