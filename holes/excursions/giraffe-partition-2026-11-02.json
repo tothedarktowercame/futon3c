@@ -1,7 +1,7 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:38:14+00:00",
+ "exported-at": "2026-11-02T20:39:36+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 3,
@@ -224,10 +224,10 @@
    },
    "decision": {
     "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: has a three-item acceptance checklist; \"looks like a pretty standard open excursion to me, could cluster with other substrate-2 items\" (retire reversed)",
+    "basis": "Joe, 2026-11-02 ~20:40Z: has a three-item acceptance checklist; \"looks like a pretty standard open excursion to me, could cluster with other substrate-2 items\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
     "carry": {
      "kind": "target",
-     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies; cluster: substrate-2"
+     "to": "needs rehoming (work, per claude-16): repoint the census at futon1b :7073, then add a gated erase path there; cluster: substrate-2; blocked-by futon1a only if futon1a is coming back"
     }
    }
   },
@@ -369,10 +369,10 @@
    },
    "decision": {
     "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed)",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
     "carry": {
      "kind": "target",
-     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies"
+     "to": "waits on landing the 15 oriented entries; eviction waits on a futon1b erase path; neither is :7071"
     }
    }
   },
@@ -991,10 +991,10 @@
    },
    "decision": {
     "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed)",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
     "carry": {
      "kind": "target",
-     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies"
+     "to": "V4 alerts; blocked-by futon1a :7071 only if futon1a is coming back, else needs rehoming (unread closely)"
     }
    }
   },
@@ -1107,10 +1107,10 @@
    },
    "decision": {
     "decision": "reopen",
-    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\"; cluster with other substrate-2 items (retire reversed)",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\"; cluster with other substrate-2 items (retire reversed) | claude-16 2026-11-02 ~20:45Z: :7071 is not listening while :7072/:7073 are; a blocker means something only if futon1a is coming back; otherwise this is 'needs rehoming', which is work",
     "carry": {
      "kind": "target",
-     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies; cluster: substrate-2"
+     "to": "liveness half met on futon1b; D4 and D5 open with unchecked prerequisites, so possibly blocked on something other than :7071; cluster: substrate-2"
     }
    }
   },
