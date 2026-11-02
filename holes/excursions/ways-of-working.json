@@ -1,82 +1,195 @@
 {
-  "schema": "ways-of-working-v1",
-  "as-of": "2026-11-02",
-  "status": "declared; monitor and invariant states are probed at publish time by scripts/ways-of-working-probe.py",
-  "provenance": "Joe 2026-11-02: declared ways of working must show up in Cascade Live with exactly which are off, broken or not working; the backlog-understood failure stays visible until fixed. Narration: holes/excursions/apex-thesis-narration-2026-11-02.md",
-  "states": {
-    "monitor": ["on", "off", "broken", "not-built"],
-    "invariant": ["holding", "failing", "unknown"]
-  },
-  "ways": [
-    {
-      "id": "records-carry-warrant",
-      "name": "Nothing is accepted on say-so",
-      "therefore": "A",
-      "problem": "An assertion severed from its derivation cannot be checked, learned from, or recovered.",
-      "invariant": "Every reviewed change carries a warrant whose shas match the diff; a run without one is the dirty tree, not a veto.",
-      "declared-in": "futon2/holes/labs/wm-contract/NOTE-test-registry.md",
-      "built": ["futon2/holes/labs/wm-contract/test-registry/ (logs, gitignored)", "code/CLAUDE.md coding-handoff protocol"],
-      "probe": "none"
-    },
-    {
-      "id": "one-queryable-self-account",
-      "name": "Everything that exists is on the map, or it is a hole",
-      "therefore": "B",
-      "problem": "Knowing what exists and its state, with provenance, at stack scale.",
-      "invariant": "Every hyperedge section reads OK and the five standards (regenerates, evidence, reconstitution, honest holes, composed) hold.",
-      "declared-in": "futon3c /api/alpha/cascade-real standards",
-      "built": ["futon3c cascade-real endpoint", "this page"],
-      "probe": "cascade-standards"
-    },
-    {
-      "id": "feedback-reaches-every-participant",
-      "name": "A send is not a receipt",
-      "therefore": "C",
-      "problem": "The loop's human and stakeholder edges are where learning silently dies.",
-      "invariant": "Every bell has a return path and every reply to the operator carries intent marks that can be read back.",
-      "declared-in": "futon2/holes/DESIGN-REQUIREMENTS-apex-2026-09-09.md R-C; code/CLAUDE.md reply proforma",
-      "built": ["Agency bell/park/bellback", "reply proforma marks", "futon3c/scripts/xiang_bracket_census.py"],
-      "probe": "none"
-    },
-    {
-      "id": "selection-gives-a-reason",
-      "name": "A selection gives a reason over ways of selecting, and a click can be refused",
-      "therefore": "D",
-      "problem": "Deciding what to do next, accountably, under uncertainty, with the goals themselves formable.",
-      "invariant": "No outer-then-inner click runs unless the selection report names the way of selecting that won and what it would have proposed otherwise.",
-      "declared-in": "futon2/holes/labs/wm-contract/packets/L5-28-meaningful-selection-gate.md; PLAN-coherent-selection-giraffe-wm-2026-11-02.md",
-      "built": ["War Machine outer selection (L5-18 :why)", "injury ledger and medic"],
-      "probe": "none"
-    },
-    {
-      "id": "inbox-zero",
-      "name": "All files are committed and pushed; no mess is left in the repos",
-      "therefore": "A",
-      "problem": "Uncommitted and unpushed work is invisible to every other participant, cannot be reviewed, and is lost on the next disk failure; a dirty tree also stops the click loop's preflight.",
-      "invariant": "Every repo under ~/code with an upstream has no untracked or modified files and no unpushed commits.",
-      "declared-in": "futon0/holes/missions/M-futonzero-mvp.md; futon0/scripts/inbox-zero-delta.bb header",
-      "built": ["futon0/scripts/futon-sync.clj check-clean (systemd user timer futon-sync-check-clean.timer)", "futon0/scripts/inbox-zero-delta.bb", "futon3/inbox-zero-lib (turn-end promotion in the futon3c JVM)"],
-      "probe": "git-clean"
-    },
-    {
-      "id": "backlog-understood",
-      "name": "Every open item is placed under a way of working, or declared retired",
-      "therefore": "B",
-      "problem": "Thousands of backlogged items that nobody has read are a pile, not a plan; neither the operator nor the War Machine can select from a pile.",
-      "invariant": "The draw pile is empty: every mission, excursion and ticket on the stack has a placement (wing, action, finish) or a retirement, and the placements are on a committed path.",
-      "declared-in": "futon2/holes/labs/wm-contract/PLAN-coherent-selection-giraffe-wm-2026-11-02.md; ~/notes/commons-map (claude-16, advisory, uncommitted)",
-      "built": ["Giraffe passes", "commons-map placements (advisory)", "this page's draw pile"],
-      "probe": "draw-pile"
-    },
-    {
-      "id": "operator-turns-logged",
-      "name": "All operator turns are logged to the evidence landscape",
-      "therefore": "A",
-      "problem": "Without the operator's turns in the record, nothing an agent did can be traced to what was asked.",
-      "invariant": "Every operator turn appears in the evidence landscape (Joe 2026-08-28: the fundamental invariant; everything else builds from it).",
-      "declared-in": "futon2/holes/missions/M-formal-war-machine.md:1495",
-      "built": ["futon1b evidence API", "象 turn feed"],
-      "probe": "none"
-    }
+ "schema": "ways-of-working-v2",
+ "as-of": "2026-11-02",
+ "status": "declared; monitor and invariant states are probed at publish time by scripts/ways-of-working-probe.py",
+ "provenance": "Joe 2026-11-02: declared ways of working must show up in Cascade Live with exactly which are off, broken or not working; the backlog-understood failure stays visible until fixed. Narration: holes/excursions/apex-thesis-narration-2026-11-02.md",
+ "states": {
+  "monitor": [
+   "on",
+   "off",
+   "broken",
+   "not-built"
+  ],
+  "invariant": [
+   "holding",
+   "failing",
+   "unknown"
   ]
+ },
+ "ways": [
+  {
+   "id": "eat-your-own-tail",
+   "name": "Make the running work its own observation surface",
+   "therefore": null,
+   "position": "below-thesis-above-therefores",
+   "problem": "The usual workflow puts the agent outside the process: wait for completion, inspect a summary, repair the visible result, declare success; learning starts after the state has gone cold.",
+   "invariant": "Every live system exposes a named observation surface, the responsible agent reads it while the system runs, at least one observation changes the next intervention, and the attachment is kept as machinery with a ratchet.",
+   "declared-in": "futon3/library/agent/eat-your-own-tail.flexiarg (Joe 2026-10-02; placed early in the cascade, Joe 2026-11-02 via claude-16)",
+   "built": [
+    "inbox-zero Reazon warning path",
+    "象 turn feed",
+    "this page's probes (publish-time only, not yet while running)"
+   ],
+   "probe": "none",
+   "pattern": "agent/eat-your-own-tail",
+   "patterns": [],
+   "note": "on none of the seven ways; retrieval gap per claude-16: 0 picks, 0 turn references, no mined edges"
+  },
+  {
+   "id": "records-carry-warrant",
+   "name": "Nothing is accepted on say-so",
+   "therefore": "A",
+   "problem": "An assertion severed from its derivation cannot be checked, learned from, or recovered.",
+   "invariant": "Every reviewed change carries a warrant whose shas match the diff; a run without one is the dirty tree, not a veto.",
+   "declared-in": "futon2/holes/labs/wm-contract/NOTE-test-registry.md",
+   "built": [
+    "futon2/holes/labs/wm-contract/test-registry/ (logs, gitignored)",
+    "code/CLAUDE.md coding-handoff protocol"
+   ],
+   "probe": "none",
+   "pattern": "ways-of-working/records-carry-warrant",
+   "patterns": [
+    "test-registry/judge-adequacy",
+    "memory/verify-in-the-serving-process",
+    "process/fake-done-via-binary-closure",
+    "apparatus/repairs-name-defects-not-neighborhoods",
+    "cascade-construction/run-it-on-a-real-case",
+    "coordination/bind-promotion-to-post-repair-replay",
+    "problems/process-conduct-is-unassured",
+    "peripherals/hot-reload-as-default-fix-path",
+    "agent/evidence-over-assertion",
+    "problems/spec-and-implementation-must-converge-to-runtime-certificates",
+    "translation/test-by-reproducing-behaviour",
+    "system-coherence/argue-empirically-not-persuasively"
+   ]
+  },
+  {
+   "id": "one-queryable-self-account",
+   "name": "Everything that exists is on the map, or it is a hole",
+   "therefore": "B",
+   "problem": "Knowing what exists and its state, with provenance, at stack scale.",
+   "invariant": "Every hyperedge section reads OK and the five standards (regenerates, evidence, reconstitution, honest holes, composed) hold.",
+   "declared-in": "futon3c /api/alpha/cascade-real standards",
+   "built": [
+    "futon3c cascade-real endpoint",
+    "this page"
+   ],
+   "probe": "cascade-standards",
+   "pattern": "ways-of-working/one-queryable-self-account",
+   "patterns": [
+    "war-room/wr-16-operationalised-exploit-loops-are-first-class-observation-channels",
+    "war-room/wr-26-a-capability-switched-off-carries-its-re-arm-condition-in-writing-at-the-switch",
+    "futon-theory/progress-signal",
+    "aif/interoceptive-tripwires",
+    "apparatus/the-system-stops-on-schedule"
+   ]
+  },
+  {
+   "id": "feedback-reaches-every-participant",
+   "name": "A send is not a receipt",
+   "therefore": "C",
+   "problem": "The loop's human and stakeholder edges are where learning silently dies.",
+   "invariant": "Every bell has a return path and every reply to the operator carries intent marks that can be read back.",
+   "declared-in": "futon2/holes/DESIGN-REQUIREMENTS-apex-2026-09-09.md R-C; code/CLAUDE.md reply proforma",
+   "built": [
+    "Agency bell/park/bellback",
+    "reply proforma marks",
+    "futon3c/scripts/xiang_bracket_census.py"
+   ],
+   "probe": "none",
+   "pattern": "ways-of-working/feedback-reaches-every-participant",
+   "patterns": [
+    "orchestration/recorded-handoff",
+    "vsatlas/proof-through-pilots",
+    "coordination/intent-to-mission-binding"
+   ],
+   "scope-note": "the planned probe over Agency bell/park/bellback records covers agents only; a holding reading must not be taken as feedback reaching people (claude-16, 2026-11-02); people and outside value get a separate way of working (real-users), shape here, values in futon7"
+  },
+  {
+   "id": "selection-gives-a-reason",
+   "name": "A selection gives a reason over ways of selecting, and a click can be refused",
+   "therefore": "D",
+   "problem": "Deciding what to do next, accountably, under uncertainty, with the goals themselves formable.",
+   "invariant": "No outer-then-inner click runs unless the selection report names the way of selecting that won and what it would have proposed otherwise.",
+   "declared-in": "futon2/holes/labs/wm-contract/packets/L5-28-meaningful-selection-gate.md; PLAN-coherent-selection-giraffe-wm-2026-11-02.md",
+   "built": [
+    "War Machine outer selection (L5-18 :why)",
+    "injury ledger and medic"
+   ],
+   "probe": "none",
+   "pattern": "ways-of-working/selection-gives-a-reason",
+   "patterns": [
+    "problems/g-over-cascade-is-undefined",
+    "library-coherence/from-argument-to-pilot",
+    "problems/facade-instead-of-validated-efe-model",
+    "aif/hierarchical-and-temporal-depth",
+    "workshop/accountable-next-action-choice",
+    "cascade-construction/order-by-what-each-step-needs",
+    "forward-model/the-forward-model-is-a-pattern-cascade",
+    "war-machine/advanceability",
+    "war-machine/ideal-actual-gap",
+    "musn/plan-before-tool"
+   ]
+  },
+  {
+   "id": "inbox-zero",
+   "name": "All files are committed and pushed; no mess is left in the repos",
+   "therefore": "A",
+   "problem": "Uncommitted and unpushed work is invisible to every other participant, cannot be reviewed, and is lost on the next disk failure; a dirty tree also stops the click loop's preflight.",
+   "invariant": "Every repo under ~/code with an upstream has no untracked or modified files and no unpushed commits.",
+   "declared-in": "futon0/holes/missions/M-futonzero-mvp.md; futon0/scripts/inbox-zero-delta.bb header",
+   "built": [
+    "futon0/scripts/futon-sync.clj check-clean (systemd user timer futon-sync-check-clean.timer)",
+    "futon0/scripts/inbox-zero-delta.bb",
+    "futon3/inbox-zero-lib (turn-end promotion in the futon3c JVM)"
+   ],
+   "probe": "git-clean",
+   "pattern": "ways-of-working/inbox-zero",
+   "patterns": []
+  },
+  {
+   "id": "backlog-understood",
+   "name": "Every open item is placed under a way of working, or declared retired",
+   "therefore": "B",
+   "problem": "Thousands of backlogged items that nobody has read are a pile, not a plan; neither the operator nor the War Machine can select from a pile.",
+   "invariant": "The draw pile is empty: every mission, excursion and ticket on the stack has a placement (wing, action, finish) or a retirement, and the placements are on a committed path.",
+   "declared-in": "futon2/holes/labs/wm-contract/PLAN-coherent-selection-giraffe-wm-2026-11-02.md; ~/notes/commons-map (claude-16, advisory, uncommitted)",
+   "built": [
+    "Giraffe passes",
+    "commons-map placements (advisory)",
+    "this page's draw pile"
+   ],
+   "probe": "draw-pile",
+   "pattern": "ways-of-working/backlog-understood",
+   "patterns": [
+    "futon-theory/mission-lifecycle",
+    "futon-theory/mission-dependency",
+    "problems/fundamentals-drowned-by-backlog",
+    "stack-coherence/ready-blocked-triage",
+    "stack-coherence/stack-blocker-detection",
+    "process-coherence/status-refresh-before-work",
+    "process-coherence/is-this-even-a-problem",
+    "futon-theory/derive-exits-on-a-minted-sorry"
+   ]
+  },
+  {
+   "id": "operator-turns-logged",
+   "name": "All operator turns are logged to the evidence landscape",
+   "therefore": "A",
+   "problem": "Without the operator's turns in the record, nothing an agent did can be traced to what was asked.",
+   "invariant": "Every operator turn appears in the evidence landscape (Joe 2026-08-28: the fundamental invariant; everything else builds from it).",
+   "declared-in": "futon2/holes/missions/M-formal-war-machine.md:1495",
+   "built": [
+    "futon1b evidence API",
+    "象 turn feed"
+   ],
+   "probe": "none",
+   "pattern": "ways-of-working/operator-turns-logged",
+   "patterns": [
+    "problems/operator-turns-become-inference-observations",
+    "features/operator-turns-enter-the-observation-vector"
+   ]
+  }
+ ],
+ "pattern-texts": "library ids; texts live in futon3/library/ways-of-working/ (claude-16, draft patterns corrected by running them); the `patterns` arrays are claude-16's advisory reading of 馬-attested patterns (~/notes/pattern-global/ways-cascade-draft.md), a reading of what surfaced, not a measurement"
 }

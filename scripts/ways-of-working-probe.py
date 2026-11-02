@@ -110,6 +110,8 @@ def main():
             w["live"] = {"monitor": "not-built", "invariant": "unknown", "observed-at": iso(NOW),
                          "violations": [], "violation-count": 0,
                          "evidence": ["no probe declared: the way of working is prose until one is built"]}
+        if w.get("scope-note"):
+            w["live"]["evidence"].append("scope: " + w["scope-note"])
         ways.append(w)
     counts = {}
     for w in ways:

@@ -595,11 +595,11 @@
           return "<li><code>"+esc(v.repo)+"</code> untracked "+v.untracked+" · modified "+v.modified+" · unpushed "+v.ahead+"</li>";}).join("")+"</ul></details>";
       }
       return "<tr><td><b>"+esc(w.name)+"</b><div class='wow-ev'>"+esc(w.problem)+"</div></td>"+
-        "<td>"+esc(w.therefore)+"</td>"+
+        "<td>"+(w.therefore?esc(w.therefore):"<span class='muted'>above the therefores</span>")+"</td>"+
         "<td class='wow-"+esc(l.monitor)+"'>"+esc(l.monitor)+"</td>"+
         "<td class='wow-"+esc(l.invariant)+"'>"+esc(l.invariant)+(viol?" · "+viol:"")+(l.denominator?"<div class='wow-ev'>"+esc(l.denominator)+"</div>":"")+"</td>"+
         "<td class='wow-ev'>"+esc(l["last-observation"]||"never")+"</td>"+
-        "<td><ul class='wow-ev' style='margin:0;padding-left:16px'>"+ev+"</ul>"+vrows+"<div class='wow-ev'>declared in "+esc(w["declared-in"])+"</div></td></tr>";
+        "<td><ul class='wow-ev' style='margin:0;padding-left:16px'>"+ev+"</ul>"+vrows+"<div class='wow-ev'>declared in "+esc(w["declared-in"])+(w.pattern?" · pattern <code>"+esc(w.pattern)+"</code>":"")+((w.patterns&&w.patterns.length)?" · "+w.patterns.length+" attested patterns beneath (a reading)":"")+"</div></td></tr>";
     }).join("");
     el("wow-body").innerHTML="<div class='scrollx'><table class='wow-table'><thead><tr><th>way of working · the problem it solves</th><th>therefore</th><th>monitor</th><th>invariant</th><th>last observation</th><th>evidence</th></tr></thead><tbody>"+rows+"</tbody></table></div>";
   }
