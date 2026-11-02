@@ -1,7 +1,7 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T21:10:32+00:00",
+ "exported-at": "2026-11-02T21:14:36+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 4,
@@ -25,10 +25,10 @@
   "probed": 13
  },
  "ant-reads": {
-  "rows": 14,
-  "items": 14,
+  "rows": 15,
+  "items": 15,
   "citations": {
-   "ok": 71,
+   "ok": 79,
    "unsure": 3,
    "failed": 5
   },
@@ -36,7 +36,8 @@
    "A2": 8,
    "A3": 1,
    "A4": 1,
-   "A5": 4
+   "A5": 4,
+   "A6": 1
   }
  },
  "by-situation": {
@@ -222,7 +223,77 @@
      "to": "cluster node 'superpod work' (mark2, mark3, M-mark8, M-paper-reverse-morphogenesis); first step of the cluster-level refactor: check mark2's four unchecked acceptance items (M-superpod-mark2.md:205-210, 2026-09-30) against marks 7 and 8: (1) pipeline completes on an all-arXiv-math corpus of 200,000+ papers; (2) stage 9b cosine-similarity sd > 0.10 and validation accuracy < 90%; (3) a learn-to-swim or LeanDojo pilot shows structural/hybrid retrieval finding technique-relevant papers BGE-only missed; (4) corpus_ws_bridge.py serves a FAISS index whose measured precision exceeds the Mark 1 BGE-only baseline. Mark3's checklist covers neither scale nor retrieval precision, so items 1 and 4 need an owner in the cluster (claude-16)"
     }
    },
-   "ants": []
+   "ants": [
+    {
+     "kind": "A6",
+     "seat": "kimi-1",
+     "job": "invoke-1793653588412-10505-ef889f0a",
+     "at": "2026-11-02T21:13:27+00:00",
+     "ok": 8,
+     "unsure": 0,
+     "failed": [],
+     "gist": null,
+     "row": {
+      "stem": "M-superpod-mark2",
+      "kind": "acceptance-check",
+      "boxes": [
+       {
+        "box": {
+         "value": "The improved pipeline completes on an all-arXiv-math corpus of at least 200,000 papers.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark2.md:207",
+         "quote": "- [ ] The improved pipeline completes on an all-arXiv-math corpus of at least 200,000 papers."
+        },
+        "verdict": "open",
+        "by": {
+         "value": "M-superpod-mark3 records only 40,000+ processed papers (below the 200K bar), and mark7 runs are on 4,616-5,000 paper math.CT slices; no record of a >=200K run found in marks 7/8.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark3.md:58",
+         "quote": "Mark 2 produces 40,000+ processed papers with typed hypergraphs,"
+        }
+       },
+       {
+        "box": {
+         "value": "Stage 9b reports pairwise cosine-similarity standard deviation above 0.10 and validation accuracy below 90%.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark2.md:208",
+         "quote": "- [ ] Stage 9b reports pairwise cosine-similarity standard deviation above 0.10 and validation accuracy below 90%."
+        },
+        "verdict": "open",
+        "by": {
+         "value": "M-superpod-mark3 restates this verbatim as anti-regression item V-2 (a requirement to hold, not a result); no mark7/mark8 file mentions stage 9b or an R-GCN cosine-std measurement.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark3.md:422",
+         "quote": "- [V-2] Stage 9b embeddings don't collapse: pairwise cosine"
+        }
+       },
+       {
+        "box": {
+         "value": "A learn-to-swim or LeanDojo pilot record shows structural or hybrid retrieval finds technique-relevant papers missed by BGE-only retrieval.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark2.md:209",
+         "quote": "- [ ] A learn-to-swim or LeanDojo pilot record shows structural or hybrid retrieval finds technique-relevant papers missed by BGE-only retrieval."
+        },
+        "verdict": "open",
+        "by": {
+         "value": "M-superpod-mark3 restates this as V-3 ('hybrid retrieval ... surfaces technique-relevant papers BGE-only misses') with no result; searched M-mark8.md and mark7-*.md, found no learn-to-swim/LeanDojo pilot record.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark3.md:424",
+         "quote": "- [V-3] Hybrid retrieval (BGE + GNN) surfaces technique-relevant"
+        }
+       },
+       {
+        "box": {
+         "value": "`corpus_ws_bridge.py` serves a FAISS index whose measured retrieval precision exceeds the BGE-only Mark 1 baseline.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark2.md:210",
+         "quote": "- [ ] `corpus_ws_bridge.py` serves a FAISS index whose measured retrieval precision exceeds the BGE-only Mark 1 baseline."
+        },
+        "verdict": "open",
+        "by": {
+         "value": "M-superpod-mark3 restates this as V-4 with no measurement attached; no mark7/mark8 record reports corpus_ws_bridge retrieval precision vs the Mark 1 baseline.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark3.md:426",
+         "quote": "- [V-4] FAISS index serves `corpus_ws_bridge.py` consumers"
+        }
+       }
+      ],
+      "confidence": "medium"
+     }
+    }
+   ]
   },
   {
    "rank": 6,
