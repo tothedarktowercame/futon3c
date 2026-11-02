@@ -1,7 +1,7 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T21:03:20+00:00",
+ "exported-at": "2026-11-02T21:10:32+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 4,
@@ -25,15 +25,17 @@
   "probed": 13
  },
  "ant-reads": {
-  "rows": 12,
-  "items": 12,
+  "rows": 14,
+  "items": 14,
   "citations": {
-   "ok": 51,
-   "unsure": 2,
-   "failed": 3
+   "ok": 71,
+   "unsure": 3,
+   "failed": 5
   },
   "by-kind": {
    "A2": 8,
+   "A3": 1,
+   "A4": 1,
    "A5": 4
   }
  },
@@ -725,7 +727,87 @@
      "to": "an explanation of what the prototype taught (IT-6); outreach itself lives in futon7"
     }
    },
-   "ants": []
+   "ants": [
+    {
+     "kind": "A4",
+     "seat": "kimi-3",
+     "job": "invoke-1793653589291-10507-56eafaca",
+     "at": "2026-11-02T21:10:18+00:00",
+     "ok": 12,
+     "unsure": 0,
+     "failed": [],
+     "gist": null,
+     "row": {
+      "stem": "M-expressions-of-interest",
+      "kind": "lesson",
+      "what": {
+       "value": "A Futonic MAP/DERIVE/ARGUE/VERIFY/INSTANTIATE mission plus an 'eoi-engine' spec for producing expressions of interest (job apps, pitches, cold emails treated as one genus) via prior/likelihood split and capacity-for-interest framing, with Arxana-Essays tension-surfacing as the revision loop.",
+       "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:4",
+       "quote": "Anthropic EoI revised-draft landed 2026-05-13 as proof-of-concept that the full eoi-engine + Arxana-Essays loop works;"
+      },
+      "last-use": {
+       "value": "2026-07-19: last dated work checkpoint (explicit EoI network projection over the corpus); after that the record shows only a 2026-09-30 acceptance checklist added with 0/6 boxes ticked, DOCUMENT still pending, and step (a) Anthropic send-decision never discharged. No explicit 'stopped' statement in the file.",
+       "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1183",
+       "quote": "### Checkpoint — explicit EoI network projection (2026-07-19)"
+      },
+      "friction": [
+       {
+        "value": "The apparatus outgrew its evidence base: ~970-line doc with protocol complete before the prior/phase-space sorries it depends on were closed.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:969",
+        "quote": "> This is a *lot* of apparatus, and I think the doc itself probably"
+       },
+       {
+        "value": "Pattern-mining ahead of encounters: Glasgow + an inward mission = N=2, and the Anthropic case was draft-only/do-not-send.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:996",
+        "quote": "> is whether the apparatus is doing more pattern-mining than the"
+       },
+       {
+        "value": "Rate-limiting step conceded to be encounters, not articulation; the building was ':foraging' rather than ':depositing'.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1037",
+        "quote": "- **Rate-limiting is encounters, not articulation** (conceded)."
+       },
+       {
+        "value": "Completion criterion 'pass really?-test' was partly satisfied but only one EoI had ever been sent.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1010",
+        "quote": "> re-reading\" — is partly satisfied but only one has been *sent*."
+       },
+       {
+        "value": "The Hyperreal 20-page brief was conceded to be a deferred legibility-purchase letting the operator postpone choosing.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1014",
+        "quote": "> deferred legibility-purchase that lets you postpone choosing?"
+       }
+      ],
+      "lessons": [
+       {
+        "value": "The critique triggered an explicit INSTANTIATE reordering: encounter-first, tool-build-later — pause the apparatus, generate real encounters, then re-evaluate.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1069",
+        "quote": "#### INSTANTIATE reordering (encounter-first, tool-build-later)"
+       },
+       {
+        "value": "The full Arxana-Essays tension-surfacing loop was validated under operation: tensions emerged from draft prose via library patterns, Joe edited in-place, and the annotation lifecycle (live → pending-retraction → retracted) played out as Lakatosian monster-barring.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1164",
+        "quote": "**What this validates.** The full Arxana-Essays-driven tension-"
+       },
+       {
+        "value": "Schema lesson recorded: eoi_instances.arrow_components should require passage-level citation, which would have caught a missed Right-Intention arrow in the Glasgow composite.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:590",
+        "quote": "Mindfulness ∘ Right Livelihood**. Generalisable lesson: the"
+       },
+       {
+        "value": "The corpus property was reframed as completeness-not-closure; the network projection reports Path gaps (Right Action, Right Concentration) and records untyped schema debt rather than fabricating edges.",
+        "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1194",
+        "quote": "- Completeness is reported without claiming closure. The current Path gaps"
+       }
+      ],
+      "lives-on": {
+       "value": "The EoI-network projection tooling and corpus: interest-scanning/eoi-network-project-v1.bb writing eoi-network-v1.edn over ~/code/atthangika-buckets.json (17 EoIs, 11 institutions, 159 edges); mission itself still OPEN with DOCUMENT pending.",
+       "cite": "/home/joe/code/futon5a/holes/missions/M-expressions-of-interest.md:1188",
+       "quote": "- `interest-scanning/eoi-network-project-v1.bb` validates institution and"
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 17,
@@ -818,7 +900,87 @@
      "to": "an audit note explaining what the mission accomplished, then close or drop with the explanation on the page"
     }
    },
-   "ants": []
+   "ants": [
+    {
+     "kind": "A3",
+     "seat": "kimi-2",
+     "job": "invoke-1793653588831-10506-b31cceee",
+     "at": "2026-11-02T21:10:17+00:00",
+     "ok": 8,
+     "unsure": 1,
+     "failed": [
+      "quote-not-on-line",
+      "quote-not-on-line"
+     ],
+     "gist": null,
+     "row": {
+      "stem": "M-structure-seed-promotion",
+      "kind": "audit-explain",
+      "accomplished": [
+       {
+        "value": "Sections 3.1–3.3 landed: discourse-verb prefilter, predicted_kind heuristic, gated regex emission, and detect_learned second-pass detector in nlab-wiring.py",
+        "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:4",
+        "quote": "**Status:** OPEN — INSTANTIATE (sections 3.1–3.3 + anti-clobber filter landed 2026-05-20; loss-of-loss stopping rule open)"
+       },
+       {
+        "value": "Loop validated on real data: 30+30-paper run gave aggregate sentence-coverage delta +0.0008 with 5/30 papers positive",
+        "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:252",
+        "quote": "- Aggregate sentence-coverage delta: **+0.0008** (small but"
+       },
+       {
+        "value": "Anti-clobber filter landed and is CLI default; 40% of learned records caught as clobbered in validation",
+        "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:233",
+        "quote": "### Anti-clobber filter (landed)"
+       },
+       {
+        "value": "Outer-term inhabitation metric defined and implemented in the QC viewer as the loop's progress frontier",
+        "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:299",
+        "quote": "`classify_kernel_terms()` in"
+       }
+      ],
+      "open": [
+       {
+        "box": {
+         "value": "Promotion-cycle records include structure_loss and before/after outer-term counts for every evaluated paper.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:339",
+         "quote": "- [ ] Promotion-cycle records include `structure_loss` and before/after outer-term counts for every evaluated paper."
+        },
+        "progress": {
+         "value": "Section 6 'Still open' confirms the loss-of-loss tracking is unimplemented; only the metric definitions (structure_loss, outer counts) exist",
+         "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:266",
+         "quote": "- **Loss-of-loss stopping rule** (section 3.4) is unimplemented."
+        }
+       },
+       {
+        "box": {
+         "value": "A measured cycle reports the inhabitation rate and applies the documented loss-of-loss stopping threshold ε.",
+         "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:340",
+         "quote": "- [ ] A measured cycle reports the inhabitation rate and applies the documented loss-of-loss stopping threshold ε."
+        },
+        "progress": {
+         "unsure": "no record of any measured inhabitation-rate cycle or ε threshold in the file; threshold itself only sketched at L319-320"
+        }
+       }
+      ],
+      "consumers": {
+       "value": "QC viewer surfaces outer counts per paper (build-batch-008-qc-viewer.py); audit CLI flags --learned-patterns-json/--learned-patterns-out wire detect_learned into every audit run; noted as 'Not blocking for Rob's first batch'",
+       "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:301",
+       "quote": "and the per-paper legend. The QC viewer surfaces them in both the index card"
+      },
+      "explanation": {
+       "value": "The mission delivered a working structure-seed-to-detector loop: signatures prefiltered by discourse verbs, classified by predicted_kind, emitted as gated regexes, consumed by detect_learned with anti-clobber; validated at +0.0008 coverage on 30+30 papers. Closing now would leave the stopping-rule half undone: no structure_loss recorded per cycle, no measured inhabitation-rate run, no ε threshold applied — the meta-loop diagnostic exists only as definition, not measurement.",
+       "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:266",
+       "quote": "- **Loss-of-loss stopping rule** (section 3.4) is unimplemented."
+      },
+      "recommend": {
+       "value": "continue",
+       "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:319",
+       "quote": "The loss-of-loss stopping rule (still open) becomes: stop when"
+      },
+      "confidence": "high"
+     }
+    }
+   ]
   },
   {
    "rank": 20,

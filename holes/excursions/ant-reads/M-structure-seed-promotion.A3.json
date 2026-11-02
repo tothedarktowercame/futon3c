@@ -1,0 +1,92 @@
+{
+ "stem": "M-structure-seed-promotion",
+ "kind": "A3",
+ "seat": "kimi-2",
+ "job": "invoke-1793653588831-10506-b31cceee",
+ "at": "2026-11-02T21:10:17+00:00",
+ "row": {
+  "stem": "M-structure-seed-promotion",
+  "kind": "audit-explain",
+  "accomplished": [
+   {
+    "value": "Sections 3.1–3.3 landed: discourse-verb prefilter, predicted_kind heuristic, gated regex emission, and detect_learned second-pass detector in nlab-wiring.py",
+    "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:4",
+    "quote": "**Status:** OPEN — INSTANTIATE (sections 3.1–3.3 + anti-clobber filter landed 2026-05-20; loss-of-loss stopping rule open)"
+   },
+   {
+    "value": "Loop validated on real data: 30+30-paper run gave aggregate sentence-coverage delta +0.0008 with 5/30 papers positive",
+    "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:252",
+    "quote": "- Aggregate sentence-coverage delta: **+0.0008** (small but"
+   },
+   {
+    "value": "Anti-clobber filter landed and is CLI default; 40% of learned records caught as clobbered in validation",
+    "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:233",
+    "quote": "### Anti-clobber filter (landed)"
+   },
+   {
+    "value": "Outer-term inhabitation metric defined and implemented in the QC viewer as the loop's progress frontier",
+    "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:299",
+    "quote": "`classify_kernel_terms()` in"
+   }
+  ],
+  "open": [
+   {
+    "box": {
+     "value": "Promotion-cycle records include structure_loss and before/after outer-term counts for every evaluated paper.",
+     "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:339",
+     "quote": "- [ ] Promotion-cycle records include `structure_loss` and before/after outer-term counts for every evaluated paper."
+    },
+    "progress": {
+     "value": "Section 6 'Still open' confirms the loss-of-loss tracking is unimplemented; only the metric definitions (structure_loss, outer counts) exist",
+     "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:266",
+     "quote": "- **Loss-of-loss stopping rule** (section 3.4) is unimplemented."
+    }
+   },
+   {
+    "box": {
+     "value": "A measured cycle reports the inhabitation rate and applies the documented loss-of-loss stopping threshold ε.",
+     "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:340",
+     "quote": "- [ ] A measured cycle reports the inhabitation rate and applies the documented loss-of-loss stopping threshold ε."
+    },
+    "progress": {
+     "unsure": "no record of any measured inhabitation-rate cycle or ε threshold in the file; threshold itself only sketched at L319-320"
+    }
+   }
+  ],
+  "consumers": {
+   "value": "QC viewer surfaces outer counts per paper (build-batch-008-qc-viewer.py); audit CLI flags --learned-patterns-json/--learned-patterns-out wire detect_learned into every audit run; noted as 'Not blocking for Rob's first batch'",
+   "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:301",
+   "quote": "and the per-paper legend. The QC viewer surfaces them in both the index card"
+  },
+  "explanation": {
+   "value": "The mission delivered a working structure-seed-to-detector loop: signatures prefiltered by discourse verbs, classified by predicted_kind, emitted as gated regexes, consumed by detect_learned with anti-clobber; validated at +0.0008 coverage on 30+30 papers. Closing now would leave the stopping-rule half undone: no structure_loss recorded per cycle, no measured inhabitation-rate run, no ε threshold applied — the meta-loop diagnostic exists only as definition, not measurement.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:266",
+   "quote": "- **Loss-of-loss stopping rule** (section 3.4) is unimplemented."
+  },
+  "recommend": {
+   "value": "continue",
+   "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:319",
+   "quote": "The loss-of-loss stopping rule (still open) becomes: stop when"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "unsure",
+  "quote-not-on-line",
+  "ok",
+  "ok"
+ ],
+ "ok": 8,
+ "unsure": 1,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

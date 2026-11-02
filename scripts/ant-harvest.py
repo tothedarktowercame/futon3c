@@ -54,6 +54,9 @@ def check_cite(c):
     if not q: return "ok" if a == b else "ok-range"
     for i in range(a, b + 1):
         if q in lines[i - 1]: return "ok" if a == b else "ok-range"
+    # one line off either way: the quote is real, the number slipped (seen on 5 of 7 failures, 2026-11-02)
+    for i in (a - 1, b + 1):
+        if 1 <= i <= len(lines) and q in lines[i - 1]: return "ok-near"
     return "quote-not-on-line"
 def walk(obj, out):
     if isinstance(obj, dict):
