@@ -1,0 +1,53 @@
+{
+ "stem": "T-repair-occ-*",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793655389703-10576-4b4724f4",
+ "at": "2026-11-02T21:40:12+00:00",
+ "row": {
+  "stem": "T-repair-occ-*",
+  "kind": "place-class",
+  "what": {
+   "value": "Machine-written repair-obligation tickets, one per observed War Machine self-heal failure, each scoping a reproduce-and-correct (or verify-and-restore) task for one observed occurrence.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:15",
+   "quote": "Reproduce the reported behaviour at the named stage and correct its cause. Use the linked evidence to establish the scope; record any mis"
+  },
+  "varies": {
+   "value": "All eight OPEN; they vary by stage (:selection x3, :code-state x2, :author-dispatch, :close, :selection-world), failure kind (abstained/no-addressable-action, click-budget-exhausted, unbindable dispatch, invalid close outcome), and target (not retained, A-self-heal, M-daily-scan). One class; no split needed.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f852a41bb5c5ca8acf5d9ad9d124bea90b0665c748df34220fb5de9051021298.md:9",
+   "quote": "Target: M-daily-scan; stage: :close."
+  },
+  "way": {
+   "value": "selection-gives-a-reason, stays-alive-and-paid",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-abd57b292fe21797a03b4bc5ba38601d89f27eac075dee9a0140919f4830d7f5.md:9",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-abd57b292fe21797a03b4bc5ba38601d89f27eac075dee9a0140919f4830d7f5.md:9",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "action": {
+   "value": "cluster:wm-repair-occ",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-807e29d7f940596bce913196c65828e8fa0de757ec69828a8e50db9565a3f958.md:13",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable. If it has cleared, retain a dated recheck showing the current"
+  },
+  "finish": {
+   "value": "Per ticket: a dated precondition recheck or a passing regression check, accepted through ordinary ticket review, with the ticket marked DONE.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-807e29d7f940596bce913196c65828e8fa0de757ec69828a8e50db9565a3f958.md:17",
+   "quote": "Retain the dated precondition check, its source and result, and evidence of any restoration. Review the task evidence through ordinary"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": []
+}

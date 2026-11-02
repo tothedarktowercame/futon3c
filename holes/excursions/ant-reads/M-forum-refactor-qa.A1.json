@@ -1,51 +1,51 @@
 {
  "stem": "M-forum-refactor-qa",
  "kind": "A1",
- "seat": "kimi-1",
- "job": "invoke-1793654348470-10535-42841422",
- "at": "2026-11-02T21:21:02+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654886368-10557-fb04d324",
+ "at": "2026-11-02T21:30:43+00:00",
  "row": {
   "stem": "M-forum-refactor-qa",
   "kind": "place",
   "what": {
-   "value": "Read-only QA verification of M-forum-refactor's nine exit conditions against futon3c @ 079e8d3, with a full test run and a registry-wide shape consistency check.",
+   "value": "Read-only QA verification of M-forum-refactor's nine exit conditions against the futon3c test suite and source, with a shape-registry consistency check.",
    "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:7",
    "quote": "This is a read-only verification against `holes/missions/M-forum-refactor.md` exit conditions."
   },
   "status": {
    "value": "closed",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:98",
-   "quote": "Status: Met"
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:16",
+   "quote": "Ran 157 tests containing 397 assertions."
   },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:15",
-   "quote": "Ran 157 tests containing 397 assertions."
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:20",
+   "quote": "### 1. Evidence shapes validate all entry/query/artifact-ref types"
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:20",
-   "quote": "## Exit Conditions Verification (9)"
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:24",
+   "quote": "Status: Met"
   },
   "action": {
    "value": "close",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:98",
-   "quote": "Status: Met"
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:88",
+   "quote": "- Entire suite passes: see \"Test Run Record\" above."
   },
   "need_goes_to": {
    "value": "solved",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:16",
-   "quote": "0 failures, 0 errors."
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:98",
+   "quote": "1. Shape test coverage gaps for enum-only shapes:"
   },
   "finish": {
-   "value": "All nine exit conditions verified Met with cited evidence; non-blocking test-coverage gaps (PatternLibrary, AgentRegistryShape, EvidenceQuery invalid tests) recorded as findings.",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:106",
-   "quote": "- `EvidenceQuery` has a valid test but no explicit invalid test (`test/futon3c/social/shapes_test.clj:445`)."
+   "value": "All nine exit conditions checked Met with file:line evidence and non-blocking gaps flagged — done in the record.",
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:20",
+   "quote": "## Exit Conditions Verification (9)"
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:5",
-   "quote": "Repo: `futon3c` @ `079e8d3`"
+   "cite": "/home/joe/code/futon3c/holes/qa/M-forum-refactor-qa.md:7",
+   "quote": "This is a read-only verification against `holes/missions/M-forum-refactor.md` exit conditions."
   },
   "confidence": "high"
  },

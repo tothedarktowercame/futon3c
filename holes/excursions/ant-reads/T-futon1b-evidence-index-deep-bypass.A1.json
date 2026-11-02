@@ -1,0 +1,64 @@
+{
+ "stem": "T-futon1b-evidence-index-deep-bypass",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655017030-10563-c3074686",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-futon1b-evidence-index-deep-bypass",
+  "kind": "place",
+  "what": {
+   "value": "Watch ticket: a backdated evidence doc bypassing on-append! is invisible to list reads until a futon1b boot reconcile.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:1",
+   "quote": "T-futon1b-evidence-index-deep-bypass: a backdated evidence doc written around the sidecar hook stays out of list reads until boot"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:3",
+   "quote": "**Status: WATCH (2026-10-14).** Not a live defect. Nothing writes evidence this way today. Act on the trigger below."
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:23",
+   "quote": "- The reconcile on 2026-10-14 17:48 checked all 569,264 store docs after a catch-up and found 0 missing."
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:25",
+   "quote": "- Being hidden from list reads is the only effect. There is no load or heap cost"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:29",
+   "quote": "## Trigger to act"
+  },
+  "finish": {
+   "value": "Watches two trigger log lines; when one fires, fix the bypassing writer and add scheduled reconcile! plus a test.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:38",
+   "quote": "Run `reconcile!` on a schedule (e.g. nightly, off-peak), deferring like the periodic catch-up when fewer than 2 query permits are free."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-futon1b-evidence-index-deep-bypass.md:5",
+   "quote": "Repo: futon1b (`futon1b_text.clj`)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

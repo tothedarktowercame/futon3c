@@ -1,0 +1,65 @@
+{
+ "stem": "T-meta-self-heal-dedicated-transaction",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655017030-10563-c3074686",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-meta-self-heal-dedicated-transaction",
+  "kind": "place",
+  "what": {
+   "value": "Architectural repair: META must own a dedicated durable self-heal repair transaction (append-only injury ledger) instead of routing A-self-heal through the ordinary task pipeline.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:1",
+   "quote": "# META self-heal must be a durable repair transaction, not an ordinary task"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:3",
+   "quote": "**Status:** OPEN — ARCHITECTURAL REPAIR REQUIRED"
+  },
+  "way": {
+   "value": "eat-your-own-tail, records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:35",
+   "quote": "META owns a dedicated repair transaction.  Ordinary task selection is entered"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:65",
+   "quote": "   While any injury is active, META admits only the self-heal transaction;"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:74",
+   "quote": "1. Implement the pure append-only ledger and total transition validator."
+  },
+  "finish": {
+   "value": "Bounded 7-step implementation plus acceptance gates (property test, replay of 2026-10-19 records, isolated-JVM harness, one discharged run) pass before any further live click.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:92",
+   "quote": "No further live click is warranted until these finite gates pass.  The fake"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:96",
+   "quote": "Requested by Joe after the five-click campaign exhausted its authorization"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

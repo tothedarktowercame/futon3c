@@ -1,0 +1,59 @@
+{
+ "stem": "T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793655389703-10576-4b4724f4",
+ "at": "2026-11-02T21:40:12+00:00",
+ "row": {
+  "stem": "T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172",
+  "kind": "place",
+  "what": {
+   "value": "Repair ticket: War Machine selected a run-algorithm action at :author-dispatch that could not be bound to the D task dispatch.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:11",
+   "quote": "Selected action could not be bound to the D task dispatch"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:7",
+   "quote": "Target: A-self-heal; stage: :author-dispatch."
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:7",
+   "quote": "Target: A-self-heal; stage: :author-dispatch."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:15",
+   "quote": "Reproduce the reported behaviour at the named stage and correct its cause. Use the linked evidence to establish the scope; record any mis"
+  },
+  "finish": {
+   "value": "Regression check detecting the failure passes after the change and the scoped work is accepted in ticket review; ticket marked DONE.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:19",
+   "quote": "Retain a reproduction or regression check that detects the reported failure and passes after the change, together with the scoped validat"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:7",
+   "quote": "Target: A-self-heal; stage: :author-dispatch."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,16 +1,16 @@
 {
  "stem": "E-wm-criteria-completeness",
  "kind": "A1",
- "seat": "kimi-1",
- "job": "invoke-1793654348470-10535-42841422",
- "at": "2026-11-02T21:21:02+00:00",
+ "seat": "kimi-3",
+ "job": "invoke-1793654886368-10557-fb04d324",
+ "at": "2026-11-02T21:30:43+00:00",
  "row": {
   "stem": "E-wm-criteria-completeness",
   "kind": "place",
   "what": {
-   "value": "A supervised useful-work capability excursion: run bounded Zai-seat click iterations under GRID v2 criteria, recording evidence per run and dispositioning deficits.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:1",
-   "quote": "# E-wm-criteria-completeness — supervised useful-work capability"
+   "value": "Supervised useful-work capability campaign: 50-click budget on Zai seats under a GRID v2 evidence/regression protocol owned by codex-11.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:3",
+   "quote": "**Opened:** 2026-10-27, Joe directly to codex-11."
   },
   "status": {
    "value": "open",
@@ -19,39 +19,39 @@
   },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:29",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:33",
    "quote": "GRID v2 retains five capabilities and twenty criteria A1–E4. Every run is a new evidence column, not an overwritten verdict."
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:22",
-   "quote": "Issue one click on Zai seats through the established background runner. Retain click/run/job identifiers, author replies, phase records, tripwire firings"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:23",
+   "quote": "Read all relevant logs and every tripwire firing; mark each of A1–E4 OBSERVED / VIOLATED / UNKNOWN / NOT-EXERCISED with file:key and actual value."
   },
   "action": {
    "value": "work",
    "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:5",
-   "quote": "**Status:** OPEN — GRID v2 adopted 2026-10-28; prospective missions-only attempt is conditional under run001-v2-disposition.md, not released."
+   "quote": "prospective missions-only attempt is conditional under run001-v2-disposition.md, not released"
   },
   "finish": {
-   "value": "Demonstrate useful task execution and successor consumption without corrective intervention, with explicit task-kind and branch coverage, retaining safe-refusal and self-heal witnesses as separate capabilities.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:39",
-   "quote": "Demonstrate useful task execution and successor consumption without corrective intervention, with explicit task-kind and branch coverage; retain safe refusal"
+   "value": "Useful task execution with successor consumption and no corrective intervention, with task-kind/branch coverage, or an honest stop with unknowns reported.",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:41",
+   "quote": "Demonstrate useful task execution and successor consumption without corrective intervention, with explicit task-kind and branch coverage"
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:13",
-   "quote": "For viable work within a declared supported scope, make a bounded verifiable contribution or establish a specific obstacle and take the appropriate recovery"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-wm-criteria-completeness.md:15",
+   "quote": "For viable work within a declared supported scope, make a bounded verifiable contribution or establish a specific obstacle and take the appropriate recovery action."
   },
-  "confidence": "high"
+  "confidence": "medium"
  },
  "checks": [
   "ok",
   "ok",
-  "ok-near",
+  "quote-not-on-line",
   "ok",
   "ok",
   "ok-near",
-  "quote-not-on-line"
+  "ok-near"
  ],
  "ok": 6,
  "unsure": 0,

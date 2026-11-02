@@ -1,0 +1,59 @@
+{
+ "stem": "T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793655044300-10565-21e21028",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved",
+  "kind": "place",
+  "what": {
+   "value": "Repair ticket: reproduce and fix a cascade-resume failure (answer holes unresolved) where the selected cascade is held in open-cascade phase.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:1",
+   "quote": "# Correct answer holes unresolved"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:19",
+   "quote": "Retain a reproduction or regression check that detects the reported failure and passes after the change, together with the scoped validation output."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:19",
+   "quote": "Retain a reproduction or regression check that detects the reported failure and passes after the change, together with the scoped validation output."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:15",
+   "quote": "Reproduce the reported behaviour at the named stage and correct its cause. Use the linked evidence to establish the scope; record any missing reproduction inputs explicitly."
+  },
+  "finish": {
+   "value": "A regression check detecting the failure passes after the fix and the ticket is accepted in ordinary ticket review, then marked DONE.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:19",
+   "quote": "mark this ticket DONE only when its scoped work is accepted"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:7",
+   "quote": "Target: not retained; stage: :cascade-resume."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

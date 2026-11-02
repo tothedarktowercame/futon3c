@@ -1,0 +1,59 @@
+{
+ "stem": "T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6",
+ "kind": "A1",
+ "seat": "kimi-3",
+ "job": "invoke-1793655389703-10576-4b4724f4",
+ "at": "2026-11-02T21:40:12+00:00",
+ "row": {
+  "stem": "T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6",
+  "kind": "place",
+  "what": {
+   "value": "Repair ticket: War Machine abstained or selected no addressable action at the :selection-world stage.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:7",
+   "quote": "Target: not retained; stage: :selection-world."
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:7",
+   "quote": "Target: not retained; stage: :selection-world."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:15",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable. If it has cleared, retain a dated recheck showing the current"
+  },
+  "finish": {
+   "value": "Dated precondition check retained, restoration evidenced if needed, accepted in ticket review; ticket marked DONE.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:19",
+   "quote": "Retain the dated precondition check, its source and result, and evidence of any restoration. Review the task evidence through ordinary"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-095254060d1cbe5b0e8be618592b7140709be23fe7b9108aebf8b1f7167a66f6.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

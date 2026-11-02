@@ -1,59 +1,70 @@
 {
  "stem": "E-pre-go-live-manifest-2026-09-10",
  "kind": "A1",
- "seat": "kimi-3",
- "job": "invoke-1793654234861-10529-2b06e751",
- "at": "2026-11-02T21:20:08+00:00",
+ "seat": "kimi-2",
+ "job": "invoke-1793654854547-10556-2cbabd28",
+ "at": "2026-11-02T21:30:42+00:00",
  "row": {
   "stem": "E-pre-go-live-manifest-2026-09-10",
   "kind": "place",
   "what": {
-   "value": "Bounded design manifest for an F12 find/separated-risk preparation experiment (frozen inputs, authority/replay/disposition firing, disposition constructor).",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
-   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
-  },
-  "status": {
-   "value": "open",
+   "value": "Bounded design specification (manifest) for an F12 pre-execution readiness authority/replay pair with a precedence intervention",
    "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:3",
    "quote": "Status: **proposed for codex-17 independent review; no primary execution**."
   },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:9",
+   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+  },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:19",
    "quote": "Useful output: one evidence-backed preparation disposition for the find and"
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:3",
-   "quote": "Status: **proposed for codex-17 independent review; no primary execution**."
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:82",
+   "quote": "Receipt fields: attempt/pair/arm/round identity; primary flag; rule ID and source"
   },
   "action": {
-   "value": "held",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:3",
-   "quote": "Status: **proposed for codex-17 independent review; no primary execution**."
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:23",
+   "quote": "propose the smallest separately reviewed task slice. Keep the current manifest"
+  },
+  "need_goes_to": {
+   "value": "E-pre-go-live-independent-pair-2026-09-10",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:20",
+   "quote": "Before implementing an interpreter or transitive freeze, deliver the actual"
   },
   "finish": {
-   "value": "Held awaiting codex-17 independent review; done is one evidence-backed preparation disposition showing owning readiness answer, replay agreement and blockers.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
-   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
+   "value": "Review of the design (done: accepted as diagnostic negative control, kept as flat-effect/guard control); execution was never its finish",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:4",
+   "quote": "This completes the bounded design specification, not its execution apparatus,"
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:20",
-   "quote": "Useful output: one evidence-backed preparation disposition for the find and"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-2026-09-10.md:21",
+   "quote": "Joe; future outer-loop selection remains unimplemented by this packet."
   },
-  "confidence": "high"
+  "confidence": "medium"
  },
  "checks": [
   "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok"
+  "ok-near",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok-near",
+  "quote-not-on-line"
  ],
- "ok": 7,
+ "ok": 4,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
 }

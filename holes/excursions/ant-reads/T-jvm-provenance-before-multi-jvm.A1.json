@@ -1,0 +1,63 @@
+{
+ "stem": "T-jvm-provenance-before-multi-jvm",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655017030-10563-c3074686",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-jvm-provenance-before-multi-jvm",
+  "kind": "place",
+  "what": {
+   "value": "Add a /api/alpha/provenance endpoint so every JVM can state checkout, sha, and live-load history before multiple JVMs are allowed.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:1",
+   "quote": "# T-jvm-provenance-before-multi-jvm — a JVM cannot currently say what code it is"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:8",
+   "quote": "**Status:** open. The resource premise of the one-JVM rule is void; the"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:21",
+   "quote": "**Job 2 — make \"what code is running?\" have an answer.** With exactly one JVM"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:31",
+   "quote": "**No checkout path, no branch, no commit sha, anywhere.** A running futon3c"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:51",
+   "quote": "`GET /api/alpha/provenance` on every JVM, reporting at minimum:"
+  },
+  "finish": {
+   "value": "Provenance endpoint answers on futon3c incl. reloaded-from; proof-eval guard reports declared checkout; CLAUDE.md one-JVM section rewritten (Joe's edit).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:190",
+   "quote": "- `GET /api/alpha/provenance` answers on futon3c, including `reloaded-from`."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-jvm-provenance-before-multi-jvm.md:38",
+   "quote": "`load-file`d into the shared JVM, and every master-only route answered"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

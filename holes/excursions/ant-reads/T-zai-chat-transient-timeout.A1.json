@@ -1,0 +1,64 @@
+{
+ "stem": "T-zai-chat-transient-timeout",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655204592-10574-5522a67b",
+ "at": "2026-11-02T21:36:03+00:00",
+ "row": {
+  "stem": "T-zai-chat-transient-timeout",
+  "kind": "place",
+  "what": {
+   "value": "A transport-level timeout in zai chat! throws past the {:error ...} contract and kills a whole multi-round turn; H1 is a ~5-line catch returning the error shape, assigned to the M-zaif-harness track (Joe + claude-2).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, cheap prerequisite named.** chat! (zai_api.clj:752) still sends with no transport catch; a timeout throws past t"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:3",
+   "quote": "**Status (triaged 2026-09-01): STILL-OPEN, cheap prerequisite named.** chat! (zai_api.clj:752) still sends with no transport catch; a timeout throws past t"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:22",
+   "quote": "same principle one layer down. Persistence failure was made non-fatal; model-call transport failure should be too, when the turn has completed"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:19",
+   "quote": "So: one slow model response (likely: long context late in a proof turn + provider latency) exceeds 300s → the entire multi-round turn dies. No"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:28",
+   "quote": "1. **H1 — symmetry fix**: catch transport exceptions in `chat!` and return the same `{:error ...}` data shape HTTP failures already use. Turn"
+  },
+  "finish": {
+   "value": "A simulated mid-turn chat timeout yields error-as-data (H1), one visible retry (H2), turn completing if H4 lands, transient vs terminal job events, and existing zai_api tests passing.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:53",
+   "quote": "A simulated chat timeout mid-turn (stub client) results in: (H1) error as data, (H2) one retry visible in the round log, and — if H4 lands — the"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-zai-chat-transient-timeout.md:9",
+   "quote": "(harness hardening belongs with Joe + claude-2's upgrade work)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

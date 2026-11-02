@@ -1,0 +1,64 @@
+{
+ "stem": "T-wm01-runtime-error-reference-19092026",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655204592-10574-5522a67b",
+ "at": "2026-11-02T21:36:03+00:00",
+ "row": {
+  "stem": "T-wm01-runtime-error-reference-19092026",
+  "kind": "place",
+  "what": {
+   "value": "WM-01 P-4b partial delivery: width repair is done, but the runtime error bound work stopped at the boundary of specifying which exact value the bound concerns (fixture C row vs live utility-derived path).",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:3",
+   "quote": "Author: codex-1, 2026-09-19. Partial delivery; not node acceptance."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:48",
+   "quote": "The shared conversion removal remains unimplemented because work stopped at this reference boundary. Existing source and data records are unchanged."
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:46",
+   "quote": "Do not reuse the rational log remainder alone or call a fixture maximum a bound."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:46",
+   "quote": "Do not reuse the rational log remainder alone or call a fixture maximum a bound."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:44",
+   "quote": "To continue, define the reference as the exact utility-derived C law (including declared tempering and zeroed outcomes), and derive bounds for that scorer's actual operations; or"
+  },
+  "finish": {
+   "value": "Define the reference as the exact utility-derived C law and derive bounds for the scorer's actual operations (or include the materialized-row discrepancy as a separate term), then implement the shared conversion removal.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:44",
+   "quote": "To continue, define the reference as the exact utility-derived C law (including declared tempering and zeroed outcomes), and derive bounds for that scorer's actual operations; or"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:15",
+   "quote": "7 tests, 105 assertions, zero failures/errors. This is fixture execution, not a live-tick receipt."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

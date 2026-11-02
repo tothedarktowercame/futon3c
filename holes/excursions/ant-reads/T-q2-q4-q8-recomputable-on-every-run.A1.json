@@ -1,0 +1,62 @@
+{
+ "stem": "T-q2-q4-q8-recomputable-on-every-run",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655043286-10564-c086d5a7",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-q2-q4-q8-recomputable-on-every-run",
+  "kind": "place",
+  "what": {
+   "value": "Fix-now ticket: make Lean requirement verdicts Q2, Q4, Q8 decidable on every run (including failed ones) instead of surfacing as not-recomputable; ties should fail Q8 explicitly.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:1",
+   "quote": "# Make Q2, Q4 and Q8 decidable on every run, including failed ones"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:3",
+   "quote": "**Status:** OPEN — FIX NOW (Joe, 2026-10-18)"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:8",
+   "quote": "On the 10-18 readiness clicks the Lean requirement verdicts that carry the"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:22",
+   "quote": "Whether a run's G and selection comply with AIF is unknown for every"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:32",
+   "quote": "## Scoped task"
+  },
+  "finish": {
+   "value": "Re-running wm_report_card over click-5 gives decided Q2/Q4 (pass/fail) and Q8 fail-with-reason-tie; planted strict-minimum record passes Q8; Lean spec change confirmed by Joe.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:57",
+   "quote": "## Acceptance evidence"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:4",
+   "quote": "Parent: M-wm-aif-policy-grain-compliance"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok-near",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

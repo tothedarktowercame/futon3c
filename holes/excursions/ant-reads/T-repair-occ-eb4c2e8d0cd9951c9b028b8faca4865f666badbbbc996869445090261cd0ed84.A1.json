@@ -1,0 +1,64 @@
+{
+ "stem": "T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655391196-10577-bd9191f0",
+ "at": "2026-11-02T21:40:04+00:00",
+ "row": {
+  "stem": "T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84",
+  "kind": "place",
+  "what": {
+   "value": "War Machine self-heal ticket: correct an author-wait artifact binding mismatch in M-war-machine-wiring.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:11",
+   "quote": "Agency claimed an author artifact that repository observation did not validate"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:9",
+   "quote": "Target: M-war-machine-wiring; stage: :author-wait."
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:15",
+   "quote": "Reproduce the reported behaviour at the named stage and correct its cause."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:15",
+   "quote": "Reproduce the reported behaviour at the named stage and correct its cause."
+  },
+  "finish": {
+   "value": "A regression check detecting the mismatch passes after the fix and the ticket passes ordinary review.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:19",
+   "quote": "Retain a reproduction or regression check that detects the reported failure and passes after the change"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:5",
+   "quote": "Parent: M-war-machine-wiring"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

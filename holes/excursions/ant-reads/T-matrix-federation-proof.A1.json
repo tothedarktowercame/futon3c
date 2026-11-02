@@ -1,0 +1,61 @@
+{
+ "stem": "T-matrix-federation-proof",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655017030-10563-c3074686",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-matrix-federation-proof",
+  "kind": "place",
+  "what": {
+   "value": "Complete one bounded cross-server Matrix exchange with Rob (join his proof room, send a test message, get a reply); held for Joe.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:7",
+   "quote": "Join Rob's private Matrix federation proof room, send one short test message,"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:3",
+   "quote": "**Status: DEFERRED / parked 2026-06-10.** Standalone follow-on — **NOT** part of"
+  },
+  "way": {
+   "value": "real-users, feedback-reaches-every-participant",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:8",
+   "quote": "Rob replies — confirming the first bounded cross-server exchange."
+  },
+  "wing": {
+   "value": "C",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:44",
+   "quote": "**First clarify what Matrix buys over the existing `#zabuton` WS link** — Rob's agents (`zclaude-1`,"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:4",
+   "quote": "M-agency-hardening. Revisit when Joe is ready."
+  },
+  "finish": {
+   "value": "Joe joins the proof room (likely via Element on his own account), sends one test message, Rob replies — exchange confirmed.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:38",
+   "quote": "- Simplest: do the handshake from a **normal Matrix client (Element) signed into"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-matrix-federation-proof.md:44",
+   "quote": "Mirror the IRC bridge: a `matrix_bridge.py` analogous to"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

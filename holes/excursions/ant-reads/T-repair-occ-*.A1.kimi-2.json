@@ -1,0 +1,56 @@
+{
+ "stem": "T-repair-occ-*",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655391196-10577-bd9191f0",
+ "at": "2026-11-02T21:40:29+00:00",
+ "repaired": "one slip: '\"varies\", \"value\":' -> '\"varies\": {\"value\":' (missing ': {'); nothing else changed",
+ "row": {
+  "stem": "T-repair-occ-*",
+  "kind": "place-class",
+  "what": {
+   "value": "One machine-written ticket per observed War Machine self-heal repair occurrence: reproduce/verify the observed failure at a named pipeline stage and correct or restore it.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:15",
+   "quote": "Reproduce the reported behaviour at the named stage and correct its cause."
+  },
+  "varies": {
+   "value": "All eight share the template and OPEN status; they differ in failure kind (binding mismatch, resume violation, abstain, agent unavailable, guardrail refusal, transport timeout, falsifier failure), stage (:author-wait, :cascade-resume, :selection, :agent-readiness, :construction, :reviewer-wait), target (M-war-machine-wiring, M-autoclock-in, M-descriptive-essay-of-the-stack, M-self-documenting-stack, or not retained), and scoped-task flavor (correct vs verify-or-restore). One class.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6005871b96760bee9d22e28ff5ce4efccf4ba9c56787a17e30726681ca23436d.md:9",
+   "quote": "Target: M-self-documenting-stack; stage: :construction."
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-0228a166e753669832ab6342b4896ad310b86284f3793e8e876201bc4c658801.md:11",
+   "quote": "Configured author is unavailable"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6005871b96760bee9d22e28ff5ce4efccf4ba9c56787a17e30726681ca23436d.md:11",
+   "quote": "substrate-2 mission registry unreachable"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:13",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable."
+  },
+  "finish": {
+   "value": "Each ticket DONE when its scoped repair/precondition-check evidence is accepted through ordinary ticket review.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:17",
+   "quote": "mark this ticket DONE only when its scoped work is accepted"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

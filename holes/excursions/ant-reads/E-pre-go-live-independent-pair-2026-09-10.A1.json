@@ -2,13 +2,13 @@
  "stem": "E-pre-go-live-independent-pair-2026-09-10",
  "kind": "A1",
  "seat": "kimi-2",
- "job": "invoke-1793654231851-10528-e4638c0d",
- "at": "2026-11-02T21:22:06+00:00",
+ "job": "invoke-1793654854547-10556-2cbabd28",
+ "at": "2026-11-02T21:30:42+00:00",
  "row": {
   "stem": "E-pre-go-live-independent-pair-2026-09-10",
   "kind": "place",
   "what": {
-   "value": "Codex-16's note-only proposal of two independent sha256 pin-check commands (F and S) plus a six-instance carrier revision as an F12 preparation-integrity pair.",
+   "value": "Codex-16 note-only proposal of two independent sha256 pin checks (find source, risk-binding proof) as an F12 preparation-integrity pair, awaiting codex-17 review",
    "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:3",
    "quote": "Codex-16, 2026-09-10. Note-only proposal for codex-17 independent review."
   },
@@ -19,28 +19,28 @@
   },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:11",
-   "quote": "- **F:** compare the actual find implementation file to its reviewed F11"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:20",
+   "quote": "silently inherit historical find evidence, and a replaced binding proof cannot"
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:16",
-   "quote": "silently inherit historical find evidence, and a replaced binding proof cannot"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:13",
+   "quote": "compare the actual find implementation file to its reviewed F11"
   },
   "action": {
    "value": "work",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:259",
-   "quote": "adapter on that basis. If accepted, qualify the small binary I/O census and pin"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:6",
+   "quote": "Read `E-pre-go-live-manifest-review-2026-09-10.md` in full."
   },
   "finish": {
-   "value": "Reviewed adapter implemented, F/S commands executed in both arms with frozen fixtures and controls; proposal accepted for adapter implementation by the pair review.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:5",
-   "quote": "population require review; 06a8d5a8 remains the accepted ARD guard/flat control."
+   "value": "Codex-17 reviews the proposed pair/carrier revision; only then may the commands run (no command may run before review)",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:90",
+   "quote": "trace has established absence of every hidden binary read**. No command may run"
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:3",
-   "quote": "Codex-16, 2026-09-10. Note-only proposal for codex-17 independent review."
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-independent-pair-2026-09-10.md:22",
+   "quote": "prerequisite checks, not a complete F11 gate, proof elaboration, certificate"
   },
   "confidence": "medium"
  },
@@ -48,10 +48,10 @@
   "ok",
   "ok",
   "ok-near",
+  "ok-near",
+  "ok",
   "quote-not-on-line",
-  "ok",
-  "ok",
-  "ok"
+  "ok-near"
  ],
  "ok": 6,
  "unsure": 0,

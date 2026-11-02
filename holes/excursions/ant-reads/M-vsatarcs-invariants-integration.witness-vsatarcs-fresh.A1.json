@@ -2,15 +2,15 @@
  "stem": "M-vsatarcs-invariants-integration.witness-vsatarcs-fresh",
  "kind": "A1",
  "seat": "kimi-3",
- "job": "invoke-1793654408549-10538-9da513a0",
- "at": "2026-11-02T21:21:50+00:00",
+ "job": "invoke-1793654886368-10557-fb04d324",
+ "at": "2026-11-02T21:30:43+00:00",
  "row": {
   "stem": "M-vsatarcs-invariants-integration.witness-vsatarcs-fresh",
   "kind": "place",
   "what": {
-   "value": "Design note (D6) specifying the vsatarcs-up-to-date witness as a conjunction of three sub-witnesses (render-hash, feeder heartbeat, story-vs-projection content drift).",
+   "value": "Witness design decomposing 'VSATARCS is invariantly up to date' into three staleness chains (render-hash, feeder heartbeat, content drift vs projection); deliberately no code yet.",
    "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:9",
-   "quote": "Investigating the real VSATARCS surfaces (2026-06-01) shows three distinct ways it"
+   "quote": "**The key finding: \"up to date\" is not one witness — it is THREE chains**"
   },
   "status": {
    "value": "open",
@@ -19,28 +19,28 @@
   },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:60",
-   "quote": "the count must be *derived from* the live inventory, not asserted in prose."
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:56",
+   "quote": "`witness :vsatarcs-up-to-date` returns the standard probe shape"
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:63",
-   "quote": "Prose assertions with no"
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:66",
+   "quote": "**Render-before-content (mission D6/decision-log #5):** when this witness is"
   },
   "action": {
    "value": "held",
-   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:80",
-   "quote": "the implementation plugs into codex-2's"
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:71",
+   "quote": "building the witness before that schema lands would guess at its inputs."
   },
   "finish": {
-   "value": "Witness implemented once codex-2's projection schema lands, returning the standard probe shape naming which chain(s) failed; open questions for codex-2 answered.",
-   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:66",
-   "quote": "`witness :vsatarcs-up-to-date` returns the standard probe shape"
+   "value": "The three sub-witnesses implemented against codex-2's landed projection schema, returning the conjunction probe naming failed chains.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:60",
+   "quote": ":vsatarcs-up-to-date ="
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:58",
-   "quote": "one that makes VSATARCS untrustworthy as \"what the stack is.\""
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.witness-vsatarcs-fresh.md:44",
+   "quote": "the one that makes VSATARCS untrustworthy as \"what the stack is.\""
   },
   "confidence": "high"
  },
@@ -48,14 +48,15 @@
   "quote-not-on-line",
   "ok",
   "quote-not-on-line",
-  "ok",
+  "quote-not-on-line",
   "quote-not-on-line",
   "quote-not-on-line",
   "quote-not-on-line"
  ],
- "ok": 2,
+ "ok": 1,
  "unsure": 0,
  "failed": [
+  "quote-not-on-line",
   "quote-not-on-line",
   "quote-not-on-line",
   "quote-not-on-line",

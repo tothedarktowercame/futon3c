@@ -1,0 +1,63 @@
+{
+ "stem": "T-kangaroo-caching-and-compaction",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655017030-10563-c3074686",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-kangaroo-caching-and-compaction",
+  "kind": "place",
+  "what": {
+   "value": "Follow-ons to the joey gate: 1h prompt-cache TTL, joey-threshold calibration, and compaction triggers for pouch agents.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:7",
+   "quote": "Parked at end of day 2026-06-10. Three linked follow-ons to the joey gate"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:3",
+   "quote": "**Status (triaged 2026-09-01): PARTIAL -- research portions obsolete.** The 1h-prompt-cach"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:14",
+   "quote": "gaps between his turns routinely exceed the 5-min TTL → full-history re-prefill"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:58",
+   "quote": "1h-caching largely fixes the ACUTE token-bleed (5-min cache always expiring across"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:3",
+   "quote": "Close the superseded parts; decide whether threshold recalibration is still wanted."
+  },
+  "finish": {
+   "value": "Superseded parts closed and a decision recorded on whether the joey-threshold recalibration is still wanted.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:3",
+   "quote": "Close the superseded parts; decide whether threshold recalibration is still wanted."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:12",
+   "quote": "Joe runs **long turns (30-min timeout)**, so the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

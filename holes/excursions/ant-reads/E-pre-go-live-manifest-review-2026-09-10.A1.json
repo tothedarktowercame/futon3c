@@ -1,65 +1,71 @@
 {
  "stem": "E-pre-go-live-manifest-review-2026-09-10",
  "kind": "A1",
- "seat": "kimi-3",
- "job": "invoke-1793654234861-10529-2b06e751",
- "at": "2026-11-02T21:20:08+00:00",
+ "seat": "kimi-2",
+ "job": "invoke-1793654854547-10556-2cbabd28",
+ "at": "2026-11-02T21:30:42+00:00",
  "row": {
   "stem": "E-pre-go-live-manifest-review-2026-09-10",
   "kind": "place",
   "what": {
-   "value": "Codex-17's independent review of the F12 manifest: all 12 pins match, only legal order is ARD, accepted as a diagnostic negative-control design only.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:10",
-   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+   "value": "Codex-17's independent review of the F12 manifest: verifies 12 pins, shows only ARD order is legal, accepts it as a negative control and commissions the independent-pair design",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:3",
+   "quote": "Codex-17, 2026-09-10. Reviewed Codex-16 06a8d5a8 and its Markdown/JSON."
   },
   "status": {
    "value": "closed",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:32",
-   "quote": "No new Joe purpose ruling is needed; no O4 or organise closure is claimed."
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:9",
+   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
   },
   "wing": {
    "value": "A",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:10",
-   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:4",
+   "quote": "All 12 source SHA-256 pins independently match the current bytes. No primary"
   },
   "way": {
    "value": "records-carry-warrant",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:10",
-   "quote": "The manifest states this limit correctly. It is accepted as a diagnostic"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:12",
+   "quote": "manufacture a conformant O4 witness."
   },
   "action": {
    "value": "close",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:32",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:25",
    "quote": "No new Joe purpose ruling is needed; no O4 or organise closure is claimed."
   },
   "need_goes_to": {
-   "value": "E-pre-go-live-manifest-2026-09-10",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:29",
-   "quote": "propose the smallest separately reviewed task slice. Keep the current manifest"
+   "value": "E-pre-go-live-independent-pair-2026-09-10",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:14",
+   "quote": "Next bounded design work: find two independent, useful checks within Joe's"
   },
   "finish": {
-   "value": "Review delivered with disposition and named next bounded design work; the manifest is kept as the flat-effect/guard control.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:17",
-   "quote": "Next bounded design work: find two independent, useful checks within Joe's"
+   "value": "The review verdict and its commissioned next steps, all stated in the document",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:23",
+   "quote": "propose the smallest separately reviewed task slice. Keep the current manifest"
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:17",
-   "quote": "Next bounded design work: find two independent, useful checks within Joe's"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/runs/E-pre-go-live-manifest-review-2026-09-10.md:24",
+   "quote": "freeze, independent review and real shared-fire execution requirements stand."
   },
   "confidence": "high"
  },
  "checks": [
   "ok",
+  "ok-near",
   "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok",
-  "ok"
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
  ],
- "ok": 8,
+ "ok": 3,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
 }

@@ -1,59 +1,63 @@
 {
  "stem": "E-self-heal-cascade",
  "kind": "A1",
- "seat": "kimi-3",
- "job": "invoke-1793654234861-10529-2b06e751",
- "at": "2026-11-02T21:20:08+00:00",
+ "seat": "kimi-2",
+ "job": "invoke-1793654854547-10556-2cbabd28",
+ "at": "2026-11-02T21:30:42+00:00",
  "row": {
   "stem": "E-self-heal-cascade",
   "kind": "place",
   "what": {
-   "value": "Open mission: repair of injuries chosen by the existing G over repair cascades (no fixed pipeline), with pattern-based intake/analysis/extension and per-step receipts.",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:16",
-   "quote": "\"we should exercise our normal G-over-cascades mechanism rather than set up a"
+   "value": "Excursion to make repair cascades candidate policies chosen by the existing G-over-filled-META-policies mechanism, with per-step prediction/observation records so defects in self-repair can be pinpointed",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:1",
+   "quote": "# E-self-heal-cascade — repair chosen by G over repair cascades"
   },
   "status": {
    "value": "open",
    "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:7",
-   "quote": "**Status:** OPEN. Criteria stated; S1 amended 2026-10-28 (drafts stand; practice corrects them); S2 next; nothing built. Proposed as row"
+   "quote": "**Status:** OPEN. Criteria stated; S1 amended 2026-10-28 (drafts stand; practice corrects them); S2 next; nothing built."
   },
   "wing": {
-   "value": "A",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:60",
-   "quote": "2026-10-28: \"make it so we can pinpoint any need to repair or improve the"
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:14",
+   "quote": "fixed pipeline in E4\". So E4 adds no scorer, no repair-specific model with"
   },
   "way": {
    "value": "eat-your-own-tail",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:16",
-   "quote": "\"we should exercise our normal G-over-cascades mechanism rather than set up a"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:56",
+   "quote": "- **S5 (a defect in the self-repair process can be pinpointed).** Joe,"
   },
   "action": {
    "value": "work",
    "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:7",
-   "quote": "**Status:** OPEN. Criteria stated; S1 amended 2026-10-28 (drafts stand; practice corrects them); S2 next; nothing built. Proposed as row"
+   "quote": "**Status:** OPEN. Criteria stated; S1 amended 2026-10-28 (drafts stand; practice corrects them); S2 next; nothing built."
   },
   "finish": {
-   "value": "Closes when S1–S7 are observed (S2 pipeline-reading discovery next; S3–S7 wait for S2).",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:79",
+   "value": "S1–S7 each observed (drafts stand, reading checked, Lean proof, Clojure aligned, pinpointable steps, in-machine closing patterns, one live repair)",
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:74",
    "quote": "Closes when S1–S7 are observed. S3–S7 wait for S2."
   },
   "beneficiary": {
    "value": "self",
-   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:60",
-   "quote": "2026-10-28: \"make it so we can pinpoint any need to repair or improve the"
+   "cite": "/home/joe/code/futon2/holes/labs/wm-contract/E-self-heal-cascade.md:3",
+   "quote": "**Opened:** 2026-10-28, Joe to claude-11 (\"let's start on the self heal"
   },
   "confidence": "high"
  },
  "checks": [
   "ok",
   "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
   "ok",
-  "ok",
-  "ok",
-  "ok",
+  "quote-not-on-line",
   "ok"
  ],
- "ok": 7,
+ "ok": 4,
  "unsure": 0,
- "failed": []
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
 }

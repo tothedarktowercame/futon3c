@@ -1,0 +1,64 @@
+{
+ "stem": "T-outer-belief-separate-machine-failure",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655043286-10564-c086d5a7",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-outer-belief-separate-machine-failure",
+  "kind": "place",
+  "what": {
+   "value": "Fix-now ticket: stop folding apparatus failures (resume-protocol, build, dispatch failures) into the outer strategic Dirichlet belief as task-failure outcomes of missions.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:1",
+   "quote": "# Do not fold apparatus failures into the outer target belief as task outcomes"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:3",
+   "quote": "**Status:** OPEN — FIX NOW (Joe, 2026-10-19)"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:19",
+   "quote": "learned that those missions fail, and the next outer selection is biased away"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:19",
+   "quote": "learned that those missions fail, and the next outer selection is biased away"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:33",
+   "quote": "## Scoped task"
+  },
+  "finish": {
+   "value": "Only task outcomes fold into the outer belief; apparatus failures go to the interoceptive record, with before/after alpha for the three 10-18 targets and passing fixtures.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:44",
+   "quote": "## Acceptance evidence"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-belief-separate-machine-failure.md:4",
+   "quote": "Parent: M-wm-strategic-mission-selection"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

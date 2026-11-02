@@ -1,0 +1,63 @@
+{
+ "stem": "T-neo4j-scope-store",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793655017030-10563-c3074686",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-neo4j-scope-store",
+  "kind": "place",
+  "what": {
+   "value": "Build a Neo4j store for mark7 superpod scope/passage/proof-graph results so cross-paper path queries can be asked; parked behind the SQLite sidecar.",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:1",
+   "quote": "# T-neo4j-scope-store — a Neo4j store for superpod scope results"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:5",
+   "quote": "**Status:** open, parked; the SQLite sidecar is built first for"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:15",
+   "quote": "A graph store would hold these as connected nodes, so that questions running across"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:16",
+   "quote": "papers can be asked as paths: which proof steps rest on a construction another paper"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:4",
+   "quote": "come back to that later\". **Status:** open, parked; the SQLite sidecar is built first for"
+  },
+  "finish": {
+   "value": "Motivating path queries written down and shown slow/awkward in SQLite before any build; then source-of-truth, hosting, and proof-graph model decisions.",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:32",
+   "quote": "1. The path queries that motivate it, written down with a sample paper set, before any"
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon6/holes/T-neo4j-scope-store.md:9",
+   "quote": "The mark7 superpod runs write per-paper artifacts as files: expository passages with"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok-near",
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 4,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

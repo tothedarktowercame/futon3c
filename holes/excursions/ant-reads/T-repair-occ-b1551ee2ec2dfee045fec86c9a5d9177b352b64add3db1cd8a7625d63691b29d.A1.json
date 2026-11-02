@@ -1,0 +1,59 @@
+{
+ "stem": "T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655391196-10577-bd9191f0",
+ "at": "2026-11-02T21:40:04+00:00",
+ "row": {
+  "stem": "T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d",
+  "kind": "place",
+  "what": {
+   "value": "War Machine self-heal ticket: verify or restore author-wait on M-descriptive-essay-of-the-stack after an author refused with a typed reason.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:11",
+   "quote": "Author refused with a typed reason"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:9",
+   "quote": "Target: M-descriptive-essay-of-the-stack; stage: :author-wait."
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:15",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:15",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable."
+  },
+  "finish": {
+   "value": "Dated precondition check retained with restoration evidence, or dated recheck if cleared; accepted in review.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:19",
+   "quote": "Retain the dated precondition check, its source and result, and evidence of any restoration."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b1551ee2ec2dfee045fec86c9a5d9177b352b64add3db1cd8a7625d63691b29d.md:5",
+   "quote": "Parent: M-descriptive-essay-of-the-stack"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

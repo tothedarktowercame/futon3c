@@ -1,0 +1,61 @@
+{
+ "stem": "T-outer-target-g-policy-prior",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655043286-10564-c086d5a7",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-outer-target-g-policy-prior",
+  "kind": "place",
+  "what": {
+   "value": "Ticket to rank outer target selection on unclamped G (risk + ambiguity) and move resource/cadence/continuation engineering terms into an explicit log policy prior ln E.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:1",
+   "quote": "# Keep the outer target's G unaltered: move engineering costs into the policy prior and drop the clamp"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:17",
+   "quote": "So the pick moves on the sum, not on G; and the clamp maps every score past"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:4",
+   "quote": "Parent: M-wm-strategic-mission-selection"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:47",
+   "quote": "Which governs is Joe's decision; do not start until it is made."
+  },
+  "finish": {
+   "value": "Regressions showing equal-G targets selected via ln E, no ties from clamped scores, and risk/ambiguity both in nats in persisted terms.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:32",
+   "quote": "## Acceptance evidence"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:4",
+   "quote": "Parent: M-wm-strategic-mission-selection"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

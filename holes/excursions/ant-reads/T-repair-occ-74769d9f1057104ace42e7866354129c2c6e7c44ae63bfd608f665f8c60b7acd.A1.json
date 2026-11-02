@@ -1,0 +1,59 @@
+{
+ "stem": "T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655391196-10577-bd9191f0",
+ "at": "2026-11-02T21:40:04+00:00",
+ "row": {
+  "stem": "T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd",
+  "kind": "place",
+  "what": {
+   "value": "War Machine self-heal ticket: verify or restore an abstained selection stage (no addressable action).",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:9",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:3",
+   "quote": "**Status:** OPEN"
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:7",
+   "quote": "Target: not retained; stage: :selection."
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:13",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:13",
+   "quote": "Verify the reported precondition and restore it if it remains unavailable."
+  },
+  "finish": {
+   "value": "Dated precondition check retained with restoration evidence, or a dated recheck if cleared; accepted in review.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:17",
+   "quote": "Retain the dated precondition check, its source and result, and evidence of any restoration."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74769d9f1057104ace42e7866354129c2c6e7c44ae63bfd608f665f8c60b7acd.md:9",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

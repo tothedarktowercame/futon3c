@@ -1,0 +1,59 @@
+{
+ "stem": "T-open-question-docs-and-data-review",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655043286-10564-c086d5a7",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-open-question-docs-and-data-review",
+  "kind": "place",
+  "what": {
+   "value": "Open question (raised by claude-4, 2026-10-18): whether documentation-only and data-only changes should require review-execution evidence like code changes, given the review-execution-gate only requires it for code files.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:3",
+   "quote": "**Status:** OPEN QUESTION. This is not a work order; nothing is to be fixed"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:3",
+   "quote": "**Status:** OPEN QUESTION. This is not a work order; nothing is to be fixed"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:8",
+   "quote": "The full-loop runner requires evidence that a review actually ran (tool-use"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:16",
+   "quote": "The conference text of R9 (No Self-Certification) says review execution is"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:3",
+   "quote": "until the question is answered."
+  },
+  "finish": {
+   "value": "The question is answered: what counts as review of docs/data, whether data-only changes need the code standard, where the rule is stated, and whether the two validators share one rule.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:25",
+   "quote": "Things to settle:"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-open-question-docs-and-data-review.md:39",
+   "quote": "Raised by claude-4 while annotating R9 for the plop2026 docbook"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,61 @@
+{
+ "stem": "T-overlap-modes-as-factor-precision",
+ "kind": "A1",
+ "seat": "kimi-2",
+ "job": "invoke-1793655043286-10564-c086d5a7",
+ "at": "2026-11-02T21:33:21+00:00",
+ "row": {
+  "stem": "T-overlap-modes-as-factor-precision",
+  "kind": "place",
+  "what": {
+   "value": "Investigation ticket (no code change): determine whether cascade overlap modes in the code match a proposed active-inference reading of them as precision on shared factors.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:1",
+   "quote": "# Investigate: are cascade overlap modes precision on shared factors?"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:3",
+   "quote": "**Status:** OPEN — INVESTIGATION (discovery only; no code change until the"
+  },
+  "way": {
+   "value": "selection-gives-a-reason",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:5",
+   "quote": "Parent: M-aif-a-matrix-faithfulness"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:5",
+   "quote": "Parent: M-aif-a-matrix-faithfulness"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:39",
+   "quote": "## To find out"
+  },
+  "finish": {
+   "value": "A short note in holes/labs/ answering questions 1-5 with file:line evidence and cascade counts, ending matches/partly/does not match.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:53",
+   "quote": "A short note in `holes/labs/` answering 1-5 with file:line evidence and"
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:5",
+   "quote": "Parent: M-aif-a-matrix-faithfulness"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}
