@@ -1,0 +1,69 @@
+{
+ "stem": "M-f11-find-production-successor",
+ "kind": "A1r",
+ "seat": "kimi-2",
+ "job": "invoke-1793654686630-10547-be5a4fc5",
+ "at": "2026-11-02T21:27:23+00:00",
+ "row": {
+  "stem": "M-f11-find-production-successor",
+  "kind": "place",
+  "what": {
+   "value": "F11 production successor for repair-024: implement the evidence-producing `find` at its applied interface, state laws F1–F4 in Lean and witness each on the committed 24-pattern library.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:12",
+   "quote": "Complete worklist row `:F11` at its applied `find` interface. Implement the"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:3",
+   "quote": "**Status:** OPEN — OPEN — first continuous-backlog item"
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:31",
+   "quote": "- State F1–F4 in Lean and witness each on a real find over the committed"
+  },
+  "way": {
+   "value": "records-carry-warrant",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:33",
+   "quote": "- Discharge or amend the `find` sorry."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:115",
+   "quote": "- [x] Repair-024 has either a strict successful production successor link or a durable typed terminal failure that explicitly leaves the repair unresolved."
+  },
+  "need_goes_to": {
+   "unsure": "Finish is met per the 2026-09-30 checklist (both boxes ticked) but the Status line still says OPEN, and repair-024 deliberately stays unresolved in holes/labs/M-f11-find-production-successor/successor-disposition.edn — no successor item id is named."
+  },
+  "finish": {
+   "value": "Both 2026-09-30 checklist boxes ticked: ordinary F11 acceptance with runtime evidence recorded, plus a durable typed terminal failure for repair-024.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:113",
+   "quote": "- [x] F11's applied-interface acceptance and fresh 24-pattern observation are recorded with runtime validation evidence."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:40",
+   "quote": "The run must persist its G/selection, cascade, enriched wiring, holes,"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "unsure",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 1,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

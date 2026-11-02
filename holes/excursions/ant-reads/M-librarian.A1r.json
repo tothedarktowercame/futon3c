@@ -1,0 +1,65 @@
+{
+ "stem": "M-librarian",
+ "kind": "A1r",
+ "seat": "kimi-2",
+ "job": "invoke-1793654686630-10547-be5a4fc5",
+ "at": "2026-11-02T21:27:23+00:00",
+ "row": {
+  "stem": "M-librarian",
+  "kind": "place",
+  "what": {
+   "value": "A 'bonus lap' mission to build a native Steam Frame Librarian app for regular 3D editing, parked at HEAD behind the VSAT client delivery and unshipped hardware.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:1",
+   "quote": "# M-librarian — native 3D editing as a regular practice (Steam Frame)"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:3",
+   "quote": "**Status:** OPEN — **HEAD** — pre-IDENTIFY intake; explicitly a \"bonus lap\" gated behind the client-facing VSAT delivery."
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:17",
+   "quote": "> But that's a \"bonus lap\" for after I do the client facing work."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:30",
+   "quote": "The pull is personal practice: editing in 3D regularly, not demoing it occasionally."
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:87",
+   "quote": "IDENTIFY opens only after (a) invoice-202506 delivery is discharged and (b) Steam Frame exists with a known dev path."
+  },
+  "finish": {
+   "value": "Joe ratifies the HEAD text, then IDENTIFY opens once the VSAT delivery is discharged and Steam Frame hardware/docs exist; this file is the parking spot until both.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:86",
+   "quote": "**HEAD exit criterion:** Joe ratifies this as faithful; IDENTIFY opens only"
+  },
+  "beneficiary": {
+   "value": "product",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:60",
+   "quote": "a personal 3D workbench for corpus arrangement — VSAT stories first, but the arrangement-of-cards-in-space"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

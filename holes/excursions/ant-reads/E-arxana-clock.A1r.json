@@ -1,0 +1,59 @@
+{
+ "stem": "E-arxana-clock",
+ "kind": "A1r",
+ "seat": "kimi-2",
+ "job": "invoke-1793654686630-10547-be5a4fc5",
+ "at": "2026-11-02T21:27:23+00:00",
+ "row": {
+  "stem": "E-arxana-clock",
+  "kind": "place",
+  "what": {
+   "value": "One read-only surface unifying cron, systemd, cyder and clicks into a single legible clock of the system's time-drivers, plus a click-counted turn-trigger mechanism.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:18",
+   "quote": "The Arxana Clock is the single surface that answers, at a glance: *what keeps this system ticking, when did each last fire, and when does it fire next?*"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:3",
+   "quote": "**VERDICT (2026-10-09, provisional):** OPEN — Status is IDENTIFY + MAP only (2026-06-26); incident fixes landed but the tail names a residual diagnosis still owed"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:26",
+   "quote": "So: ~9 active drivers, 3 mechanisms, zero unified visibility, no next-fire tracked anywhere, and no Arxana-Clock surface exists."
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:42",
+   "quote": "The cost: drivers freeze silently (the 5-week substrate-2 freeze was exactly an unwatched tick)"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:81",
+   "quote": "**Remaining (named):** broaden cyder `:cadence`/next-fire enrichment to the OTHER periodic processes (watchers — still \"—\"); add a **stale-driver alarm**"
+  },
+  "finish": {
+   "value": "Cyder cadence/next-fire enrichment broadened to all periodic processes and a stale-driver alarm added (the 5-week-freeze lesson).",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:81",
+   "quote": "add a **stale-driver alarm** (overdue next-fire / a driver that should've fired but didn't — the 5-week-freeze lesson)."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:18",
+   "quote": "but they are scattered across **three disjoint mechanisms** with **no unified view**, and Joe can't say how many are installed (2026-06-26)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,59 @@
+{
+ "stem": "E-night-shift",
+ "kind": "A1r",
+ "seat": "kimi-2",
+ "job": "invoke-1793654686630-10547-be5a4fc5",
+ "at": "2026-11-02T21:27:23+00:00",
+ "row": {
+  "stem": "E-night-shift",
+  "kind": "place",
+  "what": {
+   "value": "An excursion granting agents a safe code-modification peripheral (`:night-shift`) that turns PI/WM code-fix recommendations into isolated branch + PR deliverables for operator review.",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:28",
+   "quote": "A new peripheral, provisionally named **`:night-shift`**, that grants safe code-modification capabilities to an inhabiting agent."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:4",
+   "quote": "**Status:** PARTIALLY EXECUTED by Codex on 2026-05-25. The envelope, registry/spec wiring, invariant tests, and spike-check are landed;"
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:20",
+   "quote": "**(b) Apply whatever PI then recommends** — code/file changes across the stack to actually close the agendas PI ranks."
+  },
+  "way": {
+   "value": "eat-your-own-tail",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:24",
+   "quote": "The pattern: **WM identifies → pilot recognises → E-excursion grants a constrained capability class with structural safety invariants"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:51",
+   "quote": "**A real remote PR demonstration is still open, but the dirty-base blocker is gone.**"
+  },
+  "finish": {
+   "value": "A concrete low-risk agenda becomes the first pushed draft PR from a night-shift frame; discard-list bell wired into a long-running service loop.",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:51",
+   "quote": "The remaining choice is simply which concrete low-risk agenda should become the first pushed draft PR from that frame."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/missions/E-night-shift.md:20",
+   "quote": "code/file changes across the stack to actually close the agendas PI ranks.  **Not in any current peripheral's envelope.**"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

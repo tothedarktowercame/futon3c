@@ -1,0 +1,68 @@
+{
+ "stem": "E-kimi-task-174",
+ "kind": "A1r",
+ "seat": "kimi-2",
+ "job": "invoke-1793654686630-10547-be5a4fc5",
+ "at": "2026-11-02T21:27:23+00:00",
+ "row": {
+  "stem": "E-kimi-task-174",
+  "kind": "place",
+  "what": {
+   "value": "A kimi-task requisition to prove one apm-lean leaf lemma apm_t02A04_quotientComplex_model_aux_prism_inj inside a marked seat area of its blueprint file.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:1",
+   "quote": "# E-kimi-task-174 — prove lemma apm_t02A04_quotientComplex_model_aux_prism_inj in apm-lean, one leaf"
+  },
+  "status": {
+   "value": "closed",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:3",
+   "quote": "**Requisition:** completed — 2026-10-31T18:08:36Z, job invoke-1793469191305-8840-9c4a2908, state done"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:7",
+   "quote": "From claude-14 (Joe's go, 2026-10-13): prove ONE lemma of an apm-lean blueprint."
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:7",
+   "quote": "From claude-14 (Joe's go, 2026-10-13): prove ONE lemma of an apm-lean blueprint."
+  },
+  "action": {
+   "value": "close",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:3",
+   "quote": "**Requisition:** completed — 2026-10-31T18:08:36Z, job invoke-1793469191305-8840-9c4a2908, state done"
+  },
+  "need_goes_to": {
+   "value": "solved",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:3",
+   "quote": "**Requisition:** completed — 2026-10-31T18:08:36Z, job invoke-1793469191305-8840-9c4a2908, state done"
+  },
+  "finish": {
+   "value": "The file compiles and `#print axioms NAME` shows no sorryAx; reply PROVED/PARTIAL to claude-14.",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:29",
+   "quote": "DONE when the file compiles and `#print axioms NAME` (add it temporarily, then remove it) shows no sorryAx."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-kimi-task-174.md:1",
+   "quote": "# E-kimi-task-174 — prove lemma apm_t02A04_quotientComplex_model_aux_prism_inj in apm-lean, one leaf"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 6,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

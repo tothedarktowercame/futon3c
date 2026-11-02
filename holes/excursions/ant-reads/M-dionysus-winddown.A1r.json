@@ -1,0 +1,62 @@
+{
+ "stem": "M-dionysus-winddown",
+ "kind": "A1r",
+ "seat": "kimi-2",
+ "job": "invoke-1793654686630-10547-be5a4fc5",
+ "at": "2026-11-02T21:27:23+00:00",
+ "row": {
+  "stem": "M-dionysus-winddown",
+  "kind": "place",
+  "what": {
+   "value": "Get everything off the Dionysus laptop before its 2026-08-28 return — replicated, queryable, and with point-in-time recovery — so the box can be wiped with nothing lost.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:1",
+   "quote": "# M-dionysus-winddown — get everything off the laptop, safely and usably"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:3",
+   "quote": "**Status:** OPEN — HEAD complete; IDENTIFY complete; MAP substantially complete (2026-08-14)"
+  },
+  "wing": {
+   "value": "V",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:8",
+   "quote": "Deadline: **2026-08-28** (~14 days from HEAD)."
+  },
+  "way": {
+   "value": "stays-alive-and-paid",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:83",
+   "quote": "It currently holds the only copy of the live Evidence Landscape (21 GB) and 5.5 GB of raw agent session history."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:12",
+   "quote": "- [ ] Every registered corpus verifies on at least two non-laptop sites."
+  },
+  "finish": {
+   "value": "All six 2026-09-30 acceptance boxes ticked: ≥2-site verification, non-laptop queryability, FTS5 search, a non-mirror recovery copy, a wipe reconciliation, and census inbox zero.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:17",
+   "quote": "- [ ] Every broadened-scope asset is recorded as recoverable or usable, and the repo census is at inbox zero."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-dionysus-winddown.md:47",
+   "quote": "If the Landscape dies with the laptop, the going-forward accrual restarts from zero on the next machine:"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "quote-not-on-line",
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}
