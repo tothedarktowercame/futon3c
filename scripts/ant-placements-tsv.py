@@ -14,6 +14,7 @@ def val(x):
 rows = []
 for f in sorted(HERE.glob(f"*.{KIND}.json")):
     d = json.loads(f.read_text()); r = d.get("row") or {}
+    if "*" in d["stem"]: continue  # class blocks live in classes.tsv, not the per-stem table (claude-16, 2026-11-02)
     rows.append([d["stem"]] + [val(r.get(k)) for k in COLS[1:10]] + [d["seat"], d["job"], d["at"], str(d["ok"]), str(d["unsure"]), ",".join(d["failed"])])
 out = HERE / f"{KIND}-placements.tsv"
 out.write_text("\t".join(COLS) + "\n" + "".join("\t".join(c.replace("\t", " ").replace("\n", " ") for c in r) + "\n" for r in rows))
