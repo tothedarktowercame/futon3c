@@ -48,6 +48,13 @@ fetch summary "/api/alpha/cascade-real"       required
 fetch graph   "/api/alpha/cascade-real/graph" required
 fetch forward "/api/alpha/forward-model"      optional
 
+WOW_DECL="${CASCADE_WOW:-/home/joe/code/futon3c/holes/excursions/ways-of-working.json}"
+echo "Probing declared ways of working ..." >&2
+if ! python3 /home/joe/code/futon3c/scripts/ways-of-working-probe.py "$WOW_DECL" "$WORK/wow.json" --summary "$WORK/summary.json" --graph "$WORK/graph.json" >&2; then
+  echo "  ways-of-working probe failed; the panel will say so" >&2
+  echo 'null' > "$WORK/wow.json"
+fi
+
 python3 - "$SRC" "$WIP" "$THESIS" "$WORK" "$OUT" "$BASE" <<'PY'
 import json, pathlib, sys, datetime
 
@@ -66,6 +73,7 @@ snapshot = {
     f"{base}/api/alpha/forward-model":      json.loads((work / "forward.json").read_text()),
     "wip-cards.json":                       json.loads(wip.read_text()),
     "apex-thesis.json":                     json.loads(thesis.read_text()),
+    "ways-of-working-live.json":            json.loads((work / "wow.json").read_text()),
 }
 stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 

@@ -54,6 +54,9 @@
   .wip-field{margin-top:7px}.wip-field b{color:#cdd6e4}.wip-none{color:#ff9c9c;font-weight:800}
   .draw-pile{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px}
   .draw-pile a{color:#93bdf8}
+  .wow-table{width:100%;border-collapse:collapse;font-size:11.5px} .wow-table th{color:#7b8698;text-align:left;font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)} .wow-table td{padding:5px 6px;border-bottom:1px solid #1e2430;vertical-align:top;color:#c3d0e0}
+  .wow-on,.wow-holding{color:#3ddc84;font-weight:800} .wow-off,.wow-failing,.wow-broken{color:#ff6b6b;font-weight:800} .wow-not-built,.wow-unknown{color:#e0a63b;font-weight:800}
+  .wow-ev{color:#8fa0b6;font-size:10.5px} .wow-ev li{margin:1px 0}
   .thesis-apex{font-size:17px;line-height:1.5;color:#eef2f8;max-width:980px;margin:3px 0 8px}
   .thesis-epigraph{color:var(--dim);font-style:italic;margin:7px 0 11px}
   .thesis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;margin-top:11px}
@@ -77,6 +80,12 @@
   <section class="panel" id="thesis-panel">
     <h2>The problem being solved — live thesis (re-statable)</h2>
     <div id="thesis-body"><div class="gap">Loading live-thesis data…</div></div>
+  </section>
+
+  <section class="panel" id="wow-panel">
+    <h2>Declared ways of working — which are on, off, broken or not built <span class="muted" id="wow-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">Each row is a way of working the stack has declared (the institution one layer under a therefore of the thesis). <b>monitor</b> says whether anything is watching it; <b>invariant</b> says whether what it promises holds right now. A way with no probe is prose until one is built, and is shown as such rather than guessed.</div>
+    <div id="wow-body"><div class="gap">Loading ways-of-working data…</div></div>
   </section>
 
   <section class="panel" id="section-status-panel" style="display:none">
@@ -139,6 +148,7 @@
 
   <section class="panel" id="tickets-panel" style="display:none">
     <h2>Tickets <span class="muted" id="tickets-count"></span></h2>
+    <div class="sub" style="margin-bottom:8px">This pile is the evidence of the failing way of working <b>backlog-understood</b> above: items with no placement under any way of working. It stays on the page until that invariant holds.</div>
     <div class="sub" style="margin-bottom:10px">unclocked = no clock lineage, live or durable · claim by clocking (<code>bell --mission &lt;id&gt;</code> or 3 doc-edits &lt;10 min)</div>
     <div id="tickets-body"></div>
   </section>
@@ -152,6 +162,7 @@
   var EP_FORWARD=BASE+"/api/alpha/forward-model";
   var EP_WIP="wip-cards.json";
   var EP_THESIS="apex-thesis.json";
+  var EP_WOW="ways-of-working-live.json";
   var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
@@ -570,6 +581,35 @@
       "<div class='thesis-grid'>"+cards+"</div>";
   }
 
+  function renderWow(d){
+    var ways=Array.isArray(d.ways)?d.ways:[];
+    var counts=d.counts||{};
+    el("wow-count").textContent="· "+ways.length+" declared · "+Object.keys(counts).sort().map(function(k){return counts[k]+" "+k;}).join(", ")+" · probed "+(d["probed-at"]||"");
+    var rows=ways.map(function(w){
+      var l=w.live||{};
+      var viol=l["violation-count"]||0;
+      var ev=(l.evidence||[]).map(function(e){return "<li>"+esc(e)+"</li>";}).join("");
+      var vrows="";
+      if(Array.isArray(l.violations)&&l.violations.length&&typeof l.violations[0]==="object"&&l.violations[0].repo){
+        vrows="<details><summary>"+viol+" repos</summary><ul>"+l.violations.map(function(v){
+          return "<li><code>"+esc(v.repo)+"</code> untracked "+v.untracked+" · modified "+v.modified+" · unpushed "+v.ahead+"</li>";}).join("")+"</ul></details>";
+      }
+      return "<tr><td><b>"+esc(w.name)+"</b><div class='wow-ev'>"+esc(w.problem)+"</div></td>"+
+        "<td>"+esc(w.therefore)+"</td>"+
+        "<td class='wow-"+esc(l.monitor)+"'>"+esc(l.monitor)+"</td>"+
+        "<td class='wow-"+esc(l.invariant)+"'>"+esc(l.invariant)+(viol?" · "+viol:"")+(l.denominator?"<div class='wow-ev'>"+esc(l.denominator)+"</div>":"")+"</td>"+
+        "<td class='wow-ev'>"+esc(l["last-observation"]||"never")+"</td>"+
+        "<td><ul class='wow-ev' style='margin:0;padding-left:16px'>"+ev+"</ul>"+vrows+"<div class='wow-ev'>declared in "+esc(w["declared-in"])+"</div></td></tr>";
+    }).join("");
+    el("wow-body").innerHTML="<div class='scrollx'><table class='wow-table'><thead><tr><th>way of working · the problem it solves</th><th>therefore</th><th>monitor</th><th>invariant</th><th>last observation</th><th>evidence</th></tr></thead><tbody>"+rows+"</tbody></table></div>";
+  }
+
+  function loadWow(){
+    requestJSON("ways-of-working data",EP_WOW).then(renderWow).catch(function(err){
+      el("wow-body").innerHTML="<div class='gap'>Ways-of-working data unavailable: "+esc(err&&err.message||err)+"</div>";
+    });
+  }
+
   function loadThesis(){
     requestJSON("live-thesis data",EP_THESIS).then(renderThesis).catch(function(err){
       el("thesis-body").innerHTML="<div class='gap'>Live-thesis data unavailable: "+esc(err&&err.message||err)+"</div>";
@@ -617,6 +657,7 @@
   }
 
   loadThesis();
+  loadWow();
   loadWip();
   loadAll();
   setInterval(loadAll,60000);
