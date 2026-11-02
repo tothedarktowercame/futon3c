@@ -44,4 +44,7 @@ Action vocabulary (rulings of 2026-11-02, claude-16's objection before packet 4)
 
 Rules for this kind: a kimi-task requisition (`E-kimi-task-N`) is a record of one dispatch; its
 "what" is the task it carried, its status is the requisition line near the top. A draft mission
-marked NON-LIVE is `held`, not `work`. Do not place an item by its filename alone.
+marked NON-LIVE is `held`, not `work`. A requisition still marked in-progress whose answer or
+output path is under `/tmp` is not open work: /tmp is erased at every boot, so give status `stopped`,
+action `unsure`, and say in `what` that the output had no durable home. Do not place an item by its
+filename alone.
