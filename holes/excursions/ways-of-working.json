@@ -129,7 +129,8 @@
     "war-machine/advanceability",
     "war-machine/ideal-actual-gap",
     "musn/plan-before-tool"
-   ]
+   ],
+   "validation": "Does the selection report name the way of selecting that won, and what the alternatives would have proposed? A probe can also count the eligible items the selector read (M-giraffe finding 1: a pick from items never read)."
   },
   {
    "id": "inbox-zero",
@@ -189,7 +190,21 @@
     "problems/operator-turns-become-inference-observations",
     "features/operator-turns-enter-the-observation-vector"
    ]
+  },
+  {
+   "id": "real-users",
+   "name": "The work has real users, and we can say who",
+   "therefore": "C",
+   "problem": "A community is a claim until it names a population: a thing used by people, known at a date, from a source that is not our own say-so. Building feels like progress, and a population is easy to assume.",
+   "invariant": "Each population holds a dated, sourced value on the scale none, asked, tried, uses, depends, with hops from the source recorded as a plain fact.",
+   "declared-in": "futon3/library/ways-of-working/real-users.flexiarg (claude-16, draft 2026-11-02); values, populations and contacts stay in futon7/holes/cui-bono.md and are not published here",
+   "built": [],
+   "probe": "none",
+   "pattern": "ways-of-working/real-users",
+   "patterns": [],
+   "shape": "real-users(population, thing, hops) -> value in {none, asked, tried, uses, depends}, dated, sourced",
+   "scope-note": "only the fluent's shape is published; no monitor state is claimed and no population or value appears on the page"
   }
  ],
- "pattern-texts": "library ids; texts live in futon3/library/ways-of-working/ (claude-16, draft patterns corrected by running them); the `patterns` arrays are claude-16's advisory reading of 馬-attested patterns (~/notes/pattern-global/ways-cascade-draft.md), a reading of what surfaced, not a measurement"
+ "pattern-texts": "library ids; texts live in futon3/library/ways-of-working/ (claude-16, draft 2026-11-02, uncommitted in futon3 as of 17:41Z; each text carries a + VALIDATION: clause, which is the probe's question); the `patterns` arrays are claude-16's advisory reading of 馬-attested patterns (~/notes/pattern-global/ways-cascade-draft.md), a reading of what surfaced, not a measurement"
 }
