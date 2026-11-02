@@ -1,18 +1,20 @@
 {
  "schema": "giraffe-partition-v1",
  "source": "Giraffe run 20261102T013012.768Z-26ad19e6; review sheet and signals 2026-11-02 (claude-16 readings, claude-2 signals); advisory, no decision applied",
- "exported-at": "2026-11-02T20:29:01+00:00",
+ "exported-at": "2026-11-02T20:38:14+00:00",
  "loop": "outermost: prepares what the War Machine's outer loop may select",
  "count": 47,
  "selectable-now": 3,
- "decided": 27,
+ "decided": 28,
  "by-decision": {
   "audit": 1,
   "close-and-carry": 1,
+  "close-as-prototype": 1,
+  "cluster": 1,
   "keep-held": 4,
-  "merge-into": 3,
-  "reopen": 1,
-  "retire": 12,
+  "merge-into": 2,
+  "reopen": 5,
+  "retire": 8,
   "un-hold": 3,
   "work": 2
  },
@@ -42,15 +44,15 @@
   "unplaced": 1
  },
  "by-needs": {
-  "read": 14,
+  "read": 13,
   "retire-or-merge": 4,
   "merge": 2,
-  "retire-or-rehome": 12,
-  "close-with-witness": 4,
+  "who-acts": 6,
+  "retire-or-rehome": 7,
+  "close-with-witness": 5,
   "verify-then-close": 4,
-  "joe-rules": 4,
-  "who-acts": 2,
-  "place": 1
+  "place": 2,
+  "joe-rules": 4
  },
  "by-deficient-way": {
   "backlog-understood": 16,
@@ -211,8 +213,8 @@
    "last-commit": "2026-10-09",
    "stated-finish": "L174-176: retraction path; empty types; negative-space map",
    "decision-question": null,
-   "needs": "retire-or-rehome",
-   "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
+   "needs": "who-acts",
+   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -221,11 +223,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "retire",
-    "basis": "Place gone by probe: :7071 not listening",
+    "decision": "reopen",
+    "basis": "Joe, 2026-11-02 ~20:40Z: has a three-item acceptance checklist; \"looks like a pretty standard open excursion to me, could cluster with other substrate-2 items\" (retire reversed)",
     "carry": {
-     "kind": "no-home",
-     "to": "census on futon1b and a gated erase path"
+     "kind": "target",
+     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies; cluster: substrate-2"
     }
    }
   },
@@ -356,8 +358,8 @@
    "last-commit": null,
    "stated-finish": "L7-9: dispositions; gold corpus; logged facet",
    "decision-question": null,
-   "needs": "retire-or-rehome",
-   "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
+   "needs": "who-acts",
+   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -366,11 +368,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "retire",
-    "basis": "Place gone by probe: futon1a erase gate down",
+    "decision": "reopen",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed)",
     "carry": {
-     "kind": "no-home",
-     "to": "collision resolution after the 15 oriented entries land"
+     "kind": "target",
+     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies"
     }
    }
   },
@@ -492,13 +494,20 @@
    "commits-since-oct": 0,
    "last-commit": null,
    "stated-finish": "\"Acceptance checklist, 0 of 6, line 1204: includes \"\"pass Joe's re-reading 'really?' test\"\".\"",
-   "decision-question": "read it first",
-   "needs": "read",
-   "needs-why": "no reading yet; read it first",
+   "decision-question": null,
+   "needs": "close-with-witness",
+   "needs-why": "Joe: a prototype we can learn from; close with what it taught",
    "selectable-now": false,
    "deficient-way": "backlog-understood",
    "place": null,
-   "decision": null
+   "decision": {
+    "decision": "close-as-prototype",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"it was a method not a governance structure, I haven't used it in quite a long time ... partly because the workflow became a bit clunky and unenjoyable ... a good example of a 'prototype we can learn from' rather than a 'feature', in distinction to things like Minus40°DB which I still see as a 'feature under development'\"",
+    "carry": {
+     "kind": "target",
+     "to": "an explanation of what the prototype taught (IT-6); outreach itself lives in futon7"
+    }
+   }
   },
   {
    "rank": 17,
@@ -541,8 +550,8 @@
    "last-commit": null,
    "stated-finish": "L526-531: batch-002 stages; schema; per-batch loop",
    "decision-question": null,
-   "needs": "retire-or-rehome",
-   "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
+   "needs": "place",
+   "needs-why": "Joe: combine upward into a cluster node without supersession",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -551,11 +560,11 @@
     "evidence": "files mentioning forward-solver in futon3c/src, futon6: 0"
    },
    "decision": {
-    "decision": "merge-into:M-mark8",
-    "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: still open; merges into the superpod work, now at mark 8 (mark 3 is out of date). A pattern-theoretic understanding of work already done is itself a reverse-morphogenesis programme, so it relates to the Cascade Live work | claude-16 2026-11-02 ~20:28Z: mark 8 is futon6/holes/M-mark8.md (open, last commit d45fbb6 2026-10-01); it is about allocating a fixed model-call budget observably and states neither 'morphogen' nor 'forward', so the need (a model trained on papers proposing techniques for new problems) vanishes unless the merge adds it",
+    "decision": "cluster:superpod-work",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"this is a good example of needing to combine structurally upwards, e.g., to a cluster called 'superpod work', without any supersession of meaning for the constituents\" (replaces merge-into:M-mark8)",
     "carry": {
      "kind": "target",
-     "to": "two places: (1) the paper-trained technique-proposing model, to be written into M-mark8 at merge time or it is lost; (2) the pattern-theoretic reading of finished work as reverse morphogenesis, to the cascade side (ways-of-working / the basin join)"
+     "to": "a cluster node 'superpod work' above M-mark8 and this mission (and the earlier marks), each keeping its own meaning; the pattern-theoretic reading of finished work still goes to the cascade side"
     }
    }
   },
@@ -971,8 +980,8 @@
    "last-commit": null,
    "stated-finish": "L296-301: categories; widgets; alarm ribbon; rename",
    "decision-question": null,
-   "needs": "retire-or-rehome",
-   "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
+   "needs": "who-acts",
+   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -981,11 +990,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "retire",
-    "basis": "Place gone by probe: HUD default :7071 not listening",
+    "decision": "reopen",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed)",
     "carry": {
-     "kind": "no-home",
-     "to": "V4 alerts, an owner gap"
+     "kind": "target",
+     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies"
     }
    }
   },
@@ -1087,8 +1096,8 @@
    "last-commit": null,
    "stated-finish": "L142-146: canonical-label map; named query; live explainer counts",
    "decision-question": null,
-   "needs": "retire-or-rehome",
-   "needs-why": "the Place no longer exists (port, cron or client gone); retire, or name the live substrate",
+   "needs": "who-acts",
+   "needs-why": "Joe: reopened; immediate need rehomed, long-term finish stands",
    "selectable-now": false,
    "deficient-way": "one-queryable-self-account",
    "place": {
@@ -1097,11 +1106,11 @@
     "evidence": "port :7071 listening: False"
    },
    "decision": {
-    "decision": "retire",
-    "basis": "Place gone by probe: :7071 not listening; rehome if futon1a returns",
+    "decision": "reopen",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\"; cluster with other substrate-2 items (retire reversed)",
     "carry": {
-     "kind": "no-home",
-     "to": "D4, D5, D7b"
+     "kind": "target",
+     "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies; cluster: substrate-2"
     }
    }
   },
@@ -1304,10 +1313,10 @@
    },
    "decision": {
     "decision": "retire",
-    "basis": "Place gone by probe: futon7 web/war-machine absent",
+    "basis": "Joe, 2026-11-02 ~20:40Z: \"potentially superseded entirely by Cascade Live and Giraffe\"",
     "carry": {
-     "kind": "no-home",
-     "to": "operator view of the WM, an owner gap"
+     "kind": "target",
+     "to": "superseded by Cascade Live and Giraffe (the operator view of the WM is this page)"
     }
    }
   },

@@ -48,6 +48,8 @@ def main(sig, sheet, out):
         _dec = DECISIONS.get(d["id"], {}).get("decision")
         if _dec == "audit": need, why = "read", "Joe: audit and explain what it accomplished, then close or drop with the explanation"
         if _dec == "reopen": need, why = "who-acts", "Joe: reopened; immediate need rehomed, long-term finish stands"
+        if _dec and _dec.startswith("cluster:"): need, why = "place", "Joe: combine upward into a cluster node without supersession"
+        if _dec == "close-as-prototype": need, why = "close-with-witness", "Joe: a prototype we can learn from; close with what it taught"
         dec = DECISIONS.get(d["id"], {}).get("decision")
         selectable = (dec == "work") or (dec is None and d["action"] == "work" and bool(d["stated-finish"]) and sit == "work")
         items.append({

@@ -5,19 +5,19 @@
  "provisional-until": "intermediate theses under 'activity as inference' let a final judgement be made",
  "decisions": {
   "E-clean-up-substrate-2": {
-   "decision": "retire",
-   "basis": "Place gone by probe: :7071 not listening",
+   "decision": "reopen",
+   "basis": "Joe, 2026-11-02 ~20:40Z: has a three-item acceptance checklist; \"looks like a pretty standard open excursion to me, could cluster with other substrate-2 items\" (retire reversed)",
    "carry": {
-    "kind": "no-home",
-    "to": "census on futon1b and a gated erase path"
+    "kind": "target",
+    "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies; cluster: substrate-2"
    }
   },
   "M-populate-substrate-2": {
-   "decision": "retire",
-   "basis": "Place gone by probe: :7071 not listening; rehome if futon1a returns",
+   "decision": "reopen",
+   "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\"; cluster with other substrate-2 items (retire reversed)",
    "carry": {
-    "kind": "no-home",
-    "to": "D4, D5, D7b"
+    "kind": "target",
+    "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies; cluster: substrate-2"
    }
   },
   "M-stack-geometry": {
@@ -29,11 +29,11 @@
    }
   },
   "M-stack-hud-refactor": {
-   "decision": "retire",
-   "basis": "Place gone by probe: HUD default :7071 not listening",
+   "decision": "reopen",
+   "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed)",
    "carry": {
-    "kind": "no-home",
-    "to": "V4 alerts, an owner gap"
+    "kind": "target",
+    "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies"
    }
   },
   "M-the-futon-stack-Q6-r12-design-choices": {
@@ -45,11 +45,11 @@
    }
   },
   "M-legacy-sorry-cleanup": {
-   "decision": "retire",
-   "basis": "Place gone by probe: futon1a erase gate down",
+   "decision": "reopen",
+   "basis": "Joe, 2026-11-02 ~20:40Z: \"still look open to me\" (retire reversed)",
    "carry": {
-    "kind": "no-home",
-    "to": "collision resolution after the 15 oriented entries land"
+    "kind": "target",
+    "to": "blocked-by futon1a :7071 (down by probe); rehome the census to futon1b where it applies"
    }
   },
   "E-live-loop-1": {
@@ -77,11 +77,11 @@
    }
   },
   "M-paper-reverse-morphogenesis": {
-   "decision": "merge-into:M-mark8",
-   "basis": "Joe, 2026-11-02 ~20:27Z, answering the four needs: still open; merges into the superpod work, now at mark 8 (mark 3 is out of date). A pattern-theoretic understanding of work already done is itself a reverse-morphogenesis programme, so it relates to the Cascade Live work | claude-16 2026-11-02 ~20:28Z: mark 8 is futon6/holes/M-mark8.md (open, last commit d45fbb6 2026-10-01); it is about allocating a fixed model-call budget observably and states neither 'morphogen' nor 'forward', so the need (a model trained on papers proposing techniques for new problems) vanishes unless the merge adds it",
+   "decision": "cluster:superpod-work",
+   "basis": "Joe, 2026-11-02 ~20:40Z: \"this is a good example of needing to combine structurally upwards, e.g., to a cluster called 'superpod work', without any supersession of meaning for the constituents\" (replaces merge-into:M-mark8)",
    "carry": {
     "kind": "target",
-    "to": "two places: (1) the paper-trained technique-proposing model, to be written into M-mark8 at merge time or it is lost; (2) the pattern-theoretic reading of finished work as reverse morphogenesis, to the cascade side (ways-of-working / the basin join)"
+    "to": "a cluster node 'superpod work' above M-mark8 and this mission (and the earlier marks), each keeping its own meaning; the pattern-theoretic reading of finished work still goes to the cascade side"
    }
   },
   "E-evidence-flow": {
@@ -94,10 +94,10 @@
   },
   "M-war-machine-frontend-upgrade1": {
    "decision": "retire",
-   "basis": "Place gone by probe: futon7 web/war-machine absent",
+   "basis": "Joe, 2026-11-02 ~20:40Z: \"potentially superseded entirely by Cascade Live and Giraffe\"",
    "carry": {
-    "kind": "no-home",
-    "to": "operator view of the WM, an owner gap"
+    "kind": "target",
+    "to": "superseded by Cascade Live and Giraffe (the operator view of the WM is this page)"
    }
   },
   "M-shared-memory-control-build-test": {
@@ -171,8 +171,17 @@
     "kind": "target",
     "to": "a TPG-related packet (claude-16 proposed M-xor-coupling-probe's run)"
    }
+  },
+  "M-expressions-of-interest": {
+   "decision": "close-as-prototype",
+   "basis": "Joe, 2026-11-02 ~20:40Z: \"it was a method not a governance structure, I haven't used it in quite a long time ... partly because the workflow became a bit clunky and unenjoyable ... a good example of a 'prototype we can learn from' rather than a 'feature', in distinction to things like Minus40°DB which I still see as a 'feature under development'\"",
+   "carry": {
+    "kind": "target",
+    "to": "an explanation of what the prototype taught (IT-6); outreach itself lives in futon7"
+   }
   }
  },
  "carries-note": "claude-16, 2026-11-02 ~20:16Z: none of the 15 retired rows reads as solved (13 partly, 2 open); a gone mechanism leaves the need, so each retirement names where the need went or that Joe dropped it. Carries are proposed, not ruled; four need Joe's word. A retired row with a carry attests nothing upward (IT-4).",
- "source-2": "Joe, 2026-11-02 ~20:27Z, answering the four needs; the Bergson reading: Cascade Live witnessing its own thesis is question-asking-and-answering; VSATARCS presented a static view of documentation and proposed to keep it up to date (it wasn't); Cascade Live and Giraffe point towards a morphogenetic compression"
+ "source-2": "Joe, 2026-11-02 ~20:27Z, answering the four needs; the Bergson reading: Cascade Live witnessing its own thesis is question-asking-and-answering; VSATARCS presented a static view of documentation and proposed to keep it up to date (it wasn't); Cascade Live and Giraffe point towards a morphogenetic compression",
+ "source-3": "Joe, 2026-11-02 ~20:40Z; also: codex built `M-x futon-find-work` at Joe's request; Giraffe could ultimately help agents find work quickly, and as a stretch help people find paid work; disposition vocabulary: 'prototype we can learn from' vs 'feature under development'"
 }

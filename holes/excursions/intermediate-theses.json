@@ -5,9 +5,9 @@
  "theses": [
   {
    "id": "IT-1",
-   "text": "A mission whose Place is down is not open work: the item is rehomed or retired, and its need carries to a named home or Joe says it is dropped.",
-   "decided-by": "the Place probe for the item; the carry record for the need (claude-16's reading: a gone mechanism leaves the need)",
-   "settled-today": 12
+   "text": "A mission whose Place is down is blocked, not retired: it is rehomed or marked blocked-by the Place, and retired only when its need is met elsewhere or dropped with an explanation.",
+   "decided-by": "the Place probe for the fact; Joe 2026-11-02 on the futon1a rows (\"still look open to me\"): a standing acceptance checklist keeps an item open while its Place is down",
+   "settled-today": "12 probed: 6 retired with a target, 5 reopened as blocked, 1 clustered"
   },
   {
    "id": "IT-2",
@@ -38,6 +38,18 @@
    "text": "Dropping a need carries the same explanatory burden as closing it: the record says what it was for and why it is no longer wanted, on the page.",
    "decided-by": "Joe 2026-11-02: \"'dropped' would also need an explanation for Cascade Live so we can't dodge the explanatory burden\"",
    "settled-today": 0
+  },
+  {
+   "id": "IT-7",
+   "text": "Combine upward without supersession: when two items share a need, they join a cluster node that names it; a merge that would lose a constituent's meaning is a cluster instead.",
+   "decided-by": "Joe 2026-11-02 on M-mark8 and M-paper-reverse-morphogenesis",
+   "settled-today": 1
+  },
+  {
+   "id": "IT-8",
+   "text": "A disposition says what kind of thing an item was: a prototype we can learn from closes with what it taught; a feature under development stays open with its next step.",
+   "decided-by": "Joe 2026-11-02 on the EOI workflow versus Minus40°DB",
+   "settled-today": 1
   }
  ]
 }
