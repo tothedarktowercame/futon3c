@@ -40,6 +40,12 @@ the result is read from the job, or the triage agent reports where told."
   "Agent offered as the default recipient, or nil to offer none."
   :type '(choice (const nil) string))
 
+(defcustom futon-bug-feed-attachment-file
+  (expand-file-name "futon/bug-feed-agent" (or (getenv "XDG_CONFIG_HOME")
+                                                "~/.config"))
+  "Private file naming the agent subscribed to completed bug reports."
+  :type 'file)
+
 (defcustom report-futon-bug-buffer-lines 150
   "Lines of the current buffer included when no region is active."
   :type 'integer)
@@ -102,6 +108,66 @@ the result is read from the job, or the triage agent reports where told."
                               agents))
             #'string<))))
 
+(defun futon-bug-feed--attached-agent ()
+  "Return the attached agent id, or nil when the feed is detached."
+  (when (file-readable-p futon-bug-feed-attachment-file)
+    (let ((agent (string-trim
+                  (with-temp-buffer
+                    (insert-file-contents futon-bug-feed-attachment-file)
+                    (buffer-string)))))
+      (unless (string-empty-p agent) agent))))
+
+(defun futon-bug-feed--current-agent ()
+  "Return the agent id associated with the current buffer, if any."
+  (and (boundp 'agent-chat--agent-id)
+       (stringp agent-chat--agent-id)
+       (not (string-empty-p agent-chat--agent-id))
+       agent-chat--agent-id))
+
+;;;###autoload
+(defun futon-bug-feed-attach (agent)
+  "Push future completed bug reports to AGENT.
+In an agent REPL, default to that buffer's agent.  The attachment is durable
+across Emacs and Voxterm restarts, but names a seat rather than a role; attach
+a replacement when the seat is retired."
+  (interactive
+   (let ((here (futon-bug-feed--current-agent)))
+     (list (completing-read
+            (if here (format "Attach bug feed to agent [%s]: " here)
+              "Attach bug feed to agent: ")
+            (report-futon-bug--agents) nil t nil nil here))))
+  (setq agent (string-trim (or agent "")))
+  (when (string-empty-p agent)
+    (user-error "An agent id is required"))
+  (make-directory (file-name-directory futon-bug-feed-attachment-file) t)
+  (with-temp-file futon-bug-feed-attachment-file (insert agent "\n"))
+  (set-file-modes futon-bug-feed-attachment-file #o600)
+  (message "Futon bug feed attached to %s" agent)
+  agent)
+
+;;;###autoload
+(defun futon-bug-feed-detach ()
+  "Stop pushing completed bug reports to an agent.
+Reports remain durable under ~/notes/futon-bugs and continue to open in Emacs."
+  (interactive)
+  (let ((old (futon-bug-feed--attached-agent)))
+    (when (file-exists-p futon-bug-feed-attachment-file)
+      (delete-file futon-bug-feed-attachment-file))
+    (if old
+        (message "Futon bug feed detached from %s" old)
+      (message "Futon bug feed was already detached"))
+    old))
+
+;;;###autoload
+(defun futon-bug-feed-status ()
+  "Report which agent, if any, receives completed bug reports."
+  (interactive)
+  (let ((agent (futon-bug-feed--attached-agent)))
+    (if agent
+        (message "Futon bug feed is attached to %s" agent)
+      (message "Futon bug feed is detached"))
+    agent))
+
 (defun report-futon-bug--bell (agent path)
   "Bell the report at PATH, whole, to AGENT.  Return the sender's output."
   (with-temp-buffer
@@ -153,6 +219,7 @@ operator's words and Emacs context are already durable in the collector's
 input file; slow health and journal reads happen outside the UI request."
   (when (string-empty-p (string-trim summary))
     (user-error "A one-line summary is needed"))
+  (setq agent (or agent (futon-bug-feed--attached-agent)))
   (let ((ctx-file (make-temp-file "futon-bug-emacs-" nil ".md"))
         (buffer (generate-new-buffer " *futon-bug-collector*")))
     (with-temp-file ctx-file (insert (report-futon-bug--emacs-context)))
