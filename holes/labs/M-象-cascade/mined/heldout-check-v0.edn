@@ -1,0 +1,178 @@
+{:schema :cascade/heldout-check-v0
+ :cascade :cascade/repair-run-read-certify
+ :turns-read 140
+ :period "2026-10-26 to 2026-11-01"
+ :units
+ [{:index 1
+   :title "Fix the defects already known before spending another run"
+   :instances
+   [{:turn "claude-11-turn-81" :session "8d4df137"
+     :quote "are *in themselves* stop-the-line findings for the War Machine work"}
+    {:turn "claude-11-turn-149" :session "8d4df137"
+     :quote "We can't just keep running clicks if we are expecting them to fail."}
+    {:turn "claude-1-turn-64" :session "b1d549da"
+     :quote "no more dispatched to zai until we sort this out."}]
+   :against
+   [{:turn "claude-11-turn-508"
+     :quote "if we spend all out time and energy on repair and never do useful work, then we are in tge grip"
+     :note "Joe names repair-before-work as a trap and asks where it ends."}
+    {:turn "codex-11-turn-328"
+     :quote "I would like to know the recovery plan, not have an interminable series of repairs"
+     :note "Blocked from starting by repairs; he asks for a way out, not more clearing."}
+    {:turn "codex-11-turn-333"
+     :quote "you keep discovering endless defects rather than focusing on tge crieria I gave"
+     :note "Open defects are not to take over from the criteria he set."}
+    {:turn "claude-1-turn-4"
+     :quote "codex was also a bit distracted with other potential repairs not on the list."
+     :note "Defects outside the agreed plan are a distraction, so the list is bounded."}
+    {:turn "claude-2-turn-58"
+     :quote "just continuous  improvement as needed as tge machine runs."
+     :note "Fixing moves inside the run, though he still waits for preparation to say it is ready."}]
+   :verdict :weak}
+  {:index 2
+   :title "Authorise a run of a stated size: one or two clicks, five clicks, a five-paper set"
+   :instances
+   [{:turn "claude-11-turn-149" :session "8d4df137"
+     :quote "then we could run another click and see if they continue to hold."}
+    {:turn "claude-16-turn-26" :session "80c1021b"
+     :quote "what does 1 claude and 1 codex do in 1 hour"}]
+   :against
+   [{:turn "claude-2-turn-58"
+     :quote "ni more whole click trials"
+     :note "Joe retires the click trial as the thing he authorises."}
+    {:turn "claude-11-turn-288"
+     :quote "restart the run based criteria-qualification loop."
+     :note "Runs are authorised with no size; the bound is the criteria list."}]
+   :verdict :weak}
+  {:index 3
+   :title "Repair a failure inside the running machine so the run carries on, instead of stopping at it"
+   :instances
+   [{:turn "claude-2-turn-58" :session "6dea40ba"
+     :quote "just by running and debugging as we go."}]
+   :against
+   [{:turn "claude-11-turn-149"
+     :quote "fixes in follow-on jobs based on frozen data could motivate new clicks."
+     :note "Offline fixes between clicks are the accepted route here."}
+    {:turn "claude-11-turn-362"
+     :quote "I've sorted out the Agency + futon1b fixes with the external agent."
+     :note "A failure during the criteria run is fixed from outside, by Joe's choice of agent."}
+    {:turn "claude-11-turn-460"
+     :quote "it was repaired from outside"
+     :note "Outside repair is treated as legitimate; what is missing is the medic record."}
+    {:turn "claude-11-turn-508"
+     :quote "we are still focusing on tge sekf-heal arm, and I worry about that being potentially an endless task"
+     :note "Joe doubts the emphasis on repair inside the machine."}]
+   :verdict :weak}
+  {:index 4
+   :title "Read what the run actually did against what its report or the previous run says"
+   :instances
+   [{:turn "claude-11-turn-149" :session "8d4df137"
+     :quote "the table you showed me inline above is basically saying \"no progress was made against my criterion\""}
+    {:turn "claude-11-turn-173" :session "8d4df137"
+     :quote "what was the tie anyway?  was there a rationale?"}
+    {:turn "claude-11-turn-362" :session "8d4df137"
+     :quote "The criteria-completeness-deficits.tsv is still showing plenty of holes."}
+    {:turn "claude-16-turn-34" :session "80c1021b"
+     :quote "6 seconds per bug does seem a bit suspicious"}
+    {:turn "claude-16-turn-46" :session "80c1021b"
+     :quote "I'm slightly disappointed that 0 bugs have been fixed"}
+    {:turn "claude-1-turn-57" :session "b1d549da"
+     :quote "But then, why was it selected?  is it utterly without purpose?"}
+    {:turn "claude-1-turn-62" :session "b1d549da"
+     :quote "this is exactly the kind if façade that i began a quest to fight 2 or 3 months ago."}
+    {:turn "claude-2-turn-23" :session "6dea40ba"
+     :quote "selectionGood says that it is possible to conform to the overall expected shape, but it also does that with what is clearly a facade"}
+    {:turn "claude-2-turn-85" :session "6dea40ba"
+     :quote "the machine is behaving like Barnaby the Scrivener or Marvin the depressed robot."}
+    {:turn "claude-2-turn-89" :session "6dea40ba"
+     :quote "the selections that are being returned are frankly a bit bizarre"}]
+   :against []
+   :verdict :held}
+  {:index 5
+   :title "Widen the gap from one bad result to the whole class, and have it written up as a plan or audit"
+   :instances
+   [{:turn "codex-11-turn-339" :session "01a16136"
+     :quote "what would resolve this and similar issues going forward?"}
+    {:turn "claude-1-turn-64" :session "b1d549da"
+     :quote "the flawed selection must be treated as a major incident and we will begin an investigation"}
+    {:turn "claude-2-turn-4" :session "6dea40ba"
+     :quote "this seems to be a total violation, so we must see why it was not flagged as such"}
+    {:turn "claude-2-turn-6" :session "6dea40ba"
+     :quote "make any cheating, facades, special cases, ties, restricted domains of operation, empty cascades, and any other such nonsense subject to tripwires."}]
+   :against
+   [{:turn "codex-11-turn-333"
+     :quote "you keep discovering endless defects rather than focusing on tge crieria I gave"
+     :note "Widening by the agent is refused."}
+    {:turn "claude-11-turn-251"
+     :quote "it's worth a quick look, but not a deep dive to reconstruct it"
+     :note "A gap in pattern-to-task attribution gets an explicit limit, not an investigation."}
+    {:turn "claude-11-turn-460"
+     :quote "we're chasing validation of a fix rather than trying to figure out why it wasn't logged properly"
+     :note "He narrows the problem to one missing record."}]
+   :verdict :weak}
+  {:index 6
+   :title "Make Lean or the comparator, not an agent's say-so, the judge of whether the fix worked"
+   :instances
+   [{:turn "claude-11-turn-82" :session "8d4df137"
+     :quote "it is still a violation that Lean should be picking up at selection time"}
+    {:turn "claude-11-turn-159" :session "8d4df137"
+     :quote "so the lean first workflow should have you ensuring quality while codex writes the aligned clojure code"}
+    {:turn "claude-1-turn-62" :session "b1d549da"
+     :quote "Lean shoukd prohibit it just the same as prohibiting a whitelist of 4 missions."}
+    {:turn "claude-1-turn-64" :session "b1d549da"
+     :quote "the entire Lean suite as well which is supposed to fail loudly when fake work is delivered."}
+    {:turn "claude-2-turn-1" :session "6dea40ba"
+     :quote "should have all the same lean enforcements as the inner loop"}
+    {:turn "claude-2-turn-5" :session "6dea40ba"
+     :quote "This is also why I wanted a Lean led way of working, so bad lean would not follow and ceetify bad clojure."}
+    {:turn "claude-2-turn-6" :session "6dea40ba"
+     :quote "move to fully lean led validatiin, requiring lean validated conformant run receipts throughout."}]
+   :against
+   [{:turn "claude-11-turn-208"
+     :quote "the lean code actually doesn't encode the model it encodes some old model"
+     :note "Lean is the thing being judged, against Joe's model."}
+    {:turn "claude-11-turn-209"
+     :quote "that's proving a complete fiction"
+     :note "A passing R20 proof is rejected on what it models."}
+    {:turn "claude-2-turn-23"
+     :quote "real conformanceagainst live data must come from something else"
+     :note "A Lean certificate alone is not taken as the verdict."}]
+   :verdict :held}]
+ :edges
+ [{:edge [1 2]
+   :sessions
+   [{:session "8d4df137" :order :holds
+     :note "Turn 149 only: the click is conditional on one area being fully addressed. Both moves sit in one sentence of one turn."}]
+   :verdict :weak}
+  {:edge [2 3]
+   :sessions []
+   :verdict :absent}
+  {:edge [2 4]
+   :sessions
+   [{:session "80c1021b" :order :holds
+     :note "One-hour experiment set at turn 26, read at turns 34 and 46. Emacs bug work, not a War Machine run, and the reads come while it is going on."}
+    {:session "8d4df137" :order :unclear
+     :note "In turn 149 the reading comes before the conditional click. Turns 173 and 362 are later, but neither can be traced to that click."}]
+   :verdict :weak}
+  {:edge [3 4]
+   :sessions
+   [{:session "6dea40ba" :order :unclear
+     :note "Unit 3 is a stated policy at turn 58, not a repair of a failure. Reads occur before it (turn 23) and after it (turns 85, 89)."}]
+   :verdict :weak}
+  {:edge [4 5]
+   :sessions
+   [{:session "b1d549da" :order :holds
+     :note "Turns 57 and 62 read the selection, turn 64 declares the incident."}
+    {:session "6dea40ba" :order :unclear
+     :note "Same incident carried over from b1d549da. Within the session unit 5 (turns 4, 6) comes before the unit 4 instances (turns 23, 85, 89), but it starts from the earlier reading. Those later reads lead to no written widening."}]
+   :verdict :weak}
+  {:edge [5 6]
+   :sessions
+   [{:session "b1d549da" :order :reversed
+     :note "Lean is named at turn 62, before the investigation at turn 64."}
+    {:session "6dea40ba" :order :reversed
+     :note "Lean enforcement is required at turn 1, before unit 5 at turn 4. Turn 6 then states Lean-led validation as the content of the plan, in one sentence with the tripwires."}]
+   :verdict :absent}]
+ :standing-rules [6]
+ :missing "Four moves recur that the cascade lacks. (1) Restating a ruling already given and objecting to having to: the outer loop must meet the same criteria as the inner loop and minimise G over cascades (claude-11 turns 173, 189, 243; claude-1 turns 58, 61; claude-2 turns 1, 4). (2) Asking for a working demonstration before he will rule: a mock-up (claude-11 turns 125, 126), a fully worked example (claude-9 turn 56), evidence from a week of work (claude-16 turn 19), fixed bugs before more triage (claude-16 turn 46), hand-built witnesses (claude-2 turn 7). (3) Refusing work that replaces the requested work: bookkeeping (claude-11 turn 151; codex-11 turn 339), endless repair (claude-11 turn 508; codex-11 turns 328, 333). (4) Complaining that he cannot see the state of the work (claude-11 turn 149; codex-11 turn 336; claude-1 turn 9; codex-5 turns 14, 22). Also, the independent check is not always Lean: claude-16 turn 34 asks for ERT tests on the Emacs bugs. Much of the file falls outside applies-to altogether: Giraffe design, Mozilla and institutional theory, voxterm, compaction, mail."
+ :summary "Reading what a run did against what was claimed held up, with 10 instances in 4 sessions, though some readings came before a run had ended (claude-16 turn 34, claude-1 turn 57), so the cascade's precondition is too strict. Lean as judge also held, but it is a standing rule and not a final step: Joe states it before and during the investigation, and in both sessions where the order can be checked it comes before the written plan, so the edge from 5 to 6 fails. Units 1, 2, 3 and 5 are weak, and no edge has two independent sessions in which its order clearly holds; most of unit 5 and the only clean 4 to 5 sequence come from a single incident on 1 November that spans two sessions. The work has moved on in part: the file is mostly Giraffe, outer-loop selection, business and infrastructure, Joe now complains about endless repair, and on 1 November he says no more whole click trials, which removes the counted run that units 2 and 3 depend on. The file has no repeated prompts, so the same point restated about the outer loop is the nearest risk of overcounting, and the 1 November turns count as one episode."}

@@ -1,0 +1,181 @@
+{:schema :cascade/record-draft-v0
+ :id :cascade/repair-run-read-certify
+ :status :candidate
+ :applies-to "Getting a long-running, expensive machine (War Machine clicks, a superpod paper pipeline) through another run when earlier runs failed or their reports cannot be believed; the operator is directing coding agents and is not reading every line himself."
+ :provenance :mined
+ :units
+ [{:index 1
+   :pattern "task-selection/repair-goes-to-the-front"
+   :sha256 "eaa7021ac0b4693d40a626858239e96a8e014ce03d61fb665a637a7090536897"
+   :title "Fix the defects already known before spending another run"
+   :needs [:known-defect-list]
+   :establishes :known-defects-cleared
+   :instances
+   [{:turn "codex-10-turn-96" :session "01a0f4ae"
+     :quote "let's ensure that all un-fixed items from your research are fixed before the next click"}
+    {:turn "claude-12-turn-15" :session "5a109aed"
+     :quote "before you run another click, lean gives you a long list of defects to fix."}
+    {:turn "codex-68-turn-48" :session "01a123e4"
+     :quote "yez tgat should bd addressed before we run the allocated click"}
+    {:turn "codex-11-turn-45" :session "01a0f574"
+     :quote "I think we should definitely do these repairs before we run it on the superpod."}
+    {:turn "claude-1-turn-18" :session "9da488d6"
+     :quote "until we actually fix the problems that were already identified, which were plenty"}]}
+  {:index 2
+   :pattern :proposed/authorise-a-counted-run
+   :sha256 nil
+   :title "Authorise a run of a stated size: one or two clicks, five clicks, a five-paper set"
+   :needs [:known-defects-cleared]
+   :establishes :counted-run-under-way
+   :instances
+   [{:turn "codex-68-turn-116" :session "01a13631"
+     :quote "we can run 1 or 2 clicks as needed to observe the new cerificates validated."}
+    {:turn "codex-68-turn-201" :session "01a13631"
+     :quote "OK please run 1 click with the debugger engaged and ready to repair any errors live"}
+    {:turn "claude-7-turn-120" :session "b5199573"
+     :quote "yes, 5 more clicks are awarded for research purposes."}
+    {:turn "codex-11-turn-47" :session "01a0f574"
+     :quote "make the repairs and rerun it with a smaller (e.g. 5 paper) set"}]}
+  {:index 3
+   :pattern "agent/eat-your-own-tail"
+   :sha256 "1634eb791d9953ec6fdd4485e77ec1f2e1719cc7f844249f6a3ea9115ca738f8"
+   :title "Repair a failure inside the running machine so the run carries on, instead of stopping at it"
+   :needs [:counted-run-under-way]
+   :establishes :run-reached-its-end
+   :instances
+   [{:turn "codex-68-turn-49" :session "01a123e4"
+     :quote "the debugger is meant to be used to repair problems live not abort runs"}
+    {:turn "codex-68-turn-127" :session "01a13631"
+     :quote "the debugger should catch it and you should be able to repair it live"}
+    {:turn "codex-11-turn-55" :session "01a0f574"
+     :quote "I can't see why we should make our machine fail, stall, and sit there burning money"}
+    {:turn "claude-2-turn-133" :session "4ca65fa3"
+     :quote "we should run the self-heal loop in the debugger at that exact point"}
+    {:turn "codex-1-turn-6" :session "01a0fcec"
+     :quote "it's not a reason to stop this goddamn machine"}]}
+  {:index 4
+   :pattern :proposed/read-the-run-against-its-claims
+   :sha256 nil
+   :title "Read what the run actually did against what its report or the previous run says"
+   :needs [:run-reached-its-end]
+   :establishes :gap-between-claim-and-run
+   :instances
+   [{:turn "codex-68-turn-106" :session "01a13631"
+     :quote "why did it select this specific task? and wgat does the report card say about runtime certificates?"}
+    {:turn "codex-10-turn-105" :session "01a0f4ae"
+     :quote "the narrative describes declared machinery that this click didn't exercise."}
+    {:turn "codex-11-turn-59" :session "01a0f574"
+     :quote "can you cross-check them to ensure the mark8 ones are indeed improved (or at least not worse)"}
+    {:turn "codex-68-turn-152" :session "01a13631"
+     :quote "The fact that production never calls previous_run.clj makes me wonder"}
+    {:turn "codex-10-turn-126" :session "01a0f4ae"
+     :quote "we are selecting apparently random excursions and missions including the closed E-kimi-task-10"}
+    {:turn "claude-4-turn-319" :session "9ef8e479"
+     :quote "there are *less* nodes compiled than before, 19 rather than 20"}]}
+  {:index 5
+   :pattern :proposed/widen-the-gap-into-a-written-investigation
+   :sha256 nil
+   :title "Widen the gap from one bad result to the whole class, and have it written up as a plan or audit"
+   :needs [:gap-between-claim-and-run]
+   :establishes :written-class-level-plan
+   :instances
+   [{:turn "codex-68-turn-110" :session "01a13631"
+     :quote "this needs a serious investigation"}
+    {:turn "codex-68-turn-111" :session "01a13631"
+     :quote "we should save it as E-wm-learning-loop.md ... ideally written in the form of a plan"}
+    {:turn "codex-10-turn-128" :session "01a0f4ae"
+     :quote "let's think about this *as a policy*  i.e. as a pattern cascade"}
+    {:turn "codex-11-turn-191" :session "01a16136"
+     :quote "this motivates a thorough analysis of the code to find all relevant call sites."}
+    {:turn "claude-5-turn-21" :session "7890e082"
+     :quote "those need a separate audit and correlation"}]}
+  {:index 6
+   :pattern "aif/no-self-certification"
+   :sha256 "6133a47d8f5ec7206c0a39fa2d643e5d8b595f0ecdb0399b07dde2c76e0c04b6"
+   :title "Make Lean or the comparator, not an agent's say-so, the judge of whether the fix worked"
+   :needs [:written-class-level-plan]
+   :establishes :verdict-from-independent-authority
+   :instances
+   [{:turn "codex-68-turn-115" :session "01a13631"
+     :quote "we should be sure that the loop / learning behaviour is suitably reflected in the lean certificates for run time"}
+    {:turn "codex-68-turn-267" :session "01a13631"
+     :quote "the certificate should note any such behaviour as a FAIL"}
+    {:turn "claude-5-turn-112" :session "7890e082"
+     :quote "the ultimate authoritity is going to be Lean rather than any agent."}
+    {:turn "claude-4-turn-381" :session "9ef8e479"
+     :quote "that's why the comparator it's the only thing we can really trust"}
+    {:turn "claude-2-turn-123" :session "4ca65fa3"
+     :quote "try to make the lean a formal model of the theory, and then we try to implement it in Clojure"}]}]
+ :edges [[1 2 :precedes]
+         [2 3 :precedes]
+         [2 4 :precedes]
+         [3 4 :precedes]
+         [4 5 :precedes]
+         [5 6 :precedes]]
+ :edge-evidence
+ [{:edge [1 2]
+   :sessions ["01a0f574" "01a0f4ae" "01a123e4"]
+   :note "01a0f574: repairs are demanded before the superpod run (turn-45), then the rerun is sized around those repairs (turn-47). 01a0f4ae: Joe offers click-3 (turn-94) and holds it until the un-fixed items are fixed (turn-96), so the fixing comes first in execution though not in the first mention. 01a123e4: the checkpoint issue must be addressed before the allocated click (turn-48)."}
+  {:edge [2 3]
+   :sessions ["01a13631" "01a0f574" "01a123e4"]
+   :note "A live repair needs a run in progress. 01a13631: clicks authorised (turn-116), then a failure inside them should be repaired live (turn-127). 01a0f574: smaller rerun set (turn-47), then the stall on one proof is refused (turn-55). 01a123e4: allocated click (turn-48), then the debugger should repair rather than abort (turn-49)."}
+  {:edge [2 4]
+   :sessions ["01a0f4ae" "01a0f574"]
+   :note "This edge records the case with no live repair: unit 3 only happens when a run fails, so a run that finishes goes straight to being read. 01a0f4ae: click authorised and fixes done (turns 94, 96), then the narrative of that click is challenged (turn-105). 01a0f574: rerun set (turn-47), then mark8 output is cross-checked against mark7 (turn-59)."}
+  {:edge [3 4]
+   :sessions ["01a13631" "01a0f574"]
+   :note "Reading needs a run that got to an end. 01a13631: repairs and another live run (turn-104), then Joe reads the result and asks why that task was selected (turn-106). 01a0f574: stalls are worked through (turn-55), then the mark8 results exist to compare (turn-59)."}
+  {:edge [4 5]
+   :sessions ["01a13631" "01a0f4ae"]
+   :note "The written investigation is about the gap the reading found. 01a13631: questions about selection and the report card (turn-106), surprise that the machine is not learning (turn-110), saved as E-wm-learning-loop.md (turn-111). 01a0f4ae: random selection noticed (turn-126), then reframed as a policy question (turn-128). 01a16136 (turns 185 then 191) shows a similar step, from one citation refusal to all call sites."}
+  {:edge [5 6]
+   :sessions ["01a13631" "7890e082"]
+   :note "Weakest edge. 01a13631 is clean: the learning-loop plan (turn-111) is followed at once by requiring that it show up in the Lean certificates (turn-115). 7890e082 is looser: the audit and work packets (turns 21, 23) come first and Lean is named as the final authority over that work later (turn-112), but turn-112 replies to a peer-review question, not directly to the audit. 9ef8e479 reaches the comparator (turn-381) straight from reading results, without a written investigation."}]
+ :independent []
+ :reads
+ {:known-defect-list {:source "Open findings in the last run's report, review notes and Lean or certificate mismatches" :kind :read}
+  :known-defects-cleared {:source "Commits or agent reports saying the listed defects were fixed; an agent's report stands in for checking each one" :kind :proxy}
+  :counted-run-under-way {:source "Operator's click authorisation and the run or click ledger" :kind :read}
+  :run-reached-its-end {:source "Terminal status of the click or pipeline run" :kind :read}
+  :gap-between-claim-and-run {:source "An operator turn questioning the run, standing in for a direct comparison of report and run trace" :kind :proxy}
+  :written-class-level-plan {:source "The E- excursion file, audit or set of work packets named in the turn" :kind :read}
+  :verdict-from-independent-authority {:source "Lean run-time certificate output or the cold comparator result" :kind :read}}
+ :rationale "Joe keeps driving an expensive machine through the same loop: he refuses to pay for another run while known defects are open, then authorises a run of a stated size. When the run fails partway, he wants the failure repaired in place so the run finishes. Once it finishes, he does not take the report at its word; he asks what actually happened, and any gap gets widened into a written investigation of the whole class of problem. The result is then tied to Lean or the comparator, because agents' claims of success have repeatedly been wrong. In one session the order closes on itself, with the fix put under the certificates and more clicks then authorised to test them, but that return to the second step appears only there and so is not recorded as an edge."
+ :counter-examples
+ [{:turn "codex-68-turn-267"
+   :quote "I'm not saying this necessarily needs to be solved before we run the next click"
+   :note "Against unit 1: a known contract violation is carried into the next run, recorded as a FAIL and not fixed first."}
+  {:turn "codex-68-turn-38"
+   :quote "how far off we are from actually running the WM again, because we've now spent a full day on repairs."
+   :note "Against unit 1 as an absolute: Joe has a limit on repair-before-run and pushes back toward running."}
+  {:turn "codex-68-turn-256"
+   :quote "These aren't real \"clicks\" but they will get us back on the road faster."
+   :note "Against unit 2: Joe proposes replaying recorded selection up to the last breakpoint, which is not a counted run at all."}
+  {:turn "codex-68-turn-247"
+   :quote "a good example of something that should be repaired from outside not live"
+   :note "Against unit 3: Joe accepts that some failures stop the run and get repaired outside it."}
+  {:turn "claude-5-turn-23"
+   :quote "we can wait for the sixty items to come back"
+   :note "Against unit 1: two turns after saying the 60 open repair items must not be carried, Joe defers them behind larger work."}
+  {:turn "claude-7-turn-171"
+   :quote "you have deviated massively, in my opinion, from running a lean led programme of work"
+   :note "Against unit 6 as Joe's steady practice: the same turn says he was drawn along too, so Lean-first work had lapsed for a stretch."}]
+ :alternatives
+ [{:id :stop-ask-and-claim-repaired
+   :rationale "What agents did and Joe corrected. The agent stops at each failure or raises a refusal, asks the operator what to do, declares the thing repaired or special-cases the check, and says one more click will prove it. There is no live repair and the verdict is the agent's own."
+   :instances
+   [{:turn "codex-68-turn-197" :quote "you stop at each error and elicit my input."}
+    {:turn "codex-68-turn-299" :quote "I don't think you can actually claim it's repaired and that another click is required to demonstrate it"}
+    {:turn "codex-68-turn-200" :quote "if it is abstaining based on red-tape that's not great."}
+    {:turn "codex-1-turn-6" :quote "you've got to make the thing work can't just give up at every possible turn"}
+    {:turn "codex-8-turn-16" :quote "this buffer shows you getting the inbox-zero process out of a fix, rather than fixing the inbox zero process"}
+    {:turn "codex-11-turn-185" :quote "why not just ensure that citations, if needed for acceptance, are actually supplied?!?!"}]}
+  {:id :autorunner-until-stop-signal
+   :rationale "Joe's own rival way of working, used on the Lisp port on 3 October. One fixed prompt is sent again and again and the agent signals when it is done; there is no defect list, no read of the results between prompts and no independent check. These are the most repeated turns in the file, but they are one instruction re-sent, so they give no evidence of a sequence. Later turns show Joe judging the approach a failure and retiring a similar grind."
+   :instances
+   [{:turn "codex-19-turn-52" :quote "OK, please continue; when the transpiler is complete, evaluate stop-codex-autorunner"}
+    {:turn "codex-18-turn-214" :quote "Keep developing the Lisp implementation of the blank-file-parser; progress is defined as discrete progress towards the \"110\" curriculum."}
+    {:turn "codex-18-turn-253" :quote "OK, please work on the Array.extract curriculum curriculum until you have a working LISP port of it"}
+    {:turn "claude-6-turn-1" :quote "My idea of porting the project to LISP and getting a speedup that way also proved impractical."}
+    {:turn "claude-14-turn-1471" :quote "don't resume the earlier topo loop grind"}]}]
+ :G nil}
