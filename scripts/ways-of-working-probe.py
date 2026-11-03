@@ -9,6 +9,7 @@ invariant (holding/failing/unknown), last-observation, violations, evidence.
 A way with probe "none" is reported as monitor not-built, invariant unknown:
 the page shows that honestly rather than guessing. No state is changed.
 """
+import collections
 import datetime, glob, hashlib, json, os, pathlib, re, subprocess, sys, time, urllib.parse, urllib.request
 
 from xiang_marks import MARKS, bracket, paragraphs
@@ -168,7 +169,12 @@ def classify_feedback_reaches(jobs, promise_history, replies, now):
             "evidence": [f"window start: {iso(cutoff)}",
                          f"return path: {len(no_path)} of {len(bells)} bells lacked an addressed path ({len(emitters)} emitters)",
                          f"return receipt: {len(return_failures)} of {len(addressed_terminal)} completed addressed bells unproved after 30m; {len(pending)} pending inside grace",
-                         f"intent marks: {len(reply_failures)} of {len(replies)} operator-facing replies failed strict form; leading-mark paragraphs {marked_paragraphs}/{reply_paragraphs} ({rate:.1%})"],
+                         f"intent marks: {len(reply_failures)} of {len(replies)} operator-facing replies failed strict form; leading-mark paragraphs {marked_paragraphs}/{reply_paragraphs} ({rate:.1%})",
+                         "reply census coverage: " + (", ".join(f"{a} {n}" for a, n in sorted(
+                             collections.Counter(r.get("agent-id") for r in replies).items(), key=lambda x: -x[1])) or "none")
+                         + "; the join "
+                           "misses most replies (claude-5, 11-03: 1 of about 9; replies after tool use are the suspected gap, unconfirmed); "
+                           "compare with the operator-turns count before reading this as stack-wide"],
             "denominator": (f"{len(no_path)}/{len(bells)} bells without path; "
                             f"{len(return_failures)}/{len(addressed_terminal)} completed addressed returns unproved; "
                             f"{len(reply_failures)}/{len(replies)} operator replies malformed")}
