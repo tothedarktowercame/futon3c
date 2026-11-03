@@ -55,7 +55,7 @@ hand.
 | one-queryable-self-account | `cascade-standards` | on, failing | s6 readability not built |
 | backlog-understood | `draw-pile` | on, failing | |
 | inbox-zero | `git-clean` | off, failing | timer parked |
-| records-carry-warrant | none | not built: no join yet | discovery 2026-11-03 (codex-15): 320 dispatched commits in 7 days cannot be classified; findings 5 and 6 |
+| records-carry-warrant | none | not built | unit is the test run, not the commit (Joe 11-03; declaration corrected); finding 5 blocks enumeration |
 | intents-are-tracked | none | not built | minus40 open asks are a candidate source |
 | selection-gives-a-reason | none | not built | War Machine side; futon2 rules apply |
 | eat-your-own-tail | none | not built | needs a design first |
@@ -83,15 +83,13 @@ hand.
    `test-registry-a7413a22…` and refused with `environment-mismatch` on
    `test/user.clj`), so the ledger is fine and the evidence emission is what
    stopped. Checked by claude-5, 2026-11-03.
-6. **No review record joins a commit to its warrants.** A reviewer supplies
-   `changed-paths` to `/check`, but nothing records which warrant a review
-   relied on. Discovery proposal (codex-15,
-   `~/notes/packets/ways-of-working/records-carry-warrant-discovery-REPORT.md`):
-   the reviewer writes `{reviewed-repo, reviewed-sha, changed-paths,
-   warrant-ids, reviewer, checked-at, outcomes}` as evidence. Then the probe
-   reads those records and calls `/check` on their ids alone. None of today's
-   reviews (claude-5) used warrants. By the house rule they are the dirty
-   tree, not rejected work.
+6. ~~No review record joins a commit to its warrants.~~ Withdrawn (Joe,
+   2026-11-03): "warrants apply to tests, not to commits". The way counts
+   test runs and the claims that rest on them, not commits, so no
+   commit→warrant join is needed. The discovery's 320-commit population is
+   not the denominator. A probe candidate: test-result claims in
+   bell-backs and reviews ("Ran N tests …") that carry no warrant id, i.e.
+   pasted counts, against those that do.
 
 ## Ways and the creativity-commons patterns (draft, claude-5; for Joe to check)
 
@@ -122,7 +120,7 @@ pattern has no way.
 
 ## Next
 
-1. Records-carry-warrant: discovery done. Before the probe: find why warrants stopped reaching evidence (finding 5), and add the review record (finding 6). Until then the way stays `not-built`, with that reason.
+1. Records-carry-warrant: discovery done. Before the probe: find why warrants stopped reaching evidence (finding 5). Until then the way stays `not-built`, with that reason.
 2. Open an item for each finding above, with this mission as its parent.
 3. Intents-are-tracked: check whether minus40's open-asks list can be the
    census (the session brief already prints "open asks with no answer

@@ -40,7 +40,7 @@
    "name": "Nothing is accepted on say-so",
    "therefore": "A",
    "problem": "An assertion severed from its derivation cannot be checked, learned from, or recovered.",
-   "invariant": "Every reviewed change carries a warrant whose shas match the diff; a run without one is the dirty tree, not a veto.",
+   "invariant": "Every test result that is relied on comes from a registered run: a warrant records the run's code sha, test sha, environment, command, results and log, and still checks; a test run without one is the dirty tree, not a veto. Warrants apply to tests, not to commits (Joe, 2026-11-03).",
    "declared-in": "futon2/holes/labs/wm-contract/NOTE-test-registry.md",
    "built": [
     "futon2/holes/labs/wm-contract/test-registry/ (logs, gitignored)",
@@ -61,7 +61,8 @@
     "problems/spec-and-implementation-must-converge-to-runtime-certificates",
     "translation/test-by-reproducing-behaviour",
     "system-coherence/argue-empirically-not-persuasively"
-   ]
+   ],
+   "scope-note": "unit is the test run, per NOTE-test-registry's mapping (dirty tree = test run with no registered warrant); a reviewer's record check asks whether the warrant's shas cover the diff, but the way itself is about tests"
   },
   {
    "id": "one-queryable-self-account",
