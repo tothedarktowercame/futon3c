@@ -1,0 +1,10 @@
+P S3 selected 107 observed 131 null 11.3 sd 3.2 p 0.002 PASS
+P S4 selected 251 observed 51 null 43.8 sd 6.2 p 0.1397 fail
+A S3 selected 46 observed 3 null 1.1 sd 1.0 p 0.0898 fail
+A S4 selected 97 observed 2 null 3.5 sd 1.8 p 0.8643 fail
+B S3 selected 48 observed 3 null 1.1 sd 1.0 p 0.0958 fail
+B S4 selected 100 observed 2 null 3.4 sd 1.7 p 0.8762 fail
+C S3 selected 70 observed 9 null 6.2 sd 2.6 p 0.1737 fail
+C S4 selected 220 observed 43 null 35.6 sd 5.6 p 0.1078 fail
+D S3 selected 286 observed 280 null 267.3 sd 14.5 p 0.1996 fail
+D S4 selected 649 observed 741 null 711.5 sd 20.1 p 0.0798 fail
