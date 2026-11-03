@@ -56,7 +56,7 @@ hand.
 | backlog-understood | `draw-pile` | on, failing | |
 | inbox-zero | `git-clean` | off, failing | timer parked |
 | records-carry-warrant | none | not built | unit is the test run, not the commit (Joe 11-03; declaration corrected); finding 5 blocks enumeration |
-| intents-are-tracked | none | not built | minus40 open asks are a candidate source |
+| intents-are-tracked | (building) | not built | discovery 11-03 (codex-7): the authority is the latest 象 record per session; 15 open operator acts, 6 stale over 7 days; minus40's 992 "open asks" are aggregation debt. Probe v1 with codex-7; brief fix with zai-5 |
 | selection-gives-a-reason | none | not built | War Machine side; futon2 rules apply |
 | eat-your-own-tail | none | not built | needs a design first |
 | real-users | none | unprobed by design | values live in futon7 |
