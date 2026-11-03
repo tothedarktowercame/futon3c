@@ -237,6 +237,24 @@ the next operator turn. The static flag still forces it on. Each switch is
 logged once per run, `[kangaroo] <agent> <n> turns without an operator turn
 — auto-compact on`, so the operator can see why a session was compacted.
 
+## Autorunner on the Cooked line (Joe, 2026-11-03)
+
+Joe: "instead of Compaction recommended (C-c C-z) we get a visual reminder that
+the agent is running as an autorunner until its dispatch/bellback pattern
+stops. That's a little subtle because knowing that a dispatch pattern *has*
+stopped requires a continuation, i.e., an autorunner that returns to manual
+control should go back to the usual Cooked line style."
+
+The JVM's counter is the source of truth. `GET /api/alpha/agents/:id/pouch`
+takes `?session=` and returns `:autorunner` and `:turns-without-operator`.
+While the count is above 5, the Cooked line shows `→ autorunner (N turns
+without you; auto-compact on)` in place of the compaction hint.
+
+Stopping is not detected by a timer. The last line of an autorun keeps saying
+autorunner while it sits at the prompt, which is true: a park may still wake
+it. The operator's next turn is the continuation. It resets the count, and the
+Cooked line after it is back to normal.
+
 ## MAP (2026-11-03, codex-13; reviewed by claude-5)
 
 Report: `~/notes/packets/ways-of-working/autoclock-wow-map-REPORT.md`. It was
