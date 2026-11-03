@@ -8,37 +8,16 @@ First run 2026-10-04 (daxiang_live §9 step 1): 1,772 targets, 28 found in
 the operator turn they answer."""
 import glob, json, os, re, sys, collections, urllib.request, urllib.parse
 
+from xiang_marks import MARKS, bracket, marked, paragraphs
+
 STORE = os.path.expanduser('~/.emacs-graph/session-turn-analysis')
 SINCE = '2026-09-30'
-MARKS = "㊩🈖㊢🈯㊟㊣🈚㊮🈹🈲🈕㊫㊭㊝🈘🈝㊯🈡🈸🈰㊬㊥🈳"
 OPENING_MARKS = set("🈸㊭🈯㊩㊬🈲㊯")          # agent paragraphs whose kind opens a port
 OPENING_INTENTS = {'propose', 'ask-action', 'offer', 'delegate', 'promise',
                    'report-problem', 'clarify', 'constrain', 'verify'}
 MIN = 8
 
 def squash(s): return re.sub(r'\s+', ' ', (s or '').lower()).strip()
-
-def paragraphs(t): return [p.strip() for p in re.split(r'\n\s*\n', t or '') if p.strip()]
-
-def bracket(after):
-    """Text of a leading (...) in AFTER, balanced; None when absent."""
-    s = after.lstrip()
-    if s.startswith(':'): s = s[1:].lstrip()
-    if not s.startswith('('): return None, after
-    depth = 0
-    for i, ch in enumerate(s):
-        depth += ch == '('
-        depth -= ch == ')'
-        if depth == 0: return s[1:i].strip(), s[i+1:]
-    return None, after
-
-def marked(text):
-    out = []
-    for p in paragraphs(text):
-        if p and p[0] in MARKS:
-            tgt, body = bracket(p[1:])
-            out.append({'mark': p[0], 'target': tgt, 'body': body.strip(), 'para': p})
-    return out
 
 def get(url):
     req = urllib.request.Request(url, headers={'Accept': 'application/json'})

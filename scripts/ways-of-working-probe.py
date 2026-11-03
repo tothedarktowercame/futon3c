@@ -9,7 +9,9 @@ invariant (holding/failing/unknown), last-observation, violations, evidence.
 A way with probe "none" is reported as monitor not-built, invariant unknown:
 the page shows that honestly rather than guessing. No state is changed.
 """
-import datetime, json, os, pathlib, subprocess, sys
+import datetime, glob, json, os, pathlib, re, subprocess, sys, urllib.parse, urllib.request
+
+from xiang_marks import MARKS, bracket, paragraphs
 
 HOME = pathlib.Path.home()
 CODE = HOME / "code"
@@ -23,6 +25,165 @@ def run(cmd, cwd=None, timeout=60):
         return p.returncode, p.stdout.strip(), p.stderr.strip()
     except Exception as e:  # noqa: BLE001
         return 99, "", str(e)
+
+TERMINAL_STATES = {"done", "failed", "cancelled", "timed-out", "delivered"}
+FEEDBACK_GRACE = datetime.timedelta(minutes=30)
+TURN_STORE = HOME / ".emacs-graph" / "session-turn-analysis"
+
+def get_json(url, timeout=120):
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return json.load(response)
+
+def parse_time(value):
+    if not value: return None
+    return datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+
+def fetch_feedback_jobs(cutoff, base="http://localhost:7070", max_records=10000):
+    """Read a bounded newest-first window, growing only until it crosses CUTOFF."""
+    limit = 500
+    while True:
+        data = get_json(f"{base}/api/alpha/invoke/jobs?limit={limit}")
+        if not data.get("ok") or not isinstance(data.get("jobs"), list):
+            raise RuntimeError("Agency invoke-jobs response is not usable")
+        jobs = data["jobs"]
+        if not jobs or parse_time(jobs[-1].get("created-at")) <= cutoff or len(jobs) < limit:
+            return jobs
+        if limit >= max_records:
+            raise RuntimeError("Agency invoke-jobs window did not cross the 24-hour cutoff")
+        limit = min(limit * 2, max_records)
+
+def fetch_promise_history(cutoff, base="http://localhost:7073", max_pages=20):
+    query = {"tags": "promise-history", "since": iso(cutoff), "limit": "1000"}
+    entries = []
+    for _ in range(max_pages):
+        data = get_json(base + "/api/alpha/evidence?" + urllib.parse.urlencode(query))
+        if not isinstance(data.get("entries"), list):
+            raise RuntimeError("futon1b promise-history response is not usable")
+        entries.extend(data["entries"])
+        cursor = data.get("next-cursor")
+        if not cursor or not data["entries"]: return entries
+        query.update({"cursor-at": cursor["at"], "cursor-id": cursor["id"]})
+    raise RuntimeError("futon1b promise-history exceeded bounded pagination")
+
+def fetch_operator_replies(cutoff, base="http://localhost:7073", max_pages=10):
+    """Join final assistant evidence to local operator-turn evidence ids."""
+    records = []
+    for filename in glob.glob(str(TURN_STORE / "turn-*.json")):
+        if os.path.basename(filename).count(".") > 1: continue
+        try: record = json.loads(pathlib.Path(filename).read_text())
+        except Exception: continue
+        at = parse_time(record.get("created_at")) if isinstance(record, dict) else None
+        if at and at >= cutoff and (record.get("origin") or "operator") == "operator":
+            records.append(record)
+    by_session = {}
+    for record in records: by_session.setdefault(record.get("session_id"), []).append(record)
+    replies = []
+    for session_id, session_records in by_session.items():
+        by_evidence = {r.get("evidence_id"): r for r in session_records if r.get("evidence_id")}
+        if not session_id or not by_evidence: continue
+        query = {"session-id": session_id, "since": iso(cutoff), "limit": "1000"}
+        for _ in range(max_pages):
+            data = get_json(base + "/api/alpha/evidence?" + urllib.parse.urlencode(query))
+            if not isinstance(data.get("entries"), list):
+                raise RuntimeError("futon1b operator-reply response is not usable")
+            for entry in data["entries"]:
+                body = entry.get("evidence/body")
+                operator = by_evidence.get(entry.get("evidence/in-reply-to"))
+                if (not isinstance(body, dict) or body.get("role") != "assistant"
+                        or body.get("segment-final") is False or not operator): continue
+                replies.append({"job-id": body.get("job-id") or body.get("turn-id") or entry.get("evidence/id"),
+                                "agent-id": operator.get("agent_id"),
+                                "text": body.get("unified-text") or body.get("text") or ""})
+            cursor = data.get("next-cursor")
+            if not cursor or not data["entries"]: break
+            query.update({"cursor-at": cursor["at"], "cursor-id": cursor["id"]})
+        else: raise RuntimeError("futon1b operator replies exceeded bounded pagination")
+    return replies
+
+def bell_emitter(job):
+    prompt = next((e.get("text", "") for e in job.get("events", []) if e.get("type") == "prompt"), "")
+    match = re.match(r"\s*(\[[^\]\n]+\])", prompt)
+    return match.group(1) if match else "unlabelled"
+
+def strict_marked_reply(text):
+    ps = paragraphs(text)
+    if not ps: return False, 0, 0
+    valid = []
+    for paragraph in ps:
+        if paragraph[0] in MARKS:
+            target, _ = bracket(paragraph[1:])
+            if target: valid.append(paragraph[0])
+    return len(valid) == len(ps) and valid[0] == "㊥", len(valid), len(ps)
+
+def classify_feedback_reaches(jobs, promise_history, replies, now):
+    """Pure 24-hour classifier; all inputs are already bounded records."""
+    cutoff = now - datetime.timedelta(hours=24)
+    window_jobs = [j for j in jobs if (parse_time(j.get("created-at")) or cutoff) >= cutoff]
+    bells = [j for j in window_jobs if j.get("surface") == "bell"]
+    by_id = {j.get("job-id"): j for j in window_jobs}
+    park_types = {}
+    for entry in promise_history:
+        body = entry.get("evidence/body") or {}
+        park_id = body.get("park-id") or body.get("id") or body.get("history/promise-id")
+        if park_id: park_types.setdefault(str(park_id), set()).add(str(entry.get("evidence/type")))
+    no_path, emitters = [], {}
+    for job in bells:
+        missing_agent = (job.get("terminal-code") == "agent-not-found"
+                         or any(e.get("code") == "agent-not-found" for e in job.get("events", [])))
+        if not str(job.get("caller") or "").strip() or job.get("caller") == "http-caller" or missing_agent:
+            no_path.append(job)
+            emitter = bell_emitter(job)
+            row = emitters.setdefault(emitter, {"emitter": emitter, "count": 0, "job-ids": []})
+            row["count"] += 1
+            if len(row["job-ids"]) < 10: row["job-ids"].append(job.get("job-id"))
+    addressed_terminal = [j for j in bells if j not in no_path and j.get("state") in TERMINAL_STATES]
+    return_failures, pending = [], []
+    for job in addressed_terminal:
+        auto, received = job.get("auto-bellback") or {}, False
+        if auto.get("bell-job-id"):
+            child = by_id.get(auto["bell-job-id"])
+            received = bool(child and child.get("delivery", {}).get("status") == "delivered")
+        elif auto.get("suppressed?") and auto.get("reason") == "parked-on":
+            received = "promise/ready-acked" in park_types.get(str(auto.get("park-id")), set())
+        if received: continue
+        finished = parse_time(job.get("finished-at")) or parse_time(job.get("created-at")) or now
+        row = {"job-id": job.get("job-id"), "caller": job.get("caller"),
+               "agent-id": job.get("agent-id"), "age-minutes": int((now - finished).total_seconds() / 60)}
+        (pending if now - finished < FEEDBACK_GRACE else return_failures).append(row)
+    reply_failures, marked_paragraphs, reply_paragraphs = [], 0, 0
+    for reply in replies:
+        passes, marked_count, paragraph_count = strict_marked_reply(reply.get("text", ""))
+        marked_paragraphs += marked_count; reply_paragraphs += paragraph_count
+        if not passes: reply_failures.append({k: reply.get(k) for k in ("job-id", "agent-id")})
+    violations = ([{"kind": "bell-no-return-path", **row}
+                   for row in sorted(emitters.values(), key=lambda r: (-r["count"], r["emitter"]))]
+                  + [{"kind": "return-not-received", **row} for row in return_failures]
+                  + [{"kind": "operator-reply-marks", **row} for row in reply_failures[:10]])
+    rate = marked_paragraphs / reply_paragraphs if reply_paragraphs else 1.0
+    return {"monitor": "on", "invariant": "failing" if no_path or return_failures or reply_failures else "holding",
+            "last-observation": iso(now), "observed-at": iso(now), "violations": violations,
+            "violation-count": len(no_path) + len(return_failures) + len(reply_failures),
+            "pending": pending, "pending-count": len(pending),
+            "evidence": [f"window start: {iso(cutoff)}",
+                         f"return path: {len(no_path)} of {len(bells)} bells lacked an addressed path ({len(emitters)} emitters)",
+                         f"return receipt: {len(return_failures)} of {len(addressed_terminal)} completed addressed bells unproved after 30m; {len(pending)} pending inside grace",
+                         f"intent marks: {len(reply_failures)} of {len(replies)} operator-facing replies failed strict form; leading-mark paragraphs {marked_paragraphs}/{reply_paragraphs} ({rate:.1%})"],
+            "denominator": (f"{len(no_path)}/{len(bells)} bells without path; "
+                            f"{len(return_failures)}/{len(addressed_terminal)} completed addressed returns unproved; "
+                            f"{len(reply_failures)}/{len(replies)} operator replies malformed")}
+
+def probe_feedback_reaches():
+    cutoff = NOW - datetime.timedelta(hours=24)
+    try:
+        return classify_feedback_reaches(fetch_feedback_jobs(cutoff),
+                                         fetch_promise_history(cutoff),
+                                         fetch_operator_replies(cutoff), NOW)
+    except Exception as error:  # never turn missing evidence into holding
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
+                "last-observation": None, "violations": [], "violation-count": 0,
+                "evidence": [f"feedback-reaches read failed: {error}"],
+                "denominator": "unavailable because a required read failed"}
 
 def probe_git_clean():
     rows, no_upstream = [], []
@@ -164,6 +325,7 @@ def main():
     probes = {"git-clean": lambda: probe_git_clean(),
               "cascade-standards": lambda: probe_cascade_standards(summary),
               "draw-pile": lambda: probe_draw_pile(graph),
+              "feedback-reaches": lambda: probe_feedback_reaches(),
               "zone-health": lambda: probe_zone_health()}
     ways = []
     for w in d["ways"]:

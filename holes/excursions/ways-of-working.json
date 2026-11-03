@@ -97,7 +97,7 @@
     "reply proforma marks",
     "futon3c/scripts/xiang_bracket_census.py"
    ],
-   "probe": "none",
+   "probe": "feedback-reaches",
    "pattern": "ways-of-working/feedback-reaches-every-participant",
    "patterns": [
     "orchestration/recorded-handoff",
