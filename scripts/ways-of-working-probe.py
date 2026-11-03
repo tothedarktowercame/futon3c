@@ -128,6 +128,11 @@ def classify_feedback_reaches(jobs, promise_history, replies, now):
         body = entry.get("evidence/body") or {}
         park_id = body.get("park-id") or body.get("id") or body.get("history/promise-id")
         if park_id: park_types.setdefault(str(park_id), set()).add(str(entry.get("evidence/type")))
+    # A brief-mode bell is a notification: it asks for no work, so it needs no
+    # return path (E-autoclock-wow "Notifications are exempt only if typed as
+    # such"). 2026-11-03: all 55 "no path" bells were brief-mode sweeper notices.
+    notices = [j for j in bells if j.get("mode") == "brief"]
+    bells = [j for j in bells if j.get("mode") != "brief"]
     no_path, emitters = [], {}
     for job in bells:
         missing_agent = (job.get("terminal-code") == "agent-not-found"
@@ -167,7 +172,7 @@ def classify_feedback_reaches(jobs, promise_history, replies, now):
             "violation-count": len(no_path) + len(return_failures) + len(reply_failures),
             "pending": pending, "pending-count": len(pending),
             "evidence": [f"window start: {iso(cutoff)}",
-                         f"return path: {len(no_path)} of {len(bells)} bells lacked an addressed path ({len(emitters)} emitters)",
+                         f"return path: {len(no_path)} of {len(bells)} work bells lacked an addressed path ({len(emitters)} emitters); {len(notices)} brief-mode notifications exempt",
                          f"return receipt: {len(return_failures)} of {len(addressed_terminal)} completed addressed bells unproved after 30m; {len(pending)} pending inside grace",
                          f"intent marks: {len(reply_failures)} of {len(replies)} operator-facing replies failed strict form; leading-mark paragraphs {marked_paragraphs}/{reply_paragraphs} ({rate:.1%})",
                          "reply census coverage: " + (", ".join(f"{a} {n}" for a, n in sorted(
@@ -175,7 +180,7 @@ def classify_feedback_reaches(jobs, promise_history, replies, now):
                          + "; the join "
                            "misses most replies (claude-5, 11-03: 1 of about 9; replies after tool use are the suspected gap, unconfirmed); "
                            "compare with the operator-turns count before reading this as stack-wide"],
-            "denominator": (f"{len(no_path)}/{len(bells)} bells without path; "
+            "denominator": (f"{len(no_path)}/{len(bells)} work bells without path; "
                             f"{len(return_failures)}/{len(addressed_terminal)} completed addressed returns unproved; "
                             f"{len(reply_failures)}/{len(replies)} operator replies malformed")}
 

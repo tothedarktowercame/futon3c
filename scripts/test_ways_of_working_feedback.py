@@ -45,6 +45,13 @@ class FeedbackClassifierTest(unittest.TestCase):
         self.assertEqual("[sweeper/consent-gate-emit]", result["violations"][0]["emitter"])
         self.assertEqual(1, result["violations"][0]["count"])
 
+    def test_brief_notification_needs_no_return_path(self):
+        notice = bell("notice", caller="http-caller", mode="brief")
+        work = bell("work", caller="http-caller", mode="work")
+        result = classify([notice, work])
+        self.assertEqual(1, result["violation-count"])
+        self.assertEqual(["work"], result["violations"][0]["job-ids"])
+
     def test_old_unacked_park_fails_and_recent_one_is_pending(self):
         old = bell("old", auto_bellback={"suppressed?": True, "reason": "parked-on",
                                          "park-id": "park-old"})
