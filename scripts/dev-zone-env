@@ -71,7 +71,11 @@ export FUTON3C_WATCHER_SCOPE_LANE="${FUTON3C_WATCHER_SCOPE_LANE:-1}"
 # witness producer (dev.clj record-inbox-zero-tool-results!) reads WITNESS_DIR
 # raw with no code fallback — ENABLED alone observes dirt but writes no claims,
 # leaving every path :unattributed with zero followups, which looks like working.
-export FUTON3C_INBOX_ZERO_ENABLED="${FUTON3C_INBOX_ZERO_ENABLED:-true}"
+# OFF by default from 2026-11-03 (Joe + claude-16): the watcher's inbox-zero phase
+# rewrote the whole 643 MB state.edn every few minutes (up to ~100 GB/day of drive
+# writes) while delivering nothing: 0 dirty sets, 1,062 unattributed, 0 followups.
+# Re-arm when the store no longer rewrites whole and attribution works.
+export FUTON3C_INBOX_ZERO_ENABLED="${FUTON3C_INBOX_ZERO_ENABLED:-false}"
 export FUTON3_INBOX_ZERO_WITNESS_DIR="${FUTON3_INBOX_ZERO_WITNESS_DIR:-${HOME}/code/storage/inbox-zero/witnesses}"
 export FUTON3C_INBOX_ZERO_STATE_PATH="${FUTON3C_INBOX_ZERO_STATE_PATH:-${HOME}/code/storage/inbox-zero/state.edn}"
 export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http://127.0.0.1:${FUTON3C_PORT}/api/alpha/followups}"
