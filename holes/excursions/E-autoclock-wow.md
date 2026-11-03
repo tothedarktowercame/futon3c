@@ -87,6 +87,45 @@ feedback can travel in three directions:
   can see each other's findings, because both are filed under one address.
   Today they meet only if the dispatcher relays.
 
+## An unranked item jumping the queue is surprisal (Joe, 2026-11-03)
+
+Joe: "E-autoclock-wow is jumping the queue relative to any analysis from
+Giraffe. That's fine and appropriate to how it should be, but this is another
+form of 'feedback' ... a form of surprisal for the system and should be
+accounted for appropriately."
+
+The requisition makes this measurable. Each dispatch names an item, so the
+system can compare the item worked on with what selection would have
+proposed:
+
+- **The observation:** "work began on item X, agreed by the operator".
+- **The prediction:** the latest click's field (M-giraffe HEAD: 786 M/E/T/A
+  items, 109 eligible) and G's ranking over it.
+- **Surprisal** is graded by where X sits: ranked, so the usual −log p under
+  G; eligible but unscored; excluded, with a typed reason; or absent from the
+  field altogether, like E-autoclock-wow, created after the last click. The
+  last grade is not an infinite number. It is a typed record "outside the
+  model".
+
+What to do with it, without overriding the operator:
+
+1. **Ingest.** The item enters the pool with its provenance ("operator,
+   2026-11-03, by turn"), so the next click can see it. Joe 10-18: a selection
+   tie means missing ingest. An operator pick from outside the field is the
+   same kind of miss.
+2. **Record the order.** The jump is an application-order edge whose evidence
+   is the operator, like "APM after prelims" (M-giraffe §Overlap: "Joe's
+   APM-after-prelims is the first such edge, evidence = operator").
+3. **Learn from the residual.** Over time, operator picks outside the field
+   say what the pool lacks. That is a signal for Giraffe's ingest, and for
+   G's prior, not a fault in the operator.
+
+Probe count 5: requisitions in the last 24 hours whose target was outside the
+last click's field, graded as above. This is not a violation; it is the
+surprisal the system should account for. Its failure condition is a jump
+that never gets ingested: an item still outside the field after the next
+click.
+
 ## Patterns (futon3/library/creativity-commons)
 
 The creativity-commons patterns are relevant, read with dispatches as
