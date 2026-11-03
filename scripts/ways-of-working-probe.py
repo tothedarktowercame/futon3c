@@ -102,7 +102,7 @@ def join_operator_replies(operator_rows, evidence_rows):
                                   or reply.get("evidence/id"),
                         "agent-id": operator.get("probe/agent-id")
                                     or (operator.get("evidence/subject") or {}).get("ref/id"),
-                        "text": reply_body.get("unified-text") or reply_body.get("text") or ""})
+                        "text": reply_body.get("text") or reply_body.get("unified-text") or ""})
     return replies
 
 def fetch_operator_replies(operator_rows, cutoff, now=NOW,
@@ -212,7 +212,7 @@ def classify_feedback_reaches(jobs, promise_history, replies, now, operator_turn
                          f"return receipt: {len(return_failures)} of {len(addressed_terminal)} completed addressed bells unproved after 30m; {len(pending)} pending inside grace",
                          f"intent marks: {len(reply_failures)} of {len(replies)} operator-facing replies failed strict form; leading-mark paragraphs {marked_paragraphs}/{reply_paragraphs} ({rate:.1%})",
                          f"replies found: {len(replies)} of {operator_turns if operator_turns is not None else len(replies)} operator turns",
-                         "marks judged on the whole turn text, including narration between tool calls"],
+                         "marks judged on the final reply segment; narration between tool calls excluded"],
             "denominator": (f"{len(no_path)}/{len(bells)} work bells without path; "
                             f"{len(return_failures)}/{len(addressed_terminal)} completed addressed returns unproved; "
                             f"{len(reply_failures)}/{len(replies)} operator replies malformed")}

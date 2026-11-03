@@ -45,10 +45,11 @@ class FeedbackClassifierTest(unittest.TestCase):
         reply = {"evidence/id": "reply-1", "evidence/session-id": "session-1",
                  "evidence/in-reply-to": "tool-1", "evidence/at": "2026-11-03T10:01:00Z",
                  "evidence/body": {"role": "assistant", "turn-id": "turn-1",
-                                   "segment-final": True, "unified-text": "whole reply"}}
+                                   "segment-final": True, "text": "final reply",
+                                   "unified-text": "narration\n\nfinal reply"}}
         found = PROBE.join_operator_replies([operator], [operator, reply])
         self.assertEqual(["turn-1"], [row["job-id"] for row in found])
-        self.assertEqual("whole reply", found[0]["text"])
+        self.assertEqual("final reply", found[0]["text"])
 
     def test_two_turns_in_one_session_are_not_swapped(self):
         operators = [{"evidence/id": f"operator-{n}", "evidence/session-id": "session-1",
