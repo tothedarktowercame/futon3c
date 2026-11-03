@@ -3,6 +3,7 @@
 **Date:** 2026-11-03
 **Status:** MAP done 2026-11-03; gate design drafted, nothing built
 **Owner:** claude-5 (writing it up); the build goes through M-autoclock-in's owner, claude-4
+**Part of:** M-ways-of-working (Joe, 2026-11-03).
 **Spawned from:** M-autoclock-in §INSTANTIATE-7a and §INSTANTIATE-8; the
 `feedback-reaches-every-participant` way of working
 (`holes/excursions/ways-of-working.json`), whose probe landed today
