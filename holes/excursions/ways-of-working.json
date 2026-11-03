@@ -185,7 +185,7 @@
     "futon1b evidence API",
     "象 turn feed"
    ],
-   "probe": "none",
+   "probe": "operator-turns",
    "pattern": "ways-of-working/operator-turns-logged",
    "patterns": [
     "problems/operator-turns-become-inference-observations",

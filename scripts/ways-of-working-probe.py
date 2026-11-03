@@ -9,7 +9,7 @@ invariant (holding/failing/unknown), last-observation, violations, evidence.
 A way with probe "none" is reported as monitor not-built, invariant unknown:
 the page shows that honestly rather than guessing. No state is changed.
 """
-import datetime, glob, json, os, pathlib, re, subprocess, sys, urllib.parse, urllib.request
+import datetime, glob, hashlib, json, os, pathlib, re, subprocess, sys, time, urllib.parse, urllib.request
 
 from xiang_marks import MARKS, bracket, paragraphs
 
@@ -185,6 +185,152 @@ def probe_feedback_reaches():
                 "evidence": [f"feedback-reaches read failed: {error}"],
                 "denominator": "unavailable because a required read failed"}
 
+OPERATOR_WINDOW = datetime.timedelta(hours=24)
+OPERATOR_GRACE = datetime.timedelta(minutes=2)
+OPERATOR_QUERY_PAD = datetime.timedelta(seconds=60)
+OPERATOR_QUERY_LIMIT = 200
+
+def normalize_turn_text(text):
+    text = re.sub(r"^\N{SPEAKING HEAD IN SILHOUETTE}\s*", "", (text or "").strip())
+    return re.sub(r"\s+", " ", text).strip()
+
+def parse_operator_header(text):
+    """Parse only the first CURRENT TURN header, never quoted body headers."""
+    text = text or ""
+    if not text.startswith("--- CURRENT TURN ---\n") or "\n---\n" not in text:
+        return None
+    header, payload = text.split("\n---\n", 1)
+    fields = {}
+    for line in header.splitlines()[1:]:
+        if ":" in line:
+            key, value = line.split(":", 1); fields[key.strip().lower()] = value.strip()
+    if fields.get("origin") != "operator": return None
+    wrapped = re.match(r"\s*Agent:\s*[^\n]+\n\s*User message:\s*\n(.*)\Z", payload, re.S)
+    return fields, (wrapped.group(1) if wrapped else payload).strip()
+
+def _content_text(content):
+    if isinstance(content, str): return content
+    if isinstance(content, list):
+        return "\n".join(str(x.get("text", "")) for x in content
+                         if isinstance(x, dict) and x.get("text"))
+    return ""
+
+def read_operator_turns(now=NOW, claude_root=None, codex_root=None):
+    claude_root = pathlib.Path(claude_root or HOME / ".claude" / "projects")
+    codex_root = pathlib.Path(codex_root or HOME / ".codex" / "sessions")
+    bad = [str(p) for p in (claude_root, codex_root)
+           if not p.is_dir() or not os.access(p, os.R_OK)]
+    if bad: raise OSError("unreadable transcript root(s): " + ", ".join(bad))
+    cutoff, records = now - OPERATOR_WINDOW, []
+    sources = (("claude", claude_root.glob("**/*.jsonl")),
+               ("codex", codex_root.glob("**/rollout-*.jsonl")))
+    for vendor, files in sources:
+        for path in files:
+            try:
+                if datetime.datetime.fromtimestamp(path.stat().st_mtime, datetime.timezone.utc) < cutoff: continue
+                stream = path.open(errors="replace")
+            except OSError as exc:
+                raise OSError(f"unreadable transcript {path}: {exc}") from exc
+            with stream:
+                for line in stream:
+                    try: row = json.loads(line)
+                    except (ValueError, TypeError): continue
+                    if vendor == "claude":
+                        if row.get("type") != "user": continue
+                        message = row.get("message") or {}; message_id = row.get("uuid")
+                    else:
+                        message = row.get("payload") or {}
+                        if (row.get("type") != "response_item" or message.get("type") != "message"
+                                or message.get("role") != "user"): continue
+                        message_id = message.get("id")
+                    parsed = parse_operator_header(_content_text(message.get("content")))
+                    try: at = parse_time(row.get("timestamp"))
+                    except (TypeError, ValueError): continue
+                    if not parsed or not at or at < cutoff or at > now or not message_id: continue
+                    header, payload = parsed
+                    records.append({"vendor": vendor, "id": message_id, "at": at,
+                                    "agent": header.get("to", "unknown"),
+                                    "surface": header.get("surface", "unknown"),
+                                    "text": normalize_turn_text(payload)})
+    unique = {(r["vendor"], r["id"]): r for r in records}
+    return sorted(unique.values(), key=lambda r: (r["at"], r["vendor"], r["id"]))
+
+def evidence_windows(turns, minutes=10):
+    buckets = {}
+    for turn in turns:
+        buckets.setdefault(int(turn["at"].timestamp()) // (minutes * 60), []).append(turn)
+    return [(min(t["at"] for t in rows) - OPERATOR_QUERY_PAD,
+             max(t["at"] for t in rows) + OPERATOR_QUERY_PAD)
+            for _, rows in sorted(buckets.items())]
+
+def fetch_operator_evidence(turns, opener=urllib.request.urlopen, pause=time.sleep,
+                            base="http://127.0.0.1:7073", limit=OPERATOR_QUERY_LIMIT):
+    entries, windows = {}, evidence_windows(turns)
+    for index, (start, end) in enumerate(windows):
+        query = urllib.parse.urlencode({"author": "joe", "since": iso(start),
+                                        "before": iso(end), "limit": limit})
+        request = urllib.request.Request(base + "/api/alpha/evidence?" + query,
+                                         headers={"Accept": "application/json"})
+        try:
+            with opener(request, timeout=20) as response: page = json.load(response)
+        except Exception as exc:
+            raise RuntimeError(f"futon1b query failed for {iso(start)}: {exc}") from exc
+        rows = page.get("entries")
+        if not isinstance(rows, list): raise RuntimeError(f"futon1b malformed page for {iso(start)}")
+        if len(rows) >= limit or page.get("count", 0) >= limit:
+            raise RuntimeError(f"futon1b window truncated at limit {limit}: {iso(start)} to {iso(end)}")
+        for row in rows:
+            if row.get("evidence/id"): entries[row["evidence/id"]] = row
+        if index + 1 < len(windows): pause(1.0)
+    return list(entries.values())
+
+def _valid_operator_evidence(row):
+    origin, body = row.get("evidence/origin") or {}, row.get("evidence/body") or {}
+    return (str(origin.get("kind", "")).lstrip(":") == "operator"
+            and body.get("event") == "chat-turn" and body.get("role") == "user")
+
+def match_operator_turns(turns, evidence, now=NOW):
+    pairs = []
+    for ti, turn in enumerate(turns):
+        transport = "emacs-claude-repl" if turn["vendor"] == "claude" else "emacs-codex-repl"
+        for ei, row in enumerate(evidence):
+            body = row.get("evidence/body") or {}
+            if (not _valid_operator_evidence(row) or body.get("transport") != transport
+                    or normalize_turn_text(body.get("text")) != turn["text"]): continue
+            try: distance = abs((parse_time(row.get("evidence/at")) - turn["at"]).total_seconds())
+            except (TypeError, ValueError): continue
+            if distance <= OPERATOR_QUERY_PAD.total_seconds(): pairs.append((distance, ti, ei))
+    used_turns, used_evidence = set(), set()
+    for _, ti, ei in sorted(pairs):
+        if ti not in used_turns and ei not in used_evidence:
+            used_turns.add(ti); used_evidence.add(ei)
+    pending, violations = [], []
+    for index, turn in enumerate(turns):
+        if index in used_turns: continue
+        item = {"at": iso(turn["at"]), "agent": turn["agent"], "surface": turn["surface"],
+                "vendor-id": turn["id"],
+                "text-digest": hashlib.sha256(turn["text"].encode()).hexdigest()[:12]}
+        (pending if now - turn["at"] < OPERATOR_GRACE else violations).append(item)
+    return {"matched": len(used_turns), "pending": pending, "violations": violations}
+
+def probe_operator_turns(now=NOW, claude_root=None, codex_root=None,
+                         fetcher=fetch_operator_evidence):
+    try:
+        turns = read_operator_turns(now, claude_root, codex_root)
+        result = match_operator_turns(turns, fetcher(turns), now)
+    except Exception as exc:
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(now),
+                "violations": [], "violation-count": 0,
+                "evidence": [f"operator-turn probe broken: {exc}"]}
+    violations, pending = result["violations"], result["pending"]
+    return {"monitor": "on", "invariant": "failing" if violations else "holding",
+            "last-observation": iso(now), "observed-at": iso(now),
+            "violations": violations, "violation-count": len(violations),
+            "pending": pending, "pending-count": len(pending),
+            "evidence": [f"operator turns (24h): {len(turns)} turns, {result['matched']} matched, {len(pending)} pending",
+                         "limitation: this does not prove dictated turns were tagged dictated"],
+            "denominator": f"{len(violations)} of {len(turns) - len(pending)} mature operator turns unmatched"}
+
 def probe_git_clean():
     rows, no_upstream = [], []
     for d in sorted(CODE.iterdir()):
@@ -326,6 +472,7 @@ def main():
               "cascade-standards": lambda: probe_cascade_standards(summary),
               "draw-pile": lambda: probe_draw_pile(graph),
               "feedback-reaches": lambda: probe_feedback_reaches(),
+              "operator-turns": lambda: probe_operator_turns(),
               "zone-health": lambda: probe_zone_health()}
     ways = []
     for w in d["ways"]:
