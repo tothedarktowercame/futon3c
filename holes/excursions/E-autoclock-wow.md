@@ -209,6 +209,34 @@ refusal question in this excursion would not need asking at all.
 - Can the down direction reuse Giraffe's locators (M-giraffe: "how the want
   is checked") rather than re-reading VERIFY prose?
 
+## Unwatched runs compact themselves (Joe, 2026-11-03)
+
+Joe: "since we don't want *usage* to explode in the process ... if an agent
+runs more than 5 turns without an operator turn, we switch on autocompact at a
+reasonable level. That will prevent Claude Opus and Claude Fable sessions
+drifting to 1m tokens in long running sessions."
+
+This feeds the same picture. Operator turns are the feedback that keeps a
+session anchored. A run with no operator turns is a dispatch stream with no
+feedback from the top, so its context should not grow without limit.
+
+**Today** (`src/futon3c/agency/agent_pouch.clj:285-363`): before every
+Claude turn, `dev/futon3c/dev.clj:3974` calls `joey-eligible-or-compact?`.
+That function runs Claude Code's own `/compact` (warm in the pouch, or cold)
+once the session passes `joey-max-tokens` (200k,
+`FUTON3C_KANGAROO_JOEY_MAX_TOKENS`). It does so only for seats whose roster
+metadata says `auto-compact? true`, a static flag for "a seat nobody
+watches". Every other seat waits for its operator's C-c C-z.
+
+**Change:** "nobody watches" is decided by behaviour, not by a flag. Per
+(agent, session), count consecutive turns whose `CURRENT TURN` header is not
+`Origin: operator`: bells, parked-resumes, work orders, auto-bellbacks. Reset
+the count on an operator turn. When the count exceeds 5, the seat is treated
+as `auto-compact?` for that session, at the existing 200k threshold, until
+the next operator turn. The static flag still forces it on. Each switch is
+logged once per run, `[kangaroo] <agent> <n> turns without an operator turn
+— auto-compact on`, so the operator can see why a session was compacted.
+
 ## MAP (2026-11-03, codex-13; reviewed by claude-5)
 
 Report: `~/notes/packets/ways-of-working/autoclock-wow-map-REPORT.md`. It was
@@ -301,8 +329,10 @@ requisition that Joe agrees once, recorded as a source-1 decision.
 Open for DERIVE:
 - ~~Does "under the agreed item" hold?~~ Yes, when the ticket declares its
   parent and the parent is agreed (Joe, 2026-11-03, above).
-- Is one level of chain enough, or may a ticket's parent itself be a
-  ticket?
+- ~~Is one level of chain enough?~~ Chains are allowed (Joe, 2026-11-03,
+  "in an homage to William Burroughs, we can allow tickets to explode"). The
+  gate walks `**Parent:**` links up until it reaches an agreed item. A cycle,
+  or a chain that never reaches one, is refused.
 - Should `turn-capture`'s 495 work jobs really be work?
 
 ## Next
