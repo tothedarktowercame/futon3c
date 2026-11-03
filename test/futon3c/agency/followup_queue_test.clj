@@ -83,3 +83,19 @@
     (is (= (:id first-result) (:id (queue/enqueue! r))))
     (is (nil? (queue/lease-one! "codex-11" "other-session" (constantly true))))
     (is (= :apm-store-repair (:type (queue/lease-one! "codex-11" "session-1" (constantly true)))))))
+
+(deftest empty-poll-does-not-rewrite-the-file
+  ;; claude-16 + Joe 2026-11-03: an unchanged state must not be persisted.
+  (let [f (java.io.File. ^String queue/*path-override*)
+        _ (queue/lease-one! "codex-11" "session-1" (constantly true))
+        before (.lastModified f)
+        _ (spit f "sentinel")]
+    (is (nil? (queue/lease-one! "codex-11" "session-1" (constantly true))))
+    (is (= "sentinel" (slurp f)) "an empty poll rewrote the queue file")
+    (spit f (pr-str (queue/snapshot)))
+    (let [id (:id (queue/enqueue! request))]
+      (is (not= "sentinel" (slurp f)))
+      (spit f "sentinel")
+      (is (= id (:followup-id (queue/lease-one! "codex-11" "session-1" (constantly true)))))
+      (is (not= "sentinel" (slurp f)) "a real lease must still persist"))
+    (is (number? before))))

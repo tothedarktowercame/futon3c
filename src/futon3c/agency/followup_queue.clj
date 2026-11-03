@@ -69,6 +69,13 @@
                 [:promise/followup-requeued item requeue-at])
               (for [[type item] transitions] [type item now])))
         eids (atom [])]
+    (if (= old new)
+      ;; Nothing changed (an empty-queue poll): no write. Each Emacs REPL buffer
+      ;; polls followups/ready every 3 s, and persisting here forced an fsync and a
+      ;; journal commit per poll, ~75 GB/day of ext4 journal and metadata writes
+      ;; (claude-16 + Joe, 2026-11-03; ~/notes/disk-writes/FINDINGS-2026-11-03.md).
+      new
+      (do
     ;; Staging belongs to the same rollback region as the authoritative write.
     (try
       (doseq [[type item event-ms] all-transitions]
@@ -84,7 +91,7 @@
         (throw e)))
     (when history/*after-outbox-persist* (history/*after-outbox-persist*))
     (history/drain! !state persist!)
-    new))
+    new))))
 
 (defn enqueue!
   "Queue a followup with optional validated :beneficiary, :deadline and
