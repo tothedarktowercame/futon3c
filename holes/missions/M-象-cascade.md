@@ -385,7 +385,10 @@ non-interactive settings "share the same data structures (or are supposed to)"; 
 scored with a number, G, relative to the policies explored. An induced rule is not a cascade: it has a guard and a product,
 no units or edges, and in the 09-30 rules the guard contains the product (`:commit-resolved`).
 
-Shared record: units, edges, terms (cited reads), rationale, attestation (turns and held-out results), alternatives.
+Shared record: units, edges, reads (cited facts), rationale, attestation (turns and held-out results), alternatives.
+The WM record (`futon2.aif.outer-menu/construct-cascade`) already has units, edges, a digest and G, and its `:terms` is numeric,
+so cited facts are `:reads`, each marked read or proxy. First instance: `holes/labs/M-象-cascade/disposition-cascade-v0.edn`. Plan:
+`futon2/holes/labs/wm-contract/PLAN-meaningful-cascades-2026-11-03.md`.
 G sits on the record. A D1 stamp is a cited term, not a score. First case: the cascade Joe applied to the 47 review rows on
 2026-11-02, scored against the policy he reversed, using his decisions as the observed outcome.
 

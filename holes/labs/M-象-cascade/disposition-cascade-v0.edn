@@ -1,0 +1,43 @@
+;; First instance of the shared cascade record (M-象-cascade D6). Draft, claude-16, 2026-11-03.
+;; Written by hand from Joe's rulings of 2026-11-02, so it is a stated cascade, not a mined one.
+;; Field names follow futon2.aif.outer-menu/construct-cascade where they exist. WM :terms is numeric
+;; (:risk :ambiguity :novelty), so cited reads are :reads, and each read is [source, read-or-proxy].
+{:schema :cascade/record-draft-v0
+ :id :judge-a-review-row
+ :status :candidate
+ :applies-to "a backlog item: what should happen to it"
+ :units
+ [{:index 0 :pattern :proposed/solved-before-retired
+   :needs [:item-need :resolvedness] :establishes :retire-or-continue
+   :quote "Retire if the problem they are addressing is actually solved"}
+  {:index 1 :pattern :proposed/down-place-rehome-or-blocked
+   :needs [:item-need :place-status :place-returning] :establishes :rehome-or-blocked
+   :quote "futon1a cannot be a dependency, 'needs rehoming' is correct"}
+  {:index 2 :pattern :proposed/cluster-without-supersession
+   :needs [:item-need :related-items] :establishes :cluster-or-merge
+   :quote "combine structurally upwards, e.g., to a cluster called 'superpod work', without any supersession of meaning for the constituents"}
+  {:index 3 :pattern :proposed/audit-what-cannot-be-explained
+   :needs [:accomplished] :establishes :audit-or-closed
+   :quote "needs a further audit and an explanation of what it accomplishes and then probably closure"}
+  {:index 4 :pattern :proposed/stopping-owes-an-explanation
+   :needs [:audit-or-closed] :establishes :explanation
+   :quote "'dropped' would also need an explanation for Cascade Live so we can't dodge the explanatory burden"}]
+ ;; Precedence from needs. Unit 2 needs nothing from the others, so it has no edge (recorded independence).
+ :edges [[0 1 :precedes] [0 3 :precedes] [3 4 :precedes]]
+ :independent [2]
+ :reads
+ {:item-need {:source "ant read `what`, `finish`" :kind :read}
+  :resolvedness {:source "ant read `need_goes_to` with citation" :kind :read}
+  :place-status {:source "scripts/place-probe.py" :kind :read}
+  :place-returning {:source "none yet: Joe's word per Place" :kind :proxy}
+  :related-items {:source "mentions and neighbours propose; a reader names" :kind :proxy}
+  :accomplished {:source "ant read status and citation" :kind :read}}
+ :rationale "Ask first whether the need is met. A mechanism going away does not answer that, so a down Place sends the need elsewhere. Related items gather without losing their meaning. What cannot be explained is audited, and anything stopped says what it taught."
+ :attestation {:source "futon3c/holes/excursions/decisions-2026-11-02.json"
+               :held-out :none-yet
+               :note "Fitted to these rulings. Agreement on them is not validation."}
+ :alternatives
+ [{:id :retire-when-place-gone
+   :rationale "A probe finds the mechanism gone, so the item retires."
+   :record "Joe reversed or changed this on 6 of 12 Place-gone rows on 2026-11-02"}]
+ :G nil}
