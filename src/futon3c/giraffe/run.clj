@@ -307,7 +307,13 @@
   jar: URLs) and file resources outside a src tree have no checkout."
   []
   (try
-    (when-let [resource (io/resource "futon3c/giraffe/run.clj")]
+    ;; Ask the loader that defined this namespace's own classes first: a
+    ;; caller that pulled this file in through an added source root (the
+    ;; futon2 tests do) has it on that loader, not on the thread's context
+    ;; loader, which is all io/resource consults by default.
+    (when-let [resource (or (.getResource (.getClassLoader (class source-repo-dir))
+                                          "futon3c/giraffe/run.clj")
+                            (io/resource "futon3c/giraffe/run.clj"))]
       (when (= "file" (.getProtocol resource))
         (loop [dir (.getParentFile (io/file (.toURI resource)))]
           (cond
