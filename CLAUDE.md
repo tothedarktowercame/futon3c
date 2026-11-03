@@ -279,15 +279,21 @@ but do not read a pre-v1 Clojure record as evidence about the instrument.
 Each re-registration closes one; `scripts/registry_ledger_audit.clj` can
 enumerate which remain.
 
-**Enumerating warrants is one cheap tagged query, not a store scan:**
+**Warrants live in a sidecar, not the evidence store (corrected 2026-11-03).**
+Since 2026-10-04 the registry's authority is the SQLite sidecar
+`~/code/storage/test-registry/warrant-index.sqlite`
+(`src/futon3c/test_registry/sqlite_backend.clj`, overridable with
+`FUTON3C_WARRANT_INDEX`). Tables include `registry_entries`, `registry_runs`
+(repo_root, namespace, ran_at, warrant) and `warrant_rerun_requests`. The
+tagged evidence query that used to be documented here
+(`/api/alpha/evidence?tag=test-registry`) returns nothing newer than
+September. To enumerate, read the sidecar read-only:
 
 ```bash
-curl -s 'http://localhost:7070/api/alpha/evidence?tag=test-registry&limit=1000'
+python3 -c "import sqlite3;c=sqlite3.connect('file:$HOME/code/storage/test-registry/warrant-index.sqlite?mode=ro',uri=True);print(c.execute(\"select repo_root,count(*),sum(warrant) from registry_runs where ran_at>='2026-11-01' group by repo_root\").fetchall())"
 ```
 
-Each entry carries `:log-artifact {:path … :sha256 …}`; ~100 entries in
-seconds. Use it to answer "which warrants exist / which logs do they pin /
-are any missing from disk" without touching the 272k-entry evidence store.
+`/check` resolves an entry id through the same authority.
 
 ## Agent Prompting: Surface Contracts
 

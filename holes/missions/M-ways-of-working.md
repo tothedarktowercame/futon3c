@@ -74,15 +74,16 @@ hand.
    replies after tool use; unconfirmed.
 4. **futon1b logs a start and an end line per request:** about 170k
    journal lines a day (futon0 README-hardening §1).
-5. **Warrants do not reach the evidence store.**
-   `storage/test-registry/futon2-suite/index.json` holds 771 entry ids and
-   was updated 11-03, but point reads of recent ids on :7070 and :7073 return
-   `evidence-not-found`. A `tags=test-registry` read with `since=2026-09-20`
-   returns 0. So the "cheap enumeration" in futon3c CLAUDE.md I-6 lists
-   nothing new. `/check` still resolves an id (it read
-   `test-registry-a7413a22…` and refused with `environment-mismatch` on
-   `test/user.clj`), so the ledger is fine and the evidence emission is what
-   stopped. Checked by claude-5, 2026-11-03.
+5. ~~Warrants do not reach the evidence store.~~ Withdrawn: they were never
+   meant to (Joe, 2026-11-03: "I think they were meant to go into a
+   sidecar"). The sidecar is `storage/test-registry/warrant-index.sqlite`
+   (`sqlite_backend.clj`, since 10-04), and it is healthy: since the 10-20
+   boot it records 833 registered runs, 698 of them warrants, the newest at
+   22:59Z today. Only the futon3c CLAUDE.md I-6 enumeration line was stale;
+   corrected. **What the sidecar does show:** registered runs are almost all
+   futon2 (792). futon3c's canonical checkout has **1**. Every futon3c test
+   run today (codex-7, codex-13, codex-15 and claude-5's reviews) was
+   unregistered, a pasted count.
 6. ~~No review record joins a commit to its warrants.~~ Withdrawn (Joe,
    2026-11-03): "warrants apply to tests, not to commits". The way counts
    test runs and the claims that rest on them, not commits, so no
@@ -129,6 +130,29 @@ from this: how many of those suite runs were reruns that a warrant would
 have spared. That needs the run logs joined to the `/tmp` scratch by time,
 or the test fixtures naming their run.
 
+## Relation to M-the-perfect-crime (Joe, 2026-11-03)
+
+Joe: "the broader issues here relate to M-the-perfect-crime". That mission's
+covert question is what catches a failure at the *prose* layer, where an
+instrument's high-definition output stands in for the thing it describes
+(Baudrillard). Today's work produced several examples where a record or a
+count stood in for what it reported:
+
+- a pasted "Ran N tests, 0 failures" in place of a registered run (finding 5);
+- "delivered" for 507 returns written to an inbox nobody reads (finding 2);
+- "25 of 26 replies malformed", a sharp number from a census that saw 1 in 9
+  of one seat's replies (finding 3);
+- a CLAUDE.md line telling every agent to enumerate warrants with a query
+  that had returned nothing for five weeks;
+- `/report`'s 88 subjects, all "no-warrant", read from the wrong authority.
+
+The discipline this mission uses against it, a constructed bad case per
+probe, is the forensic mode M-the-perfect-crime proposes for authoring
+practice. Its open checklist item ("the chained-claim sweep joins agent
+final-turn claims to Joe's next-turn stance") is the same join that
+intents-are-tracked and feedback-reaches need. The two missions should share
+that sweep, not build it twice.
+
 ## Ways and the creativity-commons patterns (draft, claude-5; for Joe to check)
 
 The creativity-commons patterns (`futon3/library/creativity-commons/`) treat
@@ -158,7 +182,7 @@ pattern has no way.
 
 ## Next
 
-1. Records-carry-warrant: discovery done. Before the probe: find why warrants stopped reaching evidence (finding 5). Until then the way stays `not-built`, with that reason.
+1. Records-carry-warrant: discovery done. The probe reads the sidecar (`registry_runs`) and counts test-result claims in bell-backs and reviews that carry no warrant id. futon3c first needs the registry used at all (finding 5). Until then the way stays `not-built`, with that reason.
 2. Open an item for each finding above, with this mission as its parent.
 3. Intents-are-tracked: check whether minus40's open-asks list can be the
    census (the session brief already prints "open asks with no answer
