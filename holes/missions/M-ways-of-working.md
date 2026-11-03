@@ -91,6 +91,44 @@ hand.
    bell-backs and reviews ("Ran N tests …") that carry no warrant id, i.e.
    pasted counts, against those that do.
 
+## Hygiene: dispatch as a fourth generation (Joe, 2026-11-03)
+
+Joe: "There's a broader class of 'hygiene' patterns that deal with warrants,
+Inbox Zero, and that maybe even touch on agent dispatch themes that would link
+with M-象-2000 though I don't know if that link has been made explicitly."
+
+`futon3/library/hygiene/README.md` names three generations of one upkeep
+policy: buffer cleaner, inbox zero and test registry. Its six shared patterns
+fit the requisition gate (E-autoclock-wow) as a fourth column:
+
+| hygiene pattern | dispatch / requisition (proposed) |
+|---|---|
+| observe-the-authority | read the clock from the Agency's durable decision, not the buffer. 11-03 incident: the buffer was overwritten by the server's stale clock, the inverse fault (`439152345`) |
+| classify-by-remedy-judgement | work vs notification vs continuation, by validated mode, not caller name |
+| exempt-the-in-use | continuations of an admitted job, and an operator clock-in still in flight |
+| receipt-then-gate | the requisition is the receipt; the gate admits on it |
+| route-to-who-can-act | a refusal goes to the operator as "clock on what?"; machine callers get a typed error |
+| settle-with-meters | the five probe counts in E-autoclock-wow |
+
+M-象-2000 does not cite `hygiene/` (one unrelated "join hygiene" line,
+`M-象-2000.md:361`), so that link has not been made. The candidate join is
+intents-are-tracked: 象 marks each operator turn's intent, and a requisition
+records the item each dispatch serves. Together they would let a probe ask
+whether the dispatches made after a turn served what the turn asked for.
+
+**Measurements behind Joe's /tmp remark (claude-5, 2026-11-03 23:1x):**
+`/tmp` holds 45,609 entries, 25 GB, all since the 10-20 boot. The largest
+families are test scratch: `wm-runner-record-suite-*` 778,
+`xiang-svc-*` 740, `reading-decision-{root,graph,flights}-*` 674 each,
+`wm-click-bindings-test-*` 661. So the futon2 suites behind them ran about
+650–780 times in two weeks. Over the same period
+`~/code/storage/test-registry/` gained 839 run logs. The 771 in
+`futon2-suite/index.json` is one row per namespace (latest run), not a run
+count, so it says nothing about discipline by itself. What can't be told
+from this: how many of those suite runs were reruns that a warrant would
+have spared. That needs the run logs joined to the `/tmp` scratch by time,
+or the test fixtures naming their run.
+
 ## Ways and the creativity-commons patterns (draft, claude-5; for Joe to check)
 
 The creativity-commons patterns (`futon3/library/creativity-commons/`) treat
