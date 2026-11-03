@@ -117,6 +117,12 @@ def strict_marked_reply(text):
             if target: valid.append(paragraph[0])
     return len(valid) == len(ps) and valid[0] == "㊥", len(valid), len(ps)
 
+# Machine callers that poll the original job to a terminal result instead of
+# reading a bellback: futon2 flight_runner.clj:120-168 ("bell, then poll";
+# "a bellback has no return path to the machine's persona"). For these, the
+# terminal result is the receipt; an inbox copy is not (codex-12, 2026-11-03).
+POLLING_CALLERS = {"wm-full-loop"}
+
 def classify_feedback_reaches(jobs, promise_history, replies, now):
     """Pure 24-hour classifier; all inputs are already bounded records."""
     cutoff = now - datetime.timedelta(hours=24)
@@ -147,7 +153,11 @@ def classify_feedback_reaches(jobs, promise_history, replies, now):
     return_failures, pending = [], []
     for job in addressed_terminal:
         auto, received = job.get("auto-bellback") or {}, False
-        if auto.get("bell-job-id"):
+        if job.get("caller") in POLLING_CALLERS:
+            # The caller reads the original job by polling; its inbox copy is a
+            # redundant duplicate nobody reads (wm-inbox-discovery-REPORT.md).
+            received = job.get("state") in TERMINAL_STATES and job.get("result") is not None
+        elif auto.get("bell-job-id"):
             child = by_id.get(auto["bell-job-id"])
             received = bool(child and child.get("delivery", {}).get("status") == "delivered")
         elif auto.get("suppressed?") and auto.get("reason") == "parked-on":

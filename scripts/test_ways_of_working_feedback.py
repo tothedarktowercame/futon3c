@@ -52,6 +52,15 @@ class FeedbackClassifierTest(unittest.TestCase):
         self.assertEqual(1, result["violation-count"])
         self.assertEqual(["work"], result["violations"][0]["job-ids"])
 
+    def test_polling_caller_receipt_is_the_terminal_result(self):
+        inbox_only = {"sent?": True, "bell-job-id": "copy-nobody-reads"}
+        polled = bell("polled", caller="wm-full-loop", result="answer",
+                      **{"auto-bellback": inbox_only})
+        no_result = bell("no-result", caller="wm-full-loop",
+                         **{"auto-bellback": inbox_only})
+        result = classify([polled, no_result])
+        self.assertEqual(["no-result"], [v["job-id"] for v in result["violations"]])
+
     def test_old_unacked_park_fails_and_recent_one_is_pending(self):
         old = bell("old", auto_bellback={"suppressed?": True, "reason": "parked-on",
                                          "park-id": "park-old"})
