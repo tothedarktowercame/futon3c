@@ -269,19 +269,40 @@ clock decision. It returns one of:
    the question "<caller> is on <clock> and wants to dispatch for <target>:
    clock on what?". Machine callers get a typed error.
 
-**Fresh context separated from target.** Replace "mint an excursion per task"
-with a per-dispatch `Context: fresh` flag, or a task key, that
-`context-carry-decision` honours. Then the requisition names the real item
-(for example the APM problem or its blueprint), and Kimi still starts clean.
-Turn off `kimi-task.sh`'s minting only once that flag exists.
+**Fresh context keeps its own item, linked to an agreed parent** (Joe,
+2026-11-03: "we could still require it be linked back to an existing or at
+least acknowledged META item ... E-autoclock-wow → T-kimi-task-181 — though
+it would be better if the tickets had semantic names not just numbers").
+Minting a new item per task stays, because a target change is what gives a
+Kimi seat a fresh conversation. Two things change:
+
+- **The minted item is a ticket under a parent.** Its requisition is written
+  as a chain: `Requisition: E-autoclock-wow → T-apm-t91J03-degree-leaf —
+  prove one leaf`. The gate checks agreement on the **parent**. The child only
+  has to exist and to name that parent, in a `**Parent:**` line. This also
+  settles the open question "does a ticket under an agreed item count?": it
+  does, when the link is declared on the ticket and the parent is agreed.
+  It is grade 4 of the surprisal list, a latent adjacent possible, by
+  construction.
+- **Semantic names, not counters.** `kimi-task.sh` mints
+  `T-<slug of purpose>` (for example `T-apm-t91J03-degree-leaf`), with a
+  short suffix only on collision, and files it under the parent's repo
+  `holes/tickets/`. That follows the 685 existing `T-*.md`, which already
+  have names like `T-arxana-direct-reads`. The 260 `E-kimi-task-N` files
+  stay as history; they are not renamed.
+
+Fresh context then needs no new flag: `context-carry-decision` already
+resets on a target change, and every minted ticket is a new target.
 
 **Rollout:** first log only (the five probe counts, no refusals); then refuse
 `work` jobs from agent callers; then give each machine caller a standing
 requisition that Joe agrees once, recorded as a source-1 decision.
 
 Open for DERIVE:
-- Does "under the agreed item" hold, e.g. a T- ticket of an agreed M-
-  mission? Which relation decides it?
+- ~~Does "under the agreed item" hold?~~ Yes, when the ticket declares its
+  parent and the parent is agreed (Joe, 2026-11-03, above).
+- Is one level of chain enough, or may a ticket's parent itself be a
+  ticket?
 - Should `turn-capture`'s 495 work jobs really be work?
 
 ## Next
