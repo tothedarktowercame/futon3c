@@ -135,10 +135,15 @@ Pattern Cascade page does not show them.
    `in-reply-to` points at the latest session row, so tool activity makes a
    reply point at an intervening row. Joining on `(session-id, turn-id)`
    finds replies for 66 of 66 turns, all 24 of claude-5's. Build dispatched
-   to codex-15. **Open for Joe:** a turn's evidence text holds the narration
-   between tool calls as well as the final reply (claude-5 turn 1: 1,482
-   chars, starting "Found the cause: …"). Should the proforma's marks apply
-   to the narration, or only to the final reply?
+   to codex-15. A turn's evidence text holds the narration between tool
+   calls as well as the final reply (claude-5 turn 1: 1,482 chars, starting
+   "Found the cause: …"). **Settled (Joe, 2026-11-03):** the marks apply to
+   the final reply only. Narration between tool calls is self-talk, "not
+   speech acts in the normal sense", and is better left unmarked. Since the
+   evidence does not separate the two, the probe takes the reply to start
+   at the first paragraph that opens with a mark (the proforma puts the ㊥
+   gist first) and judges from there; a turn with no marked paragraph is an
+   unmarked reply. Applied at review of codex-15's build, not re-belled.
 4. **futon1b logs a start and an end line per request:** about 170k
    journal lines a day (futon0 README-hardening §1).
 5. ~~Warrants do not reach the evidence store.~~ Withdrawn: they were never
