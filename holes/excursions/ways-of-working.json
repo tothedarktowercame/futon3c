@@ -238,11 +238,11 @@
    "built": [
     "futon0/scripts/zone-health.bb"
    ],
-   "probe": "none",
+   "probe": "zone-health",
    "pattern": "ways-of-working/stays-alive-and-paid",
    "patterns": [],
    "position": "below-the-therefores",
-   "scope-note": "hand reading, Joe 2026-11-02: existing consulting income and one client lined up; invariants unprobed; not derived from records, and not zero"
+   "scope-note": "machine, services, off-box copies and access probed by futon0 zone-health (claude-16, 2026-11-03); bills and runway stay a hand reading, Joe 2026-11-02: existing consulting income and one client lined up; not derived from records, and not zero"
   }
  ],
  "pattern-texts": "library ids; texts live in futon3/library/ways-of-working/ (claude-16, draft 2026-11-02, uncommitted in futon3 as of 17:41Z; each text carries a + VALIDATION: clause, which is the probe's question); the `patterns` arrays are claude-16's advisory reading of 馬-attested patterns (~/notes/pattern-global/ways-cascade-draft.md), a reading of what surfaced, not a measurement"

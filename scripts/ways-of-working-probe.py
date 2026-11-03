@@ -122,6 +122,38 @@ def probe_draw_pile(graph):
             "violations": [{"unplaced-open": open_unplaced, "unplaced-closed-unattested": len(closed_unplaced)}], "violation-count": unplaced, "evidence": ev,
             "denominator": f"{unplaced} of {total} unplaced: {open_unplaced} open, {len(closed_unplaced)} closed without attestation"}
 
+# zone-health checks that bear on "stays alive and paid" (claude-16, 2026-11-03, README-hardening):
+# the machine, its services, off-box copies and access. Bills and runway are not machine-checkable here.
+ALIVE_CHECKS = ["user-services", "system-units", "futon1b-health", "agency-health", "federation",
+                "firewall", "drive-health", "disk-space", "git-hub-backup", "evidence-backup",
+                "pass-store", "pass-hubs-agree", "parked-timers"]
+
+def probe_zone_health():
+    zh = CODE / "futon0" / "scripts" / "zone-health.bb"
+    rc, out, err = run(["bb", str(zh), "--json"], timeout=300)
+    rows = []
+    for line in out.splitlines():
+        try: rows.append(json.loads(line))
+        except Exception: pass  # noqa: BLE001
+    if not rows:
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
+                "violations": [], "violation-count": 0,
+                "evidence": [f"zone-health produced no checks (rc {rc}): {err[:200]}"]}
+    by = {r.get("id"): r for r in rows}
+    seen = [by[c] for c in ALIVE_CHECKS if c in by]
+    fails = [r for r in seen if r.get("status") != "pass"]
+    _, dw, _ = run(["systemctl", "is-active", "disk-watch.timer"])
+    ev = [f"zone-health: {len(seen) - len(fails)} of {len(seen)} checks for this way pass"]
+    ev += [f"FAIL {r['id']}: {r.get('summary')}" for r in fails]
+    ev += [f"disk-watch.timer: {dw or 'absent'} (the one check that pushes an alert unasked, drive only)",
+           "read at publish time; zone-health has no cadence of its own",
+           "not watched: bills paid, runway known (hand reading only)"]
+    return {"monitor": "on", "invariant": "failing" if fails else "holding",
+            "last-observation": iso(NOW), "observed-at": iso(NOW),
+            "violations": [{"check": r["id"], "summary": r.get("summary"), "items": (r.get("items") or [])[:10]} for r in fails],
+            "violation-count": len(fails), "evidence": ev,
+            "denominator": f"{len(fails)} of {len(seen)} zone-health checks failing; bills and runway unwatched"}
+
 def main():
     args = sys.argv[1:]
     decl, out = pathlib.Path(args[0]), pathlib.Path(args[1])
@@ -131,7 +163,8 @@ def main():
     d = json.loads(decl.read_text())
     probes = {"git-clean": lambda: probe_git_clean(),
               "cascade-standards": lambda: probe_cascade_standards(summary),
-              "draw-pile": lambda: probe_draw_pile(graph)}
+              "draw-pile": lambda: probe_draw_pile(graph),
+              "zone-health": lambda: probe_zone_health()}
     ways = []
     for w in d["ways"]:
         w = dict(w)
