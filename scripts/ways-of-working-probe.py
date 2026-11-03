@@ -100,7 +100,8 @@ def join_operator_replies(operator_rows, evidence_rows):
         reply_body = reply["evidence/body"]
         replies.append({"job-id": reply_body.get("job-id") or reply_body.get("turn-id")
                                   or reply.get("evidence/id"),
-                        "agent-id": (operator.get("evidence/subject") or {}).get("ref/id"),
+                        "agent-id": operator.get("probe/agent-id")
+                                    or (operator.get("evidence/subject") or {}).get("ref/id"),
                         "text": reply_body.get("unified-text") or reply_body.get("text") or ""})
     return replies
 
@@ -499,10 +500,10 @@ def match_operator_turns(turns, evidence, now=NOW):
             try: distance = abs((parse_time(row.get("evidence/at")) - turn["at"]).total_seconds())
             except (TypeError, ValueError): continue
             if distance <= OPERATOR_QUERY_PAD.total_seconds(): pairs.append((distance, ti, ei))
-    used_turns, used_evidence = set(), set()
+    used_turns, used_evidence, matched_pairs = set(), set(), []
     for _, ti, ei in sorted(pairs):
         if ti not in used_turns and ei not in used_evidence:
-            used_turns.add(ti); used_evidence.add(ei)
+            used_turns.add(ti); used_evidence.add(ei); matched_pairs.append((ti, ei))
     pending, violations = [], []
     for index, turn in enumerate(turns):
         if index in used_turns: continue
@@ -510,8 +511,10 @@ def match_operator_turns(turns, evidence, now=NOW):
                 "vendor-id": turn["id"],
                 "text-digest": hashlib.sha256(turn["text"].encode()).hexdigest()[:12]}
         (pending if now - turn["at"] < OPERATOR_GRACE else violations).append(item)
+    operator_evidence = [dict(evidence[ei], **{"probe/agent-id": turns[ti]["agent"]})
+                         for ti, ei in sorted(matched_pairs)]
     return {"matched": len(used_turns), "pending": pending, "violations": violations,
-            "operator-evidence": [evidence[ei] for ei in sorted(used_evidence)]}
+            "operator-evidence": operator_evidence}
 
 def read_operator_census(now=NOW, claude_root=None, codex_root=None,
                          fetcher=fetch_operator_evidence):
