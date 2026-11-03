@@ -57,6 +57,17 @@ class IntentClassifierTest(unittest.TestCase):
         self.assertEqual(0, result["violation-count"])
         self.assertEqual(1, result["status-counts"]["answered"])
 
+    def test_act_dropped_by_latest_record_is_not_counted(self):
+        # The earlier record left "x" open; the session's latest record no
+        # longer carries it and has no closure witness for it.  Reading all
+        # records instead of the latest would count "x" as a stale open act.
+        old = record(turn="old", act="x", age_days=9)
+        new = record(turn="new", act="y", age_days=8, open_=False, closed=True)
+        result = classify([old, new], latest={"s": new})
+        self.assertEqual(0, result["violation-count"])
+        self.assertNotIn("open", result["status-counts"])
+        self.assertEqual(1, result["status-counts"]["answered"])
+
     def test_duplicate_act_counts_once(self):
         a = record(session="a", act="same")
         b = record(session="b", act="same")
