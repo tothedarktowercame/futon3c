@@ -149,6 +149,11 @@ to this many attempts, then retain the record as a terminal failure."
   "Face for the clocked-in target label in transcript turn-end flair."
   :group 'agent-chat)
 
+(defface agent-chat-autorunner-face
+  '((t :inherit warning :weight bold))
+  "Face for an unwatched autorunner notice in transcript turn-end flair."
+  :group 'agent-chat)
+
 ;;; Buffer state
 
 (defvar-local agent-chat--prompt-marker nil
@@ -574,9 +579,15 @@ priced last turn (fresh session, Codex, Zai, script failure)."
          ("warm" " · pouch")
          ("none" " · no pouch")
          (_ nil))
-       (when (and agent-chat-compaction-hint-ctx (numberp ctx)
-                  (>= ctx agent-chat-compaction-hint-ctx))
-         " →  Compaction recommended (C-c C-z)")
+       (cond
+        ((plist-get basis :autorunner)
+         (propertize
+          (format " →  autorunner (%s turns without you; auto-compact on)"
+                  (plist-get basis :turns-without-operator))
+          'face 'agent-chat-autorunner-face))
+        ((and agent-chat-compaction-hint-ctx (numberp ctx)
+              (>= ctx agent-chat-compaction-hint-ctx))
+         " →  Compaction recommended (C-c C-z)"))
        (when (and (plist-get basis :cold)
                   (numberp (plist-get basis :per_turn_cold_usd)))
          (format " · cold — resuming costs ~$%.2f"
@@ -593,11 +604,16 @@ priced last turn (fresh session, Codex, Zai, script failure)."
   "Ask the Agency whether BUFFER's agent runs in a warm pouch; annotate on reply.
 GENERATION guards against a reply landing after a newer refresh."
   (let ((agent-id (buffer-local-value 'agent-chat--agent-id buffer))
+        (session-id (buffer-local-value 'agent-chat--session-id buffer))
         (base (cond ((buffer-local-value 'claude-repl-api-url buffer))
                     (t agent-chat-agency-base-url))))
     (when (and (stringp agent-id) (stringp base))
-      (let ((url (format "%s/api/alpha/agents/%s/pouch"
-                         (string-remove-suffix "/" base) (url-hexify-string agent-id))))
+      (let ((url (concat (format "%s/api/alpha/agents/%s/pouch"
+                                 (string-remove-suffix "/" base)
+                                 (url-hexify-string agent-id))
+                         (if (and (stringp session-id) (not (string-empty-p session-id)))
+                             (concat "?session=" (url-hexify-string session-id))
+                           ""))))
         (condition-case nil
             (url-retrieve
              url
@@ -616,6 +632,12 @@ GENERATION guards against a reply landing after a newer refresh."
                                (setq agent-chat--cost-basis
                                      (plist-put agent-chat--cost-basis :pouch
                                                 (if (plist-get data :warm) "warm" "none")))
+                               (setq agent-chat--cost-basis
+                                     (plist-put agent-chat--cost-basis :autorunner
+                                                (plist-get data :autorunner)))
+                               (setq agent-chat--cost-basis
+                                     (plist-put agent-chat--cost-basis :turns-without-operator
+                                                (plist-get data :turns-without-operator)))
                                (agent-chat--annotate-turn-flair!)))))))
                  (kill-buffer (current-buffer))))
              nil t t)

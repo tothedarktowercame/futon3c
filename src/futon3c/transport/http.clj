@@ -8011,26 +8011,33 @@
   "GET /api/alpha/agents/:id/pouch — is this seat running in a warm pouch?
    For the REPL Cooked line (Joe, 2026-08-22): under the joey gate most seats
    are cold even with kangaroo on, and the operator could not see which."
-  [agent-id]
-  (let [snap (get (agent-pouch/snapshot) agent-id)]
+  [agent-id request]
+  (let [snap (get (agent-pouch/snapshot) agent-id)
+        session-id (some-> (get (parse-query-params request) "session")
+                           str str/trim not-empty)
+        turns (when session-id
+                (agent-pouch/turns-without-operator agent-id session-id))]
     (json-response 200
-                   {:ok true
-                    :agent-id agent-id
-                    :kangaroo-enabled (agent-pouch/enabled?)
-                    :warm (boolean (:alive? snap))
-                    :in-flight (boolean (:in-flight? snap))
-                    :joey (:joey? snap)
-                    :session-bytes (:session-bytes snap)
-                    :turn-count (:turn-count snap)})))
+                   (cond-> {:ok true
+                            :agent-id agent-id
+                            :kangaroo-enabled (agent-pouch/enabled?)
+                            :warm (boolean (:alive? snap))
+                            :in-flight (boolean (:in-flight? snap))
+                            :joey (:joey? snap)
+                            :session-bytes (:session-bytes snap)
+                            :turn-count (:turn-count snap)}
+                     session-id
+                     (assoc :turns-without-operator turns
+                            :autorunner (agent-pouch/unwatched-run? agent-id session-id))))))
 
 (defn- handle-agent-get
   "GET /api/alpha/agents/:id — return a single agent's details.
    Also serves GET /api/alpha/agents/:id/pouch: make-handler's agents/(.+) clause
    captures that path in the closure built at startup, and this var is the
    reload-safe point behind it."
-  [_config agent-id]
+  [_config agent-id request]
   (if (str/ends-with? agent-id "/pouch")
-    (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))))
+    (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))) request)
     (handle-agent-get* agent-id)))
 
 (defn- handle-agent-get*
@@ -13699,7 +13706,7 @@
 
           (and (= :get method) (re-matches #"/api/alpha/agents/(.+)" uri))
           (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
-            (handle-agent-get config agent-id))
+            (handle-agent-get config agent-id request))
 
           (and (= :get method) (= "/api/alpha/agents" uri))
           (handle-agents-list config)

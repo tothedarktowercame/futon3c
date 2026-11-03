@@ -342,10 +342,16 @@
       (flush))
     n))
 
-(defn- unwatched-run?
+(defn turns-without-operator
+  "Consecutive non-operator turns recorded for (AGENT-ID, SESSION-ID), or 0."
   [agent-id session-id]
-  (< 5 (long (get @!turns-without-operator
-                  [(str agent-id) (some-> session-id str)] 0))))
+  (long (get @!turns-without-operator
+             [(str agent-id) (some-> session-id str)] 0)))
+
+(defn unwatched-run?
+  "True after more than five consecutive non-operator turns in this session."
+  [agent-id session-id]
+  (< 5 (turns-without-operator agent-id session-id)))
 
 (declare alive? compact-pouch!)
 

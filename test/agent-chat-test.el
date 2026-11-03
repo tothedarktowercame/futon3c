@@ -46,6 +46,20 @@
   (should (equal (agent-chat-cost-flair-suffix '(:vendor "codex" :ctx 1000)) ""))
   (should (equal (agent-chat-cost-flair-suffix nil) "")))
 
+(ert-deftest agent-chat-cost-flair-suffix-renders-autorunner-state ()
+  (let* ((manual '(:vendor "claude" :model "claude-opus-5" :mult 1.0 :ctx 411000
+                   :last_turn_usd 5.14 :last_turn_calls 22 :session_usd 293
+                   :autorunner nil :turns-without-operator 7))
+         (autorunner (plist-put (copy-sequence manual) :autorunner t))
+         (rendered (agent-chat-cost-flair-suffix autorunner)))
+    (should (equal (substring-no-properties rendered)
+                   " · ~$5.14 (22 calls · ctx 411k · opus x1) · session $293 →  autorunner (7 turns without you; auto-compact on)"))
+    (should-not (string-match-p "Compaction recommended" rendered))
+    (should (eq (get-text-property (string-match "autorunner" rendered) 'face rendered)
+                'agent-chat-autorunner-face))
+    (should (equal (agent-chat-cost-flair-suffix manual)
+                   " · ~$5.14 (22 calls · ctx 411k · opus x1) · session $293 →  Compaction recommended (C-c C-z)"))))
+
 (ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
   (with-temp-buffer
     (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")
