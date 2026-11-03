@@ -378,6 +378,17 @@ evidence beside each.
 - Whether "created and validated" on the page should mean ripe by count, or tested on held-out turns.
 - Fix `xlate.py census` for invalid candidates files.
 
+### D6. One record with the outer loop (proposal, claude-2 and claude-16, 2026-11-03)
+
+Joe, 2026-11-03: dubious that classical code can produce a meaningful cascade, even a valid one; interactive and
+non-interactive settings "share the same data structures (or are supposed to)"; the cascade reads as a rationale and is
+scored with a number, G, relative to the policies explored. An induced rule is not a cascade: it has a guard and a product,
+no units or edges, and in the 09-30 rules the guard contains the product (`:commit-resolved`).
+
+Shared record: units, edges, terms (cited reads), rationale, attestation (turns and held-out results), alternatives.
+G sits on the record. A D1 stamp is a cited term, not a score. First case: the cascade Joe applied to the 47 review rows on
+2026-11-02, scored against the policy he reversed, using his decisions as the observed outcome.
+
 ## Closure criteria (provisional, 2026-10-09)
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-5, high confidence); not yet confirmed by the author._
