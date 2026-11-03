@@ -60,6 +60,21 @@
     (should (equal (agent-chat-cost-flair-suffix manual)
                    " · ~$5.14 (22 calls · ctx 411k · opus x1) · session $293 →  Compaction recommended (C-c C-z)"))))
 
+(ert-deftest agent-chat-annotate-turn-flair-keeps-autorunner-face ()
+  (with-temp-buffer
+    (insert "hello\n" (propertize "Cooked for 1m 03s" 'face 'shadow) "\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (progn
+      (cl-letf (((symbol-function 'agent-chat-turn-flair-suffix)
+                 (lambda () (propertize " →  autorunner (7 turns without you; auto-compact on)"
+                                        'face 'agent-chat-autorunner-face))))
+        (agent-chat--annotate-turn-flair!))
+      (goto-char (point-min))
+      (search-forward "autorunner")
+      (let ((f (get-text-property (match-beginning 0) 'face)))
+        (should (or (eq f 'agent-chat-autorunner-face)
+                    (and (listp f) (eq (car f) 'agent-chat-autorunner-face))))))))
+
 (ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
   (with-temp-buffer
     (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")

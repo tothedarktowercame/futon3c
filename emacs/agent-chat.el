@@ -691,7 +691,11 @@ Idempotent: an earlier suffix on the same line is replaced."
                   (face (get-text-property (match-beginning 0) 'face)))
               (goto-char (match-end 0))
               (delete-region (point) (line-end-position))
-              (insert (propertize suffix 'face face)))))))))
+              ;; Append the line's face rather than replacing faces in SUFFIX:
+              ;; the autorunner notice carries its own warning face.
+              (let ((s (copy-sequence suffix)))
+                (when face (add-face-text-property 0 (length s) face t s))
+                (insert s)))))))))
 
 ;;;###autoload
 (defun agent-chat-cost-adopt-buffer ()
