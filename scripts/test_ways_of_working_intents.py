@@ -68,11 +68,29 @@ class IntentClassifierTest(unittest.TestCase):
         self.assertNotIn("open", result["status-counts"])
         self.assertEqual(1, result["status-counts"]["answered"])
 
-    def test_duplicate_act_counts_once(self):
-        a = record(session="a", act="same")
-        b = record(session="b", act="same")
-        result = classify([a, b], latest={"a": a, "b": b})
+    def test_act_listed_as_act_and_still_open_counts_once(self):
+        row = record(act="same")  # opener in acts and in still_open
+        result = classify([row])
         self.assertEqual(1, result["status-counts"]["open"])
         self.assertEqual(1, result["violation-count"])
+
+    def test_same_act_id_in_two_sessions_is_two_asks(self):
+        # Act ids restart with each session of a seat, so zai-7's turn 1 on
+        # 10-16 and on 10-31 share an id but are different asks.
+        a = record(session="a", act="zai-7-turn-1-f-s1-0", age_days=18)
+        b = record(session="b", act="zai-7-turn-1-f-s1-0", age_days=3)
+        result = classify([a, b], latest={"a": a, "b": b})
+        self.assertEqual(2, result["status-counts"]["open"])
+        self.assertEqual(["a"], [x["session"] for x in result["violations"]])
+
+    def test_sidecar_answer_closes_only_its_own_session(self):
+        a = record(session="a", act="x"); a["_record"] = "turn-A"
+        b = record(session="b", act="x"); b["_record"] = "turn-B"
+        sidecar = {"record": "turn-A",
+                   "acts": [{"act": "r", "kind": "report",
+                             "answers": [{"act": "x", "effect": "closes"}]}]}
+        result = classify([a, b], latest={"a": a, "b": b}, sidecars=[sidecar])
+        self.assertEqual(1, result["status-counts"]["met"])
+        self.assertEqual(["b"], [x["session"] for x in result["violations"]])
 
 if __name__ == "__main__": unittest.main()

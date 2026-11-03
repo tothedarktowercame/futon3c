@@ -56,7 +56,7 @@ hand.
 | backlog-understood | `draw-pile` | on, failing | |
 | inbox-zero | `git-clean` | off, failing | timer parked |
 | records-carry-warrant | none | not built | unit is the test run, not the commit (Joe 11-03; declaration corrected); finding 5 blocks enumeration |
-| intents-are-tracked | (building) | not built | discovery 11-03 (codex-7): the authority is the latest 象 record per session; 15 open operator acts, 6 stale over 7 days; minus40's 992 "open asks" are aggregation debt. Probe v1 with codex-7; brief fix with zai-5 |
+| intents-are-tracked | `intents-tracked` | on, failing | 6 of 13 open operator asks stale over 7 days (codex-7 `b3f026d55`; review `36f65dde3` and the session-key fix). Reconciled by hand: 1 met, 2 never answered, 3 unwitnessable (finding 6) |
 | selection-gives-a-reason | none | not built | War Machine side; futon2 rules apply |
 | eat-your-own-tail | none | not built | needs a design first |
 | real-users | none | unprobed by design | values live in futon7 |
@@ -144,6 +144,31 @@ Pattern Cascade page does not show them.
    at the first paragraph that opens with a mark (the proforma puts the ㊥
    gist first) and judges from there; a turn with no marked paragraph is an
    unmarked reply. Applied at review of codex-15's build, not re-belled.
+3a. **intents-tracked review (claude-5, 11-03).** Two defects fixed in
+   review, both with tests that fail on the old code:
+   - The latest-record test passed even when every record was read, because
+     closures are collected from all records either way. A new case (an act
+     the latest record no longer carries) fails under that mutation.
+   - Act ids restart with each session of a seat: 521 of 8,012 operator act
+     ids occur in more than one session (`zai-7-turn-1-f-s1-0` is a 10-16
+     delegation and a 10-31 bug report). The probe keyed on the id alone,
+     and its "duplicate counts once" test pinned that merge. It now keys on
+     (session, act id); a sidecar answer closes only its own record's
+     session.
+   The live count is unchanged at 6. By hand:
+   - zai-8 "please add the small change for unified behaviour" (10-19
+     04:46): **met** by zai-8's commit `e27d3bf93` 78 s later. The probe
+     has no commit witness, and the commit's Agent-Session
+     (`zai-10e2f699-…`) is not the 象 session id, so the join would be by
+     seat and time.
+   - codex-2 "can you see what claude-2 is doing?" and "I don't have
+     visibility?" (10-21): **never answered**. The turn failed with a Codex
+     thread-store conflict. Obsolete now.
+   - zai-5 "Are these uncommitted files to do with your work?" (10-18),
+     zai-6 and zai-7 "You will help with E-implementing-G-over-cascades"
+     (10-16): **cannot be told**, see finding 6.
+   No registered run: the registry accepts only pytest commands, and the
+   system python has no pytest (finding 7).
 4. **futon1b logs a start and an end line per request:** about 170k
    journal lines a day (futon0 README-hardening §1).
 5. ~~Warrants do not reach the evidence store.~~ Withdrawn: they were never
@@ -163,6 +188,15 @@ Pattern Cascade page does not show them.
    not the denominator. A probe candidate: test-result claims in
    bell-backs and reviews ("Ran N tests …") that carry no warrant id, i.e.
    pasted counts, against those that do.
+6. **Zai seats write no assistant rows to evidence.** For the four Zai
+   sessions above, futon1b holds only the operator's rows, and the 象 record
+   has an empty `reply_text`. So no probe can see whether a Zai seat answered.
+   This affects intents-tracked, feedback-reaches and the reply census.
+7. **futon3c's Python probe tests cannot be registered.** The registry wants
+   one repo-relative pytest file per record and an absolute interpreter, and
+   `/usr/bin/python3` has no pytest (the futon6 and marimo-zone venvs do).
+   So every ways-of-working build reports "warrant: none", the dirty tree by
+   construction. Fix: a futon3c venv with pytest, named in the packets.
 
 ## Hygiene: dispatch as a fourth generation (Joe, 2026-11-03)
 

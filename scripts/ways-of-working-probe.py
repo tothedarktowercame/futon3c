@@ -98,11 +98,17 @@ def join_operator_replies(operator_rows, evidence_rows):
         if not matches: continue
         reply = matches[-1]
         reply_body = reply["evidence/body"]
+        whole_text = reply_body.get("unified-text") or reply_body.get("text") or ""
+        reply_paragraphs = paragraphs(whole_text)
+        first_mark = next((index for index, paragraph in enumerate(reply_paragraphs)
+                           if paragraph and paragraph[0] in MARKS), None)
+        judged_text = ("\n\n".join(reply_paragraphs[first_mark:])
+                       if first_mark is not None else whole_text)
         replies.append({"job-id": reply_body.get("job-id") or reply_body.get("turn-id")
                                   or reply.get("evidence/id"),
                         "agent-id": operator.get("probe/agent-id")
                                     or (operator.get("evidence/subject") or {}).get("ref/id"),
-                        "text": reply_body.get("text") or reply_body.get("unified-text") or ""})
+                        "text": judged_text})
     return replies
 
 def fetch_operator_replies(operator_rows, cutoff, now=NOW,
@@ -267,6 +273,7 @@ def read_intent_records(record_root=TURN_STORE, limit=INTENT_RECORD_LIMIT):
         if (not isinstance(row, dict) or not row.get("session_id")
                 or not created_at or not isinstance(row.get("ports"), dict)):
             invalid += 1; continue
+        row["_record"] = path.stem
         valid.append(row)
     latest = {}
     for row in valid:
@@ -302,8 +309,8 @@ def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid
         acts = {a.get("id"): a for a in (row.get("acts") or []) if isinstance(a, dict) and a.get("id")}
         for act in acts.values():
             if act.get("author") == "operator" and act.get("kind") in INTENT_OPENERS:
-                candidates.setdefault(act["id"], act)
-                meta.setdefault(act["id"], (sid, row.get("agent_id", "unknown")))
+                candidates.setdefault((sid, act["id"]), act)
+                meta.setdefault((sid, act["id"]), (sid, row.get("agent_id", "unknown")))
         for port in row["ports"].get("still_open") or []:
             if not isinstance(port, dict): continue
             aid = _act_id(port); source = acts.get(aid, {})
@@ -311,7 +318,8 @@ def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid
             for key in ("author", "kind", "text", "at"):
                 if source.get(key) is not None: merged[key] = source[key]
             if merged.get("author") == "operator" and merged.get("kind") in INTENT_OPENERS and aid:
-                candidates.setdefault(aid, merged); meta.setdefault(aid, (sid, row.get("agent_id", "unknown")))
+                candidates.setdefault((sid, aid), merged)
+                meta.setdefault((sid, aid), (sid, row.get("agent_id", "unknown")))
 
     witnesses = {}
     # Kernel closure is accepted only when an inferred closes edge backs it.
@@ -321,9 +329,13 @@ def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid
         for closed in (row.get("ports") or {}).get("closed_this_turn") or []:
             aid = _act_id(closed)
             if aid in inferred:
-                witnesses.setdefault(aid, {"status": "answered", "kind": "kernel",
+                witnesses.setdefault((row.get("session_id"), aid), {"status": "answered", "kind": "kernel",
                                            "answer": inferred[aid].get("answer")})
+    # Act ids restart with each session of a seat ("zai-7-turn-1-..."), so
+    # every key is (session, act-id); a sidecar names its record, not a session.
+    record_session = {r.get("_record"): r.get("session_id") for r in records}
     for sidecar in sidecars:
+        sidecar_sid = record_session.get(sidecar.get("record"))
         for act in sidecar.get("acts") or []:
             if not isinstance(act, dict): continue
             kind = act.get("kind")
@@ -333,29 +345,31 @@ def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid
                     status = "met" if kind in {"report", "fulfil", "approve", "accept"} else "answered"
                     if kind == "redirect": status = "superseded"
                     if kind in {"withdraw", "retract"}: status = "withdrawn"
-                    witnesses[target] = {"status": status, "kind": "sidecar-answer", "answer": act.get("act")}
+                    witnesses[(sidecar_sid, target)] = {"status": status, "kind": "sidecar-answer", "answer": act.get("act")}
             scope = act.get("scope") or {}
             target = _act_id(scope.get("closes"))
             if not target and kind in {"withdraw", "retract"}: target = _act_id(scope.get("within"))
             if target:
-                witnesses[target] = {"status": "withdrawn" if kind in {"withdraw", "retract"} else "answered",
+                witnesses[(sidecar_sid, target)] = {"status": "withdrawn" if kind in {"withdraw", "retract"} else "answered",
                                      "kind": "sidecar-scope", "answer": act.get("act")}
-    for aid in candidates:
+    for key in candidates:
+        aid = key[1]
         match = INTENT_JOB_ACT.match(aid)
-        if not match or aid in witnesses: continue
+        if not match or key in witnesses: continue
         job = job_state(match.group(1))
         state = (job or {}).get("state")
         if state in TERMINAL_STATES:
-            witnesses[aid] = {"status": "met" if state in {"done", "delivered"} else "answered",
+            witnesses[key] = {"status": "met" if state in {"done", "delivered"} else "answered",
                               "kind": "agency-job", "job-state": state}
 
     statuses, pending, violations = collections.Counter(), [], []
-    for aid, act in candidates.items():
-        if aid in witnesses:
-            statuses[witnesses[aid]["status"]] += 1; continue
+    for key, act in candidates.items():
+        aid = key[1]
+        if key in witnesses:
+            statuses[witnesses[key]["status"]] += 1; continue
         statuses["open"] += 1
         at = parse_time(act.get("at") or act.get("since"))
-        sid, agent = meta[aid]
+        sid, agent = meta[key]
         item = {"act-id": aid, "session": sid, "agent": agent,
                 "date": at.date().isoformat() if at else "unknown",
                 "kind": act.get("kind", "unknown"),
