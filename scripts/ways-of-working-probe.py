@@ -125,7 +125,7 @@ def probe_draw_pile(graph):
 # zone-health checks that bear on "stays alive and paid" (claude-16, 2026-11-03, README-hardening):
 # the machine, its services, off-box copies and access. Bills and runway are not machine-checkable here.
 ALIVE_CHECKS = ["user-services", "system-units", "futon1b-health", "agency-health", "federation",
-                "firewall", "drive-health", "disk-space", "git-hub-backup", "evidence-backup",
+                "firewall", "drive-health", "write-rate", "disk-space", "git-hub-backup", "evidence-backup",
                 "pass-store", "pass-hubs-agree", "parked-timers"]
 
 def probe_zone_health():
