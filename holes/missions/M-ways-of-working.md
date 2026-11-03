@@ -61,6 +61,49 @@ hand.
 | eat-your-own-tail | none | not built | needs a design first |
 | real-users | none | unprobed by design | values live in futon7 |
 
+## Candidate ways not yet declared (Joe, 2026-11-03)
+
+Joe: "m40 hasn't been used lately (to my knowledge) and I want to understand
+why. There's a whole way of working around memory, mining patterns, updating a
+giant connected cascade that isn't recorded in the Pattern Pipeline Cascade
+... a lot of recent work has been dealing with Giraffe, 馬, WM and related
+topics and I feel like that is forming a cluster of work that needs finishing
+and bringing online along with the other WOW items even if it is more complex
+than many of those."
+
+**12. Memory is used: minus40.** Measured by claude-5, 2026-11-03:
+- Across every Claude transcript of the last 30 days there were **5** minus40
+  tool calls (`m40_find` 3, `m40_near` 2): 4 on 10-29 and 1 on 11-01.
+- minus40's last commit is 10-17 (`b68c852`). The store
+  (`minus40-store.service`, :7093) is running.
+- What still runs is passive: the SessionStart brief (`brief.py`) and two
+  PostToolUse hooks (`ingest_hook.py`, `call_hook.py`). In this session they
+  flagged a near-duplicate memory correctly, so ingest is current.
+- Why the tools go unused, as far as the records show:
+  1. No CLAUDE.md or AGENTS.md mentions minus40 or when to reach for it.
+  2. Its eight MCP tools are deferred: a session sees only their names until
+     it runs a ToolSearch.
+  3. The brief's "open asks with no answer linked" are mostly 10-19/10-20
+     turns, so it reads as stale.
+  4. Codex seats get none of it.
+  5. Memory work moved to Zai seats on 10-19 (memory
+     `zai-runners-for-memory-work`), and no minus40 commit followed.
+
+  A probe would count tool calls and brief items acted on per day.
+
+**13. The selection cluster: Giraffe, 馬, WM.** M-giraffe (the work pool as
+data), the 馬 reading and occurrence lanes (`ma-reading` 805 and
+`ma-occurrence` 467 bells in the last 6 days), and the War Machine's
+selection. It bears on `selection-gives-a-reason` and `backlog-understood`,
+and on E-autoclock-wow's surprisal accounting, which reads Giraffe's field.
+Bringing it online is larger than one probe. It needs its own excursion
+under this mission, with M-giraffe's owner (Joe + claude-11) and futon2's
+War Machine rules (Claude proposes and reviews; Codex builds).
+
+**14. The pattern cascade is kept up to date.** Memory, pattern mining and
+the connected cascade are not one of the 11 declared ways, and the Pipeline
+Pattern Cascade page does not show them.
+
 ## Open findings, each to become its own item
 
 1. **The consent-gate sweeper sends without `--from`:** 55 bells in 24 h with
