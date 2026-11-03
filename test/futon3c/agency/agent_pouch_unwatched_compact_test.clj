@@ -53,6 +53,20 @@
            "unwatched-quoted" "s-quoted" #(do (swap! calls inc) (reset! tokens nil)))
           (is (= 1 @calls)))))
 
+    (testing "a run on one session does not compact another session"
+      (let [calls (atom 0)]
+        (with-redefs [pouch/session-context-tokens (constantly 200001)]
+          (note! "unwatched-split" "s-a" 6 (prompt "agent" "work"))
+          (note! "unwatched-split" "s-b" 1 (prompt "agent" "work"))
+          (pouch/joey-eligible-or-compact?
+           "unwatched-split" "s-b" #(swap! calls inc))
+          (is (zero? @calls)))))
+
+    (testing "a resume that quotes a whole operator header block still counts as non-operator"
+      (let [p (prompt "harness" (str "resumed:\n" (prompt "operator" "old turn")))]
+        (note! "unwatched-nested" "s-nested" 5 (prompt "agent" "work"))
+        (is (= 6 (pouch/note-turn-origin! "unwatched-nested" "s-nested" p)))))
+
     (testing "ten non-operator turns stay below the token threshold"
       (let [calls (atom 0)]
         (with-redefs [pouch/session-context-tokens (constantly 199999)]
