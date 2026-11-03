@@ -67,40 +67,65 @@ def fetch_promise_history(cutoff, base="http://localhost:7073", max_pages=20):
         query.update({"cursor-at": cursor["at"], "cursor-id": cursor["id"]})
     raise RuntimeError("futon1b promise-history exceeded bounded pagination")
 
-def fetch_operator_replies(cutoff, base="http://localhost:7073", max_pages=10):
-    """Join final assistant evidence to local operator-turn evidence ids."""
-    records = []
-    for filename in glob.glob(str(TURN_STORE / "turn-*.json")):
-        if os.path.basename(filename).count(".") > 1: continue
-        try: record = json.loads(pathlib.Path(filename).read_text())
-        except Exception: continue
-        at = parse_time(record.get("created_at")) if isinstance(record, dict) else None
-        if at and at >= cutoff and (record.get("origin") or "operator") == "operator":
-            records.append(record)
-    by_session = {}
-    for record in records: by_session.setdefault(record.get("session_id"), []).append(record)
+def join_operator_replies(operator_rows, evidence_rows):
+    """Find one final assistant row for each matched operator evidence row."""
+    rows_by_session = collections.defaultdict(list)
+    for row in evidence_rows:
+        if row.get("evidence/session-id"):
+            rows_by_session[row["evidence/session-id"]].append(row)
     replies = []
-    for session_id, session_records in by_session.items():
-        by_evidence = {r.get("evidence_id"): r for r in session_records if r.get("evidence_id")}
-        if not session_id or not by_evidence: continue
-        query = {"session-id": session_id, "since": iso(cutoff), "limit": "1000"}
-        for _ in range(max_pages):
-            data = get_json(base + "/api/alpha/evidence?" + urllib.parse.urlencode(query))
-            if not isinstance(data.get("entries"), list):
-                raise RuntimeError("futon1b operator-reply response is not usable")
-            for entry in data["entries"]:
-                body = entry.get("evidence/body")
-                operator = by_evidence.get(entry.get("evidence/in-reply-to"))
-                if (not isinstance(body, dict) or body.get("role") != "assistant"
-                        or body.get("segment-final") is False or not operator): continue
-                replies.append({"job-id": body.get("job-id") or body.get("turn-id") or entry.get("evidence/id"),
-                                "agent-id": operator.get("agent_id"),
-                                "text": body.get("unified-text") or body.get("text") or ""})
-            cursor = data.get("next-cursor")
-            if not cursor or not data["entries"]: break
-            query.update({"cursor-at": cursor["at"], "cursor-id": cursor["id"]})
-        else: raise RuntimeError("futon1b operator replies exceeded bounded pagination")
+    for operator in operator_rows:
+        session_id = operator.get("evidence/session-id")
+        body = operator.get("evidence/body") or {}
+        session_rows = sorted(rows_by_session.get(session_id, []),
+                              key=lambda row: row.get("evidence/at", ""))
+        finals = [row for row in session_rows
+                  if isinstance(row.get("evidence/body"), dict)
+                  and row["evidence/body"].get("role") == "assistant"
+                  and row["evidence/body"].get("segment-final") is not False]
+        matches = [row for row in finals
+                   if body.get("turn-id")
+                   and row["evidence/body"].get("turn-id") == body.get("turn-id")]
+        if not matches:  # Legacy rows: one conversational window in this session.
+            start = operator.get("evidence/at", "")
+            later_users = [row.get("evidence/at", "") for row in session_rows
+                           if row.get("evidence/at", "") > start
+                           and isinstance(row.get("evidence/body"), dict)
+                           and row["evidence/body"].get("role") == "user"]
+            end = min(later_users) if later_users else None
+            matches = [row for row in finals if row.get("evidence/at", "") > start
+                       and (end is None or row.get("evidence/at", "") < end)]
+        if not matches: continue
+        reply = matches[-1]
+        reply_body = reply["evidence/body"]
+        replies.append({"job-id": reply_body.get("job-id") or reply_body.get("turn-id")
+                                  or reply.get("evidence/id"),
+                        "agent-id": (operator.get("evidence/subject") or {}).get("ref/id"),
+                        "text": reply_body.get("unified-text") or reply_body.get("text") or ""})
     return replies
+
+def fetch_operator_replies(operator_rows, cutoff, now=NOW,
+                           base="http://localhost:7073", bucket_hours=2):
+    """Read bounded session/time buckets, then join the census's operator rows."""
+    sessions = {row.get("evidence/session-id") for row in operator_rows
+                if row.get("evidence/session-id")}
+    entries = {}
+    for session_id in sessions:
+        start = cutoff
+        while start < now:
+            end = min(start + datetime.timedelta(hours=bucket_hours), now)
+            query = {"session-id": session_id, "since": iso(start),
+                     "before": iso(end), "limit": "1000"}
+            data = get_json(base + "/api/alpha/evidence?" + urllib.parse.urlencode(query))
+            rows = data.get("entries")
+            if not isinstance(rows, list):
+                raise RuntimeError("futon1b operator-reply response is not usable")
+            if len(rows) >= 1000 or data.get("count", 0) >= 1000:
+                raise RuntimeError(f"futon1b operator-reply bucket truncated: {session_id} {iso(start)}")
+            for entry in rows:
+                if entry.get("evidence/id"): entries[entry["evidence/id"]] = entry
+            start = end
+    return join_operator_replies(operator_rows, list(entries.values()))
 
 def bell_emitter(job):
     prompt = next((e.get("text", "") for e in job.get("events", []) if e.get("type") == "prompt"), "")
@@ -123,7 +148,7 @@ def strict_marked_reply(text):
 # terminal result is the receipt; an inbox copy is not (codex-12, 2026-11-03).
 POLLING_CALLERS = {"wm-full-loop"}
 
-def classify_feedback_reaches(jobs, promise_history, replies, now):
+def classify_feedback_reaches(jobs, promise_history, replies, now, operator_turns=None):
     """Pure 24-hour classifier; all inputs are already bounded records."""
     cutoff = now - datetime.timedelta(hours=24)
     window_jobs = [j for j in jobs if (parse_time(j.get("created-at")) or cutoff) >= cutoff]
@@ -185,21 +210,21 @@ def classify_feedback_reaches(jobs, promise_history, replies, now):
                          f"return path: {len(no_path)} of {len(bells)} work bells lacked an addressed path ({len(emitters)} emitters); {len(notices)} brief-mode notifications exempt",
                          f"return receipt: {len(return_failures)} of {len(addressed_terminal)} completed addressed bells unproved after 30m; {len(pending)} pending inside grace",
                          f"intent marks: {len(reply_failures)} of {len(replies)} operator-facing replies failed strict form; leading-mark paragraphs {marked_paragraphs}/{reply_paragraphs} ({rate:.1%})",
-                         "reply census coverage: " + (", ".join(f"{a} {n}" for a, n in sorted(
-                             collections.Counter(r.get("agent-id") for r in replies).items(), key=lambda x: -x[1])) or "none")
-                         + "; the join "
-                           "misses most replies (claude-5, 11-03: 1 of about 9; replies after tool use are the suspected gap, unconfirmed); "
-                           "compare with the operator-turns count before reading this as stack-wide"],
+                         f"replies found: {len(replies)} of {operator_turns if operator_turns is not None else len(replies)} operator turns",
+                         "marks judged on the whole turn text, including narration between tool calls"],
             "denominator": (f"{len(no_path)}/{len(bells)} work bells without path; "
                             f"{len(return_failures)}/{len(addressed_terminal)} completed addressed returns unproved; "
                             f"{len(reply_failures)}/{len(replies)} operator replies malformed")}
 
-def probe_feedback_reaches():
+def probe_feedback_reaches(census_fn=None):
     cutoff = NOW - datetime.timedelta(hours=24)
     try:
+        census = (census_fn or read_operator_census)()
+        operator_rows = census["operator-evidence"]
         return classify_feedback_reaches(fetch_feedback_jobs(cutoff),
                                          fetch_promise_history(cutoff),
-                                         fetch_operator_replies(cutoff), NOW)
+                                         fetch_operator_replies(operator_rows, cutoff), NOW,
+                                         operator_turns=len(operator_rows))
     except Exception as error:  # never turn missing evidence into holding
         return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
                 "last-observation": None, "violations": [], "violation-count": 0,
@@ -210,6 +235,159 @@ OPERATOR_WINDOW = datetime.timedelta(hours=24)
 OPERATOR_GRACE = datetime.timedelta(minutes=2)
 OPERATOR_QUERY_PAD = datetime.timedelta(seconds=60)
 OPERATOR_QUERY_LIMIT = 200
+
+INTENT_OPENERS = {"propose", "ask-action", "offer", "delegate", "promise",
+                  "report-problem", "clarify", "verify"}
+INTENT_PENDING = datetime.timedelta(hours=24)
+INTENT_STALE = datetime.timedelta(days=7)
+INTENT_RECORD_LIMIT = 50000
+INTENT_JOB_ACT = re.compile(r"^(invoke-\d+-\d+-[0-9a-f]+)-b-\d+$")
+
+def _act_id(value):
+    if isinstance(value, str): return value
+    if isinstance(value, dict): return value.get("act") or value.get("id")
+    return None
+
+def read_intent_records(record_root=TURN_STORE, limit=INTENT_RECORD_LIMIT):
+    """Read a bounded turn-record census and retain the newest valid row/session."""
+    root = pathlib.Path(record_root)
+    if not root.is_dir() or not os.access(root, os.R_OK):
+        raise OSError(f"unreadable 象 record root: {root}")
+    paths = list(root.glob("turn-*.json"))
+    if len(paths) > limit:
+        raise RuntimeError(f"象 record census truncated: {len(paths)} exceeds {limit}")
+    valid, invalid = [], 0
+    for path in paths:
+        try:
+            row = json.loads(path.read_text())
+            created_at = parse_time(row.get("created_at")) if isinstance(row, dict) else None
+        except (OSError, ValueError):
+            invalid += 1; continue
+        if (not isinstance(row, dict) or not row.get("session_id")
+                or not created_at or not isinstance(row.get("ports"), dict)):
+            invalid += 1; continue
+        valid.append(row)
+    latest = {}
+    for row in valid:
+        sid = row["session_id"]
+        if sid not in latest or parse_time(row["created_at"]) > parse_time(latest[sid]["created_at"]):
+            latest[sid] = row
+    return valid, latest, invalid
+
+def read_intent_sidecars(sidecar_root, limit=INTENT_RECORD_LIMIT):
+    root = pathlib.Path(sidecar_root)
+    if not root.is_dir() or not os.access(root, os.R_OK):
+        raise OSError(f"unreadable 象 sidecar root: {root}")
+    paths = list(root.glob("moves-scale*/shard-*/turn-*.moves.json"))
+    if len(paths) > limit:
+        raise RuntimeError(f"象 sidecar census truncated: {len(paths)} exceeds {limit}")
+    rows = []
+    for path in paths:
+        try: row = json.loads(path.read_text())
+        except (OSError, ValueError): continue
+        if isinstance(row, dict): rows.append(row)
+    return rows
+
+def fetch_intent_job(job_id, base="http://localhost:7070"):
+    try: data = get_json(f"{base}/api/alpha/invoke/jobs/{job_id}", timeout=3)
+    except Exception: return None
+    return data.get("job") or data
+
+def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid=0):
+    """Classify operator opener acts with explicit v1 closure witnesses."""
+    job_state = job_state or fetch_intent_job
+    candidates, meta = {}, {}
+    for sid, row in latest.items():
+        acts = {a.get("id"): a for a in (row.get("acts") or []) if isinstance(a, dict) and a.get("id")}
+        for act in acts.values():
+            if act.get("author") == "operator" and act.get("kind") in INTENT_OPENERS:
+                candidates.setdefault(act["id"], act)
+                meta.setdefault(act["id"], (sid, row.get("agent_id", "unknown")))
+        for port in row["ports"].get("still_open") or []:
+            if not isinstance(port, dict): continue
+            aid = _act_id(port); source = acts.get(aid, {})
+            merged = dict(port)
+            for key in ("author", "kind", "text", "at"):
+                if source.get(key) is not None: merged[key] = source[key]
+            if merged.get("author") == "operator" and merged.get("kind") in INTENT_OPENERS and aid:
+                candidates.setdefault(aid, merged); meta.setdefault(aid, (sid, row.get("agent_id", "unknown")))
+
+    witnesses = {}
+    # Kernel closure is accepted only when an inferred closes edge backs it.
+    for row in records:
+        inferred = {w.get("opener"): w for w in (row.get("ports") or {}).get("inferred") or []
+                    if isinstance(w, dict) and w.get("effect") == "closes"}
+        for closed in (row.get("ports") or {}).get("closed_this_turn") or []:
+            aid = _act_id(closed)
+            if aid in inferred:
+                witnesses.setdefault(aid, {"status": "answered", "kind": "kernel",
+                                           "answer": inferred[aid].get("answer")})
+    for sidecar in sidecars:
+        for act in sidecar.get("acts") or []:
+            if not isinstance(act, dict): continue
+            kind = act.get("kind")
+            for answer in act.get("answers") or []:
+                target = _act_id(answer)
+                if target and answer.get("effect") == "closes":
+                    status = "met" if kind in {"report", "fulfil", "approve", "accept"} else "answered"
+                    if kind == "redirect": status = "superseded"
+                    if kind in {"withdraw", "retract"}: status = "withdrawn"
+                    witnesses[target] = {"status": status, "kind": "sidecar-answer", "answer": act.get("act")}
+            scope = act.get("scope") or {}
+            target = _act_id(scope.get("closes"))
+            if not target and kind in {"withdraw", "retract"}: target = _act_id(scope.get("within"))
+            if target:
+                witnesses[target] = {"status": "withdrawn" if kind in {"withdraw", "retract"} else "answered",
+                                     "kind": "sidecar-scope", "answer": act.get("act")}
+    for aid in candidates:
+        match = INTENT_JOB_ACT.match(aid)
+        if not match or aid in witnesses: continue
+        job = job_state(match.group(1))
+        state = (job or {}).get("state")
+        if state in TERMINAL_STATES:
+            witnesses[aid] = {"status": "met" if state in {"done", "delivered"} else "answered",
+                              "kind": "agency-job", "job-state": state}
+
+    statuses, pending, violations = collections.Counter(), [], []
+    for aid, act in candidates.items():
+        if aid in witnesses:
+            statuses[witnesses[aid]["status"]] += 1; continue
+        statuses["open"] += 1
+        at = parse_time(act.get("at") or act.get("since"))
+        sid, agent = meta[aid]
+        item = {"act-id": aid, "session": sid, "agent": agent,
+                "date": at.date().isoformat() if at else "unknown",
+                "kind": act.get("kind", "unknown"),
+                "text": re.sub(r"\s+", " ", act.get("text") or "")[:80]}
+        if at and now - at < INTENT_PENDING:
+            pending.append(item); continue
+        progress = any(act.get(k) for k in ("owner", "debtor", "assignee", "progress", "progress-at"))
+        deferred = act.get("deferred") is True or act.get("disposition") == "deferred"
+        if at and now - at > INTENT_STALE and not progress and not deferred:
+            violations.append(item)
+    invariant = "failing" if violations else "holding"
+    return {"monitor": "on", "invariant": invariant, "last-observation": iso(now),
+            "observed-at": iso(now), "violations": violations,
+            "violation-count": len(violations), "pending": pending, "pending-count": len(pending),
+            "status-counts": dict(statuses),
+            "evidence": [f"intent census: {len(candidates)} deduplicated operator opener acts; {invalid} invalid records skipped",
+                         "closure states: " + ", ".join(f"{k} {v}" for k, v in sorted(statuses.items())),
+                         f"open aging: {len(pending)} pending under 24h; {len(violations)} stale over 7d without owner/progress/deferment",
+                         "v1 limitation: Joe's next-turn stance is not counted yet"],
+            "denominator": f"{len(violations)} of {statuses['open']} open operator intents stale and unwitnessed"}
+
+def probe_intents_tracked(now=NOW, record_root=TURN_STORE, sidecar_root=None,
+                          job_state=None):
+    sidecar_root = pathlib.Path(sidecar_root or CODE / "futon3c" / "holes" / "labs" / "M-象-2000" / "data")
+    try:
+        records, latest, invalid = read_intent_records(record_root)
+        sidecars = read_intent_sidecars(sidecar_root)
+        return classify_intents(records, latest, sidecars, now, job_state, invalid)
+    except Exception as exc:
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(now),
+                "last-observation": None, "violations": [], "violation-count": 0,
+                "evidence": [f"intents-tracked probe broken: {exc}"],
+                "denominator": "unavailable because a required census failed"}
 
 def normalize_turn_text(text):
     text = re.sub(r"^\N{SPEAKING HEAD IN SILHOUETTE}\s*", "", (text or "").strip())
@@ -332,13 +510,20 @@ def match_operator_turns(turns, evidence, now=NOW):
                 "vendor-id": turn["id"],
                 "text-digest": hashlib.sha256(turn["text"].encode()).hexdigest()[:12]}
         (pending if now - turn["at"] < OPERATOR_GRACE else violations).append(item)
-    return {"matched": len(used_turns), "pending": pending, "violations": violations}
+    return {"matched": len(used_turns), "pending": pending, "violations": violations,
+            "operator-evidence": [evidence[ei] for ei in sorted(used_evidence)]}
+
+def read_operator_census(now=NOW, claude_root=None, codex_root=None,
+                         fetcher=fetch_operator_evidence):
+    turns = read_operator_turns(now, claude_root, codex_root)
+    result = match_operator_turns(turns, fetcher(turns), now)
+    return {"turns": turns, **result}
 
 def probe_operator_turns(now=NOW, claude_root=None, codex_root=None,
-                         fetcher=fetch_operator_evidence):
+                         fetcher=fetch_operator_evidence, census=None):
     try:
-        turns = read_operator_turns(now, claude_root, codex_root)
-        result = match_operator_turns(turns, fetcher(turns), now)
+        result = census or read_operator_census(now, claude_root, codex_root, fetcher)
+        turns = result["turns"]
     except Exception as exc:
         return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(now),
                 "violations": [], "violation-count": 0,
@@ -489,11 +674,17 @@ def main():
     if "--summary" in args: summary = json.loads(pathlib.Path(args[args.index("--summary") + 1]).read_text())
     if "--graph" in args: graph = json.loads(pathlib.Path(args[args.index("--graph") + 1]).read_text())
     d = json.loads(decl.read_text())
+    operator_cache = {}
+    def shared_operator_census():
+        if "value" not in operator_cache:
+            operator_cache["value"] = read_operator_census()
+        return operator_cache["value"]
     probes = {"git-clean": lambda: probe_git_clean(),
               "cascade-standards": lambda: probe_cascade_standards(summary),
               "draw-pile": lambda: probe_draw_pile(graph),
-              "feedback-reaches": lambda: probe_feedback_reaches(),
-              "operator-turns": lambda: probe_operator_turns(),
+              "feedback-reaches": lambda: probe_feedback_reaches(shared_operator_census),
+              "intents-tracked": lambda: probe_intents_tracked(),
+              "operator-turns": lambda: probe_operator_turns(census=shared_operator_census()),
               "zone-health": lambda: probe_zone_health()}
     ways = []
     for w in d["ways"]:

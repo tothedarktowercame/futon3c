@@ -37,6 +37,40 @@ def classify(jobs=(), history=(), replies=()):
 
 
 class FeedbackClassifierTest(unittest.TestCase):
+    def test_reply_joins_by_turn_id_past_intervening_tool_row(self):
+        operator = {"evidence/id": "operator-1", "evidence/session-id": "session-1",
+                    "evidence/at": "2026-11-03T10:00:00Z",
+                    "evidence/subject": {"ref/id": "claude-1"},
+                    "evidence/body": {"role": "user", "turn-id": "turn-1"}}
+        reply = {"evidence/id": "reply-1", "evidence/session-id": "session-1",
+                 "evidence/in-reply-to": "tool-1", "evidence/at": "2026-11-03T10:01:00Z",
+                 "evidence/body": {"role": "assistant", "turn-id": "turn-1",
+                                   "segment-final": True, "unified-text": "whole reply"}}
+        found = PROBE.join_operator_replies([operator], [operator, reply])
+        self.assertEqual(["turn-1"], [row["job-id"] for row in found])
+        self.assertEqual("whole reply", found[0]["text"])
+
+    def test_two_turns_in_one_session_are_not_swapped(self):
+        operators = [{"evidence/id": f"operator-{n}", "evidence/session-id": "session-1",
+                      "evidence/at": f"2026-11-03T10:0{n}:00Z",
+                      "evidence/body": {"role": "user", "turn-id": f"turn-{n}"}}
+                     for n in (1, 2)]
+        replies = [{"evidence/id": f"reply-{n}", "evidence/session-id": "session-1",
+                    "evidence/at": f"2026-11-03T10:0{n}:30Z",
+                    "evidence/body": {"role": "assistant", "turn-id": f"turn-{n}",
+                                      "segment-final": True, "text": f"reply {n}"}}
+                   for n in (2, 1)]
+        found = PROBE.join_operator_replies(operators, operators + replies)
+        self.assertEqual(["reply 1", "reply 2"], [row["text"] for row in found])
+
+    def test_operator_without_assistant_stays_in_coverage_denominator(self):
+        operator = {"evidence/id": "operator-1", "evidence/session-id": "session-1",
+                    "evidence/at": "2026-11-03T10:00:00Z",
+                    "evidence/body": {"role": "user", "turn-id": "turn-1"}}
+        replies = PROBE.join_operator_replies([operator], [operator])
+        result = PROBE.classify_feedback_reaches([], [], replies, NOW, operator_turns=1)
+        self.assertIn("replies found: 0 of 1 operator turns", result["evidence"])
+
     def test_http_caller_is_grouped_by_emitter(self):
         job = bell("no-path", caller="http-caller")
         job["events"] = [{"type": "prompt", "text": "[sweeper/consent-gate-emit] work"}]
@@ -98,7 +132,7 @@ class FeedbackClassifierTest(unittest.TestCase):
 
     def test_fetch_error_is_broken_not_holding(self):
         with mock.patch.object(PROBE, "fetch_feedback_jobs", side_effect=OSError("offline")):
-            result = PROBE.probe_feedback_reaches()
+            result = PROBE.probe_feedback_reaches(lambda: {"operator-evidence": []})
         self.assertEqual("broken", result["monitor"])
         self.assertEqual("unknown", result["invariant"])
 

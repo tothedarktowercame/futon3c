@@ -218,7 +218,7 @@
     "futon3c 象 turn records with ports and acts",
     "M-象-2000 as-of view, act stamps, withdrawal"
    ],
-   "probe": "none",
+   "probe": "intents-tracked",
    "pattern": "ways-of-working/intents-are-tracked",
    "patterns": [
     "象/言即行",
