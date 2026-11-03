@@ -3957,7 +3957,13 @@ RESPOND WITH ONLY:
               (clear-invoke-control! aid-val control-token)
               (stop-ticker!)))))
               (invoke-warm-or-cold [prompt session-id]
-                (let [warm-sid (preferred-session-id session-file session-id session-id-atom)]
+                (let [warm-sid (preferred-session-id session-file session-id session-id-atom)
+                      prompt-str (cond
+                                   (string? prompt) prompt
+                                   (map? prompt)    (or (:prompt prompt) (:text prompt)
+                                                        (json/generate-string prompt))
+                                   :else            (str prompt))]
+                  (agent-pouch/note-turn-origin! agent-id warm-sid prompt-str)
                   (cond
                     ;; A Platform-stateless invocation must reach the fresh
                     ;; `claude --bare` process built by invoke-once. Reusing a
@@ -3982,12 +3988,7 @@ RESPOND WITH ONLY:
                     ;; refresh), live tool activity, interrupt control, pattern
                     ;; retrieval. Warmth must not darken the turn.
                     :else
-                    (let [prompt-str (cond
-                                       (string? prompt) prompt
-                                       (map? prompt)    (or (:prompt prompt) (:text prompt)
-                                                            (json/generate-string prompt))
-                                       :else            (str prompt))
-                          aid-val (str agent-id)
+                    (let [aid-val (str agent-id)
                           invoke-trace-id (str "invoke-" (UUID/randomUUID))
                           control-token (str "claude-pouch-" (UUID/randomUUID))
                           !warm-interrupted? (atom false)

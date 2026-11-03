@@ -314,12 +314,45 @@
         (if (false? (:ok result)) result {:ok true :metadata (:agent/metadata result)})))))
 
 (defonce ^:private !compact-failed (atom #{}))
+(defonce ^:private !turns-without-operator (atom {}))
+
+(def ^:private current-turn-header-re
+  #"(?ms)^--- CURRENT TURN ---[ \t]*\r?\n(.*?)(?:\r?\n---[ \t]*(?:\r?\n|$)|\z)")
+
+(defn- operator-turn-prompt?
+  "True only when the first CURRENT TURN header block says `Origin: operator`.
+   Text after that block is deliberately ignored, including quoted headers."
+  [prompt-str]
+  (when-let [[_ header] (re-find current-turn-header-re (str prompt-str))]
+    (boolean (re-find #"(?m)^Origin:[ \t]*operator[ \t]*\r?$" header))))
+
+(defn note-turn-origin!
+  "Record one turn for (AGENT-ID, SESSION-ID), resetting the consecutive
+   non-operator count on an operator-origin CURRENT TURN header. Returns the
+   resulting count. Logs once when a run first becomes unwatched (> 5)."
+  [agent-id session-id prompt-str]
+  (let [k [(str agent-id) (some-> session-id str)]
+        operator? (operator-turn-prompt? prompt-str)
+        counts (swap! !turns-without-operator update k
+                      (fn [n] (if operator? 0 (inc (long (or n 0))))))
+        n (long (get counts k))]
+    (when (= 6 n)
+      (println (format "[kangaroo] %s %d turns without an operator turn — auto-compact on"
+                       (str agent-id) n))
+      (flush))
+    n))
+
+(defn- unwatched-run?
+  [agent-id session-id]
+  (< 5 (long (get @!turns-without-operator
+                  [(str agent-id) (some-> session-id str)] 0))))
 
 (declare alive? compact-pouch!)
 
 (defn joey-eligible-or-compact?
   "Called before every turn. When the live context is over joey-max-tokens and
-   the seat is marked `auto-compact?` (see auto-compact-seat?), compact the session with Claude Code's own /compact:
+   the seat is marked `auto-compact?` (see auto-compact-seat?) or has run more
+   than five turns without an operator turn, compact the session with Claude Code's own /compact:
    inside the agent's warm pouch when it has one (a cold /compact beside a live
    pouch would be undone by the pouch's in-memory context on its next turn),
    otherwise by calling COMPACT! (a zero-argument fn, e.g. a cold invoke of
@@ -342,7 +375,8 @@
    (let [sid (some-> session-id str str/trim not-empty)
          aid (str agent-id)
          k [aid sid]]
-     (when (and sid (not (joey-eligible? agent-id sid)) (auto-compact-seat? aid)
+     (when (and sid (not (joey-eligible? agent-id sid))
+                (or (auto-compact-seat? aid) (unwatched-run? aid sid))
                 (not (contains? @!compact-failed k)))
        (let [pouch (get @!pouches aid)
              warm? (boolean (and pouch (alive? pouch) (= sid (some-> (:session-id pouch) str))))]
