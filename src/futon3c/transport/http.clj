@@ -8035,10 +8035,13 @@
    Also serves GET /api/alpha/agents/:id/pouch: make-handler's agents/(.+) clause
    captures that path in the closure built at startup, and this var is the
    reload-safe point behind it."
-  [_config agent-id request]
-  (if (str/ends-with? agent-id "/pouch")
-    (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))) request)
-    (handle-agent-get* agent-id)))
+  ;; The 2-arity is what make-handler closures built before 2026-11-03 call
+  ;; (a :reload does not rebuild them): it serves /pouch without ?session=.
+  ([config agent-id] (handle-agent-get config agent-id nil))
+  ([_config agent-id request]
+   (if (str/ends-with? agent-id "/pouch")
+     (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))) request)
+     (handle-agent-get* agent-id))))
 
 (defn- handle-agent-get*
   [agent-id]
