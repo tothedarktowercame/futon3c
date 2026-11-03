@@ -114,9 +114,22 @@ Pattern Cascade page does not show them.
    (`d7ea790eb`): its bells are brief-mode notifications, which need no return
    path, and the probe now exempts them. Live: 0 of 202 work bells without a
    path; 65 notifications exempt.
-2. **The `wm-full-loop` inbox is never drained:** 507 files in
-   `~/.claude/agency-inbox/wm-full-loop/` since 10-01. "Delivered" to an
-   inbox is not receipt unless something reads it.
+2. **The `wm-full-loop` inbox: resolved for the probe, files await Joe.**
+   codex-12 (`~/notes/packets/ways-of-working/wm-inbox-discovery-REPORT.md`):
+   `wm-full-loop` bells, then polls the original job to a terminal state
+   (futon2 `flight_runner.clj:120-168`: "a bellback has no return path to
+   the machine's persona"). So the 507 inbox files are redundant copies,
+   and Agency's "delivered" there only means a file was written
+   (`http.clj:2779-2801`). The probe now takes a polling caller's terminal
+   result as receipt (`5127f81da`, with a test). Spot-checked: 507 files, 0
+   consumed, 171 inbox directories.
+   **Open:**
+   - (a) Joe decides the 507: manifest then archive (recommended), move to
+     `consumed/`, or leave.
+   - (b) Agency could stop writing completion bellbacks for polling callers.
+   - (c) 166 of the 171 directories are `ack-seat-*` / `pull-seat-*` test
+     callers writing into the live inbox, the same shape as the
+     invoke-ledger test clobber.
 3. **The reply census misses most replies:** 26 replies joined against 66
    operator turns, and 1 of about 9 of claude-5's. The suspected gap is
    replies after tool use; unconfirmed.
