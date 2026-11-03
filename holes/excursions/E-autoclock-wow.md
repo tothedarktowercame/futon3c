@@ -101,11 +101,26 @@ proposed:
 - **The observation:** "work began on item X, agreed by the operator".
 - **The prediction:** the latest click's field (M-giraffe HEAD: 786 M/E/T/A
   items, 109 eligible) and G's ranking over it.
-- **Surprisal** is graded by where X sits: ranked, so the usual −log p under
-  G; eligible but unscored; excluded, with a typed reason; or absent from the
-  field altogether, like E-autoclock-wow, created after the last click. The
-  last grade is not an infinite number. It is a typed record "outside the
-  model".
+- **Surprisal** is graded by where X sits in the graph, not only in the
+  ranking:
+  1. ranked: the usual −log p under G;
+  2. eligible but unscored;
+  3. excluded, with a typed reason;
+  4. **new, but linked to an item in the field: a latent adjacent possible.**
+     This is E-autoclock-wow. Joe asked for it "linked from M-autoclock-in",
+     so relative to the previous state it sits one edge from a known node.
+     Its surprisal is the parent's position plus the cost of opening that
+     edge, not an unbounded jump.
+     (Joe, 2026-11-03: "'outside the model' is only weakly true in this case
+     b/c I said 'linked from M-autoclock-in' ... something more like a 'latent
+     adjacent possible'.")
+  5. new and unlinked: fully outside the model, a typed record, not an
+     infinite number.
+
+  The link is operator evidence too. "Linked from M-autoclock-in" in the turn
+  is an edge with the operator as source, and ingest should record it with
+  the item. Grade 4 then tells Giraffe where the field was under-explored,
+  next to M-autoclock-in, which is more useful than "something was missing".
 
 What to do with it, without overriding the operator:
 
