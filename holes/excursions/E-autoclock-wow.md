@@ -124,6 +124,26 @@ Counts over the last 24 hours:
 Each count needs a constructed bad case in its test, as in
 `scripts/test_ways_of_working_feedback.py`.
 
+## Observed: mention-autoclock, 2026-11-03
+
+Joe: "I think we should autoclock if I just mention E-autoclock-wow." It does,
+when the mention can be resolved. The clock decisions for claude-5's session
+`dd552609` show:
+
+- turn 13 (Joe: "let's create a new excursion linked from M-autoclock-in called
+  E-autoclock-wow"): `unresolvable-target`, unclocked. Two targets were named,
+  and the excursion did not exist yet.
+- 22:34:51, activity phase after the file was written: `ambiguous` between
+  M-autoclock-in and E-autoclock-wow, unclocked.
+- turn 14 (Joe names only E-autoclock-wow): `clocked`, `excursion-id
+  E-autoclock-wow`, source 1 (operator).
+
+Gap: when the operator names an item *to be created*, the agreement is
+already there, but the decision is lost because the target does not resolve
+yet. Proposal: keep an operator-named, unresolved target as a pending
+agreement on the session, and promote it when the file appears. Then the
+refusal question in this excursion would not need asking at all.
+
 ## Open questions
 
 - Where does "agreed" live as data: the clock-decision store
