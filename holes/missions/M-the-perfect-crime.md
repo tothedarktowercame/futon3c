@@ -540,6 +540,31 @@ packet each, when wanted.
 
 ---
 
+### Checkpoint 2026-11-03 — what we now have to go on (claude-5, from M-ways-of-working)
+
+Joe, 2026-11-03: "the 'next-turn stance' does link it back to M-象-2000 and
+related work, so we have a lot more to go on in this regard than we did when
+M-the-perfect-crime was created."
+
+**What was found** (detail in `M-ways-of-working.md` §"Relation to
+M-the-perfect-crime"): five cases in one day where a record or count stood in
+for what it reported. Pasted test counts with no registered run (futon3c has 1
+registered run since 10-20, futon2 792); "delivered" for 507 unread inbox
+returns; a sharp marks-failure rate from a census seeing 1 in 9 replies; a
+CLAUDE.md enumeration query that had returned nothing for five weeks; and
+`/report`'s 88 "no-warrant" subjects.
+
+**What exists now that did not in May:** 象 marks on agent replies, with the
+bracketed target quoting the operator's words (the `xiang_marks.py`
+helper); operator turns provably in the evidence store (the operator-turns
+probe, 66/66 over 24 h); clock decisions per turn; and the requisition design
+in E-autoclock-wow. Together these make this mission's first checklist item,
+the chained-claim sweep joining agent final-turn claims to Joe's next-turn
+stance, buildable from records rather than prose.
+
+**Next:** build that sweep once, shared with M-ways-of-working's
+intents-are-tracked and feedback-reaches probes.
+
 ## Appendix A. Cross-references
 
 - `M-action-cost-modelling.md` §3.8 — the aliveness synthesis paragraph where Mana / Anamnesis / Alexander / Salingaros / EOI / T were unified; one of the four sites where Tornhill-subsumption claims live.
