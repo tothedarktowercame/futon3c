@@ -1,7 +1,7 @@
 # Excursion: E-autoclock-wow — every dispatch names its META item
 
 **Date:** 2026-11-03
-**Status:** IDENTIFY (Joe opened it 2026-11-03; nothing built yet)
+**Status:** MAP done 2026-11-03; gate design drafted, nothing built
 **Owner:** claude-5 (writing it up); the build goes through M-autoclock-in's owner, claude-4
 **Spawned from:** M-autoclock-in §INSTANTIATE-7a and §INSTANTIATE-8; the
 `feedback-reaches-every-participant` way of working
@@ -194,11 +194,83 @@ refusal question in this excursion would not need asking at all.
 - Can the down direction reuse Giraffe's locators (M-giraffe: "how the want
   is checked") rather than re-reading VERIFY prose?
 
+## MAP (2026-11-03, codex-13; reviewed by claude-5)
+
+Report: `~/notes/packets/ways-of-working/autoclock-wow-map-REPORT.md`. It was
+the first requisitioned dispatch: codex-13's job was clocked `inherited` to
+`E-autoclock-wow` from claude-5's operator-sourced decision
+(`clock-decision-6eda1152…`).
+
+- **One seam.** Every durable job goes through `create-invoke-job!`
+  (`transport/http.clj:2277-2311`), which already reads the caller's clock
+  decision to snapshot inheritance, before `create-invoke-job-ledger!` appends
+  the job. Bell, `/invoke`, both whistle paths, announced invoke (the gate runs
+  at announcement, not activation), auto-bellback, work-order nudges, headless
+  park resumes and social-mesh dispatch all reach it. Buffer park resumes are
+  not jobs and need no gate.
+- **Reusable from Kimi:** `parse-requisition` and the admission shape in
+  `requisition-decision` (`agents/zai_api.clj:1333-1468`). The resolver regex
+  is `[MET]` (`:1330`), so A- needs adding, and it checks existence, not
+  agreement.
+- **Agreement is already data.** Clock-decision `source 1` is an explicit
+  operator target or mention (`agency/clock_decision.clj:253-327`), and the
+  live projection keeps the latest decision in memory
+  (`agency/clock_store.clj:236-261`). Inherited agreement follows
+  `:caller-decision-id`. That is one point read, or none if the snapshot
+  carries the origin's source.
+- **Machine traffic, last ~6 days:** `auto-bellback` 471 (17 work),
+  `http-caller` 326 (all brief), `wm-full-loop` 179 (113 work), `work-orders`
+  43 (all brief), plus `ma-reading` 805, `turn-capture` 495 (all work),
+  `lu-rerank` 493 and `ma-occurrence` 467. Caller names don't separate work
+  from notification. The ledger's validated `mode` does.
+
+**The workaround is bigger than the report counted.** codex-13 found 16
+October files (`E-kimi-task-171`…`186`). There are **260**
+`futon2/holes/excursions/E-kimi-task-*.md`: 150 added in September, 36 in
+October and 74 in the first three days of November. They are minted by
+`futon3c/scripts/kimi-task.sh`. That script's header says the purpose is
+"clock a Kimi seat in on a UNIQUE task, so its conversation starts fresh"
+(Joe, 2026-09-25). The need it serves is real. Kimi's context carries over
+until the target changes, so minting a target was the only way to force a
+fresh start. Spot-checked: `E-kimi-task-181` (`ea1304559`) and `-186`
+(`914d0ab95`) are both "prove lemma apm_t91J03_degree … one leaf", one per
+seat. Their real item is the APM problem, not a new excursion.
+
+### Gate design (draft)
+
+A pure `admit-request` in `create-invoke-job!`, after the clock snapshot and
+before the ledger append. Its inputs are the parsed requisition, the
+validated mode, the continuation type, caller, surface and the caller's
+clock decision. It returns one of:
+
+1. **admit work** with the resolved target, when the requisition names an
+   M/E/T/A item and agreement holds: the caller's decision is source 1 on it,
+   or inherited from one that is, or the target lies under the agreed item
+   (decided below);
+2. **admit continuation**: auto-bellback or parked-resume that answers an
+   admitted job (joined by job id, not caller name);
+3. **admit notification**: `brief` mode with no work payload;
+4. **refuse**: no job id is allocated. The refusal goes to the operator as
+   the question "<caller> is on <clock> and wants to dispatch for <target>:
+   clock on what?". Machine callers get a typed error.
+
+**Fresh context separated from target.** Replace "mint an excursion per task"
+with a per-dispatch `Context: fresh` flag, or a task key, that
+`context-carry-decision` honours. Then the requisition names the real item
+(for example the APM problem or its blueprint), and Kimi still starts clean.
+Turn off `kimi-task.sh`'s minting only once that flag exists.
+
+**Rollout:** first log only (the five probe counts, no refusals); then refuse
+`work` jobs from agent callers; then give each machine caller a standing
+requisition that Joe agrees once, recorded as a source-1 decision.
+
+Open for DERIVE:
+- Does "under the agreed item" hold, e.g. a T- ticket of an agreed M-
+  mission? Which relation decides it?
+- Should `turn-capture`'s 495 work jobs really be work?
+
 ## Next
 
-1. MAP: the Kimi path in `zai_api.clj` (`parse-requisition`,
-   `requisition-decision`), the bell handler in `transport/http.clj`, and
-   `agency_send.py --requisition`. Identify where one gate covers all work
-   bells. Discovery first, one handoff.
+1. ~~MAP~~ done, above.
 2. Agree the first standing requisitions with Joe.
 3. Then build the gate, with claude-4 for M-autoclock-in.
