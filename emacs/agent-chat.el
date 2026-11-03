@@ -206,6 +206,14 @@ to this many attempts, then retain the record as a terminal failure."
 Tickets are clock targets (Joe, 2026-09-24): the most specific level, below
 the campaign › mission › excursion path.")
 
+(defvar-local agent-chat--clock-manual-pending nil
+  "Non-nil after an operator clock-in the Agency has not yet seen.
+Set by `agent-chat-set-clock!' unless SUPPRESS-CALLBACK; cleared when the next
+user turn's evidence (which carries the buffer clock) is emitted.  While set,
+`agent-chat--sync-clock-from-server!' does not overwrite the buffer clock: a
+clock-in made during a running turn was otherwise replaced by the server's
+older clock at that turn's end (claude-5, 2026-11-03, M-ways-of-working).")
+
 (defvar-local agent-chat--clock-change-fn nil
   "Optional function called after the chat clock target changes.")
 
@@ -1359,6 +1367,7 @@ real freeze was the poller, now async."
             ;; Only apply a non-empty server clock that differs from the buffer's,
             ;; so an unclocked session (or a server with no record) never clobbers.
             (when (and (eq t (alist-get 'ok data))
+                       (not agent-chat--clock-manual-pending)
                        (or camp mis exc tkt)
                        (not (and (equal camp agent-chat--campaign-id)
                                  (equal mis agent-chat--mission-id)
@@ -1419,6 +1428,8 @@ current parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
     (setq agent-chat--excursion-id (plist-get parsed :excursion-id))
     (setq agent-chat--ticket-id (plist-get parsed :ticket-id)))
   (agent-chat--update-session-header-line)
+  (unless suppress-callback
+    (setq agent-chat--clock-manual-pending t))
   (when (and (not suppress-callback)
              (functionp agent-chat--clock-change-fn))
     (condition-case clock-err
@@ -4047,6 +4058,10 @@ character the operator meant to write."
              (not (string-empty-p sid))
              (agent-chat-evidence-enabled-p evidence-url))
     (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
+    ;; A user turn carries the buffer clock to the Agency, so a pending manual
+    ;; clock-in is now known there and turn-end sync may resume.
+    (when (string= role "user")
+      (setq agent-chat--clock-manual-pending nil))
     (let* ((split (agent-chat-split-surface-marker (string-trim text)))
            (surface (car split))
            (trimmed (cdr split))

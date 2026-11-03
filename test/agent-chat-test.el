@@ -75,6 +75,31 @@
         (should (or (eq f 'agent-chat-autorunner-face)
                     (and (listp f) (eq (car f) 'agent-chat-autorunner-face))))))))
 
+(defun agent-chat-test--server-clock-response (excursion)
+  (let ((b (generate-new-buffer " *clock-resp*")))
+    (with-current-buffer b
+      (insert "HTTP/1.1 200 OK\n\n"
+              (format "{\"ok\":true,\"excursion-id\":\"%s\"}" excursion)))
+    b))
+
+(ert-deftest agent-chat-manual-clock-in-survives-turn-end-sync ()
+  "A clock-in made during a turn must not be replaced by the server's older clock."
+  (with-temp-buffer
+    (setq-local agent-chat--agent-name "claude-test")
+    (setq-local agent-chat--session-id "s-1")
+    (let ((agent-chat-sync-clock-from-server t))
+      (cl-letf (((symbol-function 'futon-url-retrieve-synchronously)
+                 (lambda (&rest _) (agent-chat-test--server-clock-response "E-old"))))
+        ;; Operator clocks in mid-turn; the server still says E-old.
+        (agent-chat-clock-in "M-new")
+        (agent-chat--sync-clock-from-server!)
+        (should (equal agent-chat--mission-id "M-new"))
+        (should-not agent-chat--excursion-id)
+        ;; Once a user turn has carried the clock, sync applies again.
+        (setq agent-chat--clock-manual-pending nil)
+        (agent-chat--sync-clock-from-server!)
+        (should (equal agent-chat--excursion-id "E-old"))))))
+
 (ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
   (with-temp-buffer
     (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")
