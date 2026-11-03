@@ -55,7 +55,7 @@ hand.
 | one-queryable-self-account | `cascade-standards` | on, failing | s6 readability not built |
 | backlog-understood | `draw-pile` | on, failing | |
 | inbox-zero | `git-clean` | off, failing | timer parked |
-| records-carry-warrant | none | not built | next in build order |
+| records-carry-warrant | none | not built: no join yet | discovery 2026-11-03 (codex-15): 320 dispatched commits in 7 days cannot be classified; findings 5 and 6 |
 | intents-are-tracked | none | not built | minus40 open asks are a candidate source |
 | selection-gives-a-reason | none | not built | War Machine side; futon2 rules apply |
 | eat-your-own-tail | none | not built | needs a design first |
@@ -74,6 +74,24 @@ hand.
    replies after tool use; unconfirmed.
 4. **futon1b logs a start and an end line per request:** about 170k
    journal lines a day (futon0 README-hardening §1).
+5. **Warrants do not reach the evidence store.**
+   `storage/test-registry/futon2-suite/index.json` holds 771 entry ids and
+   was updated 11-03, but point reads of recent ids on :7070 and :7073 return
+   `evidence-not-found`. A `tags=test-registry` read with `since=2026-09-20`
+   returns 0. So the "cheap enumeration" in futon3c CLAUDE.md I-6 lists
+   nothing new. `/check` still resolves an id (it read
+   `test-registry-a7413a22…` and refused with `environment-mismatch` on
+   `test/user.clj`), so the ledger is fine and the evidence emission is what
+   stopped. Checked by claude-5, 2026-11-03.
+6. **No review record joins a commit to its warrants.** A reviewer supplies
+   `changed-paths` to `/check`, but nothing records which warrant a review
+   relied on. Discovery proposal (codex-15,
+   `~/notes/packets/ways-of-working/records-carry-warrant-discovery-REPORT.md`):
+   the reviewer writes `{reviewed-repo, reviewed-sha, changed-paths,
+   warrant-ids, reviewer, checked-at, outcomes}` as evidence. Then the probe
+   reads those records and calls `/check` on their ids alone. None of today's
+   reviews (claude-5) used warrants. By the house rule they are the dirty
+   tree, not rejected work.
 
 ## Ways and the creativity-commons patterns (draft, claude-5; for Joe to check)
 
@@ -104,7 +122,7 @@ pattern has no way.
 
 ## Next
 
-1. Records-carry-warrant: discovery handoff, then build, as for the first two.
+1. Records-carry-warrant: discovery done. Before the probe: find why warrants stopped reaching evidence (finding 5), and add the review record (finding 6). Until then the way stays `not-built`, with that reason.
 2. Open an item for each finding above, with this mission as its parent.
 3. Intents-are-tracked: check whether minus40's open-asks list can be the
    census (the session brief already prints "open asks with no answer
