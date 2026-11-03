@@ -31,6 +31,7 @@ Auto-promote a mission/campaign/excursion target identified in a turn **iff**:
 
 ## Relations
 
+- [[E-autoclock-wow]] (`holes/excursions/E-autoclock-wow.md`, Joe 2026-11-03) — lifts §INSTANTIATE-8's Kimi requisition rule to every work request (M-/E-/T-/A- targets, operator-agreed, no per-requisition excursions), so an unclocked caller is asked before it can dispatch; replaces §INSTANTIATE-7a's "unclocked callers supply no inheritance". Feedback then travels up, down and across a dispatch stream via the named item.
 - `C-substrate-completion` §8.1 (manual clock-in instrumentation) — this is the *automation* layer over it.
 - The repl **clock-in hydra** (🍒) — the manual pivot UI; auto-clock is its inferred counterpart (the hydra is the override surface).
 - `:mission/mentions-file` / the mention map — a turn mentioning a mission is the candidate signal; resolution must be explicit (principle #8: no fuzzy text matching as truth).
