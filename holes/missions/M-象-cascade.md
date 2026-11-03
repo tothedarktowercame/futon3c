@@ -1,6 +1,6 @@
 # M-象-cascade
 
-Status: IDENTIFY (drafted 2026-09-28 by claude-17; awaiting Joe)
+Status: DERIVE draft (reopened 2026-11-02 by Joe; claude-16 working through the lifecycle. The lab ran past IDENTIFY on 2026-09-30 without this line changing.)
 
 **Type**: Mission
 **Lifecycle**: HEAD (2026-09-28, operator turns verbatim) → IDENTIFY (drafted 2026-09-28). Phases per `futon4/holes/mission-lifecycle.md`.
@@ -226,12 +226,157 @@ Decisions taken here as owner:
 
 ### Owner and dependencies
 
-- **Owner:** claude-17.
-- **Builder:** codex-5.
+- **Owner:** claude-17 until 2026-09-30; claude-16 from 2026-11-02 (Joe's direction to work it through).
+- **Builder:** to be chosen at INSTANTIATE; the 2026-09-28 note named codex-5.
 - **Repos:** futon3c (corpus and coalescing), futon3 (library additions),
   futon2 (read-only: the rule shape), futon1b (read-only: evidence).
 
 **IDENTIFY exit:** awaiting Joe's reading of the gap and scope.
+
+**Addendum, Joe 2026-11-02 (voice):** "I don't have ... a way to look or understand the
+overall pattern cascade that's supposed to be mined and so we keep going around and around
+looking at what happens in a given turn". Then: "we should work through M-象-cascade using
+the mission-lifecycle phases". Proposed criterion 7, for his acceptance: **Inspectable.** Joe
+can open a page showing the global cascade, what was created, and what was validated.
+
+## MAP (claude-16, 2026-11-02)
+
+Facts only, per the lifecycle. Probes are read-only: `~/notes/pattern-global/map_probe.py`,
+`measure.py`, `build_page.py`; first view at
+https://zone.hyperreal.enterprises/wip/pattern-global.html.
+
+### Survey questions
+
+| # | Question | Answer |
+|---|---|---|
+| Q1 | How far did the 2026-09-30 lab get? | D0 fact sources, C1 corpus of 48 turns, two rules induced and tested, C6 live-gap trace. All in `holes/labs/M-象-cascade/`. No later mission commit |
+| Q2 | Did an induced rule pass? | No. Go-ahead: 20 of 22, p = 0.0205 against a threshold of 0.0167, `not-better`. Live-gap: 6 of 9 against a matched 177 of 253, `too-few-to-judge`. A commit was the wrong post fact for live-gap |
+| Q3 | Are closures independent? | Of 12 live-gap reports: 0 independent records, 4 agent assertions, 2 operator confirmations (1 doubtful), 6 none found |
+| Q4 | How many holes and proposals now? | 4,254 analysed turns; 12,189 fragments, 9,431 with no pattern (77%); 2,854 citations of 490 patterns; 3,828 distinct proposals over 4,207 occurrences; 20 ripe at three or more; 0 ripe proposals are in the library |
+| Q5 | Does coalescing exist? | No code found. Name variants stand apart, such as `operator/port-via-breadcrumbs` and `operator/port-by-breadcrumbs` |
+| Q6 | Does the library support descent? | Not in the library: 0 of 1,527 flexiargs declare a parent field. But 3,676 of 3,834 proposals name a library parent, across 637 patterns, so a tree exists on the proposal side. 646 have `@references`, untyped. 33 carry a guard, needs, produces or predicts field |
+| Q7 | Does a global structure show in the labels? | No recurring pairs detected. The first test failed its positive control and is withdrawn. The second (`holes/labs/M-象-cascade/aggregate/DECLARATION.md`) detected planted same-turn pairs, and found 3 against 1.1 in names, p = 0.09. It has no planted control for sequences |
+| Q8 | What can Joe see now? | Stepper and 象 feed, turn by turn. Cascade Live: mission lineage, clusters, 1,939 mission-pattern citations; not mined from turns. Pattern-global page: one snapshot, not maintained |
+| Q9 | Is the machine side ready? | Loader exists (`interpretation_evidence.clj`). Rule records exist as `:xiang-cascade/induced-rule-v2`. No rule qualifies, and WM dispatches are on Joe's hold. Seam contact is now claude-1 |
+
+### Ready and missing
+
+| Ready | Missing |
+|---|---|
+| 象 readings with fragments, intents, pattern refs and rejections | A way to treat variant names as one move |
+| Triple builder, induction and test (`xiang_cascade_corpus.py`, `xiang_cascade_induce.py`) with tests | Corpus beyond 48 turns |
+| Stamped acts, grants, withdrawal (M-象-2000) | Stamped merge and split acts for proposals; aliases |
+| `lift-when-three-align` and its census | An admission path into the library: 0 so far |
+| BM25 lookup | Parent links in the library; hierarchical lookup |
+| One global snapshot page | A maintained global view, Joe's criterion 7 |
+| Post facts: commits, parks | Post fact recording activation or observed use |
+
+### Surprises
+
+1. This document stood at IDENTIFY while the lab tested six steps. The earlier statement in
+   chat that nothing had happened on this mission was wrong; only the status line had not moved.
+2. `xlate.py census` crashes on invalid candidates files: 4 today, so the tool named in this
+   mission has no current output.
+3. Scatter is real, but near-duplication explains little of it. 3,828 names for 4,207 occurrences,
+   and merging at cosine 0.70 reduces 3,834 proposals only to 3,722.
+4. The analysis corpus now has 4,254 readings, against 572 when this mission opened.
+5. Labellers recorded 10,599 pattern rejections, which this mission does not use.
+
+**MAP exit:** every question above has an answer, and the table is complete.
+
+## DERIVE (draft, claude-16, 2026-11-02)
+
+**Joe, voice, 2026-11-02:** "we absolutely need a type of aggregator or reduction so that when
+things are added, they get assimilated into the map and this is what the minus 40 Memory system
+and our discussion of three halves blends should be helping with". Two very similar proposals
+should be noticed and amalgamated "into their blend", the others deleted or deprioritised.
+Library patterns are "somewhat more likely to have been attested than brand new agent
+creations", but may lack coverage, so "we're not trying to validate ... those patterns", and
+rewriting or compressing them is also relevant.
+
+Evidence so far (`holes/labs/M-象-cascade/aggregate/`, read-only):
+
+- At cosine 0.70, 23 of 30 sampled merged pairs were the same move on one reader's judgement
+  (claude-16): 77%, below the declared 80%. Those merges are not to be applied. Embedding alone
+  is not enough.
+- Known related go-ahead proposals score 0.41 to 0.57, inside the noise for random pairs
+  (q99 0.47), so families cannot be found by embedding alone.
+- Declared parents beat chance: median cosine 0.32 against 0.17, yet rank 63 among 1,207, with
+  24% in the top ten. They give a first tree, not a verified one.
+- Grouping did not produce recurrence, so merging does not by itself create a co-occurrence
+  structure. The aggregator is justified by assimilation, not by that test.
+
+### D0. Existing patterns first (Joe, voice, 2026-11-02)
+
+"if we can't produce a reasonable-looking cascade out of the ones that are already sitting on the
+file system, Mining new ones and assimilating them is going to be fairly challenging". So order
+changes: one cascade of existing patterns comes first, tied to the operator turns they were
+invoked against, then retrieval, then D1 to D3 on proposals. Findings
+(`~/notes/pattern-global/`):
+
+- MAP missed `~/notes/experiments/2026-10-24-session-cascade/graph.json`: 1,456 patterns, 6,316
+  edges, largest component 774 without weak edges. `used-together` has 0 edges: use is unrecorded.
+- 馬 read 454 turns: 2,213 picks, 1,815 void, 369 partial, 29 occurrence.
+- 176 patterns attested at least partly; 93 of them connect through authored and citation edges.
+  This is the first candidate cascade.
+- Attested at least partly: embedding 10% of 1,025 picks, 驴 24% of 1,078.
+- Shown picks were 89% void. The shown pick is usually embedding, from a query of 200 characters of
+  the previous user message plus 200 of its reply (`dev.clj:1001-1004`), so it answers the
+  previous exchange. Only ids reach the agent. 驴 reads the current turn but finishes after the
+  render, in about 10 s.
+- `m40` alternation shows 驴/m40 on only some turns.
+
+**Joe, 2026-11-02:** the aim is partly to make the animals' work amenable to a fast classical path,
+as 小象 is; 馬 can come last and be delayed, since it has the whole turn. What matters is that what
+the mining loop learns can be taken on board in the prioritisation of work. The way of working
+should itself be a pattern cascade, shown in Cascade Live; `agent/eat-your-own-tail` belongs early
+in it. Draft: `~/notes/pattern-global/ways-cascade-draft.md`, over claude-2's
+`holes/excursions/ways-of-working.json`.
+
+**Joe, 2026-11-02:** feedback in the chaos-theoretic sense is what `agent/eat-your-own-tail` is
+about, and "Possibly what's been going on is that I've been holding a lot of the learning loop."
+Reading: cluster C looks thin because its loop is carried by Joe and is unrecorded as such. In the
+analysed corpus, 2,401 of 13,234 fragments (18%) are corrections by intent (report-problem,
+redirect, disagree, constrain, qualify). Test to run: how often does a correction repeat an
+earlier one? Falling repeats would show the loop moving into machinery, step 4 of the pattern.
+
+**Joe, 2026-11-02:** the synthetic view is "a bit like a skeletal core and the data-based view should
+provide a more organism-level articulation". First articulation: `~/notes/pattern-global/articulate.py`,
+reported in `design-cascade.md`; leave-one-out 23 of 52 against 25% majority.
+
+### D1. Assimilate at intake
+
+Each new proposal gets one of four stamped outcomes against the library and open proposals:
+`restates` (cite the existing pattern, keep the turn link), `blends` (joins or forms a blend),
+`child` (a variant under a parent), `new` (stays a candidate). Reuse minus40's route: near
+candidates, then `judge.py`-style verdicts with verbatim quotes, so a merge rests on quoted text
+and not on a score. Alternative rejected: score threshold alone, 77% precision.
+
+### D2. A blend is a stamped act, not a deletion
+
+Record the inputs, what they share (the generic space, usually the parent), the blend text, and
+what each input loses. This is the 3/2-blend carrier's partial-map form. Inputs stay as aliases
+and are lowered in priority, never erased (象/收回亦是行). A split restores the citations. The
+carrier's quality order is unproved for this use: `NOTE-three-halves-pushout-discovery` records
+that it accepts structure-dropping blends, so judged quality comes first.
+
+### D3. The library is a prior, not a verdict
+
+Library patterns start with more weight, and turn attestation can move it either way. A large
+family whose children keep restating the same exception is a signal to revise or compress the
+parent. Revision is proposed as a stamped act for Joe's page, not done automatically.
+
+### D4. The global object is the tree first
+
+What exists is a parent tree with counts; a recurrence network does not show. Criterion 7's page
+starts from families: size, what was merged, what was admitted, what was revised, with use
+evidence beside each.
+
+### D5. Open before ARGUE
+
+- Which model judges pairs: WM dispatch is on Joe's hold, and Zai is held too.
+- Whether "created and validated" on the page should mean ripe by count, or tested on held-out turns.
+- Fix `xlate.py census` for invalid candidates files.
 
 ## Closure criteria (provisional, 2026-10-09)
 
