@@ -174,6 +174,40 @@
 (defn- run-dir-exists? [run-id]
   (.isDirectory (io/file storage-root run-id)))
 
+(defn- write-legacy-run-fixture! [tag git-sha]
+  (let [dir (io/file (temp-root tag) "legacy-run")
+        files ["input.edn" "rejected.edn" "pass.edn" "report.md"]]
+    (.mkdirs dir)
+    (doseq [file files]
+      (spit (io/file dir file) (str file " fixture\n")))
+    (spit (io/file dir "manifest.edn")
+          (pr-str {:run-id "legacy-run"
+                   :git-sha git-sha
+                   :files (mapv (fn [file]
+                                  {:file file
+                                   :sha256 (gr/sha256 (io/file dir file))})
+                                files)}))
+    (str dir)))
+
+(deftest verify-run-resolves-format-in-source-checkout-not-process-cwd
+  (let [legacy-sha "914f22e150ca793d532a8629b8bcf85553365e81"
+        legacy-dir (write-legacy-run-fixture! "wrong-cwd-legacy" legacy-sha)
+        nonsense-dir (write-legacy-run-fixture!
+                      "wrong-cwd-undecidable" (apply str (repeat 40 \a)))
+        empty-cwd (io/file (temp-root "empty-cwd"))
+        original-cwd (System/getProperty "user.dir")]
+    (try
+      (System/setProperty "user.dir" (str empty-cwd))
+      (is (= {:ok? true :mismatches []}
+             (gr/verify-run legacy-dir)))
+      (is (= {:ok? false
+              :mismatches [{:file "work-clusters.json"
+                            :missing-from-manifest true
+                            :format-undecidable true}]}
+             (gr/verify-run nonsense-dir)))
+      (finally
+        (System/setProperty "user.dir" original-cwd)))))
+
 (deftest legacy-runs-verify-their-original-sealed-files
   (doseq [id legacy-run-ids
           :when (run-dir-exists? id)]

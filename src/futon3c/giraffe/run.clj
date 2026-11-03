@@ -301,6 +301,24 @@
 (def ^:private work-clusters-sha
   "e90fe14bb3c181964f8d8b239e5bff16225dff37")
 
+(defn- source-repo-dir
+  "Return the checkout containing this namespace when it was loaded from
+  `<checkout>/src/futon3c/giraffe/run.clj`.  Packaged resources (for example
+  jar: URLs) and file resources outside a src tree have no checkout."
+  []
+  (try
+    (when-let [resource (io/resource "futon3c/giraffe/run.clj")]
+      (when (= "file" (.getProtocol resource))
+        (loop [dir (.getParentFile (io/file (.toURI resource)))]
+          (cond
+            (nil? dir) nil
+            (= "src" (.getName dir)) (.getParentFile dir)
+            :else (recur (.getParentFile dir))))))
+    (catch Exception _ nil)))
+
+(defn- verification-repo-dir []
+  (or (source-repo-dir) (System/getProperty "user.dir")))
+
 (defn- git-descends-from-work-clusters?
   "Decide a run manifest's format from its recorded :git-sha by asking
   the repository at REPO-DIR.  Returns true (sha resolves and
@@ -343,7 +361,7 @@
                    (edn/read r))
         listed (set (map :file (:files manifest)))
         format (git-descends-from-work-clusters?
-                (System/getProperty "user.dir") (:git-sha manifest))
+                (verification-repo-dir) (:git-sha manifest))
         legacy? (false? format)
         required (if legacy? legacy-run-files run-files)
         unlisted (vec (for [f required :when (not (listed f))]
