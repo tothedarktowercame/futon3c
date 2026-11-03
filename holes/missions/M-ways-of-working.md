@@ -90,6 +90,10 @@ than many of those."
      `zai-runners-for-memory-work`), and no minus40 commit followed.
 
   A probe would count tool calls and brief items acted on per day.
+  **Done 11-03:** a "minus40: ask the memory before you answer from it"
+  section in `~/code/CLAUDE.md` (not a git repo, so this is the record) says
+  when to load which tool. The brief's staleness is part of the
+  intents-are-tracked discovery (codex-7). Re-measure tool calls on 11-10.
 
 **13. The selection cluster: Giraffe, 馬, WM.** M-giraffe (the work pool as
 data), the 馬 reading and occurrence lanes (`ma-reading` 805 and
@@ -106,9 +110,10 @@ Pattern Cascade page does not show them.
 
 ## Open findings, each to become its own item
 
-1. **The consent-gate sweeper sends without `--from`:** 55 bells in 24 h with
-   no return path, all from `[sweeper/consent-gate-emit]` (futon2). It
-   should send `--from`, or type its bells as notifications.
+1. ~~The consent-gate sweeper sends without `--from`~~ Resolved
+   (`d7ea790eb`): its bells are brief-mode notifications, which need no return
+   path, and the probe now exempts them. Live: 0 of 202 work bells without a
+   path; 65 notifications exempt.
 2. **The `wm-full-loop` inbox is never drained:** 507 files in
    `~/.claude/agency-inbox/wm-full-loop/` since 10-01. "Delivered" to an
    inbox is not receipt unless something reads it.
