@@ -18,7 +18,7 @@
    :quote "combine structurally upwards, e.g., to a cluster called 'superpod work', without any supersession of meaning for the constituents"}
   {:index 3 :pattern :proposed/audit-what-cannot-be-explained
    :needs [:accomplished] :establishes :audit-or-closed
-   :quote "needs a further audit and an explanation of what it accomplishes and then probably closure"}
+   :quote "needs a further audit and explanation of what it accomplishes and then probably closure"}
   {:index 4 :pattern :proposed/stopping-owes-an-explanation
    :needs [:audit-or-closed] :establishes :explanation
    :quote "'dropped' would also need an explanation for Cascade Live so we can't dodge the explanatory burden"}]
