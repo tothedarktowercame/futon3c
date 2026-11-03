@@ -130,9 +130,15 @@ Pattern Cascade page does not show them.
    - (c) 166 of the 171 directories are `ack-seat-*` / `pull-seat-*` test
      callers writing into the live inbox, the same shape as the
      invoke-ledger test clobber.
-3. **The reply census misses most replies:** 26 replies joined against 66
-   operator turns, and 1 of about 9 of claude-5's. The suspected gap is
-   replies after tool use; unconfirmed.
+3. **The reply census misses most replies: cause found, fix dispatched.**
+   codex-15 (`reply-census-discovery-REPORT.md`): final replies exist, but
+   `in-reply-to` points at the latest session row, so tool activity makes a
+   reply point at an intervening row. Joining on `(session-id, turn-id)`
+   finds replies for 66 of 66 turns, all 24 of claude-5's. Build dispatched
+   to codex-15. **Open for Joe:** a turn's evidence text holds the narration
+   between tool calls as well as the final reply (claude-5 turn 1: 1,482
+   chars, starting "Found the cause: …"). Should the proforma's marks apply
+   to the narration, or only to the final reply?
 4. **futon1b logs a start and an end line per request:** about 170k
    journal lines a day (futon0 README-hardening §1).
 5. ~~Warrants do not reach the evidence store.~~ Withdrawn: they were never
