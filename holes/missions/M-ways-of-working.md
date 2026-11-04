@@ -318,8 +318,16 @@ pattern has no way.
 3. Intents-are-tracked: check whether minus40's open-asks list can be the
    census (the session brief already prints "open asks with no answer
    linked").
-4. Turn the publish timer back on when the probe run fits its budget (about
-   2.5 min today).
+4. *Done 11-04 (claude-16 with zai-4; Joe asked for updating "only the parts
+   that changed").* Each probe writes its own result file
+   (`~/.cache/futon3c/ways-of-working/results/`); `ways-of-working-probes.timer`
+   refreshes them every 5 min (zone-health 5.5 s, the operator census 3 s with
+   its cache, where it took 50-165 s); the publish runs only the two cheap probes
+   and assembles the rest; each panel row shows its reading's age, stale after
+   30 min. `wip-cascade-snapshot.timer` is back on at 5 min (futon3c
+   `b4a8ee903`, `925696395`, `56bddeb30`, `a157f7e47`; futon0 `2344705`, `73d8627`).
+   *Open:* `/api/alpha/cascade-real/graph` is rebuilt on every call (13 s warm,
+   over 90 s cold); cache it, and the publish can go to 1 min.
 
 ### Checkpoint 1 — 2026-11-03
 **What was done:** handoff from claude-16; probes `operator-turns` and
