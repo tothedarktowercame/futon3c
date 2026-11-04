@@ -49,8 +49,19 @@ fetch graph   "/api/alpha/cascade-real/graph" required
 fetch forward "/api/alpha/forward-model"      optional
 
 WOW_DECL="${CASCADE_WOW:-/home/joe/code/futon3c/holes/excursions/ways-of-working.json}"
-echo "Probing declared ways of working ..." >&2
-if ! python3 /home/joe/code/futon3c/scripts/ways-of-working-probe.py "$WOW_DECL" "$WORK/wow.json" --summary "$WORK/summary.json" --graph "$WORK/graph.json" >&2; then
+WOW_PROBE="${CASCADE_WOW_PROBE:-/home/joe/code/futon3c/scripts/ways-of-working-probe.py}"
+echo "Probing the two ways that need the fetched data; assembling the rest from result files ..." >&2
+# Only cascade-standards and draw-pile read the summary/graph fetched above.
+# The other probes are refreshed on their own cadence by
+# ways-of-working-probes.timer; --assemble reads their result files.
+wow_ok=1
+for p in cascade-standards draw-pile; do
+  python3 "$WOW_PROBE" "$WOW_DECL" --run "$p" --summary "$WORK/summary.json" --graph "$WORK/graph.json" >&2 || wow_ok=0
+done
+if [ "$wow_ok" = 1 ] && ! python3 "$WOW_PROBE" "$WOW_DECL" "$WORK/wow.json" --assemble >&2; then
+  wow_ok=0
+fi
+if [ "$wow_ok" != 1 ]; then
   echo "  ways-of-working probe failed; the panel will say so" >&2
   echo 'null' > "$WORK/wow.json"
 fi
@@ -111,6 +122,11 @@ html = html.replace("</header>",
                     + stamp + ' from <code>' + base + '</code>. '
                     + 'Regenerate: <code>futon3c/scripts/publish-cascade-snapshot.sh</code></div></header>', 1)
 
-pathlib.Path(out).write_text(html)
+# atomic publish: never let a reader see a half-written page
+import os
+out_path = pathlib.Path(out)
+tmp_out = out_path.with_name(out_path.name + ".tmp." + str(os.getpid()))
+tmp_out.write_text(html)
+os.replace(tmp_out, out_path)
 print(f"wrote {out} ({len(html)} bytes), snapshot at {stamp}")
 PY
