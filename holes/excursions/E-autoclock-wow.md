@@ -372,6 +372,27 @@ Open for DERIVE:
   nothing merged) is at `~/notes/wm-next/tests/packet-REQ-ticket.md`, to
   read when the gate build is written.
 
+### Tickets are not open work (Joe, 2026-11-04, via claude-6)
+
+Joe, about the Arxana Browse META list: requisitions "should not be printed
+on this list or scanned at all ... the pattern for requisitions has changed
+now, they should be Tickets which are under Excursions or Missions, and
+these tickets should not be listed under META because they are being
+handled at the dispatch time and do not form work that can be taken up."
+
+Scale on 11-04: 189 requisition exclusions printed in the META list; in
+Giraffe run `storage/giraffe/20261104T180634.985Z-0959fa0b`, 145 of 174
+unread-new members are E-kimi-task-* records.
+
+So this excursion owns one exclusion rule, covering both the 260+ legacy
+`E-kimi-task-N` records and the new tickets. An item is a ticket, and is
+left out of the registry enumeration, the Giraffe adapter population and
+the META list, when it carries a `**Parent:**` line or is a legacy
+`E-kimi-task-*`. Apply the rule in one shared predicate that all three
+readers call, rather than one filter per reader. Before building, a
+discovery packet should establish where each of the three gets its
+population. The rule is separate from the dispatch gate (claude-4).
+
 ## Next
 
 1. ~~MAP~~ done, above.
