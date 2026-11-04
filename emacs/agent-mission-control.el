@@ -301,6 +301,21 @@ Falls back to `select-frame-set-input-focus' on non-Sway setups."
   (or (agent-mission-control--swaymsg-focus frame)
       (progn (select-frame-set-input-focus frame) t)))
 
+(defun agent-mission-control--delete-frame-after-command (frame)
+  "Delete FRAME after the current input command has unwound.
+
+Mission Control commonly runs in a terminal frame.  Deleting that frame
+synchronously from the RET command can destroy the terminal whose input
+Emacs is still processing.  Crossing an event-loop boundary avoids that
+native TTY lifetime hazard."
+  (run-at-time
+   0 nil
+   (lambda (candidate)
+     (when (and (frame-live-p candidate)
+                (> (length (frame-list)) 1))
+       (delete-frame candidate)))
+   frame))
+
 (defun agent-mission-control--section-at-point ()
   "Return the source-buffer name for the section containing point, or nil."
   (save-excursion
@@ -363,7 +378,7 @@ so the WM doesn't pick a fallback frame between operations."
                  (frame-live-p mc-frame)
                  (not (eq (selected-frame) mc-frame))
                  (> (length (frame-list)) 1))
-        (delete-frame mc-frame)))))
+        (agent-mission-control--delete-frame-after-command mc-frame)))))
 
 ;;;###autoload
 (defun agent-mission-control ()

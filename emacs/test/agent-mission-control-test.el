@@ -1,0 +1,38 @@
+;;; agent-mission-control-test.el --- Mission Control tests -*- lexical-binding: t; -*-
+
+(require 'ert)
+(require 'cl-lib)
+(require 'agent-mission-control)
+
+(ert-deftest agent-mission-control-defers-tty-frame-deletion ()
+  (let (scheduled deleted)
+    (cl-letf (((symbol-function 'run-at-time)
+               (lambda (seconds repeat function &rest args)
+                 (setq scheduled (list seconds repeat function args))))
+              ((symbol-function 'frame-live-p) (lambda (_frame) t))
+              ((symbol-function 'frame-list) (lambda () '(target mission-control)))
+              ((symbol-function 'delete-frame)
+               (lambda (frame &optional _force) (setq deleted frame))))
+      (agent-mission-control--delete-frame-after-command 'mission-control)
+      (should-not deleted)
+      (pcase-let ((`(,seconds ,repeat ,function ,args) scheduled))
+        (should (equal seconds 0))
+        (should-not repeat)
+        (apply function args))
+      (should (eq deleted 'mission-control)))))
+
+(ert-deftest agent-mission-control-does-not-delete-last-frame-later ()
+  (let (scheduled deleted)
+    (cl-letf (((symbol-function 'run-at-time)
+               (lambda (_seconds _repeat function &rest args)
+                 (setq scheduled (cons function args))))
+              ((symbol-function 'frame-live-p) (lambda (_frame) t))
+              ((symbol-function 'frame-list) (lambda () '(mission-control)))
+              ((symbol-function 'delete-frame)
+               (lambda (&rest _) (setq deleted t))))
+      (agent-mission-control--delete-frame-after-command 'mission-control)
+      (apply (car scheduled) (cdr scheduled))
+      (should-not deleted))))
+
+(provide 'agent-mission-control-test)
+;;; agent-mission-control-test.el ends here
