@@ -677,7 +677,7 @@ ALIVE_CHECKS = ["user-services", "system-units", "futon1b-health", "agency-healt
 
 def probe_zone_health():
     zh = CODE / "futon0" / "scripts" / "zone-health.bb"
-    rc, out, err = run(["bb", str(zh), "--json"], timeout=300)
+    rc, out, err = run(["bb", str(zh), "--json", "--only", ",".join(ALIVE_CHECKS)], timeout=300)
     rows = []
     for line in out.splitlines():
         try: rows.append(json.loads(line))
