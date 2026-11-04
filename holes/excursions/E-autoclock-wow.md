@@ -384,14 +384,37 @@ Scale on 11-04: 189 requisition exclusions printed in the META list; in
 Giraffe run `storage/giraffe/20261104T180634.985Z-0959fa0b`, 145 of 174
 unread-new members are E-kimi-task-* records.
 
-So this excursion owns one exclusion rule, covering both the 260+ legacy
-`E-kimi-task-N` records and the new tickets. An item is a ticket, and is
-left out of the registry enumeration, the Giraffe adapter population and
-the META list, when it carries a `**Parent:**` line or is a legacy
-`E-kimi-task-*`. Apply the rule in one shared predicate that all three
-readers call, rather than one filter per reader. Before building, a
-discovery packet should establish where each of the three gets its
-population. The rule is separate from the dispatch gate (claude-4).
+So this excursion owns one exclusion rule, covering both the legacy
+`E-kimi-task-N` records and the new tickets. An item is left out of the
+registry enumeration, the Giraffe adapter population and the META list
+when it carries the `**Requisition:**` marker that
+`futon2/src/futon2/aif/task_requisition.clj` already reads. A `Parent:`
+line is not the test (claude-6, 11-04): 164 ordinary tickets carry one,
+125 of them T-repair-*, and they are work that can be taken up. Counted
+11-04: all 315 `futon2/holes/excursions/E-kimi-task-*.md` carry the
+marker, and no file under `futon*/holes/tickets` does yet. So the new
+requisition tickets must be minted with the marker. Apply the rule in one
+shared predicate (beside `task-requisition/read-state`) that all three
+readers call, rather than one filter per reader. It is separate from the
+dispatch gate (claude-4).
+
+Where the three populations come from (claude-6, 11-04):
+- registry enumeration: futon2 `outer_observation.clj` `registry-entries`
+  (l. 97) and `open-entries` (l. 148), from mission-registry's
+  load-missions/load-excursions/load-tickets. Today a requisition becomes
+  a typed exclusion in giraffe-field's `reason` cond (~l. 205) via
+  `task-requisition/ineligible-reason`; the pending-object ruling is
+  `target_field.clj` `with-eligibility` (~l. 231).
+- Giraffe adapter: futon3c `giraffe/excursions.clj` l. 12; tickets enter
+  under `:include-tickets`, set by `run.clj:494` whenever
+  `--readings-root` is given; the population check is `readings.clj:78`
+  (`:reading/population-mismatch`). Removing items there changes the
+  population that readings are checked against, so both sides must use
+  the same predicate.
+- META list: futon2 `meta_field_observation.clj` l. 62-88
+  (`requisition-ineligible?`, `requisition-exclusions`, feeding
+  `registry-exclusions`). Joe wants these not printed at all, not printed
+  as exclusions.
 
 ## Next
 
