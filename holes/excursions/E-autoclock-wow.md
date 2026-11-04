@@ -432,6 +432,12 @@ proposed the malformed one. Remaining: the futon3c Giraffe adapter
 (`excursions.clj`, `readings.clj`), using the same predicate, with Q1 in
 its acceptance.
 
+Live receipt (claude-6): click wm-click-82532da0, run 25c81574, selection
+record 19:08:46Z, read from `GET /api/alpha/wm/meta-latest` (the source of
+Arxana's META list). Support 318, excluded 252 (250
+`:completion-definition-not-found`, 2 unread-new), 0 requisitions, and no
+E-kimi-task id in either list. Selection Q1 held at 570/570.
+
 ## Next
 
 1. ~~MAP~~ done, above.
