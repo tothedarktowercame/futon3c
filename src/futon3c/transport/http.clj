@@ -1760,6 +1760,7 @@
       (if (turn-queue/drainer-v2-enabled?)
       (let [r (turn-queue/accept-async!
                {:id job-id
+                :msg-id (str job-id)
                 :to caller :from auto-bellback-caller :surface auto-bellback-caller
                 :prompt prompt
                 :process-fn (fn [_entry]
@@ -1795,6 +1796,7 @@
     ;; 2026-10-16, E-agency-turn-hardening O1).
     (if (turn-queue/drainer-v2-enabled?)
       (turn-queue/accept-async! {:id job-id
+                                 :msg-id (str job-id)
                                  :to (str to) :from "work-orders" :surface "work-orders"
                                  :prompt text
                                  :process-fn (fn [_entry]
@@ -1977,6 +1979,7 @@
                                              :caller parked-resume-caller :surface parked-resume-caller}))]
         (if (turn-queue/drainer-v2-enabled?)
           (turn-queue/accept-async! {:id job-id
+                                     :msg-id (str job-id)
                                      :to agent :from parked-resume-caller :surface parked-resume-caller
                                      :prompt prompt
                                      :process-fn (fn [_entry]
@@ -6685,6 +6688,7 @@
                       ;; return — never hold a shared invoke-executor lane for the turn.
                       (let [r (turn-queue/accept-async!
                                {:id job-id
+                                :msg-id (str job-id)
                                 :to (str agent-id) :from caller :surface surface :prompt prompt
                                 :process-fn (fn [_entry]
                                               (binding [turn-queue/*drained-by-outer* true]
@@ -7405,7 +7409,9 @@
                                  deliver! #(deliver completed %)]
                              (if (turn-queue/drainer-v2-enabled?)
                                (turn-queue/accept-async!
-                                {:to (str agent-id)
+                                {:id (str job-id)
+                                 :msg-id (str job-id)
+                                 :to (str agent-id)
                                  :from caller
                                  :surface "whistle"
                                  :prompt prompt

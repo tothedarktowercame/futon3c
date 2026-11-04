@@ -165,6 +165,37 @@
         (is (= :queued (:status r1)))
         (is (= :deduped (:status r2)))))))
 
+(deftest accept-sites-must-supply-stable-msg-id-for-retry-dedupe
+  ;; T-car3-queue-routing capture gap: an HTTP retry re-creates the invoke job,
+  ;; so it arrives with a FRESH :id. Without a stable :msg-id the entry falls
+  ;; back to a random generated msg-id and the retry is processed as new work.
+  ;; Every accept-async! site in transport/http.clj now supplies
+  ;; (:msg-id (str job-id)); this test pins both halves of that contract.
+  (with-temp-v2
+    (fn []
+      (let [calls (atom 0)
+            run (fn [entry]
+                  (turn-queue/accept-async!
+                   (assoc entry :process-fn (fn [_] (swap! calls inc) {:result "ok"}))))]
+        (testing "the bad case: no stable msg-id, fresh turn ids -> retried work runs twice"
+          (let [r1 (run {:id "job-a" :to "gap-agent" :from "bell" :surface "bell" :prompt "retry me"})
+                r2 (run {:id "job-a'" :to "gap-agent" :from "bell" :surface "bell" :prompt "retry me"})]
+            (Thread/sleep 300)
+            (is (= 2 @calls))
+            (is (= :generated (:msg-id-source (:entry r1))))
+            (is (= :generated (:msg-id-source (:entry r2))))
+            (is (not= (:msg-id (:entry r1)) (:msg-id (:entry r2)))
+                "generated msg-ids are distinct, so no dedupe was possible")))
+        (testing "the fix: stable msg-id on the retried turn -> deduped"
+          (let [r1 (run {:id "job-b" :msg-id "job-b" :to "gap-agent"
+                         :from "bell" :surface "bell" :prompt "retry me too"})
+                r2 (run {:id "job-b'" :msg-id "job-b" :to "gap-agent"
+                         :from "bell" :surface "bell" :prompt "retry me too"})]
+            (Thread/sleep 300)
+            (is (= :queued (:status r1)))
+            (is (= :deduped (:status r2)))
+            (is (= 3 @calls) "only the original ran")))))))
+
 (deftest idle-drainer-does-not-enter-durable-drain-loop
   (let [drain-calls (atom 0)
         {:keys [running lock thread]}
