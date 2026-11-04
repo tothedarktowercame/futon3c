@@ -520,7 +520,8 @@ def _valid_operator_evidence(row):
     return (str(origin.get("kind", "")).lstrip(":") == "operator"
             and body.get("event") == "chat-turn" and body.get("role") == "user")
 
-def match_operator_turns(turns, evidence, now=NOW):
+def _match_pairs(turns, evidence):
+    """Greedy one-to-one pairing of turns to evidence rows, nearest first."""
     pairs = []
     for ti, turn in enumerate(turns):
         transport = "emacs-claude-repl" if turn["vendor"] == "claude" else "emacs-codex-repl"
@@ -535,23 +536,78 @@ def match_operator_turns(turns, evidence, now=NOW):
     for _, ti, ei in sorted(pairs):
         if ti not in used_turns and ei not in used_evidence:
             used_turns.add(ti); used_evidence.add(ei); matched_pairs.append((ti, ei))
+    return matched_pairs
+
+def _pending_and_violations(turns, matched_keys, now=NOW):
     pending, violations = [], []
-    for index, turn in enumerate(turns):
-        if index in used_turns: continue
+    for turn in turns:
+        if _turn_key(turn) in matched_keys: continue
         item = {"at": iso(turn["at"]), "agent": turn["agent"], "surface": turn["surface"],
                 "vendor-id": turn["id"],
                 "text-digest": hashlib.sha256(turn["text"].encode()).hexdigest()[:12]}
         (pending if now - turn["at"] < OPERATOR_GRACE else violations).append(item)
+    return pending, violations
+
+def match_operator_turns(turns, evidence, now=NOW):
+    matched_pairs = _match_pairs(turns, evidence)
+    pending, violations = _pending_and_violations(turns, {turns[ti]["vendor"] + "/" + turns[ti]["id"]
+                                                          for ti, _ in matched_pairs}, now)
     operator_evidence = [dict(evidence[ei], **{"probe/agent-id": turns[ti]["agent"]})
                          for ti, ei in sorted(matched_pairs)]
-    return {"matched": len(used_turns), "pending": pending, "violations": violations,
+    return {"matched": len(matched_pairs), "pending": pending, "violations": violations,
             "operator-evidence": operator_evidence}
 
+CENSUS_CACHE = HOME / ".cache" / "futon3c" / "ways-of-working" / "operator-census.json"
+
+def _turn_key(turn):
+    return turn["vendor"] + "/" + turn["id"]
+
+def load_census_cache(path):
+    """Read the matched-evidence cache. Corrupt or unreadable: start empty, warn on stderr."""
+    try:
+        with open(path) as fh: data = json.load(fh)
+        if not isinstance(data, dict) or not all(isinstance(v, dict) for v in data.values()):
+            raise ValueError("cache is not a dict of rows")
+        return data
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        print(f"operator-census cache unreadable at {path} ({exc}); starting empty",
+              file=sys.stderr)
+        return {}
+
+def write_census_cache(path, entries):
+    path = pathlib.Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp." + str(os.getpid()))
+    with open(tmp, "w") as fh: json.dump(entries, fh)
+    os.replace(tmp, path)
+
 def read_operator_census(now=NOW, claude_root=None, codex_root=None,
-                         fetcher=fetch_operator_evidence):
+                         fetcher=fetch_operator_evidence, cache_path=CENSUS_CACHE):
     turns = read_operator_turns(now, claude_root, codex_root)
-    result = match_operator_turns(turns, fetcher(turns), now)
-    return {"turns": turns, **result}
+    cache_path = pathlib.Path(cache_path)
+    live_keys = {_turn_key(t) for t in turns}
+    # keep only entries whose turn is still inside the 24 h window
+    cached = {k: v for k, v in load_census_cache(cache_path).items() if k in live_keys}
+    rest = [t for t in turns if _turn_key(t) not in cached]
+    # with zero turns we still ping the fetcher: a broken store must break the
+    # probe even when there is nothing to look up (fetcher([]) does no HTTP)
+    new_matches = {}
+    if rest or not turns:
+        # a row already held by a cached turn is spoken for: matching stays one-to-one
+        held = {v.get("evidence/id") for v in cached.values()}
+        evidence = [r for r in fetcher(rest) if r.get("evidence/id") not in held]
+        for ti, ei in _match_pairs(rest, evidence):
+            new_matches[_turn_key(rest[ti])] = dict(evidence[ei], **{"probe/agent-id": rest[ti]["agent"]})
+    merged = {**cached, **new_matches}
+    if merged != load_census_cache(cache_path):
+        write_census_cache(cache_path, merged)
+    matched_keys = {_turn_key(t) for t in turns if _turn_key(t) in merged}
+    pending, violations = _pending_and_violations(turns, matched_keys, now)
+    operator_evidence = [merged[_turn_key(t)] for t in turns if _turn_key(t) in merged]
+    return {"turns": turns, "matched": len(matched_keys), "pending": pending,
+            "violations": violations, "operator-evidence": operator_evidence}
 
 def probe_operator_turns(now=NOW, claude_root=None, codex_root=None,
                          fetcher=fetch_operator_evidence, census=None):
