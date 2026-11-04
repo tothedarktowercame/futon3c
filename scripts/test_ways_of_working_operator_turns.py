@@ -200,6 +200,17 @@ class CensusCacheTest(unittest.TestCase):
         self.census([evidence(fresh["at"])], now=later)  # old is now outside 24 h
         self.assertEqual({"claude/fresh"}, set(json.loads(self.cache.read_text())))  # E
 
+    def test_new_turn_cannot_reuse_evidence_held_by_a_cached_turn(self):
+        # Joe sends the same words twice; only the first reached the store.
+        first = turn(self.NOW - datetime.timedelta(minutes=8), "first")
+        self.write_turns([first])
+        self.census([evidence(first["at"])])
+        second = turn(self.NOW - datetime.timedelta(minutes=6), "second")
+        self.write_turns([first, second])
+        result, _ = self.census([evidence(first["at"])])  # same row, nothing new
+        self.assertEqual(1, result["matched"])
+        self.assertEqual(["second"], [p["vendor-id"] for p in result["pending"]])
+
 
 if __name__ == "__main__":
     unittest.main()

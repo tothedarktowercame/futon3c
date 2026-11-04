@@ -595,7 +595,9 @@ def read_operator_census(now=NOW, claude_root=None, codex_root=None,
     # probe even when there is nothing to look up (fetcher([]) does no HTTP)
     new_matches = {}
     if rest or not turns:
-        evidence = fetcher(rest)
+        # a row already held by a cached turn is spoken for: matching stays one-to-one
+        held = {v.get("evidence/id") for v in cached.values()}
+        evidence = [r for r in fetcher(rest) if r.get("evidence/id") not in held]
         for ti, ei in _match_pairs(rest, evidence):
             new_matches[_turn_key(rest[ti])] = dict(evidence[ei], **{"probe/agent-id": rest[ti]["agent"]})
     merged = {**cached, **new_matches}
