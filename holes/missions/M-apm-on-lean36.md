@@ -1,7 +1,7 @@
 # Mission: APM on Lean 4.36 / current Mathlib
 
 **Date:** 2026-11-04 (IDENTIFY; outline by claude-14 from Joe's request)
-**Status:** IDENTIFY — outline, nothing dispatched
+**Status:** IDENTIFY — outline, nothing dispatched; target version decided 11-04
 **Repos:** apm-lean (`~/code/apm-lean`, master on Lean 4.29.0-rc8, Mathlib 5ee50502f),
 bump-probe worktree `~/worktrees/apm-lean/bump` (Lean v4.36.0-rc2, Mathlib 80ac13cbf),
 mfuton-share (EmitPython), `~/vendor/openai-math`
@@ -98,21 +98,42 @@ Evaluation: rerun A's measurement (files compiling on the new tree) after each e
 level, against the bump corpus. That corpus is a fixed 302-file test set with a known
 first error for each file.
 
-### C. Logic Atlas / beyond Lean (exploratory)
+### C. Logic Atlas / an MMT importer for Lean 4 (exploratory; possible upstream PR)
 
 Michael Kohlhase's group built the MMT system, OMDoc, and the LATIN / Logic Atlas: logics
 and libraries expressed in a meta-framework, with translations between them as morphisms.
 Valeria's point is that Lean is one of several systems. A version change is a small case of
 library translation, Lean 4.29-Mathlib to Lean 4.36-Mathlib. Track B's rewrites could be
-written as MMT-style views instead of string patches. Unknowns to settle first, by reading,
-before any build:
-- whether an MMT importer for Lean 4 exists and what state it is in (one existed for older
-  systems such as HOL Light, Isabelle, Coq and Mizar; I have not checked Lean 4);
-- whether the atlas can represent Lean's elaboration-level changes (simp sets, instances),
-  or only declarations and types.
+written as MMT views instead of string patches.
 
-C does not gate A or B. Its first deliverable is a short reading note answering those two
-questions.
+**State (checked 2026-11-04, three web searches; not exhaustive).**
+- No Lean 4 importer for MMT turned up. The KWARC paper "Experiences from Exporting Major
+  Proof Assistant Libraries" (Kohlhase, Rabe et al., JAR 2021, arXiv 2005.03089) covers
+  Coq, HOL Light, IMPS, Isabelle, Mizar and PVS, but not Lean.
+- A Lean Zulip thread mentions earlier Lean 3 work through the export format, using
+  trepplein.
+- `leanprover/lean4export` is a plain-text declaration exporter for Lean 4. It does not
+  target MMT.
+- Still to do: look directly at the UniFormal GitHub org and ask the MMT developers.
+
+**Why mfuton is well placed** (Joe 11-04: a PR would likely be welcome; Joe knows Michael).
+EmitPython already loads Mathlib-scale environments from oleans and walks every elaborated
+constant. That walk produced the 3.09M-row uses table. Emitting each constant's
+declaration (name, kind, type, value or proof term, and module) as OMDoc/MMT is a new
+backend on the same walk, not a new reader. The Isabelle importer is the model to follow
+for the structure of a library export.
+
+**Deliverables, in order.**
+1. A reading note on the Isabelle importer's shape and on MMT's input formats, with a
+   proposal for how Lean 4's theory (CIC with universes, quotients, and the kernel's
+   inductive types) would be stated as an MMT/LF foundation.
+2. A prototype export of one small Lean 4 module.
+3. Mathlib at 4.29 and at 4.36, so that track B's statement diff can be read as an MMT
+   view between the two.
+
+Open: can the atlas represent elaboration-level changes (simp sets, instances), or only
+declarations and types? If only declarations and types, C serves B levels 1–2, not 4.
+C does not gate A.
 
 ## Order
 
@@ -120,9 +141,13 @@ A0 first (it informs both A2 and B2). Then A1 and A2 on the bump tree, alongside
 B1/B2 tables, which come from the same dumps. Start B3 only if A2 shows that per-group
 repairs are slow. C is a reading task whenever there is slack.
 
-## Open questions for Joe
+## Decisions
 
-- The target version: 4.36-rc2 and Mathlib master (where the bump probe is), or a pinned
-  release? Earlier notes said "m34". The openai/math drop spans 4.32–4.36.
+- 2026-11-04 (Joe): the target is **Lean v4.36.0-rc2 with the bump-probe Mathlib
+  (80ac13cbf)**, not 4.34. 4.34 was proposed only because the OAI dump uses it; 4.36-rc2 is
+  newer and is where the bump probe already sits.
+
+## Open questions
+
 - Whether Rob's multiversion-to-29 patches can be read as a test oracle for B, without B
   depending on them.
