@@ -1,0 +1,59 @@
+{
+ "stem": "M-patterns-done-right",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793755884332-11485-3cd02389",
+ "at": "2026-11-04T01:33:32+00:00",
+ "row": {
+  "stem": "M-patterns-done-right",
+  "kind": "place",
+  "what": {
+   "value": "Make patterns first-class objects of the homeostatic agent's self-maintenance across four levels: Sokoban authoring peripheral, algorithm-guided authoring, functorial admission, and pattern-to-code receipts.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:23",
+   "quote": "**Patterns are first-class objects of the homeostatic agent's self-maintenance, threaded from authoring (peripheral) through library structure (categorical wiring) to code-level receipts.**"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:1",
+   "quote": "**Status:** OPEN — OPEN (drafted 2026-05-04; sibling to M-the-futon-stack)."
+  },
+  "way": {
+   "value": "records-carry-warrant, eat-your-own-tail",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:77",
+   "quote": "A pattern is honestly applied when there's a verifiable receipt linking the code that was built using it back to the pattern's claim."
+  },
+  "wing": {
+   "value": "A",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:82",
+   "quote": "the verify invariant `invariant-pattern-receipts-resolve` checks every receipt's pattern-ref resolves and every claimed witness can be re-derived from current code state."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:118",
+   "quote": "- All four levels as named work, with Level 1 already shipped."
+  },
+  "finish": {
+   "value": "All four levels landed, with every post-cutover commit in a pattern-claimed region carrying a resolving Pattern: footer and the verify invariant passing.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:135",
+   "quote": "**Code carries receipts**: every commit since the cutover that touches a pattern-claimed region carries a `Pattern:` footer; verify invariant `invariant-pattern-receipts-resolve` passes."
+  },
+  "beneficiary": {
+   "value": "company",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:5",
+   "quote": "patterns are the substrate the homeostatic agent maintains itself with; this mission is the deep-dive on the *pattern* aspect of self-maintenance."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

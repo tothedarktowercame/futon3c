@@ -1,0 +1,59 @@
+{
+ "stem": "M-war-machine-aif-completion",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1793755884332-11485-3cd02389",
+ "at": "2026-11-04T01:33:32+00:00",
+ "row": {
+  "stem": "M-war-machine-aif-completion",
+  "kind": "place",
+  "what": {
+   "value": "Graduate the futon War Machine from a :pi-display reading surface to ukrn-services-simulation-grade AIF coherence (forward model, EFE-scored action ranking, test harness) under the F1-F10 contract.",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:6",
+   "quote": "**Bar (lifted verbatim from §0):** *\"War Machine ≥ ukrn-services-simulation coherence — concretely: ~12 clojure notebooks (substrate + dynamics + engagement on v2 side; belief + kernel + fo"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:5",
+   "quote": "**Status:** OPEN — exit criterion #2 satisfied; HEAD-as-escrow scaffold (claude-1, PM pass for the futon-stack-as-Hyperreal-business mission cluster); awaiting Joe verbatims"
+  },
+  "way": {
+   "value": "selection-gives-a-reason, eat-your-own-tail",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:68",
+   "quote": "The futon WM operates on a different substrate (the stack's own annotation hypergraph + arms A-G data) and answers different questions (which sorry to close next? which arm to invest in?)."
+  },
+  "wing": {
+   "value": "D",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:68",
+   "quote": "answers different questions (which sorry to close next? which arm to invest in?).]"
+  },
+  "action": {
+   "value": "held",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:7",
+   "quote": "**Timebox:** estimated 3-4 weeks; final cap is Joe's call at §1.5 verbatim authoring."
+  },
+  "finish": {
+   "value": "WM passes an F1-F10 audit with ~50+ tests/~3000+ assertions, regression fixtures, and the §0 R1-R12/F1-F10 completeness contract satisfied.",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:68",
+   "quote": "the exit criterion is *War Machine ≥ ukrn-services-simulation coherence under F1-F10*. Concretely: F1 ✓ (already satisfied); F2 ✓ (with G.3 review); F3-F7 ✓"
+  },
+  "beneficiary": {
+   "value": "company",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:5",
+   "quote": "PM pass for the futon-stack-as-Hyperreal-business mission cluster"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}
