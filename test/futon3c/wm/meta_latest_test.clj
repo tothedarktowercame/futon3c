@@ -122,6 +122,8 @@
                :selection-outcome {:status :chosen :class "class-1" :pick "M-ordinary"}
                :outer/selection
                {:outer-field/admitted ["M-ordinary"]
+                :field-facts {:admitted
+                              {"M-ordinary" {:registry-entry {:path "/code/M-ordinary.md"}}}}
                 :outer-field/excluded
                 [{:target "E-kimi-task-157"
                   :reason :requisition/in-progress
@@ -131,7 +133,8 @@
               2000000)
         [status body] (ml/response [root])]
     (is (= 200 status))
-    (is (= [{:id "M-ordinary" :kind :mission :source {:path nil}}]
+    (is (= [{:id "M-ordinary" :kind :mission
+             :source {:path "/code/M-ordinary.md"}}]
            (get-in body [:receipt :support])))
     (is (= [{:id "E-kimi-task-157" :kind :excursion
              :source {:path "/code/futon2/holes/excursions/E-kimi-task-157.md"}
@@ -179,6 +182,55 @@
         [_ body] (ml/response [root])]
     (is (= ["T-used"] (mapv :id (get-in body [:receipt :support]))))
     (is (= 1 (get-in body [:source :skipped-without-outer-selection])))))
+
+(deftest selection-record-discovery-stops-at-first-exercised-file
+  (let [root (temp-root)
+        newest (selection-record!
+                root "selection-record-newest.edn"
+                {:schema :wm/selection-record-v1
+                 :outer/selection {:status :not-exercised
+                                   :nested {:status :ready}}}
+                3000)
+        middle (selection-record!
+                root "selection-record-middle.edn"
+                {:schema :wm/selection-record-v1
+                 :click/id "middle"
+                 :outer/selection {:outer-field/admitted ["M-middle"]
+                                   :nested {:status :not-exercised}}}
+                2000)
+        _ (selection-record!
+           root "selection-record-oldest.edn"
+           {:schema :wm/selection-record-v1
+            :click/id "oldest"
+            :outer/selection {:outer-field/admitted ["M-oldest"]}}
+           1000)
+        reads (atom [])
+        original @#'ml/read-selection-record
+        [_ body] (with-redefs-fn
+                   {#'ml/read-selection-record
+                    (fn [file]
+                      (swap! reads conj (.getAbsolutePath file))
+                      (original file))}
+                   #(ml/response [root]))]
+    (is (= [newest middle] @reads))
+    (is (= "middle" (get-in body [:source :click/id])))
+    (is (= 1 (get-in body [:source :skipped-without-outer-selection])))))
+
+(deftest admitted-source-path-is-retained-when-present
+  (let [project @#'ml/selection-record-projection
+        receipt (project
+                 {:schema :wm/selection-record-v1
+                  :outer/selection
+                  {:outer-field/admitted ["E-with-path" "T-without-path"]
+                   :field-facts
+                   {:admitted
+                    {"E-with-path"
+                     {:dependency-reading {:source {:path "/code/E-with-path.md"}}}
+                     "T-without-path" {:dependency-reading {:status :absent}}}}}})]
+    (is (= [{:id "E-with-path" :kind :excursion
+             :source {:path "/code/E-with-path.md"}}
+            {:id "T-without-path" :kind :ticket :source {:path nil}}]
+           (:support receipt)))))
 
 (deftest browser-projection-refuses-an-unknown-receipt-schema
   (is (= {:absent :unsupported-outer-task-selection-schema

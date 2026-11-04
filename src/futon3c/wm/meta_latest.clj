@@ -174,43 +174,43 @@
     (try (.toEpochMilli (java.time.Instant/parse s))
          (catch Throwable _ nil))))
 
+(defn- read-selection-record
+  [^java.io.File file]
+  (edn/read-string (String. (Files/readAllBytes (.toPath file)) "UTF-8")))
+
+(defn- exercised-selection-record? [record]
+  (let [outer (:outer/selection record)]
+    (and (= :wm/selection-record-v1 (:schema record))
+         (map? outer)
+         (not= :not-exercised (:status outer)))))
+
 (defn- latest-selection-record
   [roots]
-  ;; Discovery deliberately does not EDN-read every 1–13 MB record.  The
-  ;; producer writes these top-level tokens once; scan them as text, retain
-  ;; only metadata, then parse the single winning record below.
-  (let [records (->> roots
-                     (map #(java.io.File. (str %)))
-                     (filter #(.isDirectory ^java.io.File %))
-                     (mapcat selection-record-files)
-                     (keep (fn [^java.io.File f]
-                             (try
-                               (let [text (String. (Files/readAllBytes (.toPath f)) "UTF-8")
-                                     started-at (second (re-find #":startedAt\s+\"([^\"]+)\"" text))]
-                                 (when (str/includes? text ":schema :wm/selection-record-v1")
-                                   {:file f
-                                    :exercised? (and (str/includes? text ":outer/selection")
-                                                     (not (str/includes? text
-                                                                        ":status :not-exercised")))
-                                    :order-ms (or (instant-ms started-at)
-                                                  (.lastModified f))}))
-                               (catch Throwable _ nil))))
-                     (sort-by (comp - :order-ms)))
-        exercised? :exercised?
-        skipped (count (take-while (complement exercised?) records))]
-    (when-let [{:keys [file order-ms]} (first (filter exercised? records))]
-      (let [record (edn/read-string
-                    (String. (Files/readAllBytes (.toPath ^java.io.File file)) "UTF-8"))]
-        {:record record
-         :order-ms order-ms
-         :source {:path (.getAbsolutePath ^java.io.File file)
-                  :schema (:schema record)
-                  :click/id (:click/id record)
-                  :run/id (:run/id record)
-                  :written-at (or (:startedAt record)
-                                  (str (java.time.Instant/ofEpochMilli
-                                        (.lastModified ^java.io.File file))))
-                  :skipped-without-outer-selection skipped}}))))
+  ;; Mtime is the bounded discovery order.  Parse candidates one at a time and
+  ;; stop at the first exercised selection; do not accumulate historical EDN.
+  (let [files (->> roots
+                   (map #(java.io.File. (str %)))
+                   (filter #(.isDirectory ^java.io.File %))
+                   (mapcat selection-record-files)
+                   newest-first)]
+    (loop [[^java.io.File file & more] files skipped 0]
+      (when file
+        (let [record (try (read-selection-record file)
+                          (catch Throwable _ nil))]
+          (if (exercised-selection-record? record)
+            {:record record
+             :order-ms (.lastModified file)
+             :source {:path (.getAbsolutePath file)
+                      :schema (:schema record)
+                      :click/id (:click/id record)
+                      :run/id (:run/id record)
+                      :written-at (or (:startedAt record)
+                                      (str (java.time.Instant/ofEpochMilli
+                                            (.lastModified file))))
+                      :skipped-without-outer-selection skipped}}
+            (recur more (if (= :wm/selection-record-v1 (:schema record))
+                          (inc skipped)
+                          skipped))))))))
 
 (defn- target-kind [id]
   (cond
@@ -239,7 +239,13 @@
               {:selected {:target-id (:pick outcome)
                           :policy-id (:class outcome)
                           :G (:G selected-class)}}}
-     :support (mapv (fn [id] {:id id :kind (target-kind id) :source {:path nil}})
+     :support (mapv (fn [id]
+                      {:id id
+                       :kind (target-kind id)
+                       :source {:path (or (get-in outer [:field-facts :admitted id
+                                                        :registry-entry :path])
+                                          (get-in outer [:field-facts :admitted id
+                                                        :dependency-reading :source :path]))}})
                     (:outer-field/admitted outer))
      :excluded (into (mapv #(exclusion-row :field %) (:outer-field/excluded outer))
                      (map #(exclusion-row :score %) (:outer-score/excluded outer)))}))
