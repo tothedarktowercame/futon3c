@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import contextlib
 import datetime
 import importlib.util
 import io
@@ -108,6 +109,97 @@ class BusyStoreTest(unittest.TestCase):
         req = wow.urllib.request.Request("http://x")
         with self.assertRaises(wow.urllib.error.HTTPError):
             wow.open_json(req, 1, opener, lambda s: None)
+
+class CensusCacheTest(unittest.TestCase):
+    NOW = datetime.datetime(2026, 11, 3, 12, tzinfo=UTC)
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = pathlib.Path(self.tmp.name)
+        self.claude, self.codex = root / "claude", root / "codex"
+        self.claude.mkdir(); self.codex.mkdir()
+        self.cache = root / "cache" / "operator-census.json"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write_turns(self, turns):
+        by_file = {}
+        for t in turns:
+            header = (f"--- CURRENT TURN ---\nSurface: emacs-repl\nTo: {t['agent']}\n"
+                      f"Origin: operator\n---\n\n{t['text']}")
+            by_file.setdefault(t["vendor"], []).append(
+                {"type": "user", "timestamp": wow.iso(t["at"]), "uuid": t["id"],
+                 "message": {"content": [{"type": "text", "text": header}]}} if t["vendor"] == "claude" else
+                {"type": "response_item", "timestamp": wow.iso(t["at"]),
+                 "payload": {"type": "message", "role": "user", "id": t["id"],
+                             "content": [{"type": "input_text", "text": header}]}})
+        for vendor, rows in by_file.items():
+            name = "a.jsonl" if vendor == "claude" else "rollout-a.jsonl"
+            (self.claude if vendor == "claude" else self.codex).joinpath(name).write_text(
+                "".join(json.dumps(r) + "\n" for r in rows))
+
+    def census(self, fetch_rows, now=None):
+        calls = []
+        def fetcher(turns):
+            calls.append(list(turns))
+            return fetch_rows
+        result = wow.read_operator_census(now or self.NOW, self.claude, self.codex,
+                                          fetcher, cache_path=self.cache)
+        return result, calls
+
+    def test_second_run_with_no_new_turns_fetches_nothing_and_is_identical(self):
+        t = turn(self.NOW - datetime.timedelta(minutes=30), "a")
+        self.write_turns([t])
+        first, calls1 = self.census([evidence(t["at"])])
+        self.assertEqual(1, len(calls1))
+        second, calls2 = self.census([evidence(t["at"])])
+        self.assertEqual([], calls2)  # A: fetcher called zero times
+        for key in ("matched", "pending", "violations", "operator-evidence"):
+            self.assertEqual(first[key], second[key], key)
+
+    def test_second_run_with_one_new_turn_fetches_exactly_that_turn(self):
+        old = turn(self.NOW - datetime.timedelta(hours=2), "old")
+        self.write_turns([old])
+        _, calls1 = self.census([evidence(old["at"])])
+        self.assertEqual([old], calls1[0])
+        new = turn(self.NOW - datetime.timedelta(minutes=5), "new")
+        self.write_turns([old, new])
+        _, calls2 = self.census([evidence(old["at"]), evidence(new["at"], evidence_id="e-new")])
+        self.assertEqual(1, len(calls2))
+        self.assertEqual([new], calls2[0])  # B: exactly the new turn
+
+    def test_turn_unmatched_then_matched_is_matched_on_second_run(self):
+        t = turn(self.NOW - datetime.timedelta(minutes=30), "a")
+        self.write_turns([t])
+        first, _ = self.census([])          # no evidence yet
+        self.assertEqual(0, first["matched"])
+        second, calls2 = self.census([evidence(t["at"])])  # C: unmatched retried
+        self.assertEqual(1, len(calls2))
+        self.assertEqual(1, second["matched"])
+        self.assertEqual([], second["violations"])
+
+    def test_corrupt_cache_still_gives_correct_result_with_full_fetch(self):
+        t = turn(self.NOW - datetime.timedelta(minutes=30), "a")
+        self.write_turns([t])
+        self.cache.parent.mkdir(parents=True, exist_ok=True)
+        self.cache.write_text("{not json")
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            result, calls = self.census([evidence(t["at"])])
+        self.assertEqual(1, len(calls))     # D: full fetch
+        self.assertEqual(1, result["matched"])
+        self.assertIn("unreadable", err.getvalue())
+
+    def test_entries_outside_window_are_pruned(self):
+        old = turn(self.NOW - datetime.timedelta(hours=20), "old")
+        self.write_turns([old])
+        self.census([evidence(old["at"])])
+        fresh = turn(self.NOW - datetime.timedelta(minutes=5), "fresh")
+        self.write_turns([fresh])
+        later = self.NOW + datetime.timedelta(hours=5)
+        self.census([evidence(fresh["at"])], now=later)  # old is now outside 24 h
+        self.assertEqual({"claude/fresh"}, set(json.loads(self.cache.read_text())))  # E
+
 
 if __name__ == "__main__":
     unittest.main()
