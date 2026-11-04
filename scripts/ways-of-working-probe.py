@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Probe the declared ways of working and write their live state.
 
-Usage: ways-of-working-probe.py DECLARATIONS OUT [--summary summary.json] [--graph graph.json]
+Usage: ways-of-working-probe.py DECL OUT [--summary summary.json] [--graph graph.json]
+       ways-of-working-probe.py DECL --run <probe> [--summary S] [--graph G] [--results-dir DIR]
+       ways-of-working-probe.py DECL OUT --assemble [--results-dir DIR]
 
 Reads holes/excursions/ways-of-working.json, runs one probe per way that
 declares one, and writes a JSON with, per way: monitor (on/off/broken/not-built),
@@ -757,34 +759,66 @@ def probe_zone_health():
             "violation-count": len(fails), "evidence": ev,
             "denominator": f"{len(fails)} of {len(seen)} zone-health checks failing; bills and runway unwatched"}
 
-def main():
-    args = sys.argv[1:]
-    decl, out = pathlib.Path(args[0]), pathlib.Path(args[1])
-    summary = graph = None
-    if "--summary" in args: summary = json.loads(pathlib.Path(args[args.index("--summary") + 1]).read_text())
-    if "--graph" in args: graph = json.loads(pathlib.Path(args[args.index("--graph") + 1]).read_text())
-    d = json.loads(decl.read_text())
+RESULTS_DIR = HOME / ".cache" / "futon3c" / "ways-of-working" / "results"
+
+def build_probe_registry(summary=None, graph=None):
     operator_cache = {}
     def shared_operator_census():
         if "value" not in operator_cache:
             operator_cache["value"] = read_operator_census()
         return operator_cache["value"]
-    probes = {"git-clean": lambda: probe_git_clean(),
-              "cascade-standards": lambda: probe_cascade_standards(summary),
-              "draw-pile": lambda: probe_draw_pile(graph),
-              "feedback-reaches": lambda: probe_feedback_reaches(shared_operator_census),
-              "intents-tracked": lambda: probe_intents_tracked(),
-              "operator-turns": lambda: probe_operator_turns(census=shared_operator_census()),
-              "zone-health": lambda: probe_zone_health()}
-    ways = []
+    return {"git-clean": lambda: probe_git_clean(),
+            "cascade-standards": lambda: probe_cascade_standards(summary),
+            "draw-pile": lambda: probe_draw_pile(graph),
+            "feedback-reaches": lambda: probe_feedback_reaches(shared_operator_census),
+            "intents-tracked": lambda: probe_intents_tracked(),
+            "operator-turns": lambda: probe_operator_turns(census=shared_operator_census()),
+            "zone-health": lambda: probe_zone_health()}
+
+def broken_live(exc):
+    return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
+            "violations": [], "violation-count": 0,
+            "evidence": [f"probe error: {exc}"]}
+
+def run_probe(name, registry):
+    try: return registry[name]()
+    except Exception as e:  # noqa: BLE001
+        return broken_live(e)
+
+def write_probe_result(results_dir, name, live):
+    results_dir = pathlib.Path(results_dir)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    path = results_dir / (name + ".json")
+    tmp = path.with_name(path.name + ".tmp." + str(os.getpid()))
+    payload = {"probe": name, "observed-at": live.get("observed-at") or iso(NOW), "live": live}
+    with open(tmp, "w") as fh: json.dump(payload, fh, indent=1)
+    os.replace(tmp, path)
+    return path
+
+def read_probe_result(results_dir, name):
+    try:
+        data = json.loads((pathlib.Path(results_dir) / (name + ".json")).read_text())
+        live = data["live"]
+        if not isinstance(live, dict): raise ValueError("live is not a dict")
+        live["observed-at"] = data.get("observed-at") or live.get("observed-at")
+        return live
+    except (OSError, ValueError, KeyError, TypeError):
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
+                "violations": [], "violation-count": 0,
+                "evidence": [f"no result yet for probe {name}"]}
+
+def assemble_document(decl_path, results_dir, registry_names=()):
+    """Build the ways-of-working-live-v1 document from per-probe result files."""
+    d = json.loads(pathlib.Path(decl_path).read_text())
+    ways, observed = [], []
     for w in d["ways"]:
         w = dict(w)
         p = w.get("probe", "none")
-        if p in probes:
-            try: w["live"] = probes[p]()
-            except Exception as e:  # noqa: BLE001
-                w["live"] = {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
-                             "violations": [], "violation-count": 0, "evidence": [f"probe error: {e}"]}
+        if p in registry_names:
+            w["live"] = read_probe_result(results_dir, p)
+            first = (w["live"].get("evidence") or [""])[0]
+            if not str(first).startswith("no result yet"):
+                observed.append(w["live"].get("observed-at"))
         else:
             w["live"] = {"monitor": "not-built", "invariant": "unknown", "observed-at": iso(NOW),
                          "violations": [], "violation-count": 0,
@@ -795,10 +829,57 @@ def main():
     counts = {}
     for w in ways:
         k = w["live"]["monitor"] + "/" + w["live"]["invariant"]; counts[k] = counts.get(k, 0) + 1
-    out.write_text(json.dumps({"schema": "ways-of-working-live-v1", "declared": d["as-of"],
-                               "probed-at": iso(NOW), "states": d["states"], "counts": counts,
-                               "provenance": d["provenance"], "ways": ways}, indent=1))
-    print(f"wrote {out}: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+    # never claim fresher than the stalest part: probed-at is the oldest observed-at read
+    return {"schema": "ways-of-working-live-v1", "declared": d["as-of"],
+            "probed-at": min(observed) if observed else iso(NOW),
+            "states": d["states"], "counts": counts,
+            "provenance": d["provenance"], "ways": ways}
+
+def write_document(out, doc):
+    pathlib.Path(out).write_text(json.dumps(doc, indent=1))
+    print(f"wrote {out}: " + ", ".join(f"{k} {v}" for k, v in sorted(doc["counts"].items())))
+
+def _parse_args(args):
+    flags, positional, i = {}, [], 0
+    value_flags = ("--summary", "--graph", "--run", "--results-dir")
+    while i < len(args):
+        token = args[i]
+        if token in value_flags:
+            flags[token] = args[i + 1]; i += 2
+        elif token == "--assemble":
+            flags["--assemble"] = True; i += 1
+        else:
+            positional.append(token); i += 1
+    return flags, positional
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    flags, positional = _parse_args(args)
+    summary = json.loads(pathlib.Path(flags["--summary"]).read_text()) if "--summary" in flags else None
+    graph = json.loads(pathlib.Path(flags["--graph"]).read_text()) if "--graph" in flags else None
+    results_dir = pathlib.Path(flags.get("--results-dir", RESULTS_DIR))
+    decl = pathlib.Path(positional[0])
+    d = json.loads(decl.read_text())
+    declared_probes = {w.get("probe", "none") for w in d["ways"]}
+    if "--run" in flags:
+        name = flags["--run"]
+        if name not in declared_probes:
+            sys.exit(f"no way declares probe {name}")
+        registry = build_probe_registry(summary, graph)
+        live = run_probe(name, registry)
+        path = write_probe_result(results_dir, name, live)
+        print(f"wrote {path}: {live['monitor']}/{live['invariant']} at {live.get('observed-at')}")
+        return
+    registry = build_probe_registry(summary, graph)
+    if not flags.get("--assemble"):
+        # full run: run each declared probe through the same code as --run,
+        # then assemble, so the two paths cannot drift apart
+        for w in d["ways"]:
+            name = w.get("probe", "none")
+            if name in registry:
+                write_probe_result(results_dir, name, run_probe(name, registry))
+    doc = assemble_document(decl, results_dir, registry_names=set(registry))
+    write_document(positional[1], doc)
 
 if __name__ == "__main__":
     main()
