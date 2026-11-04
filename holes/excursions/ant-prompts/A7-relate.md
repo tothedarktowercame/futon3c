@@ -23,6 +23,7 @@ Areas (pick from this list; `other:<short name>` only when none fits):
 - `futon6`: futon6 and Rob's mfuton work, the Lean mission/math pipeline.
 - `voxterm`: the voice terminal.
 - `futon5`: futon5's cellular-automaton research: MetaCA, xenotypes, propagators, TPG evolution, and its reproduction notebooks.
+- `futonzero`: futonzero: prelim practice, self-play and curriculum over fold deposits, the futonzero MVP and generative work.
 - `business`: Hyperreal and Joe's working life: consulting, engagements, expressions of interest, career and money planning (mostly futon7 and futon5a).
 
 Rules for this kind:
