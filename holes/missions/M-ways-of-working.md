@@ -324,10 +324,15 @@ pattern has no way.
    refreshes them every 5 min (zone-health 5.5 s, the operator census 3 s with
    its cache, where it took 50-165 s); the publish runs only the two cheap probes
    and assembles the rest; each panel row shows its reading's age, stale after
-   30 min. `wip-cascade-snapshot.timer` is back on at 5 min (futon3c
-   `b4a8ee903`, `925696395`, `56bddeb30`, `a157f7e47`; futon0 `2344705`, `73d8627`).
-   *Open:* `/api/alpha/cascade-real/graph` is rebuilt on every call (13 s warm,
-   over 90 s cold); cache it, and the publish can go to 1 min.
+   30 min. `wip-cascade-snapshot.timer` publishes every minute (futon3c
+   `b4a8ee903`, `925696395`, `56bddeb30`, `a157f7e47`; futon0 `2344705`).
+   `/api/alpha/cascade-real/graph` took 13 s warm and over 90 s cold, nearly all
+   of it the 2,146-row `mission-scope/pattern` walk; it now reads each type's
+   exact count (about 0.4 s for all seven) and re-walks only types whose count
+   moved, or every 30 min as a backstop (zai-4 discovery
+   `~/notes/disk-writes/cascade-graph-discovery.md`; futon3c `4365e4f04`, live
+   0.4 s). *Open:* a cold page of that walk costs about 100x a warm one in
+   futon1b, which still hurts any other reader of it.
 
 ### Checkpoint 1 — 2026-11-03
 **What was done:** handoff from claude-16; probes `operator-turns` and
