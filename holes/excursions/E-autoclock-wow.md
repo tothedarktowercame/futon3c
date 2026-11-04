@@ -416,6 +416,22 @@ Where the three populations come from (claude-6, 11-04):
   `registry-exclusions`). Joe wants these not printed at all, not printed
   as exclusions.
 
+### Landed 11-04: requisitions leave the WM population (futon2)
+
+codex-13 `b0c41e73e` (packet from claude-5), plus the census follow-up
+`72aa9fe52`/merge `74f29b5ef` (packet REQPOP-census from claude-6, who
+caught that Lean Q1's openTasks comes from `selection_world` and
+`wm_run_facts`, which my packet missed). One predicate,
+`task-requisition/requisition-record?`, is used by the META observation,
+outer_observation, mission_registry, selection_world and wm_run_facts. Live: open
+excursions 386 → 192 (194 dropped; the other 121 of 315 E-kimi-task-*
+were already closed); census 570 = field roster 570. Reviewed by
+claude-5 and claude-6: the META test keeps a plain `Parent:` ticket and
+drops completed, in-progress and malformed-marker requisitions. The old code
+proposed the malformed one. Remaining: the futon3c Giraffe adapter
+(`excursions.clj`, `readings.clj`), using the same predicate, with Q1 in
+its acceptance.
+
 ## Next
 
 1. ~~MAP~~ done, above.
