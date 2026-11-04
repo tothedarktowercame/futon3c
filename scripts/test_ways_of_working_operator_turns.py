@@ -205,11 +205,11 @@ class CensusCacheTest(unittest.TestCase):
         first = turn(self.NOW - datetime.timedelta(minutes=8), "first")
         self.write_turns([first])
         self.census([evidence(first["at"])])
-        second = turn(self.NOW - datetime.timedelta(minutes=6), "second")
+        second = turn(first["at"] + datetime.timedelta(seconds=30), "second")
         self.write_turns([first, second])
         result, _ = self.census([evidence(first["at"])])  # same row, nothing new
         self.assertEqual(1, result["matched"])
-        self.assertEqual(["second"], [p["vendor-id"] for p in result["pending"]])
+        self.assertEqual(["second"], [v["vendor-id"] for v in result["violations"]])
 
 
 if __name__ == "__main__":
