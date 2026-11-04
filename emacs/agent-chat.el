@@ -43,6 +43,34 @@ Values above 0.3 are capped at 0.3 so prompt insertion remains bounded."
   :type 'number
   :group 'agent-chat)
 
+(defcustom agent-chat-large-buffer-threshold (* 1024 1024)
+  "Buffer size at which chat history is made cheap to redisplay.
+Nil disables automatic degradation.  The default is one MiB."
+  :type '(choice (const :tag "Disabled" nil) integer)
+  :group 'agent-chat)
+
+(defcustom agent-chat-large-buffer-decorated-tail (* 256 1024)
+  "Number of newest characters left decorated in a large chat buffer.
+Older text loses renderer-owned faces, display properties, and overlays."
+  :type 'integer
+  :group 'agent-chat)
+
+(defcustom agent-chat-pager-maximum-size (* 1024 1024)
+  "Maximum visible transcript size when `agent-chat-pager-mode' is enabled.
+Trimming occurs only at message boundaries.  Removed history remains in a
+buffer-local archive and is restored when the mode is disabled."
+  :type 'integer
+  :group 'agent-chat)
+
+(defvar-local agent-chat--large-buffer-degraded-p nil)
+(defvar-local agent-chat--large-buffer-stripped-through 1)
+(defvar-local agent-chat-pager-mode nil)
+(defvar-local agent-chat--pager-archive nil
+  "Propertized history hidden by `agent-chat-pager-mode'.")
+(defvar-local agent-chat--pager-trimming nil)
+(defvar agent-chat--last-health-probe nil
+  "Pair of (TIME . DEAD-CLIENT-COUNT) from the last REPL health probe.")
+
 (defcustom agent-chat-undo-timeout 3
   "Maximum seconds to wait for the operator `undo' route.
 Failure falls through to an ordinary agent turn with the original text."
@@ -2254,6 +2282,179 @@ and changes no text, only the face property."
     (message "agent-chat: refaced %d chars to %s"
              n (or agent-chat--text-face 'agent-chat-text-face))))
 
+(defun agent-chat--renderer-overlay-p (overlay)
+  "Return non-nil when OVERLAY belongs to chat/session rendering."
+  (or (overlay-get overlay 'agent-chat-code)
+      (overlay-get overlay 'agent-chat-link)
+      (overlay-get overlay 'agent-chat-tool-details)
+      (overlay-get overlay 'session-mode-mark)
+      (overlay-get overlay 'session-mode-rnode-tag)))
+
+(defun agent-chat--delete-renderer-overlays (start end)
+  "Delete chat/session renderer overlays between START and END."
+  (dolist (overlay (overlays-in start end))
+    (when (agent-chat--renderer-overlay-p overlay)
+      (delete-overlay overlay))))
+
+(defun agent-chat--strip-rendering (start end)
+  "Remove renderer-owned decoration between START and END."
+  (when (< start end)
+    (let ((inhibit-read-only t)
+          (inhibit-modification-hooks t)
+          (buffer-undo-list t))
+      (agent-chat--delete-renderer-overlays start end)
+      (remove-text-properties
+       start end
+       '(face nil font-lock-face nil display nil agent-chat-in-fence nil
+              mouse-face nil help-echo nil keymap nil follow-link nil
+              agent-chat-link-target nil)))))
+
+(defun agent-chat--message-boundary-after (position)
+  "Return the first message boundary after POSITION, or nil.
+New messages carry an explicit property.  The face-based fallback recognizes
+speaker lines in buffers created before that property was introduced."
+  (or (text-property-any position (point-max) 'agent-chat-message-start t)
+      (save-excursion
+        (goto-char position)
+        (beginning-of-line)
+        (let ((speaker-faces (mapcar #'cdr agent-chat--face-alist))
+              found)
+          (while (and (not found) (< (point) (point-max)))
+            (when (and (bolp)
+                       (memq (get-text-property (point) 'face) speaker-faces))
+              (setq found (point)))
+            (unless found (forward-line 1)))
+          found))))
+
+(defun agent-chat-pager-trim ()
+  "Hide old complete messages until the visible buffer fits its pager limit."
+  (when (and agent-chat-pager-mode
+             (not agent-chat--pager-trimming)
+             (> (buffer-size) agent-chat-pager-maximum-size))
+    (let* ((agent-chat--pager-trimming t)
+           (target (+ (point-min)
+                      (- (buffer-size) agent-chat-pager-maximum-size)))
+           (cut (agent-chat--message-boundary-after target)))
+      (when (and cut (> cut (point-min)))
+        (let ((inhibit-read-only t)
+              (inhibit-modification-hooks t)
+              (buffer-undo-list t)
+              (hidden (buffer-substring (point-min) cut)))
+          (setq agent-chat--pager-archive
+                (concat agent-chat--pager-archive hidden))
+          (delete-region (point-min) cut)
+          (setq agent-chat--large-buffer-stripped-through (point-min)))))))
+
+(defun agent-chat-pager-restore ()
+  "Restore all history hidden by this buffer's pager."
+  (when agent-chat--pager-archive
+    (let ((inhibit-read-only t)
+          (inhibit-modification-hooks t)
+          (buffer-undo-list t)
+          (history agent-chat--pager-archive))
+      (setq agent-chat--pager-archive nil)
+      (save-excursion
+        (goto-char (point-min))
+        (insert history)))))
+
+(define-minor-mode agent-chat-pager-mode
+  "Keep only a bounded, recent transcript visible in this REPL buffer.
+The mode is buffer-local and opt-in.  Turning it off restores all history
+hidden since it was enabled, making the full transcript searchable again."
+  :lighter " Page"
+  (if agent-chat-pager-mode
+      (agent-chat-pager-trim)
+    (agent-chat-pager-restore)))
+
+(defun agent-chat-maybe-degrade-large-buffer ()
+  "Make old history cheap to redisplay once this chat buffer is large.
+Markdown fontification, native code decoration, and session-mode tag painting
+are disabled buffer-locally.  The newest
+`agent-chat-large-buffer-decorated-tail' characters retain their existing
+decoration; older history is progressively stripped after completed turns."
+  (when agent-chat-pager-mode
+    (agent-chat-pager-trim))
+  (when (and agent-chat-large-buffer-threshold
+             (> (buffer-size) agent-chat-large-buffer-threshold))
+    (unless agent-chat--large-buffer-degraded-p
+      (setq-local agent-chat--large-buffer-degraded-p t)
+      (setq-local agent-chat-fontify-code-natively nil)
+      (when (bound-and-true-p font-lock-mode)
+        (font-lock-mode -1))
+      (when (and (bound-and-true-p session-mode-turn-tags-mode)
+                 (fboundp 'session-mode-turn-tags-mode))
+        (session-mode-turn-tags-mode -1))
+      ;; Even the retained tail must not carry thousands of native-code or
+      ;; tool-detail overlays.  Its baked speaker/body faces remain readable.
+      (agent-chat--delete-renderer-overlays (point-min) (point-max)))
+    (let ((cutoff (max (point-min)
+                       (- (point-max)
+                          (max 0 agent-chat-large-buffer-decorated-tail)))))
+      (when (> cutoff agent-chat--large-buffer-stripped-through)
+        (agent-chat--strip-rendering
+         agent-chat--large-buffer-stripped-through cutoff)
+        (setq-local agent-chat--large-buffer-stripped-through cutoff)))))
+
+(defun agent-chat--buffer-health (buffer)
+  "Return a small redisplay-health record for chat BUFFER."
+  (with-current-buffer buffer
+    (let ((owned 0)
+          (all (overlays-in (point-min) (point-max))))
+      (dolist (overlay all)
+        (when (agent-chat--renderer-overlay-p overlay)
+          (setq owned (1+ owned))))
+      (list :buffer (buffer-name)
+            :bytes (buffer-size)
+            :pager (bound-and-true-p agent-chat-pager-mode)
+            :archived-bytes (length agent-chat--pager-archive)
+            :degraded agent-chat--large-buffer-degraded-p
+            :font-lock (bound-and-true-p font-lock-mode)
+            :overlays (length all)
+            :renderer-overlays owned))))
+
+(defun agent-chat-large-repl-health ()
+  "Show decoration load and recent dead-emacsclient pressure for REPL buffers."
+  (interactive)
+  (let* ((buffers (seq-filter
+                   (lambda (buffer)
+                     (with-current-buffer buffer
+                       (derived-mode-p 'claude-repl-mode 'codex-repl-mode)))
+                   (buffer-list)))
+         (now (float-time))
+         (window (if (boundp 'server-dead-client-warn-window)
+                     server-dead-client-warn-window 300))
+         (recent (if (boundp 'server-dead-client--recent)
+                     (seq-count (lambda (time) (< (- now time) window))
+                                server-dead-client--recent)
+                   0))
+         (total (if (boundp 'server-dead-client-count)
+                    server-dead-client-count 0))
+         (previous agent-chat--last-health-probe))
+    (with-help-window "*Agent Chat Health*"
+      (princ (format "Large-buffer threshold: %S; decorated tail: %d\n"
+                     agent-chat-large-buffer-threshold
+                     agent-chat-large-buffer-decorated-tail))
+      (princ (format "Dead emacsclient replies: %d recent / %d total\n"
+                     recent total))
+      (if previous
+          (princ (format "Since prior probe: %d drops in %.1f minutes\n\n"
+                         (- total (cdr previous))
+                         (/ (- now (car previous)) 60.0)))
+        (princ "Since prior probe: baseline established\n\n"))
+      (dolist (buffer buffers)
+        (let ((health (agent-chat--buffer-health buffer)))
+          (princ
+           (format "%s: %dK pager=%s archived=%dK degraded=%s font-lock=%s overlays=%d (renderer=%d)\n"
+                   (plist-get health :buffer)
+                   (/ (plist-get health :bytes) 1024)
+                   (plist-get health :pager)
+                   (/ (plist-get health :archived-bytes) 1024)
+                   (plist-get health :degraded)
+                   (plist-get health :font-lock)
+                   (plist-get health :overlays)
+                   (plist-get health :renderer-overlays))))))
+    (setq agent-chat--last-health-probe (cons now total))))
+
 (defun agent-chat-insert-message (name text)
   "Insert a message from NAME with TEXT above the prompt.
 Uses `agent-chat--face-alist' to pick the name face.
@@ -2272,6 +2473,8 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
       (goto-char (marker-position agent-chat--prompt-marker))
       (let ((name-start (point)))
         (insert (format "%s: " name))
+        (put-text-property name-start (min (1+ name-start) (point-max))
+                           'agent-chat-message-start t)
         (let ((name-end (point)))
           (insert (format "%s\n\n" transformed))
           (let ((text-end (point)))
@@ -2295,7 +2498,8 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
                 (agent-chat--bake-face (line-beginning-position) (line-end-position)
                                        'agent-chat-tool-line-face)))))))
     (when at-end
-      (agent-chat-scroll-to-bottom))))
+      (agent-chat-scroll-to-bottom))
+    (agent-chat-maybe-degrade-large-buffer)))
 
 (defun agent-chat-scroll-to-bottom ()
   "Scroll window so input prompt is pinned near the bottom.
@@ -2378,6 +2582,8 @@ Optional FACE overrides `agent-chat-thinking-face'."
       (set-marker-insertion-type agent-chat--streaming-origin nil)
       (let ((name-start (point)))
         (insert (format "%s: " name))
+        (put-text-property name-start (min (1+ name-start) (point-max))
+                           'agent-chat-message-start t)
         (let ((name-end (point)))
           (agent-chat--bake-face name-start name-end name-face)
           (setq agent-chat--streaming-marker (copy-marker (point)))
@@ -2425,7 +2631,8 @@ keywords (tool lines, markdown) still win where they match."
   (setq agent-chat--streaming-marker nil
         agent-chat--streaming-origin nil
         agent-chat--streaming-skip-newline nil
-        agent-chat--streaming-started nil))
+        agent-chat--streaming-started nil)
+  (agent-chat-maybe-degrade-large-buffer))
 
 (defun agent-chat-finalize-streaming-message (name text)
   "Replace the active streaming chunk with a NAME message containing TEXT."
