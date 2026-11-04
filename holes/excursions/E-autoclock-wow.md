@@ -437,6 +437,10 @@ record 19:08:46Z, read from `GET /api/alpha/wm/meta-latest` (the source of
 Arxana's META list). Support 318, excluded 252 (250
 `:completion-definition-not-found`, 2 unread-new), 0 requisitions, and no
 E-kimi-task id in either list. Selection Q1 held at 570/570.
+The 250 `:completion-definition-not-found` exclusions are deliberate, not a
+defect: Joe's switch `:completion-undefined {:mode :exclude}` in
+futon2/resources/wm/outer-admission.edn (ADMIT-1, futon2 2d7caf17a; re-arm
+condition written in the edn).
 
 ## Next
 
