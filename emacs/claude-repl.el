@@ -1126,8 +1126,18 @@ CALLBACK is called with the final response text on completion."
                                ;; identity-checked terminal event. A done from
                                ;; any earlier stream can never close this turn.
                                (setq done-event json-obj))
+                              ((equal type "started")
+                               (agent-chat-turnline-update
+                                (if agent-chat--session-id 'restoring 'inferring)))
+                              ((equal type "invoke.activity")
+                               (let ((activity (alist-get 'activity json-obj)))
+                                 (when (stringp activity)
+                                   (agent-chat-turnline-update
+                                    (agent-chat--progress-phase activity)
+                                    activity))))
                               ((equal type "text")
                                (let ((txt (alist-get 'text json-obj)))
+                                 (agent-chat-turnline-update 'streaming)
                                  (unless agent-chat--streaming-started
                                    (agent-chat-begin-streaming-message "claude"))
                                  (agent-chat-stream-text txt)
@@ -1171,6 +1181,7 @@ CALLBACK is called with the final response text on completion."
                                                     details "\n")
                                                    "\n")
                                          (format "\n[%s]\n" tool-names))))
+                                 (agent-chat-turnline-update 'tool tool-names)
                                  ;; Record tool calls into frame
                                  (dolist (d (or details
                                                 (mapcar (lambda (n) (list (cons 'name n)))
@@ -1457,6 +1468,7 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
                            :object-type 'plist :null-object nil :false-object nil)
                         (error nil)))))
             (with-current-buffer chat-buffer
+              (agent-chat-turnline-finish)
               (agent-chat-insert-message
                "system" (claude-repl--compact-outcome-line http-status payload))
               (when (and (= http-status 200) (eq t (plist-get payload :ok)))
@@ -1480,10 +1492,12 @@ answers 202 with its turn id instead of refusing."
                       (string-remove-suffix "/" claude-repl-api-url)
                       (url-hexify-string claude-repl-agent-id))))
     (agent-chat-insert-message "system" "[compact] requested…")
+    (agent-chat-turnline-start 'compacting "context")
     (condition-case err
         (url-retrieve url #'claude-repl--compact-response
                       (list chat-buffer) t t)
       (error
+       (agent-chat-turnline-finish 'failed "compaction")
        (agent-chat-insert-message
         "system" (format "[compact] error: %s" (error-message-string err)))))))
 

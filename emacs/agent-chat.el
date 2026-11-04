@@ -62,6 +62,54 @@ buffer-local archive and is restored when the mode is disabled."
   :type 'integer
   :group 'agent-chat)
 
+(defcustom agent-chat-turnline-enabled t
+  "When non-nil, show one live status line for the current turn.
+Completed turns retain only their ordinary searchable Cooked line."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-turnline-update-seconds 1.0
+  "Seconds between updates of the one live turnline.
+The timer is buffer-local and is cancelled as soon as the turn finishes."
+  :type 'number
+  :group 'agent-chat)
+
+(defcustom agent-chat-turnline-animate-compacting t
+  "When non-nil, animate the live turnline during context compaction."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-turnline-animate-hidden nil
+  "When non-nil, animate a turnline even when its buffer has no visible window."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-turnline-large-buffer-animation-threshold
+  agent-chat-large-buffer-threshold
+  "Maximum buffer size in which turnline animation is allowed.
+Nil means animation has no size limit.  Static phase changes still render."
+  :type '(choice (const :tag "No limit" nil) integer)
+  :group 'agent-chat)
+
+(defcustom agent-chat-turnline-labels
+  '((queued . "Queued")
+    (restoring . "Restoring")
+    (compacting . "Compacting")
+    (inferring . "Thinking")
+    (tool . "Working")
+    (streaming . "Streaming")
+    (interrupted . "Interrupted")
+    (failed . "Failed"))
+  "Display labels for turnline phases.
+Changing these labels does not change the underlying phase vocabulary."
+  :type '(alist :key-type symbol :value-type string)
+  :group 'agent-chat)
+
+(defcustom agent-chat-turnline-complete-label "Cooked"
+  "Label used by the frozen final turnline, before \"for DURATION\"."
+  :type 'string
+  :group 'agent-chat)
+
 (defvar-local agent-chat--large-buffer-degraded-p nil)
 (defvar-local agent-chat--large-buffer-stripped-through 1)
 (defvar-local agent-chat-pager-mode nil)
@@ -285,6 +333,17 @@ Distinct from agent-name which is the display name.")
 
 (defvar-local agent-chat--thinking-property nil
   "Text property symbol used to mark thinking lines.")
+
+(defvar-local agent-chat--turnline-marker nil
+  "Marker at the beginning of the one live turnline.")
+
+(defvar-local agent-chat--turnline-timer nil
+  "Timer updating the one live turnline, or nil.")
+
+(defvar-local agent-chat--turnline-phase nil)
+(defvar-local agent-chat--turnline-detail nil)
+(defvar-local agent-chat--turnline-start-time nil)
+(defvar-local agent-chat--turnline-frame 0)
 
 (defvar-local agent-chat--turn-start-time nil
   "Epoch time (float) when the current turn started.")
@@ -715,7 +774,10 @@ Idempotent: an earlier suffix on the same line is replaced."
       (save-excursion
         (goto-char prompt-pos)
         (let ((limit (max (point-min) (- prompt-pos 4000))))
-          (when (and (re-search-backward "^Cooked for [0-9][0-9ms ]*[0-9ms]" limit t)
+          (when (and (re-search-backward
+                      (format "^%s for [0-9][0-9ms ]*[0-9ms]"
+                              (regexp-quote agent-chat-turnline-complete-label))
+                      limit t)
                      ;; Only touch a Cooked line that is the flair block's own:
                      ;; the rule line must follow it and the prompt must follow
                      ;; that.  Anything else is transcript text; leave it.
@@ -1303,7 +1365,9 @@ window points all end up after the new prompt with typed input untouched."
           (while (and keep-scanning
                       (> (line-beginning-position) (point-min)))
             (forward-line -1)
-            (if (or (looking-at-p "^Cooked for ")
+            (if (or (looking-at-p
+                     (format "^%s for "
+                             (regexp-quote agent-chat-turnline-complete-label)))
                     (looking-at-p "^─+ \\*.*\\*$")
                     (looking-at-p "^─+$"))
                 (setq start (line-beginning-position))
@@ -1333,7 +1397,8 @@ window points all end up after the new prompt with typed input untouched."
           (delete-region (line-beginning-position)
                          (min (point-max) (1+ (line-end-position)))))
         (when (numberp elapsed)
-          (insert (propertize (format "Cooked for %s%s\n"
+          (insert (propertize (format "%s for %s%s\n"
+                                      agent-chat-turnline-complete-label
                                       (agent-chat--format-duration elapsed)
                                       (agent-chat-turn-flair-suffix))
                               'face 'agent-chat-turn-flair-face)))
@@ -1415,6 +1480,7 @@ the elapsed, so the whole unified turn finalizes ONCE (E-repl-continuations)."
                   (or agent-chat--agent-id agent-chat--agent-name "agent")
                   (or agent-chat--turn-counter 0)
                   (or agent-chat--turn-start-time (float-time)))))
+  (agent-chat-turnline-finish)
   (unless (and agent-chat--current-turn-id
                (equal agent-chat--current-turn-id agent-chat--last-flair-turn-id))
     (let ((duration (or elapsed
@@ -2514,16 +2580,174 @@ scrolled away, their view and cursor are left undisturbed."
 
 ;;; Thinking / Progress
 
+(defconst agent-chat--turnline-spinner ["▰▱▱▱" "▱▰▱▱" "▱▱▰▱" "▱▱▱▰"])
+
+(defun agent-chat--turnline-label (phase)
+  "Return the configured display label for PHASE."
+  (or (alist-get phase agent-chat-turnline-labels)
+      (capitalize (symbol-name (or phase 'inferring)))))
+
+(defun agent-chat--turnline-animation-allowed-p ()
+  "Return non-nil when animating this buffer is currently cheap enough."
+  (and agent-chat-turnline-animate-compacting
+       (or agent-chat-turnline-animate-hidden
+           (get-buffer-window (current-buffer) 'visible))
+       (or (null agent-chat-turnline-large-buffer-animation-threshold)
+           (<= (buffer-size)
+               agent-chat-turnline-large-buffer-animation-threshold))))
+
+(defun agent-chat--turnline-text ()
+  "Render the current live turnline as plain text."
+  (let* ((phase (or agent-chat--turnline-phase 'inferring))
+         (elapsed (and agent-chat--turnline-start-time
+                       (- (float-time) agent-chat--turnline-start-time)))
+         (spinner (when (and (eq phase 'compacting)
+                             (agent-chat--turnline-animation-allowed-p))
+                    (aref agent-chat--turnline-spinner
+                          (% agent-chat--turnline-frame
+                             (length agent-chat--turnline-spinner)))))
+         (parts (delq nil
+                      (list (agent-chat--turnline-label phase)
+                            spinner
+                            (and elapsed (agent-chat--format-duration elapsed))
+                            (and (stringp agent-chat--turnline-detail)
+                                 (not (string-empty-p agent-chat--turnline-detail))
+                                 agent-chat--turnline-detail))))
+         (bugs (when (fboundp 'futon-bug-feed-segment)
+                 (futon-bug-feed-segment agent-chat--agent-id))))
+    (concat (string-join parts " · ") (or bugs ""))))
+
+(defun agent-chat--turnline-delete-live ()
+  "Delete the live turnline without scanning historical transcript text."
+  (when (and (markerp agent-chat--turnline-marker)
+             (marker-position agent-chat--turnline-marker))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (marker-position agent-chat--turnline-marker))
+        (delete-region (line-beginning-position)
+                       (min (point-max) (1+ (line-end-position)))))))
+  (when (markerp agent-chat--turnline-marker)
+    (set-marker agent-chat--turnline-marker nil))
+  (setq agent-chat--turnline-marker nil))
+
+(defun agent-chat--turnline-delete-legacy-progress ()
+  "Remove a pre-turnline thinking indicator during a live hot reload."
+  (let ((inhibit-read-only t)
+        (prop (or agent-chat--thinking-property 'agent-chat-thinking)))
+    (save-excursion
+      (goto-char (point-min))
+      (while-let ((pos (text-property-any (point) (point-max) prop t)))
+        (goto-char pos)
+        (if (get-text-property pos 'agent-chat-turnline)
+            (goto-char (or (next-single-property-change pos prop nil (point-max))
+                           (point-max)))
+          (delete-region (line-beginning-position)
+                         (min (point-max) (1+ (line-end-position)))))))))
+
+(defun agent-chat--turnline-render ()
+  "Render or replace the one live turnline immediately before the prompt."
+  (when (and agent-chat-turnline-enabled
+             (markerp agent-chat--prompt-marker)
+             (marker-position agent-chat--prompt-marker))
+    (let ((inhibit-read-only t)
+          (text (agent-chat--turnline-text))
+          (prop (or agent-chat--thinking-property 'agent-chat-thinking))
+          (had-live (and (markerp agent-chat--turnline-marker)
+                         (marker-position agent-chat--turnline-marker))))
+      (agent-chat--turnline-delete-live)
+      (unless had-live
+        (agent-chat--turnline-delete-legacy-progress))
+      (save-excursion
+        (goto-char (marker-position agent-chat--prompt-marker))
+        (unless (bolp) (insert "\n"))
+        (let ((start (point)))
+          (insert (propertize (concat text "\n")
+                              'face 'agent-chat-thinking-face
+                              prop t
+                              'agent-chat-turnline t))
+          (setq agent-chat--turnline-marker (copy-marker start nil)))))))
+
+(defun agent-chat--turnline-stop-timer ()
+  "Cancel this buffer's turnline timer."
+  (when (timerp agent-chat--turnline-timer)
+    (cancel-timer agent-chat--turnline-timer))
+  (setq agent-chat--turnline-timer nil))
+
+(defun agent-chat--turnline-start-timer ()
+  "Ensure this buffer has its one live turnline timer."
+  (unless (timerp agent-chat--turnline-timer)
+    (let ((buffer (current-buffer)))
+      (setq agent-chat--turnline-timer
+            (run-at-time agent-chat-turnline-update-seconds
+                         agent-chat-turnline-update-seconds
+                         #'agent-chat--turnline-tick buffer)))))
+
+(defun agent-chat--turnline-tick (buffer)
+  "Advance and render BUFFER's live turnline."
+  (if (not (buffer-live-p buffer))
+      nil
+    (with-current-buffer buffer
+      (if (null agent-chat--turnline-phase)
+          (agent-chat--turnline-stop-timer)
+        (when (or (not (eq agent-chat--turnline-phase 'compacting))
+                  (agent-chat--turnline-animation-allowed-p))
+          (cl-incf agent-chat--turnline-frame)
+          (agent-chat--turnline-render))))))
+
+(defun agent-chat-turnline-start (&optional phase detail)
+  "Start the one live turnline at PHASE with optional DETAIL."
+  (when agent-chat-turnline-enabled
+    (agent-chat--turnline-stop-timer)
+    (agent-chat--turnline-delete-live)
+    (setq agent-chat--turnline-phase (or phase 'queued)
+          agent-chat--turnline-detail detail
+          agent-chat--turnline-start-time (float-time)
+          agent-chat--turnline-frame 0)
+    (agent-chat--turnline-render)
+    (agent-chat--turnline-start-timer)))
+
+(defun agent-chat-turnline-update (phase &optional detail)
+  "Move the live turnline to PHASE and optional DETAIL."
+  (when agent-chat-turnline-enabled
+    (unless agent-chat--turnline-start-time
+      (setq agent-chat--turnline-start-time (float-time)))
+    (setq agent-chat--turnline-phase phase
+          agent-chat--turnline-detail detail)
+    (agent-chat--turnline-render)
+    (agent-chat--turnline-start-timer)))
+
+(defun agent-chat-turnline-finish (&optional phase detail)
+  "Stop and remove the live turnline.
+PHASE and DETAIL are rendered once before removal, useful to tests and callers
+that briefly display a terminal state.  The durable final state is the Cooked
+line inserted by `agent-chat-finish-turn!'."
+  (when phase
+    (agent-chat-turnline-update phase detail))
+  (agent-chat--turnline-stop-timer)
+  (agent-chat--turnline-delete-live)
+  (setq agent-chat--turnline-phase nil
+        agent-chat--turnline-detail nil
+        agent-chat--turnline-start-time nil
+        agent-chat--turnline-frame 0))
+
+(defun agent-chat--progress-phase (status-text)
+  "Infer a conservative turnline phase from legacy STATUS-TEXT."
+  (let ((s (downcase (or status-text ""))))
+    (cond
+     ((string-match-p "compact" s) 'compacting)
+     ((string-match-p "restor\|resum\|context" s) 'restoring)
+     ((string-match-p "bash\|tool\|read\|edit\|search\|command" s) 'tool)
+     ((string-match-p "stream\|preparing response" s) 'streaming)
+     ((string-match-p "queue\|start" s) 'queued)
+     (t 'inferring))))
+
 (defun agent-chat-insert-thinking ()
-  "Insert the thinking indicator above the prompt."
-  (save-excursion
-    (goto-char (marker-position agent-chat--prompt-marker))
-    (insert (propertize (concat (or agent-chat--thinking-text "thinking...") "\n")
-                        'face 'agent-chat-thinking-face
-                        (or agent-chat--thinking-property 'agent-chat-thinking) t))))
+  "Start the live turnline above the prompt."
+  (agent-chat-turnline-start 'queued))
 
 (defun agent-chat-remove-thinking ()
   "Remove thinking/progress indicators from the buffer."
+  (agent-chat-turnline-finish)
   (let ((inhibit-read-only t)
         (prop (or agent-chat--thinking-property 'agent-chat-thinking))
         (text (or agent-chat--thinking-text "thinking...")))
@@ -2556,18 +2780,9 @@ scrolled away, their view and cursor are left undisturbed."
 (defun agent-chat-update-progress (status-text &optional face)
   "Replace the thinking/progress line with STATUS-TEXT.
 Optional FACE overrides `agent-chat-thinking-face'."
-  (let ((inhibit-read-only t)
-        (prop (or agent-chat--thinking-property 'agent-chat-thinking)))
-    ;; Remove existing progress lines
-    (agent-chat-remove-thinking)
-    ;; Insert new progress line
-    (save-excursion
-      (goto-char (marker-position agent-chat--prompt-marker))
-      (unless (bolp)
-        (insert "\n"))
-      (insert (propertize (concat status-text "\n")
-                          'face (or face 'agent-chat-thinking-face)
-                          prop t)))))
+  (ignore face)
+  (agent-chat-turnline-update (agent-chat--progress-phase status-text)
+                              status-text))
 
 (defun agent-chat-begin-streaming-message (name &optional face)
   "Insert NAME prefix above prompt and set streaming marker."
@@ -2575,7 +2790,7 @@ Optional FACE overrides `agent-chat-thinking-face'."
         (name-face (or face
                        (cdr (assoc name agent-chat--face-alist))
                        'agent-chat-joe-face)))
-    (agent-chat-remove-thinking)
+    (agent-chat--turnline-delete-live)
     (save-excursion
       (goto-char (marker-position agent-chat--prompt-marker))
       (setq agent-chat--streaming-origin (copy-marker (point)))
@@ -2587,7 +2802,8 @@ Optional FACE overrides `agent-chat-thinking-face'."
         (let ((name-end (point)))
           (agent-chat--bake-face name-start name-end name-face)
           (setq agent-chat--streaming-marker (copy-marker (point)))
-          (setq agent-chat--streaming-started t))))))
+          (setq agent-chat--streaming-started t))))
+    (agent-chat-turnline-update 'streaming)))
 
 (defun agent-chat--bake-face (start end face)
   "Apply FACE from START to END as both `face' and `font-lock-face'.
@@ -2621,7 +2837,6 @@ keywords (tool lines, markdown) still win where they match."
   (when (and agent-chat--streaming-marker
              (marker-position agent-chat--streaming-marker))
     (let ((inhibit-read-only t))
-      (agent-chat-remove-thinking)
       (save-excursion
         (goto-char (marker-position agent-chat--streaming-marker))
         (unless agent-chat--streaming-skip-newline

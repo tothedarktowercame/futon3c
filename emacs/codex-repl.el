@@ -1798,6 +1798,7 @@ When ELAPSED-SECONDS is non-nil, include it in the display."
   (when (and (stringp status) (not (string-empty-p status)))
     (codex-repl--record-invoke-timing! "first-progress-status" status t))
   (setq codex-repl--last-progress-status status)
+  (agent-chat-turnline-update (agent-chat--progress-phase status) status)
   (codex-repl--progress-line status (codex-repl--thinking-elapsed-seconds)))
 
 (defun codex-repl--drawbridge-token ()
@@ -1959,10 +1960,9 @@ short human-readable progress string to surface in *agents*."
              (with-current-buffer chat-buffer
                (if (not (process-live-p agent-chat--pending-process))
                    (codex-repl--stop-thinking-heartbeat)
-                 (agent-chat-update-progress
-                  (codex-repl--progress-line
-                   (codex-repl--current-progress-status)
-                   (codex-repl--thinking-elapsed-seconds)))
+                 (let ((status (codex-repl--current-progress-status)))
+                   (agent-chat-turnline-update
+                    (agent-chat--progress-phase status) status))
                  (codex-repl--refresh-invoke-dashboard))))))))
 
 (defun codex-repl--ui-state-valid-p ()
