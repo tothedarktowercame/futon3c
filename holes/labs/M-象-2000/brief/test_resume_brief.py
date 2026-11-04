@@ -56,14 +56,18 @@ class ResumeBriefTest(unittest.TestCase):
             now = dt.datetime(2026, 10, 12, tzinfo=dt.timezone.utc)
             data = brief.prepare(records, now)
             text = brief.render("M-test", join, [], data, now)
-            self.assertEqual(1, text.count("I will return the tested patch"))
-            self.assertIn("Awaiting you: agent proposals and asks (1)", text)
+            self.assertEqual(2, text.count("I will return the tested patch"))
+            # Two sessions each hold their own open port with this bare act
+            # id: identity is (session, act id), not the bare id (the ids
+            # restart with each session of a seat).
+            self.assertIn("Awaiting you: agent proposals and asks (2)", text)
             self.assertIn("Asked by the operator, no answer linked (1)", text)
             self.assertIn("Keep the statement frozen", text)
             self.assertIn("inferred: sole-port", text)
             path = brief.write_measurement(root, "M-test", "claude-1", now, data)
             payload = json.loads(path.read_text())
-            self.assertEqual(["agent-open"], payload["sections"]["awaiting_you"])
+            self.assertEqual(["agent-open", "agent-open"],
+                             payload["sections"]["awaiting_you"])
             self.assertEqual(["turn-a", "turn-b", "turn-c"], payload["record_ids"])
 
     def test_seed_block_and_inline_quotes(self):
@@ -128,6 +132,37 @@ class ResumeBriefTest(unittest.TestCase):
             record_ids=[], facts=picked, facts_note="store not answering; cache of x"), now2)
         self.assertIn("## Facts (2)", text)
         self.assertIn("_facts: store not answering; cache of x_", text)
+
+    def test_same_act_id_in_two_sessions_kept_separately(self):
+        """Act ids restart with each session of a seat, so a still-open ask
+        in session a survives a closure of the same bare id in session b,
+        keeps a's own text, and does not collapse with c's open ask."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            common = {"mission_id": "M-test", "agent_id": "claude-1",
+                      "created_at": "2026-10-11T00:00:00Z",
+                      "standings": {"in_force": [], "adopted_not_applied": []},
+                      "obligations": []}
+            def session(sid, text, still, closed):
+                row = dict(common, turn_id="turn-%s" % sid,
+                           evidence_id="record-%s" % sid, session_id=sid)
+                row["acts"] = [{"id": "dup-1", "author": "operator",
+                                "kind": "ask-action", "text": text,
+                                "at": "2026-10-11T00:00:00Z"}]
+                row["ports"] = {"still_open": [{"act": "dup-1"}] if still else [],
+                                "closed_this_turn": [{"act": "dup-1"}] if closed else []}
+                self.write(root, "turn-%s.json" % sid, row)
+                return row
+            session("session-a", "ask in session a", still=True, closed=False)
+            session("session-b", "ask in session b", still=False, closed=True)
+            session("session-c", "ask in session c", still=True, closed=False)
+            records, _ = brief.load_records(root, "M-test", set())
+            data = brief.prepare(records, dt.datetime(2026, 10, 13, tzinfo=dt.timezone.utc))
+            self.assertEqual([("session-a", "ask in session a"),
+                              ("session-c", "ask in session c")],
+                             sorted((r["session_id"], r["text"]) for r in data["asked"]))
+            self.assertEqual([("session-b", "ask in session b")],
+                             [(r["session_id"], r["text"]) for r in data["closed"]])
 
     def test_bell_ask_closed_when_its_job_ended(self):
         with tempfile.TemporaryDirectory() as tmp:

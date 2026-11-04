@@ -131,8 +131,10 @@ def unique(rows):
     out, seen = [], set()
     rows.sort(key=lambda x: instant(x.get("at") or x.get("since")), reverse=True)
     for row in rows:
-        key = aid(row)
-        if key and key not in seen:
+        # Act ids restart with each session of a seat, so identity is the
+        # (session, act id) pair: two sessions' asks may share a bare id.
+        key = (row.get("session_id"), aid(row))
+        if key[1] and key not in seen:
             seen.add(key)
             out.append(row)
     return out
@@ -161,7 +163,16 @@ def prepare(records, now, job_state=None):
     """JOB_STATE, when given, maps a job id to (state, finished-at); an open
     bell ask whose job has ended moves to the closed list with the job's
     state as its witness, since the bellback is the answer."""
-    acts = {a.get("id"): a for r in records for a in (r.get("acts") or [])}
+    # Act ids restart with each session of a seat (521 of 8k operator ids
+    # recur across sessions), so acts are keyed by (session_id, act id).
+    # BY_ID is a display fallback for standings/obligations, never for
+    # ports: a port's text must come from its own session.
+    acts, by_id = {}, {}
+    for r in records:
+        for a in (r.get("acts") or []):
+            if a.get("id"):
+                acts[(r.get("session_id"), a["id"])] = a
+                by_id.setdefault(a["id"], a)
     latest = {}
     for r in records:
         if not isinstance(r.get("ports"), dict):
@@ -174,7 +185,7 @@ def prepare(records, now, job_state=None):
     for r in latest.values():
         sid = r["session_id"]
         for p in r["ports"].get("still_open") or []:
-            row, source = dict(p), acts.get(aid(p), {})
+            row, source = dict(p), acts.get((sid, aid(p)), {})
             for k in ("author", "kind", "text", "at"):
                 row[k] = source.get(k, row.get(k))
             row["session_id"] = sid
@@ -199,14 +210,16 @@ def prepare(records, now, job_state=None):
         for source_key, dest in (("in_force", "in_force"),
                                  ("adopted_not_applied", "adopted")):
             for identifier in standings.get(source_key) or []:
-                row = dict(acts.get(identifier, {"id": identifier}))
+                row = dict(acts.get((sid, identifier))
+                           or by_id.get(identifier) or {"id": identifier})
                 row.setdefault("at", r.get("created_at"))
                 data[dest].append(row)
         for ob in r.get("obligations") or []:
             row = dict(ob)
             row.setdefault("id", row.get("act") or row.get("source_act"))
-            if row.get("source") in acts:
-                row["source_text"] = acts[row["source"]].get("text")
+            source_act = acts.get((sid, row.get("source"))) or by_id.get(row.get("source"))
+            if source_act:
+                row["source_text"] = source_act.get("text")
                 row["id"] = row["source"]
             row.setdefault("at", r.get("created_at"))
             data["obligations"].append(row)
@@ -222,7 +235,7 @@ def prepare(records, now, job_state=None):
                 inferred.setdefault(witness.get("opener"), []).append(witness.get("rule"))
         for c in r["ports"].get("closed_this_turn") or []:
             row = dict(c) if isinstance(c, dict) else {"act": c}
-            source = acts.get(aid(row), {})
+            source = acts.get((sid, aid(row)), {})
             for k in ("author", "kind", "text", "at"):
                 row[k] = source.get(k, row.get(k))
             row.setdefault("at", r.get("created_at"))
