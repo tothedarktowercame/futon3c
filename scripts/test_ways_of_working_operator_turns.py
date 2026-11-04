@@ -87,5 +87,27 @@ class OperatorTurnProbeTest(unittest.TestCase):
         self.assertEqual("broken", result["monitor"])
         self.assertEqual("unknown", result["invariant"])
 
+class BusyStoreTest(unittest.TestCase):
+    def busy(self):
+        import urllib.error
+        return urllib.error.HTTPError("u", 503, "Service Unavailable", {}, None)
+
+    def test_busy_store_is_retried_then_read(self):
+        import io, json as _json
+        calls, waits = [], []
+        def opener(request, timeout):
+            calls.append(1)
+            if len(calls) < 3: raise self.busy()
+            return io.BytesIO(_json.dumps({"ok": 1}).encode())
+        req = wow.urllib.request.Request("http://x")
+        self.assertEqual({"ok": 1}, wow.open_json(req, 1, opener, waits.append))
+        self.assertEqual([2, 4], waits)
+
+    def test_store_busy_past_backoff_still_raises(self):
+        def opener(request, timeout): raise self.busy()
+        req = wow.urllib.request.Request("http://x")
+        with self.assertRaises(wow.urllib.error.HTTPError):
+            wow.open_json(req, 1, opener, lambda s: None)
+
 if __name__ == "__main__":
     unittest.main()

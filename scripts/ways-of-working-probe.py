@@ -31,10 +31,27 @@ TERMINAL_STATES = {"done", "failed", "cancelled", "timed-out", "delivered"}
 FEEDBACK_GRACE = datetime.timedelta(minutes=30)
 TURN_STORE = HOME / ".emacs-graph" / "session-turn-analysis"
 
+# futon1b admits one expensive read at a time and answers 503
+# (expensive-read-busy) while another holds it; the cascade publisher's own
+# pattern reads hold it for 8-12 s (2026-11-03 23:48 and 23:57 publishes).
+# A busy store is a reason to wait, not a broken monitor; after the backoff
+# runs out the probe still reports broken.
+BUSY_BACKOFF_S = (2, 4, 8, 16)
+
+def open_json(request, timeout, opener=None, pause=None):
+    opener = opener or urllib.request.urlopen
+    pause = pause or time.sleep
+    for wait in BUSY_BACKOFF_S + (None,):
+        try:
+            with opener(request, timeout=timeout) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as exc:
+            if exc.code != 503 or wait is None: raise
+            pause(wait)
+
 def get_json(url, timeout=120):
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return json.load(response)
+    return open_json(req, timeout)
 
 def parse_time(value):
     if not value: return None
@@ -486,7 +503,7 @@ def fetch_operator_evidence(turns, opener=urllib.request.urlopen, pause=time.sle
         request = urllib.request.Request(base + "/api/alpha/evidence?" + query,
                                          headers={"Accept": "application/json"})
         try:
-            with opener(request, timeout=20) as response: page = json.load(response)
+            page = open_json(request, 20, opener, pause)
         except Exception as exc:
             raise RuntimeError(f"futon1b query failed for {iso(start)}: {exc}") from exc
         rows = page.get("entries")
