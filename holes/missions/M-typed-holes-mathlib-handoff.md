@@ -13,7 +13,7 @@ formalisation, no new Lean code.
 - [x] `holes/missions/M-typed-holes-mathlib-audit.edn` classifies all ten manifest concepts and includes summary counts plus a critical path. (evidence: `holes/missions/M-typed-holes-mathlib-audit.edn`)
 - [x] Every present or partial result in the audit cites exact mathlib declarations and source paths and distinguishes the full-tree audit from the declaration slice. (evidence: `holes/missions/M-typed-holes-mathlib-audit.edn`)
 - [x] Every partial or absent concept records cited external formalisations or source literature, portability, build scope, difficulty, and confidence. (evidence: `holes/missions/M-typed-holes-mathlib-audit.edn`)
-- [ ] A result record shows claude-2's review disposition and receipt of the audit path with summary counts.
+- [x] A result record shows claude-2's review disposition and receipt of the audit path with summary counts. (evidence: `holes/missions/M-typed-holes-mathlib-review-result.edn`)
 
 ## Inputs (READ-ONLY)
 - `futon3c/holes/missions/M-typed-holes-lean-manifest.edn` — 10 concepts, each

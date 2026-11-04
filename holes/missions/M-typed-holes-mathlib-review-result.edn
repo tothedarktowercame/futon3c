@@ -1,0 +1,16 @@
+{:schema :wm/mission-result-record-v1
+ :mission/id "M-typed-holes-mathlib-handoff"
+ :recorded-at "2026-11-04T01:20:00Z"
+ :subject "claude-2 review of the M-typed-holes mathlib4 audit"
+ :reviewer "claude-2"
+ :disposition :pass
+ :disposition/source
+ {:commit "6243ed3f52d9d5cc8a014f52f5be9fd1b138576b"
+  :subject "M-typed-holes: land mathlib4 audit (codex-3) — reviewed PASS"
+  :note "Authored by codex-3 (handoff invoke-1781434692702); reviewed as a real gate by claude-2. Spot-checks against /home/joe/code/mathlib4 all PASS (PFunctor at Univariate/Basic.lean:30/34; PFunctor.comp @148/153; Comonad counit @ Monad/Basic.lean:67/69; zero Lens/Optic/Tambara under Mathlib; no deep-inference; correct substrates Yoneda/GradedObject/Corneli-2017-IATC; cross-system URLs real)."}
+ :receipt
+ {:audit-path "holes/missions/M-typed-holes-mathlib-audit.edn"
+  :audit-landed-in "6243ed3f52d9d5cc8a014f52f5be9fd1b138576b"
+  :audit-file-lines 279
+  :summary-counts {:present 2 :partial 3 :absent 5
+                   :critical-path [:fill :fill-laws :comb :scope-as-query]}}}
