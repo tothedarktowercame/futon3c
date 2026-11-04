@@ -21,6 +21,15 @@
     (.setLastModified f (long mtime-ms))
     (.getAbsolutePath f)))
 
+(defn- selection-record!
+  [root filename record mtime-ms]
+  (let [dir (java.io.File. root "wm-runs")
+        f (java.io.File. dir filename)]
+    (.mkdirs dir)
+    (spit f (pr-str record))
+    (.setLastModified f (long mtime-ms))
+    (.getAbsolutePath f)))
+
 (def receipt-text-old
   "{:event/schema-version 1
     :payload {:judgment {:selected-cascade :C1
@@ -99,6 +108,77 @@
     (is (= 404 status))
     (is (false? (:ok body)))
     (is (= :no-retained-receipt (:error body)))))
+
+(deftest newer-exercised-selection-record-is-projected-for-the-browser
+  (let [root (temp-root)
+        _ (attempt! root "wm-full-loop-machinery-2" "wm-contract-machinery-2-v1"
+                    "attempt-001" receipt-text-old 1000000)
+        path (selection-record!
+              root "selection-record-2026-11-04-wm-click-new.edn"
+              {:schema :wm/selection-record-v1
+               :click/id "wm-click-new"
+               :run/id "run-new"
+               :startedAt "2026-11-04T10:00:00Z"
+               :selection-outcome {:status :chosen :class "class-1" :pick "M-ordinary"}
+               :outer/selection
+               {:outer-field/admitted ["M-ordinary"]
+                :outer-field/excluded
+                [{:target "E-kimi-task-157"
+                  :reason :requisition/in-progress
+                  :evidence {:registry-entry {:path "/code/futon2/holes/excursions/E-kimi-task-157.md"}}}]
+                :outer-score/excluded [{:target "T-score" :reason :no-cascade}]
+                :classes [{:id "class-1" :pick "M-ordinary" :G 2.5}]}}
+              2000000)
+        [status body] (ml/response [root])]
+    (is (= 200 status))
+    (is (= [{:id "M-ordinary" :kind :mission :source {:path nil}}]
+           (get-in body [:receipt :support])))
+    (is (= [{:id "E-kimi-task-157" :kind :excursion
+             :source {:path "/code/futon2/holes/excursions/E-kimi-task-157.md"}
+             :ineligible-reason :requisition/in-progress
+             :exclusion-stage :field}
+            {:id "T-score" :kind :ticket :source {:path nil}
+             :ineligible-reason :no-cascade :exclusion-stage :score}]
+           (get-in body [:receipt :excluded])))
+    (is (= {:target-id "M-ordinary" :policy-id "class-1" :G 2.5}
+           (get-in body [:receipt :policy :meta-selection :selected])))
+    (is (= path (get-in body [:source :path])))
+    (is (= :wm/selection-record-v1 (get-in body [:source :schema])))
+    (is (= "wm-click-new" (get-in body [:source :click/id])))))
+
+(deftest newer-cohort-receipt-still-wins
+  (let [root (temp-root)
+        _ (selection-record!
+           root "selection-record-2026-10-01-wm-click-old.edn"
+           {:schema :wm/selection-record-v1
+            :startedAt "1970-01-01T00:00:01Z"
+            :outer/selection {:outer-field/admitted ["M-record"]}}
+           1000)
+        _ (attempt! root "wm-full-loop-machinery-2" "wm-contract-machinery-2-v1"
+                    "attempt-002" receipt-text-new 3000000)
+        [_ body] (ml/response [root])]
+    (is (= "new/one" (get-in body [:receipt :chosen :id])))
+    (is (= "attempt-002" (get-in body [:source :attempt])))))
+
+(deftest selection-record-without-exercised-outer-selection-is-skipped
+  (let [root (temp-root)
+        _ (selection-record!
+           root "selection-record-2026-11-04-wm-click-skipped.edn"
+           {:schema :wm/selection-record-v1
+            :startedAt "2026-11-04T11:00:00Z"
+            :selection-outcome {:status :not-exercised}
+            :outer/selection {:status :not-exercised :reason :meta-self-heal}}
+           3000000)
+        _ (selection-record!
+           root "selection-record-2026-11-04-wm-click-used.edn"
+           {:schema :wm/selection-record-v1
+            :click/id "wm-click-used"
+            :startedAt "2026-11-04T10:00:00Z"
+            :outer/selection {:outer-field/admitted ["T-used"]}}
+           2000000)
+        [_ body] (ml/response [root])]
+    (is (= ["T-used"] (mapv :id (get-in body [:receipt :support]))))
+    (is (= 1 (get-in body [:source :skipped-without-outer-selection])))))
 
 (deftest browser-projection-refuses-an-unknown-receipt-schema
   (is (= {:absent :unsupported-outer-task-selection-schema

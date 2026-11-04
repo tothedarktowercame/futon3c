@@ -154,6 +154,112 @@
                                          (.lastModified f)))}}
              (recur more))))))))
 
+(defn- selection-record-files
+  [^java.io.File root]
+  (let [dir (java.io.File. root "wm-runs")]
+    (if (.isDirectory dir)
+      (->> (.listFiles dir)
+           (filter (fn [^java.io.File f]
+                     (let [n (.getName f)]
+                       (and (.isFile f)
+                            (str/starts-with? n "selection-record-")
+                            (str/ends-with? n ".edn")
+                            (not (str/includes? n ".edn."))
+                            (not= n "selection-record-index.edn")))))
+           vec)
+      [])))
+
+(defn- instant-ms [s]
+  (when (string? s)
+    (try (.toEpochMilli (java.time.Instant/parse s))
+         (catch Throwable _ nil))))
+
+(defn- latest-selection-record
+  [roots]
+  ;; Discovery deliberately does not EDN-read every 1–13 MB record.  The
+  ;; producer writes these top-level tokens once; scan them as text, retain
+  ;; only metadata, then parse the single winning record below.
+  (let [records (->> roots
+                     (map #(java.io.File. (str %)))
+                     (filter #(.isDirectory ^java.io.File %))
+                     (mapcat selection-record-files)
+                     (keep (fn [^java.io.File f]
+                             (try
+                               (let [text (String. (Files/readAllBytes (.toPath f)) "UTF-8")
+                                     started-at (second (re-find #":startedAt\s+\"([^\"]+)\"" text))]
+                                 (when (str/includes? text ":schema :wm/selection-record-v1")
+                                   {:file f
+                                    :exercised? (and (str/includes? text ":outer/selection")
+                                                     (not (str/includes? text
+                                                                        ":status :not-exercised")))
+                                    :order-ms (or (instant-ms started-at)
+                                                  (.lastModified f))}))
+                               (catch Throwable _ nil))))
+                     (sort-by (comp - :order-ms)))
+        exercised? :exercised?
+        skipped (count (take-while (complement exercised?) records))]
+    (when-let [{:keys [file order-ms]} (first (filter exercised? records))]
+      (let [record (edn/read-string
+                    (String. (Files/readAllBytes (.toPath ^java.io.File file)) "UTF-8"))]
+        {:record record
+         :order-ms order-ms
+         :source {:path (.getAbsolutePath ^java.io.File file)
+                  :schema (:schema record)
+                  :click/id (:click/id record)
+                  :run/id (:run/id record)
+                  :written-at (or (:startedAt record)
+                                  (str (java.time.Instant/ofEpochMilli
+                                        (.lastModified ^java.io.File file))))
+                  :skipped-without-outer-selection skipped}}))))
+
+(defn- target-kind [id]
+  (cond
+    (str/starts-with? (str id) "M-") :mission
+    (str/starts-with? (str id) "E-") :excursion
+    (str/starts-with? (str id) "T-") :ticket
+    :else :target))
+
+(defn- exclusion-row [stage x]
+  (let [id (or (:target x) (:id x))]
+    {:id id
+     :kind (or (:kind x) (target-kind id))
+     :source {:path (or (get-in x [:source :path])
+                        (get-in x [:evidence :registry-entry :path]))}
+     :ineligible-reason (or (:ineligible-reason x) (:reason x))
+     :exclusion-stage stage}))
+
+(defn- selection-record-projection [record]
+  (let [outer (:outer/selection record)
+        outcome (:selection-outcome record)
+        selected-class (some #(when (= (:class outcome) (:id %)) %)
+                             (:classes outer))]
+    {:schema :wm/selection-record-v1
+     :policy {:kind :outer-selection
+              :meta-selection
+              {:selected {:target-id (:pick outcome)
+                          :policy-id (:class outcome)
+                          :G (:G selected-class)}}}
+     :support (mapv (fn [id] {:id id :kind (target-kind id) :source {:path nil}})
+                    (:outer-field/admitted outer))
+     :excluded (into (mapv #(exclusion-row :field %) (:outer-field/excluded outer))
+                     (map #(exclusion-row :score %) (:outer-score/excluded outer)))}))
+
+(defn- selection-record-frontier [record]
+  (let [classes (get-in record [:outer/selection :classes])]
+    (if (seq classes)
+      {:status :produced
+       :entries (->> classes
+                     (map #(hash-map :target-id (:pick %)
+                                     :policy-id (:id %)
+                                     :G (:G %)))
+                     (sort-by :G)
+                     (map-indexed #(assoc %2 :rank (inc %1)))
+                     vec)}
+      {:absent :selection-record-cascade-frontier-not-retained})))
+
+(defn- cohort-order-ms [found]
+  (or (instant-ms (get-in found [:source :written-at])) 0))
+
 (defn browser-projection
   "Return the bounded browser projection of a retained outer-selection receipt.
 
@@ -214,11 +320,22 @@
   404 {:ok false :error :no-retained-receipt :scanned n}."
   ([] (response default-roots))
   ([roots]
-   (let [found (latest-retained-receipt roots)]
-     (if (:absent found)
+   (let [roots (if (coll? roots) roots [roots])
+         cohort (latest-retained-receipt roots)
+         selection (latest-selection-record roots)
+         use-selection? (and selection
+                             (or (:absent cohort)
+                                 (> (:order-ms selection) (cohort-order-ms cohort))))
+         found (if use-selection? selection cohort)]
+     (if (and (not use-selection?) (:absent found))
        [404 {:ok false :error :no-retained-receipt
              :scanned (:scanned found)}]
-       [200 {:ok true
-             :receipt (browser-projection (:receipt found))
-             :g-frontier (g-frontier (:receipt found))
-             :source (:source found)}]))))
+       (if use-selection?
+         [200 {:ok true
+               :receipt (selection-record-projection (:record found))
+               :g-frontier (selection-record-frontier (:record found))
+               :source (:source found)}]
+         [200 {:ok true
+               :receipt (browser-projection (:receipt found))
+               :g-frontier (g-frontier (:receipt found))
+               :source (:source found)}])))))
