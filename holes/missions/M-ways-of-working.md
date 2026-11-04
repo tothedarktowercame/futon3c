@@ -50,7 +50,7 @@ hand.
 | Way | Probe | State | Notes |
 |---|---|---|---|
 | operator-turns-logged | `operator-turns` | on, holding | 66/66 turns matched over 24 h (codex-7 `2493f725a`) |
-| feedback-reaches-every-participant | `feedback-reaches` | on, failing | 55/247 bells with no return path, one emitter; 3 unproved returns; marks count partial (codex-15 `f391eca2c`, review `965e220fa`) |
+| feedback-reaches-every-participant | `feedback-reaches` | on, failing | 0/212 work bells without a return path; 1/210 returns unproved; replies found 80 of 89 operator turns (codex-15, join on turn id); 70/80 replies fail the marks form, judged from the first marked paragraph (Joe 11-03). Reads wait out futon1b busy 503s (`5b4398a5f`) |
 | stays-alive-and-paid | `zone-health` | on, failing | evidence backup now nightly (futon0 `fa1618c`); bills and runway by hand |
 | one-queryable-self-account | `cascade-standards` | on, failing | s6 readability not built |
 | backlog-understood | `draw-pile` | on, failing | |
@@ -144,6 +144,22 @@ Pattern Cascade page does not show them.
    at the first paragraph that opens with a mark (the proforma puts the ㊥
    gist first) and judges from there; a turn with no marked paragraph is an
    unmarked reply. Applied at review of codex-15's build, not re-belled.
+3b. **Why replies fail the marks form (24 h to 11-04 00:10, 80 replies).**
+   Judged from the first marked paragraph on, so narration is excluded:
+   - first paragraph is not the ㊥ gist: 32 (all four Claude seats);
+   - an unmarked paragraph after the first mark: 12 (claude-5 10, claude-14
+     2), plus 2 unmarked tables/lists (claude-2). These are real: the
+     reply carries on without a mark;
+   - a mark with no bracketed target: 3 (claude-16);
+   - no mark at all: 21, of which codex-9 18 and codex-7 2. Codex seats
+     take operator turns but the proforma is only in CLAUDE.md;
+   - one invented mark: claude-5 wrote 🖖 four times on 11-03 (not in the
+     key; 🈖 explain was meant).
+   10 of 80 pass (claude-5 7, claude-2 3). Review notes: codex-15's join
+   test fails against the old in-reply-to join (checked by substitution).
+   claude-5's commit `815791320` swept in codex-15's uncommitted
+   first-marked-paragraph change, so that change carries claude-5's
+   trailers.
 3a. **intents-tracked review (claude-5, 11-03).** Two defects fixed in
    review, both with tests that fail on the old code:
    - The latest-record test passed even when every record was read, because
