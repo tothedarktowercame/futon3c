@@ -94,6 +94,10 @@ than many of those."
   section in `~/code/CLAUDE.md` (not a git repo, so this is the record) says
   when to load which tool. The brief's staleness is part of the
   intents-are-tracked discovery (codex-7). Re-measure tool calls on 11-10.
+  Brief fixed 11-04 (zai-5, minus40 `c539e72` and `590d054`, futon3c
+  `ce96a852f`): open asks come from the latest 象 record per session, keyed by
+  (session, act id); claude-15's brief went from 12 asks dated 10-11 to 10-14
+  to 12 from its newest session. Warm run 0.6 to 1.2 s.
 
 **13. The selection cluster: Giraffe, 馬, WM.** M-giraffe (the work pool as
 data), the 馬 reading and occurrence lanes (`ma-reading` 805 and
