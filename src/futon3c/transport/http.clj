@@ -1582,6 +1582,17 @@
    Widened to :kimi 2026-09-23: same harness, same silent-completion hazard."
   #{:codex :claude :zai :kimi})
 
+(def ^:private polling-result-callers
+  "Machine callers that consume the original invoke-job's terminal result.
+
+  These callers do not consume completion bellbacks.  Creating an inbox copy
+  for them turns an already-consumed result into durable, ownerless debt."
+  #{"wm-full-loop"})
+
+(defn- polling-result-caller?
+  [caller]
+  (contains? polling-result-callers (some-> caller str str/trim)))
+
 (defn- same-agent-id?
   [a b]
   (= (some-> a str str/trim) (some-> b str str/trim)))
@@ -1617,6 +1628,7 @@
          (terminal-invoke-state? (:state job))
          (contains? auto-bellback-recipient-types recipient-type)
          (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
+         (not (polling-result-caller? (:caller job)))
          (not (auto-bellback-job? job))
          (nil? (:auto-bellback job))
          (not (cancelled-before-start? job))
@@ -1676,6 +1688,7 @@
   [job released-park-records]
   (and (invoke-job-terminal-state? (:state job))
        (inbox-agent? (:caller job))
+       (not (polling-result-caller? (:caller job)))
        (valid-auto-bellback-caller? (:caller job) (:agent-id job) true)
        (not (auto-bellback-job? job))
        (nil? (:auto-bellback job))

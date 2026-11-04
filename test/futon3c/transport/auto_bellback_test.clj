@@ -158,6 +158,29 @@
         (doseq [file (reverse (file-seq root))]
           (io/delete-file file true))))))
 
+(deftest polling-machine-caller-does-not-receive-redundant-completion-inbox
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "polling-caller-inbox"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        caller "wm-full-loop"
+        job-id "polling-caller-completion"]
+    (try
+      (reg/register-agent!
+       {:agent-id caller
+        :type :mock
+        :delivery-mode :inbox
+        :invoke-fn (fn [& _] (throw (ex-info "polling caller invoked" {})))
+        :capabilities [:invoke]})
+      (create-job! {:job-id job-id :agent-id "unregistered-worker" :caller caller})
+      (with-redefs [agency-inbox/inbox-root (constantly root)]
+        (finalize! job-id)
+        (is (nil? (:auto-bellback (job job-id))))
+        (is (empty? (seq (.listFiles (io/file root caller))))
+            "terminal polling already consumed the result; no inbox debt is created"))
+      (finally
+        (doseq [file (reverse (file-seq root))]
+          (io/delete-file file true))))))
+
 (deftest push-caller-completion-delivery-receipt-is-unchanged
   (register-agent! "codex-push" :codex)
   (register-agent! "claude-push" :claude)
