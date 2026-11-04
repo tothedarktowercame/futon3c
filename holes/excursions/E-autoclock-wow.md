@@ -354,6 +354,24 @@ Open for DERIVE:
   or a chain that never reaches one, is refused.
 - Should `turn-capture`'s 495 work jobs really be work?
 
+### Added to the MAP 2026-11-04 (from claude-6)
+
+- **Each minted E-kimi-task changes Giraffe's input.** `futon3c.giraffe.run
+  --source missions-excursions` reads excursions, so every Kimi/Zai
+  dispatch forces a Giraffe re-mint at the next WM click
+  (`futon2` `wm_click.sh:140-215`). On 2026-11-04 that was 7 mints of about
+  3 min each. Joe: "Giraffe is meant to model *my* work." So the gate's
+  tickets-under-a-parent change must keep T- tickets out of Giraffe's
+  population. That stops the churn and keeps Giraffe modelling Joe's items.
+- **A machine caller to cover.** futon2 `operator_focus.clj`
+  `dispatch-reader!` calls `kimi-task.sh` once per focus reading (at most
+  hourly) with no meaningful parent. E-kimi-task-262..306 (about 45) are
+  claude-6's, from area-reading ants and this reader. The gate needs a
+  parent for it, plausibly the WM operator-focus item itself.
+- claude-6's cancelled packet (codex-19, invoke-1793766577166-11826-783e027d,
+  nothing merged) is at `~/notes/wm-next/tests/packet-REQ-ticket.md`, to
+  read when the gate build is written.
+
 ## Next
 
 1. ~~MAP~~ done, above.
