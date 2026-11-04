@@ -1,9 +1,8 @@
 (ns futon3c.wm.meta-latest-test
   "GET /api/alpha/wm/meta-latest's disk half: the newest retained receipt
   across the attempt trees, mtime-ordered, typed absence when none.  The
-  receipt shape (browser-receipt) is futon2's; here it is stubbed by testing
-  response's source block and the raw receipt projection only through
-  latest-retained-receipt.  Run: clojure -M:test -n futon3c.wm.meta-latest-test"
+  browser projection is reconstructed locally from the durable receipt schema.
+  Run: clojure -M:test -n futon3c.wm.meta-latest-test"
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.wm.meta-latest :as ml]))
 
@@ -87,13 +86,25 @@
         [status body] (ml/response [root])]
     (is (= 200 status))
     (is (:ok body))
-    (is (= {:absent :no-task-selection-policy} (:receipt body)))
+    (is (= :wm/outer-task-selection-v1 (get-in body [:receipt :schema])))
+    (is (= [{:id "old/one" :kind :mission :source "s"}]
+           (get-in body [:receipt :support])))
+    (is (= [{:id "old/x" :kind :ticket :source "s"
+             :ineligible-reason :not-live}]
+           (get-in body [:receipt :excluded])))
+    (is (= {:id "old/one"} (get-in body [:receipt :chosen])))
     (is (= "attempt-001" (get-in body [:source :attempt]))))
   (let [root (temp-root)
         [status body] (ml/response [root])]
     (is (= 404 status))
     (is (false? (:ok body)))
     (is (= :no-retained-receipt (:error body)))))
+
+(deftest browser-projection-refuses-an-unknown-receipt-schema
+  (is (= {:absent :unsupported-outer-task-selection-schema
+          :schema :wm/future-selection}
+         (ml/browser-projection {:schema :wm/future-selection
+                                 :support [{:id "must-not-leak"}]}))))
 
 (deftest g-frontier-lists-every-scored-candidate-by-rank
   (let [receipt {:policy {:canonical-g-frontier

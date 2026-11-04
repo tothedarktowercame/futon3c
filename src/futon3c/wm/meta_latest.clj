@@ -155,9 +155,28 @@
              (recur more))))))))
 
 (defn browser-projection
-  "The removed outer selector has no browser projection."
-  [_receipt]
-  {:absent :no-task-selection-policy})
+  "Return the bounded browser projection of a retained outer-selection receipt.
+
+  Projection is intentionally local and pure: the producer that created the
+  historical receipt has been retired, but the durable v1 receipt remains the
+  authority.  The browser needs its identities, ordering, selected policy and
+  typed exclusions, not the large comparison witnesses retained alongside
+  them."
+  [receipt]
+  (if (= :wm/outer-task-selection-v1 (:schema receipt))
+    {:schema (:schema receipt)
+     :policy {:kind (get-in receipt [:policy :kind])
+              :meta-selection
+              (select-keys (get-in receipt [:policy :meta-selection])
+                           [:schema :status :selected :reason
+                            :epistemic-value-nats :ranking])}
+     :support (mapv #(select-keys % [:id :kind :source]) (:support receipt))
+     :excluded (mapv #(select-keys % [:id :kind :source :ineligible-reason])
+                     (:excluded receipt))
+     :chosen (:chosen receipt)
+     :action (:action receipt)}
+    {:absent :unsupported-outer-task-selection-schema
+     :schema (:schema receipt)}))
 
 (defn- cascade-at
   "Locator into the same receipt for the q4 row (under
