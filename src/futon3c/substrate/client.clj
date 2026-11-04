@@ -213,6 +213,22 @@
              (str "&system-as-of=" (encode system-as-of)))))
     options)))
 
+(defn hyperedge-count
+  "Exact row count for HX-TYPE from the server's own include-total count —
+  one limit=1 page, no walk. The cheap change signal the cascade graph cache
+  keys on: measured 2–65 ms per type against the live store (a full walk of
+  mission-scope/pattern is 22 pages). Throws on transport/server failure, so
+  callers fall back to walking."
+  ([type] (hyperedge-count type {}))
+  ([type {:keys [timeout-ms trace-id] :or {timeout-ms 5000}}]
+   (let [body (get-edn! (str (configured-url) "/api/alpha/hyperedges?type=" (encode type)
+                             "&limit=1&include-total=true")
+                        timeout-ms trace-id)]
+     (if-not (integer? (:count body))
+       (throw (ex-info "substrate count response malformed"
+                       {:hyperedge-type type :body-keys (keys body)}))
+       (long (:count body))))))
+
 (defn hyperedges-by-end
   ([end] (hyperedges-by-end end {}))
   ([end {:keys [type valid-as-of system-as-of] :as options}]

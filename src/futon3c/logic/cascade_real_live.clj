@@ -560,13 +560,75 @@
    "cascade/hole-target"
    "mine/meme"])
 
-(defn fetch-graph-sections
-  "Fetch the graph's independent typed walks with exactly two workers. Each
-   result is explicit: an authoritative empty read is `:ok` with zero rows;
-   a failed read is `:failed` with its type and cause. Cursor-linked pages
-   within one `fetch-edges` call remain sequential."
+(def graph-cache-max-age-ms
+  "Backstop re-walk interval: edits that leave a type's COUNT unchanged
+  (endpoint/prop changes on existing edges) are invisible to the count
+  signal, so no entry is reused forever. 30 minutes."
+  (* 30 60 1000))
+
+(def ^:dynamic *graph-count-reader*
+  "fn [hx-type] -> exact row count; throws on failure. Injectable so the
+  graph cache tests need no futon1b. Default: substrate/hyperedge-count."
+  (fn [hx-type]
+    (substrate/hyperedge-count hx-type {:timeout-ms 5000})))
+
+;; hx-type -> {:count n :edges [...] :fetched-at-ms t} for the last GOOD walk,
+;; or {:failed? true} after a walk failed with no good entry to keep. The edges
+;; are reused verbatim while the type's count signal has not moved.
+(defonce graph-section-cache (atom {}))
+
+(defn- graph-count-reads
+  "Parallel exact-count reads. Returns {hx-type count} for the types whose
+  count read succeeded; a failed read is simply absent, which makes the
+  caller fall back to walking that type (today's behaviour)."
+  [types]
+  (let [pool (Executors/newFixedThreadPool 4)]
+    (try
+      (let [tasks (into {}
+                        (map (fn [hx-type]
+                               [hx-type (.submit pool ^Callable
+                                                  (fn []
+                                                    (try {:count (*graph-count-reader* hx-type)}
+                                                         (catch Throwable _ nil))))]))
+                        types)]
+        (into {}
+              (keep (fn [[hx-type task]]
+                      (try
+                        (when-let [result (some-> (.get task 10000 TimeUnit/MILLISECONDS)
+                                                  :count)]
+                          [hx-type (long result)])
+                        (catch Throwable _
+                          (.cancel task true)
+                          nil))))
+              tasks))
+      (finally
+        (.shutdownNow pool)))))
+
+(defn- graph-walk-needed?
+  "True when HX-TYPE must be re-walked: no cache entry, a failed placeholder,
+  a moved count (including a failed count read, which yields nil), or an entry
+  past the max-age backstop."
+  [entry count-now now-ms]
+  (boolean (or (nil? entry)
+               (:failed? entry)
+               (not= (:count entry) count-now)
+               (> (- now-ms (:fetched-at-ms entry 0)) graph-cache-max-age-ms))))
+
+(defn graph-sections*
+  "fetch-graph-sections with its cache accounting exposed. Returns
+  {:fetches {hx-type {:status ... :edges [...]}} :cache {:reused [...] :rewalked [...]}}.
+  A type whose count signal has not moved reuses its cached edges; a failed
+  walk reports :failed exactly as an uncached walk would and never overwrites
+  a good cache entry."
   []
-  (let [pool (Executors/newFixedThreadPool (int graph-fetch-workers))]
+  (let [now-ms   (System/currentTimeMillis)
+        counts   (graph-count-reads graph-hyperedge-types)
+        cached   @graph-section-cache
+        rewalk   (filter (fn [hx-type]
+                           (graph-walk-needed? (get cached hx-type) (get counts hx-type) now-ms))
+                         graph-hyperedge-types)
+        reuse    (remove (set rewalk) graph-hyperedge-types)
+        pool     (Executors/newFixedThreadPool (int graph-fetch-workers))]
     (try
       (let [tasks (into {}
                         (map (fn [hx-type]
@@ -585,24 +647,52 @@
                                                 :error {:message (or (ex-message t) (str t))
                                                         :class (.getName (class t))
                                                         :data (some-> (ex-data t) pr-str)}}))))]))
-                        graph-hyperedge-types)]
-        (into {}
-              (map (fn [[hx-type task]]
-                     [hx-type
-                      (try
-                        (.get task graph-fetch-deadline-ms TimeUnit/MILLISECONDS)
-                        (catch TimeoutException t
-                          (.cancel task true)
-                          {:status :failed
-                           :hyperedge-type hx-type
-                           :edges []
-                           :error {:message (str "walk exceeded " graph-fetch-deadline-ms
-                                                 "ms graph deadline")
-                                   :class (.getName (class t))
-                                   :data nil}}))])
-                   tasks)))
+                        rewalk)
+        results (into {}
+                      (map (fn [[hx-type task]]
+                             [hx-type
+                              (try
+                                (.get task graph-fetch-deadline-ms TimeUnit/MILLISECONDS)
+                                (catch TimeoutException t
+                                  (.cancel task true)
+                                  {:status :failed
+                                   :hyperedge-type hx-type
+                                   :edges []
+                                   :error {:message (str "walk exceeded " graph-fetch-deadline-ms
+                                                         "ms graph deadline")
+                                           :class (.getName (class t))
+                                           :data nil}}))])
+                           tasks))]
+        ;; a successful walk updates the cache; a failed one never overwrites
+        ;; a good entry — it only leaves a failed placeholder when there was
+        ;; nothing good to keep, so the next call retries it
+        (doseq [[hx-type result] results]
+          (if (= :ok (:status result))
+            (swap! graph-section-cache assoc hx-type
+                   {:count (or (get counts hx-type) (count (:edges result)))
+                    :edges (:edges result)
+                    :fetched-at-ms (System/currentTimeMillis)})
+            (when-not (and (contains? @graph-section-cache hx-type)
+                           (not (:failed? (get @graph-section-cache hx-type))))
+              (swap! graph-section-cache assoc hx-type {:failed? true}))))
+        {:fetches (merge (into {} (map (fn [hx-type]
+                                         [hx-type {:status :ok
+                                                   :hyperedge-type hx-type
+                                                   :edges (:edges (get cached hx-type))}]))
+                               reuse)
+                         results)
+         :cache {:reused (vec (sort reuse)) :rewalked (vec (sort rewalk))}})
       (finally
         (.shutdownNow pool)))))
+
+(defn fetch-graph-sections
+  "Fetch the graph's independent typed walks, reusing cached edges for any
+  type whose exact-count change signal has not moved (and whose entry is under
+  the max-age backstop). Each result is explicit: an authoritative empty read
+  is `:ok` with zero rows; a failed read is `:failed` with its type and cause.
+  Cursor-linked pages within one `fetch-edges` call remain sequential."
+  []
+  (:fetches (graph-sections*)))
 
 (defn- fetched-edges [fetches hx-type]
   (:edges (get fetches hx-type)))
@@ -625,7 +715,7 @@
    landed + queryable (`pattern/library`, `pattern/clause`) but not yet cited into the
    cascade body (O4 enrichment, post-campaign)."
   []
-  (let [fetches  (fetch-graph-sections)
+  (let [{fetches :fetches cache :cache} (graph-sections*)
         lineage  (lineage-section (fetched-edges fetches "clock/clocked-on"))
         clusters (cluster-section (fetched-edges fetches "cascade/cluster-member"))
         holes    (hole-section (fetched-edges fetches "cascade/hole-target"))
@@ -635,6 +725,7 @@
         tickets  (tickets-section (fetched-edges fetches "clock/clocked-on"))]
     {:as-of-ms (System/currentTimeMillis)
      :section-status (fetch-status fetches)
+     :cache cache
      :lineage  lineage
      :clusters clusters
      :holes    holes

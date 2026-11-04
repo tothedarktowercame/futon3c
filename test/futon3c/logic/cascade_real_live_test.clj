@@ -274,7 +274,10 @@
 (deftest graph-fetches-are-bounded-at-two
   (let [active (atom 0)
         max-active (atom 0)]
-    (with-redefs [live/fetch-edges
+    ;; counts unavailable (reader throws): every type falls back to a walk
+    (reset! live/graph-section-cache {})
+    (with-redefs [live/*graph-count-reader* (fn [_] (throw (ex-info "no substrate" {})))
+                  live/fetch-edges
                   (fn [_]
                     (let [n (swap! active inc)]
                       (swap! max-active max n)
@@ -286,6 +289,79 @@
         (is (= 2 @max-active))
         (is (every? #(= :ok (:status %)) (vals results)))))))
 
+(def ^:private no-substrate-counts
+  "A count reader that never answers, so every test walk is a fallback walk."
+  (fn [_] (throw (ex-info "no substrate for test" {}))))
+
+(deftest graph-cache-second-call-walks-nothing-and-is-identical  ; A
+  (reset! live/graph-section-cache {})
+  (let [walked (atom [])]
+    (with-redefs [live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges (fn [hx-type] (swap! walked conj hx-type) [{:hx/endpoints []}])
+                  live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (let [g1 (live/cascade-real-graph)
+            g2 (live/cascade-real-graph)]
+        (is (= 7 (count @walked)) "first call walks all seven types once")
+        (is (= [] (:rewalked (:cache g2))) "second call re-walks nothing")
+        (is (= 7 (count (:reused (:cache g2)))) "second call reuses all seven")
+        (is (= (dissoc g1 :as-of-ms :cache) (dissoc g2 :as-of-ms :cache))
+            "identical sections, counts and section-status (only :cache differs)")))))
+
+(deftest graph-cache-rewalks-only-the-type-whose-count-moved  ; B
+  (reset! live/graph-section-cache {})
+  (let [counts (atom {"mission-scope/pattern" 1})
+        walked (atom [])]
+    (with-redefs [live/*graph-count-reader* (fn [hx-type] (get @counts hx-type 0))
+                  live/fetch-edges (fn [hx-type] (swap! walked conj hx-type) [{:hx/endpoints []}])
+                  live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (live/cascade-real-graph)
+      (reset! walked [])
+      (swap! counts assoc "held/on-mission" 5)  ; one append the count signal sees
+      (let [g2 (live/cascade-real-graph)]
+        (is (= ["held/on-mission"] @walked))
+        (is (= ["held/on-mission"] (:rewalked (:cache g2))))
+        (is (= 6 (count (:reused (:cache g2)))))))))
+
+(deftest graph-cache-max-age-backstop-rewalks-unchanged-count  ; C
+  (reset! live/graph-section-cache {})
+  (with-redefs [live/*graph-count-reader* (constantly 1)
+                live/fetch-edges (fn [_] [{:hx/endpoints []}])
+                live/tickets-section (fn [_] {:count-total 0 :items []})]
+    (live/cascade-real-graph)
+    ;; age one entry past the backstop without touching its count
+    (swap! live/graph-section-cache update "clock/clocked-on"
+           assoc :fetched-at-ms (- (System/currentTimeMillis) live/graph-cache-max-age-ms 1))
+    (let [g2 (live/cascade-real-graph)]
+      (is (= ["clock/clocked-on"] (:rewalked (:cache g2)))
+          "count unchanged, entry stale: re-walked anyway"))))
+
+(deftest graph-cache-count-failure-falls-back-and-failed-walk-keeps-entry  ; D
+  (reset! live/graph-section-cache {})
+  (let [fail-walk? (atom nil)
+        good-entry (atom nil)]
+    (with-redefs [live/*graph-count-reader*
+                  (fn [hx-type]
+                    (if (= "mine/meme" hx-type)
+                      (throw (ex-info "count read failed" {}))  ; fallback: walk it
+                      1))
+                  live/fetch-edges
+                  (fn [hx-type]
+                    (if (and (= "mine/meme" hx-type) @fail-walk?)
+                      (throw (ex-info "walk failed too" {}))
+                      [{:hx/endpoints [hx-type]}]))
+                  live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (live/cascade-real-graph)
+      (reset! good-entry (get @live/graph-section-cache "mine/meme"))
+      (is (vector? (:edges @good-entry)) "good entry cached after the first walk")
+      ;; now the count read still fails AND the walk fails
+      (reset! fail-walk? true)
+      (let [g2 (live/cascade-real-graph)]
+        (is (= ["mine/meme"] (:rewalked (:cache g2))
+                ) "failed count read forces a walk attempt")
+        (is (= :failed (get-in g2 [:section-status "mine/meme" :status])))
+        (is (= @good-entry (get @live/graph-section-cache "mine/meme"))
+            "the failed walk did not overwrite the good cache entry")))))
+
 (deftest graph-fetch-failure-is-an-explicit-honest-hole
   (let [counts {"clock/clocked-on" 67
                 "cascade/cluster-member" 117
@@ -293,12 +369,14 @@
                 "code/v05/mined-move" 177
                 "held/on-mission" 124
                 "mission-scope/pattern" 971}]
-    (with-redefs [live/fetch-edges
+    (with-redefs [live/*graph-count-reader* no-substrate-counts
+                  live/fetch-edges
                   (fn [hx-type]
                     (if (= "mine/meme" hx-type)
                       (throw (ex-info "induced one-section timeout" {:timeout-ms 1}))
                       (vec (repeat (get counts hx-type) {:hx/endpoints []}))))
                   live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (reset! live/graph-section-cache {})
       (let [graph (live/cascade-real-graph)
             status (:section-status graph)]
         (is (= :failed (get-in status ["mine/meme" :status])))
