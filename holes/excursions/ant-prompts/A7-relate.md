@@ -22,6 +22,7 @@ Areas (pick from this list; `other:<short name>` only when none fits):
 - `象`: operator-turn capture and labelling (象, turn records, the reply proforma).
 - `futon6`: futon6 and Rob's mfuton work, the Lean mission/math pipeline.
 - `voxterm`: the voice terminal.
+- `futon5`: futon5's cellular-automaton research: MetaCA, xenotypes, propagators, TPG evolution, and its reproduction notebooks.
 
 Rules for this kind:
 - Judge by what the item's work is FOR, from its own text, not by words it shares with an area.
