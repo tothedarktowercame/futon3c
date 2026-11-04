@@ -224,9 +224,12 @@
    (let [body (get-edn! (str (configured-url) "/api/alpha/hyperedges?type=" (encode type)
                              "&limit=1&include-total=true")
                         timeout-ms trace-id)]
-     (if-not (integer? (:count body))
-       (throw (ex-info "substrate count response malformed"
-                       {:hyperedge-type type :body-keys (keys body)}))
+     ;; without an exact total, :count is just the page size (1), which would
+     ;; never move and would freeze the cache until its max-age backstop
+     (if-not (and (integer? (:count body)) (true? (:count-exact? body)))
+       (throw (ex-info "substrate count response malformed or not exact"
+                       {:hyperedge-type type :body-keys (keys body)
+                        :count-exact? (:count-exact? body)}))
        (long (:count body))))))
 
 (defn hyperedges-by-end

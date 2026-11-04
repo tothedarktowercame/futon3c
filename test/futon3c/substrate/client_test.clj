@@ -166,3 +166,12 @@
       #(is (thrown-with-msg? clojure.lang.ExceptionInfo #"timed out"
                             (sut/memory-projection ["memory"] {:timeout-ms 10}))))
     (is (.isCancelled pending))))
+
+(deftest hyperedge-count-requires-an-exact-total
+  (let [get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
+    (with-redefs-fn {get-edn-var (fn [& _] {:count 2146 :count-exact? true})}
+      #(is (= 2146 (sut/hyperedge-count "mission-scope/pattern"))))
+    ;; a page-size count (include-total ignored) must not pass as a change signal
+    (with-redefs-fn {get-edn-var (fn [& _] {:count 1 :count-exact? false})}
+      #(is (thrown? clojure.lang.ExceptionInfo
+                    (sut/hyperedge-count "mission-scope/pattern"))))))
