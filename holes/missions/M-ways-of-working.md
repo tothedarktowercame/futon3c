@@ -155,10 +155,15 @@ Pattern Cascade page does not show them.
      2), plus 2 unmarked tables/lists (claude-2). These are real: the
      reply carries on without a mark;
    - a mark with no bracketed target: 3 (claude-16);
-   - no mark at all: 21, of which codex-9 18 and codex-7 2. Codex seats
-     take operator turns but the proforma is only in CLAUDE.md;
+   - no mark at all: 21, of which codex-9 18 and codex-7 2. The proforma
+     was in `~/code/AGENTS.md`, but Codex reads AGENTS.md only from the git
+     root down to its working directory, and these seats start in `~/` and
+     `~/code/mfuton-share`. Fixed 11-04: the proforma is one file,
+     `~/code/reply-proforma.md`, @-imported by `~/code/CLAUDE.md` and
+     symlinked as `~/.codex/AGENTS.md` (a `codex exec` from `~/` quotes it);
    - one invented mark: claude-5 wrote 🖖 four times on 11-03 (not in the
-     key; 🈖 explain was meant).
+     key; 🈖 explain was meant). Joe: it recurs, so the proforma now says
+     so. If the note does not stop it, replace 🖖 with 🈖 in code.
    10 of 80 pass (claude-5 7, claude-2 3). Review notes: codex-15's join
    test fails against the old in-reply-to join (checked by substitution).
    claude-5's commit `815791320` swept in codex-15's uncommitted
