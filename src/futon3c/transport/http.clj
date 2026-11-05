@@ -58,6 +58,7 @@
   (:require [futon1b-harness :as harness]
             [futon3c.evidence.origin :as origin]
             [futon3c.transport.protocol :as proto]
+            [futon3c.runtime.provenance :as provenance]
             [futon3c.apm.conductor-binding :as conductor-binding]
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
@@ -9907,6 +9908,14 @@
     (json-response 200 (assoc (health) :ok true))
     (jvm-incidents-unavailable-response)))
 
+(defn handle-provenance
+  "GET /api/alpha/provenance — T-jvm-provenance-before-multi-jvm: this
+  JVM states what code it is. Checkout, branch, head sha, dirty flag,
+  every path live-loaded since start, port and repo, so two JVMs of the
+  same repo can be told apart."
+  [config]
+  (json-response 200 (assoc (provenance/snapshot config) :ok true)))
+
 (def ^:private morning-brief-symbols
   {:queue-item! 'futon2.aif.morning-brief/queue-item!
    :review! 'futon2.aif.morning-brief/review!
@@ -13097,6 +13106,10 @@
       (and (= :get method) (= "/api/alpha/jvm/health" uri))
       (handle-jvm-health request)
 
+      ;; T-jvm-provenance-before-multi-jvm: every JVM states its provenance.
+      (and (= :get method) (= "/api/alpha/provenance" uri))
+      (handle-provenance config)
+
       (and (= :post method) (= "/api/alpha/morning-brief/review" uri))
       (handle-morning-brief-review request)
 
@@ -13470,6 +13483,10 @@
 
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
+  ;; T-jvm-provenance-before-multi-jvm: from the first request on, every
+  ;; live load-file into this JVM is recorded and served at
+  ;; /api/alpha/provenance. Idempotent across handler rebuilds.
+  (provenance/install-load-recording!)
   (let [started-at (Instant/now)
         _ (when *restore-clock-decisions?*
             (when-let [backend (evidence-store-for-config config)]
