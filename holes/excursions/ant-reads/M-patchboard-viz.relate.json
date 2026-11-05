@@ -1,0 +1,29 @@
+{
+ "stem": "M-patchboard-viz",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-patchboard-viz",
+  "kind": "relate",
+  "what": {
+   "value": "Build a visualizer of the futon5 propagator/MetaCA constraint model (FREE/CHAIN/UNSAT patch board) so the middle wiring layer is visible before judging the ants' results.",
+   "cite": "/home/joe/code/futon2/holes/M-patchboard-viz.md:12",
+   "quote": "time, a model of the middle layer that is *readable off a diagram*. The viz renders that"
+  },
+  "area": {
+   "value": "other:propagator-viz",
+   "cite": "/home/joe/code/futon2/holes/M-patchboard-viz.md:19",
+   "quote": "The propagator is a **constraint system**: the operator `bit[f(k)] := ¬bit[k]` asserts"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

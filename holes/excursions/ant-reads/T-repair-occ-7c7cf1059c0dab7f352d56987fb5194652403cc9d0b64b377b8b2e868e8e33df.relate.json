@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-7c7cf1059c0dab7f352d56987fb5194652403cc9d0b64b377b8b2e868e8e33df",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-7c7cf1059c0dab7f352d56987fb5194652403cc9d0b64b377b8b2e868e8e33df",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore after WM abstention at :selection because M-memory-retrieval was an unknown-class target",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-7c7cf1059c0dab7f352d56987fb5194652403cc9d0b64b377b8b2e868e8e33df.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-7c7cf1059c0dab7f352d56987fb5194652403cc9d0b64b377b8b2e868e8e33df.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

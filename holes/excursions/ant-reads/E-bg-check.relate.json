@@ -1,0 +1,29 @@
+{
+ "stem": "E-bg-check",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-bg-check",
+  "kind": "relate",
+  "what": {
+   "value": "A 30-second smoke test confirming the durable futon3c background-process facility is healthy in a freshly restarted JVM.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-bg-check.md:5",
+   "quote": "**Purpose.** A 30-second smoke test to confirm the durable background-process facility is healthy in a freshly-restarted futon3c JVM, and that a launched process is parented to the JVM (so it will survive pouch teardown)."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-bg-check.md:5",
+   "quote": "**Purpose.** A 30-second smoke test to confirm the durable background-process facility is healthy in a freshly-restarted futon3c JVM, and that a launched process is parented to the JVM (so it will survive pouch teardown)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

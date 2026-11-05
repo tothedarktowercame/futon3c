@@ -1,0 +1,37 @@
+{
+ "stem": "T-repair-occ-a3438ff06dcbdfc85f021c305f089a974ef545762a481fba7a3d329389556782",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-a3438ff06dcbdfc85f021c305f089a974ef545762a481fba7a3d329389556782",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an unavailable attempt-evidence source when the War Machine closed M-autonomous-pattern-lifecycle",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a3438ff06dcbdfc85f021c305f089a974ef545762a481fba7a3d329389556782.md:13",
+   "quote": "Attempt evidence source unavailable"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a3438ff06dcbdfc85f021c305f089a974ef545762a481fba7a3d329389556782.md:9",
+   "quote": "Target: M-autonomous-pattern-lifecycle; stage: :close."
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a3438ff06dcbdfc85f021c305f089a974ef545762a481fba7a3d329389556782.md:5",
+   "quote": "Parent: M-autonomous-pattern-lifecycle"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-actuator-bindings-authoring",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-actuator-bindings-authoring",
+  "kind": "relate",
+  "what": {
+   "value": "Author spec-derived per-box substrate bindings in actuator_a3.clj so a done mission's CLean spec becomes testable through build-match, measuring spec-to-built drift.",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-bindings-authoring.md:16",
+   "quote": "Make a *done* mission testable through **build-match** by authoring the per-box"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-bindings-authoring.md:18",
+   "quote": "**drift** between the authored CLean spec and what was actually built."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

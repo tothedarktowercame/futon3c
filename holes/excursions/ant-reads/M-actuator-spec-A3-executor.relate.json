@@ -1,0 +1,29 @@
+{
+ "stem": "M-actuator-spec-A3-executor",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "M-actuator-spec-A3-executor",
+  "kind": "relate",
+  "what": {
+   "value": "Spec for A3, a general content-free actuator that consumes reviewed blueprint corpora and executes them into real substrate change.",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:19",
+   "quote": "A3 is a **general, content-free** executor. Given a reviewed blueprint it runs"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-executor.md:14",
+   "quote": "**Tracks:** `futon2/holes/aif-wiring-actuator.html`. Consumes the reviewed"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

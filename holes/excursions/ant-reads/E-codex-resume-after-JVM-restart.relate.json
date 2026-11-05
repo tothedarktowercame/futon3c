@@ -1,0 +1,29 @@
+{
+ "stem": "E-codex-resume-after-JVM-restart",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-codex-resume-after-JVM-restart",
+  "kind": "relate",
+  "what": {
+   "value": "Give codex agents a JVM-owned supervisor (a 'codex pouch' mirroring agent_pouch) so resume after JVM crash is automatic rather than manual.",
+   "cite": "/home/joe/code/futon3c/holes/E-codex-resume-after-JVM-restart.md:1",
+   "quote": "# E-codex-resume-after-JVM-restart — give codex a JVM-owned supervisor so it resumes like claude"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/E-codex-resume-after-JVM-restart.md:1",
+   "quote": "# E-codex-resume-after-JVM-restart — give codex a JVM-owned supervisor so it resumes like claude"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

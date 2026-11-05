@@ -1,0 +1,37 @@
+{
+ "stem": "M-formal-patterns",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-formal-patterns",
+  "kind": "relate",
+  "what": {
+   "value": "Formalize design patterns as signed graphs whose coherence is governed by a proved signed-cycle balance theorem, with the MetaCA propagator as shared formal core.",
+   "cite": "/home/joe/code/futon5/holes/M-formal-patterns.md:15",
+   "quote": "**One-line:** Formalize design patterns as *signed graphs* whose coherence is governed by"
+  },
+  "area": {
+   "value": "futon5",
+   "cite": "/home/joe/code/futon5/holes/M-formal-patterns.md:15",
+   "quote": "**One-line:** Formalize design patterns as *signed graphs* whose coherence is governed by"
+  },
+  "also": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon5/holes/M-formal-patterns.md:13",
+   "quote": "- [ ] The arbitrary-edge-sign balance theorem builds in Lean without `sorry`, `admit`, `axiom`, or finite-case `decide` substitution."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

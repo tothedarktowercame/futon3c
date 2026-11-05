@@ -1,0 +1,29 @@
+{
+ "stem": "M-experiment-build-match",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "M-experiment-build-match",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to register experiments the way folds are already registered, correlating the Lean spec with the Clojure implementation via operational_witness build-match.",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:1",
+   "quote": "# M-experiment-build-match — register experiments the way we already register folds"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-experiment-build-match.md:11",
+   "quote": "the Lean system and the Clojure implementation correlated more strongly — the"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

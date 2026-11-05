@@ -1,0 +1,29 @@
+{
+ "stem": "M-u88-contextual-preferences",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-u88-contextual-preferences",
+  "kind": "relate",
+  "what": {
+   "value": "Implement and independently review the fixture-scoped contextual-preferences interpreter (worklist U88) in futon2 AIF",
+   "cite": "/home/joe/code/futon2/holes/missions/M-u88-contextual-preferences.md:19",
+   "quote": "Activation open hole: implement and independently review the fixture-scoped contextual-preferences interpreter described below."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-u88-contextual-preferences.md:8",
+   "quote": "- [x] `futon2.aif.contextual-preferences-test` passes 9 tests / 152 assertions and the API exposes no `mark-done` operation."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

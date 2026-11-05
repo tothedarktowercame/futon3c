@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-25dc2faf0ef641860133dc7c67b828163c3415d7ff980cd04861f62669920a38",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-25dc2faf0ef641860133dc7c67b828163c3415d7ff980cd04861f62669920a38",
+  "kind": "relate",
+  "what": {
+   "value": "Correct a request-timeout failure when the War Machine closes mission M-aif-policy-conditioned-eig",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-25dc2faf0ef641860133dc7c67b828163c3415d7ff980cd04861f62669920a38.md:5",
+   "quote": "Parent: M-aif-policy-conditioned-eig"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-25dc2faf0ef641860133dc7c67b828163c3415d7ff980cd04861f62669920a38.md:9",
+   "quote": "Target: M-aif-policy-conditioned-eig; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

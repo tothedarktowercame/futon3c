@@ -1,0 +1,29 @@
+{
+ "stem": "M-fold-ansatz",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-fold-ansatz",
+  "kind": "relate",
+  "what": {
+   "value": "Consolidates the embedding-fold (JAX/GFlowNet) landscape and evaluates a trained structural embedding as an ansatz for the futon2 AIF fold.",
+   "cite": "/home/joe/code/futon2/holes/M-fold-ansatz.md:1",
+   "quote": "# Mission: the embedding fold as an ansatz (M-fold-ansatz)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-fold-ansatz.md:11",
+   "quote": "- [ ] Any retained implementation plugs into `futon2.aif.fold` and preserves explicit `:policy-holes` for wiring it cannot discharge."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

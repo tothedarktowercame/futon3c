@@ -1,0 +1,29 @@
+{
+ "stem": "M-differentiable-math",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-differentiable-math",
+  "kind": "relate",
+  "what": {
+   "value": "Pilot a ground metric (continuity via BGE embeddings, curvature via Ollivier–Ricci) on the real math.SE hypergraph data, informing the substrate-metric campaign.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-differentiable-math.md:1",
+   "quote": "# Mission: Differentiable Mathematics — a ground-metric pilot on real math embeddings"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-differentiable-math.md:1",
+   "quote": "# Mission: Differentiable Mathematics — a ground-metric pilot on real math embeddings"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

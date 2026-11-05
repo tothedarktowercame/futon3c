@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-c0506402970aeb4a0a50e1d895d7829c8cf6a30d9361431694d48499f8e98416",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761345255-11690-8d04f87a",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-c0506402970aeb4a0a50e1d895d7829c8cf6a30d9361431694d48499f8e98416",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct a close-stage 'request timed out' failure on M-self-documenting-stack.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-c0506402970aeb4a0a50e1d895d7829c8cf6a30d9361431694d48499f8e98416.md:11",
+   "quote": "request timed out"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-c0506402970aeb4a0a50e1d895d7829c8cf6a30d9361431694d48499f8e98416.md:9",
+   "quote": "Target: M-self-documenting-stack; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

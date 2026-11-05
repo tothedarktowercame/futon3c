@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-d2f65574326c6cf91328d4061f10e695abdb63444df18c2fa78a8ead4dd54812",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "T-repair-occ-d2f65574326c6cf91328d4061f10e695abdb63444df18c2fa78a8ead4dd54812",
+  "kind": "relate",
+  "what": {
+   "value": "WM repair ticket (parent M-pattern-posteriors): correct invalid fold output — the construction fold wiring is missing or malformed at the construction stage.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d2f65574326c6cf91328d4061f10e695abdb63444df18c2fa78a8ead4dd54812.md:13",
+   "quote": "Construction fold wiring is missing or malformed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d2f65574326c6cf91328d4061f10e695abdb63444df18c2fa78a8ead4dd54812.md:9",
+   "quote": "Target: M-pattern-posteriors; stage: :construction."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

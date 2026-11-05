@@ -1,0 +1,29 @@
+{
+ "stem": "E-aif-ants-epistemics",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-aif-ants-epistemics",
+  "kind": "relate",
+  "what": {
+   "value": "Bring the epistemic half of the futon2 AIF ant controller online (measured inert vs its causal scoring)",
+   "cite": "/home/joe/code/futon2/holes/E-aif-ants-epistemics.md:10",
+   "quote": "The ant controller has **high causal authority and an inert epistemic half**."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-aif-ants-epistemics.md:6",
+   "quote": "**Parent:** `M-aif-stack.md`. **Registration machinery:** `M-experiment-build-match.md`."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

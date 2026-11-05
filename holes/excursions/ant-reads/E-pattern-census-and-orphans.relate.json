@@ -1,0 +1,29 @@
+{
+ "stem": "E-pattern-census-and-orphans",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-pattern-census-and-orphans",
+  "kind": "relate",
+  "what": {
+   "value": "Holds the non-APM findings from a pattern-store census checking the store and the futon3 flexiarg library agree.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pattern-census-and-orphans.md:6",
+   "quote": "direction**, to hold the non-APM findings from today's store census so the"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pattern-census-and-orphans.md:9",
+   "quote": "**Surface:** `futon3c/scripts/pattern_store_census.py`, the pattern store"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

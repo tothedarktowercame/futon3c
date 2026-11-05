@@ -1,0 +1,31 @@
+{
+ "stem": "E-cascade-sampler-sampler",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-cascade-sampler-sampler",
+  "kind": "relate",
+  "what": {
+   "value": "Run a contest of cascade-sampling methods for budget-6 cascades under one yardstick (sampler over samplers)",
+   "cite": "/home/joe/code/futon2/holes/E-cascade-sampler-sampler.md:10",
+   "quote": "afternoon — \"sufficiently well specified to hand off\"; claude-1 authored"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-cascade-sampler-sampler.md:3",
+   "quote": "Parent: `M-wm-policies` (the build); resolves-candidate for the semilattice-vs-"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

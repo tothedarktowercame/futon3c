@@ -1,0 +1,29 @@
+{
+ "stem": "M-inbox-zero-claim-lifecycle",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-inbox-zero-claim-lifecycle",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to sort out inbox-zero's claim lifecycle so one seat's unfinished edits cannot be committed under another seat's name.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-inbox-zero-claim-lifecycle.md:18",
+   "quote": "Inbox-zero can commit one seat's unfinished edits under another seat's name."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-inbox-zero-claim-lifecycle.md:6",
+   "quote": "**Repos:** futon3c, futon3/inbox-zero-lib; operational state in storage/inbox-zero."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

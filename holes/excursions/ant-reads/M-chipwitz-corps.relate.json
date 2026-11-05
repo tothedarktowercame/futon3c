@@ -1,0 +1,35 @@
+{
+ "stem": "M-chipwitz-corps",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-chipwitz-corps",
+  "kind": "relate",
+  "what": {
+   "value": "A warranted-work control layer: pattern warrants gate autonomous agent work in the WM pilot loop, with typed PSR/PXR/PUR records as evidence.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-chipwitz-corps.md:13",
+   "quote": "**Owner:** Joe + fable-1 (ground control); develops as-we-go alongside the WM pilot loop"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-chipwitz-corps.md:13",
+   "quote": "**Owner:** Joe + fable-1 (ground control); develops as-we-go alongside the WM pilot loop"
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-chipwitz-corps.md:12",
+   "quote": "- [ ] The mission names the `library/corps/` disciplines this layer operationalizes and links each to its protocol or guard."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

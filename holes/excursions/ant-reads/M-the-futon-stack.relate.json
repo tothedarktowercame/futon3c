@@ -1,0 +1,29 @@
+{
+ "stem": "M-the-futon-stack",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-the-futon-stack",
+  "kind": "relate",
+  "what": {
+   "value": "The whole-stack thesis mission: a homeostatic software agent that maintains itself via an Active Inference loop (Argument=priors, Invariants=precision, Missions=policy).",
+   "cite": "/home/joe/code/futon0/holes/missions/M-the-futon-stack.md:12",
+   "quote": "**A homeostatic software agent.** Specifically: a software system that participates in its own homeostasis via an Active Inference loop"
+  },
+  "area": {
+   "value": "other:stack",
+   "cite": "/home/joe/code/futon0/holes/missions/M-the-futon-stack.md:14",
+   "quote": "THE-STACK.md (2026-04-22) gives the architectural decomposition: thesis **S0** = a system that participates in its own maintenance"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

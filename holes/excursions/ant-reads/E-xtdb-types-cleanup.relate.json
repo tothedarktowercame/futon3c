@@ -1,0 +1,29 @@
+{
+ "stem": "E-xtdb-types-cleanup",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-xtdb-types-cleanup",
+  "kind": "relate",
+  "what": {
+   "value": "Note recording the XTDB types-cleanup inventory and safety check; the cleanup itself was not performed because no code path can perform it.",
+   "cite": "/home/joe/code/futon1b/holes/E-xtdb-types-cleanup.md:9",
+   "quote": "**Outcome: the cleanup was NOT performed, because there is no code path that can"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon1b/holes/E-xtdb-types-cleanup.md:1",
+   "quote": "# E-xtdb-types-cleanup"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-futon-workshop-demo",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-futon-workshop-demo",
+  "kind": "relate",
+  "what": {
+   "value": "Assurance excursion for Joe's live #futon workshop — verifying the logistics checklist (IRC attach, agent liveness, mesh, cards) is actually true.",
+   "cite": "/home/joe/code/futon3c/holes/E-futon-workshop-demo.md:4",
+   "quote": "**Owner:** claude-14 (prep apparatus); **Joe runs the room.**"
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon3c/holes/E-futon-workshop-demo.md:5",
+   "quote": "**Charter:** Joe's workshop workup (abstract + session plan + logistics checklist),"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

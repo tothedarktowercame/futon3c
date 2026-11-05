@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d",
+  "kind": "relate",
+  "what": {
+   "value": "Address a REQUEST_CHANGES review on M-autonomous-pattern-lifecycle whose orchestration test namespace still fails",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d.md:11",
+   "quote": "FULL_LOOP_REVIEW: REQUEST_CHANGES required orchestration test namespace still fails with 25 failures and 12 errors"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d.md:9",
+   "quote": "Target: M-autonomous-pattern-lifecycle; stage: :independent-review."
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-9b6c9871d59bde364a23f9c346ddc708e2f68f4a026d9afe0aac6c9d538f087d.md:5",
+   "quote": "Parent: M-autonomous-pattern-lifecycle"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

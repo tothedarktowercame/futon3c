@@ -1,0 +1,29 @@
+{
+ "stem": "E-superpod-hardening",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-superpod-hardening",
+  "kind": "relate",
+  "what": {
+   "value": "Track defects from running the futon6 mark7 harness off-Superpod so Rob's 20-hour Superpod window doesn't hit them",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-superpod-hardening.md:7",
+   "quote": "surfaces is one Rob's 20 h window doesn't have to. This note tracks those"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-superpod-hardening.md:1",
+   "quote": "# E-superpod-hardening — findings from running the mark7 harness off-Superpod"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

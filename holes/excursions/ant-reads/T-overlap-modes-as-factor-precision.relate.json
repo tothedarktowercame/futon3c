@@ -1,0 +1,29 @@
+{
+ "stem": "T-overlap-modes-as-factor-precision",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793762075799-11735-3400349c",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "T-overlap-modes-as-factor-precision",
+  "kind": "relate",
+  "what": {
+   "value": "Investigate whether cascade overlap modes (blend/selective/containment) are implemented as precision on shared factors, per an active-inference reading",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:5",
+   "quote": "Parent: M-aif-a-matrix-faithfulness"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-overlap-modes-as-factor-precision.md:5",
+   "quote": "Parent: M-aif-a-matrix-faithfulness"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

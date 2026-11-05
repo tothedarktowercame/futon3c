@@ -1,0 +1,29 @@
+{
+ "stem": "M-peradam-grounding",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "M-peradam-grounding",
+  "kind": "relate",
+  "what": {
+   "value": "Wires the certified peradam discharge into the futonzero-alphazero learning loop's value channel, grounding reward in the world; constituent of C-pudding-prover giving M-pudding-peradams its first machine consumer.",
+   "cite": "/home/joe/code/futon7/holes/M-peradam-grounding.md:11",
+   "quote": "planning session over `futonzero-alphazero.md`; PM handoff → Opus pool, build → codex pool)."
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/code/futon7/holes/M-peradam-grounding.md:11",
+   "quote": "planning session over `futonzero-alphazero.md`; PM handoff → Opus pool, build → codex pool)."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-aif-docs-live",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-aif-docs-live",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion to make the futon2 AIF paper, build-tracker, and aif-wiring-explainer flow from one underlying data model via Nelson-style transclusions, killing drift.",
+   "cite": "/home/joe/code/futon2/holes/E-aif-docs-live.md:11",
+   "quote": "`aif-wiring-explainer.html` via **Nelson-style transclusions**, so that the **literate notebook +"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-aif-docs-live.md:12",
+   "quote": "the build-tracker + the explainer all flow from ONE underlying data model**. Edit a state once → all"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

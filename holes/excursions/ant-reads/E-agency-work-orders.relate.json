@@ -1,0 +1,35 @@
+{
+ "stem": "E-agency-work-orders",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "E-agency-work-orders",
+  "kind": "relate",
+  "what": {
+   "value": "Make a work order stay open until the recipient reports it done against its acceptance bar, with reminders",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-work-orders.md:5",
+   "quote": "**Attached to:** M-象-2000. The open/closed judgement is P24's"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-work-orders.md:5",
+   "quote": "**Attached to:** M-象-2000. The open/closed judgement is P24's"
+  },
+  "also": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-work-orders.md:5",
+   "quote": "**Attached to:** M-象-2000. The open/closed judgement is P24's"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

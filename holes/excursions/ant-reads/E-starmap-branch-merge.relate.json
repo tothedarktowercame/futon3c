@@ -1,0 +1,29 @@
+{
+ "stem": "E-starmap-branch-merge",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-starmap-branch-merge",
+  "kind": "relate",
+  "what": {
+   "value": "Merge the unmerged star-map INSTANTIATE branch wm-outing/2026-06-07 so M-capability-star-map's work lands on main",
+   "cite": "/home/joe/code/futon0/holes/E-starmap-branch-merge.md:4",
+   "quote": "**Spawned:** 2026-06-10, on the **close of `M-capability-star-map`** (operator decision by Joe via"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon0/holes/E-starmap-branch-merge.md:4",
+   "quote": "**Spawned:** 2026-06-10, on the **close of `M-capability-star-map`** (operator decision by Joe via"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

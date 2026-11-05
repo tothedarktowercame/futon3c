@@ -1,0 +1,35 @@
+{
+ "stem": "E-mining-qual-loop",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-mining-qual-loop",
+  "kind": "relate",
+  "what": {
+   "value": "A design note for in-run quality surveys of the CT paper-mining run, self-written qualifying-exam problems, and the bridge from datamined contents to the memory system.",
+   "cite": "/home/joe/code/futon6/holes/E-mining-qual-loop.md:21",
+   "quote": "category theory — so **write our own qualifying-exam problems from the"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/E-mining-qual-loop.md:7",
+   "quote": "Siblings: `E-superpod-hardening.md` (runner"
+  },
+  "also": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon6/holes/E-mining-qual-loop.md:24",
+   "quote": "\"The bridge between datamined contents and memory system warrants some"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

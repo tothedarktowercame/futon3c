@@ -1,0 +1,29 @@
+{
+ "stem": "T-wm01-runtime-error-reference-19092026",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "T-wm01-runtime-error-reference-19092026",
+  "kind": "relate",
+  "what": {
+   "value": "WM-01 P-4b: width repair and runtime reference boundary in the futon2.aif wm01 numerical operations tests.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:1",
+   "quote": "# WM-01 P-4b: width repair and runtime reference boundary"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-wm01-runtime-error-reference-19092026.md:21",
+   "quote": "clojure -M:test -e '(require (quote futon2.aif.wm01-numerical-operations-test)) (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)] (with-redefs [futon2.aif.wm01-numerical-operations-test/enclosure-width (fn [lo hi] (- (double hi) (double lo)))]"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

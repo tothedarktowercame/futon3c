@@ -1,0 +1,35 @@
+{
+ "stem": "E-formalisation-defect-memories",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-formalisation-defect-memories",
+  "kind": "relate",
+  "what": {
+   "value": "Close the memory asymmetry between the learnable proving lane and the throwaway formalisation lane: wire the APM statement-bank review's findings into typed, retrievable defect memories.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-formalisation-defect-memories.md:10",
+   "quote": "— the part that changes the design — **which defects should become memories at"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-formalisation-defect-memories.md:9",
+   "quote": "oversight), what the APM statement-bank review produced that can close it, and"
+  },
+  "also": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-formalisation-defect-memories.md:30",
+   "quote": "**Receipt:** 259 problems formalised across waves 1–5, with **zero memory reads"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

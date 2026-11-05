@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-74116ef4fe5c8b02a34f04dd16200d46ff9c7c24b8dc3aba1e5ec9ff50530f2a",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-74116ef4fe5c8b02a34f04dd16200d46ff9c7c24b8dc3aba1e5ec9ff50530f2a",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct a zero-achievement :grounded-no-change outcome at :grounding stage, targeted at another repair ticket",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74116ef4fe5c8b02a34f04dd16200d46ff9c7c24b8dc3aba1e5ec9ff50530f2a.md:9",
+   "quote": "zero-achievement outcome :grounded-no-change"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-74116ef4fe5c8b02a34f04dd16200d46ff9c7c24b8dc3aba1e5ec9ff50530f2a.md:7",
+   "quote": "Target: T-repair-occ-444fb018cbbb656d09b8f4f67c063f1d51a1932a9b1c281d999c567cf22a2ade; stage: :grounding."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

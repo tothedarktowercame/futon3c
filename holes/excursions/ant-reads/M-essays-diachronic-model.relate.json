@@ -1,0 +1,31 @@
+{
+ "stem": "M-essays-diachronic-model",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-essays-diachronic-model",
+  "kind": "relate",
+  "what": {
+   "value": "Give the Arxana Essays subsystem a diachronic model — golden/live dataset identity and lifecycle-event semantics in XTDB with replay and temporal views.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essays-diachronic-model.md:20",
+   "quote": "workable read/import/edit loop and a retained-retraction path, but it still lacks a proper model of the essay as"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essays-diachronic-model.md:6",
+   "quote": "**Owner:** futon4 / WebArxana / futon1a"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-aif-wiring",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-aif-wiring",
+  "kind": "relate",
+  "what": {
+   "value": "Home the R14–R18 completeness gaps and lay R1–R18 onto a Friston-style wiring diagram telling us what to build next",
+   "cite": "/home/joe/code/futon2/holes/M-aif-wiring.md:17",
+   "quote": "1. **R14–R18 have no home.**"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-aif-wiring.md:17",
+   "quote": "1. **R14–R18 have no home.**"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

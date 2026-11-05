@@ -1,0 +1,29 @@
+{
+ "stem": "M-a4a-structure-node",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-a4a-structure-node",
+  "kind": "relate",
+  "what": {
+   "value": "The R17 structure-learning node (capability concept-formation): BMR kernel and concept pipeline feeding the futon2 AIF actuator seams.",
+   "cite": "/home/joe/code/futon2/holes/M-a4a-structure-node.md:1",
+   "quote": "# Mission: A4a — the R17 structure-learning node (capability concept-formation)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-a4a-structure-node.md:15",
+   "quote": "  - positions against `futon2/src/futon2/aif/enact.clj` (A5 seam) + `futon2/aif/actuator_a3.clj` (A3)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

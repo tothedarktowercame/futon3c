@@ -1,0 +1,29 @@
+{
+ "stem": "M-G-wm-wiring",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793765208225-11797-89c964c4",
+ "at": "2026-11-04T04:07:43+00:00",
+ "row": {
+  "stem": "M-G-wm-wiring",
+  "kind": "relate",
+  "what": {
+   "value": "Campaign wiring G through the War Machine: working the p4ng fundamentals checklist items from 'canonical Lean cascade-G definition exists' to 'G is computed, selected on, and witnessed in a production run'.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-G-wm-wiring.md:24",
+   "quote": "The campaign's gap is the set of checklist items that stand between \"canonical Lean cascade-G definition exists\" and \"G is computed, selected on, and witnessed in a production run.\" In dependency order, not checklist order:"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-G-wm-wiring.md:24",
+   "quote": "The campaign's gap is the set of checklist items that stand between \"canonical Lean cascade-G definition exists\" and \"G is computed, selected on, and witnessed in a production run.\" In dependency order, not checklist order:"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

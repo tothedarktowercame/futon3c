@@ -1,0 +1,31 @@
+{
+ "stem": "M-lab-standard",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-lab-standard",
+  "kind": "relate",
+  "what": {
+   "value": "Standardize the futon5 experimental lab's genre, layer-stack, and dispatch contracts locally before scaling experiments out to remote runners.",
+   "cite": "/home/joe/code/futon5/holes/missions/M-lab-standard.md:7-8",
+   "quote": "- **Context:** M-sci-reproduction's nb01/nb02 established the genre for"
+  },
+  "area": {
+   "value": "other:futon5",
+   "cite": "/home/joe/code/futon5/holes/missions/M-lab-standard.md:1",
+   "quote": "# M-lab-standard — standardize the experimental lab before remote scale-out"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

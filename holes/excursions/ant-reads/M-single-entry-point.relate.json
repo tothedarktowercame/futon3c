@@ -1,0 +1,29 @@
+{
+ "stem": "M-single-entry-point",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-single-entry-point",
+  "kind": "relate",
+  "what": {
+   "value": "Mission for one JVM and one launcher for the local dev stack, with clean SIGINT teardown and a status surface.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-single-entry-point.md:3",
+   "quote": "# M-single-entry-point: One JVM, one launcher for the local dev stack"
+  },
+  "area": {
+   "value": "other:dev-stack-infra",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-single-entry-point.md:7",
+   "quote": "- [ ] After a fresh boot, the webarxana Ring server, war-machine hot reload, and webarxana hot reload are all reachable when started through `scripts/dev-laptop-env`."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-efe-education",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-efe-education",
+  "kind": "relate",
+  "what": {
+   "value": "Let the EFE learn its own delicacy: adapt the star-map blend weights wired into compute-efe from pick outcomes",
+   "cite": "/home/joe/code/futon3c/holes/E-efe-education.md:9",
+   "quote": "> *\"An applied-chaos concept where we tune the delicacy as we go … we've already leaned into the AIF"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/E-efe-education.md:9",
+   "quote": "> *\"An applied-chaos concept where we tune the delicacy as we go … we've already leaned into the AIF"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

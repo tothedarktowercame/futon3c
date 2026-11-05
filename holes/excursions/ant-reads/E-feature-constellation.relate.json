@@ -1,0 +1,32 @@
+{
+ "stem": "E-feature-constellation",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-feature-constellation",
+  "kind": "relate",
+  "what": {
+   "value": "A k-collapsible live map of the futon stack's built features so an operator can see what to trim or coalesce (emerged from the 2026-07-04 feature-trim session).",
+   "cite": "/home/joe/code/futon2/holes/E-feature-constellation.md:20",
+   "quote": "in a way that lets an operator look and say *\"that part,"
+  },
+  "area": {
+   "value": "Giraffe",
+   "cite": "/home/joe/code/futon2/holes/E-feature-constellation.md:16",
+   "quote": "We currently have **no way to really understand the features that have been built in"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 0,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

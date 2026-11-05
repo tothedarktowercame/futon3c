@@ -1,0 +1,35 @@
+{
+ "stem": "T-arxana-direct-reads",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "T-arxana-direct-reads",
+  "kind": "relate",
+  "what": {
+   "value": "Ticket to make Arxana browse futon1b hyperedges live (direct reads) instead of via exported files, replacing the exporter stopgap.",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:4",
+   "quote": "\"we both had the conception in mind that Arxana would be able to read directly"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:1",
+   "quote": "# T-arxana-direct-reads — Arxana browses futon1b hyperedges live, not via exported files"
+  },
+  "also": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon4/holes/tickets/T-arxana-direct-reads.md:1",
+   "quote": "# T-arxana-direct-reads — Arxana browses futon1b hyperedges live, not via exported files"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

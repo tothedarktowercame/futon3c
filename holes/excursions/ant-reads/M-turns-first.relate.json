@@ -1,0 +1,29 @@
+{
+ "stem": "M-turns-first",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-turns-first",
+  "kind": "relate",
+  "what": {
+   "value": "Make operator and agent turns the primary artifact on every surface (marimo as a UI beside Emacs/IRC/Matrix), with native turn rendering and Python-block evaluation.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-turns-first.md:13-14",
+   "quote": "**Prompt (Joe, 2026-09-14):** *\"marimo will be another UI, like Emacs, IRC, or"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-turns-first.md:14",
+   "quote": "Matrix. Agent turns and Operator turns are the primary artifacts. Both can"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-range",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

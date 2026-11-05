@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-90b44d468789e55e996453c9b8b1b79c3ca3f1c6dbc35741a1988a25a7458f8f",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-90b44d468789e55e996453c9b8b1b79c3ca3f1c6dbc35741a1988a25a7458f8f",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an oversized cohort checkpoint when the War Machine closed M-interim-director-proxy-metric-inventory",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-90b44d468789e55e996453c9b8b1b79c3ca3f1c6dbc35741a1988a25a7458f8f.md:13",
+   "quote": "Cohort checkpoint exceeds the bounded event size"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-90b44d468789e55e996453c9b8b1b79c3ca3f1c6dbc35741a1988a25a7458f8f.md:9",
+   "quote": "Target: M-interim-director-proxy-metric-inventory; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

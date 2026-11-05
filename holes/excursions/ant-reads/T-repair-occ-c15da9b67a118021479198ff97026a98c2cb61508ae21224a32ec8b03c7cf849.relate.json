@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-c15da9b67a118021479198ff97026a98c2cb61508ae21224a32ec8b03c7cf849",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761345255-11690-8d04f87a",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-c15da9b67a118021479198ff97026a98c2cb61508ae21224a32ec8b03c7cf849",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to verify or restore an Agency dispatch failure at the WM ticket-readiness-refresh phase.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-c15da9b67a118021479198ff97026a98c2cb61508ae21224a32ec8b03c7cf849.md:11",
+   "quote": "Agency dispatch failed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-c15da9b67a118021479198ff97026a98c2cb61508ae21224a32ec8b03c7cf849.md:9",
+   "quote": "Context: {:phase :ticket-readiness-refresh}."
+  },
+  "also": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-c15da9b67a118021479198ff97026a98c2cb61508ae21224a32ec8b03c7cf849.md:11",
+   "quote": "Agency dispatch failed"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

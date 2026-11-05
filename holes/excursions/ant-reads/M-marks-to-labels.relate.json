@@ -1,0 +1,35 @@
+{
+ "stem": "M-marks-to-labels",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-marks-to-labels",
+  "kind": "relate",
+  "what": {
+   "value": "Bridge grain: resolve operator ✘/✓ marks to their judged referents and mint them as reward-lane labels (and γ-ledger events) measured before anything trusts them.",
+   "cite": "/home/joe/code/futon2/holes/M-marks-to-labels.md:1",
+   "quote": "# M-marks-to-labels — operator marks, resolved to referents, minted as reward labels"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon2/holes/M-marks-to-labels.md:19",
+   "quote": "captures them at precision 1.0 by construction — but a mark judges a TURN'S"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-marks-to-labels.md:16",
+   "quote": "The reward lane is label-starved at the grain it needs (39 flown-fold labels"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

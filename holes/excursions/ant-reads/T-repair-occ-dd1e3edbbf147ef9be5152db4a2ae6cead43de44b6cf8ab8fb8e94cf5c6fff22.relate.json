@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-dd1e3edbbf147ef9be5152db4a2ae6cead43de44b6cf8ab8fb8e94cf5c6fff22",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-dd1e3edbbf147ef9be5152db4a2ae6cead43de44b6cf8ab8fb8e94cf5c6fff22",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: record the ordinary click budget exhaustion at :code-state so the run returns to Joe for renewal",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-dd1e3edbbf147ef9be5152db4a2ae6cead43de44b6cf8ab8fb8e94cf5c6fff22.md:11",
+   "quote": "Ordinary click budget exhausted. Return to Joe for renewal. Authority: futon2/holes/labs/wm-contract/AUTH-ordinary-click-budget-renewal-7-2026-09-24.md @ 326826ac"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-dd1e3edbbf147ef9be5152db4a2ae6cead43de44b6cf8ab8fb8e94cf5c6fff22.md:11",
+   "quote": "Ordinary click budget exhausted. Return to Joe for renewal. Authority: futon2/holes/labs/wm-contract/AUTH-ordinary-click-budget-renewal-7-2026-09-24.md @ 326826ac"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

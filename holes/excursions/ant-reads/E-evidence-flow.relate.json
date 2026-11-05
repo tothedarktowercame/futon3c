@@ -1,0 +1,29 @@
+{
+ "stem": "E-evidence-flow",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-evidence-flow",
+  "kind": "relate",
+  "what": {
+   "value": "Map the actual topology of evidence flow across the futon mesh stores (laptop vs Linodes) and decide what it should be.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-evidence-flow.md:5",
+   "quote": "A bounded excursion: establish the *actual* topology of evidence flow across the futon"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-evidence-flow.md:6",
+   "quote": "mesh (laptop/Dionysus, lucy/linode1, metameso/linode2), then decide what it *should* be."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

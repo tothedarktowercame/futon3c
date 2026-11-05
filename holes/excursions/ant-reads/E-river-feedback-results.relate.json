@@ -1,0 +1,29 @@
+{
+ "stem": "E-river-feedback-results",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "E-river-feedback-results",
+  "kind": "relate",
+  "what": {
+   "value": "Matched-ablation measurement of the phenotype→genotype feedback effect on the authentic CA river, as the control for correction-round reruns",
+   "cite": "/home/joe/code/mmca-clj/holes/E-river-feedback-results.md:5",
+   "quote": "Reproduce: `clojure -M -m mmca.experiments.river-feedback`. Determinism:"
+  },
+  "area": {
+   "value": "futon5",
+   "cite": "/home/joe/code/mmca-clj/holes/E-river-feedback-results.md:9",
+   "quote": "Isolates the ORIGINAL paper river's feedback the right way. `run-original-paper-river`"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "E-convert-operator-turns-to-patterns",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "E-convert-operator-turns-to-patterns",
+  "kind": "relate",
+  "what": {
+   "value": "A two-seat experiment reading Joe's operator turns in pattern terms (seat A) and carrying them out (seat B).",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-convert-operator-turns-to-patterns.md:5-6",
+   "quote": "Opened 2026-09-25 by claude-12 at Joe's request, as the requisition for the"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-convert-operator-turns-to-patterns.md:6",
+   "quote": "seat that interprets his turns and as the record of the experiment."
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-convert-operator-turns-to-patterns.md:12",
+   "quote": "fragments of his text, each with an intent, the library patterns it cites"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-range",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

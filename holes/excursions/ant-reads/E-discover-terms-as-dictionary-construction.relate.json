@@ -1,0 +1,29 @@
+{
+ "stem": "E-discover-terms-as-dictionary-construction",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-discover-terms-as-dictionary-construction",
+  "kind": "relate",
+  "what": {
+   "value": "Scope turning discover_terms candidate extraction into OED-shape dictionary construction (definitions + usage examples + provenance) with PlanetMath seeding and stopword graduation.",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-discover-terms-as-dictionary-construction.md:1",
+   "quote": "# Excursion: discover-terms as OED-shape dictionary construction"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-discover-terms-as-dictionary-construction.md:7",
+   "quote": "**Parent mission:** `M-hyperreal-dictionary-planning.md` (futon6; status IDENTIFY since 2026-04-29; this excursion scopes the §6.B \"paper → concept bridge\" buildable-now probe under Joe's 2026-05-19 OED-framing)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

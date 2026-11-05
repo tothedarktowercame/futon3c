@@ -1,0 +1,29 @@
+{
+ "stem": "M-stack-geometry",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-stack-geometry",
+  "kind": "relate",
+  "what": {
+   "value": "Spatial synthesis of the stack's rationalization attempts — a geometric layer over missions, sorrys and embeddings",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-stack-geometry.md:1",
+   "quote": "# Mission: Stack Geometry (spatial synthesis of the existing rationalization attempts)"
+  },
+  "area": {
+   "value": "Giraffe",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-stack-geometry.md:1",
+   "quote": "# Mission: Stack Geometry (spatial synthesis of the existing rationalization attempts)"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

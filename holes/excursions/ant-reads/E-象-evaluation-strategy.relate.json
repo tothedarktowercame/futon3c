@@ -1,0 +1,35 @@
+{
+ "stem": "E-象-evaluation-strategy",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760913233-11660-4849d0fa",
+ "at": "2026-11-04T02:58:39+00:00",
+ "row": {
+  "stem": "E-象-evaluation-strategy",
+  "kind": "relate",
+  "what": {
+   "value": "Generalises a one-click evaluation strategy so any War Machine click can be evaluated as a bundle of 象 acts, repeatable by any reader.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-evaluation-strategy.md:27",
+   "quote": "So the evaluation reads the click the way 象 reads a turn:"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-evaluation-strategy.md:17",
+   "quote": "\"a robust and *repeatable* analysis strategy\", using 象's logic and markers."
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-evaluation-strategy.md:7",
+   "quote": "from the evaluation strategy claude-17 wrote for codex-10 the same day, for WM"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-1aa2ba9e8f7100d1df8d3d4f27f43222e5ec1be0fc7db384bce35fb0758504b0",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-1aa2ba9e8f7100d1df8d3d4f27f43222e5ec1be0fc7db384bce35fb0758504b0",
+  "kind": "relate",
+  "what": {
+   "value": "Verify or restore a War Machine selection abstention recorded as a wm-repair-obligation finding",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-1aa2ba9e8f7100d1df8d3d4f27f43222e5ec1be0fc7db384bce35fb0758504b0.md:9",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-1aa2ba9e8f7100d1df8d3d4f27f43222e5ec1be0fc7db384bce35fb0758504b0.md:9",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

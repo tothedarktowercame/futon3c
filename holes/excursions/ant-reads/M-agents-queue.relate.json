@@ -1,0 +1,29 @@
+{
+ "stem": "M-agents-queue",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-agents-queue",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to replace push-dispatch of agent work with a pull-based self-organizing worker pool over one shared job queue.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-agents-queue.md:19",
+   "quote": "it; cf. `futon-dispatch`) with a **pull-based worker pool**: one shared queue of jobs;"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-agents-queue.md:20",
+   "quote": "participating agents are **self-reawakening** — when idle they claim the next job, do it,"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

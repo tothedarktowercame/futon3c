@@ -1,0 +1,29 @@
+{
+ "stem": "M-hypergraph-operator",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "M-hypergraph-operator",
+  "kind": "relate",
+  "what": {
+   "value": "An analytic Click/Tick layer over the three objects describing Joe's situation (Placemat, JSDQ vocabulary, JSDQ hypergraph)",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-hypergraph-operator.md:16",
+   "quote": "Three objects exist that describe Joe's situation from different angles:"
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-hypergraph-operator.md:16",
+   "quote": "Three objects exist that describe Joe's situation from different angles:"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

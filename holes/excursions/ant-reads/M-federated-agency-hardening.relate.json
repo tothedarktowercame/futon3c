@@ -1,0 +1,29 @@
+{
+ "stem": "M-federated-agency-hardening",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-federated-agency-hardening",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to make Agency routing and healing correct across boxes — per federation point, not only locally.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-federated-agency-hardening.md:6",
+   "quote": "This mission is the **federation**"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-federated-agency-hardening.md:7",
+   "quote": "layer: making Agency correct across boxes."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

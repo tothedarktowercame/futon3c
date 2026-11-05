@@ -1,0 +1,29 @@
+{
+ "stem": "E-codex-visibility-after-resume",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-codex-visibility-after-resume",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion write-up of the case that a successful codex resume in the futon3c JVM must be observably successful — resume works and nothing shows it working.",
+   "cite": "/home/joe/code/futon3c/holes/E-codex-visibility-after-resume.md:13",
+   "quote": "exposes the successor gap: **resume works, and nothing shows it working.**"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/E-codex-visibility-after-resume.md:2",
+   "quote": "**Status: IDENTIFY (2026-07-22). Chartered by Joe (emacs-repl, same day): \"make a"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

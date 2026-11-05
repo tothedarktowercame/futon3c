@@ -1,0 +1,29 @@
+{
+ "stem": "M-wm-tripwires",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-wm-tripwires",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to build invariant tripwires woven around the live War Machine run, freezing and summoning on violation instead of letting broken runs complete.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-wm-tripwires.md:13",
+   "quote": "- **Joe's framing:** \"a supplementary harness for the war machine made up of"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-wm-tripwires.md:1",
+   "quote": "# M-wm-tripwires — invariant tripwires for the live War Machine"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

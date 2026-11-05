@@ -1,0 +1,29 @@
+{
+ "stem": "M-essay-corpus-substrate",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-essay-corpus-substrate",
+  "kind": "relate",
+  "what": {
+   "value": "Uniform per-essay import of futonN essays (home convention + futon3c essay projector) so annotations round-trip to XTDB and show up in WebArxana, feeding M-editorial-assistant.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:15",
+   "quote": "[ ] WebArxana shows 16 annotations for `arxana/essay/operator-foreword-v1` after projection, while the compiled Emacs view still shows the same count."
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/missions/M-essay-corpus-substrate.md:15",
+   "quote": "[ ] WebArxana shows 16 annotations for `arxana/essay/operator-foreword-v1` after projection, while the compiled Emacs view still shows the same count."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

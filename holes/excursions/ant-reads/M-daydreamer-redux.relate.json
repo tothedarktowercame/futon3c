@@ -1,0 +1,29 @@
+{
+ "stem": "M-daydreamer-redux",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "M-daydreamer-redux",
+  "kind": "relate",
+  "what": {
+   "value": "Agents dream up candidate new features in bounded t4r rounds, imagining what is not yet an item — the upstream goal-formation layer the War Machine's selection lacks.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-daydreamer-redux.md:9",
+   "quote": "Joe, 2026-11-02: \"a version of the t4r infrastructure in which agents ideate about new features to build ..."
+  },
+  "area": {
+   "value": "Giraffe",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-daydreamer-redux.md:16",
+   "quote": "Machine selects among existing items, and every click pays for building. Nothing here imagines what is not yet an"
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

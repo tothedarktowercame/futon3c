@@ -1,0 +1,35 @@
+{
+ "stem": "M-pheromone-field",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-pheromone-field",
+  "kind": "relate",
+  "what": {
+   "value": "Earn the pheromone-field name by building deposit/decay semantics over the live EFE map and closing the behavioral loop",
+   "cite": "/home/joe/code/futon6/holes/missions/M-pheromone-field.md:9",
+   "quote": "From M-live-efe-map's C5: *this layer may be called a pheromone field only once agent"
+  },
+  "area": {
+   "value": "Giraffe",
+   "cite": "/home/joe/code/futon6/holes/missions/M-pheromone-field.md:9",
+   "quote": "From M-live-efe-map's C5: *this layer may be called a pheromone field only once agent"
+  },
+  "also": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon6/holes/missions/M-pheromone-field.md:26",
+   "quote": "- **A fast proto-pheromone (in flight)**: coordination-edge overlay — who belled whom,"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

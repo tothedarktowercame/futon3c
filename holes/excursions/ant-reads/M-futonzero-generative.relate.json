@@ -1,0 +1,35 @@
+{
+ "stem": "M-futonzero-generative",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793765208225-11797-89c964c4",
+ "at": "2026-11-04T04:07:43+00:00",
+ "row": {
+  "stem": "M-futonzero-generative",
+  "kind": "relate",
+  "what": {
+   "value": "Mission chartering FutonZero's generative sibling: a self-bootstrapping WM learner that turns one-off warranted functionings into repeatable capabilities, AlphaZero-structured but playing against the field.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-generative.md:17",
+   "quote": "trajectories. This mission charters the generative sibling: a learner that turns"
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-generative.md:16",
+   "quote": "FutonZero currently names a **monitor**: it reads evidence and measures capability"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-generative.md:1",
+   "quote": "# Mission: FutonZero Generative — Self-Bootstrapping WM Learner"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

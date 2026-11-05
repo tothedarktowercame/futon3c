@@ -1,0 +1,29 @@
+{
+ "stem": "E-prior-over-terms",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "E-prior-over-terms",
+  "kind": "relate",
+  "what": {
+   "value": "A base-rate term prior for the prose concept-term layer of the futon6 DP math-paper pipeline, under parent mission M-prior-mathematics.",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-prior-over-terms.md:8",
+   "quote": "   — this is the concrete instance of the corpus base-rate prior applied to the"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-prior-over-terms.md:9",
+   "quote": "**prose concept-term layer** of the DP pipeline (not symbols, not the NER"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

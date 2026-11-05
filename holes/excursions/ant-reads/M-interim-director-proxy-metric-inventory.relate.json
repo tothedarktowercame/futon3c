@@ -1,0 +1,29 @@
+{
+ "stem": "M-interim-director-proxy-metric-inventory",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-interim-director-proxy-metric-inventory",
+  "kind": "relate",
+  "what": {
+   "value": "Inventories proxy metrics and enumerates the value-generating business arms (consulting, Lean, UKRN, VSAT) scaffolded end-to-end.",
+   "cite": "/home/joe/code/futon7/holes/M-interim-director-proxy-metric-inventory.md:18",
+   "quote": "3. **Enumerates the value-generating arms** — concrete domains where futon-stack work might be purchasable — and scaffolds each end-to-end as `retrieve → process → evaluate → report`, with handoff candidates per arm."
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/M-interim-director-proxy-metric-inventory.md:18",
+   "quote": "3. **Enumerates the value-generating arms** — concrete domains where futon-stack work might be purchasable — and scaffolds each end-to-end as `retrieve → process → evaluate → report`, with handoff candidates per arm."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-smart-emacs-cursor",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-smart-emacs-cursor",
+  "kind": "relate",
+  "what": {
+   "value": "The spoken mission loop: voice-typed mission sentences driving the smart cursor through Emacs scopes with a completion bubble.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-smart-emacs-cursor.md:23",
+   "quote": "> drive the smart cursor around to type everything needed into Emacs, change"
+  },
+  "area": {
+   "value": "voxterm",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-smart-emacs-cursor.md:21",
+   "quote": "> I have a Voice Typing mode I should be able to initiate — it invokes"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

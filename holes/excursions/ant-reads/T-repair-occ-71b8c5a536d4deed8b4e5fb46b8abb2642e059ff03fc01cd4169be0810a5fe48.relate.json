@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-71b8c5a536d4deed8b4e5fb46b8abb2642e059ff03fc01cd4169be0810a5fe48",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-71b8c5a536d4deed8b4e5fb46b8abb2642e059ff03fc01cd4169be0810a5fe48",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore an ineligible trigger at WM :initialization stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-71b8c5a536d4deed8b4e5fb46b8abb2642e059ff03fc01cd4169be0810a5fe48.md:9",
+   "quote": "ineligible trigger"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-71b8c5a536d4deed8b4e5fb46b8abb2642e059ff03fc01cd4169be0810a5fe48.md:21",
+   "quote": "Finding: [repair-occ-71b8c5a536d4deed8b4e5fb46b8abb2642e059ff03fc01cd4169be0810a5fe48](/home/joe/code/futon2/data/wm-repair-obligatio"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

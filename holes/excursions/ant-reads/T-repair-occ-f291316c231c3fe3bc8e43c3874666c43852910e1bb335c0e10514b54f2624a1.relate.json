@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-f291316c231c3fe3bc8e43c3874666c43852910e1bb335c0e10514b54f2624a1",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-f291316c231c3fe3bc8e43c3874666c43852910e1bb335c0e10514b54f2624a1",
+  "kind": "relate",
+  "what": {
+   "value": "Correct WM dispatch lacking its run-local job ledger context at ticket-readiness-refresh",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f291316c231c3fe3bc8e43c3874666c43852910e1bb335c0e10514b54f2624a1.md:11",
+   "quote": "WM dispatch lacks its run-local job ledger context"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f291316c231c3fe3bc8e43c3874666c43852910e1bb335c0e10514b54f2624a1.md:11",
+   "quote": "WM dispatch lacks its run-local job ledger context"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

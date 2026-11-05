@@ -1,0 +1,29 @@
+{
+ "stem": "E-fold-embed-pipeline",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "E-fold-embed-pipeline",
+  "kind": "relate",
+  "what": {
+   "value": "GPU-scale multi-relational embedding pipeline for M-fold-ansatz phase 2: predicting a mission's real substrate-2 sorry endpoints from its cascade.",
+   "cite": "/home/joe/code/futon2/holes/E-fold-embed-pipeline.md:11",
+   "quote": "Phase 2 = predict a mission's real **substrate-2 sorry endpoints** from its **cascade**. Three *shallow*"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-fold-embed-pipeline.md:11",
+   "quote": "Phase 2 = predict a mission's real **substrate-2 sorry endpoints** from its **cascade**. Three *shallow*"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

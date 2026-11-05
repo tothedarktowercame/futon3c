@@ -1,0 +1,29 @@
+{
+ "stem": "E-first-flights-typed-grounds-tail-closure",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-first-flights-typed-grounds-tail-closure",
+  "kind": "relate",
+  "what": {
+   "value": "W2 census of whether the typed-grounds/return-channel tail around sorry-arrow arr-7535a5b6-e59 (minted in the WM piloted flight of 2026-06-12) closes from existing evidence.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-first-flights-typed-grounds-tail-closure.md:11",
+   "quote": "Does the typed-grounds / return-channel tail around sorry-arrow"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-first-flights-typed-grounds-tail-closure.md:20",
+   "quote": "(DERIVE gate certificate), and `futon3c/holes/flights/F-wm-piloted-2026-06-12.md`"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

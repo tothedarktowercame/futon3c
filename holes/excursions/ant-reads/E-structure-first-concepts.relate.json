@@ -1,0 +1,29 @@
+{
+ "stem": "E-structure-first-concepts",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-structure-first-concepts",
+  "kind": "relate",
+  "what": {
+   "value": "Ensure each concept used in CT proofs has a definition and usage examples, as the foundational step beneath informal proof checking",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-structure-first-concepts.md:5",
+   "quote": "*Excursion · owner **claude-1** · chartered 2026-06-17 · the **foundational first step"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-structure-first-concepts.md:5",
+   "quote": "*Excursion · owner **claude-1** · chartered 2026-06-17 · the **foundational first step"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

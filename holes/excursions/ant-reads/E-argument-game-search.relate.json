@@ -1,0 +1,29 @@
+{
+ "stem": "E-argument-game-search",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-argument-game-search",
+  "kind": "relate",
+  "what": {
+   "value": "Idea: AlphaZero-style self-play search to help build or judge argument structures, cascades, or s-expression evaluations, with an LLM as move proposer.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-argument-game-search.md:7-8",
+   "quote": "Can AlphaZero-style search (self-play, Monte Carlo tree search, a learned policy and\nvalue) help build or judge argument structures, cascades, or s-expression"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-argument-game-search.md:8",
+   "quote": "value) help build or judge argument structures, cascades, or s-expression"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-range",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

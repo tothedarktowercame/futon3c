@@ -1,0 +1,35 @@
+{
+ "stem": "M-vsatarcs-invariants-integration",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-vsatarcs-invariants-integration",
+  "kind": "relate",
+  "what": {
+   "value": "Keep VSATARCS's operational invariants current: a pinned inventory, a read-only projection with witnessed-status tripwires, Arxana consumers, and a War Machine status feed.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.md:22",
+   "quote": "Invariants are not being kept up to date, and VSATARCS **should be** (invariantly!)."
+  },
+  "area": {
+   "value": "other:VSATARCS",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.md:14",
+   "quote": "- [x] The projection schema, witnessed-status tripwires, read-only builder, Arxana consumers, and War Machine `:vsatarcs-status` feed are implemented and verified."
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-invariants-integration.md:14",
+   "quote": "- [x] The projection schema, witnessed-status tripwires, read-only builder, Arxana consumers, and War Machine `:vsatarcs-status` feed are implemented and verified."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

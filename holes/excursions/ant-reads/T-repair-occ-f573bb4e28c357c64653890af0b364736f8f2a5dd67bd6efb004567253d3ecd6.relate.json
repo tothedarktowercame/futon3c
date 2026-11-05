@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-f573bb4e28c357c64653890af0b364736f8f2a5dd67bd6efb004567253d3ecd6",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-f573bb4e28c357c64653890af0b364736f8f2a5dd67bd6efb004567253d3ecd6",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an oversized cohort checkpoint at the War Machine's close stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f573bb4e28c357c64653890af0b364736f8f2a5dd67bd6efb004567253d3ecd6.md:11",
+   "quote": "Cohort checkpoint exceeds the bounded event size"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f573bb4e28c357c64653890af0b364736f8f2a5dd67bd6efb004567253d3ecd6.md:7",
+   "quote": "Target: not retained; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

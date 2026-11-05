@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-b69768de20c53f0e8a0b5e461aca49031e9bd40c138e52dee5b1b78e75745a97",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761345255-11690-8d04f87a",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-b69768de20c53f0e8a0b5e461aca49031e9bd40c138e52dee5b1b78e75745a97",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct failed reviewer-falsifier checks at the WM reviewer-wait stage on M-stack-geometry.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b69768de20c53f0e8a0b5e461aca49031e9bd40c138e52dee5b1b78e75745a97.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-b69768de20c53f0e8a0b5e461aca49031e9bd40c138e52dee5b1b78e75745a97.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

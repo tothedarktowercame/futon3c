@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-f91e2dc1aa62bdd27449cf14428cee60a83818c2f6d8f989714cec7af21e2e36",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-f91e2dc1aa62bdd27449cf14428cee60a83818c2f6d8f989714cec7af21e2e36",
+  "kind": "relate",
+  "what": {
+   "value": "Correct War Machine tripwire T3 (exit and stop-line completeness) tripped at initialization",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f91e2dc1aa62bdd27449cf14428cee60a83818c2f6d8f989714cec7af21e2e36.md:11",
+   "quote": "War Machine tripwire T3 tripped: exit and stop-line completeness"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f91e2dc1aa62bdd27449cf14428cee60a83818c2f6d8f989714cec7af21e2e36.md:11",
+   "quote": "War Machine tripwire T3 tripped: exit and stop-line completeness"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

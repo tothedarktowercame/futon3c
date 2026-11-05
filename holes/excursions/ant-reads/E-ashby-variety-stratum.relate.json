@@ -1,0 +1,29 @@
+{
+ "stem": "E-ashby-variety-stratum",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-ashby-variety-stratum",
+  "kind": "relate",
+  "what": {
+   "value": "Install a theoretical layer under the tower linking Ashby's intelligence-amplifier and Beer's VSM to the futon stack and mathematics.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-ashby-variety-stratum.md:3-4",
+   "quote": "**Status: DERIVE (exploratory).** Opened 2026-07-30 by claude-1 at Joe's\ndirection: *\"install a theoretical layer, linking to Ashby and the concept of"
+  },
+  "area": {
+   "value": "other:cybernetics-theory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-ashby-variety-stratum.md:3-4",
+   "quote": "**Status: DERIVE (exploratory).** Opened 2026-07-30 by claude-1 at Joe's\ndirection: *\"install a theoretical layer, linking to Ashby and the concept of"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-range",
+  "ok-range"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

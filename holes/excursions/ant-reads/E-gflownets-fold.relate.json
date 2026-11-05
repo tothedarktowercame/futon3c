@@ -1,0 +1,31 @@
+{
+ "stem": "E-gflownets-fold",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-gflownets-fold",
+  "kind": "relate",
+  "what": {
+   "value": "Reopen the GFlowNet fold sampler on executable reward, unblocked by new empirical data, after the E-fold-embed-pipeline G.1 null.",
+   "cite": "/home/joe/code/futon2/holes/E-gflownets-fold.md:3",
+   "quote": "**Date:** 2026-07-03 · **Status:** CHARTERED (IDENTIFY/MAP — Joe: \"we have the empirical data"
+  },
+  "area": {
+   "value": "other:fold-embeddings",
+   "cite": "/home/joe/code/futon2/holes/E-gflownets-fold.md:6",
+   "quote": "**Parents / prior art:** [[E-fold-embed-pipeline]] G.1 (the seed NULL — both rungs, zero"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

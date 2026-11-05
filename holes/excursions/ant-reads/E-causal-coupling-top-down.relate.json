@@ -1,0 +1,29 @@
+{
+ "stem": "E-causal-coupling-top-down",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-causal-coupling-top-down",
+  "kind": "relate",
+  "what": {
+   "value": "An exploratory reading of hooking Rob's Pearl-scaffolded top-down causal structure to the bottom-up receipt-driven retrieval operator, whose deficit is a measured connectivity floor.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-causal-coupling-top-down.md:12",
+   "quote": "hook up his top-down reasoning system and the bottom-up one I've been"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-causal-coupling-top-down.md:36",
+   "quote": "That is the whole argument in one line. The retrieval operator is starved of"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

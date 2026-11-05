@@ -1,0 +1,29 @@
+{
+ "stem": "M-distributed-proofreaders",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-distributed-proofreaders",
+  "kind": "relate",
+  "what": {
+   "value": "Run a structure-first mine → measure loss → fix worst class loop over the math.CT corpus: concepts as the index, papers as occurrence sites, a recognizer registry per shared notation.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-distributed-proofreaders.md:1",
+   "quote": "# M-distributed-proofreaders — structure-first recognition + QA over the math corpus"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-distributed-proofreaders.md:1",
+   "quote": "# M-distributed-proofreaders — structure-first recognition + QA over the math corpus"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

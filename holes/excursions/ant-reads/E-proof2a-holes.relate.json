@@ -1,0 +1,29 @@
+{
+ "stem": "E-proof2a-holes",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-proof2a-holes",
+  "kind": "relate",
+  "what": {
+   "value": "claude-8's clock excursion coordinating closure of the ten holes in the wm-contract PROOF-2a theorem draft",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-proof2a-holes.md:5",
+   "quote": "Parent: `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md`."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-proof2a-holes.md:5",
+   "quote": "Parent: `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md`."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

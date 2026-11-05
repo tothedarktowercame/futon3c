@@ -1,0 +1,29 @@
+{
+ "stem": "E-operator-turn-modelling-2026-08-25",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-operator-turn-modelling-2026-08-25",
+  "kind": "relate",
+  "what": {
+   "value": "Measurements from the 2026-08-25 operator session on operator turns entering the observation vector via futon3a retrieval.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-operator-turn-modelling-2026-08-25.md:9",
+   "quote": "`futon3/library/features/operator-turns-enter-the-observation-vector.flexiarg`"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-operator-turn-modelling-2026-08-25.md:9",
+   "quote": "`futon3/library/features/operator-turns-enter-the-observation-vector.flexiarg`"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

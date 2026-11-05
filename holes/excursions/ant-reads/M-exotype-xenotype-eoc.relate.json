@@ -1,0 +1,29 @@
+{
+ "stem": "M-exotype-xenotype-eoc",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-exotype-xenotype-eoc",
+  "kind": "relate",
+  "what": {
+   "value": "Test whether phenotype/genotype evolution can drive the exotype layer to discover edge-of-chaos for itself, instead of fixing an exotype in advance.",
+   "cite": "/home/joe/code/futon5/holes/missions/M-exotype-xenotype-eoc.md:19-20",
+   "quote": "**One line:** every \"Baldwin\" experiment to date fixed an exotype in advance (river ="
+  },
+  "area": {
+   "value": "other:futon5",
+   "cite": "/home/joe/code/futon5/holes/missions/M-exotype-xenotype-eoc.md:21",
+   "quote": "at the EXOTYPE layer to discover EoC for itself."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-range",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

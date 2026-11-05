@@ -1,0 +1,29 @@
+{
+ "stem": "M-self-improvement-loop",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-self-improvement-loop",
+  "kind": "relate",
+  "what": {
+   "value": "Bootstrap a review-to-change loop over the stack's open missions so review changes what happens next week rather than describing the last",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-self-improvement-loop.md:23",
+   "quote": "The missing piece isn't visibility — it's the self-improvement loop. We"
+  },
+  "area": {
+   "value": "other:stack-self-improvement",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-self-improvement-loop.md:23",
+   "quote": "The missing piece isn't visibility — it's the self-improvement loop. We"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

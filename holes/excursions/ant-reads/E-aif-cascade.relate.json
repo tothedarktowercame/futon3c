@@ -1,0 +1,29 @@
+{
+ "stem": "E-aif-cascade",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-aif-cascade",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion assembling the scattered formal pieces (blend story, wants-tokens, small causal worlds) into the cascade as formation on the WM outer loop and R-nodes.",
+   "cite": "/home/joe/code/futon2/holes/E-aif-cascade.md:1",
+   "quote": "# E-aif-cascade — the cascade as formation: blends, tokens, causal theories, on the outer loop and the R-nodes"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-aif-cascade.md:7",
+   "quote": "**Driver:** War Machine. **Operator:** Joe. **Owner:** claude-2."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

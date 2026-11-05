@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-02dc6384e2f7b77f2956203b925e2c185586f522fa4d4a785a5dc814f410890b",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760983841-11665-3cebdff4",
+ "at": "2026-11-04T03:00:17+00:00",
+ "row": {
+  "stem": "T-repair-occ-02dc6384e2f7b77f2956203b925e2c185586f522fa4d4a785a5dc814f410890b",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct failed reviewer falsifier checks during a M-war-machine-wiring click at :reviewer-wait",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-02dc6384e2f7b77f2956203b925e2c185586f522fa4d4a785a5dc814f410890b.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-02dc6384e2f7b77f2956203b925e2c185586f522fa4d4a785a5dc814f410890b.md:5",
+   "quote": "Parent: M-war-machine-wiring"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

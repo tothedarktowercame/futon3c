@@ -1,0 +1,29 @@
+{
+ "stem": "M-pattern-retrieval-calibration",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-pattern-retrieval-calibration",
+  "kind": "relate",
+  "what": {
+   "value": "Calibrates per-turn pattern retrieval into a legible, HIT-adjudicated, feedback-looped sensor over the pattern library.",
+   "cite": "/home/joe/code/futon3/holes/missions/M-pattern-retrieval-calibration.md:50",
+   "quote": "**We are using per-turn pattern retrieval as if it were a calibrated"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3/holes/missions/M-pattern-retrieval-calibration.md:1",
+   "quote": "# Mission: Pattern Retrieval Calibration"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

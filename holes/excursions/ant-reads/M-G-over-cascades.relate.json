@@ -1,0 +1,29 @@
+{
+ "stem": "M-G-over-cascades",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "M-G-over-cascades",
+  "kind": "relate",
+  "what": {
+   "value": "Operationalise G over cascades rather than flat pattern distributions in the futon2 AIF rollout, with production seam and verified enactment",
+   "cite": "/home/joe/code/futon2/holes/M-G-over-cascades.md:1",
+   "quote": "# Mission: G is over Cascades, not Patterns (M-G-over-cascades)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-G-over-cascades.md:1",
+   "quote": "# Mission: G is over Cascades, not Patterns (M-G-over-cascades)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

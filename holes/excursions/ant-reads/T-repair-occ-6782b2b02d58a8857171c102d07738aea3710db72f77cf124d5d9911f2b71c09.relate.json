@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-6782b2b02d58a8857171c102d07738aea3710db72f77cf124d5d9911f2b71c09",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-6782b2b02d58a8857171c102d07738aea3710db72f77cf124d5d9911f2b71c09",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct an invalid author refusal (no reason, artifact claim) during an M-recommendation-bindings click at :author-wait",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6782b2b02d58a8857171c102d07738aea3710db72f77cf124d5d9911f2b71c09.md:13",
+   "quote": "Author refusal lacks a reason or claims an artifact"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6782b2b02d58a8857171c102d07738aea3710db72f77cf124d5d9911f2b71c09.md:9",
+   "quote": "Target: M-recommendation-bindings; stage: :author-wait."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

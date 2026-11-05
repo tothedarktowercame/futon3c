@@ -1,0 +1,29 @@
+{
+ "stem": "T-wm-wrong-corpus-26082026",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "T-wm-wrong-corpus-26082026",
+  "kind": "relate",
+  "what": {
+   "value": "A slice of the R8 red-ring diagnosis: null results drawn from one WM runner archive were stated about the stack because futon2's two runners write two ambiguous archives.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:5",
+   "quote": "Parent: `E-R8-red-ring-fill.md`. Found 2026-08-26 by claude-13, independently by"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-wrong-corpus-26082026.md:1",
+   "quote": "# T-wm-wrong-corpus-26082026 — a null result must name the corpus it is null about"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

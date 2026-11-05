@@ -1,0 +1,29 @@
+{
+ "stem": "T-outer-target-g-policy-prior",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "T-outer-target-g-policy-prior",
+  "kind": "relate",
+  "what": {
+   "value": "Ticket to keep the outer target's G unaltered in the futon2 outer selector: move engineering costs into the policy prior and drop the clamp that manufactures ties.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:1",
+   "quote": "# Keep the outer target's G unaltered: move engineering costs into the policy prior and drop the clamp"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-outer-target-g-policy-prior.md:8",
+   "quote": "R5 of the PLoP catalogue says engineering terms are a named augmentation"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-implementing-G-over-cascades",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "E-implementing-G-over-cascades",
+  "kind": "relate",
+  "what": {
+   "value": "Implementation-plan excursion to turn a selected composition into a durable, validated, executable cascade as required by DarkTower/WarMachine/GOverCascades.lean.",
+   "cite": "/home/joe/code/futon2/holes/E-implementing-G-over-cascades.md:11",
+   "quote": "mission and by `DarkTower/WarMachine/GOverCascades.lean`."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-implementing-G-over-cascades.md:22",
+   "quote": "- `DarkTower.WarMachine.GOverCascades`: the policy grain scored by G is the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

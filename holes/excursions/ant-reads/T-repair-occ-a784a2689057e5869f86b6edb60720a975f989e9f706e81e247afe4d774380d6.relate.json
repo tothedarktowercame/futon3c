@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-a784a2689057e5869f86b6edb60720a975f989e9f706e81e247afe4d774380d6",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-a784a2689057e5869f86b6edb60720a975f989e9f706e81e247afe4d774380d6",
+  "kind": "relate",
+  "what": {
+   "value": "Verify or restore a War Machine selection that produced no addressable action for M-repl-wins-over-cli",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a784a2689057e5869f86b6edb60720a975f989e9f706e81e247afe4d774380d6.md:13",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a784a2689057e5869f86b6edb60720a975f989e9f706e81e247afe4d774380d6.md:13",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-usage-hacking",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-usage-hacking",
+  "kind": "relate",
+  "what": {
+   "value": "Spend agent quotas deliberately: an evidence-backed view of Claude/Codex/Zai quota consumption joined to workload and outcome evidence, from which scheduling policies are derived.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-usage-hacking.md:1",
+   "quote": "# Mission: Usage Hacking — Spend Agent Quotas Deliberately"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon0/holes/missions/M-usage-hacking.md:21",
+   "quote": "general allocation strategy."
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

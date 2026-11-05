@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-a88c7ae74d1f758a70a47e456140cd6121c9d27dac6a852c601bf6036161c78e",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-a88c7ae74d1f758a70a47e456140cd6121c9d27dac6a852c601bf6036161c78e",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an invalid close outcome at the War Machine's close stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a88c7ae74d1f758a70a47e456140cd6121c9d27dac6a852c601bf6036161c78e.md:11",
+   "quote": "invalid close outcome"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a88c7ae74d1f758a70a47e456140cd6121c9d27dac6a852c601bf6036161c78e.md:7",
+   "quote": "Target: not retained; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-futon-enrichment",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-futon-enrichment",
+  "kind": "relate",
+  "what": {
+   "value": "Rational-reconstruction enrichment layers over the Arxana hypergraph — missions, patterns, tensions, churn, complexity rendered in the browser.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-futon-enrichment.md:21",
+   "quote": "M-three-column-stack gave us the schema: code, project, and math columns with"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/missions/M-futon-enrichment.md:7",
+   "quote": "**Owner:** futon4 (Arxana), with dependencies on futon3c (reflection API,"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

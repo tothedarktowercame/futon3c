@@ -1,0 +1,29 @@
+{
+ "stem": "M-post-mining-ingest",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-post-mining-ingest",
+  "kind": "relate",
+  "what": {
+   "value": "Govern the one-off mining run's snapshot (from M-operational-vocabulary / M-goals-and-holes) with a canonical pin and consumer contract so downstream consumers neither neglect nor muddle it.",
+   "cite": "/home/joe/code/futon2/holes/M-post-mining-ingest.md:7",
+   "quote": "The **mining run** (the State apparatus: M-operational-vocabulary + M-goals-and-holes) produced an **expensive, one-off, multi-artifact snapshot**"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-post-mining-ingest.md:7",
+   "quote": "The **mining run** (the State apparatus: M-operational-vocabulary + M-goals-and-holes) produced an **expensive, one-off, multi-artifact snapshot**"
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

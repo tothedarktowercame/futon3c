@@ -1,0 +1,29 @@
+{
+ "stem": "M-NA2026-outreach-debrief",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-NA2026-outreach-debrief",
+  "kind": "relate",
+  "what": {
+   "value": "Debrief Joe's 2026 North-America in-person networking (cold contacts turned warm without sends) into evidence entries and decide whether T2.4/T2.5 should count meetings rather than sends.",
+   "cite": "/home/joe/code/futon7/holes/missions/M-NA2026-outreach-debrief.md:13",
+   "quote": "**Question.** Can these cold-to-warm conversations be turned into a funnel? If not, what is missing?"
+  },
+  "area": {
+   "value": "other:pudding-prover",
+   "cite": "/home/joe/code/futon7/holes/missions/M-NA2026-outreach-debrief.md:6",
+   "quote": "**Cross-ref:** pudding-prover T2.4 / T2.5 (`futon7/holes/C-pudding-prover.md`, rows 589–590; stars `cold-send-response`,"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

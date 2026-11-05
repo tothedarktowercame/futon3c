@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-a1f9953c35ee4ed8a16473911f2bafeaa54b2e8609d3da40fe8e32a1a226423f",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-a1f9953c35ee4ed8a16473911f2bafeaa54b2e8609d3da40fe8e32a1a226423f",
+  "kind": "relate",
+  "what": {
+   "value": "Correct failed reviewer falsifier checks when the War Machine waited on M-stack-geometry",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a1f9953c35ee4ed8a16473911f2bafeaa54b2e8609d3da40fe8e32a1a226423f.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a1f9953c35ee4ed8a16473911f2bafeaa54b2e8609d3da40fe8e32a1a226423f.md:9",
+   "quote": "Target: M-stack-geometry; stage: :reviewer-wait."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

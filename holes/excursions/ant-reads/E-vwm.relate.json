@@ -1,0 +1,29 @@
+{
+ "stem": "E-vwm",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-vwm",
+  "kind": "relate",
+  "what": {
+   "value": "Virtual War Machine — a speculative simulator doing 'speculative fiction over the stack' to anticipate how missions would go and show where they break.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-vwm.md:14",
+   "quote": "find anything they're confident about doing\"). The VWM is a **speculative simulator** — it does \"speculative"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-vwm.md:11",
+   "quote": "The WM's real failure is the **stall**: an agent enters a mission, its candidate patterns are a flat, low-cosine"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

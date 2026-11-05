@@ -1,0 +1,29 @@
+{
+ "stem": "E-ukrn-paper-v2.4-comments",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-ukrn-paper-v2.4-comments",
+  "kind": "relate",
+  "what": {
+   "value": "Comment-response sheet for the UKRN working paper v2.4 — anchored co-author comments with candidate writing-coherence patterns and draft revisions.",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:1",
+   "quote": "# UKRN paper v2.4 — comment-response sheet"
+  },
+  "area": {
+   "value": "other:papers",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-ukrn-paper-v2.4-comments.md:4",
+   "quote": "and a draft revision. Edit freely — accept, reject, rewrite. Once you sign off, I will apply approved edits to a fresh .docx for upload."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

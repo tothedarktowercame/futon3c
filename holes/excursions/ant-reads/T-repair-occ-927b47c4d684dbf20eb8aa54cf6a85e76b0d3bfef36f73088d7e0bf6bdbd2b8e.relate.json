@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-927b47c4d684dbf20eb8aa54cf6a85e76b0d3bfef36f73088d7e0bf6bdbd2b8e",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-927b47c4d684dbf20eb8aa54cf6a85e76b0d3bfef36f73088d7e0bf6bdbd2b8e",
+  "kind": "relate",
+  "what": {
+   "value": "Correct failed inner construction after occurrence squares were published",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-927b47c4d684dbf20eb8aa54cf6a85e76b0d3bfef36f73088d7e0bf6bdbd2b8e.md:11",
+   "quote": "Occurrence squares were published but inner construction failed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-927b47c4d684dbf20eb8aa54cf6a85e76b0d3bfef36f73088d7e0bf6bdbd2b8e.md:7",
+   "quote": "Target: not retained; stage: :occurrence-square-redecision."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

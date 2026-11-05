@@ -1,0 +1,29 @@
+{
+ "stem": "E-apm-cross-paper-dependency-graph",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-apm-cross-paper-dependency-graph",
+  "kind": "relate",
+  "what": {
+   "value": "Join APM informal proof steps and Lean lemmas into a cross-paper dependency graph showing reuse for open sorries",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-apm-cross-paper-dependency-graph.md:1",
+   "quote": "# E-apm-cross-paper-dependency-graph — which APM papers can reuse each other's Lean"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-apm-cross-paper-dependency-graph.md:1",
+   "quote": "# E-apm-cross-paper-dependency-graph — which APM papers can reuse each other's Lean"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-e46f72e83344f27c9db169ab020245552eeea84e73b27afba129efeb3ed85d07",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-e46f72e83344f27c9db169ab020245552eeea84e73b27afba129efeb3ed85d07",
+  "kind": "relate",
+  "what": {
+   "value": "Correct a refused cascade decision at selection against M-autoclock-in",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e46f72e83344f27c9db169ab020245552eeea84e73b27afba129efeb3ed85d07.md:11",
+   "quote": "cascade decision refused"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e46f72e83344f27c9db169ab020245552eeea84e73b27afba129efeb3ed85d07.md:9",
+   "quote": "Target: M-autoclock-in; stage: :selection."
+  },
+  "also": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e46f72e83344f27c9db169ab020245552eeea84e73b27afba129efeb3ed85d07.md:5",
+   "quote": "Parent: M-autoclock-in"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

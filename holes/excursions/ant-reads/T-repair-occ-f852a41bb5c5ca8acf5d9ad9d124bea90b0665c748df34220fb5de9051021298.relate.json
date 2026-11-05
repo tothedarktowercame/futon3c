@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-f852a41bb5c5ca8acf5d9ad9d124bea90b0665c748df34220fb5de9051021298",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-f852a41bb5c5ca8acf5d9ad9d124bea90b0665c748df34220fb5de9051021298",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an invalid close outcome when the War Machine closed M-daily-scan",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f852a41bb5c5ca8acf5d9ad9d124bea90b0665c748df34220fb5de9051021298.md:11",
+   "quote": "invalid close outcome"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-f852a41bb5c5ca8acf5d9ad9d124bea90b0665c748df34220fb5de9051021298.md:9",
+   "quote": "Target: M-daily-scan; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

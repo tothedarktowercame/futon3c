@@ -1,0 +1,29 @@
+{
+ "stem": "T-q2-q4-q8-recomputable-on-every-run",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760983841-11665-3cebdff4",
+ "at": "2026-11-04T03:00:17+00:00",
+ "row": {
+  "stem": "T-q2-q4-q8-recomputable-on-every-run",
+  "kind": "relate",
+  "what": {
+   "value": "Make WM report-card requirements Q2, Q4, Q8 decidable on every run, including failed ones, and align the Lean tie rule with the Clojure verifier",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:4",
+   "quote": "Parent: M-wm-aif-policy-grain-compliance"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-q2-q4-q8-recomputable-on-every-run.md:9",
+   "quote": "On the 10-18 readiness clicks the Lean requirement verdicts that carry the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

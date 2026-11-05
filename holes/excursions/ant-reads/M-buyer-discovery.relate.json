@@ -1,0 +1,29 @@
+{
+ "stem": "M-buyer-discovery",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-buyer-discovery",
+  "kind": "relate",
+  "what": {
+   "value": "Ground, from the documented 20-year CV buyer-trail, who the next buyers of the Hyperreal/Futon stack are — ≈3 concrete buyers in 3 months as the assurance goal.",
+   "cite": "/home/joe/code/futon7/holes/M-buyer-discovery.md:3",
+   "quote": "**Status:** OPEN — IDENTIFY (scoped 2026-06-03) — seeded from the CV buyer-trail (`~/code/cv-and-publications`). Roster rows are fact-checkable; the *ask* per row is Joe's to fill."
+  },
+  "area": {
+   "value": "other:business-development",
+   "cite": "/home/joe/code/futon7/holes/M-buyer-discovery.md:9",
+   "quote": "Goal frame: **≈3 concrete buyers in 3 months** to have assurance Hyperreal is a business."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

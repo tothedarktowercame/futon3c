@@ -1,0 +1,29 @@
+{
+ "stem": "E-scope-audit",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-scope-audit",
+  "kind": "relate",
+  "what": {
+   "value": "Joint mission-mode scope audits whose labeled misses improve futon6's mission_scope_detect.py and ingest",
+   "cite": "/home/joe/code/futon6/holes/E-scope-audit.md:10",
+   "quote": "`futon6/scripts/mission_scope_detect.py` + the ingest."
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/E-scope-audit.md:10",
+   "quote": "`futon6/scripts/mission_scope_detect.py` + the ingest."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-categorical-code",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-categorical-code",
+  "kind": "relate",
+  "what": {
+   "value": "Port futon5's evolutionary machinery to code evolution as a functor (Evolution → Code), a consumer of Campaign C-substrate-completion.",
+   "cite": "/home/joe/code/futon5/holes/missions/M-categorical-code.md:14",
+   "quote": "**Port futon5's evolutionary machinery to *code evolution*, expressed as a functor.** futon5 evolved"
+  },
+  "area": {
+   "value": "other:substrate",
+   "cite": "/home/joe/code/futon5/holes/missions/M-categorical-code.md:8",
+   "quote": "**Campaign:** **late joiner to `C-substrate-completion`** (`futon3c/holes/campaigns/C-substrate-completion.md`)"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

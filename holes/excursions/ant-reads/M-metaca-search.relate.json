@@ -1,0 +1,29 @@
+{
+ "stem": "M-metaca-search",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-metaca-search",
+  "kind": "relate",
+  "what": {
+   "value": "Build a two-frame (models-in-space / behaviour-in-space) search engine over CA dynamics on the DarkTower skeleton, run as a re-targeted War Machine flight with the CA as its external world.",
+   "cite": "/home/joe/code/futon5/holes/missions/M-metaca-search.md:1",
+   "quote": "# M-metaca-search — a two-frame search engine over CA dynamics"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon5/holes/missions/M-metaca-search.md:95",
+   "quote": "the model grid. **The CA is the WM's first external world.**"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

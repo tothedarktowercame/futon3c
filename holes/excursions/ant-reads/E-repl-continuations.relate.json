@@ -1,0 +1,29 @@
+{
+ "stem": "E-repl-continuations",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-repl-continuations",
+  "kind": "relate",
+  "what": {
+   "value": "Let an agent park its own REPL turn until expected bellbacks/jobs return, then self-resume via the futon3c turn/execution path",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-repl-continuations.md:5",
+   "quote": "**Repo:** futon3c — the turn/execution path: `transport/http.clj` (`invoke-executor`, `handle-bell`, autobell-back, async-accept), `agency/turn_queue.clj` (durable per-agent queue + drainer-v2), `agents/tickle*` (self-trigger), `agency/clock_lineage.clj` (durable per-agent state precedent)."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-repl-continuations.md:5",
+   "quote": "**Repo:** futon3c — the turn/execution path: `transport/http.clj` (`invoke-executor`, `handle-bell`, autobell-back, async-accept), `agency/turn_queue.clj` (durable per-agent queue + drainer-v2), `agents/tickle*` (self-trigger), `agency/clock_lineage.clj` (durable per-agent state precedent)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

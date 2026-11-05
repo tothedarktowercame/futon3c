@@ -1,0 +1,29 @@
+{
+ "stem": "M-kangaroo",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-kangaroo",
+  "kind": "relate",
+  "what": {
+   "value": "Keep warm persistent agent processes for agency-routed turns instead of cold `claude --resume` reconstruction per turn",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-kangaroo.md:19",
+   "quote": "agency-routed turn invokes `claude -p --resume <session>` — a fresh cold process"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-kangaroo.md:19",
+   "quote": "agency-routed turn invokes `claude -p --resume <session>` — a fresh cold process"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

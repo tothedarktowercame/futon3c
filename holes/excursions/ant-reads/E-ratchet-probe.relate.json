@@ -1,0 +1,29 @@
+{
+ "stem": "E-ratchet-probe",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-ratchet-probe",
+  "kind": "relate",
+  "what": {
+   "value": "Testing whether review pushback ratchets agent behavior — feed-forward prompts, in-context correction, or lessons promoted to durable artifacts",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-ratchet-probe.md:20",
+   "quote": "or (b) a meta-learning event (the lesson lands in a durable artifact —"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-ratchet-probe.md:34",
+   "quote": "  a durable artifact by either party, unprompted, and is later CITED"
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

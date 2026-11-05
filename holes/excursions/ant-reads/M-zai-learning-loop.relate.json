@@ -1,0 +1,35 @@
+{
+ "stem": "M-zai-learning-loop",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-zai-learning-loop",
+  "kind": "relate",
+  "what": {
+   "value": "A laptop-based, self-improving mathematics learning loop: a runner does math, a scribe distills typed memories, retrieval feeds them back, producing real evidence of learning.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-zai-learning-loop.md:20-21",
+   "quote": "M-typed-memories names the gap: agents do the work but the *learning* is not"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-zai-learning-loop.md:24-25",
+   "quote": "1. **A learning loop runs**: a runner does mathematics; a scribe distills its"
+  },
+  "also": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-zai-learning-loop.md:22",
+   "quote": "captured, stored, or fed back. This mission exists to produce **real"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-range",
+  "ok-range",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

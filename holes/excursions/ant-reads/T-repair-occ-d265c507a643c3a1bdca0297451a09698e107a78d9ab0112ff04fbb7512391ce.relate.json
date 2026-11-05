@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-d265c507a643c3a1bdca0297451a09698e107a78d9ab0112ff04fbb7512391ce",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-d265c507a643c3a1bdca0297451a09698e107a78d9ab0112ff04fbb7512391ce",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct a resume-protocol violation at WM :cascade-resume stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d265c507a643c3a1bdca0297451a09698e107a78d9ab0112ff04fbb7512391ce.md:1",
+   "quote": "# Correct resume protocol violation"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d265c507a643c3a1bdca0297451a09698e107a78d9ab0112ff04fbb7512391ce.md:7",
+   "quote": "Target: not retained; stage: :cascade-resume."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-4bc74d192b2e6d43514825b62f5df02c28f3d75abd8e091dfd54af30f5a44f8f",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-4bc74d192b2e6d43514825b62f5df02c28f3d75abd8e091dfd54af30f5a44f8f",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to verify or restore an ineligible WM initialization trigger.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4bc74d192b2e6d43514825b62f5df02c28f3d75abd8e091dfd54af30f5a44f8f.md:9",
+   "quote": "ineligible trigger"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4bc74d192b2e6d43514825b62f5df02c28f3d75abd8e091dfd54af30f5a44f8f.md:9",
+   "quote": "ineligible trigger"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-typed-holes-example-self",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-typed-holes-example-self",
+  "kind": "relate",
+  "what": {
+   "value": "Reflexive excursion typing M-typed-holes with its own typed-hole vocabulary, so the framework's self-representation bottoms out.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-typed-holes-example-self.md:13",
+   "quote": "`BV.copar`, ghost phase a `TypedHole`). Therefore **M-typed-holes is itself a"
+  },
+  "area": {
+   "value": "other:typed-holes",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-typed-holes-example-self.md:1",
+   "quote": "# E-typed-holes-example-self — M-typed-holes, typed as a (live) typed hole"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

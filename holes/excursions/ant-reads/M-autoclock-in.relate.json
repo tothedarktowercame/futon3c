@@ -1,0 +1,29 @@
+{
+ "stem": "M-autoclock-in",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-autoclock-in",
+  "kind": "relate",
+  "what": {
+   "value": "Implements witnessed auto-promotion of clock-in targets in the futon3c agent-chat/REPL surface, with durable clock decisions and dispatch lineage.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-autoclock-in.md:17",
+   "quote": "The going-forward clock-in (`C-substrate-completion §8.1`) is manual: `cr/cx new <target>` or `agent-chat-clock-in`/`-excurse`."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-autoclock-in.md:13",
+   "quote": "**Repo:** futon3c (clock-in lives in the agent-chat/REPL surface)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

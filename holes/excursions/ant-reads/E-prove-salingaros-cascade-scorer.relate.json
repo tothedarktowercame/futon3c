@@ -1,0 +1,29 @@
+{
+ "stem": "E-prove-salingaros-cascade-scorer",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-prove-salingaros-cascade-scorer",
+  "kind": "relate",
+  "what": {
+   "value": "Settle whether Salingaros life L=T·H is recoverable as accuracy×(−complexity) for the futon2 AIF cascade scorer",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-prove-salingaros-cascade-scorer.md:7",
+   "quote": "**Parent:** M-G-over-cascades (futon2) — grain-2 grounding. **Source:** deep-research open-Q3."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-prove-salingaros-cascade-scorer.md:7",
+   "quote": "**Parent:** M-G-over-cascades (futon2) — grain-2 grounding. **Source:** deep-research open-Q3."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

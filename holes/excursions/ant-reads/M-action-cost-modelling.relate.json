@@ -1,0 +1,29 @@
+{
+ "stem": "M-action-cost-modelling",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-action-cost-modelling",
+  "kind": "relate",
+  "what": {
+   "value": "Builds cost/benefit-aware action prioritisation for the War Machine so it stops presenting minute-scale and months-scale work as equivalent.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-action-cost-modelling.md:14",
+   "quote": "**Trigger:** Joe's emacs-repl finding 2026-05-26, after the live tied-bucket display fix (commit `713d74d` futon3c) surfaced the WM's actual indifference among 5 sibling sorries: *\"until we have some strategy for doing cost (and benefit) aware prioritisation, it's somewhat premature to greenlight new work."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-action-cost-modelling.md:1",
+   "quote": "# Mission: Action Cost/Benefit Modelling for the WM"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

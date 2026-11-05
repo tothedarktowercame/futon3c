@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-29b5ddce251554d1fb1c9e6dc3e6ada925746e49890bbd72fa32671213818aa7",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-29b5ddce251554d1fb1c9e6dc3e6ada925746e49890bbd72fa32671213818aa7",
+  "kind": "relate",
+  "what": {
+   "value": "Correct missing/malformed construction fold wiring when the War Machine ran algorithm A-self-heal",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-29b5ddce251554d1fb1c9e6dc3e6ada925746e49890bbd72fa32671213818aa7.md:11",
+   "quote": "Construction fold wiring is missing or malformed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-29b5ddce251554d1fb1c9e6dc3e6ada925746e49890bbd72fa32671213818aa7.md:9",
+   "quote": "Context: {:phase :construction, :selected-entry {:action {:type :run-algorithm, :target \"A-self-heal\"}, :controller-score nil}}."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

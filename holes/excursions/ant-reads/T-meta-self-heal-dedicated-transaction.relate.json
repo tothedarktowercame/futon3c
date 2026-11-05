@@ -1,0 +1,29 @@
+{
+ "stem": "T-meta-self-heal-dedicated-transaction",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760913233-11660-4849d0fa",
+ "at": "2026-11-04T02:58:39+00:00",
+ "row": {
+  "stem": "T-meta-self-heal-dedicated-transaction",
+  "kind": "relate",
+  "what": {
+   "value": "META self-heal must run as a durable repair transaction rather than the ordinary WM task pipeline, which exposed one incompatible gate per click.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:5",
+   "quote": "Parent: A-self-heal"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-meta-self-heal-dedicated-transaction.md:12",
+   "quote": "ordinary R6/R13/R14/CTAU admission;"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

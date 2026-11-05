@@ -1,0 +1,29 @@
+{
+ "stem": "E-globe2-candidate-bridge-v0",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-globe2-candidate-bridge-v0",
+  "kind": "relate",
+  "what": {
+   "value": "Worked bridge from the Strategic SORRY 🌐2 (mode violation) into candidate invariant families, for comparison with the 🌐1 bridge.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-globe2-candidate-bridge-v0.md:6",
+   "quote": "**Purpose:** build the second worked bridge from a Strategic SORRY into"
+  },
+  "area": {
+   "value": "other:Strategic-SORRY-bridges",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-globe2-candidate-bridge-v0.md:7",
+   "quote": "candidate-invariant families, so the `🌐1` bridge can be compared rather"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-simulating-or-training-as-learning-system",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-simulating-or-training-as-learning-system",
+  "kind": "relate",
+  "what": {
+   "value": "Fix the simulation supporting the UKRN working paper's OR-training design recommendations — multi-seed runs, facet calibration, validated sorry closure.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-simulating-or-training-as-learning-system.md:5",
+   "quote": "this mission identifies gaps in the *simulation* that supports the working paper's design recommendations and aims at a simulation we can be confident about."
+  },
+  "area": {
+   "value": "other:UKRN-paper",
+   "cite": "/home/joe/code/futon4/holes/missions/M-simulating-or-training-as-learning-system.md:8",
+   "quote": "- `/home/joe/npt/working-paper/UKRN_WP_draft_v9.md` (current paper)"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "T-evidence-pinned-to-mutable-prose-26082026",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793762075799-11735-3400349c",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "T-evidence-pinned-to-mutable-prose-26082026",
+  "kind": "relate",
+  "what": {
+   "value": "Fix fold-turn deposits dying because fold_escrow reconstructs prompts from current flexiarg prose with no sha pin",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-evidence-pinned-to-mutable-prose-26082026.md:11",
+   "quote": "`fold_escrow/reconstruct-prompt` rebuilds the prompt by slurping **current**"
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-evidence-pinned-to-mutable-prose-26082026.md:11",
+   "quote": "`fold_escrow/reconstruct-prompt` rebuilds the prompt by slurping **current**"
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-evidence-pinned-to-mutable-prose-26082026.md:12",
+   "quote": "flexiarg prose from `/home/joe/code/futon3/library`. If any cited prose has"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

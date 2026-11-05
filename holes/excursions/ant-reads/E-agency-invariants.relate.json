@@ -1,0 +1,29 @@
+{
+ "stem": "E-agency-invariants",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-agency-invariants",
+  "kind": "relate",
+  "what": {
+   "value": "Research excursion: can futon3c Agency features (durable-queue, restore, single-writer, operator-turn delivery) be specified as invariants with cheap tripwires.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-invariants.md:5",
+   "quote": "Question: can we specify futon3c Agency features (durable-queue trio, restore,"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-invariants.md:6",
+   "quote": "single-writer, operator-turn delivery) as **invariants with cheap tripwires** —"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

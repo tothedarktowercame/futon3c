@@ -1,0 +1,29 @@
+{
+ "stem": "M-wm-strategic-mission-selection",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "M-wm-strategic-mission-selection",
+  "kind": "relate",
+  "what": {
+   "value": "Pattern-organized strategic mission selection for the WM outer loop, with typed candidate projection and memory-recalled episodes",
+   "cite": "/home/joe/code/futon2/holes/missions/M-wm-strategic-mission-selection.md:1",
+   "quote": "# Mission: Pattern-organized strategic mission selection"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-wm-strategic-mission-selection.md:1",
+   "quote": "# Mission: Pattern-organized strategic mission selection"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

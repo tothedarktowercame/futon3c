@@ -1,0 +1,29 @@
+{
+ "stem": "M-editorial-assistant",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-editorial-assistant",
+  "kind": "relate",
+  "what": {
+   "value": "Scope the reviewer-comment/operator-resolution editorial-assistant layer over the futon4 essay-revise substrate",
+   "cite": "/home/joe/code/futon4/holes/missions/M-editorial-assistant.md:20",
+   "quote": "> \"I think what we have here is the making of a new futon4 mission. M-editorial-assistant.md — we can start by build the queue, and I could progress things without any AI assistance, just logging work.\""
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/missions/M-editorial-assistant.md:26",
+   "quote": "The essay-revision queue (v0.5.28) ranks futon7a essays by an AIF-shaped G-proxy combining staleness × cross-link-density × pattern-hits."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

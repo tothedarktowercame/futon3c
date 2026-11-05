@@ -1,0 +1,29 @@
+{
+ "stem": "E-half-mil-audit",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "E-half-mil-audit",
+  "kind": "relate",
+  "what": {
+   "value": "A grounded survey of the 500k-LOC FUTON stack's structure and git evolution, consumed by the codebase-manifold research and a possible small-blocks rewrite.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-half-mil-audit.md:10",
+   "quote": "Stop the *fishing expedition for \"what works\"* (the beats-baseline value-hunt that kept returning nulls). Do a **grounded evaluation of \"what IS.\"** The FUTON stack exists — we hit the **500k-LOC milestone** — so survey what's actually in there."
+  },
+  "area": {
+   "value": "other:stack-morphology-survey",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-half-mil-audit.md:41",
+   "quote": "`E-codebase-manifold` (M-aif2 §6) materializes here: **attractors = the manifold's deep basins** (git-accreted mass), the metric's **curvature marks the bridges between them**, and the **accretion history is the evolution**. Survey = *basins + bridges + history*."
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

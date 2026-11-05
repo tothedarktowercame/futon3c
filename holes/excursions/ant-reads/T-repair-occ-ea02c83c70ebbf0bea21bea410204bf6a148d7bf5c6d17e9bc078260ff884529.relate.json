@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-ea02c83c70ebbf0bea21bea410204bf6a148d7bf5c6d17e9bc078260ff884529",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-ea02c83c70ebbf0bea21bea410204bf6a148d7bf5c6d17e9bc078260ff884529",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an invalid author refusal when the War Machine waited on M-self-documenting-stack",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-ea02c83c70ebbf0bea21bea410204bf6a148d7bf5c6d17e9bc078260ff884529.md:11",
+   "quote": "Author refusal lacks a reason or claims an artifact"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-ea02c83c70ebbf0bea21bea410204bf6a148d7bf5c6d17e9bc078260ff884529.md:9",
+   "quote": "Target: M-self-documenting-stack; stage: :author-wait."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

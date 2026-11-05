@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-836a86b20fca2fd5de0e3a7582ff65363f6e4cdb1cc1ecd75b60c845a77042e7",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-836a86b20fca2fd5de0e3a7582ff65363f6e4cdb1cc1ecd75b60c845a77042e7",
+  "kind": "relate",
+  "what": {
+   "value": "Verify or restore the configured author at the War Machine's agent-readiness stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-836a86b20fca2fd5de0e3a7582ff65363f6e4cdb1cc1ecd75b60c845a77042e7.md:11",
+   "quote": "Configured author is unavailable"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-836a86b20fca2fd5de0e3a7582ff65363f6e4cdb1cc1ecd75b60c845a77042e7.md:7",
+   "quote": "Target: not retained; stage: :agent-readiness."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

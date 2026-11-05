@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-e62431354b9285c3a249e7331b8582475b1dc426123a35a0432c156ba813844f",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-e62431354b9285c3a249e7331b8582475b1dc426123a35a0432c156ba813844f",
+  "kind": "relate",
+  "what": {
+   "value": "Correct failed inner construction after the selected-target reading was published",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e62431354b9285c3a249e7331b8582475b1dc426123a35a0432c156ba813844f.md:11",
+   "quote": "Selected-target reading was published but inner construction failed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e62431354b9285c3a249e7331b8582475b1dc426123a35a0432c156ba813844f.md:7",
+   "quote": "Target: not retained; stage: :selected-target-reading-redecision."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

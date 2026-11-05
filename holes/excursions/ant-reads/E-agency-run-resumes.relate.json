@@ -1,0 +1,29 @@
+{
+ "stem": "E-agency-run-resumes",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-agency-run-resumes",
+  "kind": "relate",
+  "what": {
+   "value": "Design-intake excursion tracing how parked-resume buffer delivery works on futon3c master and what the smallest server experiment would be.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-run-resumes.md:9",
+   "quote": "**[read]** `parked-resume!` splits on an `emacs*` surface.  The buffer branch"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-agency-run-resumes.md:10",
+   "quote": "the headless branch creates an invoke job and submits it to the recipient's"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

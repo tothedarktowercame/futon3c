@@ -1,0 +1,29 @@
+{
+ "stem": "M-pattern-application-diagnostic",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-pattern-application-diagnostic",
+  "kind": "relate",
+  "what": {
+   "value": "Treat each pattern application (context → tension → move) as an observable unit with a witness, as the build-the-new sibling of M-pattern-mining.",
+   "cite": "/home/joe/code/futon3/holes/missions/M-pattern-application-diagnostic.md:11-12",
+   "quote": "This mission generalises that pattern from \"tasks\" to \"pattern"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3/holes/missions/M-pattern-application-diagnostic.md:5",
+   "quote": "**Parent:** `holes/missions/M-pattern-mining.md` (the IFR was articulated"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-range",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

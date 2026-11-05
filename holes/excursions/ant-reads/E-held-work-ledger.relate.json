@@ -1,0 +1,29 @@
+{
+ "stem": "E-held-work-ledger",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-held-work-ledger",
+  "kind": "relate",
+  "what": {
+   "value": "Durable queryable held/deferred-work ledger so the cascade's question — 'what held work should wake up now?' — stops being manual archaeology.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-held-work-ledger.md:1",
+   "quote": "# E-held-work-ledger — the durable, queryable held/deferred-work ledger"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-held-work-ledger.md:4",
+   "quote": "**Member of:** C-cascade-real — the **held/deferred-work ledger** facet (Clause-1"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

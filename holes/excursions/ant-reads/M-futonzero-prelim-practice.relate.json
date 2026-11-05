@@ -1,0 +1,29 @@
+{
+ "stem": "M-futonzero-prelim-practice",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-futonzero-prelim-practice",
+  "kind": "relate",
+  "what": {
+   "value": "Adapts the python-practice routines to prelim practice for Joe's own mathematical learning.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-prelim-practice.md:17",
+   "quote": "> if we can adapt the python-practice routines to prelim-practice. […] What we"
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-prelim-practice.md:17",
+   "quote": "> if we can adapt the python-practice routines to prelim-practice. […] What we"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

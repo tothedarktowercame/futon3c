@@ -1,0 +1,29 @@
+{
+ "stem": "E-evidence-flows-everywhere",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-evidence-flows-everywhere",
+  "kind": "relate",
+  "what": {
+   "value": "Seed-note the requirement that evidence should fan out to multiple stores (not single-target dual-write), after three hosts silently failed to carry the record in different ways.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-evidence-flows-everywhere.md:17",
+   "quote": "> away. So, broadly, evidence should actually flow everywhere.\" — Joe, 2026-08-14"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-evidence-flows-everywhere.md:24",
+   "quote": "Underwritten by the FUTON tenet it serves: *the turns are the primary research"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

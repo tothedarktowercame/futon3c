@@ -1,0 +1,29 @@
+{
+ "stem": "E-aif-post-mission-mining",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-aif-post-mission-mining",
+  "kind": "relate",
+  "what": {
+   "value": "Ledger of prioritized follow-ons after the futon2 AIF loop closed live and the PROOF-MINE sweep landed (executor rules, forward-model durable join, belly honesty).",
+   "cite": "/home/joe/code/futon2/holes/E-aif-post-mission-mining.md:4",
+   "quote": "**Context:** the AIF loop closed live and the gold-gated PROOF-MINE sweep landed the same day"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-aif-post-mission-mining.md:4",
+   "quote": "**Context:** the AIF loop closed live and the gold-gated PROOF-MINE sweep landed the same day"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

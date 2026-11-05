@@ -1,0 +1,31 @@
+{
+ "stem": "E-dynamic-queries",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-dynamic-queries",
+  "kind": "relate",
+  "what": {
+   "value": "Retrieval that updates its own query operator over candidate memories — a bounded dark companion to the memory missions.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-dynamic-queries.md:17",
+   "quote": "When the desired memory is not known until it is encountered, retrieval is not"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-dynamic-queries.md:4-5",
+   "quote": "**Type:** E-prefix excursion; bounded dark companion to\n`M-typed-memories` and `M-shared-memory-control-build-test`."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok-range"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

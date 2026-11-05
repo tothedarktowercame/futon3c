@@ -1,0 +1,29 @@
+{
+ "stem": "E-btoa-candidate-queue-reweighting-v0",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-btoa-candidate-queue-reweighting-v0",
+  "kind": "relate",
+  "what": {
+   "value": "Turn the B→A evidence idea into a concrete phase-1 candidate-queue reweighting model",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-candidate-queue-reweighting-v0.md:4",
+   "quote": "**Purpose:** turn the B->A evidence idea into a concrete phase-1 queue"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-btoa-candidate-queue-reweighting-v0.md:4",
+   "quote": "**Purpose:** turn the B->A evidence idea into a concrete phase-1 queue"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-voxterm-multiplexed-conversation",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-voxterm-multiplexed-conversation",
+  "kind": "relate",
+  "what": {
+   "value": "Idea to give voxterm a queue across sessions so gists from several agent sessions are spoken in turn at a steadier combined pace.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-voxterm-multiplexed-conversation.md:13",
+   "quote": "Give voxterm a queue across sessions, similar to each coding agent's queue. Gists from several agent sessions would be spoken in turn."
+  },
+  "area": {
+   "value": "voxterm",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-voxterm-multiplexed-conversation.md:9",
+   "quote": "the `Gist:` lines were directly useful within the session for the first time. The thing that made them work was that voxterm was set to gist-only"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-6920bdcd41c5f38dadc3bccfe1b66e43ca91edb9a015d2ff22a239be64d1f710",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-6920bdcd41c5f38dadc3bccfe1b66e43ca91edb9a015d2ff22a239be64d1f710",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore after WM :selection produced no addressable action (outer task not selected)",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6920bdcd41c5f38dadc3bccfe1b66e43ca91edb9a015d2ff22a239be64d1f710.md:11",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6920bdcd41c5f38dadc3bccfe1b66e43ca91edb9a015d2ff22a239be64d1f710.md:11",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

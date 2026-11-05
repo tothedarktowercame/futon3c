@@ -1,0 +1,29 @@
+{
+ "stem": "E-futon1b-fairness-etc",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-futon1b-fairness-etc",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion on futon1b admission fairness under mixed read workloads, opened after a 503 :expensive-read-busy shed a healthy substrate-2 mission read.",
+   "cite": "/home/joe/code/futon1b/holes/E-futon1b-fairness-etc.md:1",
+   "quote": "# E-futon1b-fairness-etc — admission fairness under mixed read workloads"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon1b/holes/E-futon1b-fairness-etc.md:7",
+   "quote": "live `503 :expensive-read-busy` while substrate-2 itself remained healthy."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

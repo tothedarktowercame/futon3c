@@ -1,0 +1,29 @@
+{
+ "stem": "E-business-exotype-audit",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-business-exotype-audit",
+  "kind": "relate",
+  "what": {
+   "value": "Exploratory strategy deposit on modelling a business's ways of working computationally as an exotype with measurable gain.",
+   "cite": "/home/joe/code/futon7/holes/E-business-exotype-audit.md:1",
+   "quote": "# E-business-exotype-audit — modelling a business's ways of working as an exotype with measurable gain"
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/E-business-exotype-audit.md:1",
+   "quote": "# E-business-exotype-audit — modelling a business's ways of working as an exotype with measurable gain"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

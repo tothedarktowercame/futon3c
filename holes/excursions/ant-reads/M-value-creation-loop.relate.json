@@ -1,0 +1,29 @@
+{
+ "stem": "M-value-creation-loop",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "M-value-creation-loop",
+  "kind": "relate",
+  "what": {
+   "value": "Mission turning the stack's descriptive pattern machinery into a prospective cascade that produces warranted build strategies, wired as a value-creation loop.",
+   "cite": "/home/joe/code/futon7/holes/missions/M-value-creation-loop.md:13",
+   "quote": "pattern cascade that, given a missing feature, produces a warranted \"here's how"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon7/holes/missions/M-value-creation-loop.md:12",
+   "quote": "**Turn the stack's *descriptive* pattern machinery into a *prospective* one: a"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

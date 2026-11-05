@@ -1,0 +1,31 @@
+{
+ "stem": "M-intent-curvature",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-intent-curvature",
+  "kind": "relate",
+  "what": {
+   "value": "Promote the live curvature surface to mentions-mixed (β>0) intent-curvature so the M-aif2 tension proposer reads cross-concern intent bridges.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-intent-curvature.md:21",
+   "quote": "This mission is the strict upgrade: promote the consumed signal to the"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-intent-curvature.md:14",
+   "quote": "**Parent:** `C-substrate-completion` §9.1 (the named follow-up beyond the dissolution bar)."
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

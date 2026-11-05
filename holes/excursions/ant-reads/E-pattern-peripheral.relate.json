@@ -1,0 +1,29 @@
+{
+ "stem": "E-pattern-peripheral",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-pattern-peripheral",
+  "kind": "relate",
+  "what": {
+   "value": "Build the transactional pattern-creation peripheral so pattern writes honour the canonical-parser invariant at write time",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-pattern-peripheral.md:1",
+   "quote": "# Excursion: Pattern Peripheral (transactional pattern creation)"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-pattern-peripheral.md:1",
+   "quote": "# Excursion: Pattern Peripheral (transactional pattern creation)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

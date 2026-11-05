@@ -1,0 +1,29 @@
+{
+ "stem": "M-digital-nomad-patterns",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-digital-nomad-patterns",
+  "kind": "relate",
+  "what": {
+   "value": "Author a trigger-class pattern language (Choose The Grid, Live Yardstick, etc.) for moving on the professional/business landscape, minted as futon3/library/nomad/*.flexiarg with a business-intel embedding.",
+   "cite": "/home/joe/code/futon2/holes/M-digital-nomad-patterns.md:1",
+   "quote": "# M-digital-nomad-patterns — a pattern language for moving on the professional landscape"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon2/holes/M-digital-nomad-patterns.md:1",
+   "quote": "# M-digital-nomad-patterns — a pattern language for moving on the professional landscape"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

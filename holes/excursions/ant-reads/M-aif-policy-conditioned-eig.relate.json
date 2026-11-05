@@ -1,0 +1,29 @@
+{
+ "stem": "M-aif-policy-conditioned-eig",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793765208225-11797-89c964c4",
+ "at": "2026-11-04T04:07:43+00:00",
+ "row": {
+  "stem": "M-aif-policy-conditioned-eig",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to implement policy-conditioned expected information gain in the futon2 AIF loop, replacing posterior-spread model-uncertainty bonus with EIG(π) answering which observations a policy would produce and how much uncertainty each removes.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-aif-policy-conditioned-eig.md:20",
+   "quote": "The canonical target is policy-conditioned expected information gain:"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-aif-policy-conditioned-eig.md:14",
+   "quote": "The live `model-uncertainty-bonus` is posterior spread. It can identify a model"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

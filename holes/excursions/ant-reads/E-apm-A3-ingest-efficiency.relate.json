@@ -1,0 +1,29 @@
+{
+ "stem": "E-apm-A3-ingest-efficiency",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-apm-A3-ingest-efficiency",
+  "kind": "relate",
+  "what": {
+   "value": "Decomposition of A3 into handoffs aimed at making the flexiarg-pattern ingest reach the 30-minute target.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:10",
+   "quote": "Sub-items of **A3** on the locked list (`E-apm-halftime-pre-go-live.md`). No"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-A3-ingest-efficiency.md:10",
+   "quote": "Sub-items of **A3** on the locked list (`E-apm-halftime-pre-go-live.md`). No"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

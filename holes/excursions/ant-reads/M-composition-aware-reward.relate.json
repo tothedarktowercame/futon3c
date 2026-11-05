@@ -1,0 +1,29 @@
+{
+ "stem": "M-composition-aware-reward",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-composition-aware-reward",
+  "kind": "relate",
+  "what": {
+   "value": "Fix the learned proposal reward R̂ so its argmax is an honest multi-pattern composition instead of a single safe pattern, using wiring evidence from the fold corpus (reward_v1 in M-memes-arrows).",
+   "cite": "/home/joe/code/futon2/holes/M-composition-aware-reward.md:21",
+   "quote": "WANT: a reward whose argmax is an honest composition — R̂ v1 that (a) draws a"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon2/holes/M-composition-aware-reward.md:18",
+   "quote": "cannot see. A single pattern is one PSR/PUR arrow: boundedly complex by"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

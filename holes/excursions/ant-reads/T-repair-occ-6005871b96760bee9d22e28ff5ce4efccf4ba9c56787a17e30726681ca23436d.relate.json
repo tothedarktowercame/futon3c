@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-6005871b96760bee9d22e28ff5ce4efccf4ba9c56787a17e30726681ca23436d",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-6005871b96760bee9d22e28ff5ce4efccf4ba9c56787a17e30726681ca23436d",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore substrate-2 mission registry reachability hit during an M-self-documenting-stack click at :construction",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6005871b96760bee9d22e28ff5ce4efccf4ba9c56787a17e30726681ca23436d.md:11",
+   "quote": "substrate-2 mission registry unreachable"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-6005871b96760bee9d22e28ff5ce4efccf4ba9c56787a17e30726681ca23436d.md:5",
+   "quote": "Parent: M-self-documenting-stack"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

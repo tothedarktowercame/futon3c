@@ -1,0 +1,29 @@
+{
+ "stem": "M-memory-retrieval",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-memory-retrieval",
+  "kind": "relate",
+  "what": {
+   "value": "Grow the memory retrieval subsystem toward the retrieval theory (propagation rungs, semantic lane, whitepaper)",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-memory-retrieval.md:1",
+   "quote": "# M-memory-retrieval — growing the retrieval subsystem toward the theory"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-memory-retrieval.md:1",
+   "quote": "# M-memory-retrieval — growing the retrieval subsystem toward the theory"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

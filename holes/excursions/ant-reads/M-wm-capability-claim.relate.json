@@ -1,0 +1,29 @@
+{
+ "stem": "M-wm-capability-claim",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "M-wm-capability-claim",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to state what the War Machine should be able to do — a falsifiable capability claim, prerequisite for M-aif-stack S2.",
+   "cite": "/home/joe/code/futon2/holes/M-wm-capability-claim.md:1",
+   "quote": "# M-wm-capability-claim — what the War Machine should be able to do"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-wm-capability-claim.md:4",
+   "quote": "**Status:** OPEN — SPEC. Prerequisite for M-aif-stack S2."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

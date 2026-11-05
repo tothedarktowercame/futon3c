@@ -1,0 +1,29 @@
+{
+ "stem": "E-park-delivery-losses",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "E-park-delivery-losses",
+  "kind": "relate",
+  "what": {
+   "value": "Live-found catalogue of three ways a parked resume dies between the Agency join and the Emacs REPL buffer, plus finding 0 (the poller was never installed).",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-park-delivery-losses.md:1",
+   "quote": "# E-park-delivery-losses — three ways a parked resume dies between the join and the buffer"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-park-delivery-losses.md:1",
+   "quote": "# E-park-delivery-losses — three ways a parked resume dies between the join and the buffer"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

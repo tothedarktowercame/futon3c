@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-69aaabcf68cc2e7cbe6e5aff4bdfcc5039e9c88f597b848932ef243b2ea21ac4",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761217421-11682-e5ca67a4",
+ "at": "2026-11-04T03:02:25+00:00",
+ "row": {
+  "stem": "T-repair-occ-69aaabcf68cc2e7cbe6e5aff4bdfcc5039e9c88f597b848932ef243b2ea21ac4",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct a missing wm-executable-cascades EDN file at :cascade-execution stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-69aaabcf68cc2e7cbe6e5aff4bdfcc5039e9c88f597b848932ef243b2ea21ac4.md:11",
+   "quote": "data/wm-executable-cascades/4372a892317d9a20739d7d0d3817acd396240194bf2cbc90d0d0267409e9a976.edn (No such file or directory)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-69aaabcf68cc2e7cbe6e5aff4bdfcc5039e9c88f597b848932ef243b2ea21ac4.md:11",
+   "quote": "data/wm-executable-cascades/4372a892317d9a20739d7d0d3817acd396240194bf2cbc90d0d0267409e9a976.edn (No such file or directory)"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

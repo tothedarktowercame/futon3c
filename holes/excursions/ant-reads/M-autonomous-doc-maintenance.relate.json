@@ -1,0 +1,35 @@
+{
+ "stem": "M-autonomous-doc-maintenance",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-autonomous-doc-maintenance",
+  "kind": "relate",
+  "what": {
+   "value": "Ship the autonomous maintenance loop so documentation drift is stack-self-detected and stack-self-resolved without operator stepping",
+   "cite": "/home/joe/code/futon7/holes/M-autonomous-doc-maintenance.md:17",
+   "quote": "**This mission addresses the other sub-shape**: *autonomous-maintenance-loop*."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon7/holes/M-autonomous-doc-maintenance.md:6",
+   "quote": "**Owner:** claude-2 (cross-cutting; WM-side drift channel + delegation; coordinates with futon3c-side peripheral wrapping)."
+  },
+  "also": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon7/holes/M-autonomous-doc-maintenance.md:6",
+   "quote": "**Owner:** claude-2 (cross-cutting; WM-side drift channel + delegation; coordinates with futon3c-side peripheral wrapping)."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

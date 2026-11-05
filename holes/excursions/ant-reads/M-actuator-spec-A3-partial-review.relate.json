@@ -1,0 +1,29 @@
+{
+ "stem": "M-actuator-spec-A3-partial-review",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "M-actuator-spec-A3-partial-review",
+  "kind": "relate",
+  "what": {
+   "value": "Witness-gated mission-doc advancement for the futon2 A3 actuator: close fixture holes via resolving witnesses without a gaming vector",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-partial-review.md:14",
+   "quote": "**Extends:** `src/futon2/aif/actuator_a3.clj` (built + reviewed; commits 7c78518, 08391af, 6f9312d)."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-A3-partial-review.md:14",
+   "quote": "**Extends:** `src/futon2/aif/actuator_a3.clj` (built + reviewed; commits 7c78518, 08391af, 6f9312d)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

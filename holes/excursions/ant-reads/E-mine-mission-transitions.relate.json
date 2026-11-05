@@ -1,0 +1,35 @@
+{
+ "stem": "E-mine-mission-transitions",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-mine-mission-transitions",
+  "kind": "relate",
+  "what": {
+   "value": "Mining the mission corpus to give the WM agent a memory of previous actions, closing R16's rollout path so the act-gate stops abstaining.",
+   "cite": "/home/joe/code/futon2/holes/E-mine-mission-transitions.md:1",
+   "quote": "# E-mine-mission-transitions — give the agent a memory of previous actions (close R16's rollout path)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-mine-mission-transitions.md:7",
+   "quote": "gap that makes the act-gate abstain. Parent: [[M-wm-policies]] (Track 2, the rollout engine + arrow contract)."
+  },
+  "also": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon2/holes/E-mine-mission-transitions.md:8",
+   "quote": "`futon6/scripts/clean_structure_embed.py` (the structure-embedding precedent: verified N=7 — same-family NN-match 0.86 structure vs 0.14 text; NN-sim 0.95 vs 0.25)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

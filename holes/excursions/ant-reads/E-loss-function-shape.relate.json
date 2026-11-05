@@ -1,0 +1,29 @@
+{
+ "stem": "E-loss-function-shape",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "E-loss-function-shape",
+  "kind": "relate",
+  "what": {
+   "value": "Derives the four-band loss-component shape (cost/capability/transfer/accumulation) recorded per APM frame f7–f13 to make frame outcomes and transfer measurable.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-loss-function-shape.md:164",
+   "quote": "`:loss-components` sits in `series.edn` per frame and is populated **f7–f13**."
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-loss-function-shape.md:90",
+   "quote": "Of 211 reviewed attachments in the store, **exactly one** came from an APM frame"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

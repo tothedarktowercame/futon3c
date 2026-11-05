@@ -1,0 +1,29 @@
+{
+ "stem": "M-superpod-mark3",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-superpod-mark3",
+  "kind": "relate",
+  "what": {
+   "value": "Superpod Mark 3: the pattern-tagged and geometrically annotated arXiv corpus pipeline in futon6, substrate-side delivery for the pattern-application diagnostic.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark3.md:1",
+   "quote": "# Mission: Superpod Mark 3 — Pattern-Tagged + Geometrically Annotated arXiv Corpus"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark3.md:6",
+   "quote": "**Repos:** futon6 (pipeline), futon3c (downstream consumers),"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

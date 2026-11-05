@@ -1,0 +1,29 @@
+{
+ "stem": "E-memory-v3-programme",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-memory-v3-programme",
+  "kind": "relate",
+  "what": {
+   "value": "Derive the ≤10-experiment programme that settles the V3 retrieval model, registered through DarkTower preregistration",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-v3-programme.md:5",
+   "quote": "**Opened 2026-08-01 by claude-2.** Strategy for settling the V3 model in"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-v3-programme.md:5",
+   "quote": "**Opened 2026-08-01 by claude-2.** Strategy for settling the V3 model in"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

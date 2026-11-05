@@ -1,0 +1,29 @@
+{
+ "stem": "M-metric-harness",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-metric-harness",
+  "kind": "relate",
+  "what": {
+   "value": "Instrument the futon6 mining pipeline so the next end-to-end run measures compounding PROGRESS (per-stage slope metrics) rather than throughput, underwriting the superpod scale decision.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-metric-harness.md:1",
+   "quote": "# M-metric-harness — the next end-to-end run measures PROGRESS, not throughput"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-metric-harness.md:1",
+   "quote": "# M-metric-harness — the next end-to-end run measures PROGRESS, not throughput"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

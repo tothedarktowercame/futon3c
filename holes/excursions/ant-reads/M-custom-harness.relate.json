@@ -1,0 +1,37 @@
+{
+ "stem": "M-custom-harness",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-custom-harness",
+  "kind": "relate",
+  "what": {
+   "value": "Design the Futon-native agent harness (zai): what memory and orientation a model endpoint with no filesystem or memories should get from evidence, missions, graph memory and Agency state.",
+   "cite": "/home/joe/code/futon2/holes/M-custom-harness.md:49",
+   "quote": "sense. The next question is deeper: what kind of *memory and orientation* should a"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon2/holes/M-custom-harness.md:49",
+   "quote": "sense. The next question is deeper: what kind of *memory and orientation* should a"
+  },
+  "also": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon2/holes/M-custom-harness.md:59",
+   "quote": "an Agency mode that streams `/api/alpha/invoke-stream` events (text,"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

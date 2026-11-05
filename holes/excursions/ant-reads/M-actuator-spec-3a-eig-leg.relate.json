@@ -1,0 +1,29 @@
+{
+ "stem": "M-actuator-spec-3a-eig-leg",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-actuator-spec-3a-eig-leg",
+  "kind": "relate",
+  "what": {
+   "value": "Add the BMR epistemic-value EIG leg (−λ·EIG) to the War Machine's forward EFE ranker in futon2",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-3a-eig-leg.md:14",
+   "quote": "semantics). **Edits:** `futon2/src/futon2/aif/efe.clj`. **Pays down:** R13 (breaks the G-ties"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-actuator-spec-3a-eig-leg.md:14",
+   "quote": "semantics). **Edits:** `futon2/src/futon2/aif/efe.clj`. **Pays down:** R13 (breaks the G-ties"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

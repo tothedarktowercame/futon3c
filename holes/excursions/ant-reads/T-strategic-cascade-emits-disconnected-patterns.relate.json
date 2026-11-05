@@ -1,0 +1,32 @@
+{
+ "stem": "T-strategic-cascade-emits-disconnected-patterns",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "T-strategic-cascade-emits-disconnected-patterns",
+  "kind": "relate",
+  "what": {
+   "value": "Repairs the strategic-cascade pattern constructor so every carrier pattern carries a descent edge or a typed unrelatedness reason, with the 23 malformed cascades as acceptance corpus.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-strategic-cascade-emits-disconnected-patterns.md:16",
+   "quote": "The reduction: 23 records, one defect"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-strategic-cascade-emits-disconnected-patterns.md:12",
+   "quote": "we would be able to"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ],
+ "ok": 0,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line",
+  "quote-not-on-line"
+ ]
+}

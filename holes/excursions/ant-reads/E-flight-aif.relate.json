@@ -1,0 +1,29 @@
+{
+ "stem": "E-flight-aif",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-flight-aif",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion retrofitting an AIF interpretation onto the anatomy-of-a-flight era wiring diagrams (siblings: E-cascade-real, E-outer-loop), under the PROOF-2 plan.",
+   "cite": "/home/joe/code/futon2/holes/E-flight-aif.md:1",
+   "quote": "# E-flight-aif — retrofitting an AIF reading onto the flight-era wiring diagrams"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-flight-aif.md:4",
+   "quote": "Parent: the PROOF-2 plan. Siblings: `E-cascade-real.md` (the machine does not"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

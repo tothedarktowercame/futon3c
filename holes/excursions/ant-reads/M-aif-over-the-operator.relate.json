@@ -1,0 +1,35 @@
+{
+ "stem": "M-aif-over-the-operator",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-aif-over-the-operator",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to close the AIF loop over the operator's responses, zipping the M-象-2000 offer recording with the War Machine's AIF selection side.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-aif-over-the-operator.md:10",
+   "quote": "\"zip\" the two into one mission, and to work it from both sides, swapping work"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-aif-over-the-operator.md:11",
+   "quote": "between the automated team (War Machine) and the interactive session team."
+  },
+  "also": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-aif-over-the-operator.md:9",
+   "quote": "Joe, 2026-10-01: \"from the M-象-2000 side we now have tool, and from the AIF side"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

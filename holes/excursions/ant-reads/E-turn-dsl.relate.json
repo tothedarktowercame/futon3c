@@ -1,0 +1,35 @@
+{
+ "stem": "E-turn-dsl",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793762075799-11735-3400349c",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-turn-dsl",
+  "kind": "relate",
+  "what": {
+   "value": "A turn-prefix DSL on operator REPL turns for clocking, per-turn attribution and phatic escape, in the agent-chat/claude-repl surface",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:5",
+   "quote": "**Repo:** futon3c (the DSL lives in the agent-chat / claude-repl surface)."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:5",
+   "quote": "**Repo:** futon3c (the DSL lives in the agent-chat / claude-repl surface)."
+  },
+  "also": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-turn-dsl.md:13",
+   "quote": "> *\"What if my turns in the Claude-REPL (or agent-chat.el more widely) get a small DSL attached, e.g., if I"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

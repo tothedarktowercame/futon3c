@@ -1,0 +1,29 @@
+{
+ "stem": "M-f11-find-production-successor",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-f11-find-production-successor",
+  "kind": "relate",
+  "what": {
+   "value": "Completes the F11 find-interface worklist row: implement the evidence-producing finder, state its laws in Lean, and resolve repair-024.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:12",
+   "quote": "Complete worklist row `:F11` at its applied `find` interface. Implement the"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-f11-find-production-successor.md:13",
+   "quote": "evidence-producing finder and state its laws in Lean, witness every law on a"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

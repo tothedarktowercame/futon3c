@@ -1,0 +1,29 @@
+{
+ "stem": "E-live-loop-1",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "E-live-loop-1",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion to turn the live click loop's 'honest nothings' (674 ticks, zero cascade wins) into a loop that pays — Flight 1 of the WM transparency flights.",
+   "cite": "/home/joe/code/futon2/holes/E-live-loop-1.md:6",
+   "quote": "territory), Flight 1 of the WM transparency flights.**"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-live-loop-1.md:11",
+   "quote": "We pick M-first-flights as the source of a (have,want) magnet — unclear"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

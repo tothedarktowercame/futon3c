@@ -1,0 +1,29 @@
+{
+ "stem": "M-stack-essay-code-alignment",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-stack-essay-code-alignment",
+  "kind": "relate",
+  "what": {
+   "value": "Interface mission of the futon-stack-as-Hyperreal-business cluster: keep the descriptive essay of the stack and the code aligned so what the essay says the simulation does, the simulation does.",
+   "cite": "/home/joe/code/futon7/holes/M-stack-essay-code-alignment.md:5",
+   "quote": "**Status:** OPEN — HEAD-as-escrow scaffold (claude-1, PM pass for the futon-stack-as-Hyperreal-business mission cluster); awaiting Joe verbatims via simulated `eoi-engine` `eoi-inward-mission` flash. **Exit criterion source:** §0 of `~/code/futon7/holes/M-descriptive-essay-of-the-stack.md`, criterion #3."
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/M-stack-essay-code-alignment.md:5",
+   "quote": "**Status:** OPEN — HEAD-as-escrow scaffold (claude-1, PM pass for the futon-stack-as-Hyperreal-business mission cluster); awaiting Joe verbatims via simulated `eoi-engine` `eoi-inward-mission` flash. **Exit criterion source:** §0 of `~/code/futon7/holes/M-descriptive-essay-of-the-stack.md`, criterion #3."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

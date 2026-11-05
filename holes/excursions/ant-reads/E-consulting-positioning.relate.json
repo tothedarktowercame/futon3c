@@ -1,0 +1,29 @@
+{
+ "stem": "E-consulting-positioning",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-consulting-positioning",
+  "kind": "relate",
+  "what": {
+   "value": "Position the operator's offer as consulting ('I find out what your AI agents are actually doing') rather than a product, grounded in the agent-tooling survey evidence.",
+   "cite": "/home/joe/code/futon7/holes/E-consulting-positioning.md:1",
+   "quote": "# E-consulting-positioning — \"this is different\" for a consultant, not a product"
+  },
+  "area": {
+   "value": "other:business-development",
+   "cite": "/home/joe/code/futon7/holes/E-consulting-positioning.md:13",
+   "quote": "  rather, to get some consulting income. If I could consult and get paid to"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

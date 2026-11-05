@@ -1,0 +1,29 @@
+{
+ "stem": "M-giraffe",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-giraffe",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to define what one work item is as data, so a War Machine can select from the pool, check progress, and say why it chose it.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-giraffe.md:7",
+   "quote": "**Serves:** our own War Machine first. Second, the consulting offer: \"show me your agent logs and your ticket tracker, and I will show you how to make it work better\" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞)."
+  },
+  "area": {
+   "value": "Giraffe",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-giraffe.md:1",
+   "quote": "# M-giraffe — start from the data structure: a work pool the War Machine can read"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

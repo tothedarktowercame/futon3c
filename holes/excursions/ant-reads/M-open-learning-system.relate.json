@@ -1,0 +1,29 @@
+{
+ "stem": "M-open-learning-system",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-open-learning-system",
+  "kind": "relate",
+  "what": {
+   "value": "Reconstruct the UKRN open-research-training evaluation as a structured, testable learning system (patterns, levers, projections) with an explicit prior→measurement→update loop.",
+   "cite": "/home/joe/code/futon2/holes/M-open-learning-system.md:7",
+   "quote": "# Mission: Evaluating Open Research Training as a Learning System"
+  },
+  "area": {
+   "value": "other:ukrn-learning-system",
+   "cite": "/home/joe/code/futon2/holes/M-open-learning-system.md:7",
+   "quote": "# Mission: Evaluating Open Research Training as a Learning System"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

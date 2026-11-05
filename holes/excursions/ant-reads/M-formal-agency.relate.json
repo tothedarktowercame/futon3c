@@ -1,0 +1,29 @@
+{
+ "stem": "M-formal-agency",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-formal-agency",
+  "kind": "relate",
+  "what": {
+   "value": "State and check the conditions under which a network of participants (bells, dispatches, receipts) can be said to have acted together.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-formal-agency.md:5",
+   "quote": "**One-line:** State and eventually check the conditions under which a network of"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-formal-agency.md:5",
+   "quote": "**One-line:** State and eventually check the conditions under which a network of"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

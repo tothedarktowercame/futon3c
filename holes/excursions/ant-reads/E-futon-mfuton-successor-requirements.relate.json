@@ -1,0 +1,29 @@
+{
+ "stem": "E-futon-mfuton-successor-requirements",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-futon-mfuton-successor-requirements",
+  "kind": "relate",
+  "what": {
+   "value": "Outer-loop synthesis of futon/mfuton dialogue into shared design requirements for a possible successor system.",
+   "cite": "/home/joe/code/futon3c/holes/E-futon-mfuton-successor-requirements.md:9",
+   "quote": "successor system. (The agent behind `fuclaude` is whatever the bridge's"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon3c/holes/E-futon-mfuton-successor-requirements.md:1",
+   "quote": "# E: shared design requirements for a futon/mfuton successor (outer loop)"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

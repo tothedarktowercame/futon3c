@@ -1,0 +1,37 @@
+{
+ "stem": "E-memory-causal-integration",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-memory-causal-integration",
+  "kind": "relate",
+  "what": {
+   "value": "Banks Rob's first reply and tracks the joint modeling work between the futon memory programme (V3) and Rob's causal engine (mfuton).",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-causal-integration.md:5",
+   "quote": "This doc banks that reply's load-bearing content and tracks the joint"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-causal-integration.md:14",
+   "quote": "from evidence** — not autonomous discovery — so V3's job for them is the"
+  },
+  "also": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-causal-integration.md:17",
+   "quote": "- `M-book-of-why-causal-memory-graph-for-compiler-repair.md`"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-3fe75d581a8c962ab29a199c63c147caa48f35f9ab30f6ef1a42810a78e06cb4",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-3fe75d581a8c962ab29a199c63c147caa48f35f9ab30f6ef1a42810a78e06cb4",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct the breakpoint at the WM selection-redecision stage on M-war-machine-wiring where outer selection completed but was flagged.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-3fe75d581a8c962ab29a199c63c147caa48f35f9ab30f6ef1a42810a78e06cb4.md:13",
+   "quote": "War Machine outer selection completed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-3fe75d581a8c962ab29a199c63c147caa48f35f9ab30f6ef1a42810a78e06cb4.md:13",
+   "quote": "War Machine outer selection completed"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

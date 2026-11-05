@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-2aee52c72aa505a77d8a1cf6f7c2c6ad9a2d19bfb162c8c5706a0ad9e0e5643c",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-2aee52c72aa505a77d8a1cf6f7c2c6ad9a2d19bfb162c8c5706a0ad9e0e5643c",
+  "kind": "relate",
+  "what": {
+   "value": "Verify or restore the missing cast/agent readiness for the selected action against M-autoclock-in",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2aee52c72aa505a77d8a1cf6f7c2c6ad9a2d19bfb162c8c5706a0ad9e0e5643c.md:11",
+   "quote": "Selected an action, but no cast was given for it"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2aee52c72aa505a77d8a1cf6f7c2c6ad9a2d19bfb162c8c5706a0ad9e0e5643c.md:9",
+   "quote": "Target: M-autoclock-in; stage: :agent-readiness."
+  },
+  "also": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2aee52c72aa505a77d8a1cf6f7c2c6ad9a2d19bfb162c8c5706a0ad9e0e5643c.md:5",
+   "quote": "Parent: M-autoclock-in"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

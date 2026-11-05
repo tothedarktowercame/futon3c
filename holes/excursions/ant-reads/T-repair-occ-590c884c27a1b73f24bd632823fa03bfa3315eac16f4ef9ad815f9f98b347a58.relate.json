@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-590c884c27a1b73f24bd632823fa03bfa3315eac16f4ef9ad815f9f98b347a58",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-590c884c27a1b73f24bd632823fa03bfa3315eac16f4ef9ad815f9f98b347a58",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct a cascade-enactment-left-open failure at the WM occurrence-square-redecision stage.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-590c884c27a1b73f24bd632823fa03bfa3315eac16f4ef9ad815f9f98b347a58.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-590c884c27a1b73f24bd632823fa03bfa3315eac16f4ef9ad815f9f98b347a58.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

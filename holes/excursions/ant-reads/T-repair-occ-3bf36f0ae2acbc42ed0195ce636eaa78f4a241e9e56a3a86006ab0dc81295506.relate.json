@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-3bf36f0ae2acbc42ed0195ce636eaa78f4a241e9e56a3a86006ab0dc81295506",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-3bf36f0ae2acbc42ed0195ce636eaa78f4a241e9e56a3a86006ab0dc81295506",
+  "kind": "relate",
+  "what": {
+   "value": "Correct required checkpoints missing at the War Machine's initialization stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-3bf36f0ae2acbc42ed0195ce636eaa78f4a241e9e56a3a86006ab0dc81295506.md:11",
+   "quote": "required checkpoints missing"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-3bf36f0ae2acbc42ed0195ce636eaa78f4a241e9e56a3a86006ab0dc81295506.md:7",
+   "quote": "Target: not retained; stage: :initialization."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

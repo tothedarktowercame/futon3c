@@ -1,0 +1,35 @@
+{
+ "stem": "E-known-uses-and-competitors",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-known-uses-and-competitors",
+  "kind": "relate",
+  "what": {
+   "value": "Worklist survey used two ways: competitor analysis for buyers, and known independent uses for the PLoP 2026 pattern paper's non-idiosyncrasy hypothesis.",
+   "cite": "/home/joe/code/futon7/holes/E-known-uses-and-competitors.md:14",
+   "quote": "1. **Competitor analysis** (what a buyer compares FUTON with)."
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon7/holes/E-known-uses-and-competitors.md:15",
+   "quote": "2. **Known uses** for the PLoP proceedings (PLoP convention: a pattern cites"
+  },
+  "also": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/E-known-uses-and-competitors.md:14",
+   "quote": "1. **Competitor analysis** (what a buyer compares FUTON with)."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

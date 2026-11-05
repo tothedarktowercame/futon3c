@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-487ca3f2205bf084f5d9bbb6b753cdc3908f106e8ff3aec60243a1bff7c34581",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-487ca3f2205bf084f5d9bbb6b753cdc3908f106e8ff3aec60243a1bff7c34581",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct a zero-achievement WM outcome (:grounded-no-change) at the grounding stage of another repair ticket.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-487ca3f2205bf084f5d9bbb6b753cdc3908f106e8ff3aec60243a1bff7c34581.md:9",
+   "quote": "zero-achievement outcome :grounded-no-change"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-487ca3f2205bf084f5d9bbb6b753cdc3908f106e8ff3aec60243a1bff7c34581.md:9",
+   "quote": "zero-achievement outcome :grounded-no-change"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

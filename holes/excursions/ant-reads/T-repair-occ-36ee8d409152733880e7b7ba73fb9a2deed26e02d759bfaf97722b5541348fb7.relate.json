@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-36ee8d409152733880e7b7ba73fb9a2deed26e02d759bfaf97722b5541348fb7",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-36ee8d409152733880e7b7ba73fb9a2deed26e02d759bfaf97722b5541348fb7",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an invalid close outcome when the War Machine closed M-typed-memories",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-36ee8d409152733880e7b7ba73fb9a2deed26e02d759bfaf97722b5541348fb7.md:13",
+   "quote": "invalid close outcome"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-36ee8d409152733880e7b7ba73fb9a2deed26e02d759bfaf97722b5541348fb7.md:9",
+   "quote": "Target: M-typed-memories; stage: :close."
+  },
+  "also": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-36ee8d409152733880e7b7ba73fb9a2deed26e02d759bfaf97722b5541348fb7.md:5",
+   "quote": "Parent: M-typed-memories"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-differentiable-code",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-differentiable-code",
+  "kind": "relate",
+  "what": {
+   "value": "A continuous code-graph embedding plus predicates so the half-million-line stack can be reasoned about differentiably; contributes to Campaign C-substrate-completion.",
+   "cite": "/home/joe/code/futon5/holes/missions/M-differentiable-code.md:24",
+   "quote": "could let us *reason* about the stack's structure instead of just reading it:"
+  },
+  "area": {
+   "value": "other:substrate",
+   "cite": "/home/joe/code/futon5/holes/missions/M-differentiable-code.md:6",
+   "quote": "ratified by Joe, 2026-06-01) — owns this mission (E2); contributes to Campaign `C-substrate-completion` (futon3c)."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

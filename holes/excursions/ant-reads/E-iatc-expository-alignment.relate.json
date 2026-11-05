@@ -1,0 +1,31 @@
+{
+ "stem": "E-iatc-expository-alignment",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-iatc-expository-alignment",
+  "kind": "relate",
+  "what": {
+   "value": "Pre-registered experiment: do IATC's 'ignored' argumentation categories show up in expository mathematical prose?",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-iatc-expository-alignment.md:1",
+   "quote": "# E-iatc-expository-alignment — do IATC's \"ignored\" categories show up in expository prose?"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-iatc-expository-alignment.md:6",
+   "quote": "**Repo:** futon6 (scripts) + futon3c (close-reading artifacts)."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

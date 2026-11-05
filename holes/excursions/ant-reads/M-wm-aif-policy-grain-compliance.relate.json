@@ -1,0 +1,31 @@
+{
+ "stem": "M-wm-aif-policy-grain-compliance",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793765208225-11797-89c964c4",
+ "at": "2026-11-04T04:07:43+00:00",
+ "row": {
+  "stem": "M-wm-aif-policy-grain-compliance",
+  "kind": "relate",
+  "what": {
+   "value": "Mission making the War Machine's live habit prior and its paper-level AIF policy the same grain, so the tactical cascade lane has a same-circumstance candidate set and an E(π) input.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-wm-aif-policy-grain-compliance.md:21",
+   "quote": "habit prior and its paper-level policy do not currently have the same grain."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-wm-aif-policy-grain-compliance.md:18",
+   "quote": "The War Machine is the reference implementation for the paper, but its live"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

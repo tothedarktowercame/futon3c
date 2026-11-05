@@ -1,0 +1,29 @@
+{
+ "stem": "M-apm-on-lean36",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-apm-on-lean36",
+  "kind": "relate",
+  "what": {
+   "value": "Bumps the APM Lean repo from 4.29 to current Lean 4.36 / Mathlib so external Lean material can be imported and upkeep shrinks.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-apm-on-lean36.md:1",
+   "quote": "# Mission: APM on Lean 4.36 / current Mathlib"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-apm-on-lean36.md:13",
+   "quote": "1. **Reuse.** The openai/math drop and the other external Lean material (Schoenflies,"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

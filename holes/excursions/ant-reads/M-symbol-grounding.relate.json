@@ -1,0 +1,29 @@
+{
+ "stem": "M-symbol-grounding",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-symbol-grounding",
+  "kind": "relate",
+  "what": {
+   "value": "Extend structure mining inside $...$ math content so term-symbol correspondences become grounded markup in the corpus",
+   "cite": "/home/joe/code/futon6/holes/missions/M-symbol-grounding.md:1",
+   "quote": "# Mission: Symbol Grounding — Structure Mining Inside `$...$` Math Content"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-symbol-grounding.md:1",
+   "quote": "# Mission: Symbol Grounding — Structure Mining Inside `$...$` Math Content"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

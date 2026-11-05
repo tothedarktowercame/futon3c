@@ -1,0 +1,29 @@
+{
+ "stem": "E-memory-whitepaper-plan",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-memory-whitepaper-plan",
+  "kind": "relate",
+  "what": {
+   "value": "A proposed finishing strategy for the memory retrieval white paper: freeze claims and evidence, write the finished paper from a claim/evidence matrix.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-whitepaper-plan.md:26",
+   "quote": "> claims and the evidence required for them, and write the finished white"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-whitepaper-plan.md:3",
+   "quote": "**Target:** `futon3c/docs/retrieval-whitepaper.md`"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an author-artifact claim not validated by repository observation on M-war-machine-wiring",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:13",
+   "quote": "Agency claimed an author artifact that repository observation did not validate"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-eb4c2e8d0cd9951c9b028b8faca4865f666badbbbc996869445090261cd0ed84.md:9",
+   "quote": "Target: M-war-machine-wiring; stage: :author-wait."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

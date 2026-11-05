@@ -1,0 +1,29 @@
+{
+ "stem": "T-wm-turns-are-not-operator-turns",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "T-wm-turns-are-not-operator-turns",
+  "kind": "relate",
+  "what": {
+   "value": "Aligns WM ticks with operator-facing considerations so they are stored, queryable and annotatable like operator turns.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:3",
+   "quote": "**Opened:** 2026-08-27 · claude-13, from Joe: *\"my point was to try and align the"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-wm-turns-are-not-operator-turns.md:4",
+   "quote": "WM with operator-facing considerations … WM 'turns' are not stored in quite such"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-d4d69c06c78c751c19932818dc910dab38702f3c2390e96a8feaaa17b73ec233",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-d4d69c06c78c751c19932818dc910dab38702f3c2390e96a8feaaa17b73ec233",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore the missing cast for a selected action during an M-descriptive-essay-of-the-stack click at :agent-readiness",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d4d69c06c78c751c19932818dc910dab38702f3c2390e96a8feaaa17b73ec233.md:11",
+   "quote": "Selected an action, but no cast was given for it"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d4d69c06c78c751c19932818dc910dab38702f3c2390e96a8feaaa17b73ec233.md:9",
+   "quote": "Target: M-descriptive-essay-of-the-stack; stage: :agent-readiness."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

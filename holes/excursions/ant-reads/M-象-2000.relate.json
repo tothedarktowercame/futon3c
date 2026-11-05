@@ -1,0 +1,29 @@
+{
+ "stem": "M-象-2000",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-象-2000",
+  "kind": "relate",
+  "what": {
+   "value": "Implement a 象-2000 (McCarthy Elephant-2000) rewind/debug capability over operator-turn records from the xlate data source",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-象-2000.md:25",
+   "quote": "> Right, well speaking of 象, I had been discussing a 象-2000 implementation of"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-象-2000.md:25",
+   "quote": "> Right, well speaking of 象, I had been discussing a 象-2000 implementation of"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

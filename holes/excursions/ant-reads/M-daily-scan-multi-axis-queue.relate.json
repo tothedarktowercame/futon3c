@@ -1,0 +1,29 @@
+{
+ "stem": "M-daily-scan-multi-axis-queue",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-daily-scan-multi-axis-queue",
+  "kind": "relate",
+  "what": {
+   "value": "Plans a 5-axis back-to-back daily-scan queue to read GitHub-side demand signals for the supply-side business arms and clusters.",
+   "cite": "/home/joe/code/futon7/holes/M-daily-scan-multi-axis-queue.md:5",
+   "quote": "**Trigger:** Joe (2026-05-19): *\"I'm wondering if we could queue up several ~/code/algorithms/run-daily-scan.md runs (back to back rather than daily) to explore Github-side demand signals for any of the arms/buckets/clusters that we have been building a supply-side model of?\"**"
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/M-daily-scan-multi-axis-queue.md:5",
+   "quote": "to explore Github-side demand signals for any of the arms/buckets/clusters that we have been building a supply-side model of?"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

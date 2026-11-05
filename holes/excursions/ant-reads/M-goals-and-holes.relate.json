@@ -1,0 +1,29 @@
+{
+ "stem": "M-goals-and-holes",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-goals-and-holes",
+  "kind": "relate",
+  "what": {
+   "value": "State the War Machine's setpoints (goals and holes) explicitly — the backward/goal dual of M-operational-vocabulary, feeding the M-aif-wiring belly.",
+   "cite": "/home/joe/code/futon2/holes/M-goals-and-holes.md:1",
+   "quote": "# Mission: Goals and holes — the WM's setpoints, stated & unstated (M-goals-and-holes)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-goals-and-holes.md:1",
+   "quote": "# Mission: Goals and holes — the WM's setpoints, stated & unstated (M-goals-and-holes)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

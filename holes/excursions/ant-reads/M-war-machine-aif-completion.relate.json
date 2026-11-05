@@ -1,0 +1,29 @@
+{
+ "stem": "M-war-machine-aif-completion",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-war-machine-aif-completion",
+  "kind": "relate",
+  "what": {
+   "value": "Graduate the War Machine from a :π-display reading surface to a complete AIF stack (forward model, EFO-scored policy ranking, test harness) against the ukrn-services-simulation bar.",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:6",
+   "quote": "**Bar (lifted verbatim from §0):** *\"War Machine ≥ ukrn-services-simulation coherence — concretely: ~12 clojure notebooks"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-completion.md:6",
+   "quote": "**Bar (lifted verbatim from §0):** *\"War Machine ≥ ukrn-services-simulation coherence — concretely: ~12 clojure notebooks"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-pattern-mining",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-pattern-mining",
+  "kind": "relate",
+  "what": {
+   "value": "Make every A→B operator turn code as a well-specified, repeatable, verifiable pattern activation, replacing the artifact MiniLM pipeline.",
+   "cite": "/home/joe/code/futon3/holes/missions/M-pattern-mining.md:13",
+   "quote": "> **Each turn A→B is coded as an activation of a pattern that is"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3/holes/missions/M-pattern-mining.md:8",
+   "quote": "diagnostic we wanted. Mission's centre of gravity has shifted from"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

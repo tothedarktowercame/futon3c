@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-d276a49116c14bd53fd025b0e320c7cb5bb6db344890caa334d11addd0fb5ba9",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-d276a49116c14bd53fd025b0e320c7cb5bb6db344890caa334d11addd0fb5ba9",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct required WM loop nodes not exercised by a selection",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d276a49116c14bd53fd025b0e320c7cb5bb6db344890caa334d11addd0fb5ba9.md:11",
+   "quote": "Required loop nodes were not exercised by selection"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d276a49116c14bd53fd025b0e320c7cb5bb6db344890caa334d11addd0fb5ba9.md:11",
+   "quote": "Required loop nodes were not exercised by selection"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

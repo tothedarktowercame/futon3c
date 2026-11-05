@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-3d71c1a357f40eb2bd4df4063fda1b963e20a5ea189db7356fc70bb4add68812",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-3d71c1a357f40eb2bd4df4063fda1b963e20a5ea189db7356fc70bb4add68812",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to verify or restore the WM selection-stage abstain where selection produced no addressable action.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-3d71c1a357f40eb2bd4df4063fda1b963e20a5ea189db7356fc70bb4add68812.md:11",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-3d71c1a357f40eb2bd4df4063fda1b963e20a5ea189db7356fc70bb4add68812.md:11",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-a70bb6aab60c8d37d8562a669b30c999f12a67137828631950d1fa3d49f91212",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761280228-11686-fd431f30",
+ "at": "2026-11-04T03:04:01+00:00",
+ "row": {
+  "stem": "T-repair-occ-a70bb6aab60c8d37d8562a669b30c999f12a67137828631950d1fa3d49f91212",
+  "kind": "relate",
+  "what": {
+   "value": "Correct required loop nodes not exercised by War Machine selection (A-self-heal meta-algorithm)",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a70bb6aab60c8d37d8562a669b30c999f12a67137828631950d1fa3d49f91212.md:11",
+   "quote": "Required loop nodes were not exercised by selection"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-a70bb6aab60c8d37d8562a669b30c999f12a67137828631950d1fa3d49f91212.md:7",
+   "quote": "Target: not retained; stage: :selection."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

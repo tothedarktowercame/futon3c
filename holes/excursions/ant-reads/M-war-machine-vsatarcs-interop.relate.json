@@ -1,0 +1,35 @@
+{
+ "stem": "M-war-machine-vsatarcs-interop",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-war-machine-vsatarcs-interop",
+  "kind": "relate",
+  "what": {
+   "value": "Operational convergence of the War Machine and VSATARCS — authoritative sources, projection directions, and coherence checks for the three existing bridges.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-war-machine-vsatarcs-interop.md:1",
+   "quote": "# M-war-machine-vsatarcs-interop: Operational convergence of WM and VSATARCs"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon4/holes/missions/M-war-machine-vsatarcs-interop.md:21",
+   "quote": "> \"My only concern right now is that if VSATARCS remains totally filesystem backed, it may end up drifting out of sync with the War Machine and XTDB."
+  },
+  "also": {
+   "value": "other:VSATARCS",
+   "cite": "/home/joe/code/futon4/holes/missions/M-war-machine-vsatarcs-interop.md:4",
+   "quote": "Three point-to-point bridges exist (WM-trace read, XTDB clicks consumer, intrinsic-values hyperedge round-trip); no cross-side coherence audit; mission scopes the convergence."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

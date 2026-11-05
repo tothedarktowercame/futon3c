@@ -1,0 +1,29 @@
+{
+ "stem": "M-peeragogy-rewrite",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-peeragogy-rewrite",
+  "kind": "relate",
+  "what": {
+   "value": "Decide the right carrier (rewrite, zine, hybrid, emergent) for an updated Peeragogy Handbook and produce at least one carrier instance end to end.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-peeragogy-rewrite.md:20",
+   "quote": "The Peeragogy Handbook (Wikibooks, 2014–2016) is a 31-chapter book on peer learning that has aged unevenly."
+  },
+  "area": {
+   "value": "other:peeragogy",
+   "cite": "/home/joe/code/futon4/holes/missions/M-peeragogy-rewrite.md:3",
+   "quote": "Reframe makes that one option among several."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

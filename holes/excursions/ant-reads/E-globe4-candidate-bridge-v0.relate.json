@@ -1,0 +1,29 @@
+{
+ "stem": "E-globe4-candidate-bridge-v0",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-globe4-candidate-bridge-v0",
+  "kind": "relate",
+  "what": {
+   "value": "V0 sketch of the bridge for the probing Strategic SORRY 🌐4 (paragogy-revenue), whose uptake condition is named but the artifact path fuzzy.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-globe4-candidate-bridge-v0.md:6",
+   "quote": "**Purpose:** sketch the bridge for a probing Strategic SORRY whose"
+  },
+  "area": {
+   "value": "other:Strategic-SORRY-bridges",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-globe4-candidate-bridge-v0.md:7",
+   "quote": "artifact path is still fuzzy but whose uptake condition is already named."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

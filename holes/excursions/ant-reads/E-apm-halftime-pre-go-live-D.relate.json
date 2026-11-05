@@ -1,0 +1,29 @@
+{
+ "stem": "E-apm-halftime-pre-go-live-D",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-apm-halftime-pre-go-live-D",
+  "kind": "relate",
+  "what": {
+   "value": "Dispatch-ready packets decomposing section D (substrate residuals from the 2026-08-13 outage) of the locked halftime list.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-halftime-pre-go-live-D.md:9",
+   "quote": "Section **D** of the locked list (`E-apm-halftime-pre-go-live.md`). Decomposes"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-halftime-pre-go-live-D.md:9",
+   "quote": "Section **D** of the locked list (`E-apm-halftime-pre-go-live.md`). Decomposes"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

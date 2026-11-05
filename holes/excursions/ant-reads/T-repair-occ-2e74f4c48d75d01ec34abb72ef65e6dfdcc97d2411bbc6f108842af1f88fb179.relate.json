@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-2e74f4c48d75d01ec34abb72ef65e6dfdcc97d2411bbc6f108842af1f88fb179",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-2e74f4c48d75d01ec34abb72ef65e6dfdcc97d2411bbc6f108842af1f88fb179",
+  "kind": "relate",
+  "what": {
+   "value": "Correct failed reviewer falsifier checks when the War Machine waited on M-interim-director-proxy-metric-inventory",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2e74f4c48d75d01ec34abb72ef65e6dfdcc97d2411bbc6f108842af1f88fb179.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2e74f4c48d75d01ec34abb72ef65e6dfdcc97d2411bbc6f108842af1f88fb179.md:9",
+   "quote": "Target: M-interim-director-proxy-metric-inventory; stage: :reviewer-wait."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

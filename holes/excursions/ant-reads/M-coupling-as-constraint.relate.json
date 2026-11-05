@@ -1,0 +1,29 @@
+{
+ "stem": "M-coupling-as-constraint",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-coupling-as-constraint",
+  "kind": "relate",
+  "what": {
+   "value": "Reformulate TPG fitness so coupling is a floor constraint and diversity the primary objective, testing Pareto-front change",
+   "cite": "/home/joe/code/futon5/holes/missions/M-coupling-as-constraint.md:15",
+   "quote": "Reformulate TPG fitness so coupling is a floor constraint (>= 0.05) rather"
+  },
+  "area": {
+   "value": "futon5",
+   "cite": "/home/joe/code/futon5/holes/missions/M-coupling-as-constraint.md:15",
+   "quote": "Reformulate TPG fitness so coupling is a floor constraint (>= 0.05) rather"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

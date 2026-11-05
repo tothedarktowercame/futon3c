@@ -1,0 +1,35 @@
+{
+ "stem": "E-substrate-2-timetravel",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-substrate-2-timetravel",
+  "kind": "relate",
+  "what": {
+   "value": "Fix substrate-2's code graph being a HEAD mirror so the bitemporal store can answer what the code looked like at past commits",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-substrate-2-timetravel.md:16",
+   "quote": "substrate-2 (futon1a / XTDB, bitemporal, served on :7071) does **not** version code *contents* over time."
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-substrate-2-timetravel.md:16",
+   "quote": "substrate-2 (futon1a / XTDB, bitemporal, served on :7071) does **not** version code *contents* over time."
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-substrate-2-timetravel.md:8",
+   "quote": "**Parents/links:** M-G-over-cascades (the consumer), M-live-geometric-stack (futon3 — the geometric layer this"
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

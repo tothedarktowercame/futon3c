@@ -1,0 +1,29 @@
+{
+ "stem": "M-aif-ants-port",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-aif-ants-port",
+  "kind": "relate",
+  "what": {
+   "value": "Port the modern AIF (R1–R19) into the futon2 ant forager as Port 1 of a two-port plan, after the cyberant domain-transfer result was found not to measure what it claimed.",
+   "cite": "/home/joe/code/futon2/holes/M-aif-ants-port.md:5",
+   "quote": "**Context:** [[project_m_sci_reproduction_complete]] cyberants post-mortem. This is **Port 1** of a"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-aif-ants-port.md:1",
+   "quote": "# M-aif-ants-port — Port the modern AIF (R1–R19) into the ant forager"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

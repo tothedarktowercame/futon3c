@@ -1,0 +1,29 @@
+{
+ "stem": "E-R2-red-ring-fill",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-R2-red-ring-fill",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion filling the R2 red ring — the operator's turns reach the belief side through one missing edge (R14's mirror, the loop open at both ends).",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-R2-red-ring-fill.md:8",
+   "quote": "**The loop is open at both ends.**"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-R2-red-ring-fill.md:4",
+   "quote": "out the collection\"*. Excursion from `futon2/holes/missions/M-formal-war-machine.md`."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-war-machine-qa",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-war-machine-qa",
+  "kind": "relate",
+  "what": {
+   "value": "Stub for a War Machine QA pass: whether the WM actually works end-to-end across the full surface, not just the four AIF tiles covered so far.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-war-machine-qa.md:9",
+   "quote": "remaining audit pass is whether it actually does, end-to-end,"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-war-machine-qa.md:5",
+   "quote": "**Entry point:** M-war-machine-tuning § Checkpoint 9. The mission"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

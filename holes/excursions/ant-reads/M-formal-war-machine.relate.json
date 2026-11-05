@@ -1,0 +1,29 @@
+{
+ "stem": "M-formal-war-machine",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-formal-war-machine",
+  "kind": "relate",
+  "what": {
+   "value": "Adapt the APM Lean-to-Clojure specification chain to the War Machine so its stages, R-nodes, transitions and eleven interfaces are a typed source of truth checked against the running futon2.aif code.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-formal-war-machine.md:13",
+   "quote": "**One-line:** Adapt the APM demonstration's Lean-to-Clojure specification chain"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-formal-war-machine.md:67",
+   "quote": "The War Machine, which is older and more central, has a picture and an EDN of"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

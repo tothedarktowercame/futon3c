@@ -1,0 +1,29 @@
+{
+ "stem": "E-informal-proof-checking-final-checklist",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-informal-proof-checking-final-checklist",
+  "kind": "relate",
+  "what": {
+   "value": "Hold the final checklist of caveats, GPU-gated measurements and verification gaps for the informal-proof-checking CAS-CERT spine",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-informal-proof-checking-final-checklist.md:7",
+   "quote": "**Status going in:** the **deterministic build of the checker spine is complete** — all four CAS-CERT"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-informal-proof-checking-final-checklist.md:7",
+   "quote": "**Status going in:** the **deterministic build of the checker spine is complete** — all four CAS-CERT"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

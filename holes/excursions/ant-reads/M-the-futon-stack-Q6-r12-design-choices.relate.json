@@ -1,0 +1,29 @@
+{
+ "stem": "M-the-futon-stack-Q6-r12-design-choices",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-the-futon-stack-Q6-r12-design-choices",
+  "kind": "relate",
+  "what": {
+   "value": "Record every non-mechanical DERIVE design choice for the narrow R12-unblocking subset of M-the-futon-stack Q6, so later sessions can revise without re-walking forks.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-the-futon-stack-Q6-r12-design-choices.md:10-11",
+   "quote": "This document records every non-mechanical choice made during DERIVE so a"
+  },
+  "area": {
+   "value": "other:futon0",
+   "cite": "/home/joe/code/futon0/holes/missions/M-the-futon-stack-Q6-r12-design-choices.md:5",
+   "quote": "**Companion to:** `~/code/futon0/holes/missions/M-the-futon-stack.md` §Q6."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-range",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

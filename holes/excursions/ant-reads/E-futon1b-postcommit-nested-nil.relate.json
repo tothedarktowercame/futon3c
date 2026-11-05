@@ -1,0 +1,29 @@
+{
+ "stem": "E-futon1b-postcommit-nested-nil",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-futon1b-postcommit-nested-nil",
+  "kind": "relate",
+  "what": {
+   "value": "Documented futon1b bug: POST /api/alpha/hyperedge with a nested nil commits the act then returns 503 :postcommit-missing-act; upstream fix options recorded.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-futon1b-postcommit-nested-nil.md:8",
+   "quote": "POST /api/alpha/hyperedge with `:hx/mint-id` and a nested nil in `:hx/props` (for example"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-futon1b-postcommit-nested-nil.md:8",
+   "quote": "POST /api/alpha/hyperedge with `:hx/mint-id` and a nested nil in `:hx/props` (for example"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

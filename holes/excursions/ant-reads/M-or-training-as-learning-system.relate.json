@@ -1,0 +1,29 @@
+{
+ "stem": "M-or-training-as-learning-system",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-or-training-as-learning-system",
+  "kind": "relate",
+  "what": {
+   "value": "Evaluates open-research training (ORP) as a learning system, closing the gap between what the ORP evaluation established and what UKRN-S's design commitments need as evidence.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.md:23",
+   "quote": "UKRN-S is a Community Interest Company that has just inherited the wind-down of the ORP. It faces design decisions on a calendar (Elle's planning meeting is in May 2026) before any of the four sorries are closed by additional empirical work. The mission's gap is the gap between *what ORP evaluation could establish on its own evidence* and *what UKRN-S's commitments need to be evidence-grounded*."
+  },
+  "area": {
+   "value": "other:ukrn-open-research",
+   "cite": "/home/joe/code/futon4/holes/missions/M-or-training-as-learning-system.md:5",
+   "quote": "Evaluating open-research training as a learning system: closing the gap between what the ORP evaluation could establish on its own evidence and what UKRN-S's design commitments need to be evidence-grounded."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

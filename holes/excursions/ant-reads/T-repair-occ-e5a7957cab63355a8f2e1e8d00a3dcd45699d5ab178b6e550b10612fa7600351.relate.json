@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-e5a7957cab63355a8f2e1e8d00a3dcd45699d5ab178b6e550b10612fa7600351",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-e5a7957cab63355a8f2e1e8d00a3dcd45699d5ab178b6e550b10612fa7600351",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an invalid checkpoint cell at the War Machine's close stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e5a7957cab63355a8f2e1e8d00a3dcd45699d5ab178b6e550b10612fa7600351.md:11",
+   "quote": "invalid checkpoint cell"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e5a7957cab63355a8f2e1e8d00a3dcd45699d5ab178b6e550b10612fa7600351.md:7",
+   "quote": "Target: not retained; stage: :close."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

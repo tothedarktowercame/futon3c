@@ -1,0 +1,29 @@
+{
+ "stem": "E-port-wiring-map",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-port-wiring-map",
+  "kind": "relate",
+  "what": {
+   "value": "An inventory of which service runs on which port on each host, written after port confusion cost several wrong conclusions.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-port-wiring-map.md:5",
+   "quote": "Opened 2026-08-14 (Joe: \"different hosts are using different ports and it's"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-port-wiring-map.md:22",
+   "quote": "**futon3c Agency is always :7070.** That one is stable everywhere."
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

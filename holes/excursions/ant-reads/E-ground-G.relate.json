@@ -1,0 +1,35 @@
+{
+ "stem": "E-ground-G",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "E-ground-G",
+  "kind": "relate",
+  "what": {
+   "value": "Ground the rollout's value G in a signal external to the prior's own metric, then re-run the T1 rent test",
+   "cite": "/home/joe/code/futon6/holes/E-ground-G.md:10",
+   "quote": "`M-peradam-grounding` (CH2) and the rollout `futon2.aif.rollout`."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon6/holes/E-ground-G.md:10",
+   "quote": "`M-peradam-grounding` (CH2) and the rollout `futon2.aif.rollout`."
+  },
+  "also": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/E-ground-G.md:9",
+   "quote": "**Scopes out from:** `M-differentiable-substrate` (the producer/value-prior); couples to the car"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "M-war-machine-wiring",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-war-machine-wiring",
+  "kind": "relate",
+  "what": {
+   "value": "Bridge the War Machine head (move-selection, Tick/Click dispatch) to the live geometric stack manifold",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-war-machine-wiring.md:10",
+   "quote": "- `futon3c/holes/missions/M-war-machine.md` — the head: move-selection"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-war-machine-wiring.md:10",
+   "quote": "- `futon3c/holes/missions/M-war-machine.md` — the head: move-selection"
+  },
+  "also": {
+   "value": "Giraffe",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-war-machine-wiring.md:14",
+   "quote": "- `futon3/holes/missions/M-live-geometric-stack.md` — the manifold:"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

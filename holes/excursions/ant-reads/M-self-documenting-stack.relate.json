@@ -1,0 +1,29 @@
+{
+ "stem": "M-self-documenting-stack",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-self-documenting-stack",
+  "kind": "relate",
+  "what": {
+   "value": "Make the stack deeply self-documenting: autonomous drift-resolution along patterns→missions→code→docs plus a mission-discoverability search surface",
+   "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:27",
+   "quote": "The \"deeply self-documenting\" goal is the chain: `patterns → missions → code → docs`."
+  },
+  "area": {
+   "value": "other:stack-self-documentation",
+   "cite": "/home/joe/code/futon7/holes/M-self-documenting-stack.md:27",
+   "quote": "The \"deeply self-documenting\" goal is the chain: `patterns → missions → code → docs`."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

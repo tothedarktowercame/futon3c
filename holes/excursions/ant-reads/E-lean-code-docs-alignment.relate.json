@@ -1,0 +1,35 @@
+{
+ "stem": "E-lean-code-docs-alignment",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793762075799-11735-3400349c",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-lean-code-docs-alignment",
+  "kind": "relate",
+  "what": {
+   "value": "Keep Lean, code and docs of the War Machine aligned as one Arxana hypergraph using recomputable link tiers instead of stale file:line",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-lean-code-docs-alignment.md:15",
+   "quote": "Arxana's link tiers (`dev/arxana-links.el`) replace a stored location with"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-lean-code-docs-alignment.md:15",
+   "quote": "Arxana's link tiers (`dev/arxana-links.el`) replace a stored location with"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-lean-code-docs-alignment.md:7",
+   "quote": "The War Machine has three descriptions of the same behaviour. The formal one is"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

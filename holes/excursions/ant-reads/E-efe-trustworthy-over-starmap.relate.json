@@ -1,0 +1,29 @@
+{
+ "stem": "E-efe-trustworthy-over-starmap",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-efe-trustworthy-over-starmap",
+  "kind": "relate",
+  "what": {
+   "value": "Pre-witness the :efe-trustworthy-over-starmap capability — the last held precondition of the wm-overnight-unsupervised goal — on three counts: de-saturated gap term, domain gate, and de-selecting off-map work.",
+   "cite": "/home/joe/code/futon3c/holes/E-efe-trustworthy-over-starmap.md:17",
+   "quote": "`:efe-trustworthy-over-starmap` is witnessed (n=1) when the WM's EFE selection over the star-map is demonstrably"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/E-efe-trustworthy-over-starmap.md:17",
+   "quote": "`:efe-trustworthy-over-starmap` is witnessed (n=1) when the WM's EFE selection over the star-map is demonstrably"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

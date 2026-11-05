@@ -1,0 +1,29 @@
+{
+ "stem": "E-wm-learning-loop",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793762075799-11735-3400349c",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-wm-learning-loop",
+  "kind": "relate",
+  "what": {
+   "value": "Close the outcome-learning loop so the live WM outer selector consumes learned outcome state (durable outcome publication → posterior → selection)",
+   "cite": "/home/joe/code/futon2/holes/E-wm-learning-loop.md:9",
+   "quote": "**Driver:** War Machine. **Operator:** Joe. **Repository:** `futon2`.  "
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-wm-learning-loop.md:9",
+   "quote": "**Driver:** War Machine. **Operator:** Joe. **Repository:** `futon2`.  "
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

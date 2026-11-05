@@ -1,0 +1,29 @@
+{
+ "stem": "M-joe-reflection",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-joe-reflection",
+  "kind": "relate",
+  "what": {
+   "value": "Give the operator a peradam-style self-ledger: recover 'how the work acts on Joe' from the operator-turn corpus and marks he already emits, rendered as a Q5 self/ surface.",
+   "cite": "/home/joe/code/futon2/holes/M-joe-reflection.md:54",
+   "quote": "**Can \"how the work acts on the operator\" be recovered, at coarse grain and"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon2/holes/M-joe-reflection.md:72",
+   "quote": "- The operator turn corpus (evidence store, now futon1b/:7073 with D1 FTS) —"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

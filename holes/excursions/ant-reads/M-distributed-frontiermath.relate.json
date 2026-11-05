@@ -1,0 +1,29 @@
+{
+ "stem": "M-distributed-frontiermath",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-distributed-frontiermath",
+  "kind": "relate",
+  "what": {
+   "value": "Stress-test distributed multi-agent coordination (prover/critic/mentor roles over federated IRC) on the Frontier Math problem FM-001, valuing named obstructions over solving.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-distributed-frontiermath.md:11",
+   "quote": "Stress-test distributed agent coordination on a genuine Frontier Math problem."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon6/holes/missions/M-distributed-frontiermath.md:11",
+   "quote": "Stress-test distributed agent coordination on a genuine Frontier Math problem."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

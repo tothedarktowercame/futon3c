@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-402bbfc68fd00fe028e9a3148474df20115581d5d3bb7aa889064fd01077db52",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-402bbfc68fd00fe028e9a3148474df20115581d5d3bb7aa889064fd01077db52",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct a failed WM reviewer-falsifier check at the reviewer-wait stage on a cascade candidate for M-interim-director-proxy-metric-inventory.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-402bbfc68fd00fe028e9a3148474df20115581d5d3bb7aa889064fd01077db52.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-402bbfc68fd00fe028e9a3148474df20115581d5d3bb7aa889064fd01077db52.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

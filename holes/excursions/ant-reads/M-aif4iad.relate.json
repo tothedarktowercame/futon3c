@@ -1,0 +1,29 @@
+{
+ "stem": "M-aif4iad",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "M-aif4iad",
+  "kind": "relate",
+  "what": {
+   "value": "Extends the futon2 AIF-head pattern from individual peripherals to institutional systems that monitor and revise their own structure.",
+   "cite": "/home/joe/code/futon2/holes/M-aif4iad.md:40",
+   "quote": "> institutions themselves possess an explicit generative model, monitor their own performance, and revise their structure when necessary."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-aif4iad.md:209",
+   "quote": "* **Primary repo:** futon2 (AIF and modelling layer)"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

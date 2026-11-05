@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-be076a458ed64481117508045fa0dcdb5632b5c9eba71f365e49916d2a94b04f",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761345255-11690-8d04f87a",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-be076a458ed64481117508045fa0dcdb5632b5c9eba71f365e49916d2a94b04f",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct failed reviewer-falsifier checks at the WM reviewer-wait stage on a cascade candidate for M-self-improvement-loop.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-be076a458ed64481117508045fa0dcdb5632b5c9eba71f365e49916d2a94b04f.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-be076a458ed64481117508045fa0dcdb5632b5c9eba71f365e49916d2a94b04f.md:13",
+   "quote": "Reviewer falsifier checks did not pass"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

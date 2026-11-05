@@ -1,0 +1,37 @@
+{
+ "stem": "E-Ttotal",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-Ttotal",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion computing a paper-level tension scalar across result batches to see what the distribution says about the mined corpus.",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-Ttotal.md:1",
+   "quote": "# Excursion: T_total — paper-level tension scalar across a batch"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-Ttotal.md:4",
+   "quote": "**Owner mission:** `holes/missions/M-pattern-application-diagnostic.md`"
+  },
+  "also": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-Ttotal.md:7",
+   "quote": "(Track B demo for Rob; the geometry-artifact stage of mark3 can adopt the script"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

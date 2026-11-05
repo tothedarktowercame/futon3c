@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-d7b9455b38aeeaee22030c79db02690de8c444612826547c7589d0e6e6c56c02",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-d7b9455b38aeeaee22030c79db02690de8c444612826547c7589d0e6e6c56c02",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore a request timeout during an M-aif-policy-conditioned-eig click at :author-wait",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d7b9455b38aeeaee22030c79db02690de8c444612826547c7589d0e6e6c56c02.md:11",
+   "quote": "request timed out"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d7b9455b38aeeaee22030c79db02690de8c444612826547c7589d0e6e6c56c02.md:9",
+   "quote": "Target: M-aif-policy-conditioned-eig; stage: :author-wait."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-2ff102a09d24d55886bd0e015afd6651115974b0b28afb5b0ed9f7b9d15b7521",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-2ff102a09d24d55886bd0e015afd6651115974b0b28afb5b0ed9f7b9d15b7521",
+  "kind": "relate",
+  "what": {
+   "value": "Correct an invalid author refusal when the War Machine waited on M-recommendation-bindings",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2ff102a09d24d55886bd0e015afd6651115974b0b28afb5b0ed9f7b9d15b7521.md:13",
+   "quote": "Author refusal lacks a reason or claims an artifact"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-2ff102a09d24d55886bd0e015afd6651115974b0b28afb5b0ed9f7b9d15b7521.md:9",
+   "quote": "Target: M-recommendation-bindings; stage: :author-wait."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

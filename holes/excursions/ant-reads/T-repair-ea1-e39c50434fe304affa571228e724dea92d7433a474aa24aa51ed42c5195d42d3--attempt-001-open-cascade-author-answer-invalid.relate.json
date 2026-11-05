@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-ea1-e39c50434fe304affa571228e724dea92d7433a474aa24aa51ed42c5195d42d3--attempt-001-open-cascade-author-answer-invalid",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760983841-11665-3cebdff4",
+ "at": "2026-11-04T03:00:17+00:00",
+ "row": {
+  "stem": "T-repair-ea1-e39c50434fe304affa571228e724dea92d7433a474aa24aa51ed42c5195d42d3--attempt-001-open-cascade-author-answer-invalid",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct an invalid open-cascade author answer at WM cascade-resume stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-e39c50434fe304affa571228e724dea92d7433a474aa24aa51ed42c5195d42d3--attempt-001-open-cascade-author-answer-invalid.md:11",
+   "quote": "Selected cascade held in open-cascade phase"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-e39c50434fe304affa571228e724dea92d7433a474aa24aa51ed42c5195d42d3--attempt-001-open-cascade-author-answer-invalid.md:23",
+   "quote": "Finding: [repair-ea1-e39c50434fe304affa571228e724dea92d7433a474aa24aa51ed42c5195d42d3--attempt-001-open-cascade-author-answer-invalid](/home/joe/code/futon2/data/wm-re"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

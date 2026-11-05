@@ -1,0 +1,29 @@
+{
+ "stem": "M-a-sorry-enterprise",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "M-a-sorry-enterprise",
+  "kind": "relate",
+  "what": {
+   "value": "Model sorry topology as the organising principle of the stack: B→A hinge evidence feeding sorry discovery and evolution",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-a-sorry-enterprise.md:20",
+   "quote": "**Repos:** futon5a (logic model, sorry topology), futon3a (pattern retrieval, embeddings),"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-a-sorry-enterprise.md:20",
+   "quote": "**Repos:** futon5a (logic model, sorry topology), futon3a (pattern retrieval, embeddings),"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-cascade-real",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-cascade-real",
+  "kind": "relate",
+  "what": {
+   "value": "An excursion documenting why the War Machine's critical step (cascade construction/selection) is passive, as defects D1–D18 under the PROOF-2 plan.",
+   "cite": "/home/joe/code/futon2/holes/E-cascade-real.md:1",
+   "quote": "# E-cascade-real — why the War Machine's critical step is passive"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-cascade-real.md:1",
+   "quote": "# E-cascade-real — why the War Machine's critical step is passive"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

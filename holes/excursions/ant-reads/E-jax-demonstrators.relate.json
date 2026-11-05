@@ -1,0 +1,27 @@
+{
+ "stem": "E-jax-demonstrators",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "E-jax-demonstrators",
+  "kind": "relate",
+  "what": {
+   "value": "Reference/scoping note naming known-good JAX demonstrators (jraph link prediction, pymdp) so the C-substrate-completion §8.2 substrate experiments are directed rather than blank-page builds.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-jax-demonstrators.md:4",
+   "quote": "**Status:** reference / scoping. Names the known-good JAX demonstrators the `C-substrate-completion` §8.2 experiments should aim at, so the work is *directed* (a target to reproduce, not a blank-page build)."
+  },
+  "area": {
+   "unsure": "Directs substrate-2 code-graph and active-inference experiments spanning futon5a substrate work and the WM/VFE strand; no listed area covers the substrate-experiment family."
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "ok",
+  "unsure"
+ ],
+ "ok": 1,
+ "unsure": 1,
+ "failed": []
+}

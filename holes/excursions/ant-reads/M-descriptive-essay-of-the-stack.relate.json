@@ -1,0 +1,35 @@
+{
+ "stem": "M-descriptive-essay-of-the-stack",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-descriptive-essay-of-the-stack",
+  "kind": "relate",
+  "what": {
+   "value": "Produce a print-quality descriptive essay of the stack, War Machine coherence at ukrn-simulation level, and essay-code alignment",
+   "cite": "/home/joe/code/futon7/holes/M-descriptive-essay-of-the-stack.md:15",
+   "quote": "### Exit criterion #2 — War Machine ≥ ukrn-services-simulation coherence"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon7/holes/M-descriptive-essay-of-the-stack.md:5",
+   "quote": "the original framing — \"an essay\" — was too narrow. The scope is a **mission cluster** with three named exit criteria"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon7/holes/M-descriptive-essay-of-the-stack.md:15",
+   "quote": "### Exit criterion #2 — War Machine ≥ ukrn-services-simulation coherence"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

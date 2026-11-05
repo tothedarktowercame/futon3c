@@ -1,0 +1,29 @@
+{
+ "stem": "M-sigils-reconsidered",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-sigils-reconsidered",
+  "kind": "relate",
+  "what": {
+   "value": "Survey both sides of keep/revise/retire for the pattern library's sigil vocabulary and record Joe's ruling",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-sigils-reconsidered.md:17",
+   "quote": "- [ ] The final keep, revise, or retire decision is recorded here and reflected in `futon3/flexiarg-directives.edn` when that directive is affected."
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-sigils-reconsidered.md:17",
+   "quote": "- [ ] The final keep, revise, or retire decision is recorded here and reflected in `futon3/flexiarg-directives.edn` when that directive is affected."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

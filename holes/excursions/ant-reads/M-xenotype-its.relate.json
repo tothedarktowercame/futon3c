@@ -1,0 +1,29 @@
+{
+ "stem": "M-xenotype-its",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-xenotype-its",
+  "kind": "relate",
+  "what": {
+   "value": "Use proofs and the explanation witness as the basis of an intelligent tutoring system (ITS) over Lean, with zai runners as the proving phenotype.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-xenotype-its.md:1",
+   "quote": "# M-xenotype-its — the explanation witness, and proofs as the basis of an ITS"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-xenotype-its.md:23",
+   "quote": "| **Phenotype** | zai runners | proof behavior on problems | compiler (`lake`) |"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

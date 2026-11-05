@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-10421fbe344701047590fcdbe24684d554aae59c3cb385ca06145f94bbb914f3",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760983841-11665-3cebdff4",
+ "at": "2026-11-04T03:00:17+00:00",
+ "row": {
+  "stem": "T-repair-occ-10421fbe344701047590fcdbe24684d554aae59c3cb385ca06145f94bbb914f3",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct an invalid close outcome at WM :close stage for M-daily-scan",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-10421fbe344701047590fcdbe24684d554aae59c3cb385ca06145f94bbb914f3.md:11",
+   "quote": "invalid close outcome"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-10421fbe344701047590fcdbe24684d554aae59c3cb385ca06145f94bbb914f3.md:5",
+   "quote": "Parent: M-daily-scan"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-wm-apparatus",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "E-wm-apparatus",
+  "kind": "relate",
+  "what": {
+   "value": "Name the apparatus-level assurances (recording, delivery, liveness, identity) the War Machine needs beyond its verified mathematics",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-wm-apparatus.md:4",
+   "quote": "cross references them and explains the assurances we need to build into the"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/excursions/E-wm-apparatus.md:4",
+   "quote": "cross references them and explains the assurances we need to build into the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

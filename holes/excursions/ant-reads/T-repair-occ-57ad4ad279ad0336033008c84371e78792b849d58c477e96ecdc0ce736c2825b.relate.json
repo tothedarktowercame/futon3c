@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-57ad4ad279ad0336033008c84371e78792b849d58c477e96ecdc0ce736c2825b",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-57ad4ad279ad0336033008c84371e78792b849d58c477e96ecdc0ce736c2825b",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct a duplicate effective run at the WM effective-run-comparison stage on M-typed-memories.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-57ad4ad279ad0336033008c84371e78792b849d58c477e96ecdc0ce736c2825b.md:1",
+   "quote": "# Correct duplicate effective run"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-57ad4ad279ad0336033008c84371e78792b849d58c477e96ecdc0ce736c2825b.md:9",
+   "quote": "Target: M-typed-memories; stage: :effective-run-comparison."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

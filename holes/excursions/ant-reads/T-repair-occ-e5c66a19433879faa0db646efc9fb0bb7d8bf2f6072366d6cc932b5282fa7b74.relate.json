@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-e5c66a19433879faa0db646efc9fb0bb7d8bf2f6072366d6cc932b5282fa7b74",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-e5c66a19433879faa0db646efc9fb0bb7d8bf2f6072366d6cc932b5282fa7b74",
+  "kind": "relate",
+  "what": {
+   "value": "Verify or restore the missing cast/agent readiness for the selected action against M-daily-scan",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e5c66a19433879faa0db646efc9fb0bb7d8bf2f6072366d6cc932b5282fa7b74.md:11",
+   "quote": "Selected an action, but no cast was given for it"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e5c66a19433879faa0db646efc9fb0bb7d8bf2f6072366d6cc932b5282fa7b74.md:9",
+   "quote": "Target: M-daily-scan; stage: :agent-readiness."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

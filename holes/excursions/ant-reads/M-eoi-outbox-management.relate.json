@@ -1,0 +1,29 @@
+{
+ "stem": "M-eoi-outbox-management",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-eoi-outbox-management",
+  "kind": "relate",
+  "what": {
+   "value": "Build the managed outbox pipeline that turns authored expressions of interest into sent, tracked outreach",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-eoi-outbox-management.md:28",
+   "quote": "FUTON already **authors** expressions of interest — the `eoi-engine` / `eoi-new`"
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-eoi-outbox-management.md:28",
+   "quote": "FUTON already **authors** expressions of interest — the `eoi-engine` / `eoi-new`"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

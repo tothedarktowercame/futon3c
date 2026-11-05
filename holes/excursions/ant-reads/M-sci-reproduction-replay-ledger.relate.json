@@ -1,0 +1,29 @@
+{
+ "stem": "M-sci-reproduction-replay-ledger",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-sci-reproduction-replay-ledger",
+  "kind": "relate",
+  "what": {
+   "value": "Replay futon5's 25 censused bright ideas as gated reproduction notebooks with claims tables and baselines",
+   "cite": "/home/joe/code/futon5/holes/missions/M-sci-reproduction-replay-ledger.md:5",
+   "quote": "Companion to `M-sci-reproduction.md`. Compiled 2026-07-13 (claude-6, from a"
+  },
+  "area": {
+   "value": "futon5",
+   "cite": "/home/joe/code/futon5/holes/missions/M-sci-reproduction-replay-ledger.md:5",
+   "quote": "Companion to `M-sci-reproduction.md`. Compiled 2026-07-13 (claude-6, from a"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

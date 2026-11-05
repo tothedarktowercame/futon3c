@@ -1,0 +1,29 @@
+{
+ "stem": "E-capability-graph-ui-polish",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "E-capability-graph-ui-polish",
+  "kind": "relate",
+  "what": {
+   "value": "Interactive operator walkthrough to verify and polish the WebArxana capability-graph UI.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-capability-graph-ui-polish.md:16",
+   "quote": "Verify and polish the WebArxana capability-graph UI"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-capability-graph-ui-polish.md:16",
+   "quote": "Verify and polish the WebArxana capability-graph UI"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

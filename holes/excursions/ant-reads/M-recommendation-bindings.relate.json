@@ -1,0 +1,29 @@
+{
+ "stem": "M-recommendation-bindings",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-recommendation-bindings",
+  "kind": "relate",
+  "what": {
+   "value": "Give the War Machine's Recommended Next Move concrete :binds-to handles in operational surfaces (candidate queue, boundary.edn, live violations) with counter-deltas as the observation channel.",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-recommendation-bindings.md:1",
+   "quote": "# Mission: Recommendation Bindings (make the War Machine's next-move land in operational surfaces)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-recommendation-bindings.md:1",
+   "quote": "# Mission: Recommendation Bindings (make the War Machine's next-move land in operational surfaces)"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

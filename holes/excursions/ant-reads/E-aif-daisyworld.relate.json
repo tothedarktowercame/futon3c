@@ -1,0 +1,29 @@
+{
+ "stem": "E-aif-daisyworld",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760386380-11616-1c563bd0",
+ "at": "2026-11-04T02:49:32+00:00",
+ "row": {
+  "stem": "E-aif-daisyworld",
+  "kind": "relate",
+  "what": {
+   "value": "Controllable Daisyworld microcosm of the futon stack as a FutonZero testbed — clean simulable board, grounded reward, evolutionary policy learning.",
+   "cite": "/home/joe/code/futon0/holes/excursions/E-aif-daisyworld.md:1",
+   "quote": "# E-aif-daisyworld — a controllable microcosm of the futon stack (FutonZero testbed)"
+  },
+  "area": {
+   "value": "other:FutonZero",
+   "cite": "/home/joe/code/futon0/holes/excursions/E-aif-daisyworld.md:10",
+   "quote": "`futon2/docs/futonzero-alphazero.md`). Daisyworld gives a **clean simulable board (G-SIM)** with a **grounded"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "E-cascade-assembly",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-cascade-assembly",
+  "kind": "relate",
+  "what": {
+   "value": "Design exploration of what pattern-cascade assembly could look like, generating several possibilities measured against the real futon3 math-pattern graph.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-cascade-assembly.md:7",
+   "quote": "`b7c7332`, futon3c `fdd6d4e7`). Joe: *\"I'm not sure what the cascade assembly"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-cascade-assembly.md:18",
+   "quote": "Measured 2026-08-17 over `futon3/library/math-*` and the live store:"
+  },
+  "also": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-cascade-assembly.md:5",
+   "quote": "**Opened 2026-08-17 by claude-2 (Analyst, M-apm-demonstration) at Joe's"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

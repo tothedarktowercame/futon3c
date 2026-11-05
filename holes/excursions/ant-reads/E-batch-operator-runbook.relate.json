@@ -1,0 +1,37 @@
+{
+ "stem": "E-batch-operator-runbook",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761536771-11700-203493d1",
+ "at": "2026-11-04T03:09:23+00:00",
+ "row": {
+  "stem": "E-batch-operator-runbook",
+  "kind": "relate",
+  "what": {
+   "value": "Standing manual for the Zone batch-operator seat running A/B proof batches under the memory-whitepaper V3 programme",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-batch-operator-runbook.md:12",
+   "quote": "`E-memory-whitepaper-v3-programme.md` §Phase-2 + §Frames + §Generic proof"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-batch-operator-runbook.md:12",
+   "quote": "`E-memory-whitepaper-v3-programme.md` §Phase-2 + §Frames + §Generic proof"
+  },
+  "also": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-batch-operator-runbook.md:14",
+   "quote": "./scripts/batch1_pair.sh <pid>` per panel problem (clone/adapt per batch id;"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

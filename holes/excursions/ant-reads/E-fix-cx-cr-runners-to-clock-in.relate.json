@@ -1,0 +1,29 @@
+{
+ "stem": "E-fix-cx-cr-runners-to-clock-in",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-fix-cx-cr-runners-to-clock-in",
+  "kind": "relate",
+  "what": {
+   "value": "Rectify the divergent cx/cr runner scripts and extend the clock-in model with Excursions as a third level (Campaign › Mission › Excursion) so off-trail turns are typed, not noise.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-fix-cx-cr-runners-to-clock-in.md:9",
+   "quote": "2. **Extend the clock-in model to Excursions** — see below."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-fix-cx-cr-runners-to-clock-in.md:22",
+   "quote": "And the deeper point (Joe): **this pushes type-theory into the *turns* rather than into function names.** Classically types live in the code (fn signatures, namespaces). Here the **clock-in path types each turn** in the live stream — a turn's type *is* its `Campaign › Mission › Excursion` context. The turn-stream becomes a typed sequence; an off-trail detour is a *type-change* (a named excursion), not an exception."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

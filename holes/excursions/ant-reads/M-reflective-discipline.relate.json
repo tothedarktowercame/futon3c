@@ -1,0 +1,37 @@
+{
+ "stem": "M-reflective-discipline",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-reflective-discipline",
+  "kind": "relate",
+  "what": {
+   "value": "Type PSR/PUR/PAR as tangent-vector hyperedges cross-edged to substrate-2, lift the legacy markdown corpus, and make the War Machine the operator-facing surface for writing them.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-reflective-discipline.md:1",
+   "quote": "# Mission: Reflective Discipline (PSR / PUR / PAR as tangent vectors)"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon2/holes/missions/M-reflective-discipline.md:62",
+   "quote": "exercised) but **not identified**. PSR/PUR ARE pattern records;"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-reflective-discipline.md:186",
+   "quote": "The War Machine becomes the operator-facing surface for PAR"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

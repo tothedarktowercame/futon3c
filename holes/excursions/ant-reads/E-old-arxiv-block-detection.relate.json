@@ -1,0 +1,29 @@
+{
+ "stem": "E-old-arxiv-block-detection",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793762075799-11735-3400349c",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-old-arxiv-block-detection",
+  "kind": "relate",
+  "what": {
+   "value": "Close the F₂ paper-vintage gap by adding prose-convention block detection for old plain-TeX arxiv papers to the futon6 parser",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-old-arxiv-block-detection.md:27",
+   "quote": "(`futon6/src/futon6/paper_hypergraph.py`) detects environment-based"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon3/holes/excursions/E-old-arxiv-block-detection.md:27",
+   "quote": "(`futon6/src/futon6/paper_hypergraph.py`) detects environment-based"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-typed-memories",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "M-typed-memories",
+  "kind": "relate",
+  "what": {
+   "value": "Mission making memories typed dialogue acts over the futon1b hypergraph, with pattern-conditioned recall wired into psr_search/psr_select.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-memories.md:1",
+   "quote": "# M-typed-memories — memories as typed dialogue acts over the futon1b hypergraph"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-memories.md:10",
+   "quote": "**Retrieval strategy added 2026-07-23** — pattern-conditioned recall via"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

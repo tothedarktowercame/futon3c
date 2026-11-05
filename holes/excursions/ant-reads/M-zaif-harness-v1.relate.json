@@ -1,0 +1,29 @@
+{
+ "stem": "M-zaif-harness-v1",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760200828-11603-3f6514e8",
+ "at": "2026-11-04T02:46:26+00:00",
+ "row": {
+  "stem": "M-zaif-harness-v1",
+  "kind": "relate",
+  "what": {
+   "value": "Harness edition of the zaif mission, lifecycle-aligned and WM-fed, running INSTANTIATE as wm-contract U rows.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-zaif-harness-v1.md:4",
+   "quote": "**Status:** OPEN — HEAD through VERIFY drafted; INSTANTIATE runs as wm-contract U rows."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-zaif-harness-v1.md:16",
+   "quote": "the point: a conforming mission is WM-legible (see the phase→node table in IDENTIFY)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

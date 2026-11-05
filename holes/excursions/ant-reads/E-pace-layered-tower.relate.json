@@ -1,0 +1,29 @@
+{
+ "stem": "E-pace-layered-tower",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "E-pace-layered-tower",
+  "kind": "relate",
+  "what": {
+   "value": "Aligns the pheno/geno/exo/xeno tower with the stack's pace layers to yield pacing design rules for stack changes and a genotype-update-delay coordinate for the CA research.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pace-layered-tower.md:157",
+   "quote": "1. **A vocabulary for pacing a decision.** \"Which layer is this change at?\""
+  },
+  "area": {
+   "value": "futon5",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pace-layered-tower.md:122",
+   "quote": "direction too: it suggests the CA family would need an explicit"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

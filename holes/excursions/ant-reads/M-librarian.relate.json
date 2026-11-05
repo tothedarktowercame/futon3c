@@ -1,0 +1,35 @@
+{
+ "stem": "M-librarian",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761506355-11698-ac172ec4",
+ "at": "2026-11-04T03:08:16+00:00",
+ "row": {
+  "stem": "M-librarian",
+  "kind": "relate",
+  "what": {
+   "value": "A native 3D editing app (Steam Frame) for the Librarian layout, a bonus lap gated behind the client-facing VSAT delivery.",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:22",
+   "quote": "> Regarding the Librarian layout, I do slightly wonder if the a-frame"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:16",
+   "quote": "- [ ] IDENTIFY names whether Librarian is a VSAT client or an Arxana-side 3D surface and records the resulting repository and authentication boundary."
+  },
+  "also": {
+   "value": "business",
+   "cite": "/home/joe/code/futon4/holes/missions/M-librarian.md:7",
+   "quote": "gated behind the client-facing VSAT delivery. Not yet scoped, not yet"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

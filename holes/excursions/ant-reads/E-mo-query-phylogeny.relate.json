@@ -1,0 +1,29 @@
+{
+ "stem": "E-mo-query-phylogeny",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-mo-query-phylogeny",
+  "kind": "relate",
+  "what": {
+   "value": "Use MathOverflow as a query phylogeny and QA benchmark for generating and proving queries-as-scopes",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mo-query-phylogeny.md:9",
+   "quote": "MathOverflow gives *something akin to the pattern phylogeny, just at the level of"
+  },
+  "area": {
+   "value": "other:typed-holes",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-mo-query-phylogeny.md:9",
+   "quote": "MathOverflow gives *something akin to the pattern phylogeny, just at the level of"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

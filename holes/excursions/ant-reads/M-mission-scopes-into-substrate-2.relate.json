@@ -1,0 +1,35 @@
+{
+ "stem": "M-mission-scopes-into-substrate-2",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-mission-scopes-into-substrate-2",
+  "kind": "relate",
+  "what": {
+   "value": "Put mission scopes (the scope-tree-of-centres) into the Arxana hypergraph substrate-2 as durable, position-free nodes, with a Salingaros C-field and a WM-EFE composition.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-mission-scopes-into-substrate-2.md:22",
+   "quote": "Substrate-2 (the Arxana hypergraph, port 7071) already reflects code **contents** (substrate-1). What it lacks"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-mission-scopes-into-substrate-2.md:16",
+   "quote": "it is their **scopes** (the scope-tree-of-centres) that are not."
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-mission-scopes-into-substrate-2.md:12",
+   "quote": "- [ ] A ratified C-field/WM-EFE composition has a worked example where the War Machine returns a specific buildable unit rather than the instruction to finish a mission."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

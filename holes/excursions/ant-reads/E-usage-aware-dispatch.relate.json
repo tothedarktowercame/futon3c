@@ -1,0 +1,29 @@
+{
+ "stem": "E-usage-aware-dispatch",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-usage-aware-dispatch",
+  "kind": "relate",
+  "what": {
+   "value": "Idea to pace agent dispatch against each provider's usage window so work runs continuously without hitting the 5-hour limits.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-usage-aware-dispatch.md:1",
+   "quote": "# E-usage-aware-dispatch — pace dispatch against each provider's usage window"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-usage-aware-dispatch.md:14",
+   "quote": "Today there is no usage-"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

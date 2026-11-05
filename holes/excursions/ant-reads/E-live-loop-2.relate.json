@@ -1,0 +1,29 @@
+{
+ "stem": "E-live-loop-2",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-live-loop-2",
+  "kind": "relate",
+  "what": {
+   "value": "Run the live loop as operator-gated microsteps, each with an action, machine-checkable gate, and recorded evidence",
+   "cite": "/home/joe/code/futon2/holes/E-live-loop-2.md:9",
+   "quote": "Rather than running in 3 big steps, run in MICROSTEPS: each has an"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-live-loop-2.md:9",
+   "quote": "Rather than running in 3 big steps, run in MICROSTEPS: each has an"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

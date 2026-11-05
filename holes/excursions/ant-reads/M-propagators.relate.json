@@ -1,0 +1,29 @@
+{
+ "stem": "M-propagators",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-propagators",
+  "kind": "relate",
+  "what": {
+   "value": "Study the propagator family over the MetaCA rule byte discovered via a 2014 Emacs off-by-one — patterns of improvisation in rule evolution.",
+   "cite": "/home/joe/code/futon5/holes/missions/M-propagators.md:1",
+   "quote": "# M-propagators — patterns of improvisation in the MetaCA rule byte"
+  },
+  "area": {
+   "value": "futon5",
+   "cite": "/home/joe/code/futon5/holes/missions/M-propagators.md:1",
+   "quote": "# M-propagators — patterns of improvisation in the MetaCA rule byte"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-arxana-clock",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-arxana-clock",
+  "kind": "relate",
+  "what": {
+   "value": "One read-only surface normalising cron, systemd timers, cyder and clicks into a single legible clock of the system's time-drivers.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:18",
+   "quote": "The Arxana Clock is the single surface that answers, at a glance: *what keeps this system ticking, when did each last fire, and when does it fire next?*"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-arxana-clock.md:18",
+   "quote": "and the place a **new** driver (e.g. an every-≈100-turns trigger) registers so it's visible rather than hidden."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

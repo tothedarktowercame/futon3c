@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-e3d89579ae0e767db5858b6f42ffd4be7232557e8a2e489d1113b20b8f9447e7",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-e3d89579ae0e767db5858b6f42ffd4be7232557e8a2e489d1113b20b8f9447e7",
+  "kind": "relate",
+  "what": {
+   "value": "Correct the exhausted ordinary click budget at the War Machine's code-state stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e3d89579ae0e767db5858b6f42ffd4be7232557e8a2e489d1113b20b8f9447e7.md:11",
+   "quote": "Ordinary click budget exhausted. Return to Joe for renewal."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e3d89579ae0e767db5858b6f42ffd4be7232557e8a2e489d1113b20b8f9447e7.md:7",
+   "quote": "Target: not retained; stage: :code-state."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

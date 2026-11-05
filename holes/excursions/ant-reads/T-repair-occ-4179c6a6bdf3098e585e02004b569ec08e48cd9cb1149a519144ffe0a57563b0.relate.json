@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-4179c6a6bdf3098e585e02004b569ec08e48cd9cb1149a519144ffe0a57563b0",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-4179c6a6bdf3098e585e02004b569ec08e48cd9cb1149a519144ffe0a57563b0",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct an untyped WM failure where a cascade decision was refused at the selection stage on M-formal-patterns.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4179c6a6bdf3098e585e02004b569ec08e48cd9cb1149a519144ffe0a57563b0.md:11",
+   "quote": "cascade decision refused"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4179c6a6bdf3098e585e02004b569ec08e48cd9cb1149a519144ffe0a57563b0.md:11",
+   "quote": "cascade decision refused"
+  },
+  "also": {
+   "value": "futon5",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4179c6a6bdf3098e585e02004b569ec08e48cd9cb1149a519144ffe0a57563b0.md:5",
+   "quote": "Parent: M-formal-patterns"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-mfuton-silver",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "E-mfuton-silver",
+  "kind": "relate",
+  "what": {
+   "value": "Turn the mfuton lineage into a silver-target corpus for improving legacy arXiv source handling, under owner mission M-superpod-mark3, for Joe's pipeline and Rob's batch execution.",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-mfuton-silver.md:14-15",
+   "quote": "Turn the mfuton lineage into a **silver-target corpus** for improving"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-mfuton-silver.md:5",
+   "quote": "**Owner mission:** `futon6/holes/missions/M-superpod-mark3.md`"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-range",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

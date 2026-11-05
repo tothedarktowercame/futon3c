@@ -1,0 +1,35 @@
+{
+ "stem": "M-differentiable-substrate",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-differentiable-substrate",
+  "kind": "relate",
+  "what": {
+   "value": "Add a gradient policy-prior layer over the substrate-2 metric, emitting ranked moves consumed by the discrete rollout",
+   "cite": "/home/joe/code/futon6/holes/missions/M-differentiable-substrate.md:15",
+   "quote": "  **gradient layer over that metric**. Sibling to `M-aif2` (E1, claude-3)."
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-differentiable-substrate.md:11",
+   "quote": "  from code to the **whole unified substrate-2** (code + missions + capabilities + patterns —"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon6/holes/missions/M-differentiable-substrate.md:16",
+   "quote": "- **Complements** `M-wm-policies` (claude-1): the geodesic / `G(π)` is its deliverable too."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

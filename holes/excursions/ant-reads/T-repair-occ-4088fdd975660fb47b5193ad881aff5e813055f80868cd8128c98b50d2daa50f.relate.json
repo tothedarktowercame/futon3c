@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-4088fdd975660fb47b5193ad881aff5e813055f80868cd8128c98b50d2daa50f",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-4088fdd975660fb47b5193ad881aff5e813055f80868cd8128c98b50d2daa50f",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct the occurrence-square redecision where WM published occurrence squares but inner construction failed.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4088fdd975660fb47b5193ad881aff5e813055f80868cd8128c98b50d2daa50f.md:11",
+   "quote": "Occurrence squares were published but inner construction failed"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-4088fdd975660fb47b5193ad881aff5e813055f80868cd8128c98b50d2daa50f.md:11",
+   "quote": "Occurrence squares were published but inner construction failed"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

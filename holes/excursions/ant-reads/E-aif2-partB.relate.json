@@ -1,0 +1,29 @@
+{
+ "stem": "E-aif2-partB",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-aif2-partB",
+  "kind": "relate",
+  "what": {
+   "value": "A held deep-research excursion to triangulate the AIF specification (R1–R13) against the canonical active-inference literature and add missing R-criteria.",
+   "cite": "/home/joe/code/futon2/holes/E-aif2-partB.md:1",
+   "quote": "# E-aif2-partB — can we trust the AIF specification? (a held deep-research excursion)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-aif2-partB.md:13",
+   "quote": "**Relation:** follow-on to `M-aif2` (the R1–R12 boundary-tier work) and its **2026-06-09 retrospective**"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

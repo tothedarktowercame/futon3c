@@ -1,0 +1,35 @@
+{
+ "stem": "M-codex-sorry-loop",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "M-codex-sorry-loop",
+  "kind": "relate",
+  "what": {
+   "value": "Run the memory learning loop on a second runner (codex) to patch APM sorries, proving runner-model portability",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-codex-sorry-loop.md:9",
+   "quote": "Dual payoff: a demo that the memory system is runner-model-portable, and"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-codex-sorry-loop.md:14",
+   "quote": "- [ ] The APM corpus has no transitive `sorryAx` in any problem proof."
+  },
+  "also": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-codex-sorry-loop.md:9",
+   "quote": "Dual payoff: a demo that the memory system is runner-model-portable, and"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

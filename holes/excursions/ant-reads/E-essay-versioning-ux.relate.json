@@ -1,0 +1,29 @@
+{
+ "stem": "E-essay-versioning-ux",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-essay-versioning-ux",
+  "kind": "relate",
+  "what": {
+   "value": "Deliver the WebArxana UI + futon1a storage edge so essay version lineage (head/chain props) is legible: one link per essay, a version column, and browsing of earlier versions.",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-essay-versioning-ux.md:6",
+   "quote": "**Surface:** WebArxana (futon4) + Arxana store (futon1a)."
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-essay-versioning-ux.md:6",
+   "quote": "**Surface:** WebArxana (futon4) + Arxana store (futon1a)."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

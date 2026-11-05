@@ -1,0 +1,29 @@
+{
+ "stem": "M-vsatarcs-writer",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-vsatarcs-writer",
+  "kind": "relate",
+  "what": {
+   "value": "Give the VSATARCS reader surface writer-capability (consent-gated action proposal and writes back into the stack)",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:22",
+   "quote": "VSATARCS is currently a *reader* surface for FUTON. The reader-criteria axis Q1-Q8 was closed 2026-05-20 (VSATARCS v0.5.15; 272 tests; 8/8 satisfied; 13 `:bilateral-evidence` entries; 5/5 `:evidence-kind` values activated)."
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/missions/M-vsatarcs-writer.md:22",
+   "quote": "VSATARCS is currently a *reader* surface for FUTON."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

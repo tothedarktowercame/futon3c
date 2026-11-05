@@ -1,0 +1,29 @@
+{
+ "stem": "E-prove-memory-useful",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-prove-memory-useful",
+  "kind": "relate",
+  "what": {
+   "value": "Proving the memory store's usefulness live: delivery, effect and absence of memories reaching seats",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-prove-memory-useful.md:14",
+   "quote": "minus40 (40ºBelowDB) keeps every version of the agents' memory files with"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-prove-memory-useful.md:14",
+   "quote": "minus40 (40ºBelowDB) keeps every version of the agents' memory files with"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

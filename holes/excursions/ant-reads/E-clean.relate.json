@@ -1,0 +1,29 @@
+{
+ "stem": "E-clean",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "E-clean",
+  "kind": "relate",
+  "what": {
+   "value": "CLean: an EDN-as-Lean-sketch artifact format (the CT treatment of a proof with typed holes) that renders to the DarkTower Lean types Rob's pipeline consumes.",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-clean.md:12",
+   "quote": "**CLean = the EDN image of the CT treatment of a proof** — a comb of typed Poly"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-clean.md:12",
+   "quote": "**CLean = the EDN image of the CT treatment of a proof** — a comb of typed Poly"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-trip-journal",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-trip-journal",
+  "kind": "relate",
+  "what": {
+   "value": "Preserve the unfinished-object/phenomenology dimension of missions (B→A turns) that the typed mission ledger cannot store",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-trip-journal.md:25",
+   "quote": "What it does not preserve is the *unfinished-object* dimension of"
+  },
+  "area": {
+   "value": "other:mission-journaling",
+   "cite": "/home/joe/code/futon5a/holes/missions/M-trip-journal.md:25",
+   "quote": "What it does not preserve is the *unfinished-object* dimension of"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

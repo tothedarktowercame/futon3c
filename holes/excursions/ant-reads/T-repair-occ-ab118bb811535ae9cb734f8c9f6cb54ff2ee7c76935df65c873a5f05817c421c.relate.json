@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-ab118bb811535ae9cb734f8c9f6cb54ff2ee7c76935df65c873a5f05817c421c",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761345255-11690-8d04f87a",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-ab118bb811535ae9cb734f8c9f6cb54ff2ee7c76935df65c873a5f05817c421c",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket to correct a close-stage JSON parse exception ('Unrecognized token Task') in the WM close phase.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-ab118bb811535ae9cb734f8c9f6cb54ff2ee7c76935df65c873a5f05817c421c.md:11",
+   "quote": "Unrecognized token 'Task': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')  at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 5]"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-ab118bb811535ae9cb734f8c9f6cb54ff2ee7c76935df65c873a5f05817c421c.md:9",
+   "quote": "Context: {:phase :close}."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

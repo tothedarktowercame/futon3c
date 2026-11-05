@@ -1,0 +1,29 @@
+{
+ "stem": "E-memory-latency",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-memory-latency",
+  "kind": "relate",
+  "what": {
+   "value": "Records the remaining latency problem in pattern-conditioned memory retrieval (psr_search) before the same read seam is used by the War Machine.",
+   "cite": "/home/joe/code/futon3c/holes/E-memory-latency.md:10",
+   "quote": "excursion records the remaining latency problem before the same read seam is"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/E-memory-latency.md:16",
+   "quote": "`psr_search` can still take long enough to disrupt an interactive agent turn."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

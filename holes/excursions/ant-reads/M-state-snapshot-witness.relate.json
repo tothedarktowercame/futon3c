@@ -1,0 +1,29 @@
+{
+ "stem": "M-state-snapshot-witness",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762442518-11747-d6c4a62b",
+ "at": "2026-11-04T03:27:50+00:00",
+ "row": {
+  "stem": "M-state-snapshot-witness",
+  "kind": "relate",
+  "what": {
+   "value": "Periodic point-in-time projection of stack state as queryable evidence, closing pipeline-tracer track-4-2-snapshot-as-evidence.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-state-snapshot-witness.md:7",
+   "quote": "# M-state-snapshot-witness: Periodic point-in-time projection as queryable evidence"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-state-snapshot-witness.md:7",
+   "quote": "# M-state-snapshot-witness: Periodic point-in-time projection as queryable evidence"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

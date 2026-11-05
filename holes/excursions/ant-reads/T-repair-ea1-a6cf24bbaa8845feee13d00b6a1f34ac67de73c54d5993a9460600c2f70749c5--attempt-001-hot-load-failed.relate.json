@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-ea1-a6cf24bbaa8845feee13d00b6a1f34ac67de73c54d5993a9460600c2f70749c5--attempt-001-hot-load-failed",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760983841-11665-3cebdff4",
+ "at": "2026-11-04T03:00:17+00:00",
+ "row": {
+  "stem": "T-repair-ea1-a6cf24bbaa8845feee13d00b6a1f34ac67de73c54d5993a9460600c2f70749c5--attempt-001-hot-load-failed",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct a hot-load failure at WM cascade-resume stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-a6cf24bbaa8845feee13d00b6a1f34ac67de73c54d5993a9460600c2f70749c5--attempt-001-hot-load-failed.md:11",
+   "quote": "Selected cascade held in open-cascade phase"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-a6cf24bbaa8845feee13d00b6a1f34ac67de73c54d5993a9460600c2f70749c5--attempt-001-hot-load-failed.md:23",
+   "quote": "Finding: [repair-ea1-a6cf24bbaa8845feee13d00b6a1f34ac67de73c54d5993a9460600c2f70749c5--attempt-001-hot-load-failed](/home/joe/code/futon2/data/wm-re"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

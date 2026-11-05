@@ -1,0 +1,39 @@
+{
+ "stem": "M-象-cascade",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793819927773-12173-82f9e8c5",
+ "at": "2026-11-04T19:19:48+00:00",
+ "row": {
+  "stem": "M-象-cascade",
+  "kind": "relate",
+  "what": {
+   "value": "A mission to turn 象's operator-turn labels into checkable guard/produces rules and ongoing coalescing of pattern proposals, so holes close and the pattern library grows automatically.",
+   "cite": "holes/missions/M-象-cascade.md:62",
+   "quote": "象 labels every operator turn with a move and a pattern, but nothing turns those labels into such rules."
+  },
+  "area": {
+   "value": "象",
+   "cite": "holes/missions/M-象-cascade.md:62",
+   "quote": "象 labels every operator turn with a move and a pattern, but nothing turns those labels into such rules. So the labels are only recorded, and the pattern library does not grow from them."
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "holes/missions/M-象-cascade.md:63",
+   "quote": "So the labels are only recorded, and the pattern library does not grow from them."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "path-missing",
+  "path-missing",
+  "path-missing"
+ ],
+ "ok": 0,
+ "unsure": 0,
+ "failed": [
+  "path-missing",
+  "path-missing",
+  "path-missing"
+ ]
+}

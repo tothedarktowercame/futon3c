@@ -1,0 +1,29 @@
+{
+ "stem": "M-structure-seed-promotion",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "M-structure-seed-promotion",
+  "kind": "relate",
+  "what": {
+   "value": "Mission promoting structure-seed replay labels into a live pattern inducer that fires cross-paper on fresh arXiv papers in the superpod pipeline.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:1",
+   "quote": "# Mission: Structure-Seed Promotion — From Replay Labels to a Live Pattern Inducer"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-structure-seed-promotion.md:25",
+   "quote": "The structure-seed replay loop now actually fires on fresh papers."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

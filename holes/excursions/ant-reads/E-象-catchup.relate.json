@@ -1,0 +1,29 @@
+{
+ "stem": "E-象-catchup",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-象-catchup",
+  "kind": "relate",
+  "what": {
+   "value": "Idea to interpret the whole operator-turn corpus (12,880 turns, 26% analysed) and fold the labels into an approved core; not scheduled.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-catchup.md:11",
+   "quote": "has 12,880 operator turns from 2026-02-18 to 2026-09-23. 3,395 of them (26%)"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-catchup.md:1",
+   "quote": "# E-象-catchup — interpret the whole operator-turn corpus, and fold the labels into an approved core"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-cold-storage",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-cold-storage",
+  "kind": "relate",
+  "what": {
+   "value": "Parked excursion on a reliable non-git storage strategy for large artifacts (futon6/data at 798 MB, ~/code/storage at 195 GB with no manifest or backup).",
+   "cite": "/home/joe/code/futon6/holes/E-cold-storage.md:1",
+   "quote": "# Excursion: E-cold-storage — a reliable non-git storage strategy"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/E-cold-storage.md:16",
+   "quote": "- Large artifacts accumulate beside the repos: `futon6/data/` is **798 MB**"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

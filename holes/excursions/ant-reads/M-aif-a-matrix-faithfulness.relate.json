@@ -1,0 +1,29 @@
+{
+ "stem": "M-aif-a-matrix-faithfulness",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-aif-a-matrix-faithfulness",
+  "kind": "relate",
+  "what": {
+   "value": "Make the War Machine belief-update observation model A faithful: a proper declared A/B/D generative model with production provenance, plus empirical calibration against a distinguishing corpus.",
+   "cite": "/home/joe/code/futon2/holes/missions/M-aif-a-matrix-faithfulness.md:1",
+   "quote": "# Mission: Make the belief-update observation model A faithful (M-aif-a-matrix-faithfulness)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/missions/M-aif-a-matrix-faithfulness.md:21",
+   "quote": "War Machine arena explicitly selects this mode in production and trace-stamps"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

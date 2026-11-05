@@ -1,0 +1,35 @@
+{
+ "stem": "E-proof-dialogues",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760757043-11647-1d4faf46",
+ "at": "2026-11-04T02:56:23+00:00",
+ "row": {
+  "stem": "E-proof-dialogues",
+  "kind": "relate",
+  "what": {
+   "value": "Lakatos-style multi-role dialogue traces over a held-out APM Lean proof, with a hash-chained transcript contract",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-proof-dialogues.md:8",
+   "quote": "The held-out proof is APM `t94A01`, the weighted metric on the countable cube."
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-proof-dialogues.md:8",
+   "quote": "The held-out proof is APM `t94A01`, the weighted metric on the countable cube."
+  },
+  "also": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-proof-dialogues.md:34",
+   "quote": "Matrix is a view, not the record of truth. The configured account"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

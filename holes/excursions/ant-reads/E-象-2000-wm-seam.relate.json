@@ -1,0 +1,35 @@
+{
+ "stem": "E-象-2000-wm-seam",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-象-2000-wm-seam",
+  "kind": "relate",
+  "what": {
+   "value": "Seam excursion defining the adapter between M-象-2000's problem-statement-to-wants front end and what the War Machine accepts, so the two projects meet in the middle.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-2000-wm-seam.md:6",
+   "quote": "for now, we might need an adapter or 'seam' for the WM, but certainly it is my"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-2000-wm-seam.md:3",
+   "quote": "Opened 2026-09-27 by claude-17 at Joe's direction. It follows M-象-2000's"
+  },
+  "also": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-象-2000-wm-seam.md:7",
+   "quote": "aim that the 2 projects meet in the middle.\""
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

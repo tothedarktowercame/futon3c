@@ -1,0 +1,29 @@
+{
+ "stem": "E-queries-and-scopes",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "E-queries-and-scopes",
+  "kind": "relate",
+  "what": {
+   "value": "Synthesis excursion on the queries-as-scopes duality: in what sense a query is a scope, where scope-as-environment and scope-as-partial-hyperedge come apart.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-queries-and-scopes.md:6",
+   "quote": "M-typed-holes projection #5.** This document takes the **relationship itself** as"
+  },
+  "area": {
+   "value": "other:typed-holes/scope-query-theory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-queries-and-scopes.md:14",
+   "quote": "We keep saying \"queries-as-scopes\" as if it were one word. Dive into the"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

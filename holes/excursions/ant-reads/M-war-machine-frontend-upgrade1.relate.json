@@ -1,0 +1,29 @@
+{
+ "stem": "M-war-machine-frontend-upgrade1",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761696509-11711-8e0f6b92",
+ "at": "2026-11-04T03:12:54+00:00",
+ "row": {
+  "stem": "M-war-machine-frontend-upgrade1",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to upgrade the War Machine's frontend SPA: rendering, wiring and new view modes over data the WM-AIF backend already produces.",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-frontend-upgrade1.md:18",
+   "quote": "adds rendering / wiring / new view modes on the existing data the apparatus"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-frontend-upgrade1.md:18",
+   "quote": "adds rendering / wiring / new view modes on the existing data the apparatus"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

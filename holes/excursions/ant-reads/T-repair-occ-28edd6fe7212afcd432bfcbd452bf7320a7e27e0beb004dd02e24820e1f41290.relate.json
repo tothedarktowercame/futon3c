@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-28edd6fe7212afcd432bfcbd452bf7320a7e27e0beb004dd02e24820e1f41290",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761048048-11669-5556da97",
+ "at": "2026-11-04T03:01:19+00:00",
+ "row": {
+  "stem": "T-repair-occ-28edd6fe7212afcd432bfcbd452bf7320a7e27e0beb004dd02e24820e1f41290",
+  "kind": "relate",
+  "what": {
+   "value": "Correct a resume error at the War Machine's occurrence-square-redecision stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-28edd6fe7212afcd432bfcbd452bf7320a7e27e0beb004dd02e24820e1f41290.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-28edd6fe7212afcd432bfcbd452bf7320a7e27e0beb004dd02e24820e1f41290.md:7",
+   "quote": "Target: not retained; stage: :occurrence-square-redecision."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

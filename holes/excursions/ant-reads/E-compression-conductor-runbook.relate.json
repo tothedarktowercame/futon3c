@@ -1,0 +1,29 @@
+{
+ "stem": "E-compression-conductor-runbook",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-compression-conductor-runbook",
+  "kind": "relate",
+  "what": {
+   "value": "Runbook for the compression pass: mining surprisal marks from case transcripts through semantic clustering, dedupe against the flexiarg library, and authoring survivors as reviewed flexiarg patterns.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-compression-conductor-runbook.md:34",
+   "quote": "3. Author survivors as flexiargs (template: the case-1 five in"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-compression-conductor-runbook.md:34",
+   "quote": "3. Author survivors as flexiargs (template: the case-1 five in"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "E-pattern-promotion-and-gc",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-pattern-promotion-and-gc",
+  "kind": "relate",
+  "what": {
+   "value": "Define how patterns climb, fall, and are garbage-collected in the cascade once M-象-2000's cascade exists",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pattern-promotion-and-gc.md:6",
+   "quote": "Opened 2026-09-27 by claude-17 at Joe's direction, as a follow-on to M-象-2000's P21"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pattern-promotion-and-gc.md:6",
+   "quote": "Opened 2026-09-27 by claude-17 at Joe's direction, as a follow-on to M-象-2000's P21"
+  },
+  "also": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-pattern-promotion-and-gc.md:6",
+   "quote": "Opened 2026-09-27 by claude-17 at Joe's direction, as a follow-on to M-象-2000's P21"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

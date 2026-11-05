@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793761119256-11678-38b66535",
+ "at": "2026-11-04T03:02:24+00:00",
+ "row": {
+  "stem": "T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket for the A-self-heal author-dispatch stage where the selected WM action could not be bound to the D task dispatch.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:11",
+   "quote": "Selected action could not be bound to the D task dispatch"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-5691caac1c58ec374091742f3d95b41338669e917c45f83d3049dd84a9637172.md:11",
+   "quote": "Selected action could not be bound to the D task dispatch"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

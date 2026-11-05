@@ -1,0 +1,29 @@
+{
+ "stem": "T-kangaroo-caching-and-compaction",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760913233-11660-4849d0fa",
+ "at": "2026-11-04T02:58:39+00:00",
+ "row": {
+  "stem": "T-kangaroo-caching-and-compaction",
+  "kind": "relate",
+  "what": {
+   "value": "Parked follow-ons to the joey gate and prompt-caching accounting for the pouch/agent harness (1-hour cache TTL, threshold recalibration, compaction).",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:6",
+   "quote": "(commit 042fad2) and the prompt-caching accounting. Do NOT start without Joe."
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-kangaroo-caching-and-compaction.md:17",
+   "quote": "not Agency code. **First step:** find whether Claude Code exposes a cache-TTL"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-car3-queue-routing-design-note",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760913233-11660-4849d0fa",
+ "at": "2026-11-04T02:58:39+00:00",
+ "row": {
+  "stem": "T-car3-queue-routing-design-note",
+  "kind": "relate",
+  "what": {
+   "value": "A model-only design for durable per-agent Agency turn queues with ordered drain, replacing lock-then-timeout semantics.",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:11",
+   "quote": "   - Introduce an Agency turn queue keyed by recipient agent id, with entries of"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-car3-queue-routing-design-note.md:11",
+   "quote": "   - Introduce an Agency turn queue keyed by recipient agent id, with entries of"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

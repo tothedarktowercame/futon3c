@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-d16904991c7b8b5588112d862800e10a8bae0d6f3d77914946d56920ec187131",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-d16904991c7b8b5588112d862800e10a8bae0d6f3d77914946d56920ec187131",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: verify or restore after WM :selection produced no addressable action for target A-self-heal",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d16904991c7b8b5588112d862800e10a8bae0d6f3d77914946d56920ec187131.md:11",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-d16904991c7b8b5588112d862800e10a8bae0d6f3d77914946d56920ec187131.md:11",
+   "quote": "War Machine selection produced no addressable action"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

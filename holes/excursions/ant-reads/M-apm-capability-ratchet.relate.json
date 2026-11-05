@@ -1,0 +1,29 @@
+{
+ "stem": "M-apm-capability-ratchet",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "M-apm-capability-ratchet",
+  "kind": "relate",
+  "what": {
+   "value": "Builds the ratchet that turns solved APM problems into tested, reusable mathematical capability packets with sealed transfer probes.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-apm-capability-ratchet.md:1",
+   "quote": "# Mission: APM Capability Ratchet — From Solved Proofs to Transferable Mathematical Capability"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon0/holes/missions/M-apm-capability-ratchet.md:35",
+   "quote": "reusable mathematical capability."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

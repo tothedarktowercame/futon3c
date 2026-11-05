@@ -1,0 +1,29 @@
+{
+ "stem": "E-APM-f12-defects",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762011620-11729-67d689d2",
+ "at": "2026-11-04T03:16:41+00:00",
+ "row": {
+  "stem": "E-APM-f12-defects",
+  "kind": "relate",
+  "what": {
+   "value": "Catalogue frame 12 (m03J01) proof defects D40–D48 and the ContDiff-⊤ sweep in the APM corpus",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-APM-f12-defects.md:13",
+   "quote": "Cycle m03J01-cee36266…e87ba v44. `theorem apm_m03j01` CLOSED axiom-clean with the"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-APM-f12-defects.md:1",
+   "quote": "# E-APM-f12-defects — frame 12 (m03J01), defects D40–D48 + the ContDiff-⊤ corpus sweep"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

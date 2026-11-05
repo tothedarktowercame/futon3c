@@ -1,0 +1,29 @@
+{
+ "stem": "M-xtdb-22x-benchmarking",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-xtdb-22x-benchmarking",
+  "kind": "relate",
+  "what": {
+   "value": "Benchmark XTDB 2.2.x (#5637/#3663) query ceilings and sustained ingest on the futon1b store, from public arXiv corpora.",
+   "cite": "/home/joe/code/futon1b/holes/M-xtdb-22x-benchmarking.md:1",
+   "quote": "# Mission: M-xtdb-22x-benchmarking — a #5637/#3663 benchmark on XTDB 2.2.x, from arXiv corpora"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon1b/holes/M-xtdb-22x-benchmarking.md:11",
+   "quote": "- `futon1b/TN-xtdb2-query-ceilings-and-ingest-memory-2026-08-02.md` — the 2.1.0"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

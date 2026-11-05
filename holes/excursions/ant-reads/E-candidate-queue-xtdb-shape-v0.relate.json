@@ -1,0 +1,29 @@
+{
+ "stem": "E-candidate-queue-xtdb-shape-v0",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "E-candidate-queue-xtdb-shape-v0",
+  "kind": "relate",
+  "what": {
+   "value": "Chooses the XTDB document shape for a ranked candidate queue so the B→A ranking surface is queryable per item, per run, and as a snapshot.",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-candidate-queue-xtdb-shape-v0.md:4",
+   "quote": "**Purpose:** choose how a ranked Candidate Queue should live in XTDB"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon5a/holes/excursions/E-candidate-queue-xtdb-shape-v0.md:212",
+   "quote": "- [ ] Arxana reads ranked queue state directly from XTDB instead of family-sorted placeholders"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

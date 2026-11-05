@@ -1,0 +1,29 @@
+{
+ "stem": "E-mathse-xtdb-benchmark",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760572760-11632-b27f1dd2",
+ "at": "2026-11-04T02:53:40+00:00",
+ "row": {
+  "stem": "E-mathse-xtdb-benchmark",
+  "kind": "relate",
+  "what": {
+   "value": "Proposed temporal text-index benchmark from Math.StackExchange targeting upstream XTDB #5637, inheriting the FTS5 sidecar from M-text-sidecar.",
+   "cite": "/home/joe/code/futon3c/holes/E-mathse-xtdb-benchmark.md:5",
+   "quote": "**Upstream design target:** [XTDB #5637 — Text indexing](https://github.com/xtdb/xtdb/issues/5637)."
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/E-mathse-xtdb-benchmark.md:1",
+   "quote": "# E-mathse-xtdb-benchmark — temporal text-index benchmark from Math.StackExchange"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

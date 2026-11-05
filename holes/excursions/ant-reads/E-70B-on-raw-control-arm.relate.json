@@ -1,0 +1,29 @@
+{
+ "stem": "E-70B-on-raw-control-arm",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "E-70B-on-raw-control-arm",
+  "kind": "relate",
+  "what": {
+   "value": "Bounded experiment holding the 70B model fixed and stripping only the enrichment, to isolate whether the enrichment pipeline is worth paying for at arXiv scale.",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-70B-on-raw-control-arm.md:17",
+   "quote": "**RAW-CTL isolates the enrichment variable.** Hold the model fixed (the same"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/excursions/E-70B-on-raw-control-arm.md:5",
+   "quote": "Author: claude-2, 2026-06-18. Bounded experiment (RAW-CTL on the proofcheck"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

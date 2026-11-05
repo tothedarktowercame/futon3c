@@ -1,0 +1,35 @@
+{
+ "stem": "M-futonzero-mvp",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760012398-11592-3bb8a509",
+ "at": "2026-11-04T02:44:22+00:00",
+ "row": {
+  "stem": "M-futonzero-mvp",
+  "kind": "relate",
+  "what": {
+   "value": "A local-first, evidence-backed capability monitor + tutor loop on the futon0 cyborg utility layer, composable with mission infrastructure.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-mvp.md:16",
+   "quote": "We want a local-first, evidence-backed capability loop that composes with"
+  },
+  "area": {
+   "value": "other:futon0",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-mvp.md:10",
+   "quote": "Futon0 is the cyborg utility layer. It already aggregates operational telemetry"
+  },
+  "also": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon0/holes/missions/M-futonzero-mvp.md:14",
+   "quote": "The active need is concrete: in First Proof work (`futon6` mathematical tasks),"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

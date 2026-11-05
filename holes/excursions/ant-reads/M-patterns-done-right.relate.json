@@ -1,0 +1,29 @@
+{
+ "stem": "M-patterns-done-right",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "M-patterns-done-right",
+  "kind": "relate",
+  "what": {
+   "value": "Cross-stack mission making patterns first-class objects of the agent's self-maintenance, threaded from authoring through categorical library wiring to code-level receipts.",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:23",
+   "quote": "**Patterns are first-class objects of the homeostatic agent's self-maintenance, threaded from authoring (peripheral) through library structure (categorical wiring) to code-level receipts.**"
+  },
+  "area": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon0/holes/missions/M-patterns-done-right.md:23",
+   "quote": "**Patterns are first-class objects of the homeostatic agent's self-maintenance, threaded from authoring (peripheral) through library structure (categorical wiring) to code-level receipts.**"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "M-superpod-mark2",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793759981697-11590-ec68a5dd",
+ "at": "2026-11-04T02:43:20+00:00",
+ "row": {
+  "stem": "M-superpod-mark2",
+  "kind": "relate",
+  "what": {
+   "value": "Mission to run the superpod parse→embed→hypergraph→FAISS pipeline over all of arXiv, feeding retrieval-augmented theorem proving.",
+   "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark2.md:27",
+   "quote": "**Process all of arXiv** (not just the 9,916-paper math.CT slice),"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon6/holes/missions/M-superpod-mark2.md:14",
+   "quote": "We used the output for retrieval-augmented theorem proving (the"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

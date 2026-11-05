@@ -1,0 +1,29 @@
+{
+ "stem": "E-interim-director-followups",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793819897425-12171-757b1c0d",
+ "at": "2026-11-04T19:20:18+00:00",
+ "row": {
+  "stem": "E-interim-director-followups",
+  "kind": "relate",
+  "what": {
+   "value": "Carries the three unfinished items (VSAT resolution record, follow-up artifact, forward-model inputs) out of the closed M-interim-director business mission.",
+   "cite": "/home/joe/code/futon7/holes/E-interim-director-followups.md:17",
+   "quote": "- [ ] The VSAT resolution is recorded as a typed checkpoint delta with buyer, budget, and evidence references."
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/E-interim-director-followups.md:17",
+   "quote": "- [ ] The VSAT resolution is recorded as a typed checkpoint delta with buyer, budget, and evidence references."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

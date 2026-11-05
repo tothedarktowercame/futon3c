@@ -1,0 +1,29 @@
+{
+ "stem": "M-signal-roll-up",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-signal-roll-up",
+  "kind": "relate",
+  "what": {
+   "value": "Build a cheap-CRM roll-up surface joining the typed signal bearers into one queryable opportunity pipeline with likely-buyer answers",
+   "cite": "/home/joe/code/futon7/holes/M-signal-roll-up.md:20",
+   "quote": "**These 6 bearers don't talk to each other yet.**"
+  },
+  "area": {
+   "value": "business",
+   "cite": "/home/joe/code/futon7/holes/M-signal-roll-up.md:1",
+   "quote": "# M-signal-roll-up — cheap CRM as supply-demand correlation surface"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,37 @@
+{
+ "stem": "E-classical-wastage-scanner",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-classical-wastage-scanner",
+  "kind": "relate",
+  "what": {
+   "value": "A purely classical (no LLM, no network) scanner that reads .jsonl agent-chat transcripts and reports wastage/red-tape incidents with citations and matching pattern violations, per M-象-2000's aim.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-classical-wastage-scanner.md:7",
+   "quote": "read people's .jsonl agent chats and develop an analysis of some of their red"
+  },
+  "area": {
+   "value": "象",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-classical-wastage-scanner.md:6",
+   "quote": "M-象-2000. Joe: \"build a purely classical (no LLM, no network) scanner that can"
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-classical-wastage-scanner.md:27",
+   "quote": "71 library patterns carry a `@violation-signature`. Those signatures are the"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "quote-not-on-line"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

@@ -1,0 +1,35 @@
+{
+ "stem": "E-arxana-workflow-management",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-arxana-workflow-management",
+  "kind": "relate",
+  "what": {
+   "value": "Moving workflow state out of flexiarg pattern files into a non-file workflow surface, with the Arxana ledger subsystems as the named candidate.",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-arxana-workflow-management.md:25",
+   "quote": "the Arxana Ledger and similar subsystems of Arxana.\"*"
+  },
+  "area": {
+   "value": "Arxana",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-arxana-workflow-management.md:25",
+   "quote": "the Arxana Ledger and similar subsystems of Arxana.\"*"
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon4/holes/excursions/E-arxana-workflow-management.md:23",
+   "quote": "pattern text at all, even as metadata. If we need to handle workflow, we should"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

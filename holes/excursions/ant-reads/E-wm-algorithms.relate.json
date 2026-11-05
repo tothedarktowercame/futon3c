@@ -1,0 +1,29 @@
+{
+ "stem": "E-wm-algorithms",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-wm-algorithms",
+  "kind": "relate",
+  "what": {
+   "value": "Excursion making META's Algorithm class safe and selectable, giving the stuck outer selector M/E/T/A action classes.",
+   "cite": "/home/joe/code/futon2/holes/E-wm-algorithms.md:11",
+   "quote": "giving the outer selector the four classes M/E/T/A (META). Candidate Algorithms"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/E-wm-algorithms.md:1",
+   "quote": "# E-wm-algorithms — make META's Algorithm class safe and selectable"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

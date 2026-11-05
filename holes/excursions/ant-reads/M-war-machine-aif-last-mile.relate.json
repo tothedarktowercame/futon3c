@@ -1,0 +1,29 @@
+{
+ "stem": "M-war-machine-aif-last-mile",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761635601-11706-37a7195e",
+ "at": "2026-11-04T03:10:23+00:00",
+ "row": {
+  "stem": "M-war-machine-aif-last-mile",
+  "kind": "relate",
+  "what": {
+   "value": "Close residual R-criteria gaps of the War Machine AIF apparatus (flip R10 to running, make R11/R12 stances legible)",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-last-mile.md:5",
+   "quote": "**Bar:** Close the residual items below; flip R10 from \"scheduled-execution-ready\" to \"running\"; record final empirical state."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon7/holes/M-war-machine-aif-last-mile.md:7",
+   "quote": "**Owner:** Joe (futon7); engineering ownership transferable to whichever agent next picks up the WM AIF apparatus."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

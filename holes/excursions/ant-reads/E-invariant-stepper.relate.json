@@ -1,0 +1,31 @@
+{
+ "stem": "E-invariant-stepper",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762042877-11732-7c3bd5bf",
+ "at": "2026-11-04T03:17:45+00:00",
+ "row": {
+  "stem": "E-invariant-stepper",
+  "kind": "relate",
+  "what": {
+   "value": "Charter for an opt-in Emacs mode showing a live model of the stack's invariants (futon3c wiring claims, futon4 Arxana constraints, mission logic-models) as green checks over the running system.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-invariant-stepper.md:13",
+   "quote": "An **opt-in Emacs mode** (shape of `loop-lag-mode`) that builds and displays a **live model of the"
+  },
+  "area": {
+   "value": "other:operator-emacs-tooling",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-invariant-stepper.md:4",
+   "quote": "**Repo:** operator-side Emacs (sibling to `futon0/contrib/loop-lag.el`); models invariants that live"
+  },
+  "confidence": "low"
+ },
+ "checks": [
+  "quote-not-on-line",
+  "ok-near"
+ ],
+ "ok": 1,
+ "unsure": 0,
+ "failed": [
+  "quote-not-on-line"
+ ]
+}

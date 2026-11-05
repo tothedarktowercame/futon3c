@@ -1,0 +1,29 @@
+{
+ "stem": "M-warrant-limit",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760262664-11609-0dfc099a",
+ "at": "2026-11-04T02:47:28+00:00",
+ "row": {
+  "stem": "M-warrant-limit",
+  "kind": "relate",
+  "what": {
+   "value": "Cap test-warrant staleness from product edits so the War Machine's test registry stops redoing whole reruns — a warrant must replace the rerun with a record.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-warrant-limit.md:25",
+   "quote": "A warrant replaces a rerun with a record (`futon2/holes/labs/wm-contract/NOTE-test-registry.md`). A record that goes stale on unrelated edits does not replace the rerun. A consumer reads the producer's record and does not recompute it."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-warrant-limit.md:19",
+   "quote": "we want the war machine to run automatically and not have to redo loads of work\"; \"just like with the Inbox0 work, we need to get this to actually run properly\"."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

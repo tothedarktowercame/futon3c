@@ -1,0 +1,29 @@
+{
+ "stem": "M-another-university",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760323815-11612-991c8886",
+ "at": "2026-11-04T02:48:31+00:00",
+ "row": {
+  "stem": "M-another-university",
+  "kind": "relate",
+  "what": {
+   "value": "An adjacent-system note describing the university system (via the UKRN Open Research Programme) — what it claims, coordinates, and fails to remember — as a comparative frame.",
+   "cite": "/home/joe/code/futon7/holes/M-another-university.md:7",
+   "quote": "The university system describes itself as a place where knowledge is"
+  },
+  "area": {
+   "value": "other:ukrn-open-research",
+   "cite": "/home/joe/code/futon7/holes/M-another-university.md:11",
+   "quote": "privately hoarded.  The UKRN Open Research Programme is one attempt to"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "E-retrieval-flows",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-retrieval-flows",
+  "kind": "relate",
+  "what": {
+   "value": "Write memory retrieval as an evolving-operator flow unifying dynamic queries, MetaCA draft5, and Rob's note",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-retrieval-flows.md:1",
+   "quote": "# E-retrieval-flows — memory retrieval as an evolving-operator flow"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-retrieval-flows.md:1",
+   "quote": "# E-retrieval-flows — memory retrieval as an evolving-operator flow"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

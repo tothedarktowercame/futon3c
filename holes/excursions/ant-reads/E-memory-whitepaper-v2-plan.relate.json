@@ -1,0 +1,29 @@
+{
+ "stem": "E-memory-whitepaper-v2-plan",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760726037-11644-3bbffa6f",
+ "at": "2026-11-04T02:55:13+00:00",
+ "row": {
+  "stem": "E-memory-whitepaper-v2-plan",
+  "kind": "relate",
+  "what": {
+   "value": "A Version 2 plan for the memory retrieval white paper, re-baselining its headline channel figures against the all-authors live corpus.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-whitepaper-v2-plan.md:18",
+   "quote": "author, so V1's headline channel figures describe a slice, not the system."
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-whitepaper-v2-plan.md:4",
+   "quote": "**V1:** `docs/retrieval-whitepaper.md` — frozen, keep as Version 1"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

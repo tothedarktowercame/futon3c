@@ -1,0 +1,35 @@
+{
+ "stem": "E-apm-halftime-B1-options",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793760449050-11620-9e5053a6",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-apm-halftime-B1-options",
+  "kind": "relate",
+  "what": {
+   "value": "Options document on how (or whether) pattern entities should become recallable through reviewed memory attachments, deciding the B1 taxonomy question.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-halftime-B1-options.md:1",
+   "quote": "# B1 discovery — pattern and memory taxonomy options"
+  },
+  "area": {
+   "value": "APM",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-halftime-B1-options.md:1",
+   "quote": "# B1 discovery — pattern and memory taxonomy options"
+  },
+  "also": {
+   "value": "patterns",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-apm-halftime-B1-options.md:6",
+   "quote": "attachments, while a flexiarg's existence as a `pattern/library` entity does"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

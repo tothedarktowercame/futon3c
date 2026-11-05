@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-0228a166e753669832ab6342b4896ad310b86284f3793e8e876201bc4c658801",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793762447925-11748-ac90f932",
+ "at": "2026-11-04T03:24:23+00:00",
+ "row": {
+  "stem": "T-repair-occ-0228a166e753669832ab6342b4896ad310b86284f3793e8e876201bc4c658801",
+  "kind": "relate",
+  "what": {
+   "value": "WM repair ticket: verify or restore when the configured author is unavailable at the agent-readiness stage.",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-0228a166e753669832ab6342b4896ad310b86284f3793e8e876201bc4c658801.md:7",
+   "quote": "Target: not retained; stage: :agent-readiness."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-0228a166e753669832ab6342b4896ad310b86284f3793e8e876201bc4c658801.md:7",
+   "quote": "Target: not retained; stage: :agent-readiness."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

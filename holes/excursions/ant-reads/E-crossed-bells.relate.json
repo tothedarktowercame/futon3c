@@ -1,0 +1,29 @@
+{
+ "stem": "E-crossed-bells",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760511685-11625-caef42a1",
+ "at": "2026-11-04T02:52:05+00:00",
+ "row": {
+  "stem": "E-crossed-bells",
+  "kind": "relate",
+  "what": {
+   "value": "Design a bell router / conversation-thread layer (shared thread-id + in-reply-to surfaced in the bell contract) so agents can tell a new request from a reply and stop splicing threads.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-crossed-bells.md:1",
+   "quote": "# Excursion: E-crossed-bells — a bell router / making mesh conversation threads visible"
+  },
+  "area": {
+   "value": "Agency",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-crossed-bells.md:5",
+   "quote": "**Repo:** futon3c — the bell/mesh path: `transport/http.clj` (handle-bell + auto-bellback),"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-watu-replay-layer",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-watu-replay-layer",
+  "kind": "relate",
+  "what": {
+   "value": "Scope the WATU replay layer for the WIP board: a review of past superpod runs as a replay instrument, not a link",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:11",
+   "quote": "2026-08-24: *\"those are pending items, but the WATU half would need a big review"
+  },
+  "area": {
+   "value": "futon6",
+   "cite": "/home/joe/code/futon3c/holes/tickets/T-watu-replay-layer.md:12",
+   "quote": "of e.g. superpod work etc.\"*"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

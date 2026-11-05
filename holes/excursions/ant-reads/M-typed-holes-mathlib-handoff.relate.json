@@ -1,0 +1,29 @@
+{
+ "stem": "M-typed-holes-mathlib-handoff",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793820075091-12179-a0c4bd01",
+ "at": "2026-11-04T19:22:45+00:00",
+ "row": {
+  "stem": "M-typed-holes-mathlib-handoff",
+  "kind": "relate",
+  "what": {
+   "value": "A Codex audit deciding each typed-holes manifest concept's mathlib4 status (present/partial/absent) and scoping the remaining Lean build — audit only, no formalisation.",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:6",
+   "quote": "decide its mathlib4 status (PRESENT / PARTIAL / ABSENT); for anything not fully"
+  },
+  "area": {
+   "value": "other:lean-mathlib-audit",
+   "cite": "/home/joe/code/futon3c/holes/missions/M-typed-holes-mathlib-handoff.md:6",
+   "quote": "decide its mathlib4 status (PRESENT / PARTIAL / ABSENT); for anything not fully"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

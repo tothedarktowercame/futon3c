@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-occ-e2c18a46bbc13f546121374c489a44780536dc14b8ac097c0deced7dc4994c49",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793761442090-11695-b1b57b17",
+ "at": "2026-11-04T03:07:15+00:00",
+ "row": {
+  "stem": "T-repair-occ-e2c18a46bbc13f546121374c489a44780536dc14b8ac097c0deced7dc4994c49",
+  "kind": "relate",
+  "what": {
+   "value": "Correct a resume protocol violation (abstention) at the War Machine's cascade-resume stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e2c18a46bbc13f546121374c489a44780536dc14b8ac097c0deced7dc4994c49.md:11",
+   "quote": "War Machine abstained or selected no addressable action"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e2c18a46bbc13f546121374c489a44780536dc14b8ac097c0deced7dc4994c49.md:7",
+   "quote": "Target: not retained; stage: :cascade-resume."
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

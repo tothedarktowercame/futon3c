@@ -1,0 +1,32 @@
+{
+ "stem": "M-the-perfect-crime",
+ "kind": "relate",
+ "seat": "zai-2",
+ "job": "invoke-1793819927773-12173-82f9e8c5",
+ "at": "2026-11-04T19:19:48+00:00",
+ "row": {
+  "stem": "M-the-perfect-crime",
+  "kind": "relate",
+  "what": {
+   "value": "A mission to detect chained-claim/subsumption failures in mission prose — claims that instruments like Tornhill analysis are live when they are not — and build a forensic discipline over the authoring practice.",
+   "cite": "holes/missions/M-the-perfect-crime.md:3",
+   "quote": "The chained-claim sweep joins agent final-turn claims to Joe's next-turn stance and records a verdict for each accepted claim."
+  },
+  "area": {
+   "value": "other:claim-discipline",
+   "cite": "holes/missions/M-the-perfect-crime.md:44",
+   "quote": "futonic discipline needs a **forensic** mode whose *target* is not the code (Tornhill's target) but the *authoring practice*"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "path-missing",
+  "path-missing"
+ ],
+ "ok": 0,
+ "unsure": 0,
+ "failed": [
+  "path-missing",
+  "path-missing"
+ ]
+}

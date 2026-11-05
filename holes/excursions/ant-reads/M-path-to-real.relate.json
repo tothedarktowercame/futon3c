@@ -1,0 +1,29 @@
+{
+ "stem": "M-path-to-real",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760044492-11593-4bb93d43",
+ "at": "2026-11-04T02:45:23+00:00",
+ "row": {
+  "stem": "M-path-to-real",
+  "kind": "relate",
+  "what": {
+   "value": "Make the A4a pipeline (BMR concepts → EIG → ranker) run on real evidence by arming scoped :capability/* extraction writes to the live store, with preregistered merge-success criteria.",
+   "cite": "/home/joe/code/futon2/holes/M-path-to-real.md:6",
+   "quote": "two arming decisions. **The whole A4a pipeline (BMR concepts → EIG → ranker) is inert for exactly"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/M-path-to-real.md:1",
+   "quote": "# Path to Real — closing the loop on real `:capability/*` evidence"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

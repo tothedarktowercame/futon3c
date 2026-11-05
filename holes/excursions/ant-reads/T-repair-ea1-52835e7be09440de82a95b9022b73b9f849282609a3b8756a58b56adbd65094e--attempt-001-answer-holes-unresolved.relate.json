@@ -1,0 +1,29 @@
+{
+ "stem": "T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793760983841-11665-3cebdff4",
+ "at": "2026-11-04T03:00:17+00:00",
+ "row": {
+  "stem": "T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct answer-holes-unresolved at WM cascade-resume stage",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:11",
+   "quote": "Selected cascade held in open-cascade phase"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved.md:23",
+   "quote": "Finding: [repair-ea1-52835e7be09440de82a95b9022b73b9f849282609a3b8756a58b56adbd65094e--attempt-001-answer-holes-unresolved](/home/joe/code/futon2/data/wm-re"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

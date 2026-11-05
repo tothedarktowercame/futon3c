@@ -1,0 +1,35 @@
+{
+ "stem": "T-repair-occ-e0b7d987118bcafd40f9a87e9dd37ad88b0d670533ca6e973d0a0e7c565996dc",
+ "kind": "relate",
+ "seat": "zai-3",
+ "job": "invoke-1793761380936-11691-99b54e11",
+ "at": "2026-11-04T03:05:06+00:00",
+ "row": {
+  "stem": "T-repair-occ-e0b7d987118bcafd40f9a87e9dd37ad88b0d670533ca6e973d0a0e7c565996dc",
+  "kind": "relate",
+  "what": {
+   "value": "Repair ticket: correct War Machine tripwire T5 (review commit binding) tripped at :close of M-futonzero-prelim-practice",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e0b7d987118bcafd40f9a87e9dd37ad88b0d670533ca6e973d0a0e7c565996dc.md:13",
+   "quote": "War Machine tripwire T5 tripped: review commit binding"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e0b7d987118bcafd40f9a87e9dd37ad88b0d670533ca6e973d0a0e7c565996dc.md:13",
+   "quote": "War Machine tripwire T5 tripped: review commit binding"
+  },
+  "also": {
+   "value": "futonzero",
+   "cite": "/home/joe/code/futon2/holes/tickets/T-repair-occ-e0b7d987118bcafd40f9a87e9dd37ad88b0d670533ca6e973d0a0e7c565996dc.md:5",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

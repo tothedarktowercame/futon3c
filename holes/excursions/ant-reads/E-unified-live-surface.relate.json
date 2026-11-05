@@ -1,0 +1,29 @@
+{
+ "stem": "E-unified-live-surface",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-unified-live-surface",
+  "kind": "relate",
+  "what": {
+   "value": "Charter to fold the live trackers (EFE map, cascade tracker, WebArxana, evidence viewer) into one unified CLJS app with the evidence landscape.",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-unified-live-surface.md:5",
+   "quote": "evidence landscape viewer into one unified CLJS app.\" Charter by claude-18."
+  },
+  "area": {
+   "value": "other:CLJS-visualization",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-unified-live-surface.md:3",
+   "quote": "surfaces into one of the cljs apps (:3100 / /wa#/) — and combine them along with the"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok-near"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

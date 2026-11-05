@@ -1,0 +1,29 @@
+{
+ "stem": "E-warranted-play",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793760821194-11652-b09f2e2f",
+ "at": "2026-11-04T02:57:27+00:00",
+ "row": {
+  "stem": "E-warranted-play",
+  "kind": "relate",
+  "what": {
+   "value": "The WM's explore pole (dāna loop, peradam generator): when pragmatic progress is flat the WM makes a pattern-warranted try and records it, minting typed peradams.",
+   "cite": "/home/joe/code/futon3c/holes/E-warranted-play.md:1",
+   "quote": "# E-warranted-play — the WM's explore pole (the dāna loop; the peradam generator)"
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/code/futon3c/holes/E-warranted-play.md:8",
+   "quote": "the WM does **not** NAG — it makes a"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

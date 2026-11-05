@@ -1,0 +1,29 @@
+{
+ "stem": "E-memory-v3-staging",
+ "kind": "relate",
+ "seat": "zai-1",
+ "job": "invoke-1793762201668-11740-7cd13324",
+ "at": "2026-11-04T03:20:25+00:00",
+ "row": {
+  "stem": "E-memory-v3-staging",
+  "kind": "relate",
+  "what": {
+   "value": "Bank pre-V3 findings and repairs with named V2/V3 treatments so repair never interleaves with measurement",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-v3-staging.md:5",
+   "quote": "**Opened 2026-07-31 by claude-2 at Joe's suggestion.** Findings and repairs"
+  },
+  "area": {
+   "value": "memory",
+   "cite": "/home/joe/code/futon3c/holes/excursions/E-memory-v3-staging.md:5",
+   "quote": "**Opened 2026-07-31 by claude-2 at Joe's suggestion.** Findings and repairs"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}
