@@ -608,15 +608,24 @@
 
 (defonce graph-refresh-in-flight (atom #{}))
 
+(defn- daemon-factory [thread-name]
+  (let [default-factory (Executors/defaultThreadFactory)]
+    (reify java.util.concurrent.ThreadFactory
+      (newThread [_ runnable]
+        (doto (.newThread default-factory runnable)
+          (.setDaemon true)
+          (.setName thread-name))))))
+
+;; Two pools, never one: a refresh task waits on its walk, so if both ran on
+;; one bounded pool, two due sections would hold both threads waiting on walks
+;; queued behind them (all sections age out together). The supervisor pool is
+;; unbounded but holds at most one task per type (graph-refresh-in-flight);
+;; the walk pool bounds the load on futon1b.
 (defonce graph-refresh-pool
-  (Executors/newFixedThreadPool
-   2
-   (let [default-factory (Executors/defaultThreadFactory)]
-     (reify java.util.concurrent.ThreadFactory
-       (newThread [_ runnable]
-         (doto (.newThread default-factory runnable)
-           (.setDaemon true)
-           (.setName "graph-section-refresh")))))))
+  (Executors/newCachedThreadPool (daemon-factory "graph-section-refresh")))
+
+(defonce graph-refresh-walk-pool
+  (Executors/newFixedThreadPool 2 (daemon-factory "graph-section-refresh-walk")))
 
 (defn- start-graph-refresh
   "Start at most one background refresh of HX-TYPE. The refresh walks with no
@@ -630,7 +639,7 @@
                ^Callable
                (fn []
                  (try
-                   (let [future (.submit graph-refresh-pool ^Callable #(fetch-edges hx-type))
+                   (let [future (.submit graph-refresh-walk-pool ^Callable #(fetch-edges hx-type))
                          edges  (try (vec (.get future graph-refresh-deadline-ms TimeUnit/MILLISECONDS))
                                      (catch TimeoutException _
                                        (.cancel future true)

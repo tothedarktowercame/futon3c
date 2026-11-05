@@ -454,6 +454,24 @@
                         (:edges (get @live/graph-section-cache "clock/clocked-on"))))
           "the single refresh swapped the entry on success"))))
 
+(deftest graph-swrv-every-type-due-at-once-all-refresh
+  "Every section was walked together, so every section ages out together.
+   Refreshes for all of them must complete; a refresh must not wait on a
+   thread that another refresh is holding (review, claude-16, 2026-11-05)."
+  (reset-refresh-in-flight!)
+  (let [types @#'live/graph-hyperedge-types
+        old (- (System/currentTimeMillis) live/graph-cache-max-age-ms 1)]
+    (with-redefs [live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges (fn [t] (Thread/sleep 200) [{:hx/endpoints [:fresh t]}])]
+      (seed-graph-cache (into {} (map (fn [t] [t {:count 1 :edges [{:hx/endpoints [:old]}]
+                                                   :fetched-at-ms old}]))
+                              types))
+      (live/graph-sections*)
+      (is (wait-for #(every? (fn [t] (= [{:hx/endpoints [:fresh t]}]
+                                        (:edges (get @live/graph-section-cache t))))
+                             types))
+          "every due section was refreshed"))))
+
 (deftest graph-cache-count-failure-serves-stale-and-failed-refresh-keeps-entry  ; D
   (reset! live/graph-section-cache {})
   (reset-refresh-in-flight!)
