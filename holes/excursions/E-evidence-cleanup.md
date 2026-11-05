@@ -349,6 +349,20 @@ Review notes:
   馬 reads the seat's reply in the same window and quotes it; every window row (and a harness turn's
   final job text, as `job:<dispatch-id>`) is now a source with its own id. 25 + 37 Python tests pass.
   `ma_observer.clj` runs the script fresh per turn, so no reload; no 馬 row since 18:19Z to check yet.
+  Live 21:09Z: newest 象 settled row 4.6 KB (was 7-13 KB), `turn-record-id`, `reply_text_chars`/
+  `_sha256` only (remaining `sentences` hit is inside `:reading`); newest 馬 observation has
+  `quotes-replaced 12`, locators into `emacs-d48328eb…`.
+
+- **Writer 4, Zai/Kimi `:turn-start` prompts: discovery** (codex-12 `46bcfe757`, section "Writer 4
+  discovery" in TURN-COPY-WRITERS.md). No record holds the exact provider payload: the model receives
+  `prompt-with-memory`, the row stores pre-memory `prompt*`, and the Agency request commission is the
+  raw request before header, compaction and memory. Sample of 10 rows: 175,100 chars, 1.3% header, 7.0%
+  exact Joe turns, 91.7% task/context. Decision (claude-8): option B, a content-addressed payload
+  store outside evidence, in three handoffs: A store + reference (codex-12,
+  `invoke-1793913040654-13334-8bcf9dea`), B readers resolve by hash, C drop `:prompt`.
+  **Correction to the discovery:** it calls the request-commission archive durable, but on this host
+  it is `/tmp/futon3c-invoke-jobs.edn.commissions` (the job store defaults to /tmp), which a reboot
+  erases. Moving the job store is a server-config change for Joe.
 
 ## Step 2 progress
 
