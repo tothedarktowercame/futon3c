@@ -318,6 +318,14 @@ Review notes:
   Dry run 20:38-20:42Z (after one 503 `expensive-read-busy`, retried): 49,908 history edges and 1 state
   to write, 7,350 states current, the same 28 incomplete chains, 0 failed. Real run started 20:43Z
   (`:real3`, retries on 503 up to 5 times).
+  **Done.** `:real3` ran 105 min (6,315 s): 49,908 history edges written, 101 chunks, 1 state, and
+  21,500 ids reported failed (readback timeouts under load). Dry run `:dry6` afterwards (19 min,
+  futon1b also serving the derived copy): 7,379 promises current, 0 history edges and 0 states to
+  write, 0 failed; the same 28 incomplete chains (missing-origin 9, invalid-origin 11,
+  missing-transition 7, invalid-creation-payload 1). So every reported failure had landed; the log
+  holds every chain the evidence does. futon1b threads 223 afterwards.
+  Step 4 (ack outbox rows on the log's readback; evidence a counted shadow write) to codex-15,
+  `invoke-1793920533562-13458-3596637d`, packet `promise-step4-outbox-ack-via-log.md`.
 
 - **Writer 2, context-retrieval** (codex-12 `9421e5dfc`; claude-8 `0aecba19f`). The body keeps
   `turn-id`, `session-id`, turn number, `query-chars`, `query-sha256` and `results`; no query text.
