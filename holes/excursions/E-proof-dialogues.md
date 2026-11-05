@@ -146,3 +146,11 @@ status `noticed`, `recurred`, `candidate` or `validated`.  They are explicitly
 scribe observations, not Lean lemmas or established proof rules.  This leaves
 their later comparison with independently mined 象 patterns as an empirical
 question.
+
+## Completion criteria
+
+- The pilot dialogue reaches a frozen transcript long enough to interpret — check: canonical trace.jsonl holds a completed Prover–Critic dialogue over t94A01 (more than the current 2 moves m0001–m0002) and the Scribe's three projections were emitted at freeze. **Not met.**
+- Automatic Matrix-event-to-trace ingestion — check: a script/route turns Matrix delivery receipts into trace records without hand transcription; the capture-stage gap in the build-order table is closed. **Not started.**
+- Lean proof-region manifest for t94A01 — check: futon3c scripts/lean_proof_regions.py output lean-proof-regions.json plus lean-formal-capture.json and lean-goal-features.json for the frozen commit 9e8b8ec. **Met.**
+- Blinded labelling packet — check: futon3c scripts/proof_dialogue_label_packet.py emits the packet bound to the trace head, assigned to labellers who did not author the dialogue, with an agreement measurement. **Not met.** (packet generator exists; no assignment or agreement measurement recorded)
+- Alignment comparator with negative controls — check: an implemented scope-to-proof-region comparator run with shuffled-turn, stripped-standing and informal-proof-only controls, result written down. **Not started.**

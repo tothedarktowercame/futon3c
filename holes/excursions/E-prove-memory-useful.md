@@ -1052,3 +1052,10 @@ still lists them for auto-continue. (4) Make one REPL turn and look for
 - M-象-2000: the two queries this excursion's G7 serves.
 - [E-象-repl-cycle](E-象-repl-cycle.md): the per-turn Read/Evaluate/Print/Loop record this excursion continues into.
 - `~/notes/packets/memory-effect/RUN-LOG.md`: the effect experiment, leaf by leaf, with job ids; proofs archived beside it.
+
+## Completion criteria
+
+- Delivery is visible live — check: the stepper page (`zone.hyperreal.enterprises/wip/stepper/?agent=<seat>`) shows frames whose MEMORY section lists injected memories before round 1 for a seat with injection wired (G4; currently zai-5 only), and prints the typed absence sentence otherwise. **Not met.** (injection live on one seat only)
+- Effect is shown on failing baselines — check: the G6 task bank and the t95J03-style pair protocol yield at least one recorded pair where the uninformed seat fails and the informed seat succeeds with the memory named in the reply, with the seat confound stated; current record is 3/5 on the bank and mixed effect rows. **Not met.**
+- Derivation is recorded — check: a memory version's margin shows the operator turn/act it descends from, taken from the 象 record (G7; not started). **Not started.**
+- The excursion states its verdict on usefulness in Joe's terms — check: a closing paragraph updating "correct, not shown useful" with what the runs showed, and the open 馬 plan-write proposal either built or decided by Joe. **Not met.** (proposal awaiting Joe's go)
