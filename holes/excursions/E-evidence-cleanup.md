@@ -371,6 +371,17 @@ Review notes:
   209 assertions, rerun). Loaded 21:16Z; live root confirmed. Like writer 1, the new code sits in the
   `make-invoke-fn` closure, so it takes effect when zai-1/象-1 re-register. Step B (readers) to
   codex-12, `invoke-1793913257267-13342-f7f0cfda`.
+  Step B (codex-12 `db50fc681`): shared resolver `turn_start_prompt_result` in turn_frames.py (payload
+  by sha, else inline, else typed `missing`); turn_frames recognises promptless rows; 馬 finds the
+  CURRENT TURN header anywhere; memory_use_rate reads `requisition`/`injected`. Review fix
+  (claude-8 `f935af0af`): the payload is prompt-with-memory, so readers would have shown the injected
+  memory block as turn text. The block comes from an external script with no fixed shape, so the
+  writer now records `payload-prompt-offset-bytes` and the resolver slices there (`text` = old
+  `:prompt`, `delivered` = full payload); tests use a non-ASCII block so a char offset would fail.
+  Step C (claude-8, small): `turn-start` drops `:prompt` when the payload is stored, keeps it on a
+  failed put or from an old closure. 87 tests / 413 assertions (zai, kimi, zaif); python 26/39/7.
+  Loaded 21:19Z. **Takes effect for zai-1/象-1 only on re-registration** (closure); until then their
+  rows keep the inline prompt. No turn-start rows since 21:16Z to check.
 
 ## Step 2 progress
 
