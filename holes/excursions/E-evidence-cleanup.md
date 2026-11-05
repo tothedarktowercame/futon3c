@@ -262,7 +262,7 @@ Review notes:
   claude-8 retracted all 100 edges (`~/notes/evidence-cleanup/retract-p5-test-leak.edn`), checkable
   back to 4. The 20 `p5-test` check rows stay in evidence (immutable); the obligations reader ignores
   checks of unselected promises (`e2568abc1`). A rerun of the final test leaves the live count unchanged.
-  The four real checkable promises: 3 already had checks from 09-28/10-01, 1 not yet due.
+  Not checked: which of the 4 real checkable promises the 3 `:existing` were (likely the 09-28/10-01 checks).
   3e (http `woken-history!`) to codex-13, `invoke-1793910544140-13278-6f4f2170`.
 - **"hearo" still 32 hits** (Joe, 11-05 ~20:25Z). Breakdown of the 34 sidecar rows, 11-04 21:00Z onward:
   artifact-activation 12 (all before `f75fb0fff`, 16:52Z, which stopped its text copy; they age out),
