@@ -383,6 +383,18 @@ Review notes:
   Loaded 21:19Z. **Takes effect for zai-1/象-1 only on re-registration** (closure); until then their
   rows keep the inline prompt. No turn-start rows since 21:16Z to check.
 
+- **Re-registration, 2026-11-05 ~22:15Z** (Joe: "deregister/reregister agents, remembering to rename
+  zai-1 as 猴-1"). Used `POST /api/alpha/agents/restore` with each agent's own
+  `roster-store/restore-payload`, which rebuilds the invoke-fn in place and keeps status, session id
+  and model (checked on codex-12 first). 61 claude/codex/zai/kimi seats refreshed (the four mid-turn
+  ones last, from a fresh export); `chi-claude-1`/`chi-codex-1` refused as remote-homed. Zai/Kimi
+  seats lose their in-closure conversation context, as on any re-registration. This activates
+  writer 1 (prompt preview) and writer 4 (turn-start payload). `猴-1` registered as a fresh zai seat,
+  `zai-1` deregistered; futon2 `operator_focus.clj` reader-seat default now `猴-1` (futon2
+  `c919ec424`, reloaded). Payloads: `~/notes/evidence-cleanup/restore-payloads{,-2}.json`, log
+  `refresh-1.log`. Side finding: `GET /api/alpha/agents/<id>` does not URL-decode non-ASCII ids
+  (`猴-1`, `象-1` return not-found).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).

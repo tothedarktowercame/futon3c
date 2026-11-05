@@ -113,7 +113,7 @@ recomputed.
 | 狗 dog | agent turn: pre-hook recall, post-hook save | relevant memories, proposed memories | metadata on the agent reply (memory ids, scores) |
 | 馬 horse | agent reply | 無門関: tension resolved / re-raised / dropped | derived store |
 | Giraffe | 馬's tensions + pattern cascade (second derivative) | proposed tickets, relationship reviews | derived store |
-| 猴 monkey | timer (the operator-focus reader; seat currently `zai-1`, to be renamed `猴-1`) | operator focus | derived store |
+| 猴 monkey | timer (the operator-focus reader; seat `猴-1`, renamed from `zai-1` 2026-11-05) | operator focus | derived store |
 
 狗 is to the agent as 驴 is to the operator (Joe, 2026-11-05). The code calls 狗
 "act" (M-giraffe loop line; "驴 works while 狗 does", `xiang/lu_rerank.clj:303`).
