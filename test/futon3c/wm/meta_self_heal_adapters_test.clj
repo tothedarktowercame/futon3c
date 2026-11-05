@@ -412,6 +412,45 @@
                (get-in result [:payload :reason])))
         (is (= "done" (get-in result [:payload :response-preview])))))))
 
+(deftest prose-then-final-map-is-the-answer
+  ;; Live pin, click wm-click-76ca8902 (2026-11-05): wm-reviewer's whole
+  ;; answer to repair/de1cea6a attempt 1, from the transaction's review
+  ;; receipt. It was refused as :agency-response-not-one-edn-map, which spent
+  ;; the injury's self-heal attempt on a review that had passed.
+  (let [live (str "The acceptance test is healthy: run on its namespace it executes "
+                  "`cause-scope/assert-repair` against the pinned carrier and passes "
+                  "(0 failures, 0 errors; namespaced `-v` invocation exits 0). The repair "
+                  "itself is sound: clj-kondo clean on all three changed files, no workarounds."
+                  "\n\n{:status :succeeded :payload {:patch-sha \"cbd1409d8559e20adf29af9b7aa969b9205eb6fd\" "
+                  ":reviewer-sha \"cbd1409d8559e20adf29af9b7aa969b9205eb6fd\"}}")]
+    (testing "a line-initial map that ends the answer is read"
+      (is (= {:status :succeeded
+              :payload {:patch-sha "cbd1409d8559e20adf29af9b7aa969b9205eb6fd"
+                        :reviewer-sha "cbd1409d8559e20adf29af9b7aa969b9205eb6fd"}}
+             (:value (#'sut/one-edn-map live))))
+      (is (= :succeeded (get-in (#'sut/one-edn-map (str live "\n  \n")) [:value :status]))
+          "trailing whitespace is allowed")
+      (is (= :succeeded
+             (get-in (#'sut/one-edn-map
+                      (str "Prose.\n{:status :rejected :payload {:reason :x}}\n"
+                           "{:status :succeeded :payload {}}"))
+                     [:value :status]))
+          "the last map that ends the answer is the one read"))
+    (testing "prose after the map is still refused"
+      (is (nil? (:value (#'sut/one-edn-map (str live "\nmore prose"))))))
+    (testing "a map in the middle of a prose line is not an answer"
+      (is (nil? (:value (#'sut/one-edn-map "I would answer {:status :succeeded :payload {}}")))))
+    (testing "prose alone is still refused"
+      (is (nil? (:value (#'sut/one-edn-map "done")))))
+    (testing "a map not keyed by keywords is not an answer"
+      (is (nil? (:value (#'sut/one-edn-map "Prose.\n{\"status\" \"ok\"}")))))
+    (testing "the adapter returns the reviewer's status"
+      (with-redefs [reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                    reg/invoke-agent! (fn [& _] {:ok true :result live :session-id "fresh"
+                                                 :invoke-meta {:job-id "j"}})]
+        (is (= :succeeded
+               (:status (sut/agency-invoke! {:seat "wm-reviewer" :request {:phase :review}}))))))))
+
 (deftest agency-review-prompt-states-the-sealed-reviewer-answer-contract
   (let [prompt (atom nil)
         patch "b463d85cca1eedd975639c22747dda63f4629974"

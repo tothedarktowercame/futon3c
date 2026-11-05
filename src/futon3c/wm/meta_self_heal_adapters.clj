@@ -223,6 +223,26 @@
         (recur (next chars) false false opened closed))
       {:opened opened :closed closed})))
 
+(defn- trailing-edn-map-text
+  "The last line-initial EDN map that ends TEXT, when TEXT opens with prose.
+   Click wm-click-76ca8902 (2026-11-05): wm-reviewer answered a sound review
+   as two prose sentences, a blank line, then the contracted map
+   {:status :succeeded ...} with nothing after it. The parser read the first
+   prose word as a symbol and failed the review, which spent the injury's
+   self-heal attempt. Only a map that starts its own line, reads as exactly
+   one keyword-keyed map, and has nothing but whitespace after it qualifies;
+   prose after the map still fails, as it does after a fence."
+  [text]
+  (when-not (str/starts-with? text "{")
+    (some (fn [i]
+            (let [candidate (subs text (inc i))]
+              (try
+                (when (keyword-keyed-map? (read-one-edn candidate))
+                  candidate)
+                (catch Throwable _ nil))))
+          (reverse (keep-indexed (fn [i [a b]] (when (and (= a \newline) (= b \{)) i))
+                                 (partition 2 1 text))))))
+
 (defn- one-edn-map
   "One EDN map, bare or inside a code fence under any alphabetic tag (F18: a
    seat that fences its map as ```json still returned the map). The map must
@@ -235,7 +255,7 @@
         ;; machine result. The fence is usable only when it ends the answer;
         ;; prose after the closing fence remains a malformed response.
         fenced (re-matches #"(?s).*?```[A-Za-z]*\s*(.*?)\s*```\s*" text)
-        reader-text (or (second fenced) text)
+        reader-text (or (second fenced) (trailing-edn-map-text text) text)
         reader (clojure.lang.LineNumberingPushbackReader.
                 (java.io.StringReader. reader-text))]
     (try
