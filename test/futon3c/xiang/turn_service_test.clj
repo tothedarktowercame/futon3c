@@ -727,6 +727,12 @@
                 :original_text operator
                 :reply_text reply
                 :happened_summary happened
+                ;; The real record quotes the operator again in nested
+                ;; fields, and :ports re-quotes earlier turns' acts.
+                :sentences [{:id "s1" :start 0 :end 32 :text operator}]
+                :acts [{:id "a1" :kind "ask-action" :text operator}]
+                :alignment {:spans [{:quote operator}]}
+                :ports {:still_open [{:act "earlier-r-1" :text reply}]}
                 :analysis_status "analyzed"}
         reading {:status "analyzed" :fragments [{:intent "report"}]}
         entry (svc/turn-evidence-entry "turn-copy-test" record reading :analyzed)

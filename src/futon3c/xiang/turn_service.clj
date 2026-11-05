@@ -381,26 +381,36 @@
   [:source_text :original_text :reply_text :happened_summary
    :source-text :original-text :reply-text :happened-summary])
 
+(def ^:private record-reference-fields
+  "Identity and status fields kept in the evidence packet. Everything else in
+   a turn record can carry turn prose: besides the four text fields,
+   :sentences, :acts and :alignment quote the operator's sentences and :ports
+   re-quotes earlier turns' acts (25 KB on one 2026-11-05 record). The
+   canonical turn store, reached by :turn-record-id, holds the rest."
+  [:session_id :turn_id :evidence_id :reply_evidence_id :agent_id :mission_id
+   :surface :origin :created_at :reply_at :analysis_status :draft_status
+   :ports_status :quote_count :offset_unit :version :interpretation_version
+   :vocabulary_version :secrets_redacted :tagging_failed
+   :session-id :turn-id :evidence-id :reply-evidence-id :agent-id])
+
 (defn- text-witness-key [field suffix]
   (let [field-name (name field)
         separator (if (str/includes? field-name "_") "_" "-")]
     (keyword (str field-name separator suffix))))
 
 (defn- evidence-record-reference
-  "Remove top-level operator/reply prose from RECORD, retaining exact content
-   witnesses beside every removed field. The canonical turn store remains the
-   text authority."
+  "Project RECORD to its identity and status fields, with a length and
+   SHA-256 witness for each operator/reply text field. The canonical turn
+   store remains the text authority."
   [record]
   (reduce
    (fn [kept field]
-     (if-let [text (and (string? (get kept field)) (get kept field))]
-       (-> kept
-           (dissoc field)
-           (assoc (text-witness-key field "chars") (count text)
-                  (text-witness-key field "sha256")
-                  (invoke-preview/prompt-sha256 text)))
+     (if-let [text (and (string? (get record field)) (get record field))]
+       (assoc kept
+              (text-witness-key field "chars") (count text)
+              (text-witness-key field "sha256") (invoke-preview/prompt-sha256 text))
        kept))
-   record
+   (select-keys record record-reference-fields)
    copied-record-text-fields))
 
 (defn turn-evidence-entry
