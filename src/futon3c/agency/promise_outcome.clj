@@ -8,10 +8,14 @@
    Deterministic per-promise/per-outcome ids are checked in the durable backend;
    no process-local flag can suppress retry after a failed write or restart."
   (:require [clojure.edn :as edn]
+            [futon3c.agency.promise-log :as promise-log]
+            [futon3c.agency.rule-record :as rule-record]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.origin :as origin]
-            [futon3c.evidence.store :as store])
-  (:import [java.time Instant]
+            [futon3c.evidence.store :as store]
+            [futon3c.substrate.client :as substrate])
+  (:import [java.net URLEncoder]
+           [java.time Instant]
            [java.util UUID]))
 
 (def types #{:promise/fulfilled :promise/lapsed})
@@ -29,10 +33,30 @@
                         (ns-resolve 'promise-job-lookup))]
       (v id))))
 (defonce ^:private !stats (atom {:evaluated 0 :written 0 :existing 0 :failed 0}))
+(def page-limit 1000)
+(def ^:dynamic *request!* rule-record/request!)
 (defn stats [] @!stats)
 (defn failed! [e]
   (swap! !stats update :failed inc)
   (binding [*out* *err*] (println "promise-outcome failed:" (.getMessage ^Throwable e))))
+
+(defn- encode [value] (URLEncoder/encode (str value) "UTF-8"))
+
+(defn- hyperedge-window [type endpoint source]
+  (let [path (str "/api/alpha/hyperedges?type=" (encode (if-let [ns (namespace type)]
+                                                           (str ns "/" (name type))
+                                                           (name type)))
+                  "&end=" (encode endpoint) "&limit=" page-limit
+                  "&include-total=false")
+        response (*request!* (substrate/configured-url) "GET" path nil)
+        rows (vec (:hyperedges response))]
+    ;; The indexed type+end query currently emits no cursor. A full window is
+    ;; therefore not proof of exhaustion and must refuse rather than omit work.
+    (when (or (= page-limit (count rows)) (:truncated response)
+              (:partial? response) (:incomplete response) (:next-cursor response))
+      (throw (ex-info "Incomplete promise outcome projection"
+                      {:reason :truncated-input :source source :rows (count rows)})))
+    rows))
 
 (defn outcome-id [pid type]
   (str "promise-outcome:" (UUID/nameUUIDFromBytes (.getBytes (pr-str [pid type]) "UTF-8"))))
@@ -245,29 +269,25 @@
    (evaluate-observation! backend source-id rec now-ms source-at true)))
 
 (defn sweep!
-  "Complete retained-history read, not a /tmp snapshot. Reject partial reads and
-   pre-repair payloads rather than guessing missing promise fields. Type namespace
-   pushdown is avoided (the evidence client currently drops type namespaces)."
+  "Evaluate the bounded checkable-state population from operational history.
+   A checkable state can only be built from a format-3 creation payload, so the
+   pre-repair evidence fallback is intentionally unreachable and removed."
   [backend now-ms]
-  (let [entries (store/query* backend {:query/tags [:promise-history]})
-        seen (volatile! #{})]
-    (when (:partial? (meta entries)) (throw (ex-info "Incomplete promise outcome sweep" (meta entries))))
-    (doseq [entry (sort-by (juxt :evidence/at :evidence/id) entries)
-            :when (contains? #{:promise/park-made :promise/followup-enqueued} (:evidence/type entry))
-            :let [b (:evidence/body entry)]
-            :when (:fulfilment-criterion b)
-            :let [pid (or (:id b) (:followup-id b) (get-in b [:history/promise-id]))]
-            :when (or (nil? pid) (not (contains? @seen pid)))]
-      (when pid (vswap! seen conj pid))
+  (let [states (hyperedge-window :promise/state "promise-obligation:checkable"
+                                 :promise-states-checkable)]
+    (doseq [state states
+            :let [pid (get-in state [:hx/props :promise-id])]]
       (try
-        (if-not (= 3 (:history/format b))
-          (let [due-ms (or (millis (:deadline b)) (millis (:evidence/at entry)) now-ms)]
-            (if (and (string? pid) (>= now-ms due-ms))
-              (write-check! backend (:evidence/id entry)
-                            (assoc b :id pid) now-ms (:evidence/at entry) nil false
-                            {:verdict :unable-to-determine
-                             :unable-reason :invalid-promise-record :due-ms due-ms})
-              (throw (ex-info "Incomplete pre-repair promise" {:id (:evidence/id entry)}))))
-          (let [rec (:record (edn/read-string (:history/payload-edn b)))]
-            (evaluate-due! backend (:evidence/id entry) rec now-ms (:evidence/at entry))))
+        (let [history (mapv promise-log/hyperedge->entry
+                            (hyperedge-window :promise/history-event pid :promise-history))
+              creation (some #(when (= 1 (get-in % [:evidence/body
+                                                    :history/promise-sequence])) %)
+                             history)
+              rec (some-> creation :evidence/body :history/payload-edn
+                          edn/read-string :record)]
+          (when-not (and creation (map? rec))
+            (throw (ex-info "Checkable promise lacks a creation row"
+                            {:reason :missing-promise-creation :promise-id pid})))
+          (evaluate-due! backend (:evidence/id creation) rec now-ms
+                         (:evidence/at creation)))
         (catch Throwable e (failed! e))))))
