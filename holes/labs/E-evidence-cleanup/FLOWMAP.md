@@ -83,6 +83,85 @@ are retained as typed unknowns below rather than assigned guessed fields.
    :readers [:reader/operator-focus]}]}
 ```
 
+## Reader coverage rerun — 2026-11-05
+
+The graph now includes the previously listed session/author/tag readers and
+the ID-following paths. The important non-query join is
+`peripheral/memory_recall.clj:139-149,171-184`: it reads `:memory/assert`
+hyperedges, takes `[:hx/props :roles :entry]`, then calls `get-entry*` on that
+evidence id. The same join is used by
+`apm/memory_caption_store.clj:236-245`,
+`apm/promotion_candidate_store.clj:206-212,299-336`, and
+`apm/promotion_review_store.clj:129-147,220-238`. These readers account for
+the memory, memory-lifecycle, gate-memory, and math-memory wires.
+
+Other by-ID consumers boxed here are `memory_outcome_sweeper.py:658,773`,
+`agency/grant_record.clj:276`, `apm/conductor.clj:444`,
+`dispatch_with_recall.clj:657`, `review_codex_lane_attachments.clj:193`, and
+the public ID/chain handlers at `transport/http.clj:3789-3804`. Visibility and
+idempotency reads in the writers themselves (`promise_history.clj:181`,
+`promise_outcome.clj:108-224`, `clock_decision.clj:348-364`) were not counted
+as downstream readers: they validate a write rather than consume its meaning.
+
+Filtered boxes were also added for `inbox_zero/infer_adapters.clj:90-99`, the
+three `ways-of-working-probe.py` queries (`:80`, `:154`, `:584`),
+`lu_situations.py:86`, `turn_frames.py:72,97`,
+`scope_view_data.py:118,258`, `agency/dispatch_graph.clj:126-139`,
+`agency/answer_population.clj:85-86`, `agency/obligations.clj:53-66,196`, and
+`xiang_turn_check.py:121`. The `lu-memory` and `context-retrieval` producers
+are boxed respectively from `xiang/lu_memory.clj:46,197` and
+`transport/http.clj:5308-5334`; hence neither becomes a false
+`read-never-written` gap.
+
+```clojure
+{:written-never-read
+ [{:finding :written-never-read, :field :evidence/apm-workflow, :writers [:writer/apm-work-queue]}
+  {:finding :written-never-read, :field :evidence/arse-workflow, :writers [:writer/arse-work-queue]}
+  {:finding :written-never-read, :field :evidence/artifact-weak-activation, :writers [:writer/artifact-activation]}
+  {:finding :written-never-read, :field :evidence/bell-arrival, :writers [:writer/social-arrival]}
+  {:finding :written-never-read, :field :evidence/logic-archaeology, :writers [:writer/logic-archaeology]}
+  {:finding :written-never-read, :field :evidence/logic-locus, :writers [:writer/logic-locus]}
+  {:finding :written-never-read, :field :evidence/logic-metabolic-balance, :writers [:writer/logic-metabolic-balance]}
+  {:finding :written-never-read, :field :evidence/logic-probe, :writers [:writer/logic-probe]}
+  {:finding :written-never-read, :field :evidence/logic-probe-tap, :writers [:writer/logic-probe-taps]}
+  {:finding :written-never-read, :field :evidence/logic-ratchet, :writers [:writer/logic-ratchet]}
+  {:finding :written-never-read, :field :evidence/logic-ratchet-check, :writers [:writer/logic-ratchet]}
+  {:finding :written-never-read, :field :evidence/logic-snapshot, :writers [:writer/logic-snapshot]}
+  {:finding :written-never-read, :field :evidence/logic-trace, :writers [:writer/logic-tracer]}
+  {:finding :written-never-read, :field :evidence/logic-trace-link, :writers [:writer/logic-tracer]}
+  {:finding :written-never-read, :field :evidence/peripheral-call-data-unknown, :writers [:writer/peripheral-common]}
+  {:finding :written-never-read, :field :evidence/peripheral-coordination, :writers [:writer/peripheral-real-backend]}
+  {:finding :written-never-read, :field :evidence/peripheral-mentor, :writers [:writer/peripheral-mentor]}
+  {:finding :written-never-read, :field :evidence/pull-receipt, :writers [:writer/peripheral-pull-receipts]}
+  {:finding :written-never-read, :field :evidence/relationship-review, :writers [:writer/xiang-turn-service]}
+  {:finding :written-never-read, :field :evidence/scheduled-dispatch, :writers [:writer/social-scheduled-dispatch]}
+  {:finding :written-never-read, :field :evidence/test-bell, :writers [:writer/social-test-bell]}
+  {:finding :written-never-read, :field :evidence/tickle-availability, :writers [:writer/tickle-availability]}
+  {:finding :written-never-read, :field :evidence/tickle-escalation, :writers [:writer/tickle-escalation]}
+  {:finding :written-never-read, :field :evidence/tickle-fm-cycle, :writers [:writer/tickle-fm-cycle]}
+  {:finding :written-never-read, :field :evidence/tickle-orchestration, :writers [:writer/tickle-orchestration]}
+  {:finding :written-never-read, :field :evidence/tickle-page, :writers [:writer/tickle-page]}
+  {:finding :written-never-read, :field :evidence/tickle-scan, :writers [:writer/tickle-scan]}
+  {:finding :written-never-read, :field :evidence/tickle-status-report, :writers [:writer/tickle-status-report]}
+  {:finding :written-never-read, :field :evidence/tickle-workflow, :writers [:writer/tickle-work-queue]}
+  {:finding :written-never-read, :field :evidence/zaif-arm-choice, :writers [:writer/zaif-controller]}],
+ :read-never-written
+ [{:finding :read-never-written, :field :evidence/generic-search, :readers [:reader/generic-search]}]}
+```
+
+## Never read, by model class
+
+The classification follows “The evidence model” in
+`holes/missions/M-repl-circus.md:27-43`: participant speech and dispatches are
+evidence; recomputable analysis, retrieval, summaries, step traces, and
+scheduler state are operational derivatives. “Never read” is therefore a
+feedback-path finding, not a deletion recommendation.
+
+| model class | remaining fields |
+|---|---|
+| participant acts | `bell-arrival`, `scheduled-dispatch`, `test-bell` |
+| derived / operational | `apm-workflow`, `arse-workflow`, `artifact-weak-activation`, all `logic-*`, `peripheral-call-data-unknown`, `peripheral-coordination`, `peripheral-mentor`, `pull-receipt`, `relationship-review`, all remaining `tickle-*`, `zaif-arm-choice` |
+
 The scoped `joe` finding exposes a deliberate R0 limitation: HTTP ingress is
 modelled as the unscoped writer because its author is request data. The runtime
 records do establish that the 87 rows were authored by `joe`; the spec does not

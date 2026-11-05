@@ -61,6 +61,8 @@
   {:box/id :writer/script-wire-math-memory :writes [:evidence/math-memory-pattern]}
   {:box/id :writer/script-memory-outcome-sweeper :writes [:evidence/pattern-outcome]}
   {:box/id :writer/script-codex-ws-step :writes [:evidence/agent-step]}
+  {:box/id :writer/xiang-lu-memory :writes [:evidence/lu-memory]}
+  {:box/id :writer/http-context-retrieval :writes [:evidence/context-retrieval]}
   {:box/id :writer/xiang-turn-service
    :reads [[:evidence/operator-turn {:record "joe"}]]
    :writes [:evidence/xiang-turn :evidence/relationship-review]}
@@ -85,5 +87,56 @@
    :reads [:evidence/promise-history :evidence/promise-outcome]}
   {:box/id :reader/dispatch-pattern-outcomes :reads [:evidence/pattern-outcome]}
   {:box/id :reader/dispatch-graph :reads [:evidence/coordination-mesh-edge]}
+  {:box/id :reader/inbox-zero-session
+   :reads [:evidence/agent-step :evidence/social-dispatch
+           [:evidence/transcript {:record "zai-1"}]
+           [:evidence/transcript {:record "wm-author"}]
+           [:evidence/transcript {:record "象-1"}]]}
+  {:box/id :reader/ways-of-working-promise-history
+   :reads [:evidence/promise-history]}
+  {:box/id :reader/ways-of-working-session
+   :reads [:evidence/agent-step :evidence/social-dispatch
+           [:evidence/transcript {:record "zai-1"}]
+           [:evidence/transcript {:record "wm-author"}]
+           [:evidence/transcript {:record "象-1"}]]}
+  {:box/id :reader/ways-of-working-operator
+   :reads [[:evidence/operator-turn {:record "joe"}]]}
+  {:box/id :reader/lu-situations-author
+   :reads [:evidence/lu-memory]}
+  {:box/id :reader/turn-frames-session
+   :reads [:evidence/agent-step :evidence/social-dispatch
+           [:evidence/transcript {:record "zai-1"}]
+           [:evidence/transcript {:record "wm-author"}]
+           [:evidence/transcript {:record "象-1"}]]}
+  {:box/id :reader/turn-frames-xiang
+   :reads [:evidence/xiang-turn]}
+  {:box/id :reader/scope-view-transcript
+   :reads [[:evidence/transcript {:record "zai-1"}]
+           [:evidence/transcript {:record "wm-author"}]
+           [:evidence/transcript {:record "象-1"}]]}
+  {:box/id :reader/scope-view-context-retrieval
+   :reads [:evidence/context-retrieval]}
+  {:box/id :reader/answer-population
+   :reads [:evidence/promise-history :evidence/promise-outcome]}
+  {:box/id :reader/obligations-projection
+   :reads [:evidence/promise-history :evidence/promise-outcome]}
+  {:box/id :reader/xiang-turn-check-ma-card
+   :reads [:evidence/ma-card]}
+  {:box/id :reader/memory-recall-by-memory-assert
+   :reads [:evidence/memory :evidence/memory-lifecycle
+           :evidence/math-memory-pattern :evidence/gate-memory]}
+  {:box/id :reader/memory-caption-by-memory-assert
+   :reads [:evidence/memory :evidence/math-memory-pattern]}
+  {:box/id :reader/promotion-candidate-by-memory-assert
+   :reads [:evidence/memory :evidence/math-memory-pattern]}
+  {:box/id :reader/promotion-review-by-memory-assert
+   :reads [:evidence/memory :evidence/memory-lifecycle]}
+  {:box/id :reader/memory-outcome-by-id
+   :reads [:evidence/pattern-outcome]}
+  {:box/id :reader/grant-source-by-id
+   :reads [:evidence/social-dispatch :evidence/bell :evidence/whistle]}
+  {:box/id :reader/http-evidence-by-id
+   :reads [:evidence/operator-turn-backfill :evidence/agent-step
+           :evidence/social-dispatch :evidence/bell :evidence/whistle]}
   {:box/id :reader/generic-search
    :reads [:evidence/generic-search]}]}
