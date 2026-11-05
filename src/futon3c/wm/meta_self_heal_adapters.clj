@@ -575,7 +575,11 @@
   ([seat operation request]
    (producer-invoke! nil seat operation request))
   ([seat-call-context seat operation request]
-  (let [record-call! (fn [result]
+  (let [agent (reg/get-agent seat)
+        prompt (producer-prompt operation request)
+        options (when agent {:mode "work" :caller "war-machine"
+                             :session-id (:agent/session-id agent)})
+        record-call! (fn [result]
                        (when (and result seat-call-context)
                          (seat-call-index/append!
                           (seat-call-row seat-call-context
@@ -583,11 +587,7 @@
                                            :diagnosis :meta-diagnosis
                                            :acceptance-proposal :meta-acceptance-proposal
                                            :acceptance-review :meta-acceptance-review)
-                                         operation seat result nil))))
-        agent (reg/get-agent seat)
-        prompt (producer-prompt operation request)
-        options (when agent {:mode "work" :caller "war-machine"
-                             :session-id (:agent/session-id agent)})
+                                         operation seat result (:session-id options)))))
         result (when (and agent (invoke-capable? agent)
                           (available-seat-state? (:agent/status agent)))
                  (invoke-with-rate-limit-retry! seat prompt options))
