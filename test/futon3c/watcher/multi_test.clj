@@ -648,4 +648,7 @@
       (is (= {:status :not-armed
               :rearm :restart-watcher-after-file-change-journal-reload}
              (:file-change-journal (sut/status nil))))
+      (is (= {:status :not-armed
+              :rearm :restart-watcher-after-file-change-shadow-reload}
+             (:file-change-shadow (sut/status nil))))
       (finally (reset! sut/!state prior)))))

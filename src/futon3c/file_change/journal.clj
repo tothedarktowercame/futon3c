@@ -111,17 +111,38 @@
         (assoc-in [:consumers consumer-id :after] through-seq)
         (assoc-in [:consumers consumer-id :last-progress-at-ms] now-ms))))
 
+(defn begin-rebuild
+  "Pin the journal tail BEFORE a consumer begins its authority read. Changes
+  appended during that read remain after the returned `:through-seq`."
+  [state consumer-id]
+  (let [consumer (get-in state [:consumers consumer-id])]
+    (when-not consumer
+      (throw (ex-info "Consumer not registered" {:consumer-id consumer-id})))
+    {:status :rebuild-begun :consumer-id consumer-id
+     :through-seq (dec (:next-seq state)) :watermark (:watermark state)
+     :authority (:authority (:rebuild-evidence consumer))}))
+
 (defn rebuild-consumer
-  "Resume a lagged consumer only after it supplies a fresh authority receipt."
-  [state consumer-id now-ms rebuild-evidence]
+  "Complete a rebuild through the sequence pinned by `begin-rebuild`.
+  Returns [state receipt]; the receipt drives full-authority demand rather than
+  relying on a level-jump entry that the rebuild cursor intentionally passes."
+  [state consumer-id through-seq now-ms rebuild-evidence]
   {:pre [(map? rebuild-evidence)]}
   (when-not (get-in state [:consumers consumer-id])
     (throw (ex-info "Consumer not registered" {:consumer-id consumer-id})))
-  (-> state
-      (assoc-in [:consumers consumer-id :after] (dec (:next-seq state)))
-      (assoc-in [:consumers consumer-id :last-progress-at-ms] now-ms)
-      (assoc-in [:consumers consumer-id :rebuild-evidence] rebuild-evidence)
-      (assoc-in [:consumers consumer-id :rebuild-required?] false)))
+  (let [tail (dec (:next-seq state))]
+    (when (or (< through-seq (:watermark state)) (> through-seq tail))
+      (throw (ex-info "Rebuild basis outside retained journal bounds"
+                      {:consumer-id consumer-id :through-seq through-seq
+                       :watermark (:watermark state) :tail tail})))
+    [(-> state
+         (assoc-in [:consumers consumer-id :after] through-seq)
+         (assoc-in [:consumers consumer-id :last-progress-at-ms] now-ms)
+         (assoc-in [:consumers consumer-id :rebuild-evidence] rebuild-evidence)
+         (assoc-in [:consumers consumer-id :rebuild-required?] false))
+     {:outcome :consumer-rebuilt :consumer-id consumer-id
+      :through-seq through-seq :basis :consumer-rebuild
+      :authority (:authority rebuild-evidence)}]))
 
 (defn expire-consumers
   "Drop consumers whose progress deadline has elapsed. The returned receipts

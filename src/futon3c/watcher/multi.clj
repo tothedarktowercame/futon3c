@@ -28,6 +28,8 @@
             [cheshire.core :as json]
             [futon3c.cyder :as cyder]
             [futon3c.file-change.journal :as file-change-journal]
+            [futon3c.file-change.shadow-consumer :as file-change-shadow]
+            [futon3c.giraffe.run :as giraffe-run]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
             [futon3c.watcher.file-ingest :as file-ingest]
@@ -1460,7 +1462,7 @@
 
 (defn run-cycle!
   [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
-           inbox-zero-options file-change-journal]
+           inbox-zero-options file-change-journal file-change-shadow]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
@@ -1560,6 +1562,13 @@
                                   :from-root from-root :to-root to-root
                                   :from-label from-label :to-label to-label
                                   :run-id run-id :event-n ev-n :hash hash})))
+    ;; Shadow only: consume hints and retain projected demand/health.  This
+    ;; never invokes Giraffe, the registry, or a dispatcher.
+    (when (and file-change-journal file-change-shadow)
+      (file-change-shadow/run-once!
+       file-change-journal file-change-shadow
+       {:now-ms (System/currentTimeMillis)
+        :authority-read-fn #(giraffe-run/newest-field-run giraffe-run/default-root)}))
     ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
     ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
     ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
@@ -1723,6 +1732,7 @@
         per-root-cache (atom (zipmap (map :path roots) (repeat {})))
         file-change-journal (atom (file-change-journal/empty-state
                                    file-change-journal-max-entries))
+        file-change-shadow (atom (file-change-shadow/empty-state 30000 300000 256))
         executor (Executors/newSingleThreadScheduledExecutor
                   (reify java.util.concurrent.ThreadFactory
                     (newThread [_ r]
@@ -1739,6 +1749,7 @@
                      :cold-scan? cold-scan?
                      :commit-ingest? commit-ingest?
                      :file-change-journal file-change-journal
+                     :file-change-shadow file-change-shadow
                      :inbox-zero-options inbox-zero-options}
         task #(#'safe-cycle! cycle-state)]
     (reset! !state {:executor executor
@@ -1751,6 +1762,7 @@
                     :cold-scan? cold-scan?
                     :commit-ingest? commit-ingest?
                     :file-change-journal file-change-journal
+                    :file-change-shadow file-change-shadow
                     :inbox-zero-options inbox-zero-options
                     :inbox-zero-writer writer
                     :inbox-zero (if inbox-zero-options
@@ -1795,7 +1807,7 @@
   (when-let [s @!state]
     (-> s
         (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer
-                :file-change-journal)
+                :file-change-journal :file-change-shadow)
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
@@ -1809,6 +1821,15 @@
                                              (System/currentTimeMillis))
                  {:status :not-armed
                   :rearm :restart-watcher-after-file-change-journal-reload})
+               :file-change-shadow
+               (if-let [shadow-state (:file-change-shadow s)]
+                 (if-let [journal-state (:file-change-journal s)]
+                   (file-change-shadow/health @shadow-state @journal-state
+                                              (System/currentTimeMillis))
+                   {:status :not-armed
+                    :rearm :restart-watcher-after-file-change-journal-reload})
+                 {:status :not-armed
+                  :rearm :restart-watcher-after-file-change-shadow-reload})
                :mission-maintenance (mission-maintenance-status)))))
 
 (defn tick!
@@ -1826,5 +1847,6 @@
                  :cold-scan? (:cold-scan? s)
                  :commit-ingest? (:commit-ingest? s)
                  :file-change-journal (:file-change-journal s)
+                 :file-change-shadow (:file-change-shadow s)
                  :inbox-zero-options (:inbox-zero-options s)})
     (status nil)))

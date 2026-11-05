@@ -4,7 +4,8 @@
   Hints select when and which authority to ask; they never answer currency.
   Giraffe recomputes its complete input. Test-registry checks require an
   explicit named demand, so this projector cannot turn a file save into a
-  registry-wide warrant sweep.")
+  registry-wide warrant sweep."
+  (:require [futon2.aif.mission-registry :as mission-registry]))
 
 (def schema :file-change/demand-projector-v1)
 
@@ -15,10 +16,7 @@
    :giraffe-pending nil})
 
 (defn- task-definition? [path]
-  (boolean
-   (and (string? path)
-        (re-find #"(?:^|/)holes/(?:missions/|excursions/|tickets/)?[MET]-[^/]+\.md$"
-                 path))))
+  (some? (mission-registry/task-document-kind path)))
 
 (defn- level-jump? [entry] (= :level-jump (:operation entry)))
 
@@ -41,13 +39,15 @@
         task-paths (vec (filter task-definition? paths))
         giraffe-trigger? (or jump? (seq task-paths))
         pending (:giraffe-pending state)
+        jump-basis (some->> entries (filter level-jump?) first :basis)
         state (if giraffe-trigger?
                 (assoc state :giraffe-pending
                        {:first-at-ms (or (:first-at-ms pending) now-ms)
                         :last-at-ms now-ms
                         :changed-paths (vec (sort (into (set (:changed-paths pending))
                                                        task-paths)))
-                        :level-jump? (or jump? (:level-jump? pending))})
+                        :level-jump? (or jump? (:level-jump? pending))
+                        :trigger-basis (or jump-basis (:trigger-basis pending))})
                 state)
         currency
         (->> warrant-demands
@@ -59,16 +59,30 @@
                          {:demand/type :test-registry/currency
                           :entry-id entry-id :repo-root repo-root
                           :changed-paths (if jump? [] matched)
-                          :basis (if jump? :walk-level-jump :named-path-intersection)
+                          :basis (if jump? (or jump-basis :walk-level-jump)
+                                     :named-path-intersection)
                           :demand/id (:demand/id demand)}))))
              vec)]
     [state currency]))
+
+(defn project-rebuild
+  "A completed consumer rebuild is itself a full-authority trigger. The level
+  jump entry may sit behind the rebuilt cursor, so composition must not depend
+  on reading that entry afterwards."
+  [state rebuild-receipt warrant-demands now-ms]
+  {:pre [(= :consumer-rebuilt (:outcome rebuild-receipt))]}
+  (project state
+           [{:repo "rebuild" :worktree "rebuild" :path "."
+             :content-id (str "consumer-rebuild:" (:through-seq rebuild-receipt))
+             :operation :level-jump :basis :consumer-rebuild
+             :seq (:through-seq rebuild-receipt)}]
+           warrant-demands now-ms))
 
 (defn due-demands
   "Emit and clear a pending full-Giraffe recomputation once debounce or the
   maximum wait expires. Under continuous change the maximum wait wins."
   [state now-ms]
-  (if-let [{:keys [first-at-ms last-at-ms changed-paths level-jump?]}
+  (if-let [{:keys [first-at-ms last-at-ms changed-paths level-jump? trigger-basis]}
            (:giraffe-pending state)]
     (let [due-at (min (+ last-at-ms (:debounce-ms state))
                       (+ first-at-ms (:max-wait-ms state)))]
@@ -80,5 +94,6 @@
            :level-jump? (boolean level-jump?)
            :first-at-ms first-at-ms :last-at-ms last-at-ms
            :due-at-ms due-at
+           :trigger-basis trigger-basis
            :basis :recompute-from-giraffe-authority}]]))
     [state []]))

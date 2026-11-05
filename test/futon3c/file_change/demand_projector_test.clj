@@ -1,6 +1,7 @@
 (ns futon3c.file-change.demand-projector-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.file-change.demand-projector :as projector]))
+            [futon3c.file-change.demand-projector :as projector]
+            [futon3c.file-change.journal :as journal]))
 
 (defn entry [path seq]
   {:repo "futon3c-d" :worktree "/code/futon3c" :path path
@@ -60,3 +61,38 @@
                                      [(entry "src/a.clj" 1)] [] 0)
         [_ due] (projector/due-demands state 100)]
     (is (empty? due))))
+
+(deftest census-predicate-rejects-nested-snapshots
+  (let [entries [(entry "holes/labs/run/authority/holes/missions/M-copy.md" 1)
+                 (entry "holes/qa/T-not-census.md" 2)]
+        [state _] (projector/project (projector/empty-state 10 20) entries [] 0)
+        [_ due] (projector/due-demands state 100)]
+    (is (empty? due))))
+
+(deftest overflow-rebuild-composes-into-full-authority-demand
+  (let [[seeded _] (journal/reconcile-snapshot
+                    (journal/empty-state 3)
+                    {:repo "r" :worktree "/r" :files {} :observed-at-ms 0})
+        registered (journal/register-consumer seeded :giraffe-shadow 0 100
+                                              {:authority :giraffe-input})
+        initial-basis (:through-seq (journal/begin-rebuild registered :giraffe-shadow))
+        [ready _] (journal/rebuild-consumer registered :giraffe-shadow initial-basis 0
+                                            {:authority :giraffe-input :hash "old"})
+        [jumped _] (journal/reconcile-snapshot
+                    ready {:repo "r" :worktree "/r"
+                           :files {"a" "1" "b" "2" "c" "3" "d" "4"}
+                           :observed-at-ms 1})
+        _ (is (= :rebuild-required
+                 (:status (journal/read-next jumped :giraffe-shadow 10))))
+        basis (:through-seq (journal/begin-rebuild jumped :giraffe-shadow))
+        [rebuilt receipt] (journal/rebuild-consumer
+                           jumped :giraffe-shadow basis 2
+                           {:authority :giraffe-input :hash "new"})
+        [projected currency] (projector/project-rebuild
+                              (projector/empty-state 10 20) receipt [] 2)
+        [_ giraffe] (projector/due-demands projected 12)]
+    (is (= :ok (:status (journal/read-next rebuilt :giraffe-shadow 10))))
+    (is (empty? currency))
+    (is (= 1 (count giraffe)))
+    (is (true? (:level-jump? (first giraffe))))
+    (is (= :consumer-rebuild (:trigger-basis (first giraffe))))))

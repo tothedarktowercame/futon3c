@@ -26,16 +26,18 @@
     (is (= 1 (:dropped result)))
     (is (= :rebuild-required (:status (journal/read-next s3 :registry 10))))
     (testing "a fresh authority receipt resumes at the current tail"
-      (let [rebuilt (journal/rebuild-consumer s3 :registry 4
-                                              {:authority :registry :hash "fresh"})]
+      (let [basis (:through-seq (journal/begin-rebuild s3 :registry))
+            [rebuilt _] (journal/rebuild-consumer s3 :registry basis 4
+                                                  {:authority :registry :hash "fresh"})]
         (is (= {:status :ok :entries [] :watermark 1}
                (journal/read-next rebuilt :registry 10)))))))
 
 (deftest expired-consumer-is-dropped-with-rebuild-receipt
   (let [registered (journal/register-consumer (journal/empty-state 2) :giraffe 10 20
                                               {:authority :giraffe-input})
-        s0 (journal/rebuild-consumer registered :giraffe 10
-                                     {:authority :giraffe-input :hash "h"})
+        basis (:through-seq (journal/begin-rebuild registered :giraffe))
+        [s0 _] (journal/rebuild-consumer registered :giraffe basis 10
+                                         {:authority :giraffe-input :hash "h"})
         [before receipts-before] (journal/expire-consumers s0 30)
         [after receipts-after] (journal/expire-consumers before 31)]
     (is (empty? receipts-before) "the exact deadline remains live")
@@ -49,8 +51,9 @@
 (deftest acknowledgement-is-monotone-and-bounded-by-tail
   (let [registered (journal/register-consumer (journal/empty-state 3) :registry 0 50
                                               {:authority :registry})
-        s0 (journal/rebuild-consumer registered :registry 0
-                                     {:authority :registry :hash "initial"})
+        basis (:through-seq (journal/begin-rebuild registered :registry))
+        [s0 _] (journal/rebuild-consumer registered :registry basis 0
+                                         {:authority :registry :hash "initial"})
         [s1 _] (journal/observe s0 (observation "a" "1" 1))
         s2 (journal/acknowledge s1 :registry 1 2)]
     (is (= 0 (get-in (journal/health s2 2) [:consumers :registry :lag])))
@@ -101,11 +104,11 @@
     (is (map? before))
     (is (= :seeded (:outcome seed)))
     (is (= :rebuild-required (:status (journal/read-next registered :registry 10))))
-    (is (= :ok (:status
-                (journal/read-next
-                 (journal/rebuild-consumer registered :registry 4
-                                           {:authority :registry :hash "fresh-h2"})
-                 :registry 10))))))
+    (let [basis (:through-seq (journal/begin-rebuild registered :registry))
+          [rebuilt _] (journal/rebuild-consumer
+                       registered :registry basis 4
+                       {:authority :registry :hash "fresh-h2"})]
+      (is (= :ok (:status (journal/read-next rebuilt :registry 10)))))))
 
 (deftest over-bound-walk-collapses-to-one-level-jump
   (let [[seeded _] (journal/reconcile-snapshot
@@ -113,8 +116,9 @@
                     {:repo "r" :worktree "/r" :files {} :observed-at-ms 1})
         registered (journal/register-consumer seeded :giraffe 1 50
                                               {:authority :giraffe-input})
-        ready (journal/rebuild-consumer registered :giraffe 1
-                                        {:authority :giraffe-input :hash "old"})
+        basis (:through-seq (journal/begin-rebuild registered :giraffe))
+        [ready _] (journal/rebuild-consumer registered :giraffe basis 1
+                                            {:authority :giraffe-input :hash "old"})
         [jumped receipt] (journal/reconcile-snapshot
                           ready {:repo "r" :worktree "/r"
                                  :files {"a" "1" "b" "2" "c" "3"}
@@ -130,3 +134,16 @@
     (is (= {:at-ms 7 :message "bad walk"
             :rearm :restart-or-repair-file-change-observer}
            (:last-refusal (journal/health state 8))))))
+
+(deftest change-during-rebuild-remains-readable
+  (let [registered (journal/register-consumer (journal/empty-state 4) :giraffe 0 100
+                                              {:authority :giraffe-input})
+        basis (:through-seq (journal/begin-rebuild registered :giraffe))
+        [changed _] (journal/observe registered (observation "during" "h1" 1))
+        [rebuilt receipt] (journal/rebuild-consumer
+                           changed :giraffe basis 2
+                           {:authority :giraffe-input :hash "authority-at-basis"})
+        read (journal/read-next rebuilt :giraffe 10)]
+    (is (= 0 basis))
+    (is (= :consumer-rebuilt (:outcome receipt)))
+    (is (= ["during"] (mapv :path (:entries read))))))
