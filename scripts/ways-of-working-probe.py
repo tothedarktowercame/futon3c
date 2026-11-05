@@ -12,7 +12,7 @@ A way with probe "none" is reported as monitor not-built, invariant unknown:
 the page shows that honestly rather than guessing. No state is changed.
 """
 import collections
-import datetime, glob, hashlib, json, os, pathlib, re, subprocess, sys, time, urllib.parse, urllib.request
+import datetime, difflib, glob, hashlib, json, os, pathlib, re, subprocess, sys, time, urllib.parse, urllib.request
 
 from xiang_marks import MARKS, bracket, paragraphs
 
@@ -276,6 +276,20 @@ def probe_feedback_reaches(census_fn=None):
 OPERATOR_WINDOW = datetime.timedelta(hours=24)
 OPERATOR_GRACE = datetime.timedelta(minutes=2)
 OPERATOR_QUERY_PAD = datetime.timedelta(seconds=60)
+# Clock skew between the futon1b evidence row (written when Joe sends the
+# turn) and the transcript row (written when the turn is delivered to the
+# seat and analysed) is minutes, not seconds: the two 2026-11-04 false
+# violations were 319 s and 426 s apart (audit
+# ~/notes/ways-of-working-audit/2026-11-04/operator-turns.md). 10 minutes
+# covers both with margin without reaching Joe's habitual re-sends of
+# similar prompts (hours apart).
+OPERATOR_MATCH_WINDOW = datetime.timedelta(minutes=10)
+# Dictated turns are re-transcribed on the way into the store: the observed
+# drift was ratio 0.985 over ~4.4 KB ("end-of-day" vs "end-of-the-day").
+# Fuzzy matching is only allowed for long turns: a 0.95 ratio over a short
+# greeting would match unrelated greetings. Short turns must match exactly.
+OPERATOR_FUZZY_MIN_LEN = 200
+OPERATOR_FUZZY_RATIO = 0.95
 OPERATOR_QUERY_LIMIT = 200
 
 INTENT_OPENERS = {"propose", "ask-action", "offer", "delegate", "promise",
@@ -504,17 +518,20 @@ def read_operator_turns(now=NOW, claude_root=None, codex_root=None):
     unique = {(r["vendor"], r["id"]): r for r in records}
     return sorted(unique.values(), key=lambda r: (r["at"], r["vendor"], r["id"]))
 
-def evidence_windows(turns, minutes=10):
+def evidence_windows(turns, minutes=10, pad_before=None, pad_after=None):
     buckets = {}
     for turn in turns:
         buckets.setdefault(int(turn["at"].timestamp()) // (minutes * 60), []).append(turn)
-    return [(min(t["at"] for t in rows) - OPERATOR_QUERY_PAD,
-             max(t["at"] for t in rows) + OPERATOR_QUERY_PAD)
+    before = OPERATOR_QUERY_PAD if pad_before is None else pad_before
+    after = OPERATOR_QUERY_PAD if pad_after is None else pad_after
+    return [(min(t["at"] for t in rows) - before,
+             max(t["at"] for t in rows) + after)
             for _, rows in sorted(buckets.items())]
 
 def fetch_operator_evidence(turns, opener=urllib.request.urlopen, pause=time.sleep,
                             base="http://127.0.0.1:7073", limit=OPERATOR_QUERY_LIMIT):
-    entries, windows = {}, evidence_windows(turns)
+    entries, windows = {}, evidence_windows(
+        turns, pad_before=OPERATOR_MATCH_WINDOW + OPERATOR_QUERY_PAD)
     for index, (start, end) in enumerate(windows):
         query = urllib.parse.urlencode({"author": "joe", "since": iso(start),
                                         "before": iso(end), "limit": limit})
@@ -538,20 +555,41 @@ def _valid_operator_evidence(row):
     return (str(origin.get("kind", "")).lstrip(":") == "operator"
             and body.get("event") == "chat-turn" and body.get("role") == "user")
 
+def _pair_rank(turn_text, evidence_text):
+    """0 = exact text, 1 = fuzzy (long-turn transcription drift), None = no match.
+
+    There is no shared per-row id: the futon1b evidence body carries a
+    turn-id from the turn-analysis pool ("claude-14-turn-1467") and a
+    session id, not the transcript row uuid, so text + a bounded window is
+    the join. Exact wins over fuzzy; short turns never go fuzzy."""
+    if turn_text == evidence_text: return 0
+    if min(len(turn_text), len(evidence_text)) >= OPERATOR_FUZZY_MIN_LEN:
+        if difflib.SequenceMatcher(None, turn_text, evidence_text).ratio() >= OPERATOR_FUZZY_RATIO:
+            return 1
+    return None
+
 def _match_pairs(turns, evidence):
-    """Greedy one-to-one pairing of turns to evidence rows, nearest first."""
-    pairs = []
+    """Greedy one-to-one pairing of turns to evidence rows, nearest first.
+
+    A pair needs transport agreement, a text match (exact, or fuzzy for long
+    turns — dictation drift), and a timestamp distance within
+    OPERATOR_MATCH_WINDOW: the evidence row is written at send, the
+    transcript row minutes later, so the old 60 s pad logged false
+    violations at 319 s and 426 s skew. Exact matches take priority so a
+    drifted copy never steals an evidence row from its exact twin."""
+    pairs, window = [], OPERATOR_MATCH_WINDOW.total_seconds()
     for ti, turn in enumerate(turns):
         transport = "emacs-claude-repl" if turn["vendor"] == "claude" else "emacs-codex-repl"
         for ei, row in enumerate(evidence):
             body = row.get("evidence/body") or {}
-            if (not _valid_operator_evidence(row) or body.get("transport") != transport
-                    or normalize_turn_text(body.get("text")) != turn["text"]): continue
+            if not _valid_operator_evidence(row) or body.get("transport") != transport: continue
+            rank = _pair_rank(turn["text"], normalize_turn_text(body.get("text")))
+            if rank is None: continue
             try: distance = abs((parse_time(row.get("evidence/at")) - turn["at"]).total_seconds())
             except (TypeError, ValueError): continue
-            if distance <= OPERATOR_QUERY_PAD.total_seconds(): pairs.append((distance, ti, ei))
+            if distance <= window: pairs.append((rank, distance, ti, ei))
     used_turns, used_evidence, matched_pairs = set(), set(), []
-    for _, ti, ei in sorted(pairs):
+    for _, _, ti, ei in sorted(pairs):
         if ti not in used_turns and ei not in used_evidence:
             used_turns.add(ti); used_evidence.add(ei); matched_pairs.append((ti, ei))
     return matched_pairs
