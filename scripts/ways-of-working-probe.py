@@ -646,32 +646,51 @@ def probe_operator_turns(now=NOW, claude_root=None, codex_root=None,
             "denominator": f"{len(violations)} of {len(turns) - len(pending)} mature operator turns unmatched"}
 
 def probe_git_clean():
-    rows, no_upstream = [], []
+    # population fixed 2026-11-05 (zai-6, audit git-clean.md, claude-16 fix list):
+    # - .repair-limbs-fixture-* dirs are leaked test fixtures, not work; excluded
+    #   from the population and counted separately, since the leak is a defect.
+    # - "no @{u}" does not mean "push undefined": a worktree shares its parent
+    #   repo's remotes, and a repo with no remote at all is a single-copy repo.
+    #   Both are checked for commits not reachable from any remote ref, and a
+    #   dirty tree counts for them as for upstream repos.
+    rows, no_upstream, checked, fixtures = [], [], 0, 0
     for d in sorted(CODE.iterdir()):
         if not (d / ".git").exists(): continue
+        if d.name.startswith(".repair-limbs-fixture-"):
+            fixtures += 1; continue
+        checked += 1
+        ahead = behind = 0
         rc, ab, _ = run(["git", "rev-list", "--left-right", "--count", "@{u}...HEAD"], cwd=d)
-        if rc != 0:
-            no_upstream.append(d.name); continue
-        behind, ahead = (ab.split() + ["0", "0"])[:2]
+        if rc == 0:
+            behind, ahead = (ab.split() + ["0", "0"])[:2]
+            ahead, behind = int(ahead), int(behind)
+        else:
+            no_upstream.append(d.name)
+            # commits visible only on this box; counts all of HEAD when there
+            # is no remote (single-copy repo)
+            rc2, cnt, _ = run(["git", "rev-list", "--count", "HEAD", "--not", "--remotes"], cwd=d)
+            ahead = int(cnt) if rc2 == 0 and cnt.isdigit() else 0
         rc, st, _ = run(["git", "status", "--porcelain"], cwd=d)
         lines = [l for l in st.splitlines() if l.strip()]
         untracked = sum(1 for l in lines if l.startswith("??"))
         modified = len(lines) - untracked
-        if untracked or modified or int(ahead):
+        if untracked or modified or ahead:
             rows.append({"repo": d.name, "untracked": untracked, "modified": modified,
-                         "ahead": int(ahead), "behind": int(behind)})
+                         "ahead": ahead, "behind": behind})
     rc, active, _ = run(["systemctl", "--user", "is-active", "futon-sync-check-clean.timer"])
     rc2, enabled, _ = run(["systemctl", "--user", "is-enabled", "futon-sync-check-clean.timer"])
     log = CODE / "futon0" / "data" / "inbox-zero-delta.log"
     last = iso(datetime.datetime.fromtimestamp(log.stat().st_mtime, datetime.timezone.utc)) if log.exists() else None
     monitor = "on" if active == "active" else "off"
-    evidence = [f"timer futon-sync-check-clean.timer: {active or 'absent'} ({enabled or 'unknown'})",
+    evidence = [f"timer futon-sync-check-clean.timer: {active or 'absent'} ({enabled or 'unknown'}); this is the futon0 watcher, parked by Joe, and is NOT this probe",
+                f"probe cadence: this probe re-reads every 5 min via the ways-of-working results refresh; monitor 'off' above refers only to the parked timer",
                 f"delta notifier last wrote: {last or 'never'}",
-                f"repos with no upstream (push undefined): {len(no_upstream)}"]
+                f"repos with no @{{u}} (still checked for unpushed/dirty): {len(no_upstream)}",
+                f"excluded .repair-limbs-fixture-* leaked test fixtures: {fixtures} (the leak is itself a defect, not part of the population)"]
     return {"monitor": monitor, "invariant": "failing" if rows else "holding",
             "last-observation": last, "observed-at": iso(NOW),
             "violations": rows, "violation-count": len(rows), "evidence": evidence,
-            "denominator": f"{len(rows) + 0} dirty of {len(list(p for p in CODE.iterdir() if (p/'.git').exists())) - len(no_upstream)} repos with an upstream"}
+            "denominator": f"{len(rows)} dirty or unpushed of {checked} repos checked ({checked - len(no_upstream)} with @{{u}}, {len(no_upstream)} without; {fixtures} fixture dirs excluded)"}
 
 def probe_cascade_standards(summary):
     if not summary:
