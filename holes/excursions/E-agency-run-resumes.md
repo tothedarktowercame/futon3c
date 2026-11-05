@@ -135,3 +135,10 @@ admission/ack contract is specified.
 No cut should claim that a job-ledger event survives a restart as a live
 stream: the producer explicitly says those per-event records are
 best-effort/in-memory (`http.clj:1384-1388`).
+
+## Completion criteria
+
+- Cut 1, server opt-in admission: a per-agent/surface flag routes buffer park resumes onto the recipient's turn-queue as named resume invoke jobs, flag-off retains ready-inbox + WS poke, and an idle flagged seat receives exactly one drainer entry while an active turn delays it — check: the buffer branch of `parked-resume!` in `/home/joe/code/futon3c/src/futon3c/transport/http.clj:1962` consults the flag; test ns exhibits the acceptance conditions **Not started.**
+- Cut 2, Emacs job binding/display: the resume job id is bound to its origin buffer, ledger events render through agent-chat streaming primitives, duplicate doorbells do not duplicate text, and the terminal session id reaches the buffer — check: `emacs/agent-repl-park.el` and `emacs/agent-follow-mode.el` name the binding; one live resume observed **Not started.**
+- Cut 3, finalize/evidence equivalence: one chosen evidence/flair authority for server-run resumes implemented, with a one-park run producing exactly the selected evidence records and one final flair/cost outcome — check: a dated decision note plus the corresponding code path **Not started.**
+- Cut 4, polling retired only after the above: park polling disabled for opted-in seats with the ready-inbox endpoint and 404 fallback retained; followup polling unchanged — check: the poller's enabled condition in `/home/joe/code/futon3c/emacs/agent-repl-park.el:405-489` **Not started.**

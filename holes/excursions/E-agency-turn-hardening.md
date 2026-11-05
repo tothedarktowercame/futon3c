@@ -136,3 +136,10 @@ boot drain has failed any orphans). Test
 - The poll budget (`session-mode-turn-jvm-poll-tries` 225 × 20 s, 75 min) is
   long, and was only needed because the server never answered `failed`.
   Revisit once O2/O3 are done.
+
+## Completion criteria
+
+- F1/F2/O1/O2/O3 fixes landed with their named tests — check: futon3c commits `0217d3e22`, `a7978107e`, `ce669debf` on master; tests `async-request-kills-buffer-and-calls-once`, `reading-a-turn-settles-it-behind-a-dead-job`, `a-work-order-bell-joins-the-recipients-turn-queue`, `a-restored-turn-without-processor-fails-its-job`, `the-boot-sweep-settles-requested-turns-behind-dead-jobs` **Met.**
+- O1 confirmed live: a work-order nudge arriving while a REPL turn is pending is reported queued behind it, with no 'already has an active writer' refusal — check: a dated note here or in the turn ledger quoting the queued display after 2026-10-17 **Not met.**
+- O2 confirmed live on the automatic path: after a restart with a queued turn, no invoke job is left `queued` that is absent from `turn-queue/queue-view` (failed as `turn-lost-on-restart` instead) — check: `GET /api/alpha/invoke/jobs?state=queued` after the next Agency restart, cross-checked against the queue view **Not met.**
+- O3 confirmed live: `sweep-requested!` runs 120 s after a service start and settles `requested` turn records behind dead jobs — check: a post-restart dated observation here or in the 蝉 turn store of a `requested` record reading `failed` without any poll **Not met.**
