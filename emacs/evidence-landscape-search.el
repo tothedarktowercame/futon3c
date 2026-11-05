@@ -36,6 +36,7 @@
 
 (defvar-local evidence-landscape-search--query nil)
 (defvar-local evidence-landscape-search--all-time nil)
+(defvar-local evidence-landscape-search--scope nil)
 
 (define-derived-mode evidence-landscape-search-mode special-mode "Evidence Search"
   "Major mode for Evidence Landscape search results."
@@ -46,11 +47,14 @@
   (format-time-string "%Y-%m-%dT%H:%M:%SZ"
                       (time-subtract (current-time) (days-to-time 1)) t))
 
-(defun evidence-landscape-search--url (query all-time)
-  "Build the search URL for QUERY, omitting the time bound when ALL-TIME."
+(defun evidence-landscape-search--url (query all-time &optional scope)
+  "Build the search URL for QUERY, omitting the time bound when ALL-TIME.
+SCOPE nil lets the server apply its default participant-act scope; `all'
+requests the legacy unscoped population."
   (concat evidence-landscape-search-url
           "?q=" (url-hexify-string query)
           "&limit=" (number-to-string evidence-landscape-search-limit)
+          (when (eq scope 'all) "&scope=all")
           (unless all-time
             (concat "&since=" (url-hexify-string
                                 (evidence-landscape-search--since))))))
@@ -146,9 +150,11 @@ Return the number of matching source lines inserted."
     (insert "\n")
     (length lines)))
 
-(defun evidence-landscape-search--render (query all-time payload)
-  "Render PAYLOAD for QUERY and ALL-TIME into the results buffer."
+(defun evidence-landscape-search--render (query all-time scope payload)
+  "Render PAYLOAD for QUERY, ALL-TIME and requested SCOPE into the results buffer."
   (let ((results (gethash :results payload))
+        (applied-scope (gethash :scope payload :unknown))
+        (removed (gethash :scope-removed payload 0))
         (regexp (evidence-landscape-search--query-regexp query))
         (buffer (get-buffer-create "*Evidence Landscape Search*")))
     (with-current-buffer buffer
@@ -156,12 +162,14 @@ Return the number of matching source lines inserted."
         (erase-buffer)
         (evidence-landscape-search-mode)
         (setq evidence-landscape-search--query query
-              evidence-landscape-search--all-time all-time)
+              evidence-landscape-search--all-time all-time
+              evidence-landscape-search--scope scope)
         (insert (propertize
-                 (format "%d evidence result%s for %S (%s):\n\n"
+                 (format "%d evidence result%s for %S (%s; scope %s, %d excluded):\n\n"
                          (if (vectorp results) (length results) 0)
                          (if (and (vectorp results) (= (length results) 1)) "" "s")
-                         query (if all-time "all time" "last 24 hours"))
+                         query (if all-time "all time" "last 24 hours")
+                         applied-scope removed)
                  'face 'bold))
         (if (and (vectorp results) (> (length results) 0))
             (mapc (lambda (result)
@@ -171,8 +179,8 @@ Return the number of matching source lines inserted."
         (goto-char (point-min))))
     (pop-to-buffer buffer)))
 
-(defun evidence-landscape-search--response (status query all-time)
-  "Handle an asynchronous search response with STATUS for QUERY and ALL-TIME."
+(defun evidence-landscape-search--response (status query all-time scope)
+  "Handle a response with STATUS for QUERY, ALL-TIME and requested SCOPE."
   (let ((response-buffer (current-buffer)))
     (unwind-protect
         (if-let* ((error-value (plist-get status :error)))
@@ -188,7 +196,7 @@ Return the number of matching source lines inserted."
                            (buffer-substring-no-properties (point) (point-max))
                            'utf-8))))
                     (if (and (= http-status 200) (gethash :ok payload))
-                        (evidence-landscape-search--render query all-time payload)
+                        (evidence-landscape-search--render query all-time scope payload)
                       (message "Evidence Landscape search returned HTTP %s: %s"
                                http-status (gethash :error payload "unknown error"))))
                 (error (message "Could not read Evidence Landscape response: %s"
@@ -216,7 +224,29 @@ index."
    (evidence-landscape-search--url query all-time)
    evidence-landscape-search-timeout
    (lambda (status)
-     (evidence-landscape-search--response status query all-time))))
+     (evidence-landscape-search--response status query all-time nil))))
+
+;;;###autoload
+(defun my/evidence-landscape-search-all (query &optional all-time)
+  "Search all Evidence Landscape rows for QUERY without blocking Emacs.
+
+This is the reversible escape hatch for derived and operational rows excluded
+by the default participant-act scope.  With prefix argument ALL-TIME, omit the
+default 24-hour bound as well."
+  (interactive
+   (list (read-string "All evidence search: "
+                      (thing-at-point 'symbol)
+                      'evidence-landscape-search-history)
+         current-prefix-arg))
+  (when (string-empty-p (string-trim query))
+    (user-error "Search text must not be empty"))
+  (message "Searching all Evidence Landscape rows for %S%s..."
+           query (if all-time " (all time)" " (last 24 hours)"))
+  (futon-url-retrieve
+   (evidence-landscape-search--url query all-time 'all)
+   evidence-landscape-search-timeout
+   (lambda (status)
+     (evidence-landscape-search--response status query all-time 'all))))
 
 (provide 'evidence-landscape-search)
 
