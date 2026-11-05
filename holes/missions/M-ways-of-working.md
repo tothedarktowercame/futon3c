@@ -123,6 +123,21 @@ War Machine rules (Claude proposes and reviews; Codex builds).
 the connected cascade are not one of the 11 declared ways, and the Pipeline
 Pattern Cascade page does not show them.
 
+## One connected graph for work, memory and patterns (Joe, 2026-11-05)
+
+Joe: "the commons map is lovely but it is the *start* in my view of a Giant
+Connected Component that we are going to want to have in XTDB". Three
+consumers each need a current view of part of it:
+
+- Giraffe: a priority-ordered cascade of work and its adjacent possible.
+- minus40: an up-to-date sense of memories.
+- 馬: an up-to-date sense of mined patterns.
+
+Joe expects these to be compatible in ways not yet formalised; see
+M-formal-agency (opened 2026-11-04). Today the commons map is uncommitted
+TSVs in `~/notes/commons-map`, read by the draw-pile probe for placements.
+Candidate ways 12 and 14 (memory upkeep, mined-pattern upkeep) belong here.
+
 ## Open findings, each to become its own item
 
 1. ~~The consent-gate sweeper sends without `--from`~~ Resolved
