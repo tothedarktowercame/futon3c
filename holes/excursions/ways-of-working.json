@@ -244,6 +244,23 @@
    "patterns": [],
    "position": "below-the-therefores",
    "scope-note": "machine, services, off-box copies and access probed by futon0 zone-health (claude-16, 2026-11-03); bills and runway stay a hand reading, Joe 2026-11-02: existing consulting income and one client lined up; not derived from records, and not zero"
+  },
+  {
+   "id": "dispatches-name-an-agreed-item",
+   "name": "Every dispatch names an agreed META item",
+   "therefore": null,
+   "problem": "An unclocked caller can dispatch anything, and an excursion minted for the dispatch satisfies the resolver, so work lands under items nobody selects from or verifies.",
+   "invariant": "Every work request carries a requisition naming an M-, E-, T- or A- item the operator has agreed to; a request without one is refused before a job exists, and the refusal reaches the operator as a question (E-autoclock-wow, Joe 2026-11-03).",
+   "declared-in": "holes/excursions/E-autoclock-wow.md (Joe 2026-11-03, via M-autoclock-in INSTANTIATE-7a/8)",
+   "built": [
+    "requisition parsing + Kimi admission (agents/zai_api.clj parse-requisition; regex [MET], existence only)",
+    "autorunner auto-compact after >5 turns without an operator turn (agent_pouch.clj, 6a9cd7f1a)",
+    "requisitions excluded from the WM population (futon2 b0c41e73e, 72aa9fe52)"
+   ],
+   "probe": "autoclock-gate",
+   "pattern": null,
+   "patterns": [],
+   "scope-note": "the gate (admit-request at create-invoke-job!) is designed but not built; until it exists the probe reads facts around it: whether admit-request is at the seam, and how many E-kimi-task-* per-dispatch excursions were minted in 24 h. With no gate the reading is on/failing, never holding. Counts needing per-job requisition data (requests without a requisition; recipient clock vs requisition) wait for the gate (owner claude-4)."
   }
  ],
  "pattern-texts": "library ids; texts live in futon3/library/ways-of-working/ (claude-16, draft 2026-11-02, uncommitted in futon3 as of 17:41Z; each text carries a + VALIDATION: clause, which is the probe's question); the `patterns` arrays are claude-16's advisory reading of 馬-attested patterns (~/notes/pattern-global/ways-cascade-draft.md), a reading of what surfaced, not a measurement"
