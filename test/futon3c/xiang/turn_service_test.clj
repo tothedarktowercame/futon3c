@@ -705,12 +705,43 @@
     (let [e (first @appended)]
       (is (= (str "e-xiang-turn-" id) (:evidence-id e)))
       (is (= "emacs-abc" (:in-reply-to e)) "cites the operator turn")
+      (is (= id (get-in e [:body :turn-record-id])))
       (is (= "claude-17-turn-3" (get-in e [:body :record :turn_id])))
       (is (= "analyzed" (get-in e [:body :reading :status])))
       (is (= "analyzed" (get-in e [:body :settled])))
-      (is (some? (get-in e [:body :record :happened_summary])) "carries the summary")
+      (is (nil? (get-in e [:body :record :happened_summary])) "references the summary")
+      (is (pos? (get-in e [:body :record :happened_summary_chars])))
+      (is (string? (get-in e [:body :record :happened_summary_sha256])))
       (is (some #{:xiang-turn-analyzed} (:tags e)))
       (is (= "sess-1" (:session-id e))))))
+
+(deftest settled-turn-evidence-carries-references-not-turn-text
+  (let [operator "DISTINCTIVE OPERATOR SENTENCE 73"
+        reply "DISTINCTIVE REPLY SENTENCE 91"
+        happened (str "Reply begins:\n" reply)
+        record {:session_id "session-copy-test"
+                :turn_id "agent-turn-copy-test"
+                :evidence_id "emacs-copy-test"
+                :reply_evidence_id "emacs-reply-copy-test"
+                :source_text operator
+                :original_text operator
+                :reply_text reply
+                :happened_summary happened
+                :analysis_status "analyzed"}
+        reading {:status "analyzed" :fragments [{:intent "report"}]}
+        entry (svc/turn-evidence-entry "turn-copy-test" record reading :analyzed)
+        shown (pr-str entry)]
+    (is (not (str/includes? shown operator)))
+    (is (not (str/includes? shown reply)))
+    (is (= reading (get-in entry [:body :reading])))
+    (is (= {:ref/type :thread :ref/id "turn-copy-test"} (:subject entry)))
+    (is (= "emacs-copy-test" (:in-reply-to entry)))
+    (is (= "emacs-reply-copy-test" (get-in entry [:body :record :reply_evidence_id])))
+    (doseq [field [:source_text :original_text :reply_text :happened_summary]]
+      (is (nil? (get-in entry [:body :record field])))
+      (is (pos? (get-in entry [:body :record (keyword (str (name field) "_chars"))])))
+      (is (= 64 (count (get-in entry [:body :record
+                                      (keyword (str (name field) "_sha256"))])))))))
 
 (deftest settled-clock-topic-mismatch-is-durable-proposed-evidence
   ;; Exact bad case: the clock says one piece of work while the operator names
@@ -912,7 +943,8 @@
     (is (empty? @appended) "dispatched, not yet read: nothing written")
     (svc/publish-analysis! (:svc h) id (analysis-for record) {})
     (is (= 1 (count @appended)))
-    (is (some? (get-in (first @appended) [:body :record :happened_summary])))
+    (is (nil? (get-in (first @appended) [:body :record :happened_summary])))
+    (is (pos? (get-in (first @appended) [:body :record :happened_summary_chars])))
     (is (= "analyzed" (get-in (first @appended) [:body :settled])))))
 
 (deftest a-turn-whose-reply-never-ends-is-written-after-the-bounded-wait
@@ -938,7 +970,8 @@
     (is (= [(str "e-xiang-turn-" id)] (map :evidence-id @appended)))
     (is (= "drafted" (get-in (first @appended) [:body :settled])))
     (is (some? (get-in (first @appended) [:body :reading])))
-    (is (some? (get-in (first @appended) [:body :record :happened_summary])))))
+    (is (nil? (get-in (first @appended) [:body :record :happened_summary])))
+    (is (pos? (get-in (first @appended) [:body :record :happened_summary_chars])))))
 
 (deftest a-dark-turn-is-never-evidence
   ;; 象-off: not-requested turns go dark, and stay out of the database.

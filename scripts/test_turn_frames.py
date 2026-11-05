@@ -652,6 +652,25 @@ class XiangReadings(unittest.TestCase):
         frames = frames_for(self.rows, analyses)
         self.assertEqual("analyzed", frames[0]["parse"]["status"])
 
+    def test_new_shape_entry_resolves_canonical_record_by_id(self):
+        """The compact evidence packet supplies the reading; canonical files
+        remain the source for operator and reply text."""
+        write_turn_files(self.dir)
+        analyses = tf.load_analyses(SID, self.dir)
+        compact = {"turn-record-id": "turn-abc123",
+                   "record": {"session_id": SID, "turn_id": "agent-turn-1",
+                              "evidence_id": "emacs-t1",
+                              "source_text_chars": len(RECORD["source_text"]),
+                              "source_text_sha256": "a" * 64},
+                   "reading": ANALYSIS, "settled": "analyzed"}
+        tf.merge_xiang_readings(analyses, {"turn-abc123": compact}, SID)
+        frames = frames_for(self.rows, analyses)
+        self.assertEqual(
+            "do the thing please",
+            analyses["by_record_id"]["turn-abc123"]["record"]["source_text"],
+        )
+        self.assertEqual("analyzed", frames[0]["parse"]["status"])
+
 
 class StubEvidence:
     """A real local HTTP server answering /api/alpha/evidence.

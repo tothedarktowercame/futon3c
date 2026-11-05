@@ -85,8 +85,8 @@ def fetch_xiang_readings(session_id, base=DEFAULT_BASE, page_limit=1000):
     """The session's settled 象 turn entries, paged like fetch_evidence.
 
     Since M-象-2000 step 2 the JVM writes one evidence entry per settled
-    turn: id e-xiang-turn-<record-id>, body {:record ... :reading ...
-    :settled "analyzed"|"drafted"}.  Returns {record_id: body}.  Entries
+    turn: id e-xiang-turn-<record-id>, body {:turn-record-id ... :record ...
+    :reading ... :settled "analyzed"|"drafted"}.  Returns {record_id: body}. Entries
     whose body is a bare record (the four older step-2 turns) are skipped:
     their readings come from the files, like turns with no entry.
     """
@@ -104,7 +104,8 @@ def fetch_xiang_readings(session_id, base=DEFAULT_BASE, page_limit=1000):
             if not m:
                 continue
             body = body_of(row)
-            if isinstance(body.get("record"), dict) and body.get("reading"):
+            if (body.get("reading") and
+                    (isinstance(body.get("record"), dict) or body.get("turn-record-id"))):
                 out[m.group(1)] = body
         cursor = page.get("next-cursor")
         if not cursor:
@@ -123,7 +124,8 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
     (session_id, turn_id). Records without evidence_id are keyed by the
     tuple; the join falls back to that.
     """
-    out = {"by_evidence_id": {}, "by_turn_id": {}, "by_text": {}}
+    out = {"by_evidence_id": {}, "by_turn_id": {}, "by_text": {},
+           "by_record_id": {}}
     pattern = os.path.join(analysis_dir, "turn-*.json")
     for path in sorted(glob.glob(pattern)):
         base = os.path.basename(path)
@@ -169,6 +171,7 @@ def load_analyses(session_id, analysis_dir=ANALYSIS_DIR):
                 break
         entry = {"record": record, "analysis": analysis, "draft": draft,
                  "candidates": candidates, "path": path}
+        out["by_record_id"][base[:-len(".json")]] = entry
         if record.get("evidence_id"):
             out["by_evidence_id"][record["evidence_id"]] = entry
         if record.get("turn_id"):
@@ -192,7 +195,8 @@ def load_one_record(path):
     session_id = record.get("session_id")
     if not session_id:
         raise ValueError("record has no session_id")
-    out = {"by_evidence_id": {}, "by_turn_id": {}, "by_text": {}}
+    out = {"by_evidence_id": {}, "by_turn_id": {}, "by_text": {},
+           "by_record_id": {}}
     analysis = None
     try:
         with open(path + ".analysis.json") as f:
@@ -219,6 +223,7 @@ def load_one_record(path):
             pass
     entry = {"record": record, "analysis": analysis, "draft": draft,
              "candidates": candidates, "path": path}
+    out["by_record_id"][base[:-len(".json")]] = entry
     if record.get("evidence_id"):
         out["by_evidence_id"][record["evidence_id"]] = entry
     if record.get("turn_id"):
@@ -252,7 +257,15 @@ def merge_xiang_readings(analyses, readings, session_id):
     the same keys a file entry would be.
     """
     for record_id, body in readings.items():
-        record = body["record"]
+        record = body.get("record") or {}
+        # New packets retain the stable record id and hashes, not source or
+        # reply prose. Resolve that id against the canonical turn store loaded
+        # above; old packets still carry a complete record and use the joins
+        # below.
+        entry = analyses.get("by_record_id", {}).get(body.get("turn-record-id") or record_id)
+        if entry is not None:
+            entry["analysis"] = body["reading"]
+            continue
         entry = analyses["by_evidence_id"].get(record.get("evidence_id"))
         if entry is None:
             entry = analyses["by_turn_id"].get((session_id, record.get("turn_id")))

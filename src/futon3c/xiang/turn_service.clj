@@ -48,6 +48,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
+            [futon3c.evidence.invoke-preview :as invoke-preview]
             [futon3c.xiang.reply-target :as rt]
             [futon3c.xiang.relationship-review :as relationship-review]
             [futon3c.xiang.scope-rules :as scope-rules]
@@ -376,6 +377,32 @@
 ;; or blocks a turn, and the deterministic id makes a retry a quiet
 ;; duplicate.
 
+(def ^:private copied-record-text-fields
+  [:source_text :original_text :reply_text :happened_summary
+   :source-text :original-text :reply-text :happened-summary])
+
+(defn- text-witness-key [field suffix]
+  (let [field-name (name field)
+        separator (if (str/includes? field-name "_") "_" "-")]
+    (keyword (str field-name separator suffix))))
+
+(defn- evidence-record-reference
+  "Remove top-level operator/reply prose from RECORD, retaining exact content
+   witnesses beside every removed field. The canonical turn store remains the
+   text authority."
+  [record]
+  (reduce
+   (fn [kept field]
+     (if-let [text (and (string? (get kept field)) (get kept field))]
+       (-> kept
+           (dissoc field)
+           (assoc (text-witness-key field "chars") (count text)
+                  (text-witness-key field "sha256")
+                  (invoke-preview/prompt-sha256 text)))
+       kept))
+   record
+   copied-record-text-fields))
+
 (defn turn-evidence-entry
   "The evidence entry for settled turn ID: RECORD with the READING that
    settled it (an analysis, or a routine draft) and HOW (:analyzed or
@@ -386,7 +413,10 @@
            :type :memory
            :claim-type :assert
            :author "xiang-turn-service"
-           :body {:record record :reading reading :settled (name how)}
+           :body {:turn-record-id id
+                  :record (evidence-record-reference record)
+                  :reading reading
+                  :settled (name how)}
            :tags (cond-> [:xiang-turn (keyword (str "xiang-turn-" (name how)))]
                    (:session_id record) (conj (:session_id record))
                    (:agent_id record) (conj (:agent_id record)))}
