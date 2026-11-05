@@ -139,7 +139,7 @@
    "name": "All files are committed and pushed; no mess is left in the repos",
    "therefore": "A",
    "problem": "Uncommitted and unpushed work is invisible to every other participant, cannot be reviewed, and is lost on the next disk failure; a dirty tree also stops the click loop's preflight.",
-   "invariant": "Every repo under ~/code with an upstream has no untracked or modified files and no unpushed commits.",
+   "invariant": "Every repo under ~/code (leaked .repair-limbs-fixture-* dirs excluded) has no untracked or modified files and no commits that exist on no remote; a repo with no remote at all counts as unpushed (population widened 2026-11-05, Joe's fix approval, zai-6 f41ed6adc).",
    "declared-in": "futon0/holes/missions/M-futonzero-mvp.md; futon0/scripts/inbox-zero-delta.bb header",
    "built": [
     "futon0/scripts/futon-sync.clj check-clean (systemd user timer futon-sync-check-clean.timer)",
