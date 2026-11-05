@@ -123,3 +123,37 @@ Step C (migration tool, in-JVM, batched existence checks, resumable, manifest un
 ~/code/storage/derived-migration/) to codex-13 `invoke-1793918042938-13422-4c65658a`; step D
 (evidence erase: copy check, receipt with the full documents before erase, `:erase-docs`, delete from
 the five FTS tables) to codex-14 `invoke-1793918043740-13423-909553ed`.
+
+## Steps C and D reviewed; first family copying (2026-11-05 ~23:30Z)
+
+Step C: codex-13 futon1b `ae1f0ba` (futon1b_migrate_derived.clj: family spec as data, cursor on
+(at, id), manifest/batches/state/complete files, readback check per batch, dry run, verify!).
+claude-8 review fixes, all in futon1b:
+- `9d19ad9` The transform rehashed the stored `:text`. Rows written before f75fb0fff already carry
+  `:text-sha256` of the FULL text (computed before truncation), so for truncated rows the copy would
+  have held the hash of a 64 KiB prefix; it also added `:text-chars`, which the writer never stores.
+  Now: keep the stored hash; hash only complete unhashed text; a truncated unhashed row keeps
+  `:text-truncated? true`. verify! held every source row in memory (270 MB for this family); it now
+  keeps a count and its 20-row sample. verify! deduplicates the manifest, since a crash between the
+  manifest append and state.edn replays a batch.
+- `d3da60e` Live, the `[*]` page took 103 s per 200 rows (every matching body carried through the
+  sort): ~3 h for the family. Now a keys-only page (7.3 s per 1,000) and one `_id IN` hydrate
+  (25 s per 1,000; point reads were 0.28 s each). Dry run: 34 s per 1,000-row batch.
+- `46076d8` The pressure check read `:queue-depth`, which the snapshot does not have
+  (`:requests/queued`), and one busy moment ended the run; it now waits up to 30 checks.
+Tests: test_migrate_derived 2 tests / 28 assertions (each new assertion fails on `ae1f0ba`).
+Live: loaded from master; run `aa-1` started ~23:20Z as a future in futon1b (`user/derived-aa1`,
+check with ~/notes/evidence-cleanup/check-aa1.clj); writes take 1.4-2.3 s per 1,000-row batch, but
+batches land ~2.5 min apart (source reads under live load), so ~1 h for 22,290 rows.
+
+Step D: codex-14 futon1b `30f6b7b` (futon1b_evidence_erase.clj: refuses without a manifest entry, a
+derived copy of the same family and matching source and derived body hashes; durable receipt with
+the full documents before `:erase-docs`; history check after; FTS sidecar delete; outcome written).
+claude-8 review fix `6513666`: the sidecar delete ran `DELETE FROM ev_fts WHERE id = ?` per id, a
+full FTS5 scan each (0.6 s at 825k rows live), ~5 min of held sidecar write lock per 500-id batch;
+and the history check ran two queries per id (~0.55 s each live), ~9 min per batch. Both are now one
+`IN` statement per batch. New tests: the history check must see a past-valid-time-only row and a
+replaced row; the manifest written by migrate-derived drives an erase end to end. test_evidence_erase
+5 tests / 27 assertions; test_text_search ALL PASS. Not loaded live (`futon1b-text` changed; load
+with the erase, after the snapshot).
+Erase waits for: the futon1b stop and snapshot (Joe), then Joe seeing the aa-1 counts.
