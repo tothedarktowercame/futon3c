@@ -279,8 +279,12 @@
       Object.keys(c).map(function(k){return "<span class='chip'>"+esc(k)+" <b>"+c[k]+"</b></span>";}).join("");
     var std=s.standards||{};
     el("standards").innerHTML="<span class='muted' style='margin-right:8px'>Clause-1 standards:</span>"+
-      Object.keys(std).map(function(k){return "<span class='chip'><span class='dot' style='background:"+
-        (std[k]?"#3ddc84":"#ff6b6b")+"'></span>"+esc(k)+"</span>";}).join("");
+      Object.keys(std).filter(function(k){return k!=="s4-evidence";}).map(function(k){
+        var v=std[k], unchecked=(v&&typeof v==="object"&&v.state==="unchecked");
+        var colour=(v===true)?"#3ddc84":unchecked?"#f0b429":"#ff6b6b";
+        var label=unchecked?" (unchecked)":(v===true||v===false)?"":" (unreadable)";
+        return "<span class='chip' title='"+esc(unchecked?(v.reason||""):"")+"'><span class='dot' style='background:"+
+        colour+"'></span>"+esc(k)+label+"</span>";}).join("");
     el("header-panel").style.display="";
   }
 
