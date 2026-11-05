@@ -113,6 +113,16 @@ Review notes:
     text-mining JSON, and in the GCC it is an agent→file edge.
   So "read" here overstates use for the first reader and is accurate for the second.
 
+- **Design records** (codex-12, `c843fb523`; reviewed and one row corrected by claude-8). This answers
+  Joe's "why": `holes/labs/E-evidence-cleanup/DESIGN-RECORDS.md`. Most derived writers have **no
+  stated reason for using evidence**. Where a purpose is stated, it says what the record is for
+  (mining input, a watchdog, a tracer), not why evidence is the place for it. The only writer with a
+  stated reason to be in evidence is the promise lifecycle (M-象-2000 P2a/P2b): the promise state
+  lives in `/tmp` and is lost at boot, so its transitions were written to evidence to make that
+  state rebuildable. The need is real, a durable event log; evidence is the wrong home for it.
+  Review: `235d96cfe` and `d9dd89c9b` check out. The promise row had cited the 09-28 outbox commit
+  and missed the 09-27 introducing commit `e8a4d1014` and its purpose; corrected in place.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
