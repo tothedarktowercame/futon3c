@@ -23,7 +23,7 @@ records up to 22 hours later. Searching all time finds the original among 58 hit
 | `joe` | operator turns | 90 | 0.05 | the turns themselves |
 | claude-14 | `:promise/*` lifecycle | ~1,400 (202 promises × ~7) | ~27 | scheduler state |
 | `futon3c/artifact-activation` | `:artifact/weak-activation` | 601 | 6.6 | invoke prompt (≤64 KB) + MiniLM pattern hits |
-| `wm-author` | `:coordination` | 962 | 2.2 | not yet read |
+| `wm-author` | `:coordination :step` | 962 | 2.2 | Zai transcript of the WM author seat: in a 200-record sample, 167 `:turn-round`, 13 `:turn-start`, 2 `:turn-commits` (writer `futon3c.agents.zai-api`); 18 tagged `:clock-decision` |
 | 象-1 | `:coordination :step` | 556 | 2.0 | Kimi seat transcript, full prompt at turn start |
 | `zai-1` (猴) | `:coordination :step` | 348 | 1.0 | operator-focus reader transcript, re-quotes batches of turns |
 | `xiang-turn-service` | `:memory` | 82 | 0.9 | turn records with "what happened" summaries |
@@ -46,7 +46,17 @@ For each writer, keep what it computes and change where it puts it:
 - **馬, Giraffe, 象 turn records.** Move to derived stores keyed by evidence-id.
 - **Agent `:step` traces.** The reply is the evidence. Steps are operational logs.
 - **Promise lifecycle.** Scheduler state: one record per promise, outside evidence.
-- **`wm-author :coordination`.** Read it before deciding.
+- **`wm-author :coordination`.** Read 11-05: the same Zai transcript writer, here logging every tool round of the War Machine author seat. The WM's dispatch to the seat and the seat's reply are evidence (part 3). The rounds between them are a tool-step trace. The 18 `:clock-decision` records need a separate look.
+
+## Method: a diagramprover flow map (M-diagramprover R0, 2026-11-05)
+
+Clocked under M-diagramprover. R0 (`src/futon3c/diagramprover/wiring.clj`) ingests boxes
+with `:reads`/`:writes` and reports `written-never-read`. Model each evidence writer and
+each evidence reader as a box, with wires typed by evidence type/author/tag. A record type
+whose only reader is generic text search has no reason recorded in code, which is the
+"why is this stored" question asked mechanically. A type with readers has its reason
+in those readers, and they are what has to move with it. R4 (`causal/*`) is for the
+later step: a causal model of how the GCC should be built from evidence.
 
 ## Steps (each a small handoff, with review between)
 
