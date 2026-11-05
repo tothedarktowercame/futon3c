@@ -13,6 +13,29 @@ participants, and where its output lives. Evidence holds what participants said
 and sent. The animals' outputs are references attached to those acts, or records
 in their own derived stores.
 
+## Goal: the Circus talks through the graph (Joe, 2026-11-05)
+
+The Circus interoperates by **graph writes and graph queries**, not by storing JSON inside
+the evidence store. Even when such JSON is read, the reader has to parse bodies to make sense
+of it. The animals write nodes and edges into the GCC, in XTDB, and read each other through
+XTQL queries over it.
+
+The GCC is meant to be read from many places:
+- retrieving relevant patterns for operator turns (驴);
+- priority items in Giraffe;
+- related missions and pattern-based methods;
+- M-the-perfect-crime hotspots and misconstruals in the War Machine;
+- especially, fast construction of cascades in the War Machine and in a future mathematics tutor.
+
+futon4 Arxana, as a view into XTDB, is the existing prototype of this kind of reading.
+Parts already in place:
+- futon1b's hyperedge API (`/api/alpha/hyperedge(s)`, `futon1b_server.clj:1034,1103`; `hx_*` sidecar tables);
+- WebArxana reading it (`webarxana/server/interest_network.clj`);
+- `peripheral/memory_recall.clj:175`, which already finds memories through `:memory/assert`
+  hyperedges and is one working case of the pattern.
+
+Everything here depends on E-evidence-cleanup.
+
 ## Origin
 
 Joe searched the Evidence Landscape for a word from his own turn on 11-04
@@ -101,6 +124,9 @@ store keyed by the act's evidence-id; the hook writes no evidence of its own.*
 The instances are the six animals above.
 
 ## Acceptance checklist (IDENTIFY)
+
+- [ ] For each animal: which GCC node and edge types it writes, and which XTQL queries it reads
+  others through. No animal reads another's output by parsing evidence bodies.
 
 - [ ] E-evidence-cleanup has closed (gate to MAP).
 - [ ] Each animal's trigger, input, output and output store are confirmed against
