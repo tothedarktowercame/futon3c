@@ -72,3 +72,10 @@ written by Circus readers (ma-reading, lu-rerank, ma-occurrence, turn-capture) a
 
 A derived table is not full-text indexed with evidence, so search over acts stays clean by
 construction; a separate index can be added for derived text if a reader needs it.
+
+## Decision (Joe, 2026-11-05)
+
+"OK, let's go w/ XTDB for now, that works with the GCC + XTQL direction ... and if we need to improve
+XTDB itself or its tuning, we can do that." Derived records go to their own table in futon1b's XTDB.
+Next: a read-only discovery of how futon1b writes evidence (table, transaction path, FTS ingest
+hooks, ERASE support), then the derived table and its routes, then per-family migration.
