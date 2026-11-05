@@ -1,20 +1,29 @@
 (ns futon3c.agency.promise-history-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.promise-history :as history]
+            [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.atomic-file :as atomic-file]
-            [futon3c.agency.promise-outcome]
+            [futon3c.agency.promise-outcome :as outcome]
             [futon3c.agency.parked-on :as park]
             [futon3c.agency.followup-queue :as queue]
             [futon3c.evidence.futon1b-backend :as f1b]))
 
 (def ^:dynamic *evidence* nil)
+(def ^:dynamic *hyperedges* nil)
 (use-fixtures :each
   (fn [f]
     (let [p (java.io.File/createTempFile "p2a-park" ".edn")
           q (java.io.File/createTempFile "p2a-followup" ".edn")
           store (atom {:entries {} :order []})]
-      (with-redefs-fn {#'park/store-path (constantly (str p))}
-        #(binding [queue/*path-override* (str q) history/*backend* store history/*heads* (atom {}) *evidence* store]
+      (with-redefs-fn {#'park/store-path (constantly (str p))
+                       #'outcome/evaluate! (fn [& _] nil)
+                       #'outcome/sweep! (fn [& _] nil)}
+        #(binding [queue/*path-override* (str q) history/*backend* store history/*heads* (atom {})
+                   *evidence* store *hyperedges* (atom {})
+                   promise-log/*post-fn* (fn [edge]
+                                           (swap! *hyperedges* assoc (:hx/id edge) edge)
+                                           {:ok true :hx/id (:hx/id edge)})
+                   promise-log/*get-fn* (fn [id] (get @*hyperedges* id))]
            (try (park/clear!) (queue/clear!)
                 (history/await-writes! 5000)
                 (reset! store {:entries {} :order []})
@@ -165,6 +174,35 @@
       (is (= 2 (count (set (map :evidence/id entries)))))
       (is (empty? (:history-outbox @state)))
       (is (empty? (:history-outbox @persisted))))))
+
+(deftest outbox-waits-for-hyperedge-and-retries-without-losing-evidence
+  (let [state (atom {:history-outbox {}})
+        persisted (atom nil)
+        persist! #(reset! persisted %)
+        rec {:id "park:dual-write" :agent "agent" :session "session"
+             :awaiting #{"job"} :arrived {}}
+        failed-before (:failed (history/stats))
+        eid (history/stage! state :promise/park-made rec 1000)
+        entry (get-in @state [:history-outbox eid])]
+    (binding [promise-log/*post-fn* (fn [_]
+                                      (throw (ex-info "store unavailable" {})))
+              promise-log/*get-fn* (fn [_]
+                                     (throw (ex-info "store unavailable" {})))]
+      (history/drain-now! state persist!))
+    (is (some? (get-in @*evidence* [:entries eid]))
+        "the evidence shadow is durable before operational recovery")
+    (is (contains? (:history-outbox @state) eid))
+    (is (= 1 (- (:failed (history/stats)) failed-before)))
+    (history/drain-now! state persist!)
+    (let [edge (get @*hyperedges* (promise-log/hyperedge-id eid))]
+      (is (= (:history/payload-edn (:evidence/body entry))
+             (get-in edge [:hx/props :history/payload-edn])))
+      (is (= eid (get-in edge [:hx/props :history/evidence-id]))))
+    (is (empty? (:history-outbox @state)))
+    (is (empty? (:history-outbox @persisted)))
+    (history/drain-now! state persist!)
+    (is (= 1 (count @*hyperedges*)))
+    (is (= 1 (count (:entries @*evidence*))))))
 
 (deftest old-path-write-does-not-persist-an-uncommitted-outbox-reservation
   (let [sidecar (java.io.File/createTempFile "p2c-sidecar" ".edn")

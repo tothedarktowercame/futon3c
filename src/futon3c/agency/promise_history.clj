@@ -3,6 +3,7 @@
   (:require [futon3c.evidence.origin :as origin] [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.agency.promise-capture :as capture]
+            [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.promise-outcome :as outcome]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
@@ -177,25 +178,32 @@
   (doseq [[eid entry] (sort-by #(get-in (val %) [:evidence/body :history/promise-sequence])
                                (:history-outbox @state))]
     (let [result (boundary/append! (backend) entry)
-          existing (when (= :duplicate-id (:error/code result))
-                     (estore/get-entry* (backend) eid))]
+          existing (when (or (:ok result) (= :duplicate-id (:error/code result)))
+                     (estore/get-entry* (backend) eid))
+          evidence-matches? (and existing (same-history-row? entry existing))]
       (cond
-        (or (:ok result) (and existing (same-history-row? entry existing)))
-        (do (swap! !counts update :written inc)
-            (when *after-outbox-append* (*after-outbox-append* entry))
-            (swap! !uncommitted-outbox-ids disj eid)
-            (locking !chain-cache (persist-heads! (heads!)))
-            (swap! state update :history-outbox dissoc eid)
-            (persist! @state)
-            (swap! !counts #(-> % (update :drained (fnil inc 0))
-                                  (update :pending (fn [n] (max 0 (dec (or n 0)))))))
-            (try
-              (let [rec (:record (edn/read-string
-                                  (get-in entry [:evidence/body :history/payload-edn])))]
-                (outcome/evaluate! (backend) eid rec (System/currentTimeMillis)))
-              (catch Throwable e (outcome/failed! e))))
+        evidence-matches?
+        (try
+          (promise-log/write! entry)
+          (swap! !counts update :written inc)
+          (when *after-outbox-append* (*after-outbox-append* entry))
+          (swap! !uncommitted-outbox-ids disj eid)
+          (locking !chain-cache (persist-heads! (heads!)))
+          (swap! state update :history-outbox dissoc eid)
+          (persist! @state)
+          (swap! !counts #(-> % (update :drained (fnil inc 0))
+                                (update :pending (fn [n] (max 0 (dec (or n 0)))))))
+          (try
+            (let [rec (:record (edn/read-string
+                                (get-in entry [:evidence/body :history/payload-edn])))]
+              (outcome/evaluate! (backend) eid rec (System/currentTimeMillis)))
+            (catch Throwable e (outcome/failed! e)))
+          (catch Throwable error
+            (outbox-failed! eid (:evidence/type entry)
+                            (or (:reason (ex-data error)) (.getMessage error)))))
         (= :duplicate-id (:error/code result)) (swap! !counts update :conflict (fnil inc 0))
-        :else (outbox-failed! eid (:evidence/type entry) (:error/code result))))))
+        :else (outbox-failed! eid (:evidence/type entry)
+                              (or (:error/code result) :evidence-readback-mismatch))))))
 ;; State atoms with a drain already queued. Every park/followup mutation calls
 ;; drain!, and each drain walks the whole outbox; with futon1b slow the queue
 ;; filled with redundant drains of the same entries (2026-10-28: 1,024 queued,
