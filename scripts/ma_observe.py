@@ -78,6 +78,8 @@ def is_observation(row):
 
 def turn_text(row):
     b = tf.body_of(row)
+    if b.get("event") == "turn-start":
+        return (tf.turn_start_prompt(b) or "").strip()
     return (b.get("text") or b.get("prompt") or "").strip()
 
 
@@ -283,8 +285,9 @@ def known_work(clock, previous_card):
 
 def fresh_packet(turn_row):
     """A Zai/Kimi turn that is not a 馬 continuation starts a new packet."""
-    return (tf.is_harness_turn_start(turn_row)
-            and not CONT_HEAD.match(packet_body(tf.body_of(turn_row).get("prompt"))))
+    prompt = tf.turn_start_prompt(tf.body_of(turn_row))
+    return (tf.is_harness_turn_start(turn_row) and prompt is not None
+            and not CONT_HEAD.match(packet_body(prompt)))
 
 
 def carried(previous_card, turn_row):
@@ -546,6 +549,10 @@ def observe_session(session, agent="", dry_run=False, log=print):
         msgs = [("user", t.get("evidence/at"), turn_text(t))] + window_messages(rows, start, end)
         harness = tf.is_harness_turn_start(t)
         if harness:
+            prompt_result = tf.turn_start_prompt_result(tf.body_of(t))
+            if prompt_result["status"] == "missing":
+                log("馬 payload missing %s: %s" %
+                    (tf.body_of(t).get("dispatch-id"), prompt_result.get("reason")))
             # the seat's final text is in the job record; add it unless the
             # last round already carries it
             fr = final_round(rows, t, start, end)
@@ -620,12 +627,14 @@ MEMORY_PROJECT = "ma"           # ~/.claude/projects/ma/memory: 馬's own memori
 MAX_CONTINUE = 3
 CONTINUE_WITHIN_S = 1800        # never continue a turn that finished longer ago
 PROMOTE_CHARS = 1300
-ENVELOPE = re.compile(r"\A\s*--- CURRENT TURN ---\n.*?^---[ \t]*$\n?", re.S | re.M)
+ENVELOPE = re.compile(r"(?:\A|\n)--- CURRENT TURN ---\n.*?^---[ \t]*$\n?", re.S | re.M)
 CONT_HEAD = re.compile(r"\A\s*CONTINUATION \(auto, 馬\): episode (\d+) of (\S+?)\.(?:\s|$)")
 
 
 def packet_body(prompt):
-    return ENVELOPE.sub("", prompt or "", count=1).strip()
+    prompt = prompt or ""
+    envelope = ENVELOPE.search(prompt)
+    return (prompt[envelope.end():] if envelope else prompt).strip()
 
 
 def leaf_of(packet):
@@ -734,7 +743,11 @@ def after_harness_turn(agent, session, turn_row, observation, rows, log=print, d
     """Promote and, when the episode ended with no verdict, continue."""
     b = tf.body_of(turn_row)
     dispatch = b.get("dispatch-id")
-    packet = packet_body(b.get("prompt"))
+    prompt_result = tf.turn_start_prompt_result(b)
+    if prompt_result["status"] == "missing":
+        log("馬 payload missing %s: %s" %
+            (b.get("dispatch-id"), prompt_result.get("reason")))
+    packet = packet_body(prompt_result.get("text"))
     m = CONT_HEAD.match(packet)
     root, episode = (m.group(2), int(m.group(1))) if m else (dispatch, 1)
     inner = packet.split("\n\n", 1)[1] if m else packet

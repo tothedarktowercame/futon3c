@@ -2,12 +2,14 @@
 """Unit tests for turn_frames.py — fixture data only, no live calls."""
 
 import json
+import hashlib
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import turn_frames as tf
@@ -671,6 +673,50 @@ class XiangReadings(unittest.TestCase):
         )
         self.assertEqual("analyzed", frames[0]["parse"]["status"])
 
+
+class DispatchPayloads(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="dispatch-payload-reader-")
+        self.addCleanup(shutil.rmtree, self.root)
+
+    def store(self, text):
+        sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        path = os.path.join(self.root, "objects", sha[:2], sha)
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w", encoding="utf-8") as out:
+            out.write(text)
+        return sha
+
+    def test_promptless_turn_start_resolves_and_builds_a_frame(self):
+        prompt = ("memory block\n\n--- CURRENT TURN ---\nSurface: bell\n---\n\n"
+                  "Do this exact task")
+        sha = self.store(prompt)
+        row = {"evidence/id": "e-start", "evidence/type": "coordination",
+               "evidence/at": T1, "evidence/session-id": SID,
+               "evidence/body": {"event": "turn-start", "turn-id": "zai-turn-1",
+                                 "dispatch-id": "invoke-1", "payload-sha256": sha}}
+        with mock.patch.dict(os.environ,
+                             {"FUTON3C_DISPATCH_PAYLOAD_STORE": self.root}):
+            self.assertTrue(tf.is_harness_turn_start(row))
+            result = tf.turn_start_prompt_result(row["evidence/body"])
+            frames = frames_for([row], {"by_evidence_id": {}, "by_turn_id": {},
+                                        "by_text": {}, "by_record_id": {}})
+        self.assertEqual("payload", result["status"])
+        self.assertIn("--- CURRENT TURN ---", frames[0]["turn"]["text"])
+        self.assertEqual("payload", frames[0]["turn"]["payload"]["status"])
+
+    def test_inline_legacy_and_typed_missing_are_distinct(self):
+        old = tf.turn_start_prompt_result({"prompt": "old inline"}, root=self.root)
+        missing = tf.turn_start_prompt_result(
+            {"payload-sha256": "0" * 64}, root=self.root)
+        fallback = tf.turn_start_prompt_result(
+            {"payload-sha256": "0" * 64, "prompt": "compat"}, root=self.root)
+        self.assertEqual(("legacy-inline", "old inline"),
+                         (old["status"], old["text"]))
+        self.assertEqual(("missing", "payload-missing"),
+                         (missing["status"], missing["reason"]))
+        self.assertEqual(("inline-fallback", "payload-missing", "compat"),
+                         (fallback["status"], fallback["reason"], fallback["text"]))
 
 class StubEvidence:
     """A real local HTTP server answering /api/alpha/evidence.

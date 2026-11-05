@@ -1,6 +1,8 @@
 """Tests for ma_observe.py's card logic (no network, no model)."""
 import datetime
+import hashlib
 import os
+import tempfile
 import sys
 import unittest
 from unittest import mock
@@ -176,6 +178,31 @@ class WorkRecordTest(unittest.TestCase):
 
 
 class HarnessTest(unittest.TestCase):
+    def test_payload_prompt_with_memory_is_parsed_from_current_turn_header(self):
+        root = tempfile.mkdtemp(prefix="ma-payload-reader-")
+        self.addCleanup(__import__("shutil").rmtree, root)
+
+        def row_for(packet):
+            payload = "retrieved memory block\nFACT\n\n" + packet
+            sha = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+            path = os.path.join(root, "objects", sha[:2], sha)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as out:
+                out.write(payload)
+            return {"evidence/type": "coordination",
+                    "evidence/body": {"event": "turn-start", "turn-id": "zt",
+                                      "dispatch-id": "invoke-z", "payload-sha256": sha}}
+
+        split = S2_PACKET.index("\n\n") + 2
+        continuation = S2_PACKET[:split] + ma.continuation_packet(
+            ma.packet_body(S2_PACKET), "invoke-root", 2, "memory-name")
+        with mock.patch.dict(os.environ, {"FUTON3C_DISPATCH_PAYLOAD_STORE": root}):
+            fresh = row_for(S2_PACKET)
+            continued = row_for(continuation)
+            self.assertTrue(ma.fresh_packet(fresh))
+            self.assertFalse(ma.fresh_packet(continued))
+            self.assertTrue(ma.packet_body(ma.turn_text(continued)).startswith("CONTINUATION"))
+
     def test_truncated_s2_episode_has_no_verdict(self):
         self.assertIsNone(ma.verdict(S2_TRUNCATED_REPLY))
         self.assertIsNone(ma.verdict("once this is PROVED we can splice ... not yet PROVED"))

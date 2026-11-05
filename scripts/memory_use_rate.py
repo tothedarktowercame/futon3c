@@ -2,8 +2,9 @@
 """memory_use_rate.py — how often seats consult the minus40 memory store.
 
 One row per seat per day, from the harness round records in futon1b (the
-Zai harness writes a :turn-start entry with the prompt and one :turn-round
-entry per model round, each round carrying its tool calls).  Read-only.
+Zai harness writes a :turn-start entry with typed packet metadata (and, for
+legacy rows, the inline prompt) and one :turn-round entry per model round,
+each round carrying its tool calls).  Read-only.
 
     python3 -I scripts/memory_use_rate.py --since 2026-10-14
     python3 -I scripts/memory_use_rate.py --since 2026-10-14 --agents zai-1,zai-2 --json out.json
@@ -13,8 +14,9 @@ Columns:
   with-tools     turns with at least one tool call of any kind
   using-m40      turns with at least one minus40 call (m40_* or memory_assert)
   m40-calls      number of minus40 calls
-  requisitioned  turns whose prompt asked for the store (names a minus40 tool,
-                 "minus40" or "M40"), and how many of those used it
+  requisitioned  new turns whose typed requisition/injection metadata asks for
+                 the store, or legacy turns whose prompt names a memory tool,
+                 and how many of those used it
   instructed     turns that used the store with no ask in the packet but the
   (standing)     harness's standing instruction in force (--standing-since;
                  the Zai harness has told every seat to call m40_find /
@@ -26,10 +28,9 @@ Columns:
   (no call)      (turn-start :injected) and the seat made no m40 call of its
                  own — the delivery the seat never had to choose
 
-"Requisitioned" is read from the prompt text, so a turn the operator asked
-in other words lands in "instructed" or "no-instruct", not
-"requisitioned"; the columns say what the record can show, not what the
-seat understood.
+For new rows, "Requisitioned" is read from typed metadata without resolving
+prompt prose.  Legacy rows retain the prompt-text heuristic.  The columns say
+what the record can show, not what the seat understood.
 """
 import argparse
 import collections
@@ -89,7 +90,11 @@ def tabulate(starts, rounds, standing_since=None):
     for s in starts:
         b = body_of(s)
         if b.get("turn-id"):
+            typed = "requisition" in b or "injected" in b
             prompts[b["turn-id"]] = {"prompt": b.get("prompt") or "",
+                                     "requisitioned":
+                                         (bool(b.get("requisition") or b.get("injected"))
+                                          if typed else None),
                                      "dispatch": b.get("dispatch-id"),
                                      "injected": b.get("injected") or [],
                                      "at": s.get("evidence/at")}
@@ -112,7 +117,9 @@ def tabulate(starts, rounds, standing_since=None):
                 t["m40_tools"].append(c["tool"])
     for t in turns.values():
         p = prompts.get(t["turn"], {})
-        t["requisitioned"] = bool(REQUISITION.search(p.get("prompt", "")))
+        t["requisitioned"] = (p.get("requisitioned")
+                              if p.get("requisitioned") is not None
+                              else bool(REQUISITION.search(p.get("prompt", ""))))
         t["standing"] = bool(standing_since and (t["at"] or "") >= standing_since)
         t["injected"] = list(p.get("injected") or [])
         t["dispatch"] = p.get("dispatch")

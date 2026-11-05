@@ -36,6 +36,15 @@ class Tabulate(unittest.TestCase):
         self.assertEqual((r["requisitioned"], r["requisitioned_using"]), (1, 1))
         self.assertEqual(len(turns), 3)
 
+    def test_promptless_new_row_uses_typed_requisition_metadata(self):
+        typed = start("zai-1", "typed", "discarded", "2026-10-16T06:00:00Z")
+        typed["evidence/body"].pop("prompt")
+        typed["evidence/body"]["requisition"] = {"target": "M-memory-work"}
+        rows, turns = mur.tabulate(
+            [typed], [rnd("zai-1", "typed", [], "2026-10-16T06:01:00Z")])
+        self.assertEqual(1, rows[0]["requisitioned"])
+        self.assertTrue(turns[0]["requisitioned"])
+
     def test_standing_instruction_counts_so_packet_silent_use_is_not_unprompted(self):
         # The exact case G12 is named for: a used turn with no ask in the
         # packet, before and after the harness's standing instruction.

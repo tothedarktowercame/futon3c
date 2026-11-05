@@ -60,6 +60,43 @@ DEFAULT_BASE = "http://localhost:7073"
 ANALYSIS_DIR = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
 FETCH_TIMEOUT = 20          # seconds; bounds one HTTP call so the stepper
                             # is never left waiting on a busy futon1b
+DISPATCH_PAYLOAD_ROOT = os.environ.get(
+    "FUTON3C_DISPATCH_PAYLOAD_STORE",
+    "/home/joe/code/storage/dispatch-payloads")
+
+
+def turn_start_prompt_result(body, root=None):
+    """Resolve a turn-start prompt, preserving a typed missing/fallback signal."""
+    root = root or os.environ.get("FUTON3C_DISPATCH_PAYLOAD_STORE",
+                                  DISPATCH_PAYLOAD_ROOT)
+    sha = body.get("payload-sha256")
+    inline = body.get("prompt")
+    if sha:
+        valid = bool(re.fullmatch(r"[0-9a-f]{64}", str(sha)))
+        path = os.path.join(root, "objects", str(sha)[:2], str(sha)) if valid else None
+        try:
+            if path and os.path.isfile(path):
+                with open(path, encoding="utf-8") as payload:
+                    return {"status": "payload", "text": payload.read(),
+                            "sha256": sha}
+        except OSError as exc:
+            reason = "payload-unreadable:%s" % type(exc).__name__
+        else:
+            reason = "payload-missing" if valid else "payload-sha-invalid"
+        if inline is not None:
+            return {"status": "inline-fallback", "text": str(inline),
+                    "sha256": sha, "reason": reason}
+        return {"status": "missing", "text": None, "sha256": sha,
+                "reason": reason}
+    if inline is not None:
+        return {"status": "legacy-inline", "text": str(inline)}
+    return {"status": "missing", "text": None,
+            "reason": "payload-reference-absent"}
+
+
+def turn_start_prompt(body, root=None):
+    """The resolved prompt text, or None; see turn_start_prompt_result for why."""
+    return turn_start_prompt_result(body, root=root)["text"]
 
 
 # ---------------------------------------------------------------- fetching
@@ -476,14 +513,15 @@ def is_operator_turn(row):
 
 def is_harness_turn_start(row):
     """A Zai or Kimi seat's turn: the harness's turn-start row
-    (zai_api.clj persist-turn-start!), which carries the prompt as sent, the
-    Agency dispatch id and, since G4, what was injected before round 1.
+    (zai_api.clj persist-turn-start!), which carries a content-addressed prompt
+    reference (or a legacy inline prompt), the Agency dispatch id and, since
+    G4, what was injected before round 1.
     These seats have no chat-turn rows, so without this their sessions had
     no frames at all."""
     b = body_of(row)
     return (row.get("evidence/type") == "coordination"
             and b.get("event") == "turn-start"
-            and "prompt" in b)
+            and bool(b.get("dispatch-id") or b.get("turn-id")))
 
 
 def is_legacy_operator_turn(row, accepted_texts, session_id=None):
@@ -793,7 +831,10 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         # record's turn_id), then exact source_text match.
         entry = analyses.get("by_evidence_id", {}).get(eid)
         join_key = "evidence_id" if entry else None
-        text = (b.get("text") or b.get("prompt") or "").strip()
+        prompt_result = (turn_start_prompt_result(b)
+                         if is_harness_turn_start(turn) else None)
+        text = (b.get("text") or
+                (prompt_result or {}).get("text") or "").strip()
         if entry is None and b.get("dispatch-id"):
             # a harness turn: 象's record turn_id is the Agency dispatch id
             entry = analyses.get("by_turn_id", {}).get(
@@ -953,6 +994,9 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             "happened": happened,
             "_join": join_key if entry else None,
         })
+        if prompt_result is not None:
+            frames[-1]["turn"]["payload"] = {
+                k: v for k, v in prompt_result.items() if k != "text"}
         if eid in observed_by_turn:
             frames[-1]["observed"] = observed_by_turn[eid]
         if eid in card_by_turn:
