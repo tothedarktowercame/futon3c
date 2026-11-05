@@ -733,9 +733,10 @@ ALIVE_CHECKS = ["user-services", "system-units", "futon1b-health", "agency-healt
                 "firewall", "drive-health", "write-rate", "disk-space", "git-hub-backup", "evidence-backup",
                 "pass-store", "pass-hubs-agree", "parked-timers"]
 
-def probe_zone_health():
+def probe_zone_health(runner=None):
+    # runner is injectable so the test can feed synthetic zone-health JSON.
     zh = CODE / "futon0" / "scripts" / "zone-health.bb"
-    rc, out, err = run(["bb", str(zh), "--json", "--only", ",".join(ALIVE_CHECKS)], timeout=300)
+    rc, out, err = (runner or run)(["bb", str(zh), "--json", "--only", ",".join(ALIVE_CHECKS)], timeout=300)
     rows = []
     for line in out.splitlines():
         try: rows.append(json.loads(line))
@@ -745,17 +746,33 @@ def probe_zone_health():
                 "violations": [], "violation-count": 0,
                 "evidence": [f"zone-health produced no checks (rc {rc}): {err[:200]}"]}
     by = {r.get("id"): r for r in rows}
+    # A check missing from zone-health's output (crashed, or renamed so --only
+    # drops it) must not silently shrink the denominator: a missing check is a
+    # broken reading, named. Audit 2026-11-04 (zai-7).
+    missing = [c for c in ALIVE_CHECKS if c not in by]
     seen = [by[c] for c in ALIVE_CHECKS if c in by]
     fails = [r for r in seen if r.get("status") != "pass"]
     _, dw, _ = run(["systemctl", "is-active", "disk-watch.timer"])
-    ev = [f"zone-health: {len(seen) - len(fails)} of {len(seen)} checks for this way pass"]
+    ev = [f"zone-health: {len(seen) - len(fails)} of {len(seen)} reported checks for this way pass"]
     ev += [f"FAIL {r['id']}: {r.get('summary')}" for r in fails]
+    ev += [f"MISSING {c}: zone-health did not report this check" for c in missing]
     ev += [f"disk-watch.timer: {dw or 'absent'} (the one check that pushes an alert unasked, drive only)",
            "read at publish time; zone-health has no cadence of its own",
            "not watched: bills paid, runway known (hand reading only)"]
+    violations = [{"check": r["id"], "summary": r.get("summary"), "items": (r.get("items") or [])[:10]} for r in fails]
+    violations += [{"check": c, "summary": "zone-health did not report this check (crashed or renamed)", "items": []}
+                   for c in missing]
+    if missing:
+        return {"monitor": "broken", "invariant": "unknown",
+                "last-observation": iso(NOW), "observed-at": iso(NOW),
+                "violations": violations,
+                "violation-count": len(fails) + len(missing), "evidence": ev,
+                "denominator": f"{len(fails)} of {len(seen)} reported checks failing; "
+                               f"{len(missing)} of {len(ALIVE_CHECKS)} checks missing from zone-health output; "
+                               "bills and runway unwatched"}
     return {"monitor": "on", "invariant": "failing" if fails else "holding",
             "last-observation": iso(NOW), "observed-at": iso(NOW),
-            "violations": [{"check": r["id"], "summary": r.get("summary"), "items": (r.get("items") or [])[:10]} for r in fails],
+            "violations": violations,
             "violation-count": len(fails), "evidence": ev,
             "denominator": f"{len(fails)} of {len(seen)} zone-health checks failing; bills and runway unwatched"}
 
