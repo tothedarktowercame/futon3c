@@ -6,6 +6,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.run :as gr]
             [futon3c.giraffe.tickets :as gt]))
@@ -414,3 +415,41 @@
     (is (pos? (compare (:run-id tickets) (:run-id field)))
         "fixture ordering: the tickets run has the newer directory name")
     (is (= (:run-id field) (:run-id (gr/newest-field-run root))))))
+
+(deftest combined-invocation-is-the-single-adapter-construction-path
+  (let [reading-root (temp-root "readings")
+        _ (spit (io/file reading-root "batch-00.jsonl") "{}\n")
+        seen (atom nil)
+        base (gt/tickets->input {:tickets-dir tickets-dir
+                                 :index-file index-file
+                                 :edges-file edges-file :only pilot1-ids})]
+    (with-redefs [excursions/missions-and-excursions->input
+                  (fn [opts] (reset! seen opts) base)]
+      (gr/build-adapter-result
+       {:source "missions-excursions" :edges edges-file
+        :repos ["/repo"] :readings-root reading-root :only-ids ["M-one"]})
+      (is (= ["/repo"] (:repos @seen)))
+      (is (:include-tickets @seen))
+      (is (= [(str (io/file reading-root "batch-00.jsonl"))]
+             (:reading-batches @seen)))
+      (is (= :population/missions-excursions-tickets
+             (:reading-scope @seen))))))
+
+(deftest current-freshness-replays-the-mint-invocation
+  (let [root (temp-root "invocation")
+        adapter (gt/tickets->input {:tickets-dir tickets-dir
+                                    :index-file index-file
+                                    :edges-file edges-file :only pilot1-ids})
+        invocation {:source "missions-excursions" :edges edges-file
+                    :repos ["/repo"] :readings-root "/readings"
+                    :with-retained-focus? true}
+        written (gr/write-run! {:root root :adapter-result adapter
+                                :pass-output (gp/pass (:input adapter))
+                                :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"
+                                :edges-file edges-file :invocation invocation})]
+    (with-redefs [gr/build-adapter-result (fn [actual]
+                                           (is (= invocation actual))
+                                           adapter)]
+      (let [freshness (gr/current-missions-freshness root)]
+        (is (:fresh? freshness))
+        (is (= (:run-id written) (:run-id freshness)))))))

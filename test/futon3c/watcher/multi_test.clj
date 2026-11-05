@@ -671,7 +671,13 @@
                          :run-id 1 :event-n (atom 0) :cycle-n (atom 59)
                          :cold-scan? false :commit-ingest? false
                          :file-change-journal journal
-                         :file-change-shadow shadow})
+                         :file-change-shadow shadow
+                         :file-change-giraffe-probe
+                         (atom {:task nil
+                                :last-result {:fresh? true
+                                              :computed-sha256 "x"
+                                              :run-sha256 "x" :run-id "g"
+                                              :at-ms 0}})})
         (is @freshness-ran?)
         (is (= :refused (:outcome (last (:outcomes @shadow))))))
       (finally (reset! sut/!state prior)))))
@@ -681,9 +687,13 @@
         task (future @gate)
         probe (atom {:task task})
         poll @#'sut/poll-giraffe-freshness!]
-    (is (nil? (poll probe)))
+    (is (nil? (poll probe 0)))
     (is (identical? task (:task @probe)))
     (deliver gate {:fresh? false :computed-sha256 "new" :run-sha256 "old"})
     @task
-    (is (= "new" (:computed-sha256 (poll probe))))
-    (is (nil? (:task @probe)))))
+    (is (= "new" (:computed-sha256 (poll probe 0))))
+    (is (nil? (:task @probe)))
+    (is (= "new" (:computed-sha256 (poll probe 0)))
+        "the same result remains available to a sink in this cycle")
+    (is (nil? (poll probe (inc (:at-ms (:last-result @probe)))))
+        "a later trigger starts a new probe instead of reusing stale data")))

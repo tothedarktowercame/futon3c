@@ -103,6 +103,12 @@
          {:at-ms now-ms :outcome :refused :reason :shadow-cycle-failed
           :message (.getMessage ^Exception e)}))
 
+(defn record-held!
+  "Retain a normal asynchronous wait state without calling it a refusal."
+  [consumer-state now-ms reason]
+  (swap! consumer-state retain :outcomes
+         {:at-ms now-ms :outcome :held :reason reason}))
+
 (defn run-once!
   "Consume bounded hints and retain projected outcomes without external calls."
   [journal-state consumer-state

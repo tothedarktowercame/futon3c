@@ -235,7 +235,7 @@
   HEAD git sha, and the sha256 of the tickets index and edges file the
   adapter read (when supplied in the adapter result)."
   [{:keys [root run-id adapter-result pass-output git-sha index-file
-           edges-file focus-relation-input priority-cutoff]
+           edges-file focus-relation-input priority-cutoff invocation]
     :or {root default-root}}]
   {:pre [(:input adapter-result) pass-output]}
   (let [input (:input adapter-result)
@@ -290,6 +290,7 @@
                             (assoc priority-entry :status :present
                                    :cutoff (or priority-cutoff 20))
                             {:status :absent :reason :focus-relation-input-absent})
+                          :invocation invocation
                           :sources (cond-> {}
                                      index-file (assoc :tickets-index
                                                        {:path (str index-file)
@@ -453,22 +454,53 @@
     (println "fresh:" (if fresh? "true" "false"))
     {:fresh? fresh? :newest newest :adapter-input-sha256 adapter-sha}))
 
+(defn build-adapter-result
+  "Build exactly the adapter input named by a persisted mint invocation."
+  [{:keys [source edges repos readings-root only-ids]
+    :or {source "tickets"}}]
+  (let [combined? (= "missions-excursions" source)
+        missions? (or combined? (= "missions" source))
+        repo-roots (when missions? (or (seq repos) gm/default-repos))
+        reading-batches (when readings-root
+                          (->> (file-seq (io/file readings-root))
+                               (filter #(.isFile %))
+                               (filter #(re-matches #"batch-.*\.jsonl" (.getName %)))
+                               (sort-by #(.getName %))
+                               (mapv #(.getAbsolutePath %))))]
+    (when (and readings-root (not combined?))
+      (throw (ex-info "readings-root requires missions-excursions"
+                      {:kind :giraffe/readings-source-mismatch})))
+    (when (and readings-root (empty? reading-batches))
+      (throw (ex-info "readings-root contains no batches"
+                      {:kind :giraffe/readings-empty :root readings-root})))
+    (-> (if missions?
+          ((if combined? excursions/missions-and-excursions->input gm/missions->input)
+           {:repos repo-roots :edges-file edges :only only-ids
+            :include-tickets (boolean readings-root)
+            :reading-checker (when readings-root
+                               (str (io/file readings-root "check_edges.py")))
+            :members-file (when readings-root
+                            (str (io/file readings-root "members.json")))
+            :reading-batches reading-batches
+            :reading-scope (when readings-root
+                             :population/missions-excursions-tickets)})
+          (gt/tickets->input {:tickets-dir default-tickets-dir
+                              :index-file default-index-file
+                              :edges-file edges :only only-ids}))
+        (update :input stale/annotate-input))))
+
 (defn current-missions-freshness
-  "Recompute the canonical missions adapter input and compare it with the
-  newest sealed field run. Read-only; unlike `newest-field-run`, this proves
-  whether the current input agrees with that run."
+  "Rebuild the newest field run's persisted invocation and compare inputs.
+  Legacy runs without an invocation return nil rather than guessing."
   ([] (current-missions-freshness default-root))
   ([root]
    (let [newest (newest-field-run root)
          manifest (when newest
                     (edn/read-string
                      (slurp (io/file root (:run-id newest) "manifest.edn"))))
-         edges-path (get-in manifest [:sources :edges :path])]
-     (when (and newest edges-path)
-       (let [adapter-result (-> (gm/missions->input
-                                 {:repos gm/default-repos
-                                  :edges-file edges-path})
-                                (update :input stale/annotate-input))
+         invocation (:invocation manifest)]
+     (when (and newest invocation)
+       (let [adapter-result (build-adapter-result invocation)
              computed-sha (sha256 (.getBytes ^String
                                              (print-edn (:input adapter-result))
                                              "UTF-8"))
@@ -526,37 +558,10 @@
                            (vec (remove str/blank?
                                         (map str/trim (str/split repos #",")))))
                          gm/default-repos))
-        reading-batches (when readings-root
-                          (->> (file-seq (io/file readings-root))
-                               (filter #(.isFile %))
-                               (filter #(re-matches #"batch-.*\.jsonl" (.getName %)))
-                               (sort-by #(.getName %))
-                               (mapv #(.getAbsolutePath %))))
-        _ (when (and readings-root (not combined?))
-            (throw (ex-info "--readings-root requires --source missions-excursions"
-                            {:kind :giraffe/readings-source-mismatch})))
-        _ (when (and readings-root (empty? reading-batches))
-            (throw (ex-info "--readings-root contains no batch-*.jsonl files"
-                            {:kind :giraffe/readings-empty :root readings-root})))
-        adapter-result (if missions?
-                         ((if combined? excursions/missions-and-excursions->input gm/missions->input)
-                          {:repos repo-roots
-                           :edges-file edges
-                           :only only-ids
-                           :include-tickets (boolean readings-root)
-                           :reading-checker (when readings-root
-                                              (str (io/file readings-root "check_edges.py")))
-                           :members-file (when readings-root
-                                           (str (io/file readings-root "members.json")))
-                           :reading-batches reading-batches
-                           :reading-scope (when readings-root
-                                            :population/missions-excursions-tickets)})
-                         (gt/tickets->input
-                          {:tickets-dir default-tickets-dir
-                           :index-file default-index-file
-                           :edges-file edges
-                           :only only-ids}))
-        adapter-result (update adapter-result :input stale/annotate-input)
+        invocation {:source source :edges edges :repos repo-roots
+                    :readings-root readings-root :only-ids only-ids
+                    :with-retained-focus? (boolean with-retained-focus?)}
+        adapter-result (build-adapter-result invocation)
         pass-output ((if combined? excursions/combined-pass gp/pass) (:input adapter-result))
         focus-relation-input
         (when with-retained-focus?
@@ -570,6 +575,7 @@
                             :adapter-result adapter-result
                             :pass-output pass-output
                             :focus-relation-input focus-relation-input
+                            :invocation invocation
                             :git-sha (git-head-sha)
                             :index-file (when-not missions? default-index-file)
                             :edges-file edges})]

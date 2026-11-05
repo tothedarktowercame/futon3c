@@ -59,3 +59,19 @@
                              :demand-sink-fn #(swap! written conj %)})
       (is (= 1 (count @written)))
       (is (= 11 (:emitted-at-ms (first @written)))))))
+
+(deftest rebuild-and-due-demand-share-one-authority-result
+  (let [j (atom (journal/empty-state 8))
+        c (atom (assoc-in (shadow/empty-state 10 30 8)
+                          [:projector :giraffe-pending]
+                          {:first-at-ms 0 :last-at-ms 0 :changed-paths []
+                           :level-jump? true :trigger-basis :restart}))
+        authority-calls (atom 0)
+        written (atom [])]
+    (shadow/run-once! j c {:now-ms 30
+                           :authority-read-fn
+                           (fn [] (swap! authority-calls inc) (authority))
+                           :demand-sink-fn #(swap! written conj %)})
+    (is (= 1 @authority-calls))
+    (is (= 1 (count @written)))
+    (is (empty? (filter #(= :refused (:outcome %)) (:outcomes @c))))))

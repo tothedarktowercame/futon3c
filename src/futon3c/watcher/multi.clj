@@ -1373,21 +1373,25 @@
           {:outcome :refused :error (.getMessage e) :at-ms at-ms})))))
 
 (defn- poll-giraffe-freshness!
-  "Poll one single-flight freshness computation without blocking the watcher."
-  [probe]
+  "Return a result no older than MIN-AT-MS, starting at most one background
+  computation when needed. Results remain reusable by rebuild and sink."
+  [probe min-at-ms]
   (when probe
-    (if-let [task (:task @probe)]
+    (when-let [task (:task @probe)]
       (when (realized? task)
         (try
-          (let [result @task]
-            (reset! probe {:task nil :last-result result})
-            result)
+          (let [result (assoc @task :at-ms (System/currentTimeMillis))]
+            (swap! probe assoc :task nil :last-result result :last-error nil))
           (catch Exception e
-            (reset! probe {:task nil :last-error (.getMessage e)})
-            nil)))
-      (do
-        (swap! probe assoc :task (future (giraffe-run/current-missions-freshness)))
-        nil))))
+            (swap! probe assoc :task nil :last-error (.getMessage e))))))
+    (let [{:keys [task last-result]} @probe]
+      (cond
+        (and last-result (>= (:at-ms last-result) min-at-ms)) last-result
+        task nil
+        :else (do
+                (swap! probe assoc
+                       :task (future (giraffe-run/current-missions-freshness)))
+                nil)))))
 
 ;; ---------- commit-vertex live ingestion ----------
 
@@ -1585,9 +1589,8 @@
     ;; never invokes Giraffe, the registry, or a dispatcher.
     (when (and file-change-journal file-change-shadow)
       (let [now-ms (System/currentTimeMillis)
-            read-authority #(if file-change-giraffe-probe
-                              (poll-giraffe-freshness! file-change-giraffe-probe)
-                              (giraffe-run/current-missions-freshness))]
+            read-authority #(poll-giraffe-freshness!
+                             file-change-giraffe-probe 0)]
         (try
           (file-change-shadow/run-once!
            file-change-journal file-change-shadow
@@ -1597,14 +1600,21 @@
             (fn [demand]
               (shadow-ledger/append!
                shadow-ledger/default-path
-               (if-let [authority (read-authority)]
+               (if-let [authority
+                        (poll-giraffe-freshness!
+                         file-change-giraffe-probe (:first-at-ms demand))]
                  (assoc demand :authority authority)
                  (throw (ex-info "Giraffe freshness probe pending"
                                  {:error/type :giraffe-freshness-pending})))))})
           (catch Exception e
-            (file-change-shadow/record-refusal! file-change-shadow now-ms e)
-            (binding [*out* *err*]
-              (println "[multi.file-change-shadow] refused:" (.getMessage e)))))))
+            (if (= :giraffe-freshness-pending (:error/type (ex-data e)))
+              (file-change-shadow/record-held!
+               file-change-shadow now-ms :giraffe-freshness-pending)
+              (do
+                (file-change-shadow/record-refusal! file-change-shadow now-ms e)
+                (binding [*out* *err*]
+                  (println "[multi.file-change-shadow] refused:"
+                           (.getMessage e)))))))))
     ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
     ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
     ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
