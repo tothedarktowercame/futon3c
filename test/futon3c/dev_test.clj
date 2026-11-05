@@ -603,6 +603,16 @@
       (finally
         (reset! store-atom old-store)))))
 
+(deftest legacy-context-retrieval-caller-inherits-queue-turn-id
+  (let [seen (atom nil)]
+    (with-redefs-fn {#'dev/perform-context-retrieval!
+                     (fn [opts] (reset! seen (:turn-id opts)))}
+      (fn []
+        (binding [turn-queue/*turn-id* "queue-turn-7"]
+          (#'dev/context-retrieval! {:agent-id "claude-test" :session-id "s-legacy"
+                                     :prompt-str "p" :response-text "r"}))))
+    (is (= "queue-turn-7" @seen))))
+
 (deftest make-claude-invoke-fn-uses-pouch-when-kangaroo-on
   (testing "Kangaroo warm path is wired behind its own flag"
     (let [fed (atom nil)]

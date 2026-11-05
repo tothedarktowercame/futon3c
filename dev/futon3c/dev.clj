@@ -952,7 +952,7 @@
                              "agent-id" (str agent-id)
                              "at" (str (java.time.Instant/now))
                              "session-id" (str (or session-id "dev-invoke"))
-                             "turn-id" (str turn-id)
+                             "turn-id" (some-> turn-id str)
                              "turn" turn-n
                              "query-chars" (count query-text)
                              "query-sha256" (invoke-preview/prompt-sha256 query-text)
@@ -1091,7 +1091,11 @@
     (if owner?
       (try
         (perform-context-retrieval!
-         (assoc opts :publish-ready! (fn [value]
+         ;; Legacy post-turn callers pass no :turn-id; the queue binding is
+         ;; the same identity the retrieval key already falls back to.
+         (assoc opts
+                :turn-id (or (:turn-id opts) turn-queue/*turn-id*)
+                :publish-ready! (fn [value]
                                         (deliver ready value)
                                         (when publish-ready! (publish-ready! value)))))
         (finally
