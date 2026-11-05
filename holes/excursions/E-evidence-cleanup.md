@@ -151,6 +151,16 @@ Review notes:
   `promise/history-event` hyperedges are readable in futon1b. Drains run at roughly 4–6 s per row
   (the hyperedge POST dominates), which is enough for about 2,400 rows a day. Watch for bursts.
 
+- **Promise move step 2, dual-read comparison** (codex-13, `53e77f85c`; reviewed by claude-8, cutover
+  instant corrected in `c10953dd8`). `promise_log/read-history` (bounded, paginated, current or as-of)
+  and `promise_history_compare/compare-history`. Evidence stays the authority. First live run (17:17Z;
+  evidence since 17:00Z against the whole log): **0 mismatched** over the rows present in both. The 10
+  evidence-only rows are 17:10:50–17:11:04Z, written before the reload took effect, so the cutover
+  constant moved from 17:10 to 17:12Z. The 13 log-only rows are the 10-28 rows that were stuck and are
+  now drained (outside the evidence window). Chain gaps on both sides are window edges. Only a handful
+  of rows are common so far, so a timer park (`park-32c37866-…`, +3 h) reruns it over a larger
+  window before step 3 repoints readers.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
