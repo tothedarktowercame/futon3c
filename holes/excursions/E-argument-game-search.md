@@ -120,3 +120,8 @@ organism would.
 - The argument graph (`apex.edn`) grows to where choosing which sorry to discharge next
   is itself a search problem with a computable payoff.
 - A venue (Mozilla or another funder) wants the argument-technology line specifically.
+
+## Completion criteria
+
+- Joe decides the idea's fate: take it up, or retire it with a note — check: a dated decision recorded in this item **Not started.**
+- If taken up, the cheapest falsifier runs: the arithmetic s-expression game (or the no-new-game habit-vs-G agreement measure) with its result recorded, whichever way it comes out — check: a dated results subsection in this item or a successor item, naming solve rate / agreement rate vs the baseline **Not started.**
