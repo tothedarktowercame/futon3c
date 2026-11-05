@@ -19,6 +19,7 @@
   (is (= {:hx/id "promise-log:123e4567-e89b-12d3-a456-426614174000"
           :hx/type :promise/history-event
           :hx/endpoints ["park-7" "agent-7"]
+          :hx/valid-time "2026-11-05T12:00:00Z"
           :hx/props {:history/payload-edn "{:record {:id \"park-7\"}}"
                      :history/promise-id "park-7"
                      :history/promise-sequence 2

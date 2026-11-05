@@ -27,19 +27,41 @@
                          {:sequence 2 :id (:evidence/id two) :type :promise/woken}
                          "2026-11-05T17:02:00Z")))))
 
-(defn- fixture [rows edges writes]
-  {:request (fn [_ _ _ _] {:entries rows})
+(defn- fixture
+  ([rows edges writes] (fixture rows edges writes #{}))
+  ([rows edges writes failed-ids]
+   (let [chunks (atom [])
+         gets (atom 0)]
+     {:request (fn [_ _ _ _] {:entries rows})
+      :read (fn [hx-type _]
+              (->> (vals @edges) (filter #(= hx-type (:hx/type %))) vec))
+      :batch (fn [batch]
+               (swap! chunks conj batch)
+               {:ok (not-any? failed-ids (map :hx/id batch))
+                :results
+                (mapv (fn [edge]
+                        (if (failed-ids (:hx/id edge))
+                          {:ok false :hx/id (:hx/id edge) :error "injected"}
+                          (do (swap! writes conj edge)
+                              (swap! edges assoc (:hx/id edge) edge)
+                              {:ok true :hx/id (:hx/id edge)})))
+                      batch)})
    :get (fn [id]
+          (swap! gets inc)
           (if-let [edge (get @edges id)] edge
               (throw (ex-info "not found" {:status 404}))))
    :post (fn [edge]
            (swap! writes conj edge)
            (swap! edges assoc (:hx/id edge) edge)
-           {:ok true :hx/id (:hx/id edge)})})
+           {:ok true :hx/id (:hx/id edge)})
+      :chunks chunks
+      :gets gets})))
 
 (defmacro with-store [f & body]
   `(binding [reconcile/*request-fn* (:request ~f)
              reconcile/*sleep-fn* (fn [_#])
+             reconcile/*read-hyperedges-fn* (:read ~f)
+             reconcile/*batch-post-fn* (:batch ~f)
              promise-log/*get-fn* (:get ~f)
              promise-log/*post-fn* (:post ~f)]
      ~@body))
@@ -109,3 +131,53 @@
            (try (reconcile/read-evidence-history {:max-pages 1 :page-sleep-ms 0}) nil
                 (catch clojure.lang.ExceptionInfo error
                   (:reason (ex-data error))))))))
+
+(defn- many-state-rows [n]
+  (->> (range n)
+       (mapcat (fn [index]
+                 (map-indexed
+                  (fn [offset history-row]
+                    (assoc history-row :evidence/at
+                           (format "2026-11-05T18:%02d:00Z" offset)))
+                  (chain (format "bulk-%04d" index) (< index 600)))))
+       vec))
+
+(deftest bulk-state-catch-up-uses-three-open-first-chunks-and-no-point-gets
+  (let [rows (many-state-rows 1200)
+        edges (atom {}) writes (atom []) f (fixture rows edges writes)]
+    (with-store f
+      (let [report (reconcile/run! {:page-sleep-ms 0})
+            chunks @(:chunks f)]
+        (is (= [500 500 200] (mapv count chunks)))
+        (is (every? #(some #{"promise-status:open"} (:hx/endpoints %))
+                    (first chunks)))
+        (is (= 3 (:chunks-sent report)))
+        (is (= 1200 (:states-written report)))
+        (is (zero? @(:gets f)))))))
+
+(deftest one-batch-payload-failure-is-reported-and-later-chunks-run
+  (let [rows (many-state-rows 1200)
+        failed-id (promise-state/state-id "bulk-0600")
+        edges (atom {}) writes (atom [])
+        f (fixture rows edges writes #{failed-id})]
+    (with-store f
+      (let [report (reconcile/run! {:page-sleep-ms 0})]
+        (is (= [500 500 200] (mapv count @(:chunks f))))
+        (is (= 1 (:failed-ids-count report)))
+        (is (= [failed-id] (:failed-ids report)))
+        (is (= 1199 (count @writes)))))))
+
+(deftest edge-prefetch-overflow-refuses-instead-of-using-a-partial-map
+  (let [rows (chain "overflow" false)
+        edges (atom {}) writes (atom []) f (fixture rows edges writes)]
+    (binding [reconcile/*request-fn* (:request f)
+              reconcile/*sleep-fn* (fn [_])
+              reconcile/*read-hyperedges-fn*
+              (fn [hx-type _]
+                (if (= :promise/state hx-type)
+                  (with-meta [] {:partial? true :next-cursor "more"})
+                  []))]
+      (is (= {:reason :truncated-input :source :promise/state}
+             (try (reconcile/run! {:page-sleep-ms 0}) nil
+                  (catch clojure.lang.ExceptionInfo error
+                    (select-keys (ex-data error) [:reason :source]))))))))

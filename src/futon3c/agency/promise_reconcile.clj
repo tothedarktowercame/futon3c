@@ -12,9 +12,18 @@
 (def default-max-pages 100)
 (def default-page-sleep-ms 50)
 (def history-dual-write-at "2026-11-05T17:12:00Z")
+(def edge-page-size 1000)
+(def state-edge-limit 10000)
+(def history-edge-limit 100000)
+(def batch-size 500)
 
 (def ^:dynamic *request-fn* store/request!)
 (def ^:dynamic *sleep-fn* (fn [millis] (Thread/sleep millis)))
+(def ^:dynamic *read-hyperedges-fn* substrate/hyperedges-by-type)
+(def ^:dynamic *batch-post-fn*
+  (fn [edges]
+    (store/request! (substrate/configured-url) "POST"
+                    "/api/alpha/hyperedges/batch" {:hyperedges edges})))
 
 (defn- encode [value] (URLEncoder/encode (str value) "UTF-8"))
 
@@ -67,35 +76,74 @@
       (get-in row [:evidence/body :id])
       (get-in row [:evidence/body :followup-id])))
 
-(defn- get-edge [id]
-  (try
-    (promise-log/*get-fn* id)
-    (catch clojure.lang.ExceptionInfo error
-      (if (= 404 (:status (ex-data error))) nil (throw error)))))
+(defn- edge-read-options [limit]
+  {:limit limit
+   :page-size edge-page-size
+   :request-budget (inc (quot limit edge-page-size))})
 
-(defn- write-edge! [edge]
-  (promise-log/*post-fn* edge)
-  (let [stored (promise-log/*get-fn* (:hx/id edge))]
-    (when-not (promise-log/same-edge? edge stored)
-      (throw (ex-info "Promise reconciliation exact readback mismatch"
-                      {:reason :promise-reconcile-readback-mismatch
-                       :hx/id (:hx/id edge)})))
-    stored))
+(defn- estimated-requests [edges]
+  (or (:requests (meta edges))
+      (max 1 (long (Math/ceil (/ (double (count edges)) edge-page-size))))))
+
+(defn- read-edges!
+  [hx-type limit requests]
+  (let [edges (*read-hyperedges-fn* hx-type (edge-read-options limit))]
+    (swap! requests + (estimated-requests edges))
+    (when (substrate/partial-result? edges)
+      (throw (ex-info "Promise reconciliation hyperedge prefetch exceeded its bound"
+                      (merge {:reason :truncated-input
+                              :source hx-type
+                              :rows (count edges)}
+                             (meta edges)))))
+    (vec edges)))
+
+(defn- edge-map [edges]
+  (into {} (map (juxt :hx/id identity)) edges))
 
 (defn- before-history-dual-write? [row]
   (.isBefore (Instant/parse (:evidence/at row))
              (Instant/parse history-dual-write-at)))
 
-(defn- history-edge-current? [row]
-  (let [expected (promise-log/entry->hyperedge row)
-        stored (get-edge (:hx/id expected))]
-    (promise-log/same-edge? expected stored)))
-
-(defn- state-current? [state]
-  (let [stored (get-edge (promise-state/state-id (:promise-id state)))]
+(defn- state-current? [states state]
+  (let [stored (get states (promise-state/state-id (:promise-id state)))]
     (and stored
          (>= (or (get-in stored [:hx/props :head-sequence]) 0)
              (:head-sequence state)))))
+
+(defn- chunk-failures!
+  [hx-type limit chunk requests]
+  (let [response (try
+                   (swap! requests inc)
+                   (*batch-post-fn* chunk)
+                   (catch Throwable error {:error error}))
+        results (:results response)
+        post-failed (cond
+                      (:error response) (set (map :hx/id chunk))
+                      (not= (count chunk) (count results)) (set (map :hx/id chunk))
+                      :else (into #{}
+                                  (keep-indexed
+                                   (fn [index result]
+                                     (when-not (:ok result)
+                                       (:hx/id (nth chunk index)))))
+                                  results))
+        readback (try
+                   (edge-map (read-edges! hx-type limit requests))
+                   (catch Throwable _ ::unavailable))]
+    (into post-failed
+          (keep (fn [expected]
+                  (when (or (= ::unavailable readback)
+                            (not (promise-log/same-edge?
+                                  expected (get readback (:hx/id expected)))))
+                    (:hx/id expected))))
+          chunk)))
+
+(defn- write-chunks!
+  [hx-type limit edges requests]
+  (reduce (fn [{:keys [failed chunks]} chunk]
+            {:failed (into failed (chunk-failures! hx-type limit chunk requests))
+             :chunks (inc chunks)})
+          {:failed #{} :chunks 0}
+          (partition-all batch-size edges)))
 
 (defn run!
   "Catch operational promise projections up to retained evidence. DRY-RUN?
@@ -105,10 +153,17 @@
    (let [started (System/nanoTime)
          {:keys [rows pages]} (read-evidence-history options)
          groups (group-by promise-id rows)
+         requests (atom pages)
+         state-edges (edge-map (read-edges! :promise/state state-edge-limit requests))
+         history-edges (edge-map (read-edges! :promise/history-event
+                                              history-edge-limit requests))
          counters (atom {:states-written 0
                          :already-current 0
                          :incomplete-by-reason {}
-                         :history-edges-written 0})]
+                         :history-edges-written 0})
+         planned-states (atom [])
+         planned-history (atom [])
+         edge-owners (atom {})]
      ;; Open promises first: they are what current obligations read, and a full
      ;; run writes thousands of edges at several seconds each.
      (doseq [[pid history folded]
@@ -118,23 +173,47 @@
        (if (= :incomplete (:promise/state folded))
          (swap! counters update-in [:incomplete-by-reason (:reason folded)]
                 (fnil inc 0))
-         (let [current? (state-current? folded)]
+         (let [current? (state-current? state-edges folded)]
            (if current?
              (swap! counters update :already-current inc)
              (do
                (swap! counters update :states-written inc)
-               (when-not dry-run?
-                 (write-edge! (promise-state/state->hyperedge folded)))))
+               (let [edge (promise-state/state->hyperedge folded)]
+                 (swap! planned-states conj edge)
+                 (swap! edge-owners assoc (:hx/id edge) pid))))
            (when (= :open (:status folded))
              (doseq [row (filter before-history-dual-write? history)
-                     :when (not (history-edge-current? row))]
+                     :let [edge (promise-log/entry->hyperedge row)]
+                     :when (not (promise-log/same-edge?
+                                 edge (get history-edges (:hx/id edge))))]
                (swap! counters update :history-edges-written inc)
-               (when-not dry-run? (promise-log/write! row))))
-           (when-not dry-run? (swap! promise-state/!deferred dissoc pid)))))
-     (let [report (merge {:promises-seen (count groups)
+               (swap! planned-history conj edge)
+               (swap! edge-owners assoc (:hx/id edge) pid))))))
+     ;; The prefetched heads are intentionally not checked again before each
+     ;; chunk. A concurrent writer can only make this projection temporarily
+     ;; stale; the stable ids and never-rewind prefetch make a rerun converge.
+     (let [state-result (if (or dry-run? (empty? @planned-states))
+                          {:failed #{} :chunks 0}
+                          (write-chunks! :promise/state state-edge-limit
+                                         @planned-states requests))
+           history-result (if (or dry-run? (empty? @planned-history))
+                            {:failed #{} :chunks 0}
+                            (write-chunks! :promise/history-event history-edge-limit
+                                           @planned-history requests))
+           failed (into (:failed state-result) (:failed history-result))
+           failed-promises (into #{} (keep @edge-owners) failed)]
+       (when-not dry-run?
+         (doseq [pid (remove failed-promises (keys groups))]
+           (swap! promise-state/!deferred dissoc pid)))
+       (let [report (merge {:promises-seen (count groups)
                           :pages-read pages
                           :dry-run? (boolean dry-run?)
-                          :duration-ms (quot (- (System/nanoTime) started) 1000000)}
-                         @counters)]
-       (println "promise reconciliation:" (pr-str report))
-       report))))
+                           :duration-ms (quot (- (System/nanoTime) started) 1000000)
+                           :requests-made @requests
+                           :chunks-sent (+ (:chunks state-result)
+                                           (:chunks history-result))
+                           :failed-ids-count (count failed)
+                           :failed-ids (vec (take 20 (sort failed)))}
+                          @counters)]
+         (println "promise reconciliation:" (pr-str report))
+         report)))))

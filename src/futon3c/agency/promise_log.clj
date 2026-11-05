@@ -36,6 +36,7 @@
     {:hx/id (hyperedge-id (:evidence/id entry))
      :hx/type :promise/history-event
      :hx/endpoints [promise-id agent]
+     :hx/valid-time (:evidence/at entry)
      :hx/props (cond-> {:history/payload-edn (:history/payload-edn body)
                         :history/promise-id promise-id
                         :history/promise-sequence (:history/promise-sequence body)
