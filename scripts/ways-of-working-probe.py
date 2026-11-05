@@ -761,9 +761,27 @@ def git_first_added(path):
     if repo is None: return None
     try: rel = p.relative_to(repo)
     except ValueError: return None
-    rc, out, _ = run(["git", "log", "--diff-filter=A", "--format=%aI", "--", str(rel)], cwd=repo)
-    if rc != 0 or not out: return None
-    return parse_time(out.splitlines()[-1])
+    added = _first_added_in_dir(repo, rel.parent)
+    return added.get(str(rel))
+
+_FIRST_ADDED_CACHE = {}
+
+def _first_added_in_dir(repo, reldir):
+    """{repo-relative path: first-add datetime} for every file ever added under
+    RELDIR, from ONE git log call (per-file calls cost ~95 s per probe run over
+    futon2's E-kimi-task files, which broke the 1-min publish). git log is
+    newest-first, so the last date seen for a path is its first add."""
+    key = (str(repo), str(reldir))
+    if key in _FIRST_ADDED_CACHE: return _FIRST_ADDED_CACHE[key]
+    rc, out, _ = run(["git", "log", "--diff-filter=A", "--name-only", "--format=@@%aI",
+                      "--", str(reldir) if str(reldir) != "." else "."], cwd=repo, timeout=120)
+    added, when = {}, None
+    if rc == 0:
+        for line in out.splitlines():
+            if line.startswith("@@"): when = parse_time(line[2:])
+            elif line.strip() and when is not None: added[line.strip()] = when
+    _FIRST_ADDED_CACHE[key] = added
+    return added
 
 def _punch_rules(stem, body_text, repair_store, first_added):
     """Machine-minted completion rules (Joe, 2026-11-05). A punched item left
