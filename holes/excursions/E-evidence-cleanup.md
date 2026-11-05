@@ -383,7 +383,7 @@ Review notes:
   Loaded 21:19Z. **Takes effect for zai-1/象-1 only on re-registration** (closure); until then their
   rows keep the inline prompt. No turn-start rows since 21:16Z to check.
 
-- **Re-registration, 2026-11-05 ~22:15Z** (Joe: "deregister/reregister agents, remembering to rename
+- **Re-registration, 2026-11-05 ~22:10Z** (Joe: "deregister/reregister agents, remembering to rename
   zai-1 as 猴-1"). Used `POST /api/alpha/agents/restore` with each agent's own
   `roster-store/restore-payload`, which rebuilds the invoke-fn in place and keeps status, session id
   and model (checked on codex-12 first). 61 claude/codex/zai/kimi seats refreshed (the four mid-turn
