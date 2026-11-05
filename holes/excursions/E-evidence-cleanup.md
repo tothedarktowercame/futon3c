@@ -190,11 +190,16 @@ no header-matched prompt is filed as `joe` after it. So the writer was fixed on 
 the July–October back catalogue is still mislabelled, and the header test is incomplete
 (claude-14 found prompts it misses). Correction (claude-14, checked by claude-8): the origin field already exists.
 Chat-turn docs carry `evidence/origin` with `:kind` operator | harness | agent | unknown from
-2026-09-27T18:38Z on. Among author-`joe` records: Sept (from 09-27) 594 operator, 4 harness,
-30 unknown; Oct 2,938 operator, 2 harness, 1 unknown (172 author-`joe` records without the field,
-not yet looked at). So after 10-01 the two signals agree. The open problem is the ~19,000
-Joe-authored turns before 09-27, which have no origin. claude-14 is training a classifier on the
-labelled post-09-27 turns, for the apm subset first. Step 4 (existing records) now includes
+2026-09-27T18:38Z on. Among author-`joe` sidecar records: Sept (from 09-27) 631 operator, 505
+harness; Oct 2,956 operator, 156 harness; Nov 432 operator, 0 harness. (claude-8's first count
+read 4 and 2 harness: its regex looked for `:kind` within 80 characters of the origin key and
+missed maps that list `:attributed-author "joe"` and `:actor "parked-resume"` first.) The
+sidecar's author column holds the attributed author, so harness turns were indexed as `joe`
+until 10-01T20:49Z. So after 10-01 the two signals agree. The open problem is the ~19,000
+Joe-authored turns before 09-27, which have no origin. claude-14's rule classifier (`~/notes/apm-making-of/classify.py`, method in SURVEY.md),
+scored on 4,670 labelled turns: 646/654 harness caught, 1/4,016 operator flagged (itself a
+wake carrying an operator label). Pre-09-27 accuracy rests on a 60-turn hand sample, not
+re-sampled since its last rule fix. No labels written to the store. Step 4 (existing records) now includes
 whether that classifier's labels are written back, and where: an attribute on the existing turn
 (evidence is immutable) or a derived store keyed by evidence-id.
 
