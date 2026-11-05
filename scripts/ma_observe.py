@@ -381,10 +381,12 @@ def replace_turn_quotes_in(value, source, turn_evidence_id):
     return value, 0
 
 
-def card_row(session, agent, turn_row, card, now):
+def card_row(session, agent, turn_row, card, now, extra_sources=()):
     turn_evidence_id = turn_row.get("evidence/id")
-    card, quotes_replaced = replace_turn_quotes_in(
-        card, turn_text(turn_row), turn_evidence_id)
+    quotes_replaced = 0
+    for source_id, source in [(turn_evidence_id, turn_text(turn_row))] + list(extra_sources):
+        card, n = replace_turn_quotes_in(card, source, source_id)
+        quotes_replaced += n
     return {
         "subject": {"ref/type": "session", "ref/id": session},
         "type": "coordination", "claim-type": "observation", "author": "馬",
@@ -451,16 +453,41 @@ def replace_turn_quotes(text, source, turn_evidence_id, min_words=8):
     return text, len(replacements)
 
 
-def observation_row(session, agent, turn_row, raw, usage, seconds, n_msgs):
+def replace_quotes_from(text, sources):
+    """Apply replace_turn_quotes for each (evidence_id, text) source in turn."""
+    total = 0
+    for source_id, source in sources:
+        text, n = replace_turn_quotes(text, source, source_id)
+        total += n
+    return text, total
+
+
+def window_sources(rows, start, end, extra=()):
+    """(evidence_id, text) for the seat's own output in one turn window. 馬
+    reads the reply as well as the operator turn, and quotes both."""
+    out = []
+    for r in rows:
+        at = tf.at_key(r)
+        if at <= start or (end is not None and at >= end):
+            continue
+        b = tf.body_of(r)
+        text = b.get("unified-text") or b.get("text")
+        if r.get("evidence/id") and isinstance(text, str) and text.strip():
+            out.append((r["evidence/id"], text))
+    return out + [x for x in extra if x[1]]
+
+
+def observation_row(session, agent, turn_row, raw, usage, seconds, n_msgs,
+                    extra_sources=()):
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     turn_evidence_id = turn_row.get("evidence/id")
-    source = turn_text(turn_row)
+    sources = [(turn_evidence_id, turn_text(turn_row))] + list(extra_sources)
     fields = {"observations": tag(raw, "observations") or raw.strip(),
               "current-task": tag(raw, "current-task"),
               "suggested-response": tag(raw, "suggested-response")}
     quotes_replaced = 0
     for field, value in fields.items():
-        fields[field], count = replace_turn_quotes(value, source, turn_evidence_id)
+        fields[field], count = replace_quotes_from(value, sources)
         quotes_replaced += count
     return {
         "subject": {"ref/type": "session", "ref/id": session},
@@ -544,13 +571,17 @@ def observe_session(session, agent="", dry_run=False, log=print):
             continue
         t0 = time.time()
         raw, usage = call_model(system_prompt(harness), user)
-        row = observation_row(session, agent, t, raw, usage, time.time() - t0, len(msgs))
+        dispatch = tf.body_of(t).get("dispatch-id")
+        sources = window_sources(rows, start, end,
+                                 [("job:" + dispatch, final)] if harness and dispatch and final else ())
+        row = observation_row(session, agent, t, raw, usage, time.time() - t0, len(msgs),
+                              extra_sources=sources)
         post_evidence(row)
         mc = parse_card(raw)
         known = known_work(clock_of(agent) if agent else {}, base)
         card = build_card(agent, session, rows, row["body"]["observations"], mc, base,
                           work=check_work((mc or {}).get("work"), known, turn_text(t)))
-        post_evidence(card_row(session, agent, t, card, row["body"]["at"]))
+        post_evidence(card_row(session, agent, t, card, row["body"]["at"], extra_sources=sources))
         if not dry_run:
             try:
                 refresh_view(session)

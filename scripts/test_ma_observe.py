@@ -45,6 +45,29 @@ class CardTest(unittest.TestCase):
         self.assertIn("[quote emacs-card-source@", row["body"]["card"]["fresh"]["work"]["quote"])
         self.assertEqual(1, row["body"]["quotes-replaced"])
 
+    def test_reply_quotes_are_located_against_the_reply_row(self):
+        # 馬 sees the seat's reply too; a copied reply run must not survive,
+        # including one re-wrapped across a line break.
+        reply = ("The backfill planned forty nine thousand history edges and "
+                 "one state with zero failures overall")
+        turn = {"evidence/id": "emacs-op", "evidence/body": {"text": "how is it going?"}}
+        rows = [{"evidence/id": "e-reply-1", "evidence/at": "2026-11-05T21:00:02Z",
+                 "evidence/body": {"role": "assistant", "text": reply}}]
+        sources = ma.window_sources(rows, "2026-11-05T21:00:00Z", None)
+        wrapped = reply.replace(" history ", "\n  history ")
+        raw = "<observations>Seat said: " + wrapped + ".</observations>"
+        row = ma.observation_row("s", "claude-8", turn, raw, {}, 1.0, 2,
+                                 extra_sources=sources)
+        obs = row["body"]["observations"]
+        self.assertNotIn("forty nine thousand", obs)
+        m = __import__("re").search(r"\[quote e-reply-1@(\d+)\+(\d+)\]", obs)
+        self.assertIsNotNone(m)
+        start, length = map(int, m.groups())
+        self.assertEqual(reply, reply[start:start + length])
+        card = ma.card_row("s", "claude-8", turn, {"fresh": {"work": {"quote": reply}}},
+                           "now", extra_sources=sources)
+        self.assertNotIn("forty nine thousand", str(card["body"]))
+
     def test_parse_card_reads_tagged_json_and_fenced_json(self):
         raw = '<observations>x</observations>\n<agent-card>```json\n{"purpose": "p", "repair": ["r"], "extra": 1}\n```</agent-card>'
         card = ma.parse_card(raw)
