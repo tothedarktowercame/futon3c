@@ -1052,7 +1052,7 @@ def probe_status_known(now=NOW, decl=STATUS_DECL, results_dir=None, scripts_dir=
                     fails.append("a-fresh")
                 if live.get("monitor") == "broken" or live.get("invariant") == "unknown":
                     fails.append("b-readable")
-            suffix = STATUS_TEST_NAMES.get(name, name)
+            suffix = STATUS_TEST_NAMES.get(name, name.replace("-", "_"))
             if not (scripts_dir / f"test_ways_of_working_{suffix}.py").exists():
                 fails.append("c-can-fail")
         line = f"{way}: " + (", ".join(fails) if fails else "known (a-d pass)")

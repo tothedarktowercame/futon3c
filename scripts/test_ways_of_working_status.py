@@ -98,6 +98,16 @@ class StatusKnownProbeTest(unittest.TestCase):
                                         scripts_dir=scripts)
         self.assertIn("c-can-fail", fails_for(live, "w-untested"))
 
+    def test_hyphenated_probe_finds_underscored_test_file(self):
+        # probe "git-clean" is tested by test_ways_of_working_git_clean.py
+        decl, results_dir, scripts = environment(
+            [way("w-tested", "git-clean")],
+            {"git-clean": result("git-clean", iso(NOW))})
+        (scripts / "test_ways_of_working_git_clean.py").write_text("")
+        live = PROBE.probe_status_known(now=NOW, decl=decl, results_dir=results_dir,
+                                        scripts_dir=scripts)
+        self.assertIsNone(fails_for(live, "w-tested"))
+
     def test_none_probe_fails_d(self):
         live = probes_with([way("w-prose", "none")], {})
         self.assertEqual(["d-declared"], fails_for(live, "w-prose"))
