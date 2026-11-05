@@ -1,5 +1,7 @@
 # E-R8-red-ring-fill — filling the placeholder at step ⑨
 
+**Status:** DONE — findings reached; successor E-R14-red-ring-fill opened; confirmed by Joe 2026-11-05 (completion-criteria batch 1, ~/notes/completion-criteria/CLOSURES-batch1.md).
+
 **VERDICT (2026-10-09, provisional):** DONE — Excursion resolved its question (three corrected diagnoses, GainChain.lean module-1 outline built with zero sorry) and its successor E-R14-red-ring-fill was opened; the R8 investigation itself reached its findings. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
 **Opened:** 2026-08-26 · claude-13 at Joe's direction.

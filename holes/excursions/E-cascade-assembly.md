@@ -1,5 +1,7 @@
 # E-cascade-assembly — what assembly could look like, measured against the real graph
 
+**Status:** DONE — five strategies, projections and measured Part 2 written; confirmed by Joe 2026-11-05 (completion-criteria batch 1, ~/notes/completion-criteria/CLOSURES-batch1.md).
+
 **VERDICT (2026-10-09, provisional):** DONE — Design exploration whose deliverable (making options visible against measured numbers) is present with three parts committed and later corrections recorded; it explicitly builds nothing. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
 **Opened 2026-08-17 by claude-2 (Analyst, M-apm-demonstration) at Joe's

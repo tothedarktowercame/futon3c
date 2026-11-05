@@ -1,5 +1,7 @@
 # E-batch-operator-runbook — running A/B batches as ground-control's operator
 
+**Status:** DONE — runbook written (standing reference document); confirmed by Joe 2026-11-05 (completion-criteria batch 1, ~/notes/completion-criteria/CLOSURES-batch1.md).
+
 **VERDICT (2026-10-09, provisional):** DONE — The runbook manual itself (the deliverable) was written from batch-1 lessons and refined (registry row updated 2026-08-11); it is a completed standing document. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 
 **For the Opus batch-operator seat on Zone (claude-3). Written 2026-08-10 by

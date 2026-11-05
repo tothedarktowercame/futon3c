@@ -1,5 +1,7 @@
 # E-apm-halftime-pre-go-live — the locked problem list
 
+**Status:** SUPERSEDED by M-apm-demonstration — closed by Joe 2026-08-14; confirmed by Joe 2026-11-05 (completion-criteria batch 1, ~/notes/completion-criteria/CLOSURES-batch1.md).
+
 **VERDICT (2026-10-09, provisional):** SUPERSEDED by M-apm-demonstration — Closed 2026-08-14 by Joe with items discharged/corrected/parked and the remaining work explicitly continued as mission M-apm-demonstration. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
 
 **CLOSED 2026-08-14 by Joe.** The 24 items are discharged, corrected in

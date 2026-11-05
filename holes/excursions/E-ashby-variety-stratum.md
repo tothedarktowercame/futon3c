@@ -1,6 +1,6 @@
 # E-ashby-variety-stratum — the theoretical layer under the tower: Ashby's intelligence-amplifier, and why mathematics is the same stratum
 
-**Status: DERIVE (exploratory).** Opened 2026-07-30 by claude-1 at Joe's
+**Status:** DONE — findings written; next steps are proposals; confirmed by Joe 2026-11-05 (completion-criteria batch 1, ~/notes/completion-criteria/CLOSURES-batch1.md). (Previous status: DERIVE (exploratory).** Opened 2026-07-30 by claude-1 at Joe's)
 direction: *"install a theoretical layer, linking to Ashby and the concept of
 Intelligence Amplification."* §4 contains the one genuinely new claim and it is
 a **conjecture with a named check**, not a result. Nothing here is measured.

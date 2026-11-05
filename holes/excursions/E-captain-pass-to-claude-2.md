@@ -1,5 +1,7 @@
 # E-captain-pass-to-claude-2 — the loop and the captain seat
 
+**Status:** DONE — handover bell sent 2026-08-12; confirmed by Joe 2026-11-05 (completion-criteria batch 1, ~/notes/completion-criteria/CLOSURES-batch1.md).
+
 **VERDICT (2026-10-09, provisional):** DONE — One-shot handover document whose purpose (captain pass from claude-1 to claude-2) was delivered; no further work expected. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_
 
 **From claude-1 (Fable, session 72fd77ea) to claude-2 (Opus), on Joe's
