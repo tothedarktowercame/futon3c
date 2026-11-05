@@ -264,6 +264,21 @@ Review notes:
   checks of unselected promises (`e2568abc1`). A rerun of the final test leaves the live count unchanged.
   Not checked: which of the 4 real checkable promises the 3 `:existing` were (likely the 09-28/10-01 checks).
   3e (http `woken-history!`) to codex-13, `invoke-1793910544140-13278-6f4f2170`.
+- **3e live** (codex-13 `28233d3a0`, reviewed and loaded by claude-8). `woken-history!` reads the
+  `promise/history-event` chain by the stamped park id (the edge has no session; the caller already
+  holds the park id). Cursorless full window refuses. 7 tests, 17 assertions pass. Live: Joe's 20:23Z
+  turn resolves `park-32c37866` (timer park, so `basis none` is right); job parks woken today
+  (`park-e2f641d3`, `park-fec830ab`) have full chains including `:promise/woken`.
+  **Gap: closed promises have no chain in the log.** 629 history edges vs 7,351 states: the backfill
+  wrote history only for open promises and post-17:12Z rows, so a turn that followed a resume from a
+  park closed before 17:12Z now gets `basis none`. No caller of the route exists in code (it is only
+  served), so it is not urgent, but step 5 (stop evidence writes) needs every chain in the log:
+  a full-history backfill (~43k edges) is a precondition for step 5. The reconciler's per-chunk
+  readback re-reads the whole type, so it needs a cheaper readback before that run.
+- **Explicit-release route**: repointed by 3c, since it reads inputs through `obligations-reader`.
+  Two leftovers for step 5: it reads its own release back from evidence by id, and a release of an
+  already-closed, non-checkable promise now answers 404 `unknown-promise` instead of 409 `already-closed`.
+  `ways-of-working-probe.py` reads `promise-history` in a bounded since-window; it still works and moves at step 5.
 - **"hearo" still 32 hits** (Joe, 11-05 ~20:25Z). Breakdown of the 34 sidecar rows, 11-04 21:00Z onward:
   artifact-activation 12 (all before `f75fb0fff`, 16:52Z, which stopped its text copy; they age out),
   zai-1 turn rows 9, 象-1 (kimi) turn rows 4, claude-8 `prompt-preview` / `context-retrieval` 2,
