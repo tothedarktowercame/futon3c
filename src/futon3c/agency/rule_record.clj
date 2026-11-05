@@ -146,6 +146,12 @@
                         "Rule family id must name its first self-family record"))))
   record)
 
+(defonce ^{:doc "One shared client. A new HttpClient per call keeps a selector
+  thread alive until GC; on 2026-11-05 a 7k-request reconciler run piled up 1,409
+  of them and hit the futon3c service's 2048-task limit."}
+  shared-client
+  (delay (HttpClient/newHttpClient)))
+
 (defn request!
   "EDN transport preserves keyword-valued properties. Errors never look like a receipt."
   [base method path value]
@@ -157,7 +163,7 @@
         req (-> builder
                 (.method method (if value (HttpRequest$BodyPublishers/ofString (pr-str value))
                                     (HttpRequest$BodyPublishers/noBody))) .build)
-        response (.send (HttpClient/newHttpClient) req (HttpResponse$BodyHandlers/ofString))]
+        response (.send ^HttpClient @shared-client req (HttpResponse$BodyHandlers/ofString))]
     (when-not (<= 200 (.statusCode response) 299)
       (throw (ex-info "Rule store request refused" {:status (.statusCode response) :body (.body response)})))
     (edn/read-string (.body response))))
