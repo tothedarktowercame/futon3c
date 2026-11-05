@@ -10,6 +10,41 @@ import ma_observe as ma  # noqa: E402
 
 
 class CardTest(unittest.TestCase):
+    def test_observation_row_replaces_long_turn_quotes_with_exact_locator(self):
+        sentence = ("alpha bravo charlie delta echo foxtrot golf hotel india "
+                    "juliet kilo lima")
+        short = "alpha bravo charlie delta echo foxtrot golf"
+        source = "Before.  " + sentence + "  After."
+        turn = {"evidence/id": "emacs-source-1",
+                "evidence/body": {"event": "chat-turn", "role": "user",
+                                  "text": source}}
+        raw = ("<observations>Own summary; " + sentence +
+               "; own conclusion; " + short + ".</observations>\n"
+               "<current-task>Continue carefully.</current-task>\n"
+               "<suggested-response>Say: " + sentence + "</suggested-response>")
+        row = ma.observation_row("s", "claude-8", turn, raw, {}, 1.0, 2)
+        body = row["body"]
+        self.assertNotIn(sentence, str(body))
+        self.assertIn("Own summary", body["observations"])
+        self.assertIn("own conclusion", body["observations"])
+        self.assertIn(short, body["observations"])
+        self.assertEqual(2, body["quotes-replaced"])
+        match = __import__("re").search(
+            r"\[quote emacs-source-1@(\d+)\+(\d+)\]", body["observations"])
+        self.assertIsNotNone(match)
+        start, length = map(int, match.groups())
+        self.assertEqual(sentence, source[start:start + length])
+
+    def test_card_row_compacts_a_long_grounding_quote(self):
+        sentence = "one two three four five six seven eight nine ten"
+        turn = {"evidence/id": "emacs-card-source",
+                "evidence/body": {"text": "prefix " + sentence + " suffix"}}
+        row = ma.card_row("s", "claude-8", turn,
+                          {"fresh": {"work": {"quote": sentence}}}, "now")
+        self.assertNotIn(sentence, str(row["body"]))
+        self.assertIn("[quote emacs-card-source@", row["body"]["card"]["fresh"]["work"]["quote"])
+        self.assertEqual(1, row["body"]["quotes-replaced"])
+
     def test_parse_card_reads_tagged_json_and_fenced_json(self):
         raw = '<observations>x</observations>\n<agent-card>```json\n{"purpose": "p", "repair": ["r"], "extra": 1}\n```</agent-card>'
         card = ma.parse_card(raw)

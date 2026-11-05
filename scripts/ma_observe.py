@@ -360,7 +360,31 @@ def build_card(agent, session, rows, new_obs, model_card, previous, work=None):
     }
 
 
+def replace_turn_quotes_in(value, source, turn_evidence_id):
+    """Recursively compact source quotes in model-derived structured output."""
+    if isinstance(value, str):
+        return replace_turn_quotes(value, source, turn_evidence_id)
+    if isinstance(value, list):
+        out, count = [], 0
+        for item in value:
+            compact, n = replace_turn_quotes_in(item, source, turn_evidence_id)
+            out.append(compact)
+            count += n
+        return out, count
+    if isinstance(value, dict):
+        out, count = {}, 0
+        for key, item in value.items():
+            compact, n = replace_turn_quotes_in(item, source, turn_evidence_id)
+            out[key] = compact
+            count += n
+        return out, count
+    return value, 0
+
+
 def card_row(session, agent, turn_row, card, now):
+    turn_evidence_id = turn_row.get("evidence/id")
+    card, quotes_replaced = replace_turn_quotes_in(
+        card, turn_text(turn_row), turn_evidence_id)
     return {
         "subject": {"ref/type": "session", "ref/id": session},
         "type": "coordination", "claim-type": "observation", "author": "馬",
@@ -369,7 +393,8 @@ def card_row(session, agent, turn_row, card, now):
                    "basis": "write-time", "recorded-at": now},
         "session-id": session,
         "body": {"event": "agent-card", "observed-agent": agent,
-                 "turn-evidence-id": turn_row.get("evidence/id"), "card": card, "at": now},
+                 "turn-evidence-id": turn_evidence_id, "card": card,
+                 "quotes-replaced": quotes_replaced, "at": now},
         "tags": ["ma-card"],
     }
 
@@ -382,8 +407,61 @@ def post_evidence(row):
         return json.load(resp)
 
 
+def replace_turn_quotes(text, source, turn_evidence_id, min_words=8):
+    """Replace verbatim SOURCE runs in TEXT with stable source locators.
+
+    Words are compared after whitespace normalization; locator offsets still
+    address the exact, unnormalized SOURCE bytes represented by Python chars.
+    """
+    if not text or not source:
+        return text, 0
+    word_pattern = r"\b\w+(?:[-’']\w+)*\b"
+    source_words = list(re.finditer(word_pattern, source))
+    text_words = list(re.finditer(word_pattern, text))
+    source_at = {}
+    for i, word in enumerate(source_words):
+        source_at.setdefault(word.group(0), []).append(i)
+    replacements = []
+    i = 0
+    while i < len(text_words):
+        best = None
+        for source_i in source_at.get(text_words[i].group(0), []):
+            length = 0
+            while (i + length < len(text_words)
+                   and source_i + length < len(source_words)
+                   and text_words[i + length].group(0)
+                   == source_words[source_i + length].group(0)):
+                length += 1
+            if best is None or length > best[0]:
+                best = (length, source_i)
+        if best is None or best[0] < min_words:
+            i += 1
+            continue
+        length, source_i = best
+        source_start = source_words[source_i].start()
+        source_end = source_words[source_i + length - 1].end()
+        replacements.append((text_words[i].start(),
+                             text_words[i + length - 1].end(),
+                             "[quote %s@%d+%d]" %
+                             (turn_evidence_id, source_start,
+                              source_end - source_start)))
+        i += length
+    for start, end, locator in reversed(replacements):
+        text = text[:start] + locator + text[end:]
+    return text, len(replacements)
+
+
 def observation_row(session, agent, turn_row, raw, usage, seconds, n_msgs):
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    turn_evidence_id = turn_row.get("evidence/id")
+    source = turn_text(turn_row)
+    fields = {"observations": tag(raw, "observations") or raw.strip(),
+              "current-task": tag(raw, "current-task"),
+              "suggested-response": tag(raw, "suggested-response")}
+    quotes_replaced = 0
+    for field, value in fields.items():
+        fields[field], count = replace_turn_quotes(value, source, turn_evidence_id)
+        quotes_replaced += count
     return {
         "subject": {"ref/type": "session", "ref/id": session},
         "type": "coordination", "claim-type": "observation", "author": "馬",
@@ -392,10 +470,8 @@ def observation_row(session, agent, turn_row, raw, usage, seconds, n_msgs):
                    "basis": "write-time", "recorded-at": now},
         "session-id": session,
         "body": {"event": "observation", "observed-agent": agent,
-                 "turn-evidence-id": turn_row.get("evidence/id"),
-                 "observations": tag(raw, "observations") or raw.strip(),
-                 "current-task": tag(raw, "current-task"),
-                 "suggested-response": tag(raw, "suggested-response"),
+                 "turn-evidence-id": turn_evidence_id,
+                 **fields, "quotes-replaced": quotes_replaced,
                  "model": MODEL, "prompt": PROMPT_VERSION, "usage": usage,
                  "seconds": round(seconds, 1), "messages": n_msgs, "at": now},
         "tags": ["ma-observation"],
