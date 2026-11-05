@@ -718,7 +718,9 @@
         (is (= ["cc:-home-joe/agency-send-mode-brief-trap"]
                (:injected (turn-start-body store))))
         (is (= 17 (:injected-ms (turn-start-body store))))
-        (is (= prompt (:prompt (turn-start-body store))))
+        (is (not (contains? (turn-start-body store) :prompt))
+            "a stored payload is referenced, not copied into evidence")
+        (is (= (count prompt) (:prompt-chars (turn-start-body store))))
         (is (= "--- CURRENT TURN ---\nSurface: test"
                (:header (turn-start-body store))))
         (is (= "dispatch-payloads" (:payload-store (turn-start-body store))))
@@ -742,7 +744,9 @@
       (is (= :payload-store-write-failed
              (get-in (turn-start-body store) [:payload-error :kind])))
       (is (= "disk unavailable"
-             (get-in (turn-start-body store) [:payload-error :message]))))))
+             (get-in (turn-start-body store) [:payload-error :message])))
+      (is (= "still run" (:prompt (turn-start-body store)))
+          "a failed put keeps the prompt inline so the turn text is not lost"))))
 
 (deftest injection-is-typed-absent-and-never-fails-a-turn
   (doseq [{:keys [label memory-mode context shell-result expected-calls]}

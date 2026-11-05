@@ -1317,7 +1317,11 @@
                          body)})
 
 (defn- persist-turn-start!
-  "Persist the original turn PROMPT and its pre-round injection receipt."
+  "Persist the turn's pre-round injection receipt and a reference to the
+   exact payload sent. PROMPT is copied inline only when the payload store
+   did not take it (old callers pass no PAYLOAD; a failed put has :error),
+   so the turn text is never lost and is otherwise not duplicated into
+   evidence."
   [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition
            injected injected-ms payload header prompt-offset-bytes]}]
   (persist-transcript-safely!
@@ -1325,8 +1329,7 @@
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-start
-     :body (cond-> {:prompt (str prompt)
-                    :injected (vec (or injected []))
+     :body (cond-> {:injected (vec (or injected []))
                     :injected-ms (or injected-ms 0)
                     :requisition requisition
                     :prompt-chars (count (str prompt))
@@ -1342,6 +1345,7 @@
                     ;; The payload is prompt-with-memory; PROMPT lies at this
                     ;; UTF-8 byte offset, after any injected memory block.
                     :payload-prompt-offset-bytes (or prompt-offset-bytes 0))
+             (not (:sha256 payload)) (assoc :prompt (str prompt))
              (:error payload) (assoc :payload-error (:error payload)))})))
 
 (defn- retain-provider-payload [text]
