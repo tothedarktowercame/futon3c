@@ -1,5 +1,6 @@
 (ns futon3c.agency.promise-reconcile-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
             [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.promise-reconcile :as reconcile]
             [futon3c.agency.promise-state :as promise-state]))
@@ -29,10 +30,22 @@
 
 (defn- fixture
   ([rows edges writes] (fixture rows edges writes #{}))
-  ([rows edges writes failed-ids]
+  ([rows edges writes failed-ids] (fixture rows edges writes failed-ids #{}))
+  ([rows edges writes failed-ids mismatch-ids]
    (let [chunks (atom [])
-         gets (atom 0)]
-     {:request (fn [_ _ _ _] {:entries rows})
+         gets (atom 0)
+         paths (atom [])]
+     {:request (fn [_ _ path _]
+                 (if (str/starts-with? path "/api/alpha/hyperedges?")
+                   (let [encoded (second (re-find #"[?&]end=([^&]+)" path))
+                         endpoint (java.net.URLDecoder/decode encoded "UTF-8")]
+                     (swap! paths conj path)
+                     {:hyperedges
+                      (->> (vals @edges)
+                           (filter #(and (= :promise/history-event (:hx/type %))
+                                         (some #{endpoint} (:hx/endpoints %))))
+                           vec)})
+                   {:entries rows}))
       :read (fn [hx-type _]
               (->> (vals @edges) (filter #(= hx-type (:hx/type %))) vec))
       :batch (fn [batch]
@@ -42,8 +55,12 @@
                 (mapv (fn [edge]
                         (if (failed-ids (:hx/id edge))
                           {:ok false :hx/id (:hx/id edge) :error "injected"}
-                          (do (swap! writes conj edge)
-                              (swap! edges assoc (:hx/id edge) edge)
+                          (let [stored (if (mismatch-ids (:hx/id edge))
+                                         (assoc-in edge [:hx/props :history/transition-type]
+                                                   :promise/mismatched)
+                                         edge)]
+                              (swap! writes conj edge)
+                              (swap! edges assoc (:hx/id edge) stored)
                               {:ok true :hx/id (:hx/id edge)})))
                       batch)})
    :get (fn [id]
@@ -55,7 +72,8 @@
            (swap! edges assoc (:hx/id edge) edge)
            {:ok true :hx/id (:hx/id edge)})
       :chunks chunks
-      :gets gets})))
+      :gets gets
+      :paths paths})))
 
 (defmacro with-store [f & body]
   `(binding [reconcile/*request-fn* (:request ~f)
@@ -97,6 +115,60 @@
         (is (= 1 (:states-written report)))
         (is (= 0 (:history-edges-written report)))
         (is (= [:promise/state] (mapv :hx/type @writes)))))))
+
+(deftest all-history-copies-closed-chain-with-per-promise-readback-and-converges
+  (let [rows (chain "closed-all" true)
+        edges (atom {}) writes (atom []) f (fixture rows edges writes)]
+    (with-store f
+      (is (= 0 (:history-edges-written
+                (reconcile/run! {:page-sleep-ms 0 :dry-run? true}))))
+      (is (= 3 (:history-edges-written
+                (reconcile/run! {:page-sleep-ms 0 :dry-run? true
+                                 :all-history? true}))))
+      (let [report (reconcile/run! {:page-sleep-ms 0 :all-history? true})
+            readback-paths @(:paths f)]
+        (is (= 3 (:history-edges-written report)))
+        (is (= 1 (count readback-paths)))
+        (is (every? #(and (str/includes? % "type=promise%2Fhistory-event")
+                          (str/includes? % "end=closed-all"))
+                    readback-paths)))
+      (reset! writes [])
+      (reset! (:paths f) [])
+      (let [rerun (reconcile/run! {:page-sleep-ms 0 :all-history? true})]
+        (is (zero? (:history-edges-written rerun)))
+        (is (empty? @writes))
+        (is (empty? @(:paths f)))))))
+
+(deftest all-history-readback-mismatch-is-reported
+  (let [rows (chain "mismatch" true)
+        bad-id (:hx/id (promise-log/entry->hyperedge (second rows)))
+        edges (atom {}) writes (atom [])
+        f (fixture rows edges writes #{} #{bad-id})]
+    (with-store f
+      (let [report (reconcile/run! {:page-sleep-ms 0 :all-history? true})]
+        (is (= 1 (:failed-ids-count report)))
+        (is (= [bad-id] (:failed-ids report)))
+        (is (= 1 (count @(:paths f))))))))
+
+(deftest all-history-full-cursorless-readback-refuses
+  (let [rows (chain "readback-overflow" true)
+        edges (atom {}) writes (atom []) f (fixture rows edges writes)
+        ordinary-request (:request f)]
+    (with-store f
+      (binding [reconcile/*request-fn*
+                (fn [base method path body]
+                  (if (str/starts-with? path "/api/alpha/hyperedges?")
+                    {:hyperedges
+                     (vec (repeat 1000
+                                  (promise-log/entry->hyperedge (first rows))))}
+                    (ordinary-request base method path body)))]
+        (is (= {:reason :truncated-input
+                :source :promise/history-event
+                :promise-id "readback-overflow"}
+               (try (reconcile/run! {:page-sleep-ms 0 :all-history? true}) nil
+                    (catch clojure.lang.ExceptionInfo error
+                      (select-keys (ex-data error)
+                                   [:reason :source :promise-id])))))))))
 
 (deftest open-promise-copies-missing-pre-cutover-history
   (let [rows (chain "open" false)

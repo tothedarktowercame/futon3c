@@ -100,6 +100,33 @@
 (defn- edge-map [edges]
   (into {} (map (juxt :hx/id identity)) edges))
 
+(defn- read-history-chunk!
+  "Read back only the promise chains represented in CHUNK. The indexed
+   type+end route has no usable cursor, so a full window is a refusal."
+  [chunk requests]
+  (let [base (substrate/configured-url)]
+    (reduce
+     (fn [readback promise-id]
+       (swap! requests inc)
+       (let [response (*request-fn*
+                       base "GET"
+                       (str "/api/alpha/hyperedges?type="
+                            (encode "promise/history-event")
+                            "&end=" (encode promise-id)
+                            "&limit=" page-limit "&include-total=false") nil)
+             edges (vec (:hyperedges response))]
+         (when (or (>= (count edges) page-limit) (:truncated response)
+                   (:partial? response) (:incomplete response)
+                   (:next-cursor response))
+           (throw (ex-info "Promise history readback exceeded its bound"
+                           {:reason :truncated-input
+                            :source :promise/history-event
+                            :promise-id promise-id
+                            :rows (count edges)})))
+         (into readback (edge-map edges))))
+     {}
+     (distinct (map #(get-in % [:hx/props :history/promise-id]) chunk)))))
+
 (defn- before-history-dual-write? [row]
   (.isBefore (Instant/parse (:evidence/at row))
              (Instant/parse history-dual-write-at)))
@@ -129,9 +156,11 @@
                                      (when-not (:ok result)
                                        (:hx/id (nth chunk index)))))
                                   results))
-        readback (try
-                   (edge-map (read-edges! hx-type limit requests))
-                   (catch Throwable _ ::unavailable))]
+        readback (if (= :promise/history-event hx-type)
+                   (read-history-chunk! chunk requests)
+                   (try
+                     (edge-map (read-edges! hx-type limit requests))
+                     (catch Throwable _ ::unavailable)))]
     (into post-failed
           (keep (fn [expected]
                   (when (or (= ::unavailable readback)
@@ -152,7 +181,7 @@
   "Catch operational promise projections up to retained evidence. DRY-RUN?
    performs all reads and decisions but makes no writes or deferred mutations."
   ([] (run! {}))
-  ([{:keys [dry-run?] :as options}]
+  ([{:keys [dry-run? all-history?] :as options}]
    (let [started (System/nanoTime)
          {:keys [rows pages]} (read-evidence-history options)
          groups (group-by promise-id rows)
@@ -185,7 +214,8 @@
                  (swap! planned-states conj edge)
                  (swap! edge-owners assoc (:hx/id edge) pid))))
            (doseq [row history
-                   :when (or (= :open (:status folded))
+                   :when (or all-history?
+                             (= :open (:status folded))
                              (not (before-history-dual-write? row)))
                      :let [edge (promise-log/entry->hyperedge row)]
                      :when (not (promise-log/same-edge?
