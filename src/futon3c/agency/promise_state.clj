@@ -11,6 +11,10 @@
 
 (defn state-id [promise-id] (str "promise-state:" promise-id))
 
+(defonce ^{:doc "promise-id -> reason, for promises whose state write was deferred
+  by a projection gap. Read by the reconciler and for observability."}
+  !deferred (atom {}))
+
 (defn- incomplete [promise-id reason & [detail]]
   (merge {:promise/state :incomplete
           :promise-id promise-id
@@ -131,9 +135,15 @@
     (if (and previous (>= (:head-sequence previous) sequence))
       {:ok true :state previous :replayed? true}
       (let [state (advance-state previous entry)]
-        (when (= :incomplete (:promise/state state))
-          (throw (ex-info "Promise state projection is incomplete"
-                          {:reason :incomplete-promise-state :state state})))
+        (if (= :incomplete (:promise/state state))
+          ;; A projection gap (no prior state for a promise that predates this
+          ;; writer, or a state behind the row) is not a transport failure.
+          ;; Throwing here kept the history row in the outbox and retried it on
+          ;; every drain, the 10-28 stuck-outbox shape. Defer it; the backfill/
+          ;; reconciler (step 3b) recomputes the state from full history.
+          (do (swap! !deferred assoc promise-id
+                     (select-keys state [:reason :sequence :expected-sequence]))
+              {:ok true :deferred (:reason state)})
         (let [edge (state->hyperedge state)
               post-error (try
                            (promise-log/*post-fn* edge)
@@ -152,4 +162,4 @@
                             {:reason :promise-state-readback-mismatch
                              :hx/id (:hx/id edge)})))
           {:ok true :state state :hyperedge stored
-           :replayed? (boolean post-error)})))))
+           :replayed? (boolean post-error)}))))))

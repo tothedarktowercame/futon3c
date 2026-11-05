@@ -74,3 +74,18 @@
       (let [closed (get @edges (promise-state/state-id promise-id))]
         (is (:replayed? (promise-state/write! (nth rows 3))))
         (is (= closed (get @edges (promise-state/state-id promise-id))))))))
+
+(deftest pre-existing-promise-defers-instead-of-throwing
+  ;; A promise created before the state writer existed has no state edge; its
+  ;; next row (sequence 4 here) must not throw, or the drain keeps the history
+  ;; row in the outbox and retries it forever.
+  (reset! promise-state/!deferred {})
+  (let [edges (atom {})]
+    (binding [promise-log/*get-fn* #(get @edges %)
+              promise-log/*post-fn* (fn [edge] (swap! edges assoc (:hx/id edge) edge)
+                                      {:ok true :hx/id (:hx/id edge)})]
+      (let [result (promise-state/write! (nth rows 3))]
+        (is (:ok result))
+        (is (= :missing-origin (:deferred result)))
+        (is (empty? @edges))
+        (is (= :missing-origin (get-in @promise-state/!deferred [promise-id :reason])))))))
