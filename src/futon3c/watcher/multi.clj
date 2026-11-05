@@ -27,6 +27,7 @@
             [clojure.walk :as walk]
             [cheshire.core :as json]
             [futon3c.cyder :as cyder]
+            [futon3c.file-change.journal :as file-change-journal]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
             [futon3c.watcher.file-ingest :as file-ingest]
@@ -1346,6 +1347,26 @@
      :moves moves
      :ingest-paths (vec (remove renamed-to changed-paths))}))
 
+(defn- reconcile-file-change-journal!
+  "Shadow-mode level reconciliation. It has no dispatch authority and a fault
+  here cannot stop the serving watcher; health exposes the last refusal."
+  [journal-state {:keys [root label snapshot]}]
+  (when journal-state
+    (try
+      (let [files (into {} (map (fn [[path metadata]] [path (:hash metadata)])) snapshot)
+            result (volatile! nil)]
+        (swap! journal-state
+               (fn [state]
+                 (let [[state' receipt]
+                       (file-change-journal/reconcile-snapshot
+                        state {:repo label :worktree root :files files
+                               :observed-at-ms (System/currentTimeMillis)})]
+                   (vreset! result receipt)
+                   state')))
+        @result)
+      (catch Throwable t
+        {:outcome :refused :error (.getMessage t)}))))
+
 ;; ---------- commit-vertex live ingestion ----------
 
 (defn query-repo-vars-by-file
@@ -1437,7 +1458,7 @@
 
 (defn run-cycle!
   [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
-           inbox-zero-options]
+           inbox-zero-options file-change-journal]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
@@ -1445,6 +1466,8 @@
         cross-root-froms (set (map :from cross-root-moves))
         cross-root-tos (set (map :to cross-root-moves))]
     (doseq [{:keys [root label snapshot cache moves ingest-paths first-cycle?]} plans]
+      (reconcile-file-change-journal!
+       file-change-journal {:root root :label label :snapshot snapshot})
       (let [{:keys [renamed deleted added]} moves
             cycle-ok? (atom true)
             ingest-paths (vec (remove cross-root-tos ingest-paths))
@@ -1677,8 +1700,10 @@
                           Acquires an exclusive writer lease for state-path.
 
    Returns the same shape as `status`."
-  [{:keys [roots interval-ms cold-scan? commit-ingest? inbox-zero-options]
-    :or {interval-ms 5000 cold-scan? false commit-ingest? true}}]
+  [{:keys [roots interval-ms cold-scan? commit-ingest? inbox-zero-options
+           file-change-journal-max-entries]
+    :or {interval-ms 5000 cold-scan? false commit-ingest? true
+         file-change-journal-max-entries 2048}}]
   (when-let [s @!state]
     (when (:executor s)
       (throw (ex-info "watcher already running; call stop! first or use status"
@@ -1694,6 +1719,8 @@
         event-n (atom 0)
         cycle-n (atom 0)
         per-root-cache (atom (zipmap (map :path roots) (repeat {})))
+        file-change-journal (atom (file-change-journal/empty-state
+                                   file-change-journal-max-entries))
         executor (Executors/newSingleThreadScheduledExecutor
                   (reify java.util.concurrent.ThreadFactory
                     (newThread [_ r]
@@ -1709,6 +1736,7 @@
                      :cycle-n cycle-n
                      :cold-scan? cold-scan?
                      :commit-ingest? commit-ingest?
+                     :file-change-journal file-change-journal
                      :inbox-zero-options inbox-zero-options}
         task #(#'safe-cycle! cycle-state)]
     (reset! !state {:executor executor
@@ -1720,6 +1748,7 @@
                     :interval-ms interval-ms
                     :cold-scan? cold-scan?
                     :commit-ingest? commit-ingest?
+                    :file-change-journal file-change-journal
                     :inbox-zero-options inbox-zero-options
                     :inbox-zero-writer writer
                     :inbox-zero (if inbox-zero-options
@@ -1763,7 +1792,8 @@
   [_]
   (when-let [s @!state]
     (-> s
-        (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer)
+        (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer
+                :file-change-journal)
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
@@ -1771,6 +1801,11 @@
                :last-cycle-finished-at (some-> (:last-cycle-finished-at s) str)
                :last-progress-at (some-> (:last-progress-at s) str)
                :n-roots (count (:roots s))
+               :file-change-journal
+               (if-let [journal-state (:file-change-journal s)]
+                 (file-change-journal/health @journal-state
+                                             (System/currentTimeMillis))
+                 {:status :not-started})
                :mission-maintenance (mission-maintenance-status)))))
 
 (defn tick!
@@ -1787,5 +1822,6 @@
                  :cycle-n (:cycle-n s)
                  :cold-scan? (:cold-scan? s)
                  :commit-ingest? (:commit-ingest? s)
+                 :file-change-journal (:file-change-journal s)
                  :inbox-zero-options (:inbox-zero-options s)})
     (status nil)))

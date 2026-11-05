@@ -54,3 +54,30 @@
                  (journal/acknowledge s2 :registry 2 3)))
     (is (thrown? clojure.lang.ExceptionInfo
                  (journal/acknowledge s2 :registry 0 3)))))
+
+(deftest authority-reconciliation-recovers-a-missed-change
+  (let [[seeded seed-result]
+        (journal/reconcile-snapshot
+         (journal/empty-state 3)
+         {:repo "futon3c" :worktree "/work/futon3c"
+          :files {"a.clj" "h1" "gone.clj" "g1"} :observed-at-ms 1})
+        ;; No direct observe call represents a missed notification. The next
+        ;; authority read must recover both the changed and deleted levels.
+        [reconciled result]
+        (journal/reconcile-snapshot
+         seeded
+         {:repo "futon3c" :worktree "/work/futon3c"
+          :files {"a.clj" "h2"} :observed-at-ms 2})
+        [stable stable-result]
+        (journal/reconcile-snapshot
+         reconciled
+         {:repo "futon3c" :worktree "/work/futon3c"
+          :files {"a.clj" "h2"} :observed-at-ms 3})]
+    (is (= :seeded (:outcome seed-result)))
+    (is (empty? (:journal seeded)) "the initial authority read is not a change storm")
+    (is (= {:changed 1 :deleted 1 :appended 2}
+           (select-keys result [:changed :deleted :appended])))
+    (is (= [["a.clj" :write "h2"] ["gone.clj" :delete "g1"]]
+           (mapv (juxt :path :operation :content-id) (:journal reconciled))))
+    (is (zero? (:appended stable-result)))
+    (is (= (:journal reconciled) (:journal stable)))))

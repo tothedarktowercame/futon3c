@@ -12,6 +12,7 @@
    :watermark 0
    :journal []
    :latest {}
+   :authority-levels {}
    :consumers {}})
 
 (defn path-key [{:keys [repo worktree path]}]
@@ -146,3 +147,55 @@
                      :age-ms (- now-ms (:last-progress-at-ms c))
                      :rebuild-required? (:rebuild-required? c)}]))
          (:consumers state))})
+
+(defn reconcile-snapshot
+  "Reconcile a complete repository snapshot against the last authority level.
+
+  The first snapshot seeds the level without emitting historical changes.
+  Later calls append changed and deleted paths through `observe`. This makes
+  watcher notifications acceleration hints: a missed notification is recovered
+  from the next complete snapshot. FILES is {relative-path content-id}."
+  [state {:keys [repo worktree files observed-at-ms]}]
+  (when-not (and (string? repo) (not-empty repo)
+                 (string? worktree) (not-empty worktree)
+                 (map? files)
+                 (every? string? (keys files))
+                 (every? #(and (string? %) (not-empty %)) (vals files))
+                 (integer? observed-at-ms) (not (neg? observed-at-ms)))
+    (throw (ex-info "Invalid authority snapshot"
+                    {:repo repo :worktree worktree :files files
+                     :observed-at-ms observed-at-ms})))
+  (let [scope [repo worktree]
+        absent (Object.)
+        prior (get-in state [:authority-levels scope] absent)]
+    (if (identical? absent prior)
+      [(assoc-in state [:authority-levels scope] files)
+       {:outcome :seeded :repo repo :worktree worktree
+        :files (count files) :appended 0}]
+      (let [paths (sort (into (set (keys prior)) (keys files)))
+            changes (keep (fn [path]
+                            (let [before (get prior path absent)
+                                  after (get files path absent)]
+                              (cond
+                                (identical? before after) nil
+                                (= before after) nil
+                                (identical? absent after)
+                                {:repo repo :worktree worktree :path path
+                                 :content-id before :operation :delete
+                                 :observed-at-ms observed-at-ms}
+                                :else
+                                {:repo repo :worktree worktree :path path
+                                 :content-id after :operation :write
+                                 :observed-at-ms observed-at-ms})))
+                          paths)
+            [state results]
+            (reduce (fn [[s rs] observation]
+                      (let [[s' result] (observe s observation)]
+                        [s' (conj rs result)]))
+                    [state []]
+                    changes)
+            state (assoc-in state [:authority-levels scope] files)]
+        [state {:outcome :reconciled :repo repo :worktree worktree
+                :changed (count (filter #(= :write (:operation %)) changes))
+                :deleted (count (filter #(= :delete (:operation %)) changes))
+                :appended (count (filter #(= :appended (:outcome %)) results))}]))))

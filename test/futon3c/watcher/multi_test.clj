@@ -5,7 +5,8 @@
             [babashka.http-client :as http]
             [futon3.inbox-zero.watcher :as inbox-zero]
             [futon3c.cyder :as cyder]
-            [futon3c.watcher.multi :as sut]))
+            [futon3c.watcher.multi :as sut]
+            [futon3c.file-change.journal :as file-change-journal]))
 
 (defn- private-var [sym]
   (var-get (ns-resolve 'futon3c.watcher.multi sym)))
@@ -626,3 +627,14 @@
       (spit f "{\"scope-hyperedges\": [{\"binder-type\": \"map-item\"}, {\"binder-type\": \"map-item\"}, {}]}")
       (with-redefs-fn {#'sut/mission-scope-tree-path (fn [_] (.getPath f))}
         #(is (= ["map-item"] (#'sut/scope-tree-binders "E-any")))))))
+(deftest shadow-journal-reconciles-the-watcher-snapshot
+  (let [state (atom (file-change-journal/empty-state 4))
+        reconcile @#'sut/reconcile-file-change-journal!]
+    (is (= :seeded
+           (:outcome (reconcile state {:root "/repo" :label "repo-d"
+                                       :snapshot {"a.clj" {:hash "h1"}}}))))
+    (is (= :reconciled
+           (:outcome (reconcile state {:root "/repo" :label "repo-d"
+                                       :snapshot {"a.clj" {:hash "h2"}}}))))
+    (is (= [["a.clj" "h2"]]
+           (mapv (juxt :path :content-id) (:journal @state))))))
