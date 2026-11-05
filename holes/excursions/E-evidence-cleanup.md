@@ -179,6 +179,17 @@ Review notes:
   a versioned `:promise/state` edge per promise with a status endpoint, history edges fetched per
   promise. Details in PROMISE-HISTORY-MOVE.md §"Decided: step 3 serving shape".
 
+- **Step 3a, state edge in the drain path** (codex-13 `c22af1737`; claude-8 fix `0f1febd24`). Review found
+  that a projection gap threw inside the drain, which would have kept every row of every pre-existing
+  promise in the outbox (the 10-28 shape); gaps are now deferred into `promise-state/!deferred` for
+  the reconciler. New test fails on the old code; 21 tests / 112 assertions. Live probe: state edge
+  with keyword and map props round-trips exactly (`same-edge? true`); `end=promise-status:open`
+  finds it; probe retracted. (A first probe with a future valid time read back absent: futon1b's
+  presence check is as-of now. Real writes use past event times.) Live-loaded 18:09Z; by 18:16Z
+  four new promises had state edges (2 closed, open/closed endpoints correct), outbox 0, failed
+  count unchanged at 3. Step 3b (reconciler/backfill) dispatched to codex-13
+  (`invoke-1793902614438-13190-ac860f1e`).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
