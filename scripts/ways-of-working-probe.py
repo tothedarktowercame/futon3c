@@ -304,23 +304,47 @@ def _act_id(value):
     if isinstance(value, dict): return value.get("act") or value.get("id")
     return None
 
+def _is_pasted_text(act):
+    """True when the act's own record marks it as pasted terminal/output text
+    (e.g. the 'claude is thinking...' status line Joe pasted on 10-28).
+    NOTE: standing? false alone is NOT the marker — 象 stamps it on real,
+    standing asks too (codex-2's 10-21 pair, claude-15 f-s2-0); only the
+    `about` field saying 'pasted' identifies non-intent text."""
+    about = str(act.get("about") or "").lower()
+    return "past" in about  # pasted / paste
+
 def read_intent_records(record_root=TURN_STORE, limit=INTENT_RECORD_LIMIT):
     """Read a bounded turn-record census and retain the newest valid row/session."""
     root = pathlib.Path(record_root)
     if not root.is_dir() or not os.access(root, os.R_OK):
         raise OSError(f"unreadable 象 record root: {root}")
-    paths = list(root.glob("turn-*.json"))
+    # 象 writes sibling artefacts beside the turn records (.draft/.analysis/
+    # .candidates); they are dicts without session_id/ports BY DESIGN and were
+    # 16,610 of the 19,965 "invalid" records.  Narrow the census to real
+    # turn records only.
+    artefact_suffixes = (".draft.json", ".analysis.json", ".candidates.json")
+    paths = [p for p in root.glob("turn-*.json")
+             if not p.name.endswith(artefact_suffixes)]
     if len(paths) > limit:
         raise RuntimeError(f"象 record census truncated: {len(paths)} exceeds {limit}")
     valid, invalid = [], 0
+    unanalysed = {"total": 0, "operator": 0}
     for path in paths:
         try:
             row = json.loads(path.read_text())
             created_at = parse_time(row.get("created_at")) if isinstance(row, dict) else None
         except (OSError, ValueError):
             invalid += 1; continue
-        if (not isinstance(row, dict) or not row.get("session_id")
-                or not created_at or not isinstance(row.get("ports"), dict)):
+        if not isinstance(row, dict) or not created_at:
+            invalid += 1; continue
+        if row.get("ports") is None:
+            # A real turn record that analysis never ran on: typed census
+            # hole, not corruption.  Intents here were lost UPSTREAM.
+            unanalysed["total"] += 1
+            if row.get("origin") == "operator":
+                unanalysed["operator"] += 1
+            continue
+        if not row.get("session_id") or not isinstance(row.get("ports"), dict):
             invalid += 1; continue
         row["_record"] = path.stem
         valid.append(row)
@@ -329,7 +353,7 @@ def read_intent_records(record_root=TURN_STORE, limit=INTENT_RECORD_LIMIT):
         sid = row["session_id"]
         if sid not in latest or parse_time(row["created_at"]) > parse_time(latest[sid]["created_at"]):
             latest[sid] = row
-    return valid, latest, invalid
+    return valid, latest, invalid, unanalysed
 
 def read_intent_sidecars(sidecar_root, limit=INTENT_RECORD_LIMIT):
     root = pathlib.Path(sidecar_root)
@@ -350,23 +374,28 @@ def fetch_intent_job(job_id, base="http://localhost:7070"):
     except Exception: return None
     return data.get("job") or data
 
-def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid=0):
+def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid=0,
+                     unanalysed=None):
     """Classify operator opener acts with explicit v1 closure witnesses."""
     job_state = job_state or fetch_intent_job
+    unanalysed = unanalysed or {"total": 0, "operator": 0}
     candidates, meta = {}, {}
     for sid, row in latest.items():
         acts = {a.get("id"): a for a in (row.get("acts") or []) if isinstance(a, dict) and a.get("id")}
         for act in acts.values():
             if act.get("author") == "operator" and act.get("kind") in INTENT_OPENERS:
+                if _is_pasted_text(act):
+                    continue  # pasted terminal/output text, not an intent
                 candidates.setdefault((sid, act["id"]), act)
                 meta.setdefault((sid, act["id"]), (sid, row.get("agent_id", "unknown")))
         for port in row["ports"].get("still_open") or []:
             if not isinstance(port, dict): continue
             aid = _act_id(port); source = acts.get(aid, {})
             merged = dict(port)
-            for key in ("author", "kind", "text", "at"):
+            for key in ("author", "kind", "text", "at", "about"):
                 if source.get(key) is not None: merged[key] = source[key]
-            if merged.get("author") == "operator" and merged.get("kind") in INTENT_OPENERS and aid:
+            if (merged.get("author") == "operator" and merged.get("kind") in INTENT_OPENERS
+                    and aid and not _is_pasted_text(merged)):
                 candidates.setdefault((sid, aid), merged)
                 meta.setdefault((sid, aid), (sid, row.get("agent_id", "unknown")))
 
@@ -411,7 +440,7 @@ def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid
             witnesses[key] = {"status": "met" if state in {"done", "delivered"} else "answered",
                               "kind": "agency-job", "job-state": state}
 
-    statuses, pending, violations = collections.Counter(), [], []
+    statuses, pending, violations, unwitnessable = collections.Counter(), [], [], []
     for key, act in candidates.items():
         aid = key[1]
         if key in witnesses:
@@ -428,15 +457,31 @@ def classify_intents(records, latest, sidecars, now=NOW, job_state=None, invalid
         progress = any(act.get(k) for k in ("owner", "debtor", "assignee", "progress", "progress-at"))
         deferred = act.get("deferred") is True or act.get("disposition") == "deferred"
         if at and now - at > INTENT_STALE and not progress and not deferred:
-            violations.append(item)
+            # Finding 6: Zai seats write no assistant rows, so no probe can
+            # witness closure for their acts.  Not stale — unwitnessable by
+            # construction, kept visible instead.
+            if str(agent).startswith("zai-"):
+                unwitnessable.append(item)
+            else:
+                violations.append(item)
+    if unanalysed["operator"] > 0:
+        # Real operator turns 象 never analysed: the intents were lost
+        # upstream and never became records with acts.  A violation of the
+        # way, named as such, not a silently skipped count.
+        violations.append({"act-id": "operator-turns-never-analysed",
+                           "count": unanalysed["operator"],
+                           "kind": "unanalysed-turn",
+                           "note": "operator turns with no 象 analysis: intents lost upstream (violation of the way intents-are-tracked)"})
     invariant = "failing" if violations else "holding"
     return {"monitor": "on", "invariant": invariant, "last-observation": iso(now),
             "observed-at": iso(now), "violations": violations,
             "violation-count": len(violations), "pending": pending, "pending-count": len(pending),
+            "unwitnessable-count": len(unwitnessable), "unwitnessable": unwitnessable,
             "status-counts": dict(statuses),
-            "evidence": [f"intent census: {len(candidates)} deduplicated operator opener acts; {invalid} invalid records skipped",
+            "evidence": [f"intent census: {len(candidates)} deduplicated operator opener acts; {invalid} invalid records skipped (real invalid only; 象 .draft/.analysis/.candidates artefacts excluded from the census)",
+                         f"operator turns never analysed: {unanalysed['operator']} of {unanalysed['total']} un-analysed turn records — intents lost upstream; counted as a violation of the way when non-zero",
                          "closure states: " + ", ".join(f"{k} {v}" for k, v in sorted(statuses.items())),
-                         f"open aging: {len(pending)} pending under 24h; {len(violations)} stale over 7d without owner/progress/deferment",
+                         f"open aging: {len(pending)} pending under 24h; {len(violations)} stale over 7d without owner/progress/deferment; {len(unwitnessable)} stale-looking acts unwitnessable by construction (Zai seats write no assistant rows) and not counted as violations",
                          "v1 limitation: Joe's next-turn stance is not counted yet"],
             "denominator": f"{len(violations)} of {statuses['open']} open operator intents stale and unwitnessed"}
 
@@ -444,9 +489,9 @@ def probe_intents_tracked(now=NOW, record_root=TURN_STORE, sidecar_root=None,
                           job_state=None):
     sidecar_root = pathlib.Path(sidecar_root or CODE / "futon3c" / "holes" / "labs" / "M-象-2000" / "data")
     try:
-        records, latest, invalid = read_intent_records(record_root)
+        records, latest, invalid, unanalysed = read_intent_records(record_root)
         sidecars = read_intent_sidecars(sidecar_root)
-        return classify_intents(records, latest, sidecars, now, job_state, invalid)
+        return classify_intents(records, latest, sidecars, now, job_state, invalid, unanalysed)
     except Exception as exc:
         return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(now),
                 "last-observation": None, "violations": [], "violation-count": 0,
