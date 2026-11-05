@@ -135,6 +135,19 @@ Review notes:
     and `ways-of-working-probe` are present. `/tmp` authority and "rebuild == live" are kept.
   - Step 1 (dual write) dispatched to codex-13.
 
+- **Promise move step 1, dual write** (codex-13, `d775f31f2`; reviewed by claude-8, fix `ecbd715bb`).
+  Outbox rows go to evidence and to an immutable `promise/history-event` hyperedge (new
+  `agency/promise_log.clj`). A row is acknowledged only after both readbacks match. The bad-case
+  test (hyperedge store down → row kept, recovered on the next drain) is good. Its stubs could
+  not show the real store, so it was checked live: a probe edge written through futon1b reads
+  back `same-edge? true`, and the probe was retracted afterwards.
+  **Defect found in review:** futon1b does not store nil-valued keys. A first-in-chain row has
+  `:history/predecessor nil`, so it never matched its stored copy. Pre-existing effect: 13 rows
+  stuck in the outbox since 10-28 and 16,249 `:conflict`s. d775f31f2 sent fresh appends through
+  the same comparison, which would have stuck every new `park-made`. Fixed by comparing present
+  keys only. The new test fails on the old comparison (2 failures) and passes on the fix. 4
+  namespaces: 46 tests, 200 assertions, 0 failures. Live-loaded both namespaces from master 17:2xZ.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
