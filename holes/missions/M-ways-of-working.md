@@ -53,7 +53,7 @@ and fix list: `~/notes/ways-of-working-audit/2026-11-04/SUMMARY.md`.
 | Way | Probe | Published | Audit verdict | Best reading of the way |
 |---|---|---|---|---|
 | 0. we-know-the-status | none yet | — | — | **failing**: 2 ways unreadable, 4 probes with no bad-case test, 4 probes with defects |
-| operator-turns-logged | `operator-turns` | on, failing | partly correct | holding: both violations are logged turns the 60 s exact-text join missed |
+| operator-turns-logged | `operator-turns` | on, holding | partly correct → join fixed 11-05 (`497e7b2f6`) | holding: 84/84 matched (10 min window; ratio ≥ 0.95 for turns ≥ 200 chars). Population still misses voxterm-direct, phone/cloud, IRC bridge, bell-prompt turns, other homes |
 | feedback-reaches-every-participant | `feedback-reaches` | on, failing | no reading possible → fixed 11-05 (`583264790`, `4c2dd02b9`) | failing: 28/420 bell returns unproved after 30 m; 51/58 replies fail the marks form; 0/425 bells lack a return path |
 | stays-alive-and-paid | `zone-health` | on, failing | correct | failing (federation, parked-timers); probe drops missing checks, passes stale write-rate |
 | one-queryable-self-account | `cascade-standards` | on, failing | partly correct | failing on s6; s1–s3 are literal `true`; s4 reads an unfed section |
