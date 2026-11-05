@@ -188,12 +188,15 @@ July; about 611 in August; about 263 in September; 132 in October, all on or bef
 10-01T20:40Z. The `parked-resume` author starts at 10-01T20:49Z (6,027 records since), and
 no header-matched prompt is filed as `joe` after it. So the writer was fixed on 10-01, but
 the July–October back catalogue is still mislabelled, and the header test is incomplete
-(claude-14 found prompts it misses). The fix by author is also only a proxy: the
-model's three parts (operator turn, agent reply, dispatch/continuation) need an explicit
-**origin field set where the turn is created** (operator-typed, park-wake, continuation,
-dispatch). Agency already knows it; the 象 envelope prints `Origin: operator`.
-Added to step 1's scope: which origin each chat-turn writer knows, and whether the
-existing records can be backfilled from session and header.
+(claude-14 found prompts it misses). Correction (claude-14, checked by claude-8): the origin field already exists.
+Chat-turn docs carry `evidence/origin` with `:kind` operator | harness | agent | unknown from
+2026-09-27T18:38Z on. Among author-`joe` records: Sept (from 09-27) 594 operator, 4 harness,
+30 unknown; Oct 2,938 operator, 2 harness, 1 unknown (172 author-`joe` records without the field,
+not yet looked at). So after 10-01 the two signals agree. The open problem is the ~19,000
+Joe-authored turns before 09-27, which have no origin. claude-14 is training a classifier on the
+labelled post-09-27 turns, for the apm subset first. Step 4 (existing records) now includes
+whether that classifier's labels are written back, and where: an attribute on the existing turn
+(evidence is immutable) or a derived store keyed by evidence-id.
 
 ## Steps (each a small handoff, with review between)
 
