@@ -40,6 +40,11 @@
   (is (history/await-writes! 5000))
   (mapv #(get-in @*evidence* [:entries %]) (:order @*evidence*)))
 (defn types [] (mapv :evidence/type (rows)))
+(defn- without-nils [x]
+  (cond
+    (map? x) (into (empty x) (keep (fn [[k v]] (when-not (nil? v) [k (without-nils v)]))) x)
+    (vector? x) (mapv without-nils x)
+    :else x))
 
 (deftest four-distinct-transitions-not-fulfilment
   (let [wakes (atom [])
@@ -201,8 +206,27 @@
     (is (empty? (:history-outbox @state)))
     (is (empty? (:history-outbox @persisted)))
     (history/drain-now! state persist!)
-    (is (= 1 (count @*hyperedges*)))
+    (is (= 2 (count @*hyperedges*)))
     (is (= 1 (count (:entries @*evidence*))))))
+
+(deftest state-write-failure-keeps-the-outbox-row
+  (let [state (atom {:history-outbox {}})
+        persisted (atom nil)
+        persist! #(reset! persisted %)
+        rec {:id "park:state-write-failure" :agent "debtor" :beneficiary "creditor"
+             :awaiting #{"job"} :arrived {}}
+        eid (history/stage! state :promise/park-made rec 1000)]
+    (binding [promise-log/*post-fn*
+              (fn [edge]
+                (if (= :promise/state (:hx/type edge))
+                  (throw (ex-info "state store unavailable" {}))
+                  (do (swap! *hyperedges* assoc (:hx/id edge) (without-nils edge))
+                      {:ok true :hx/id (:hx/id edge)})))]
+      (history/drain-now! state persist!))
+    (is (contains? (:history-outbox @state) eid))
+    (is (some? (get @*hyperedges* (promise-log/hyperedge-id eid))))
+    (is (nil? (get @*hyperedges* (str "promise-state:" (:id rec)))))
+    (is (nil? @persisted))))
 
 (deftest old-path-write-does-not-persist-an-uncommitted-outbox-reservation
   (let [sidecar (java.io.File/createTempFile "p2c-sidecar" ".edn")

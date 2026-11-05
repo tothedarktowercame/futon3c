@@ -5,6 +5,7 @@
             [futon3c.agency.promise-capture :as capture]
             [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.promise-outcome :as outcome]
+            [futon3c.agency.promise-state :as promise-state]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.futon1b-backend :as f1b])
@@ -193,6 +194,7 @@
         evidence-matches?
         (try
           (promise-log/write! entry)
+          (promise-state/write! entry)
           (swap! !counts update :written inc)
           (when *after-outbox-append* (*after-outbox-append* entry))
           (swap! !uncommitted-outbox-ids disj eid)
