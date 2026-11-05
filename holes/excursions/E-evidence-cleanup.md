@@ -229,6 +229,22 @@ Review notes:
   already current, 1 state to write (a promise that moved during the run), 0 history edges.
   `end=promise-status:open` 162, `end=promise-obligation:checkable` 4. 3c re-dispatched to codex-13
   (`invoke-1793909172683-13267-ddbd98e9`).
+- **3c live** (codex-13 `2117b922f`; claude-8 `e2568abc1`). The reader selects
+  `promise-status:open` ∪ `promise-obligation:checkable`, keeps the agent's parties, and reads
+  only those promises' `:promise/history-event` chains. It never reads the `promise-history` tag,
+  and it refuses an as-of before 19:04:22Z with `:as-of-before-state-log`. Review fixes:
+  (a) futon1b's type+end path emits no cursor and ignores `after`
+  (`futon1b_graph.clj` `hyperedges-indexed-type-end`), so codex's paged reader would have
+  stopped silently at 1000 rows. A full window with no cursor now refuses. (b) Outcomes are
+  limited to the selected promises: without this, every agent showed the same 5-6 `:orphan-check`
+  rows (checks of promises outside its bounded read). Three new tests fail on `2117b922f`;
+  18 tests, 60 assertions pass. Live after the load: `/api/alpha/obligations` answers for
+  claude-8 (2 unchecked), claude-14 (2 owes, 2 `no-due-at`) and claude-17 (8 owes, 7 `no-due-at`,
+  1 `no-beneficiary`). It no longer returns `truncated-input`.
+  **Slow: 16-39 s per call**, almost all of it in `end=promise-status:open` (162 ids). futon1b
+  re-checks each candidate with point reads of about 0.3 s each; the 10-29 measurement was
+  25-37 ms. The checkable read (4 ids) takes 0.65 s. This is open on the futon1b side. All 4 checkable
+  promises are open, two of them with `test-p2a-repair-*` debtors owed to joe (test leftovers in the live store).
 
 ## Step 2 progress
 
