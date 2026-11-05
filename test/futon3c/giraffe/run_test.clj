@@ -27,19 +27,21 @@
 (defn- pilot-run
   "Adapter + pass + write, all inside ROOT (a temp dir)."
   ([root] (pilot-run root {}))
-  ([root _]
+  ([root write-opts]
    (let [adapter-result (gt/tickets->input
                          {:tickets-dir tickets-dir :index-file index-file
                           :edges-file edges-file :only pilot1-ids})
          pass-output (gp/pass (:input adapter-result))
-         written (gr/write-run! {:root root
+         written (gr/write-run! (merge
+                                {:root root
                                  :adapter-result adapter-result
                                  :pass-output pass-output
                                  ;; a real current-format sha: the first
                                  ;; commit whose writer seals work-clusters.json
                                  :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"
                                  :index-file index-file
-                                 :edges-file edges-file})]
+                                 :edges-file edges-file}
+                                write-opts))]
      {:adapter-result adapter-result
       :pass-output pass-output
       :written written})))
@@ -115,6 +117,32 @@
     (is (= (slurp (io/file (:dir w1) "pass.edn"))
            (slurp (io/file (:dir w2) "pass.edn")))
         "pass.edn bytes are identical for the same input")))
+
+(deftest focus-input-writes-pinned-priority-without-changing-pass-bytes
+  (let [root (temp-root "priority")
+        baseline (:written (pilot-run root {:run-id "without-focus"}))
+        pass-output (:pass-output (pilot-run (temp-root "priority-source")))
+        relations (into {} (map (fn [{:keys [id]}] [id :associated])
+                                (:order pass-output)))
+        focused (:written
+                 (pilot-run root {:run-id "with-focus"
+                                  :focus-relation-input
+                                  {:relations relations
+                                   :evidence-pin {:sha256 "received-focus-sha"}}
+                                  :priority-cutoff 3}))
+        baseline-dir (io/file (:dir baseline))
+        focused-dir (io/file (:dir focused))
+        priority-file (io/file focused-dir "priority.edn")]
+    (is (.isFile priority-file))
+    (is (= (gr/sha256 priority-file)
+           (get-in (:manifest focused) [:priority-projection :sha256])))
+    (is (= :present (get-in (:manifest focused) [:priority-projection :status])))
+    (is (= {:status :absent :reason :focus-relation-input-absent}
+           (get-in (:manifest baseline) [:focus-relation-input])))
+    (is (not (.exists (io/file baseline-dir "priority.edn"))))
+    (is (= (slurp (io/file baseline-dir "pass.edn"))
+           (slurp (io/file focused-dir "pass.edn")))
+        "the optional projection does not alter pass.edn bytes")))
 
 (deftest default-root-is-the-canonical-storage-root-never-tmp
   (is (= "/home/joe/code/storage/giraffe/" gr/default-root)))

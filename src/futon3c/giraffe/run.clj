@@ -25,6 +25,7 @@
             [futon3c.giraffe.missions :as gm]
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
+            [futon3c.giraffe.priority :as priority]
             [futon3c.giraffe.stale-markers :as stale]
             [futon3c.giraffe.tickets :as gt]))
 
@@ -234,7 +235,7 @@
   HEAD git sha, and the sha256 of the tickets index and edges file the
   adapter read (when supplied in the adapter result)."
   [{:keys [root run-id adapter-result pass-output git-sha index-file
-           edges-file]
+           edges-file focus-relation-input priority-cutoff]
     :or {root default-root}}]
   {:pre [(:input adapter-result) pass-output]}
   (let [input (:input adapter-result)
@@ -253,6 +254,12 @@
         excluded-entry (when (contains? adapter-result :excluded)
                          (write! "excluded.edn" (print-edn (:excluded adapter-result))))
         pass-entry (write! "pass.edn" (print-edn pass-output))
+        priority-entry (when focus-relation-input
+                         (write! "priority.edn"
+                                 (print-edn
+                                  (priority/priority-projection
+                                   pass-output focus-relation-input
+                                   (or priority-cutoff 20)))))
         clusters-entry (write! "work-clusters.json"
                                (json/generate-string
                                 {:run_id run-id
@@ -271,7 +278,18 @@
                           :git-sha (or git-sha (git-head-sha))
                           :files (cond-> [(dissoc input-entry :bytes)
                                           rejected-entry pass-entry clusters-entry report-entry]
-                                   excluded-entry (conj excluded-entry))
+                                   excluded-entry (conj excluded-entry)
+                                   priority-entry (conj priority-entry))
+                          :focus-relation-input
+                          (if focus-relation-input
+                            {:status :present
+                             :evidence-pin (:evidence-pin focus-relation-input)}
+                            {:status :absent :reason :focus-relation-input-absent})
+                          :priority-projection
+                          (if priority-entry
+                            (assoc priority-entry :status :present
+                                   :cutoff (or priority-cutoff 20))
+                            {:status :absent :reason :focus-relation-input-absent})
                           :sources (cond-> {}
                                      index-file (assoc :tickets-index
                                                        {:path (str index-file)
