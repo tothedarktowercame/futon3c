@@ -87,6 +87,20 @@ Review notes:
 - The promise lifecycle has a real outside reader (the obligations API), so it is the clearest
   case of state that belongs in its own store with that reader repointed.
 
+## Step 2 progress
+
+- **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
+  The body keeps `:text-sha256`, the hits, cited and weak lists, and the retrieval descriptor.
+  `:text` and `:text-truncated?` are gone. Replay of legacy records that still hold `:text` returns
+  `:existing` and does not conflict, because `comparable-entry` ignores the two retired keys.
+  The bad-case test feeds 11 KB plus a marker; under the old 64 KB cap that marker would have
+  been stored, so the test fails on the old code. Ran `artifact-activation-test` once (first
+  run of a new test): 11 tests, 40 assertions, 0 failures. Live-loaded from master
+  16:53Z; the running JVM's `activation-record` returns a body without `:text`. Still to
+  check: the first new record in the sidecar after the reload. None had been written by 16:55Z.
+  It still writes to evidence. Moving the hits onto the operator turn as metadata waits on
+  M-repl-circus's store decision.
+
 ## Steps (each a small handoff, with review between)
 
 1. **Discovery, per writer.** Find the design record that put it in evidence and what
