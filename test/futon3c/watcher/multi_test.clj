@@ -638,3 +638,14 @@
                                        :snapshot {"a.clj" {:hash "h2"}}}))))
     (is (= [["a.clj" "h2"]]
            (mapv (juxt :path :content-id) (:journal @state))))))
+
+(deftest hot-reloaded-watcher-declares-journal-rearm-condition
+  (let [prior @sut/!state]
+    (try
+      (reset! sut/!state {:executor ::pre-reload-executor
+                          :event-n (atom 0) :cycle-n (atom 1)
+                          :per-root-cache (atom {}) :roots []})
+      (is (= {:status :not-armed
+              :rearm :restart-watcher-after-file-change-journal-reload}
+             (:file-change-journal (sut/status nil))))
+      (finally (reset! sut/!state prior)))))

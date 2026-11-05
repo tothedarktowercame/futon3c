@@ -32,8 +32,10 @@
                (journal/read-next rebuilt :registry 10)))))))
 
 (deftest expired-consumer-is-dropped-with-rebuild-receipt
-  (let [s0 (journal/register-consumer (journal/empty-state 2) :giraffe 10 20
-                                      {:authority :giraffe-input :hash "h"})
+  (let [registered (journal/register-consumer (journal/empty-state 2) :giraffe 10 20
+                                              {:authority :giraffe-input})
+        s0 (journal/rebuild-consumer registered :giraffe 10
+                                     {:authority :giraffe-input :hash "h"})
         [before receipts-before] (journal/expire-consumers s0 30)
         [after receipts-after] (journal/expire-consumers before 31)]
     (is (empty? receipts-before) "the exact deadline remains live")
@@ -45,8 +47,10 @@
            (:status (journal/read-next after :giraffe 1))))))
 
 (deftest acknowledgement-is-monotone-and-bounded-by-tail
-  (let [s0 (journal/register-consumer (journal/empty-state 3) :registry 0 50
-                                      {:authority :registry})
+  (let [registered (journal/register-consumer (journal/empty-state 3) :registry 0 50
+                                              {:authority :registry})
+        s0 (journal/rebuild-consumer registered :registry 0
+                                     {:authority :registry :hash "initial"})
         [s1 _] (journal/observe s0 (observation "a" "1" 1))
         s2 (journal/acknowledge s1 :registry 1 2)]
     (is (= 0 (get-in (journal/health s2 2) [:consumers :registry :lag])))
@@ -81,3 +85,48 @@
            (mapv (juxt :path :operation :content-id) (:journal reconciled))))
     (is (zero? (:appended stable-result)))
     (is (= (:journal reconciled) (:journal stable)))))
+
+(deftest restart-requires-an-authority-rebuild
+  (let [[before _] (journal/reconcile-snapshot
+                    (journal/empty-state 3)
+                    {:repo "futon3c" :worktree "/work/futon3c"
+                     :files {"a" "h1" "gone" "g1"} :observed-at-ms 1})
+        ;; A restart loses the hint state. Changes happen while it is down.
+        [restarted seed] (journal/reconcile-snapshot
+                          (journal/empty-state 3)
+                          {:repo "futon3c" :worktree "/work/futon3c"
+                           :files {"a" "h2"} :observed-at-ms 2})
+        registered (journal/register-consumer restarted :registry 3 50
+                                              {:authority :registry})]
+    (is (map? before))
+    (is (= :seeded (:outcome seed)))
+    (is (= :rebuild-required (:status (journal/read-next registered :registry 10))))
+    (is (= :ok (:status
+                (journal/read-next
+                 (journal/rebuild-consumer registered :registry 4
+                                           {:authority :registry :hash "fresh-h2"})
+                 :registry 10))))))
+
+(deftest over-bound-walk-collapses-to-one-level-jump
+  (let [[seeded _] (journal/reconcile-snapshot
+                    (journal/empty-state 2)
+                    {:repo "r" :worktree "/r" :files {} :observed-at-ms 1})
+        registered (journal/register-consumer seeded :giraffe 1 50
+                                              {:authority :giraffe-input})
+        ready (journal/rebuild-consumer registered :giraffe 1
+                                        {:authority :giraffe-input :hash "old"})
+        [jumped receipt] (journal/reconcile-snapshot
+                          ready {:repo "r" :worktree "/r"
+                                 :files {"a" "1" "b" "2" "c" "3"}
+                                 :observed-at-ms 2})]
+    (is (= :level-jump (:outcome receipt)))
+    (is (= 1 (:appended receipt)))
+    (is (= 1 (count (:journal jumped))))
+    (is (= :level-jump (:operation (first (:journal jumped)))))
+    (is (= :rebuild-required (:status (journal/read-next jumped :giraffe 10))))))
+
+(deftest refusal-is-visible-in-health
+  (let [state (journal/record-refusal (journal/empty-state 2) 7 "bad walk")]
+    (is (= {:at-ms 7 :message "bad walk"
+            :rearm :restart-or-repair-file-change-observer}
+           (:last-refusal (journal/health state 8))))))

@@ -6,13 +6,14 @@
 
 (defn empty-state [max-entries]
   {:pre [(and (integer? max-entries) (pos? max-entries))]}
-  {:schema :file-change/journal-v1
+  {:schema :file-change/journal-v2
    :max-entries max-entries
    :next-seq 1
    :watermark 0
    :journal []
    :latest {}
-   :authority-levels {}
+   :walk-levels {}
+   :last-refusal nil
    :consumers {}})
 
 (defn path-key [{:keys [repo worktree path]}]
@@ -64,8 +65,9 @@
 
 (defn register-consumer
   "Register an owned consumer with a finite progress deadline. Registration
-  begins at the current tail: correctness comes from its initial authority
-  read, represented by REBUILD-EVIDENCE."
+  begins at the current tail but fail-closed: it MUST complete a fresh authority
+  rebuild before reading hints. REBUILD-EVIDENCE names that authority; it is a
+  request/basis, not proof that the read already happened."
   [state consumer-id now-ms deadline-ms rebuild-evidence]
   {:pre [(keyword? consumer-id) (integer? now-ms)
          (integer? deadline-ms) (pos? deadline-ms)
@@ -77,7 +79,7 @@
                :last-progress-at-ms now-ms
                :deadline-ms deadline-ms
                :rebuild-evidence rebuild-evidence
-               :rebuild-required? false})))
+               :rebuild-required? true})))
 
 (defn read-next [state consumer-id limit]
   {:pre [(integer? limit) (pos? limit)]}
@@ -140,6 +142,7 @@
   {:entries (count (:journal state))
    :max-entries (:max-entries state)
    :watermark (:watermark state)
+   :last-refusal (:last-refusal state)
    :consumers
    (into {}
          (map (fn [[id c]]
@@ -148,13 +151,28 @@
                      :rebuild-required? (:rebuild-required? c)}]))
          (:consumers state))})
 
+(defn record-refusal
+  "Retain the latest shadow-observer refusal for operator-visible health."
+  [state at-ms message]
+  (assoc state :last-refusal {:at-ms at-ms :message message
+                              :rearm :restart-or-repair-file-change-observer}))
+
+(defn- require-all-rebuild [state]
+  (update state :consumers
+          (fn [consumers]
+            (into {} (map (fn [[id consumer]]
+                            [id (assoc consumer :rebuild-required? true)]))
+                  consumers))))
+
 (defn reconcile-snapshot
-  "Reconcile a complete repository snapshot against the last authority level.
+  "Reconcile a complete repository walk against the last walk level.
 
   The first snapshot seeds the level without emitting historical changes.
   Later calls append changed and deleted paths through `observe`. This makes
-  watcher notifications acceleration hints: a missed notification is recovered
-  from the next complete snapshot. FILES is {relative-path content-id}."
+  watcher notifications acceleration hints within one watcher epoch. This walk
+  is not durable authority: every newly registered consumer starts
+  rebuild-required and must read Git/registry/Giraffe authority before using
+  hints. FILES is {relative-path content-id}."
   [state {:keys [repo worktree files observed-at-ms]}]
   (when-not (and (string? repo) (not-empty repo)
                  (string? worktree) (not-empty worktree)
@@ -167,9 +185,9 @@
                      :observed-at-ms observed-at-ms})))
   (let [scope [repo worktree]
         absent (Object.)
-        prior (get-in state [:authority-levels scope] absent)]
+        prior (get-in state [:walk-levels scope] absent)]
     (if (identical? absent prior)
-      [(assoc-in state [:authority-levels scope] files)
+      [(assoc-in state [:walk-levels scope] files)
        {:outcome :seeded :repo repo :worktree worktree
         :files (count files) :appended 0}]
       (let [paths (sort (into (set (keys prior)) (keys files)))
@@ -188,14 +206,24 @@
                                  :content-id after :operation :write
                                  :observed-at-ms observed-at-ms})))
                           paths)
+            burst? (> (count changes) (:max-entries state))
+            changes-to-record
+            (if burst?
+              [{:repo repo :worktree worktree :path "."
+                :content-id (str "walk-level-jump:" observed-at-ms ":" (count changes))
+                :operation :level-jump :observed-at-ms observed-at-ms}]
+              changes)
             [state results]
             (reduce (fn [[s rs] observation]
                       (let [[s' result] (observe s observation)]
                         [s' (conj rs result)]))
                     [state []]
-                    changes)
-            state (assoc-in state [:authority-levels scope] files)]
-        [state {:outcome :reconciled :repo repo :worktree worktree
+                    changes-to-record)
+            state (cond-> (assoc-in state [:walk-levels scope] files)
+                    burst? require-all-rebuild)]
+        [state {:outcome (if burst? :level-jump :reconciled)
+                :repo repo :worktree worktree
                 :changed (count (filter #(= :write (:operation %)) changes))
                 :deleted (count (filter #(= :delete (:operation %)) changes))
+                :total-changes (count changes)
                 :appended (count (filter #(= :appended (:outcome %)) results))}]))))

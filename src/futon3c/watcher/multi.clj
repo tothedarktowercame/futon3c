@@ -1364,8 +1364,10 @@
                    (vreset! result receipt)
                    state')))
         @result)
-      (catch Throwable t
-        {:outcome :refused :error (.getMessage t)}))))
+      (catch Exception e
+        (let [at-ms (System/currentTimeMillis)]
+          (swap! journal-state file-change-journal/record-refusal at-ms (.getMessage e))
+          {:outcome :refused :error (.getMessage e) :at-ms at-ms})))))
 
 ;; ---------- commit-vertex live ingestion ----------
 
@@ -1805,7 +1807,8 @@
                (if-let [journal-state (:file-change-journal s)]
                  (file-change-journal/health @journal-state
                                              (System/currentTimeMillis))
-                 {:status :not-started})
+                 {:status :not-armed
+                  :rearm :restart-watcher-after-file-change-journal-reload})
                :mission-maintenance (mission-maintenance-status)))))
 
 (defn tick!
