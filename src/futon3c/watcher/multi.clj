@@ -30,6 +30,7 @@
             [futon3c.file-change.journal :as file-change-journal]
             [futon3c.file-change.shadow-consumer :as file-change-shadow]
             [futon3c.file-change.shadow-ledger :as shadow-ledger]
+            [futon3c.file-change.settlement-consumer :as settlement-consumer]
             [futon3c.giraffe.run :as giraffe-run]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
@@ -1501,7 +1502,7 @@
 (defn run-cycle!
   [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
            inbox-zero-options file-change-journal file-change-shadow
-           file-change-giraffe-probe]
+           file-change-giraffe-probe file-change-settlement]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
@@ -1642,6 +1643,17 @@
                 (binding [*out* *err*]
                   (println "[multi.file-change-shadow] refused:"
                            (.getMessage e)))))))))
+    (when (and file-change-journal file-change-settlement)
+      (mark-subtask! {:phase :file-change-settlement :cycle-n n})
+      (let [health
+            (settlement-consumer/run-once!
+             file-change-journal file-change-settlement
+             {:now-ms (System/currentTimeMillis)
+              :nag-fn (fn [{:keys [repo path]}]
+                        (binding [*out* *err*]
+                          (println (format "[inbox-zero] unsettled change in %s: %s"
+                                           repo path))))})]
+        (swap! !state #(if (map? %) (assoc % :file-change-settlement-health health) %))))
     ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
     ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
     ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
@@ -1785,7 +1797,7 @@
 
    Returns the same shape as `status`."
   [{:keys [roots interval-ms cold-scan? commit-ingest? inbox-zero-options
-           file-change-journal-max-entries]
+           file-change-journal-max-entries file-change-settlement-roles]
     :or {interval-ms 5000 cold-scan? false commit-ingest? true
          file-change-journal-max-entries 2048}}]
   (when-let [s @!state]
@@ -1806,6 +1818,9 @@
         file-change-journal (atom (file-change-journal/empty-state
                                    file-change-journal-max-entries))
         file-change-shadow (atom (file-change-shadow/empty-state 30000 300000 256))
+        file-change-settlement (when (seq file-change-settlement-roles)
+                                 (atom (settlement-consumer/empty-state
+                                        file-change-settlement-roles 256)))
         file-change-giraffe-probe (atom {:task nil})
         executor (Executors/newSingleThreadScheduledExecutor
                   (reify java.util.concurrent.ThreadFactory
@@ -1824,6 +1839,7 @@
                      :commit-ingest? commit-ingest?
                      :file-change-journal file-change-journal
                      :file-change-shadow file-change-shadow
+                     :file-change-settlement file-change-settlement
                      :file-change-giraffe-probe file-change-giraffe-probe
                      :inbox-zero-options inbox-zero-options}
         task #(#'safe-cycle! cycle-state)]
@@ -1838,6 +1854,12 @@
                     :commit-ingest? commit-ingest?
                     :file-change-journal file-change-journal
                     :file-change-shadow file-change-shadow
+                    :file-change-settlement file-change-settlement
+                    :file-change-settlement-roles (vec file-change-settlement-roles)
+                    :file-change-settlement-health
+                    (if file-change-settlement
+                      {:status :arming :roles (mapv :role/id file-change-settlement-roles)}
+                      {:status :not-armed :rearm :restart-with-settlement-roles})
                     :file-change-giraffe-probe file-change-giraffe-probe
                     :inbox-zero-options inbox-zero-options
                     :inbox-zero-writer writer
@@ -1884,7 +1906,7 @@
     (-> s
         (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer
                 :file-change-journal :file-change-shadow
-                :file-change-giraffe-probe)
+                :file-change-giraffe-probe :file-change-settlement)
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
@@ -1907,6 +1929,7 @@
                     :rearm :restart-watcher-after-file-change-journal-reload})
                  {:status :not-armed
                   :rearm :restart-watcher-after-file-change-shadow-reload})
+               :file-change-settlement (:file-change-settlement-health s)
                :mission-maintenance (mission-maintenance-status)))))
 
 (defn tick!
@@ -1925,6 +1948,7 @@
                  :commit-ingest? (:commit-ingest? s)
                  :file-change-journal (:file-change-journal s)
                  :file-change-shadow (:file-change-shadow s)
+                 :file-change-settlement (:file-change-settlement s)
                  :file-change-giraffe-probe (:file-change-giraffe-probe s)
                  :inbox-zero-options (:inbox-zero-options s)})
     (status nil)))
