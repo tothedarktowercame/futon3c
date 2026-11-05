@@ -11,6 +11,13 @@
 
 (def consumer-id :settlement)
 
+(def default-roles
+  "Initial narrow automatic settlement role. Keeping the consumer armed also
+  makes every non-role file change a retained nag rather than invisible dirt."
+  [{:role/id :futon0-inbox-zero-live
+    :repo-root "/home/joe/code/futon0"
+    :path-prefix "holes/missions/M-inbox-zero-live-readiness.md"}])
+
 (defn empty-state [roles max-retained]
   {:roles (vec roles) :max-retained max-retained
    :commits [] :nags [] :refusals []})

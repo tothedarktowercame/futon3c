@@ -1799,7 +1799,8 @@
   [{:keys [roots interval-ms cold-scan? commit-ingest? inbox-zero-options
            file-change-journal-max-entries file-change-settlement-roles]
     :or {interval-ms 5000 cold-scan? false commit-ingest? true
-         file-change-journal-max-entries 2048}}]
+         file-change-journal-max-entries 2048
+         file-change-settlement-roles settlement-consumer/default-roles}}]
   (when-let [s @!state]
     (when (:executor s)
       (throw (ex-info "watcher already running; call stop! first or use status"
