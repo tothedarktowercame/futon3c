@@ -32,8 +32,12 @@
         record (try (:record (edn/read-string (:history/payload-edn body)))
                     (catch Throwable _ {}))
         details (into (sorted-map)
-                      (remove (fn [[key _]]
-                                (or (contains? record key)
+                      ;; nil values are dropped: evidence (and futon1b) do not
+                      ;; store nil keys, so a live drain and a reconcile from the
+                      ;; stored row must print the same string.
+                      (remove (fn [[key value]]
+                                (or (nil? value)
+                                    (contains? record key)
                                     (= :awaiting key)
                                     (= "history" (namespace key)))))
                       body)]

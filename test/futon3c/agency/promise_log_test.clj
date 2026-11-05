@@ -134,3 +134,19 @@
   (is (= "promise-log:abc" (promise-log/hyperedge-id "promise-history:abc")))
   (is (thrown? clojure.lang.ExceptionInfo (promise-log/hyperedge-id "e-not-a-uuid")))
   (is (thrown? clojure.lang.ExceptionInfo (promise-log/hyperedge-id nil))))
+
+(deftest nil-detail-prints-like-the-stored-row
+  ;; The live drain sees nil-valued detail keys; the stored evidence row does
+  ;; not. Both must produce the same edge or every reconcile rewrites it.
+  (let [base {:evidence/id "promise-history:nil-detail"
+              :evidence/type :promise/released
+              :evidence/author "debtor"
+              :evidence/at "2026-11-05T19:00:00Z"
+              :evidence/body {:history/format 3
+                              :history/payload-edn (pr-str {:record {:id "p"}})
+                              :history/promise-id "p"
+                              :history/promise-sequence 2
+                              :release/basis :explicit}}
+        with-nil (assoc-in base [:evidence/body :release/by] nil)]
+    (is (= (promise-log/entry->hyperedge base)
+           (promise-log/entry->hyperedge with-nil)))))
