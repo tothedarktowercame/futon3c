@@ -144,6 +144,30 @@
            (slurp (io/file focused-dir "pass.edn")))
         "the optional projection does not alter pass.edn bytes")))
 
+(deftest retained-focus-mint-boundary-writes-priority
+  (let [root (temp-root "retained-focus-mint")
+        pass-output (:pass-output (pilot-run (temp-root "retained-focus-source")))
+        relations (into {} (map (fn [{:keys [id]}] [id :focus]) (:order pass-output)))
+        resolve-calls (atom [])]
+    (with-redefs [requiring-resolve
+                  (fn [sym]
+                    (swap! resolve-calls conj sym)
+                    (fn [targets _opts]
+                      {:relations (select-keys relations targets)
+                       :evidence-pin {:focus-manifest {:sha256 "fixture-focus"}}}))]
+      (let [input (gr/retained-focus-input pass-output)
+            written (:written (pilot-run root {:run-id "retained-focus"
+                                               :focus-relation-input input}))]
+        (is (.isFile (io/file (:dir written) "priority.edn")))
+        (is (= #{:focus}
+               (set (map :relation (read-string
+                                    (slurp (io/file (:dir written) "priority.edn")))))))
+        (is (= "fixture-focus"
+               (get-in (:manifest written)
+                       [:focus-relation-input :evidence-pin
+                        :focus-manifest :sha256])))))
+    (is (= ['futon2.aif.area-focus/retained-relations] @resolve-calls))))
+
 (deftest default-root-is-the-canonical-storage-root-never-tmp
   (is (= "/home/joe/code/storage/giraffe/" gr/default-root)))
 

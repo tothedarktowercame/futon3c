@@ -460,6 +460,14 @@
         (map (fn [[k v]] [(subs k 2) v]))
         (partition 2 args)))
 
+(defn retained-focus-input
+  "Read only the newest retained WM focus relation for PASS-OUTPUT. This CLI
+  boundary resolves futon2 lazily; it never acquires or mints focus."
+  [pass-output]
+  ((requiring-resolve 'futon2.aif.area-focus/retained-relations)
+   (mapv :id (:order pass-output))
+   {:decision-as-of (str (java.time.Instant/now))}))
+
 (defn -main
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]
   [--root <dir>] [--run-id <id>] [--source tickets|missions|missions-excursions]
@@ -473,8 +481,9 @@
   prints the freshness block and writes NOTHING (staleness probe)."
   [& args]
   (let [check-fresh? (some #{ "--check-fresh" } args)
+        with-retained-focus? (some #{"--with-retained-focus"} args)
         {:strs [edges only root run-id source repos readings-root]}
-        (merge-args (remove #{"--check-fresh"} args))
+        (merge-args (remove #{"--check-fresh" "--with-retained-focus"} args))
         source (or source "tickets")
         _ (when (str/blank? (str edges))
             (throw (ex-info "--edges <file> is required"
@@ -524,6 +533,9 @@
                            :only only-ids}))
         adapter-result (update adapter-result :input stale/annotate-input)
         pass-output ((if combined? excursions/combined-pass gp/pass) (:input adapter-result))
+        focus-relation-input
+        (when with-retained-focus?
+          (retained-focus-input pass-output))
         _ (when check-fresh?
             (check-freshness {:root (or root default-root)
                               :adapter-result adapter-result})
@@ -532,6 +544,7 @@
                             :run-id run-id
                             :adapter-result adapter-result
                             :pass-output pass-output
+                            :focus-relation-input focus-relation-input
                             :git-sha (git-head-sha)
                             :index-file (when-not missions? default-index-file)
                             :edges-file edges})]
