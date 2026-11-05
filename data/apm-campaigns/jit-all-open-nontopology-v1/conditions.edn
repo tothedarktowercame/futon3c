@@ -232,4 +232,13 @@
  ["futon2.aif.meta-repair-coordinator"
   "futon2.aif.meta-self-heal-production"],
  :loaded? true}
+{:id "C-22",
+ :at "2026-11-05T00:36Z",
+ :by "codex-7",
+ :kind :reload,
+ :note
+ "Count semantic CURRENT TURN envelopes only; ignore headerless Claude provider continuations",
+ :head "c4046d4f6",
+ :namespaces ["futon3c.agency.agent-pouch"],
+ :loaded? true}
 ]
