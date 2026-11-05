@@ -19,6 +19,7 @@
             [futon3c.agency.roles :as roles]
             [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.invoke-preview :as invoke-preview]
             [futon3c.evidence.store :as estore]
             [futon3c.pattern-lifecycle.action-rpc :as action-rpc]
             [futon3c.blackboard :as bb]
@@ -351,7 +352,9 @@
             :claim-type :step
             :event-tag :agent-assigned
             :body {:agent agent-id
-                   :prompt-preview (subs prompt 0 (min 200 (count prompt)))}})
+                   :prompt-preview (invoke-preview/header-preview prompt)
+                   :prompt-chars (count prompt)
+                   :prompt-sha256 (invoke-preview/prompt-sha256 prompt)}})
     (project! {:issue issue :status :running :phase (str "Invoking " agent-id "...")})
     (let [invoke #(reg/invoke-agent! agent-id prompt timeout-ms)
           result (if pattern-action

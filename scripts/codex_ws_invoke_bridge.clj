@@ -24,6 +24,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.shell :as sh]
             [clojure.string :as str]
+            [futon3c.evidence.invoke-preview :as invoke-preview]
             [org.httpkit.client :as http])
   (:import [java.io File]
            [java.net URI]
@@ -376,12 +377,13 @@
         incoming-session (:session_id frame)]
     (when (string? invoke-id)
       (future
-        (let [prompt-str (str prompt)
-              prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))]
+        (let [prompt-str (str prompt)]
           ;; Evidence: invoke started
           (emit-evidence! "invoke-start"
                           {"invoke-id" invoke-id
-                           "prompt-preview" prompt-preview}
+                           "prompt-preview" (invoke-preview/header-preview prompt-str)
+                           "prompt-chars" (count prompt-str)
+                           "prompt-sha256" (invoke-preview/prompt-sha256 prompt-str)}
                           :session-id incoming-session
                           :tags ["invoke-start"])
           (let [initial (invoke-codex! prompt-str incoming-session sid*)

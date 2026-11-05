@@ -70,6 +70,7 @@
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.invoke-preview :as invoke-preview]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.pattern-card-provider :as pattern-card-provider]
             [futon3c.agency.prompt-line :as prompt-line]
@@ -3693,7 +3694,6 @@ RESPOND WITH ONLY:
                      :always       (into ["--" prompt-str]))
               used-sid effective-sid
               invoke-trace-id (str "invoke-" (UUID/randomUUID))
-              prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
               _ (println (str "[invoke] " agent-id " claude -p "
                               (subs (pr-str prompt-str) 0
                                     (min 80 (count (pr-str prompt-str))))
@@ -3701,7 +3701,9 @@ RESPOND WITH ONLY:
               _ (flush)
               ;; Evidence: invoke started
               _ (emit-invoke-evidence! agent-id "invoke-start"
-                                       {"prompt-preview" prompt-preview}
+                                       {"prompt-preview" (invoke-preview/header-preview prompt-str)
+                                        "prompt-chars" (count prompt-str)
+                                        "prompt-sha256" (invoke-preview/prompt-sha256 prompt-str)}
                                        :session-id used-sid
                                        :tags ["invoke-start"])
               ;; Show prompt in the invoke buffer + force display
@@ -3998,7 +4000,9 @@ RESPOND WITH ONLY:
                                           (when warm-sid (subs (str warm-sid) 0 (min 8 (count (str warm-sid))))) ")"))
                             (flush)
                             (emit-invoke-evidence! agent-id "invoke-start"
-                                                   {"prompt-preview" (subs prompt-str 0 (min 200 (count prompt-str)))
+                                                   {"prompt-preview" (invoke-preview/header-preview prompt-str)
+                                                    "prompt-chars" (count prompt-str)
+                                                    "prompt-sha256" (invoke-preview/prompt-sha256 prompt-str)
                                                     "warm" true}
                                                    :session-id warm-sid
                                                    :tags ["invoke-start"])
@@ -4657,7 +4661,9 @@ RESPOND WITH ONLY:
           :trace []})
         ;; Evidence: invoke started
         (emit-invoke-evidence! agent-id "invoke-start"
-                               {"prompt-preview" prompt-preview}
+                               {"prompt-preview" (invoke-preview/header-preview prompt-str)
+                                "prompt-chars" (count prompt-str)
+                                "prompt-sha256" (invoke-preview/prompt-sha256 prompt-str)}
                                :session-id used-sid
                                :tags ["invoke-start"])
         ;; Show prompt in invoke buffer

@@ -1,9 +1,11 @@
 (ns futon3c.agency.history-constraints-test
   (:require [clojure.test :refer [deftest is]]
+            [clojure.string :as str]
             [futon3c.agency.history-constraints :as constraints]
             [futon3c.agency.promise-history :as history]
             [futon3c.agency.parked-on :as park]
-            [futon3c.evidence.boundary :as boundary]))
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.invoke-preview :as invoke-preview]))
 
 (def since "2026-09-27T00:00:00Z")
 (def t1 "2026-09-27T12:00:00Z")
@@ -17,6 +19,27 @@
                           "prompt-preview" (str "--- CURRENT TURN ---\nSurface: bell\nFrom: " caller
                                                 "\nTo: target\nCaller: " caller "\n---\n\ntext")})})
 (defn entries [store] (mapv #(get-in @store [:entries %]) (:order @store)))
+
+(deftest invoke-evidence-preview-keeps-only-leading-transport-header
+  (let [body "Joe's private body text"
+        prompt (str "--- CURRENT TURN ---\nSurface: bell\nFrom: http-caller\n"
+                    "To: target\nCaller: http-caller\n---\n\n" body)
+        preview (invoke-preview/header-preview prompt)
+        row (assoc-in (bell "new-preview" "http-caller")
+                      [:evidence/body]
+                      {"event" "invoke-start" "prompt-preview" preview
+                       "prompt-chars" (count prompt)
+                       "prompt-sha256" (invoke-preview/prompt-sha256 prompt)})
+        normalized (constraints/normalize-history [row])]
+    (is (str/includes? preview "Surface: bell"))
+    (is (str/includes? preview "Caller: http-caller"))
+    (is (not (str/includes? preview body)))
+    (is (= [{:id "new-preview" :type :invoke-start :at t1
+             :surface "bell" :caller "http-caller"}]
+           (:acts normalized)))
+    (is (= "" (invoke-preview/header-preview "plain prompt body")))
+    (is (= "" (invoke-preview/header-preview
+                "body first\n--- CURRENT TURN ---\nSurface: bell\nCaller: http-caller")))))
 
 (deftest anonymous-bell-legal-bell-and-idempotent-run
   (let [store (atom {:entries {} :order []})
