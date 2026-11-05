@@ -161,6 +161,19 @@ Review notes:
   of rows are common so far, so a timer park (`park-32c37866-…`, +3 h) reruns it over a larger
   window before step 3 repoints readers.
 
+- **Comparison rerun early (17:59Z, at Joe's prompt):** evidence since 17:12Z, 71 rows over 12
+  promises, all 71 also in the log; 0 mismatched, 0 evidence-only; the 13 log-only rows are the
+  10-28 ones; outbox 0.
+- **Step 3 blocked by a read-population problem.** Evidence holds 50,267 `:promise-history` rows.
+  `obligations_reader` pages the whole tag with a 20 x 1000 cap and refuses on overflow; the
+  cap was crossed on 10-15, and `GET /api/alpha/obligations` answers `truncated-input` today.
+  `promise_log/read-history` has the same cap, and the log holds only rows since 17:12Z, so a
+  plain repoint would either lose older promises or, after a backfill, fail the same way.
+  Discovery handoff to codex-12 (job `invoke-1793901645327-13144-926361a0`, park
+  `park-79f773ed-…`): which rows each reader needs, how many promises are open, and the
+  smallest population (per-promise state document vs window). Packet:
+  `~/notes/packets/evidence-cleanup/promise-step3-population-discovery.md`.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
