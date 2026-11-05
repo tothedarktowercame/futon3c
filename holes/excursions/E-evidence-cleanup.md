@@ -223,6 +223,13 @@ Review notes:
   has failed since 10-15 too; and only 7 `promise-outcome` rows exist in all, so the outcome evaluator
   is barely writing (separate question).
 
+- **3c0 live** (codex-13 `da2f72cba`; claude-8 `bc408619f` drops nil details so a drain and a reconcile
+  from the stored row print the same edge, test fails on the old code). Reconcile rerun 19:46-20:07Z:
+  7,332 states and 46 history edges rewritten, 0 failed. Convergence dry run 20:08-20:11Z: 7,341
+  already current, 1 state to write (a promise that moved during the run), 0 history edges.
+  `end=promise-status:open` 162, `end=promise-obligation:checkable` 4. 3c re-dispatched to codex-13
+  (`invoke-1793909172683-13267-ddbd98e9`).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
