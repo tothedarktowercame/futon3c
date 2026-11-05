@@ -79,3 +79,17 @@ construction; a separate index can be added for derived text if a reader needs i
 XTDB itself or its tuning, we can do that." Derived records go to their own table in futon1b's XTDB.
 Next: a read-only discovery of how futon1b writes evidence (table, transaction path, FTS ingest
 hooks, ERASE support), then the derived table and its routes, then per-family migration.
+
+## Step 0 done: search returns acts (2026-11-05 ~22:40Z)
+
+codex-12: futon1b `93c9053` (`act-scope-rules` allow-list in futon1b_text.clj, applied in SQL before
+the limit; responses carry `:scope` and `:scope-removed`; `scope=all` keeps the old behaviour) and
+futon3c `904ccb14f` (Emacs header shows scope and excluded count; `my/evidence-landscape-search-all`).
+Review fix, claude-8 futon1b `c967112`: `start-server!` registers `text-search-route` by value and does
+not keep the server object, so the new route cannot reach the live server before a restart. `search`
+now treats a missing `:scope` as `:acts`; zai-memory search passes `:all`; the route is registered by
+var from the next restart. Reloaded `futon1b-text` and `zai-memory-1b` live. Live, last 24 h:
+"hearo" 13 acts (joe, claude-8, claude-6, parked-resume), 54 removed; "Lionheart" 6 acts, 33 removed.
+Until futon1b's next restart, `scope=all` over HTTP still returns acts (the old route drops the
+parameter). Old `:invoke-start` rows from before writer 1 still carry 600-char prompt previews and
+count as acts; they go with the dev-invoke family in the migration.
