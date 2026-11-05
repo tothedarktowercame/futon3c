@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- One of the two candidate fixes lands: pull-only seats auto-registered (E-bell-clink-adapter line) or send fails fast with a roster hint — check: `E-bell-clink-adapter.p2-report.md` verdict, or the agency send path in `futon3c/src/futon3c/agency/` rejects unknown recipients before dispatch **Not met.**
+- The occurrence count for terminal-code `agent-not-found` stops growing — check: `GET /api/alpha/invoke/jobs` filtered on that terminal-code shows no occurrences after the fix lands, recounted below `census:end` in this ticket **Not met.**
+- The dated recount is written into the ticket — check: a line below `census:end` with date and current count **Not met.**

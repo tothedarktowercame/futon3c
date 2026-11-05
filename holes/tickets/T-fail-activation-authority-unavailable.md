@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- The ticket records the triage decision taken: closed as non-reproducing, or kept open — check: a dated decision line below `census:end` in the ticket file **Not met.**
+- If closed: no new occurrence of terminal-code `activation-authority-unavailable` since 2026-08-22 — check: `GET /api/alpha/invoke/jobs` filtered on that terminal-code returns zero rows after that date **Met.**
+- The residue named by the triage (delivery-retry terminal handling for jobs stuck in `delivering`) is resolved or explicitly routed to its own item — check: a ticket/TN covering delivery-retry caps referencing this ticket **Not met.**

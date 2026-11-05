@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- Exception-payload triage of the `invoke-error` occurrences is written below `census:end` — check: the ticket names the distinct exception payloads/classes with counts and a dominant cause **Not met.**
+- A close criterion for the class is stated from that triage (fix, exempt, or split into subclasses) — check: a 'What would close this' answer replacing '(unstated)' in the ticket file **Not met.**
+- If a fix is chosen: occurrence count for terminal-code `invoke-error` stops growing after it lands — check: `GET /api/alpha/invoke/jobs` filtered on that terminal-code, recounted in the ticket **Not met.**

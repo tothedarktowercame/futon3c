@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- The reclassification decision is taken: `operator-cancelled` census-exempted as expected behaviour, or kept as a defect — check: a dated decision line below `census:end` in the ticket file **Not met.**
+- If exempt: the census scripts stop minting/counting this class — check: `scripts/failure-tickets.py`/`failure-census.py` excludes `operator-cancelled` (an exemption list or equivalent) and the class disappears from the draw pile **Not met.**
+- If kept as defect: a fix is chosen and occurrences stop growing — check: `GET /api/alpha/invoke/jobs` filtered on that terminal-code recounted in the ticket after the fix **Not met.**

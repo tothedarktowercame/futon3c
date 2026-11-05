@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- The decision 'interruption is a defect' or 'interruption is an expected terminal class' is recorded below `census:end` — check: a dated decision line in the ticket file **Not met.**
+- If expected: the class is census-exempted like other expected terminals — check: `scripts/failure-tickets.py`/`failure-census.py` excludes `invoke-interrupted`, or an equivalent exemption note in the ticket **Not met.**
+- If defect: a fix lands and occurrences stop — check: `GET /api/alpha/invoke/jobs` filtered on terminal-code `invoke-interrupted` shows no growth after the fix, recounted in the ticket **Not met.**

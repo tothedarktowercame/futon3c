@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- A delivery-retry cap for restart-orphaned jobs stuck in `delivering` lands — check: the agency job/delivery path in `futon3c/src/futon3c/agency/` moves such jobs to a terminal state after N retries (commit + file:line) **Not met.**
+- No new occurrences of terminal-code `worker-lost-on-restart` after 2026-08-23 — check: `GET /api/alpha/invoke/jobs` filtered on that terminal-code returns no rows after that date **Met.**
+- The close-as-non-reproducing decision is recorded — check: a dated decision line below `census:end` in the ticket file **Not met.**

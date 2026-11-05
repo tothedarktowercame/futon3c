@@ -26,3 +26,9 @@ has responded to.
 
 (unstated -- until it is, this class has no promotion test and cannot reach
 SELECT)
+
+## Completion criteria
+
+- Defect C3 in TN-apm-defect-register reaches a decision (state semantics fixed, or the class reclassified as expected) — check: `/home/joe/code/futon3c/holes/technotes/TN-apm-defect-register.md` C3 row no longer shows repair `none` **Not met.**
+- This ticket's disposition follows that decision explicitly — check: a dated line below `census:end` in this ticket saying closed/merged per C3 **Not met.**
+- If fixed: no further functionally-successful jobs report terminal-code `no-execution-evidence` — check: `GET /api/alpha/invoke/jobs` filtered on that terminal-code shows no successful-but-failed cases after the fix, recounted in the ticket **Not met.**

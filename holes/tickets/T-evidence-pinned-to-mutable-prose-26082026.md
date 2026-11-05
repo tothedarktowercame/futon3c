@@ -49,3 +49,10 @@ load-bearing, given the layer below it already degrades.
 
 - `futon2/holes/NOTE-slice4-slice5-understood.md` — the measurement and the series argument.
 - `futon2/holes/NOTE-grounded-feed-missing-input.md` — the three-layer silence.
+
+## Completion criteria
+
+- One of the ticket's three candidate fixes is chosen and recorded in the ticket — check: a decision line naming fix 1, 2 or 3 under `## Candidate fixes` in the ticket file, or a successor item linked **Not met.**
+- The chosen fix is implemented so deposit reconstruction no longer depends on the current flexiarg tree — check: `/home/joe/code/futon2/src/futon2/aif/fold_escrow.clj` `flexiarg-prose` (line ~107) reads pinned content (stored prose or `pattern@git-sha` blob) instead of slurping `flexiarg-dir/<pattern>.flexiarg`, or the check is downgraded to a warning **Not met.**
+- The quarantine of the 10 unreconstructable fold turns still loads clean after the fix — check: `futon2 git 42a997e03` behaviour intact (load-deposits 8/10/0) via the gate/test named in that commit **Met.**
+- A decision on `deposits-by-id` strictness is recorded — check: ticket file or a TN states whether `actuator_a3.clj:149-151`'s throw on rejected deposits stays or goes **Not met.**
