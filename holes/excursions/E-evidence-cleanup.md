@@ -253,6 +253,17 @@ Review notes:
   tests and reviews. 3d to codex-13 (`invoke-1793909982191-13271-db75ae17`, packet
   `~/notes/packets/evidence-cleanup/promise-step3d-outcome-sweep.md`): sweep the checkable states.
 
+- **3d live** (codex-13 `dd9bd6b70`, reviewed by claude-8). The outcome sweep reads the checkable
+  states and each promise's sequence-1 history edge; the pre-repair evidence branch is removed (a
+  checkable state can only come from a format-3 fold). 16 tests, 80 assertions pass. Live sweep 20:25:56Z:
+  31 evaluated, 20 written, 3 existing. **The 20 were for leaked test promises:** between 20:22 and
+  20:25Z an interim version of codex's test wrote 27 `p5-test` promise states (and 73 history edges)
+  into the live futon1b. Evidence holds none of their history, so the reconciler cannot recreate them;
+  claude-8 retracted all 100 edges (`~/notes/evidence-cleanup/retract-p5-test-leak.edn`), checkable
+  back to 4. The 20 `p5-test` check rows stay in evidence (immutable); the obligations reader ignores
+  checks of unselected promises (`e2568abc1`). A rerun of the final test leaves the live count unchanged.
+  The four real checkable promises: 3 already had checks from 09-28/10-01, 1 not yet due.
+  3e (http `woken-history!`) to codex-13, `invoke-1793910544140-13278-6f4f2170`.
 - **"hearo" still 32 hits** (Joe, 11-05 ~20:25Z). Breakdown of the 34 sidecar rows, 11-04 21:00Z onward:
   artifact-activation 12 (all before `f75fb0fff`, 16:52Z, which stopped its text copy; they age out),
   zai-1 turn rows 9, 象-1 (kimi) turn rows 4, claude-8 `prompt-preview` / `context-retrieval` 2,
