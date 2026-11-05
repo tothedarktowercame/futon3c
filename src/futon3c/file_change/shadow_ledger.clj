@@ -42,29 +42,46 @@
 
   Attribution uses :first-at-ms, so debounce emission after a stale probe does
   not move the triggering change into the following fresh interval."
-  [demands probes]
-  (let [{:keys [windows]}
+  ([demands probes] (score-probes demands probes {:ambiguity-ms 90000}))
+  ([demands probes {:keys [ambiguity-ms] :or {ambiguity-ms 90000}}]
+  (let [ambiguous-times
+        (into #{}
+              (keep (fn [{:keys [first-at-ms]}]
+                      (when (some (fn [{:keys [at-ms]}]
+                                    (<= at-ms first-at-ms (+ at-ms ambiguity-ms)))
+                                  probes)
+                        first-at-ms)))
+              demands)
+        {:keys [windows]}
         (reduce
          (fn [{:keys [baseline-at windows accounted stale-covered?] :as acc} probe]
            (let [known? (boolean? (:fresh? probe))
                  candidates (if known?
                               (filterv #(let [t (:first-at-ms %)]
                                           (and (< baseline-at t)
-                                               (<= t (:at-ms probe))))
+                                               (<= t (:at-ms probe))
+                                               (not (contains? ambiguous-times t))))
                                        demands)
                               [])
                  seen (filterv #(not (contains? accounted (:first-at-ms %)))
                                candidates)
                  stale? (false? (:fresh? probe))
                  covered? (and stale? (or stale-covered? (seq seen)))
+                 ambiguous-count (count
+                                  (filter #(let [t (:first-at-ms %)]
+                                             (and (< baseline-at t)
+                                                  (<= t (:at-ms probe))
+                                                  (contains? ambiguous-times t)))
+                                          demands))
                  window {:at-ms (:at-ms probe) :fresh? (:fresh? probe)
                          :minted? (boolean (:minted? probe))
                          :demand-count (count seen)
+                         :ambiguous-count ambiguous-count
                          :unscored? (not known?)
                          :covered? (boolean covered?)
-                         :miss? (and stale? (not covered?))
+                         :miss? (and stale? (not covered?) (zero? ambiguous-count))
                          :spurious? (and (true? (:fresh? probe)) (seq seen))}
-                 closes? (or (not known?) (true? (:fresh? probe))
+                 closes? (or (true? (:fresh? probe))
                              (and stale? (:minted? probe)))]
              (cond-> (assoc acc :windows (conj windows window))
                stale? (update :accounted into (map :first-at-ms seen))
@@ -78,4 +95,5 @@
      :misses (count (filter :miss? windows))
      :spurious-wakes (count (filter :spurious? windows))
      :unscored (count (filter :unscored? windows))
-     :covered-stale (count (filter :covered? windows))}))
+     :ambiguous (count ambiguous-times)
+     :covered-stale (count (filter :covered? windows))})))

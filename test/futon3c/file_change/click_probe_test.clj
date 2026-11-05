@@ -14,7 +14,10 @@
           "giraffe field  stale (newest run-a) -- minting\ngiraffe field  minted run-b (ok)\n")
     (log! dir "click-003-30.log" "freshness probe failed (exit 1)\n")
     (log! dir "click-004-40.log" "giraffe field  already checked this launch\n")
+    (log! dir "click-005-50.log"
+          "giraffe field  stale (newest run-b) -- minting\nFINDING: mint failed (exit 1)\n")
     (is (= [[10000 true false "run-a"] [20000 false true "run-b"]
-            [30000 nil false nil]]
+            [30000 nil false nil] [50000 false false "run-b"]]
            (mapv (juxt :at-ms :fresh? :minted? :run-id)
-                 (probe/read-loop-probes dir))))))
+                 (probe/read-loop-probes dir))))
+    (is (true? (:mint-failed? (last (probe/read-loop-probes dir)))))))

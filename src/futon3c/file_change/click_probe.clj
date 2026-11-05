@@ -6,7 +6,10 @@
 (def ^:private click-file #"click-\d+-(\d+)\.log")
 
 (defn parse-log
-  "Return one probe map for a loop click log, or nil for a repeat/no probe."
+  "Return one probe map for a loop click log, or nil when no probe ran.
+
+  The failure/not-refreshed forms are emitted by futon2/scripts/wm_click.sh;
+  they are retained even though the current loop-log corpus has no examples."
   [file]
   (when-let [[_ epoch] (re-matches click-file (.getName (io/file file)))]
     (let [text (slurp file)
@@ -15,13 +18,15 @@
           fresh (re-find #"giraffe field\s+fresh \(([^)]+)\)" text)
           stale (or (re-find #"giraffe field\s+stale \(newest ([^)]+)\)" text)
                     (re-find #"stale field ([^ ]+) not refreshed" text))
-          minted (re-find #"giraffe field\s+minted ([^ ]+)" text)]
+          minted (re-find #"giraffe field\s+minted ([^ ]+)" text)
+          mint-failed? (str/includes? text "mint failed (exit")]
       (cond
         failed? {:at-ms at-ms :fresh? nil :minted? false
                  :source-file (.getPath (io/file file))}
         fresh {:at-ms at-ms :fresh? true :minted? false :run-id (second fresh)
                :source-file (.getPath (io/file file))}
         stale {:at-ms at-ms :fresh? false :minted? (boolean minted)
+               :mint-failed? mint-failed?
                :run-id (if minted (second minted) (second stale))
                :source-file (.getPath (io/file file))}
         :else nil))))

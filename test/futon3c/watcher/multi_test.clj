@@ -726,3 +726,20 @@
         (is (= :giraffe-authority-invocation-absent
                (:reason (last (:outcomes @shadow))))))
       (finally (reset! sut/!state prior)))))
+
+(deftest legacy-freshness-result-is-retried-for-a-newer-demand
+  (let [calls (atom 0)
+        first-task (future nil)
+        probe (atom {:task first-task :task-started-at-ms 0})
+        poll @#'sut/poll-giraffe-freshness!]
+    @first-task
+    (with-redefs [giraffe-run/current-missions-freshness
+                  (fn []
+                    (swap! calls inc)
+                    {:fresh? true :computed-sha256 "new" :run-sha256 "new"})]
+      (is (nil? (poll probe 1)) "legacy result is too old and starts a retry")
+      (let [task (:task @probe)]
+        (is task)
+        @task
+        (is (= "new" (:computed-sha256 (poll probe 1))))
+        (is (= 1 @calls))))))

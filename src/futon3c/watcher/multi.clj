@@ -1383,23 +1383,26 @@
       (when (realized? task)
         (try
           (let [raw @task
-                result (when raw
-                         (assoc raw
-                                :started-at-ms (:task-started-at-ms @probe)
-                                :completed-at-ms (System/currentTimeMillis)))]
+                started-at-ms (:task-started-at-ms @probe)
+                completed-at-ms (System/currentTimeMillis)
+                result (if raw
+                         (assoc raw :started-at-ms started-at-ms
+                                :completed-at-ms completed-at-ms)
+                         {:status :legacy-invocation-absent
+                          :started-at-ms started-at-ms
+                          :completed-at-ms completed-at-ms})]
             (swap! probe assoc :task nil :task-started-at-ms nil
                    :last-result result
-                   :last-status (if result :available :legacy-invocation-absent)
+                   :last-status (:status result :available)
                    :last-error nil))
           (catch Exception e
             (swap! probe assoc :task nil :task-started-at-ms nil
+                   :last-result nil :last-status nil
                    :last-error (.getMessage e))))))
-    (let [{:keys [task last-result last-status]} @probe]
+    (let [{:keys [task last-result]} @probe]
       (cond
         (and last-result (>= (:started-at-ms last-result) min-at-ms)) last-result
         task nil
-        (= :legacy-invocation-absent last-status)
-        {:status :legacy-invocation-absent}
         :else (do
                 (let [started-at-ms (System/currentTimeMillis)]
                   (swap! probe assoc :task-started-at-ms started-at-ms
