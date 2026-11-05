@@ -170,6 +170,33 @@
         (is (false? (get-in body [:check :warrant?])))
         (is (= "record-not-found" (get-in body [:check :reason])))))))
 
+(deftest currency-endpoint-carries-computed-hygiene-admission
+  (let [backend (atom {:entries {} :order []})
+        payload {:entry-id "currency-entry-7"
+                 :repo-root "/repo" :changed-paths ["src/a.clj"]}
+        current {:current? true :entry-id "currency-entry-7"
+                 :results {:exit 0}}
+        refused {:record/type :test-registry/refusal :reason :stale-sha}]
+    (with-redefs [registry/check-currency! (fn [_ _] current)]
+      (let [body (json-body
+                  (http/handle-test-registry-currency
+                   {:body (json/generate-string payload)}
+                   {:test-registry-backend backend}))]
+        (is (= current (:currency body)))
+        (is (true? (get-in body [:hygiene/handoff :admitted?])))
+        (is (= "DarkTower.WarMachine.FileChangeHygieneDelivery.admitted_iff_checked"
+               (get-in body [:hygiene/handoff :lean-contract])))
+        (is (every? true? (vals (get-in body [:hygiene/handoff :checks]))))))
+    (with-redefs [registry/check-currency! (fn [_ _] refused)]
+      (let [body (json-body
+                  (http/handle-test-registry-currency
+                   {:body (json/generate-string payload)}
+                   {:test-registry-backend backend}))]
+        (is (= "stale-sha" (get-in body [:currency :reason])))
+        (is (false? (get-in body [:hygiene/handoff :admitted?])))
+        (is (false? (get-in body [:hygiene/handoff :checks
+                                  :identity-checked])))))))
+
 (deftest stale-check-classifies-worktree-drift-without-changing-the-verdict
   (let [root (.toFile (Files/createTempDirectory
                        "test-registry-drift-"

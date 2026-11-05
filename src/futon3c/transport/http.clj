@@ -3250,12 +3250,16 @@
   [request config]
   (if-let [payload (parse-json-map (read-body request))]
     (try
-      (let [currency! (requiring-resolve 'futon3c.test-registry/check-currency!)
-            result (currency! (test-registry-store-for-config config)
-                              (select-keys payload [:entry-id :repo-root :changed-paths]))]
+      (let [request (select-keys payload [:entry-id :repo-root :changed-paths])
+            currency! (requiring-resolve 'futon3c.test-registry/check-currency!)
+            evidence! (requiring-resolve
+                       'futon3c.file-change.hygiene-delivery/currency-evidence)
+            result (currency! (test-registry-store-for-config config) request)
+            handoff (evidence! request result)]
         (json-response
          200
          {:currency result
+          :hygiene/handoff handoff
           :meaning (str "recorded inputs unchanged, not the run's verdict; "
                         ":current? true with :results is a skip-rerun answer, "
                         "never a warrant.")}))
