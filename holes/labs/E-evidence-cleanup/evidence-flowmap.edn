@@ -1,0 +1,56 @@
+{:spec/id :E-evidence-cleanup/evidence-flowmap-r0
+ :field-types
+ {:evidence/artifact-weak-activation :evidence-record
+  :evidence/transcript :evidence-record
+  :evidence/agent-step :evidence-record
+  :evidence/operator-turn :evidence-record
+  :evidence/xiang-turn :evidence-record
+  :evidence/relationship-review :evidence-record
+  :evidence/ma-card :evidence-record
+  :evidence/promise-history :evidence-record
+  :evidence/promise-outcome :evidence-record
+  :evidence/pattern-outcome :evidence-record
+  :evidence/dispatch-graph :evidence-record
+  :evidence/obligation :evidence-record
+  :evidence/generic-search :search-interface}
+ :boxes
+ [{:box/id :writer/artifact-activation
+   :writes [:evidence/artifact-weak-activation]}
+  {:box/id :writer/zai-transcript-zai-1
+   :writes [[:evidence/transcript {:record "zai-1"}]]}
+  {:box/id :writer/zai-transcript-wm-author
+   :writes [[:evidence/transcript {:record "wm-author"}]]}
+  {:box/id :writer/kimi-transcript-xiang-1
+   :writes [[:evidence/transcript {:record "象-1"}]]}
+  {:box/id :writer/claude-ws-step
+   :writes [:evidence/agent-step]}
+  {:box/id :writer/xiang-turn-service
+   :reads [:evidence/operator-turn]
+   :writes [:evidence/xiang-turn :evidence/relationship-review]}
+  {:box/id :writer/ma-observe
+   :reads [[:evidence/transcript {:record "zai-1"}]]
+   :writes [:evidence/ma-card]}
+  {:box/id :writer/promise-history
+   :writes [:evidence/promise-history]}
+  {:box/id :writer/promise-outcome
+   :reads [:evidence/promise-history]
+   :writes [:evidence/promise-outcome]}
+  {:box/id :writer/http-evidence-ingress
+   :writes [:evidence/operator-turn]}
+  {:box/id :reader/operator-focus
+   :reads [[:evidence/operator-turn {:record "joe"}]]}
+  {:box/id :reader/zai-transcript-bug-scan
+   :reads [[:evidence/transcript {:record "zai-1"}]
+           [:evidence/transcript {:record "wm-author"}]]}
+  {:box/id :reader/xiangma-export
+   :reads [:evidence/xiang-turn :evidence/ma-card]}
+  {:box/id :reader/promise-obligations
+   :reads [:evidence/promise-history :evidence/promise-outcome]}
+  {:box/id :reader/dispatch-pattern-outcomes
+   :reads [:evidence/pattern-outcome]}
+  {:box/id :reader/dispatch-graph
+   :reads [:evidence/dispatch-graph]}
+  {:box/id :reader/obligations-api
+   :reads [:evidence/obligation]}
+  {:box/id :reader/generic-search
+   :reads [:evidence/generic-search]}]}
