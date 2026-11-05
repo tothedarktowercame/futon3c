@@ -115,3 +115,11 @@ Carried forward: (1) classify + verify do 2+ point reads per row, too slow for a
 at live read speeds, so the migration tool needs a bulk existence check; (2) a new version with
 different source ids left old links current; fixed in part B (codex-13,
 `invoke-1793917737924-13418-d3b6c7ee`, with list/census routes).
+Part B done: codex-13 futon1b `ed91c86c9` (source-act lookup through the link rows, family window,
+cursor paging, cap 1000, census; a new version ends dropped links in the same transaction and verify
+checks they are gone). claude-8: test_derived 3 tests / 36 assertions pass (rerun). In memory: point
+read 10 ms, 200-row batch 4.5 s. Census scans the whole table; fine now, revisit at 600k rows.
+Step C (migration tool, in-JVM, batched existence checks, resumable, manifest under
+~/code/storage/derived-migration/) to codex-13 `invoke-1793918042938-13422-4c65658a`; step D
+(evidence erase: copy check, receipt with the full documents before erase, `:erase-docs`, delete from
+the five FTS tables) to codex-14 `invoke-1793918043740-13423-909553ed`.
