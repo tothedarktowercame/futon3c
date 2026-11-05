@@ -324,6 +324,39 @@
         (is (= (dissoc g1 :as-of-ms :cache) (dissoc g2 :as-of-ms :cache))
             "identical sections, counts and section-status (only :cache differs)")))))
 
+(defn- refresh-in-flight
+  "graph-refresh-in-flight derefed; #{} when the var is absent (master), so
+  the stale-while-revalidate tests still RUN on master and fail at their
+  assertions instead of failing to load."
+  []
+  (if-let [v (ns-resolve 'futon3c.logic.cascade-real-live 'graph-refresh-in-flight)] @@v #{}))
+
+(defn- reset-refresh-in-flight! []
+  (when-let [v (ns-resolve 'futon3c.logic.cascade-real-live 'graph-refresh-in-flight)]
+    (reset! @v #{})))
+
+(defn- wait-for
+  "Poll PRED until true or a 5 s deadline; returns PRED's value or nil."
+  [pred]
+  (let [deadline (+ (System/currentTimeMillis) 5000)]
+    (loop []
+      (or (pred)
+          (when (< (System/currentTimeMillis) deadline)
+            (Thread/sleep 10)
+            (recur))))))
+
+(defn- seed-graph-cache
+  "Seed a fresh good entry (count 1, one edge tagged with the type) for every
+  graph type; EXTRA overlays {hx-type entry} on top."
+  [extra]
+  (let [types @#'live/graph-hyperedge-types]
+    (reset! live/graph-section-cache
+            (merge (into {} (map (fn [t] [t {:count 1
+                                              :edges [{:hx/endpoints [t]}]
+                                              :fetched-at-ms (System/currentTimeMillis)}]))
+                        types)
+                   extra))))
+
 (deftest graph-cache-rewalks-only-the-type-whose-count-moved  ; B
   (reset! live/graph-section-cache {})
   (let [counts (atom {"mission-scope/pattern" 1})
@@ -339,27 +372,97 @@
         (is (= ["held/on-mission"] (:rewalked (:cache g2))))
         (is (= 6 (count (:reused (:cache g2)))))))))
 
-(deftest graph-cache-max-age-backstop-rewalks-unchanged-count  ; C
-  (reset! live/graph-section-cache {})
-  (with-redefs [live/*graph-count-reader* (constantly 1)
-                live/fetch-edges (fn [_] [{:hx/endpoints []}])
-                live/tickets-section (fn [_] {:count-total 0 :items []})]
-    (live/cascade-real-graph)
-    ;; age one entry past the backstop without touching its count
-    (swap! live/graph-section-cache update "clock/clocked-on"
-           assoc :fetched-at-ms (- (System/currentTimeMillis) live/graph-cache-max-age-ms 1))
-    (let [g2 (live/cascade-real-graph)]
-      (is (= ["clock/clocked-on"] (:rewalked (:cache g2)))
-          "count unchanged, entry stale: re-walked anyway"))))
+(deftest graph-cache-max-age-serves-stale-and-refreshes-in-background  ; C
+  (reset-refresh-in-flight!)
+  (let [refresh-count (atom 0)]
+    (with-redefs [live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges (fn [_] (swap! refresh-count inc) [{:hx/endpoints []}])
+                  live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (seed-graph-cache {"clock/clocked-on"
+                         {:count 1
+                          :edges [{:hx/endpoints [:old]}]
+                          :fetched-at-ms (- (System/currentTimeMillis)
+                                            live/graph-cache-max-age-ms 1)}})
+      (let [g2 (live/graph-sections*)]
+        (is (= [] (:rewalked (:cache g2)))
+            "count unchanged, entry over age: served, not walked in the request path")
+        (is (= ["clock/clocked-on"] (:stale (:cache g2))))
+        (is (true? (:stale? (get-in g2 [:fetches "clock/clocked-on"]))) "the section is marked stale")
+        (is (= "age" (:stale-reason (get-in g2 [:fetches "clock/clocked-on"]))))
+        (is (= [{:hx/endpoints [:old]}]
+               (:edges (get-in g2 [:fetches "clock/clocked-on"])))
+            "the stale GOOD edges are served at once"))
+      ;; the background refresh runs exactly once and replaces the entry
+      (is (wait-for #(= 1 @refresh-count)) "one background refresh started")
+      (is (wait-for #(= [{:hx/endpoints []}]
+                        (:edges (get @live/graph-section-cache "clock/clocked-on"))))
+          "the refresh replaced the cached edges")
+      (let [g3 (live/graph-sections*)]
+        (is (= [] (:stale (:cache g3))) "a successful refresh clears stale")
+        (is (contains? (set (:reused (:cache g3))) "clock/clocked-on"))))))
 
-(deftest graph-cache-count-failure-falls-back-and-failed-walk-keeps-entry  ; D
+(deftest graph-swrv-over-age-entry-with-slow-walk-serves-cached-promptly
+  "The live failure of 2026-11-05: an over-age entry whose rewalk (172 s live)
+   exceeds the 90 s request deadline must not cost the request anything."
+  (reset-refresh-in-flight!)
+  (let [refresh-count (atom 0)]
+    (with-redefs [live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges (fn [_] (swap! refresh-count inc)
+                                     (Thread/sleep 1500)
+                                     [{:hx/endpoints []}])]
+      (seed-graph-cache {"clock/clocked-on"
+                         {:count 1
+                          :edges [{:hx/endpoints [:cached]}]
+                          :fetched-at-ms (- (System/currentTimeMillis)
+                                            live/graph-cache-max-age-ms 1)}})
+      (let [t0 (System/currentTimeMillis)
+            g   (live/graph-sections*)
+            elapsed (- (System/currentTimeMillis) t0)]
+        (is (< elapsed 1000)
+            (str "the request returns well before the 1.5 s walk: took " elapsed "ms"))
+        (is (true? (:stale? (get-in g [:fetches "clock/clocked-on"]))))
+        (is (= [{:hx/endpoints [:cached]}]
+               (:edges (get-in g [:fetches "clock/clocked-on"])))
+            "the cached edges are served, not the doomed walk's"))
+      (is (wait-for #(= 1 @refresh-count)) "the refresh walks in the background")
+      (is (wait-for #(= [{:hx/endpoints []}]
+                        (:edges (get @live/graph-section-cache "clock/clocked-on"))))))))
+
+(deftest graph-swrv-two-calls-during-a-refresh-start-only-one
+  (reset-refresh-in-flight!)
+  (let [gate (promise)
+        refresh-count (atom 0)]
+    (with-redefs [live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges (fn [_] (swap! refresh-count inc)
+                                     ;; bounded so this test cannot hang on a
+                                     ;; master-shaped (no-background) code path
+                                     (deref gate 5000 ::timeout))]
+      (seed-graph-cache {"clock/clocked-on"
+                         {:count 1
+                          :edges [{:hx/endpoints [:old]}]
+                          :fetched-at-ms (- (System/currentTimeMillis)
+                                            live/graph-cache-max-age-ms 1)}})
+      (let [g1 (live/graph-sections*)
+            g2 (live/graph-sections*)]
+        (is (true? (:stale? (get-in g1 [:fetches "clock/clocked-on"]))))
+        (is (true? (:stale? (get-in g2 [:fetches "clock/clocked-on"])))))
+      (is (wait-for #(= 1 @refresh-count)) "the first call's refresh started")
+      (Thread/sleep 200)                       ; the second call had its chance
+      (is (= 1 @refresh-count) "no second refresh while one is running")
+      (deliver gate [{:hx/endpoints [:new]}])
+      (is (wait-for #(= [{:hx/endpoints [:new]}]
+                        (:edges (get @live/graph-section-cache "clock/clocked-on"))))
+          "the single refresh swapped the entry on success"))))
+
+(deftest graph-cache-count-failure-serves-stale-and-failed-refresh-keeps-entry  ; D
   (reset! live/graph-section-cache {})
+  (reset-refresh-in-flight!)
   (let [fail-walk? (atom nil)
         good-entry (atom nil)]
     (with-redefs [live/*graph-count-reader*
                   (fn [hx-type]
                     (if (= "mine/meme" hx-type)
-                      (throw (ex-info "count read failed" {}))  ; fallback: walk it
+                      (throw (ex-info "count read failed" {}))
                       1))
                   live/fetch-edges
                   (fn [hx-type]
@@ -370,14 +473,24 @@
       (live/cascade-real-graph)
       (reset! good-entry (get @live/graph-section-cache "mine/meme"))
       (is (vector? (:edges @good-entry)) "good entry cached after the first walk")
-      ;; now the count read still fails AND the walk fails
+      ;; now the count read still fails AND the walk fails: the request is
+      ;; served stale from the good entry (a failed count read is not a move),
+      ;; the refresh is attempted in the background, and its failure keeps
+      ;; the good entry — the 2026-11-05 publish-timeout shape, resolved.
       (reset! fail-walk? true)
       (let [g2 (live/cascade-real-graph)]
-        (is (= ["mine/meme"] (:rewalked (:cache g2))
-                ) "failed count read forces a walk attempt")
-        (is (= :failed (get-in g2 [:section-status "mine/meme" :status])))
-        (is (= @good-entry (get @live/graph-section-cache "mine/meme"))
-            "the failed walk did not overwrite the good cache entry")))))
+        (is (= [] (:rewalked (:cache g2))
+                )
+            "failed count read with a good entry: no request-path walk, stale serve")
+        (is (= ["mine/meme"] (:stale (:cache g2))))
+        (is (= :ok (get-in g2 [:section-status "mine/meme" :status]))
+            "the good edges are served, not a :failed section")
+        (is (get-in g2 [:section-status "mine/meme" :stale?])
+            "the page can tell this section is stale"))
+      (is (wait-for #(empty? (refresh-in-flight)))
+          "the background refresh attempt finished")
+      (is (= @good-entry (get @live/graph-section-cache "mine/meme"))
+          "the failed refresh did not overwrite the good cache entry"))))
 
 (deftest graph-fetch-failure-is-an-explicit-honest-hole
   (let [counts {"clock/clocked-on" 67

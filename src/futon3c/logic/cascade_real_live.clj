@@ -595,6 +595,57 @@
 ;; are reused verbatim while the type's count signal has not moved.
 (defonce graph-section-cache (atom {}))
 
+;; stale-while-revalidate (live failure 2026-11-05: an over-age mission-scope/
+;; pattern entry forced a ~172 s rewalk in the REQUEST path against the 90 s
+;; deadline; every 1-min publish of the WIP page timed out for 24 minutes).
+;; A type due only for revalidation is served from cache immediately, marked
+;; stale, and refreshed in the background — at most one refresh per type.
+(def ^:dynamic graph-refresh-deadline-ms
+  "Ceiling for one BACKGROUND refresh walk. No request waits on it; generous
+   (10 min) because the point is to survive slow-store windows, not to bound
+   the user-visible request. Dynamic so tests can shrink it."
+  (* 10 60 1000))
+
+(defonce graph-refresh-in-flight (atom #{}))
+
+(defonce graph-refresh-pool
+  (Executors/newFixedThreadPool
+   2
+   (let [default-factory (Executors/defaultThreadFactory)]
+     (reify java.util.concurrent.ThreadFactory
+       (newThread [_ runnable]
+         (doto (.newThread default-factory runnable)
+           (.setDaemon true)
+           (.setName "graph-section-refresh")))))))
+
+(defn- start-graph-refresh
+  "Start at most one background refresh of HX-TYPE. The refresh walks with no
+   request deadline and swaps the cache only on success — a failed refresh
+   leaves the stale-but-good entry to be served again on the next call."
+  [hx-type]
+  (let [before @graph-refresh-in-flight]
+    (when (and (not (contains? before hx-type))
+               (compare-and-set! graph-refresh-in-flight before (conj before hx-type)))
+      (.submit graph-refresh-pool
+               ^Callable
+               (fn []
+                 (try
+                   (let [future (.submit graph-refresh-pool ^Callable #(fetch-edges hx-type))
+                         edges  (try (vec (.get future graph-refresh-deadline-ms TimeUnit/MILLISECONDS))
+                                     (catch TimeoutException _
+                                       (.cancel future true)
+                                       (throw (ex-info (str "refresh walk exceeded "
+                                                            graph-refresh-deadline-ms "ms")
+                                                       {:hyperedge-type hx-type}))))]
+                     (swap! graph-section-cache assoc hx-type
+                            {:count (count edges)
+                             :edges edges
+                             :fetched-at-ms (System/currentTimeMillis)}))
+                   (catch Throwable _          ;; keep the stale-but-good entry
+                     )
+                   (finally
+                     (swap! graph-refresh-in-flight disj hx-type))))))))
+
 (defn- graph-count-reads
   "Parallel exact-count reads. Returns {hx-type count} for the types whose
   count read succeeded; a failed read is simply absent, which makes the
@@ -622,30 +673,54 @@
       (finally
         (.shutdownNow pool)))))
 
-(defn- graph-walk-needed?
-  "True when HX-TYPE must be re-walked: no cache entry, a failed placeholder,
-  a moved count (including a failed count read, which yields nil), or an entry
-  past the max-age backstop."
+(defn- graph-stale-reason
+  "When HX-TYPE's good entry is due only for revalidation, the reason keyword
+   (:age past the max-age backstop with an unmoved count, :count-read-failed),
+   else nil."
   [entry count-now now-ms]
+  (when (and entry (not (:failed? entry)))
+    (cond
+      (nil? count-now) :count-read-failed
+      (and (= (:count entry) count-now)
+           (> (- now-ms (:fetched-at-ms entry 0)) graph-cache-max-age-ms)) :age
+      :else nil)))
+
+(defn- graph-walk-needed?
+  "True when HX-TYPE must be re-walked IN THE REQUEST PATH: no cache entry, a
+   failed placeholder, or a count that MOVED (a count read that merely failed
+   is not a move — with a good entry that case is served stale and refreshed in
+   the background instead)."
+  [entry count-now]
   (boolean (or (nil? entry)
                (:failed? entry)
-               (not= (:count entry) count-now)
-               (> (- now-ms (:fetched-at-ms entry 0)) graph-cache-max-age-ms))))
+               (and (not (nil? count-now))
+                    (not= (:count entry) count-now)))))
 
 (defn graph-sections*
   "fetch-graph-sections with its cache accounting exposed. Returns
-  {:fetches {hx-type {:status ... :edges [...]}} :cache {:reused [...] :rewalked [...]}}.
-  A type whose count signal has not moved reuses its cached edges; a failed
-  walk reports :failed exactly as an uncached walk would and never overwrites
-  a good cache entry."
+  {:fetches {hx-type {:status ... :edges [...]}} :cache {:reused [...] :rewalked [...]
+                                                          :stale [...]}}.
+  A type whose count signal has not moved reuses its cached edges; a type due
+  only for revalidation (over-age with unmoved count, or a failed count read,
+  with a good entry present) is served from cache at once, marked :stale? with
+  :stale-reason and :stale-since-ms, and refreshed in the background (at most
+  one refresh per type); a failed walk reports :failed exactly as an uncached
+  walk would and never overwrites a good cache entry."
   []
   (let [now-ms   (System/currentTimeMillis)
         counts   (graph-count-reads graph-hyperedge-types)
         cached   @graph-section-cache
+        stale    (keep (fn [hx-type]
+                         (when-let [reason (graph-stale-reason (get cached hx-type)
+                                                                (get counts hx-type) now-ms)]
+                           [hx-type reason]))
+                       graph-hyperedge-types)
+        stale-t  (into #{} (map first) stale)
         rewalk   (filter (fn [hx-type]
-                           (graph-walk-needed? (get cached hx-type) (get counts hx-type) now-ms))
+                           (and (not (contains? stale-t hx-type))
+                                (graph-walk-needed? (get cached hx-type) (get counts hx-type))))
                          graph-hyperedge-types)
-        reuse    (remove (set rewalk) graph-hyperedge-types)
+        reuse    (remove (into #{} (concat stale-t rewalk)) graph-hyperedge-types)
         pool     (Executors/newFixedThreadPool (int graph-fetch-workers))]
     (try
       (let [tasks (into {}
@@ -693,21 +768,35 @@
             (when-not (and (contains? @graph-section-cache hx-type)
                            (not (:failed? (get @graph-section-cache hx-type))))
               (swap! graph-section-cache assoc hx-type {:failed? true}))))
+        (doseq [hx-type stale-t] (start-graph-refresh hx-type))
         {:fetches (merge (into {} (map (fn [hx-type]
                                          [hx-type {:status :ok
                                                    :hyperedge-type hx-type
                                                    :edges (:edges (get cached hx-type))}]))
                                reuse)
+                         (into {} (map (fn [[hx-type reason]]
+                                         (let [entry (get cached hx-type)]
+                                           [hx-type {:status :ok
+                                                     :hyperedge-type hx-type
+                                                     :edges (:edges entry)
+                                                     :stale? true
+                                                     :stale-reason (name reason)
+                                                     :stale-since-ms (:fetched-at-ms entry)}])))
+                                       stale)
                          results)
-         :cache {:reused (vec (sort reuse)) :rewalked (vec (sort rewalk))}})
+         :cache {:reused (vec (sort reuse))
+                 :rewalked (vec (sort rewalk))
+                 :stale (vec (sort stale-t))}})
       (finally
         (.shutdownNow pool)))))
 
 (defn fetch-graph-sections
   "Fetch the graph's independent typed walks, reusing cached edges for any
   type whose exact-count change signal has not moved (and whose entry is under
-  the max-age backstop). Each result is explicit: an authoritative empty read
-  is `:ok` with zero rows; a failed read is `:failed` with its type and cause.
+  the max-age backstop). A type due only for revalidation is served from cache
+  immediately, marked :stale?/:stale-reason, and refreshed in the background.
+  Each result is explicit: an authoritative empty read is `:ok` with zero
+  rows; a failed read is `:failed` with its type and cause.
   Cursor-linked pages within one `fetch-edges` call remain sequential."
   []
   (:fetches (graph-sections*)))
@@ -715,12 +804,16 @@
 (defn- fetched-edges [fetches hx-type]
   (:edges (get fetches hx-type)))
 
-(defn- fetch-status [fetches]
+(defn- fetch-status
+  [fetches]
   (into {}
-        (map (fn [[hx-type {:keys [status edges error]}]]
+        (map (fn [[hx-type {:keys [status edges error stale? stale-reason stale-since-ms]}]]
                [hx-type (cond-> {:status status
                                  :hyperedge-type hx-type}
                           (= :ok status) (assoc :row-count (count edges))
+                          stale? (assoc :stale? true
+                                        :stale-reason stale-reason
+                                        :stale-since-ms stale-since-ms)
                           error (assoc :error error))]))
         fetches))
 
