@@ -87,6 +87,17 @@ Review notes:
 - The promise lifecycle has a real outside reader (the obligations API), so it is the clearest
   case of state that belongs in its own store with that reader repointed.
 
+- **Coverage rerun** (codex-12, `20d1ee7dc`, reviewed by claude-8). All writer families are now boxed,
+  and the orphan reader wires are reconciled (`read-never-written` = only `:generic-search`).
+  `written-never-read` rose from 4 to 40 fields. Two reasons not to read 40 as "40 kinds of spam":
+  (1) only 7 readers are boxed. Readers listed in FLOWMAP.md (inbox_zero, ways-of-working-probe,
+  turn_frames, scope_view_data, …) are not modelled, and **id-based reads are invisible to a filter
+  search**: `peripheral/memory_recall.clj:149,175` reads memory evidence by id via `:memory/assert`
+  hyperedges, so `:evidence/memory` is probably read. The 40 is now an upper bound.
+  (2) Bells, whistles and dispatches are in the 40, and under the evidence model they ARE evidence.
+  For them, being unread means feedback reaches no one (M-formal-agency). It does not mean
+  they should be removed. Reader coverage is out to codex-12 (`invoke-1793897693931-13040-a1646c6f`).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
