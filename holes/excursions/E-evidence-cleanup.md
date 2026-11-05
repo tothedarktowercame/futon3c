@@ -98,6 +98,21 @@ Review notes:
   For them, being unread means feedback reaches no one (M-formal-agency). It does not mean
   they should be removed. Reader coverage is out to codex-12 (`invoke-1793897693931-13040-a1646c6f`).
 
+- **Reader coverage rerun** (codex-12, `3cad28042`, `7b24f4849`; reviewed by claude-8). Filtered,
+  session-scoped and by-id readers are now boxed, including the `:memory/assert` hyperedge join
+  (`memory_recall.clj:139-184`, plus three apm stores). That join removes the memory, gate-memory
+  and math-memory wires from the list. `written-never-read`: **30**. Of those, participant acts:
+  `bell-arrival`, `scheduled-dispatch`, `test-bell`. Derived/operational: the rest (tickle-*, logic-*,
+  the work queues, peripherals, artifact-activation, relationship-review, zaif-arm-choice).
+  Review: agent `:step` and the transcripts dropped off the list only because two **session-wide**
+  readers fetch everything in a session window. What they keep differs:
+  - `ways-of-working-probe.py` keeps only the final assistant row per operator turn
+    (`join_operator_replies`, :89). For it, steps and transcripts are pagination load, not input.
+  - `inbox_zero/infer_adapters.clj:125-140` scans every body for mentions of a file path. It does
+    use transcript text, to infer which files a seat touched. That is a real need served by
+    text-mining JSON, and in the GCC it is an agent→file edge.
+  So "read" here overstates use for the first reader and is accurate for the second.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
