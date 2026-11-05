@@ -7,7 +7,8 @@
    :evidence/type :promise/dependency-terminated
    :evidence/author "agent-7"
    :evidence/at "2026-11-05T12:00:00Z"
-   :evidence/body {:history/payload-edn "{:record {:id \"park-7\"}}"
+   :evidence/body {:history/format 3
+                   :history/payload-edn "{:record {:id \"park-7\"}}"
                    :history/promise-id "park-7"
                    :history/promise-sequence 2
                    :history/predecessor {:sequence 1
@@ -49,5 +50,33 @@
                                           :hx/id id :hx/endpoints ["wrong"]))]
     (is (= :promise-log-readback-mismatch
            (try (promise-log/write! entry) nil
+                (catch clojure.lang.ExceptionInfo error
+                  (:reason (ex-data error))))))))
+
+(deftest bounded-reader-rebuilds-current-and-as-of-rows
+  (let [edge (promise-log/entry->hyperedge entry)
+        calls (atom [])]
+    (binding [promise-log/*read-hyperedges-fn*
+              (fn [type options]
+                (swap! calls conj [type options])
+                [edge])]
+      (is (= [entry] (promise-log/read-history)))
+      (is (= [entry] (promise-log/read-history
+                      {:mode :as-of :at "2026-11-05T12:01:00Z"})))
+      (is (= [:promise/history-event :promise/history-event]
+             (mapv first @calls)))
+      (is (every? #(= {:limit 20000 :page-size 1000 :request-budget 20}
+                      (select-keys (second %) [:limit :page-size :request-budget]))
+                  @calls))
+      (is (= {:valid-as-of "2026-11-05T12:01:00Z"
+              :system-as-of "2026-11-05T12:01:00Z"}
+             (select-keys (second (second @calls))
+                          [:valid-as-of :system-as-of]))))))
+
+(deftest bounded-reader-refuses-a-partial-population
+  (binding [promise-log/*read-hyperedges-fn*
+            (fn [_ _] (with-meta [] {:partial? true :next-cursor "more"}))]
+    (is (= :truncated-input
+           (try (promise-log/read-history) nil
                 (catch clojure.lang.ExceptionInfo error
                   (:reason (ex-data error))))))))

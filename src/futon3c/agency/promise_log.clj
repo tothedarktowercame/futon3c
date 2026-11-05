@@ -3,7 +3,8 @@
   (:require [clojure.string :as str]
             [futon3c.agency.rule-record :as store]
             [futon3c.substrate.client :as substrate])
-  (:import [java.net URLEncoder]))
+  (:import [java.net URLEncoder]
+           [java.time Instant]))
 
 (defn hyperedge-id
   "Derive the stable operational id without changing promise-history identity."
@@ -76,3 +77,53 @@
                       {:reason :promise-log-readback-mismatch
                        :hx/id (:hx/id edge)})))
     {:ok true :hyperedge stored :replayed? (boolean post-error)}))
+
+(def max-history-rows
+  "Hard bound matching the evidence reader's 20 pages of 1,000 rows."
+  20000)
+
+(def ^:dynamic *read-hyperedges-fn* substrate/hyperedges-by-type)
+
+(defn hyperedge->entry
+  "Rebuild the evidence-shaped chain projection from one operational edge."
+  [edge]
+  (when-not (= :promise/history-event (:hx/type edge))
+    (throw (ex-info "Not a promise history hyperedge"
+                    {:reason :invalid-promise-log-type :hx/id (:hx/id edge)})))
+  (let [props (:hx/props edge)
+        endpoints (:hx/endpoints edge)]
+    {:evidence/id (:history/evidence-id props)
+     :evidence/type (:history/transition-type props)
+     :evidence/author (second endpoints)
+     :evidence/at (:history/event-time props)
+     :evidence/body (cond-> {:history/format 3
+                             :history/payload-edn (:history/payload-edn props)
+                             :history/promise-id (:history/promise-id props)
+                             :history/promise-sequence (:history/promise-sequence props)}
+                      (some? (:history/predecessor props))
+                      (assoc :history/predecessor (:history/predecessor props)))}))
+
+(defn read-history
+  "Read the complete bounded operational promise-history population. OPTIONS
+   accepts {:mode :current}, or {:mode :as-of :at <ISO instant>}. The latter
+   pins both temporal axes supported by futon1b's hyperedge route."
+  ([] (read-history {:mode :current}))
+  ([{:keys [mode at] :or {mode :current}}]
+   (when-not (contains? #{:current :as-of} mode)
+     (throw (ex-info "Invalid promise log read mode" {:reason :invalid-mode})))
+   (when (and (= :as-of mode)
+              (not (and (string? at)
+                        (try (Instant/parse at) true (catch Throwable _ false)))))
+     (throw (ex-info "As-of promise log reads require an instant"
+                     {:reason :invalid-as-of})))
+   (let [options (cond-> {:limit max-history-rows
+                          :page-size 1000
+                          :request-budget 20}
+                   (= :as-of mode) (assoc :valid-as-of at :system-as-of at))
+         edges (*read-hyperedges-fn* :promise/history-event options)]
+     (when (substrate/partial-result? edges)
+       (throw (ex-info "Promise log input exceeded its bounded read"
+                       (merge {:reason :truncated-input :source :promise-log
+                               :rows (count edges)}
+                              (meta edges)))))
+     (mapv hyperedge->entry edges))))
