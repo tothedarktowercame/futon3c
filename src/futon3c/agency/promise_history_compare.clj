@@ -5,8 +5,10 @@
   (:import [java.time Instant]))
 
 (def dual-write-live-at
-  "Rows before this instant predate the production dual writer."
-  "2026-11-05T17:10:00Z")
+  "Rows before this instant predate the production dual writer. Set from the
+   live run: evidence-only rows at 17:10:50-17:11:04Z were written before the
+   reload took effect (claude-8, 2026-11-05)."
+  "2026-11-05T17:12:00Z")
 
 (defn- before-dual-write? [row]
   (try
