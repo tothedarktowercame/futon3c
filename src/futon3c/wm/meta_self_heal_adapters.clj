@@ -12,6 +12,7 @@
             [futon2.aif.meta-injury-store :as injury-store]
             [futon2.aif.pinned-file-delivery :as delivery]
             [futon2.aif.meta-repair-coordinator :as coordinator]
+            [futon2.aif.seat-call-index :as seat-call-index]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity])
   (:import (java.security MessageDigest)
@@ -324,10 +325,16 @@
                                   :first-error first-error}))
       first-result)))
 
+(defn- seat-call-row [context role phase seat result session-id]
+  (merge (select-keys context [:click-id :parent-click-id :run-id])
+         {:role role :phase phase :seat seat
+          :session-id (or (:session-id result) session-id)
+          :job-id (seat-call-index/job-id result)}))
+
 (defn agency-invoke!
   "Synchronous Agency port used inside the already-checkpointed coordinator.
    The prompt requires a single EDN result so phase evidence is machine typed."
-  [{:keys [seat session-id request]}]
+  [{:keys [seat session-id request seat-call-context]}]
   (let [reset (reg/reset-session! seat)
         author? (= :author (:phase request))
         review? (= :review (:phase request))
@@ -371,6 +378,13 @@
                  (invoke-with-rate-limit-retry! seat prompt
                                                 {:mode "work" :caller "war-machine"
                                                  :session-id session-id}))
+        _seat-call (when (and result seat-call-context)
+                     (seat-call-index/append!
+                      (seat-call-row seat-call-context
+                                     (if author? :meta-repair-author
+                                         :meta-repair-reviewer)
+                                     (if author? :repair-author :repair-review)
+                                     seat result session-id)))
         parsed-result (when (:ok result) (one-edn-map (:result result)))
         parsed (:value parsed-result)
         job-id (or (get-in result [:invoke-meta :job-id]) (:job-id parsed))]
@@ -558,7 +572,9 @@
   "Serving adapter for evidence production/admission, separate from repair
   execution.  It returns only the typed map the futon2 producer expects; it
   never executes a proposed acceptance command."
-  [seat operation request]
+  ([seat operation request]
+   (producer-invoke! nil seat operation request))
+  ([seat-call-context seat operation request]
   (let [agent (reg/get-agent seat)
         prompt (producer-prompt operation request)
         options (when agent {:mode "work" :caller "war-machine"
@@ -611,6 +627,15 @@
                                                               (str prompt source-complaint)
                                                               options))
         final-result (or source-second-result envelope-result)
+        _seat-call (when (and final-result seat-call-context)
+                     (seat-call-index/append!
+                      (seat-call-row seat-call-context
+                                     (case operation
+                                       :diagnosis :meta-diagnosis
+                                       :acceptance-proposal :meta-acceptance-proposal
+                                       :acceptance-review :meta-acceptance-review)
+                                     operation seat final-result
+                                     (:session-id options))))
         final-read (if source-second-result
                      (when (:ok source-second-result) (one-edn-map (:result source-second-result)))
                      envelope-read)
@@ -683,7 +708,7 @@
               source-retry (assoc :source-retry source-retry)
               source-read-error (assoc :source-read-error source-read-error)
               source-repair (assoc :source-repair source-repair)
-              transport-retry (assoc :transport-retry transport-retry)))))
+              transport-retry (assoc :transport-retry transport-retry))))))
 
 (defn- hex-sha256 [^bytes content]
   (format "%064x" (java.math.BigInteger. 1
@@ -1009,11 +1034,11 @@
          :path (.getPath path) :detail (:err created)}))))
 
 (defn- acceptance-proposal!
-  [repository seat request]
+  [seat-call-context repository seat request]
   (let [worktree (acceptance-worktree! repository (:injury-id request))]
     (if-not (= :created (:status worktree))
       worktree
-      (producer-invoke! seat :acceptance-proposal
+      (producer-invoke! seat-call-context seat :acceptance-proposal
                         (assoc request :acceptance-worktree (:path worktree))))))
 
 (defn enact!
@@ -1119,9 +1144,9 @@
     (if-not (= :ready (:status ready)) ready
       (cond-> {:status :ready :readiness ready
        :work-order-identities (work-order-identities ready)
-       :agency-invoke-fn agency-invoke!
-       :meta-diagnosis-fn #(producer-invoke! (:author (:cast ready)) :diagnosis %)
-       :meta-acceptance-fn #(acceptance-proposal! (:repository ready)
+       :agency-invoke-fn #(agency-invoke! (assoc % :seat-call-context opts))
+       :meta-diagnosis-fn #(producer-invoke! opts (:author (:cast ready)) :diagnosis %)
+       :meta-acceptance-fn #(acceptance-proposal! opts (:repository ready)
                                                   (:author (:cast ready)) %)
        :meta-acceptance-run-fn (fn [test]
                                   (binding [*acceptance-repository*
@@ -1131,7 +1156,7 @@
                                      (or (:meta-acceptance-timeout-ms opts)
                                          default-acceptance-timeout-ms)
                                      (dissoc test :execution-repository))))
-       :meta-acceptance-review-fn #(producer-invoke! (:reviewer (:cast ready)) :acceptance-review %)
+       :meta-acceptance-review-fn #(producer-invoke! opts (:reviewer (:cast ready)) :acceptance-review %)
        :repair-enact-fn enact!
        :repair-worktree-fn ensure-author-worktree!
        :retry-click-id-fn retry-click-id

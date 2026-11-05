@@ -1,5 +1,6 @@
 (ns futon3c.wm.meta-self-heal-adapters-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.data.json :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell]
@@ -8,6 +9,7 @@
             [futon2.aif.meta-injury-ledger :as ledger]
             [futon2.aif.meta-injury-store :as injury-store]
             [futon2.aif.meta-repair-coordinator :as coordinator]
+            [futon2.aif.seat-call-index :as seat-call-index]
             [futon2.aif.meta-self-heal-harness :as harness]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.code-identity :as code-identity]
@@ -411,6 +413,36 @@
         (is (= :agency-response-not-one-edn-map
                (get-in result [:payload :reason])))
         (is (= "done" (get-in result [:payload :response-preview])))))))
+
+(deftest direct-meta-invokes-retain-one-seat-identity-per-logical-call
+  (let [path (.toString (java.nio.file.Files/createTempFile
+                         "wm-seat-calls" ".jsonl"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        context {:click-id "wm-click-cost-4" :parent-click-id "parent-click"
+                 :run-id "run-cost-4"}
+        invoked (atom 0)]
+    (binding [seat-call-index/*path* path]
+      (with-redefs [reg/get-agent (fn [_] ready-agent)
+                    reg/reset-session! (fn [_] {:ok true :old-session-id "old"})
+                    reg/invoke-agent!
+                    (fn [_ _ _]
+                      (let [n (swap! invoked inc)]
+                        {:ok true :result "{}" :session-id (str "session-" n)
+                         :invoke-meta {:job-id (str "job-" n)}}))]
+        (doseq [operation [:diagnosis :acceptance-proposal :acceptance-review]]
+          (#'sut/producer-invoke! context "wm-author" operation {}))
+        (doseq [phase [:author :review]]
+          (sut/agency-invoke! {:seat "wm-author" :request {:phase phase}
+                               :seat-call-context context}))))
+    (let [rows (map #(json/read-str % :key-fn keyword)
+                    (str/split-lines (slurp path)))]
+      (is (= 5 (count rows)))
+      (is (= #{"meta-diagnosis" "meta-acceptance-proposal"
+               "meta-acceptance-review" "meta-repair-author"
+               "meta-repair-reviewer"}
+             (set (map :role rows))))
+      (is (every? #(= "wm-click-cost-4" (:click-id %)) rows))
+      (is (= 5 (count (set (map :job-id rows))))))))
 
 (deftest prose-then-final-map-is-the-answer
   ;; Live pin, click wm-click-76ca8902 (2026-11-05): wm-reviewer's whole
