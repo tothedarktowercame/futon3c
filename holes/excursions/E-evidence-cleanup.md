@@ -326,6 +326,17 @@ Review notes:
   holds every chain the evidence does. futon1b threads 223 afterwards.
   Step 4 (ack outbox rows on the log's readback; evidence a counted shadow write) to codex-15,
   `invoke-1793920533562-13458-3596637d`, packet `promise-step4-outbox-ack-via-log.md`.
+- **Step 4 live** (codex-15 `987692f90`, reviewed by claude-8). `drain-now!` attempts the evidence
+  append first as a shadow (`shadow-write!`, counted `:shadow-ok` / `:shadow-failed` /
+  `:shadow-mismatch`, never `outbox-failed!`), then log write with exact readback -> state write ->
+  ack/persist -> outcome evaluation. `outcome/evaluate!` does not read the just-written evidence row.
+  Tests: evidence append throwing, and a `:duplicate-id` with different content, both ack with log
+  and state written and nothing in the failed set (codex: both fail on prior master); log/state
+  failure still keeps the row. promise-history-test 17 tests / 93 assertions (rerun). Loaded from
+  master ~00:10Z; stats unchanged over 5 min (no park activity yet): written 3,058, pending 0,
+  failed 4, conflict 16,288, no `:shadow-*` keys yet. First live drain still to observe.
+  Leftover for step 5: a shadow that fails is not retried, so the explicit-release route's evidence
+  readback (noted under 3c) can miss its own release; it moves to the log at step 5.
 
 - **Writer 2, context-retrieval** (codex-12 `9421e5dfc`; claude-8 `0aecba19f`). The body keeps
   `turn-id`, `session-id`, turn number, `query-chars`, `query-sha256` and `results`; no query text.
