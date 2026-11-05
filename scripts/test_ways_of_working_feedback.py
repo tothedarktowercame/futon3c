@@ -141,3 +141,58 @@ class FeedbackClassifierTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FetchOperatorRepliesPaginationTest(unittest.TestCase):
+    """A 2-hour bucket can hold more than one page (2026-11-04: one chatty
+    session's promise-lifecycle churn filled it). The reader must follow
+    next-cursor instead of refusing on a full page."""
+
+    def operator_row(self):
+        return {"evidence/id": "operator-1", "evidence/session-id": "session-1",
+                "evidence/at": "2026-11-03T10:00:00Z",
+                "evidence/body": {"role": "user", "turn-id": "turn-1"}}
+
+    def reply_row(self, evidence_id):
+        return {"evidence/id": evidence_id, "evidence/session-id": "session-1",
+                "evidence/at": "2026-11-03T10:01:00Z",
+                "evidence/body": {"role": "assistant", "turn-id": "turn-1",
+                                  "segment-final": True,
+                                  "unified-text": "㊥ (gist) Final reply",
+                                  "text": "㊥ (gist) Final reply"}}
+
+    def test_full_page_plus_cursor_then_reply_is_read(self):
+        page_one = {"entries": [self.reply_row(f"filler-{i}") for i in range(1000)],
+                    "count": 1001,
+                    "next-cursor": {"at": "2026-11-03T10:00:30Z", "id": "filler-999"}}
+        page_two = {"entries": [self.reply_row("reply-1")], "count": 1}
+        pages = [page_one, page_two]
+        seen_urls = []
+
+        def fetcher(url):
+            seen_urls.append(url)
+            return pages.pop(0)
+
+        with mock.patch.object(PROBE, "get_json", side_effect=fetcher):
+            replies = PROBE.fetch_operator_replies(
+                [self.operator_row()], NOW - datetime.timedelta(hours=2),
+                now=NOW, base="http://store.test")
+        self.assertEqual(["turn-1"], [row["job-id"] for row in replies])
+        self.assertEqual("㊥ (gist) Final reply", replies[0]["text"])
+        self.assertEqual(2, len(seen_urls))
+        self.assertIn("cursor-at=2026-11-03T10%3A00%3A30Z", seen_urls[1])
+        self.assertIn("cursor-id=filler-999", seen_urls[1])
+
+    def test_cursor_loop_fails_loudly(self):
+        page = {"entries": [self.reply_row(f"filler-{i}") for i in range(1000)],
+                "count": 1000,
+                "next-cursor": {"at": "2026-11-03T10:00:30Z", "id": "filler-999"}}
+
+        def fetcher(url):
+            return page
+
+        with mock.patch.object(PROBE, "get_json", side_effect=fetcher):
+            with self.assertRaisesRegex(RuntimeError, "exceeded bounded pagination"):
+                PROBE.fetch_operator_replies(
+                    [self.operator_row()], NOW - datetime.timedelta(hours=2),
+                    now=NOW, base="http://store.test")

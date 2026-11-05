@@ -131,8 +131,15 @@ def join_operator_replies(operator_rows, evidence_rows):
     return replies
 
 def fetch_operator_replies(operator_rows, cutoff, now=NOW,
-                           base="http://localhost:7073", bucket_hours=2):
-    """Read bounded session/time buckets, then join the census's operator rows."""
+                           base="http://localhost:7073", bucket_hours=2,
+                           max_pages=20):
+    """Read bounded session/time buckets, paging each with next-cursor.
+
+    A bucket can hold more than one page of rows (a chatty session's
+    promise-lifecycle churn filled a 2-hour bucket on 2026-11-04 and broke
+    the probe), so a full page is followed via the API's next-cursor the
+    same way fetch_promise_history does, under a page bound so a broken
+    cursor loop still fails loudly."""
     sessions = {row.get("evidence/session-id") for row in operator_rows
                 if row.get("evidence/session-id")}
     entries = {}
@@ -140,16 +147,22 @@ def fetch_operator_replies(operator_rows, cutoff, now=NOW,
         start = cutoff
         while start < now:
             end = min(start + datetime.timedelta(hours=bucket_hours), now)
-            query = {"session-id": session_id, "since": iso(start),
-                     "before": iso(end), "limit": "1000"}
-            data = get_json(base + "/api/alpha/evidence?" + urllib.parse.urlencode(query))
-            rows = data.get("entries")
-            if not isinstance(rows, list):
-                raise RuntimeError("futon1b operator-reply response is not usable")
-            if len(rows) >= 1000 or data.get("count", 0) >= 1000:
-                raise RuntimeError(f"futon1b operator-reply bucket truncated: {session_id} {iso(start)}")
-            for entry in rows:
-                if entry.get("evidence/id"): entries[entry["evidence/id"]] = entry
+            query = {str(k): str(v) for k, v in
+                     {"session-id": session_id, "since": iso(start),
+                      "before": iso(end), "limit": "1000"}.items()}
+            for _ in range(max_pages):
+                data = get_json(base + "/api/alpha/evidence?" + urllib.parse.urlencode(query))
+                rows = data.get("entries")
+                if not isinstance(rows, list):
+                    raise RuntimeError("futon1b operator-reply response is not usable")
+                for entry in rows:
+                    if entry.get("evidence/id"): entries[entry["evidence/id"]] = entry
+                cursor = data.get("next-cursor")
+                if not cursor or not rows: break
+                query.update({"cursor-at": cursor["at"], "cursor-id": cursor["id"]})
+            else:
+                raise RuntimeError(f"futon1b operator-reply bucket exceeded bounded "
+                                   f"pagination: {session_id} {iso(start)}")
             start = end
     return join_operator_replies(operator_rows, list(entries.values()))
 
