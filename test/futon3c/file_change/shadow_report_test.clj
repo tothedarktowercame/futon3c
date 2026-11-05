@@ -37,3 +37,18 @@
       (is (= :scored (:status r)))
       (is (= 1 (get-in r [:probe-verdicts :mint-failed])))
       (is (= r (report/read-report (.getPath output)))))))
+
+(deftest history-before-shadow-is-not-scored-and-new-demand-awaits-a-probe
+  (let [dir (temp-dir)
+        logs (doto (io/file dir "logs") .mkdirs)
+        demands (io/file dir "demands.jsonl")]
+    (spit (io/file logs "click-001-10.log")
+          "giraffe field  stale (newest old) -- minting\ngiraffe field  minted old-2 (ok)\n")
+    (ledger/append! (.getPath demands) {:first-at-ms 15000})
+    (let [r (report/build-report {:demand-path (.getPath demands)
+                                  :click-log-root (.getPath logs)
+                                  :ambiguity-ms 0})]
+      (is (= :awaiting-probe (:status r)))
+      (is (= 1 (:awaiting-probe r)))
+      (is (= 0 (:misses r)))
+      (is (= 1 (:scoring-probe-count r))))))
