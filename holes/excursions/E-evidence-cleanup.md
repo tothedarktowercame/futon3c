@@ -212,6 +212,17 @@ Review notes:
   `/api/alpha/obligations` still `truncated-input`, as expected until 3c. 3c dispatched to codex-13
   (`invoke-1793906579443-13253-334a9c8c`).
 
+- **Step 3c blocked, prerequisite dispatched.** codex-13 stopped without committing: the log drops each
+  row's `details` (for explicit releases `:release/basis/:role/:by` and `:act/stamp`, `http.clj:11572`),
+  and `obligations.clj:53-87` needs them; it also keeps a checkable promise live after a plain release,
+  which `promise-status:open` alone would miss. Confirmed by claude-8. Only 4 of 7,330 states carry a
+  fulfilment criterion (deadlines not yet counted). 3c0 (`invoke-1793907002950-13256-6d297a52`): a
+  generic `:history/details-edn` prop, `:checkable?`/`:deadline` and a `promise-obligation:checkable`
+  endpoint on state, reconcile rewrites stale edges. Also noted: the explicit-release route
+  (`http.clj` ~11550-11590) builds the obligations projection first and reads back from evidence, so it
+  has failed since 10-15 too; and only 7 `promise-outcome` rows exist in all, so the outcome evaluator
+  is barely writing (separate question).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
