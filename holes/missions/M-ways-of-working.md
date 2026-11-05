@@ -138,6 +138,18 @@ M-formal-agency (opened 2026-11-04). Today the commons map is uncommitted
 TSVs in `~/notes/commons-map`, read by the draw-pile probe for placements.
 Candidate ways 12 and 14 (memory upkeep, mined-pattern upkeep) belong here.
 
+## Graph cache serves stale and refreshes in the background (2026-11-05)
+
+From 00:23Z to 00:50Z the WIP page did not publish: the mission-scope/pattern
+section passed its 30-min age limit, its walk now takes ~172 s against the 90 s
+request deadline, and a failed walk neither refreshed nor served the entry.
+Fixed by zai-4 (`d064364a8`) with two review fixes by claude-16: separate
+supervisor and walk pools (`7dbc52d81`; one 2-thread pool deadlocked when two
+sections were due) and a moved count served stale too (`a681bcd24`). Only a
+missing entry or failed placeholder now walks in the request path; everything
+else is served marked stale and refreshed once in the background. The slow
+walk itself (futon1b cold pages) is still open.
+
 ## Open findings, each to become its own item
 
 1. ~~The consent-gate sweeper sends without `--from`~~ Resolved
