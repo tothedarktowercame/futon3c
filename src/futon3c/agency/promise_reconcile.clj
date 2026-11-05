@@ -157,7 +157,10 @@
                                        (:hx/id (nth chunk index)))))
                                   results))
         readback (if (= :promise/history-event hx-type)
-                   (read-history-chunk! chunk requests)
+                   ;; A failed readback marks this chunk failed, as the state
+                   ;; path does; one 503 must not abort a multi-chunk run.
+                   (try (read-history-chunk! chunk requests)
+                        (catch Throwable _ ::unavailable))
                    (try
                      (edge-map (read-edges! hx-type limit requests))
                      (catch Throwable _ ::unavailable)))]

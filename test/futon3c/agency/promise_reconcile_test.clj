@@ -162,13 +162,24 @@
                      (vec (repeat 1000
                                   (promise-log/entry->hyperedge (first rows))))}
                     (ordinary-request base method path body)))]
-        (is (= {:reason :truncated-input
-                :source :promise/history-event
-                :promise-id "readback-overflow"}
-               (try (reconcile/run! {:page-sleep-ms 0 :all-history? true}) nil
-                    (catch clojure.lang.ExceptionInfo error
-                      (select-keys (ex-data error)
-                                   [:reason :source :promise-id])))))))))
+        ;; A refused readback fails the chunk's edges; the run still finishes.
+        (let [report (reconcile/run! {:page-sleep-ms 0 :all-history? true})]
+          (is (= 3 (:history-edges-written report)))
+          (is (= 3 (:failed-ids-count report))))))))
+
+(deftest history-readback-error-fails-the-chunk-not-the-run
+  (let [rows (concat (chain "a" true) (chain "b" true))
+        edges (atom {}) writes (atom []) f (fixture rows edges writes)
+        ordinary-request (:request f)]
+    (with-store f
+      (binding [reconcile/*request-fn*
+                (fn [base method path body]
+                  (if (str/starts-with? path "/api/alpha/hyperedges?")
+                    (throw (ex-info "futon1b busy (HTTP 503)" {:status 503}))
+                    (ordinary-request base method path body)))]
+        (let [report (reconcile/run! {:page-sleep-ms 0 :all-history? true})]
+          (is (= 6 (:history-edges-written report)))
+          (is (= 6 (:failed-ids-count report))))))))
 
 (deftest open-promise-copies-missing-pre-cutover-history
   (let [rows (chain "open" false)
