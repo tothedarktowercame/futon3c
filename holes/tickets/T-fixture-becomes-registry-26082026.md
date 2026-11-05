@@ -55,3 +55,8 @@ that would have rejected `d36086f`.
 - `futon2/holes/NOTE-the-whitelist-provenance.md` — full provenance.
 - `futon2/holes/NOTE-slice4-slice5-understood.md` — why slices 4 and 5 are in series.
 - Candidate for `p4ng/plop-2026.tex` as a named anti-pattern.
+
+## Completion criteria
+
+- The fixture-becomes-registry anti-pattern is repaired at the producer — check: futon2 sha 4a65616ce on the default branch (renamed sampled-candidate-cleans, explicit no-census docstring, sample test). **Met.**
+- The product decision is made and recorded: either CLeans are bound for WM-selected missions, or sample-only is recorded as the contract in the producer's docstring and the parent slice's record — check: the decision quoted in this ticket (or its parent E-R8-red-ring-fill slice 5) naming which option and who decided. **Not met.**

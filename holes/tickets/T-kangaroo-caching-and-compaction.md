@@ -71,3 +71,9 @@ spawn-time gate should still catch, but the token-trap fear is gone.
 Research DONE. Next: set `ENABLE_PROMPT_CACHING_1H=1` (low-risk, high-value), then
 recalibrate the joey threshold upward. Compaction needs no action (auto-on); tune
 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` only if we want leaner pouches.
+
+## Completion criteria
+
+- Research findings recorded — check: the ticket's FINDINGS and Disposition sections (both knobs identified as env vars, compaction auto-on). **Met.**
+- The 1h-prompt-cache rollout is decided: ENABLE_PROMPT_CACHING_1H=1 set in dev-laptop-env, or a recorded decision not to — check: the env var present where the JVM and pouch children inherit it, or a decision line in this ticket naming the choice and decider. **Not met.**
+- The superseded parts are closed and the threshold question settled — check: a disposition line in this ticket recording that the joey threshold is retired (agent_pouch.clj:132, 2026-10-28) and that recalibration is moot, or what replaces it. **Not started.**
