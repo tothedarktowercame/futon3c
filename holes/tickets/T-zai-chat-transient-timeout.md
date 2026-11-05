@@ -71,3 +71,9 @@ happy-path round loop.
   `futon1b/TN-futon1b-memory-incident.md` (failure-taxonomy pattern)
 - Context: M-typed-memories P0 acceptance run notes
   (`holes/technotes/TN-zai2-session-notes-2026-07-22.md`, mission §Prototype ladder)
+
+## Completion criteria
+
+- H1 symmetry fix: chat! catches transport-level exceptions (timeout, connection) and returns the same `{:error ...}` data shape HTTP-status failures already use — check: `sed -n '1027,1070p' src/futon3c/agents/zai_api.clj` shows a catch around the send path returning the error map **Not met.**
+- H2 one bounded retry: on timeout/5xx/transport-error the chat call is retried once with a short jittered backoff, visible in the round log — check: a retry wrapper or test in futon3c agents code, plus a unit test stubbing a timeout **Not started.**
+- Acceptance: a simulated chat timeout mid-turn (stub client) yields error-as-data (H1) and one visible retry (H2), with existing zai_api tests passing and the happy-path round loop unchanged — check: the stub-client test exists and passes **Not started.**

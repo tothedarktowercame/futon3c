@@ -126,3 +126,10 @@ nothing is calling it, and misleading if something is.
 - `p4ng/empirics-futon/NOTE-red-ring-findings-vs-paper.md` — the claims audit.
 - `futon2/scripts/c1_turn_survival.py` — the operator-side measurement.
 - `futon3c/holes/excursions/E-R14-red-ring-fill.md`, `E-R8-red-ring-fill.md`.
+
+## Completion criteria
+
+- The tick emitter exists behind `FUTON2_WM_EMIT_EVIDENCE`, disabled by default, emitting wm-tick/wm-click/wm-cron — check: `grep -n FUTON2_WM_EMIT_EVIDENCE futon2/src/futon2/aif/evidence_emit.clj` **Met.**
+- A click has been run with the env set and its tick written to the Evidence Landscape with its own evidence id, retrievable by the filtered query surface — check: evidence store query tags=[wm-tick] since 2026-08-27 returns ≥1 item **Not met.**
+- The tick body has a declared shape: same fields every tick, absent fields typed absent — check: read two emitted tick bodies and compare key sets **Not started.**
+- Machine-facing store events (invoke-start/complete/error, context-retrieval) are readable by a JSON-parsing client, or a provided parser is used in preference to regex scraping — check: fetch such an event with `Accept: application/json` and parse the body with a stdlib JSON parser **Not started.**

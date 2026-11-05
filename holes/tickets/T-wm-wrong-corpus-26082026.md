@@ -44,3 +44,8 @@ is a writing discipline, not a code change — but it is checkable by grep, and
 - `futon2/holes/NOTE-step9-reachability.md` — the two-runner finding.
 - `p4ng/empirics-futon/promotion-tests.edn` — R8's `:retro-trip`, to be corrected.
 - V3 §4a carries this as a silence instance (claude-19, 2026-08-26).
+
+## Completion criteria
+
+- Exactly one runner writes WM run archives, or each archive is documented as enacting vs judgement-only at its directory — check: `git log --diff-filter=D -- scripts/wm_outer_loop.clj` shows removal (futon2 a04b157d2) and wm_scheduled_run.clj:109 documents the remaining runner as judgement-only **Met.**
+- A recorded null result carries the corpus it was drawn from as a path or query in the same artefact, surfaced as a checkable discipline (schema field or lint/grep check in gen-wip-cards.py) — check: `grep -n corpus futon3c/holes/excursions/gen-wip-cards.py` finds the enforcement **Not met.**

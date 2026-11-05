@@ -82,3 +82,9 @@ are findings; hiding either makes the board prettier and less true.
 - `T-devmap-forward-model-calibration.md` — the rubric template.
 - Paper: `p4ng/sec-observation-futon.tex` (the two rooms),
   `p4ng/sec-operator.tex` (registers, Figure 5).
+
+## Completion criteria
+
+- WIP cards carry a `watu` field, null when no replay reconstruction exists, and the board reports the count of cards without one — check: `grep -n '"watu"' /home/joe/code/futon3c/holes/excursions/gen-wip-cards.py` shows the field default and a without_watu count **Met.**
+- The authoritative futon6 tree is named in writing (futon6 vs futon6-old-copy) before any WATU review grades a history — check: a committed note or README paragraph under /home/joe/code/futon6 naming the authoritative tree **Not met.**
+- At least one superpod run (the m22 corpus) is reconstructed as a WATU-shaped record — what was knowable at decision time, the measured failure, the counter-move — reachable from the board via the watu field — check: a committed reconstruction document under futon6 cited by a non-null watu value on a WIP card **Not met.**
