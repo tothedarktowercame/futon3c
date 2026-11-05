@@ -327,6 +327,20 @@ Review notes:
   a turn id or `""`. `context-retrieval!` now falls back to `turn-queue/*turn-id*`, the identity its
   dedup key already uses (new test fails without it). Loaded 20:56Z; unlike writer 1 this takes effect
   at once, since the callers reach `context-retrieval!` through its var.
+  Live check 21:01Z: no `query` in new rows; the claude-8 REPL row has `turn-id`
+  `repl-claude-8-…`; codex bell turns have no queue turn id, so their rows omit it (scope_view reads
+  REPL turns only).
+
+- **Writer 3, 象 settled-turn memory** (codex-12 `e6795516d`; claude-8 `4ba13fb5d`). Body gains
+  `:turn-record-id`; `turn_frames.py` resolves new rows through the canonical record files
+  (`by_record_id`) and keeps the old joins. Review fix: codex dropped only the four top-level text
+  fields, but a real record (`turn-Z5MOf9`, 33 KB) also quotes the operator in `:sentences`, `:acts`
+  and `:alignment`, and `:ports` (25 KB) re-quotes earlier turns' acts. The packet record is now an
+  allow-list of identity/status fields plus `_chars`/`_sha256` witnesses; the test record carries the
+  nested quotes. 71 tests / 398 assertions, turn_frames tests pass. Loaded 21:01Z.
+  **Still copying:** the `:reading` (the analysis) quotes operator sentences by design; whether
+  spans should become offsets into the canonical record is open. (A duplicate work-mode bell,
+  `…13306-54cf99a9`, failed without running.)
 
 ## Step 2 progress
 
