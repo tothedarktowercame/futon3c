@@ -253,6 +253,14 @@ Review notes:
   tests and reviews. 3d to codex-13 (`invoke-1793909982191-13271-db75ae17`, packet
   `~/notes/packets/evidence-cleanup/promise-step3d-outcome-sweep.md`): sweep the checkable states.
 
+- **"hearo" still 32 hits** (Joe, 11-05 ~20:25Z). Breakdown of the 34 sidecar rows, 11-04 21:00Z onward:
+  artifact-activation 12 (all before `f75fb0fff`, 16:52Z, which stopped its text copy; they age out),
+  zai-1 turn rows 9, 象-1 (kimi) turn rows 4, claude-8 `prompt-preview` / `context-retrieval` 2,
+  xiang-turn-service `:memory` 2, 馬 1, and the operator turns and agent replies themselves 4.
+  The promise move does not touch this search: no promise row matches. Since 16:52Z the only new copy is a
+  象-1 turn row (20:23Z) embedding Joe's turn in its prompt. Discovery of the remaining turn-copy writers
+  (fields, readers of those fields, dispatch vs derived) to codex-12, `invoke-1793910300868-13274-5ea7e3d3`.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
