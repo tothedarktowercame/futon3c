@@ -101,3 +101,90 @@ guess a single producer site for them.
   :same-zai-transcript-boundary-selected-by-profile}`. The durable rows prove
   author `象-1`; the common constructor is `agents/zai_api.clj:1297-1328`, not a
   separate Kimi-only append call.
+
+## Coverage rerun — 2026-11-05
+
+The R0 now boxes every append family named in the first review: tickle and its
+three work queues, ZAIF, each logic writer, each peripheral writer, social
+bells/whistles/dispatch/ledger, and the script writers. An append site with
+multiple semantic constructors has one output wire per constructor. Dynamic
+`peripheral/common.clj:95` remains explicitly
+`:evidence/peripheral-call-data-unknown`; its callers supply the author via
+`common/resolve-author` (`common.clj:42-52`) and supply the whole entry, so no
+literal type can truthfully be assigned at that boundary.
+
+The orphan reader wires were reconciled as follows:
+
+* `:evidence/pattern-outcome` is written by
+  `peripheral/real_backend.clj:884-891` and
+  `scripts/memory_outcome_sweeper.py:529-545,743-758`, and read with
+  `type=pattern-outcome&author=...` at `dispatch_with_recall.clj:719-728`.
+* Dispatch graph reads the `:coordination :mesh-edge` stream written at
+  `social/coordination_ledger.clj:93-116`; the R0 wire is now
+  `:evidence/coordination-mesh-edge`, not the invented
+  `:evidence/dispatch-graph`.
+* The obligations readers filter `:promise-history` and the concrete promise
+  outcome types (`obligations_reader.clj:42-54,98`), already written by
+  `promise_history.clj:86-125,179` and `promise_outcome.clj:128-143,196-218`.
+  The invented `:evidence/obligation` wire was removed.
+
+`artifact_activation.clj:322` `missing-activations` is **not** a reader in this
+map. Repository search found no runtime caller: the only call is
+`test/futon3c/agency/artifact_activation_test.clj:112`; the other occurrence is
+documentation in `holes/missions/M-象-2000.md:2367`.
+
+For the newly boxed streams, the indexed window has no rows under the literal
+authors `tickle-1`, `probe`, `ratchet`, `agency-backtrace`, `gate-pipeline`,
+`runner-use-attribution-gate`, or `outcome-sweeper`; their per-type volume is
+therefore `0 records / 0 MB` in this window. The social automation stream
+`auto-bellback :coordination` has `117 records / 0.105 MB`. Dynamic agent
+authors remain included in the agent totals above and cannot be apportioned by
+writer site from `ev_attr` alone.
+
+### DiagramProver findings (verbatim, coverage rerun)
+
+```clojure
+{:written-never-read
+ [{:finding :written-never-read, :field :evidence/agent-step, :writers [:writer/claude-ws-step :writer/script-codex-ws-step]}
+  {:finding :written-never-read, :field :evidence/apm-workflow, :writers [:writer/apm-work-queue]}
+  {:finding :written-never-read, :field :evidence/arse-workflow, :writers [:writer/arse-work-queue]}
+  {:finding :written-never-read, :field :evidence/artifact-weak-activation, :writers [:writer/artifact-activation]}
+  {:finding :written-never-read, :field :evidence/bell, :writers [:writer/social-bell]}
+  {:finding :written-never-read, :field :evidence/bell-arrival, :writers [:writer/social-arrival]}
+  {:finding :written-never-read, :field :evidence/gate-memory, :writers [:writer/script-gate-memory]}
+  {:finding :written-never-read, :field :evidence/logic-archaeology, :writers [:writer/logic-archaeology]}
+  {:finding :written-never-read, :field :evidence/logic-locus, :writers [:writer/logic-locus]}
+  {:finding :written-never-read, :field :evidence/logic-metabolic-balance, :writers [:writer/logic-metabolic-balance]}
+  {:finding :written-never-read, :field :evidence/logic-probe, :writers [:writer/logic-probe]}
+  {:finding :written-never-read, :field :evidence/logic-probe-tap, :writers [:writer/logic-probe-taps]}
+  {:finding :written-never-read, :field :evidence/logic-ratchet, :writers [:writer/logic-ratchet]}
+  {:finding :written-never-read, :field :evidence/logic-ratchet-check, :writers [:writer/logic-ratchet]}
+  {:finding :written-never-read, :field :evidence/logic-snapshot, :writers [:writer/logic-snapshot]}
+  {:finding :written-never-read, :field :evidence/logic-trace, :writers [:writer/logic-tracer]}
+  {:finding :written-never-read, :field :evidence/logic-trace-link, :writers [:writer/logic-tracer]}
+  {:finding :written-never-read, :field :evidence/math-memory-pattern, :writers [:writer/script-wire-math-memory]}
+  {:finding :written-never-read, :field :evidence/memory, :writers [:writer/peripheral-memory-write]}
+  {:finding :written-never-read, :field :evidence/memory-lifecycle, :writers [:writer/peripheral-memory-lifecycle]}
+  {:finding :written-never-read, :field :evidence/operator-turn-backfill, :writers [:writer/script-backfill-claude]}
+  {:finding :written-never-read, :field :evidence/peripheral-call-data-unknown, :writers [:writer/peripheral-common]}
+  {:finding :written-never-read, :field :evidence/peripheral-coordination, :writers [:writer/peripheral-real-backend]}
+  {:finding :written-never-read, :field :evidence/peripheral-mentor, :writers [:writer/peripheral-mentor]}
+  {:finding :written-never-read, :field :evidence/pull-receipt, :writers [:writer/peripheral-pull-receipts]}
+  {:finding :written-never-read, :field :evidence/relationship-review, :writers [:writer/xiang-turn-service]}
+  {:finding :written-never-read, :field :evidence/scheduled-dispatch, :writers [:writer/social-scheduled-dispatch]}
+  {:finding :written-never-read, :field :evidence/social-dispatch, :writers [:writer/social-dispatch]}
+  {:finding :written-never-read, :field :evidence/test-bell, :writers [:writer/social-test-bell]}
+  {:finding :written-never-read, :field :evidence/tickle-availability, :writers [:writer/tickle-availability]}
+  {:finding :written-never-read, :field :evidence/tickle-escalation, :writers [:writer/tickle-escalation]}
+  {:finding :written-never-read, :field :evidence/tickle-fm-cycle, :writers [:writer/tickle-fm-cycle]}
+  {:finding :written-never-read, :field :evidence/tickle-orchestration, :writers [:writer/tickle-orchestration]}
+  {:finding :written-never-read, :field :evidence/tickle-page, :writers [:writer/tickle-page]}
+  {:finding :written-never-read, :field :evidence/tickle-scan, :writers [:writer/tickle-scan]}
+  {:finding :written-never-read, :field :evidence/tickle-status-report, :writers [:writer/tickle-status-report]}
+  {:finding :written-never-read, :field :evidence/tickle-workflow, :writers [:writer/tickle-work-queue]}
+  {:finding :written-never-read, :field :evidence/whistle, :writers [:writer/social-whistle]}
+  {:finding :written-never-read, :field :evidence/zaif-arm-choice, :writers [:writer/zaif-controller]}
+  {:finding :written-never-read, :field [:evidence/transcript "象-1"], :writers [:writer/kimi-transcript-xiang-1]}],
+ :read-never-written
+ [{:finding :read-never-written, :field :evidence/generic-search, :readers [:reader/generic-search]}]}
+```

@@ -10,8 +10,6 @@
   :evidence/promise-history :evidence-record
   :evidence/promise-outcome :evidence-record
   :evidence/pattern-outcome :evidence-record
-  :evidence/dispatch-graph :evidence-record
-  :evidence/obligation :evidence-record
   :evidence/generic-search :search-interface}
  :boxes
  [{:box/id :writer/artifact-activation
@@ -24,8 +22,47 @@
    :writes [[:evidence/transcript {:record "象-1"}]]}
   {:box/id :writer/claude-ws-step
    :writes [:evidence/agent-step]}
+  {:box/id :writer/tickle-scan :writes [:evidence/tickle-scan]}
+  {:box/id :writer/tickle-page :writes [:evidence/tickle-page]}
+  {:box/id :writer/tickle-escalation :writes [:evidence/tickle-escalation]}
+  {:box/id :writer/tickle-availability :writes [:evidence/tickle-availability]}
+  {:box/id :writer/tickle-orchestration :writes [:evidence/tickle-orchestration]}
+  {:box/id :writer/tickle-status-report :writes [:evidence/tickle-status-report]}
+  {:box/id :writer/tickle-fm-cycle :writes [:evidence/tickle-fm-cycle]}
+  {:box/id :writer/tickle-work-queue :writes [:evidence/tickle-workflow]}
+  {:box/id :writer/arse-work-queue :writes [:evidence/arse-workflow]}
+  {:box/id :writer/apm-work-queue :writes [:evidence/apm-workflow]}
+  {:box/id :writer/zaif-controller :writes [:evidence/zaif-arm-choice]}
+  {:box/id :writer/logic-probe :writes [:evidence/logic-probe]}
+  {:box/id :writer/logic-archaeology :writes [:evidence/logic-archaeology]}
+  {:box/id :writer/logic-tracer :writes [:evidence/logic-trace :evidence/logic-trace-link]}
+  {:box/id :writer/logic-snapshot :writes [:evidence/logic-snapshot]}
+  {:box/id :writer/logic-locus :writes [:evidence/logic-locus]}
+  {:box/id :writer/logic-metabolic-balance :writes [:evidence/logic-metabolic-balance]}
+  {:box/id :writer/logic-ratchet :writes [:evidence/logic-ratchet :evidence/logic-ratchet-check]}
+  {:box/id :writer/logic-probe-taps :writes [:evidence/logic-probe-tap]}
+  {:box/id :writer/peripheral-mentor :writes [:evidence/peripheral-mentor]}
+  {:box/id :writer/peripheral-real-backend :writes [:evidence/peripheral-coordination
+                                                     :evidence/pattern-outcome]}
+  {:box/id :writer/peripheral-memory-write :writes [:evidence/memory]}
+  {:box/id :writer/peripheral-memory-lifecycle :writes [:evidence/memory-lifecycle]}
+  {:box/id :writer/peripheral-pull-receipts :writes [:evidence/pull-receipt]}
+  {:box/id :writer/peripheral-common
+   :writes [:evidence/peripheral-call-data-unknown]}
+  {:box/id :writer/social-bell :writes [:evidence/bell]}
+  {:box/id :writer/social-arrival :writes [:evidence/bell-arrival]}
+  {:box/id :writer/social-test-bell :writes [:evidence/test-bell]}
+  {:box/id :writer/social-whistle :writes [:evidence/whistle]}
+  {:box/id :writer/social-dispatch :writes [:evidence/social-dispatch]}
+  {:box/id :writer/social-mesh-edge :writes [:evidence/coordination-mesh-edge]}
+  {:box/id :writer/social-scheduled-dispatch :writes [:evidence/scheduled-dispatch]}
+  {:box/id :writer/script-backfill-claude :writes [:evidence/operator-turn-backfill]}
+  {:box/id :writer/script-gate-memory :writes [:evidence/gate-memory]}
+  {:box/id :writer/script-wire-math-memory :writes [:evidence/math-memory-pattern]}
+  {:box/id :writer/script-memory-outcome-sweeper :writes [:evidence/pattern-outcome]}
+  {:box/id :writer/script-codex-ws-step :writes [:evidence/agent-step]}
   {:box/id :writer/xiang-turn-service
-   :reads [:evidence/operator-turn]
+   :reads [[:evidence/operator-turn {:record "joe"}]]
    :writes [:evidence/xiang-turn :evidence/relationship-review]}
   {:box/id :writer/ma-observe
    :reads [[:evidence/transcript {:record "zai-1"}]]
@@ -36,7 +73,7 @@
    :reads [:evidence/promise-history]
    :writes [:evidence/promise-outcome]}
   {:box/id :writer/http-evidence-ingress
-   :writes [:evidence/operator-turn]}
+   :writes [[:evidence/operator-turn {:record "joe"}]]}
   {:box/id :reader/operator-focus
    :reads [[:evidence/operator-turn {:record "joe"}]]}
   {:box/id :reader/zai-transcript-bug-scan
@@ -46,11 +83,7 @@
    :reads [:evidence/xiang-turn :evidence/ma-card]}
   {:box/id :reader/promise-obligations
    :reads [:evidence/promise-history :evidence/promise-outcome]}
-  {:box/id :reader/dispatch-pattern-outcomes
-   :reads [:evidence/pattern-outcome]}
-  {:box/id :reader/dispatch-graph
-   :reads [:evidence/dispatch-graph]}
-  {:box/id :reader/obligations-api
-   :reads [:evidence/obligation]}
+  {:box/id :reader/dispatch-pattern-outcomes :reads [:evidence/pattern-outcome]}
+  {:box/id :reader/dispatch-graph :reads [:evidence/coordination-mesh-edge]}
   {:box/id :reader/generic-search
    :reads [:evidence/generic-search]}]}
