@@ -1,0 +1,60 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild3 import build, A
+
+T = "claude-17-turn-397"
+build("turn-PPqEmR", [
+    A(f"{T}-f-s1-0", "approve", "approve/plain", "yes 2"),
+    A(f"{T}-r-0", "reply-mark", "report/done",
+      'Gist: Your "yes 2" was recorded as agreement',
+      answers=[(f"{T}-f-s1-0", 'Your "yes 2" was recorded as agreement', "closes")]),
+    A(f"{T}-r-1", "reply-mark", "report/done",
+      "(the mission note) §6.6 records",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "report/diagnosis",
+      "(the grant display) The server sends",
+      conf="medium"),
+    A(f"{T}-r-3", "reply-mark", "verify/checked-live",
+      "(what I checked, commit 8b80144f)",
+      conf="medium"),
+])
+
+T = "claude-2-turn-102"
+build("turn-PZ5GLb", [
+    A(f"{T}-f-s1-0", "redirect", "constrain/for-now",
+      "I think you need to take a step back and understand the fundamentals better",
+      opens="step back to fundamentals",
+      note="stops dispatching until the specification is understood"),
+    A(f"{T}-r-0", "reply-mark", "approve/plain",
+      '("take a step back and understand the fundamentals better") Yes',
+      answers=[(f"{T}-f-s1-0", '("take a step back and understand the fundamentals better") Yes', "closes")],
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-r-1", "reply-mark", "report/evidence",
+      "(the fundamentals as I now read them, for you to correct)",
+      answers=[(f"{T}-f-s1-0", "(the fundamentals as I now read them", "closes")],
+      within=f"{T}-f-s1-0",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "report/evidence",
+      "(the last click against the requirements)",
+      within=f"{T}-f-s1-0",
+      conf="medium"),
+    A(f"{T}-r-3", "reply-mark", "retract/correction",
+      "(what I got wrong today)",
+      answers=[(f"{T}-f-s1-0", "(what I got wrong today)", "closes")],
+      within=f"{T}-f-s1-0",
+      conf="medium"),
+    A(f"{T}-r-4", "reply-mark", "report/gap",
+      "(what I have not settled)",
+      within=f"{T}-f-s1-0",
+      conf="medium"),
+    A(f"{T}-r-5", "reply-mark", "propose/next-step",
+      "(what I would do next, in order)",
+      answers=[(f"{T}-f-s1-0", "(what I would do next, in order)", "keeps")],
+      within=f"{T}-f-s1-0",
+      conf="medium"),
+    A(f"{T}-r-6", "reply-mark", "ask-action/two-decisions",
+      "(two things I need)",
+      answers=[(f"{T}-f-s1-0", "(two things I need)", "keeps")],
+      within=f"{T}-f-s1-0",
+      conf="medium"),
+])

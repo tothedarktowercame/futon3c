@@ -1,0 +1,63 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild3 import build, A
+
+T = "claude-17-turn-458"
+build("turn-3F2XHs", [
+    A(f"{T}-f-s1-0", "approve", "approve/with-amendment",
+      "your table is good, but let's use the Max Neef terms not as a separate list"),
+    A(f"{T}-f-s1-1", "redirect", "propose/redirect-scope",
+      "let's use the Max Neef terms not as a separate list but as a discriminator",
+      opens="max-neef discriminator tree"),
+    A(f"{T}-r-0", "reply-mark", "report/done",
+      "(Max-Neef as the discriminator) Here's a draft tree.",
+      answers=[(f"{T}-f-s1-1", "(Max-Neef as the discriminator) Here's a draft tree.", "closes")],
+      within=f"{T}-f-s1-1"),
+    A(f"{T}-r-1", "reply-mark", "report/diagnosis",
+      "(where the tree is weakest) Understanding does most of the work twice over",
+      answers=[(f"{T}-f-s1-1", "(where the tree is weakest)", "keeps")],
+      within=f"{T}-f-s1-1"),
+    A(f"{T}-r-2", "reply-mark", "propose/acceptance-plan",
+      "(testing it) The tree would go to the annotator as a short file",
+      answers=[(f"{T}-f-s1-1", "(testing it)", "keeps")],
+      within=f"{T}-f-s1-1"),
+    A(f"{T}-r-3", "reply-mark", "ask-action/one-decision",
+      "(go-ahead) Shall I write the tree to a file",
+      answers=[(f"{T}-f-s1-1", "(go-ahead)", "keeps")],
+      within=f"{T}-f-s1-1"),
+])
+
+T = "claude-2-turn-42"
+build("turn-3jTIfJ", [
+    A(f"{T}-f-s1-0", "approve", "approve/plain",
+      "Okay, that's great"),
+    A(f"{T}-f-s1-1", "defer", "defer/until",
+      "we can also revise the paper to match the lean code"),
+    A(f"{T}-f-s1-2", "constrain", "constrain/standing-rule",
+      "the main point is that all of these artifacts are supposed to be demonstrating",
+      opens="artifacts demonstrate applied AIF",
+      note="standing frame governing how all paper/code work is read"),
+    A(f"{T}-r-0", "reply-mark", "approve/plain",
+      '("they can\'t just be decorative bits") Agreed',
+      answers=[(f"{T}-f-s1-2", '("they can\'t just be decorative bits") Agreed', "closes")],
+      within=f"{T}-f-s1-2"),
+    A(f"{T}-r-1", "reply-mark", "report/evidence",
+      "(what each node contributes to the active-inference account)",
+      answers=[(f"{T}-f-s1-2", "(what each node contributes to the active-inference account)", "keeps")],
+      within=f"{T}-f-s1-2",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "report/diagnosis",
+      "(where this is not yet met) The paper currently calls R9, R10 and R11",
+      answers=[(f"{T}-f-s1-2", "(where this is not yet met)", "keeps")],
+      within=f"{T}-f-s1-2",
+      conf="medium"),
+    A(f"{T}-r-3", "reply-mark", "propose/next-step",
+      "(order) I'll finish stating each role from the paper first",
+      answers=[(f"{T}-f-s1-2", "(order)", "keeps")],
+      within=f"{T}-f-s1-2",
+      conf="medium"),
+    A(f"{T}-r-4", "reply-mark", "report/in-flight",
+      "(status) The R20 job `invoke-1791168970981-32460-80c4995c` is running",
+      within=f"{T}-f-s1-2",
+      conf="medium"),
+])

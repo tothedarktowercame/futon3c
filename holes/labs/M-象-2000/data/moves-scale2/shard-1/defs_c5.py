@@ -1,0 +1,82 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild import build, A
+
+T = "claude-17-turn-382"
+build("turn-9sg8SX", [
+    A(f"{T}-f-s1-0", "propose", "propose/alternative",
+      "Rather than spending two hours reviewing everything meticulously"),
+    A(f"{T}-f-s2-0", "explain", "explain/example",
+      "E.g."),
+    A(f"{T}-f-s3-0", "extend", "propose/extend",
+      "we could catch mismatches like your read-only-first-then-extend example"),
+    A(f"{T}-f-s4-0", "extend", "propose/extend",
+      "This could also be a step towards adding classical heuristics to xiao-xiang"),
+    A(f"{T}-r-0", "reply-mark", "report/done",
+      "(what I built, commit 6be52885) `scripts/citation_audit.py`",
+      answers=[(f"{T}-f-s1-0", "(what I built, commit 6be52885)", "closes")],
+      opens="citation audit",
+      conf="medium"),
+    A(f"{T}-r-1", "reply-mark", "report/diagnosis",
+      "(word overlap doesn't work)",
+      answers=[(f"{T}-f-s1-0", "(word overlap doesn't work)", "keeps")],
+      within="citation audit"),
+    A(f"{T}-r-2", "reply-mark", "report/evidence",
+      "(the frequency measures that do work)",
+      answers=[(f"{T}-f-s3-0", "(the frequency measures that do work)", "keeps")],
+      within="citation audit"),
+    A(f"{T}-r-3", "reply-mark", "propose/next-step",
+      "(next)",
+      answers=[(f"{T}-f-s1-0", "(next)", "keeps")],
+      within="citation audit",
+      conf="medium"),
+    A(f"{T}-r-4", "reply-mark", "propose/extend",
+      "(toward 小象 heuristics) Two of these measures could serve as simple rules",
+      answers=[(f"{T}-f-s4-0", "(toward 小象 heuristics)", "closes")],
+      within="citation audit"),
+    A(f"{T}-r-5", "reply-mark", "ask-action/one-decision",
+      "(one decision) Shall I mark the 418 repeated citations as unverified now?",
+      answers=[(f"{T}-f-s1-0", "(one decision) Shall I mark the 418", "keeps")],
+      within="citation audit"),
+])
+
+T = "claude-17-turn-435"
+build("turn-9wg0bi", [
+    A(f"{T}-f-s1-0", "report-problem", "report-problem/observed",
+      "I see ONE figure, I was expecting to see breakout figures per PBASE type"),
+    A(f"{T}-r-0", "reply-mark", "report/done",
+      "(what I changed) The main 10-01 page now has a line just under the big figure",
+      answers=[(f"{T}-f-s1-0", "(what I changed) The main 10-01 page now has a line", "closes")]),
+    A(f"{T}-r-1", "reply-mark", "qualify/caveat",
+      "(what I haven't seen) The breakout page's panels are drawn by its script",
+      answers=[(f"{T}-f-s1-0", "(what I haven't seen)", "keeps")],
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "ask-action/one-decision",
+      "(one page or two) Would you rather the eight panels sit directly under the main figure",
+      answers=[(f"{T}-f-s1-0", "(one page or two)", "keeps")],
+      conf="medium"),
+])
+
+T = "claude-17-turn-27"
+build("turn-ArDfbO", [
+    A(f"{T}-f-s1-0", "report", "report/intent",
+      "I also want to send a turn with a long quote in it"),
+    A(f"{T}-f-s2-0", "constrain", "constrain/standing-rule",
+      "I will ensure that I use the triple-greater-than form for that quote"),
+    A(f"{T}-f-s3-0", "constrain", "constrain/standing-rule",
+      "On feed.html it should be given visible blockquote styling"),
+    A(f"{T}-f-s4-0", "ask-action", "ask-action/one-decision",
+      "I won't send the turn until you assure me this is OK."),
+    A(f"{T}-r-0", "reply-mark", "verify/checked-live",
+      "(what I checked)",
+      answers=[(f"{T}-f-s2-0", "(what I checked)", "keeps")],
+      conf="medium"),
+    A(f"{T}-r-1", "reply-mark", "report/with-options",
+      "(each reader of your turn)",
+      answers=[(f"{T}-f-s2-0", "(each reader of your turn)", "keeps")],
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "report/gap",
+      "(one thing outside this) Agent-chat's ordinary evidence row",
+      answers=[(f"{T}-f-s2-0", "(one thing outside this)", "keeps")],
+      conf="medium"),
+])

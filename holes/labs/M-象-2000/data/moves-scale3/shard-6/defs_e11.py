@@ -1,0 +1,60 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild3 import build, A
+
+T = "claude-2-turn-47"
+build("turn-HOhCfB", [
+    A(f"{T}-f-s1-0", "redirect", "propose/redirect-scope",
+      "I feel I've been asked a lot of questions here",
+      opens="research the theory",
+      note="redirects questions from the operator to source research"),
+    A(f"{T}-f-s2-0", "redirect", "approve/plain",
+      "All the questions are probably good questions they're just being directed in the wrong way",
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-r-0", "reply-mark", "report/done",
+      '("doing some research on the theory") Agreed, and done',
+      answers=[(f"{T}-f-s1-0", '("doing some research on the theory") Agreed', "closes")],
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-r-1", "reply-mark", "report/evidence",
+      "(what the sources say)",
+      answers=[(f"{T}-f-s1-0", "(what the sources say)", "closes")],
+      within=f"{T}-f-s1-0",
+      conf="low",
+      note="heading-only paragraph"),
+    A(f"{T}-r-2", "reply-mark", "report/evidence",
+      "(what follows for the three nodes",
+      answers=[(f"{T}-f-s1-0", "(what follows for the three nodes", "keeps")],
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-r-3", "reply-mark", "report/in-flight",
+      "(the R20 confidence module)",
+      conf="medium"),
+    A(f"{T}-r-4", "reply-mark", "qualify/caveat",
+      "(limits of this research)",
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-r-5", "reply-mark", "explain/decline",
+      "(the Campaign S question) That was a factual question, not one for you."),
+    A(f"{T}-r-6", "reply-mark", "propose/next-step",
+      "(next)",
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-r-7", "reply-mark", "report/in-flight",
+      "(status) Nothing is running.",
+      conf="medium"),
+])
+
+T = "claude-17-turn-394"
+build("turn-HUylGP", [
+    A(f"{T}-f-s1-0", "approve", "approve/plain", "🈸:yes 1"),
+    A(f"{T}-r-0", "reply-mark", "report/diagnosis",
+      "(what happened)",
+      conf="medium"),
+    A(f"{T}-r-1", "reply-mark", "explain/mechanism",
+      "(why it matters) A yes that is recorded while the buffer says",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "propose/with-options",
+      "(fixes, in order of size)",
+      conf="medium"),
+    A(f"{T}-r-3", "reply-mark", "ask-action/one-decision",
+      "(one decision) Shall I do 1 now",
+      answers=[(f"{T}-f-s1-0", "(one decision) Shall I do 1 now", "keeps")],
+      conf="medium"),
+])

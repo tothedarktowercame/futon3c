@@ -1,0 +1,66 @@
+import sys
+sys.path.insert(0, ".")
+from build import build
+from defs_34pFgV import A
+
+T = "claude-12-turn-104"
+build("turn-Cu0AN8", [
+    A(f"{T}-f-s1-0", "propose", "propose/preregistration",
+      "be able to preregister any needed improvements against tge latest report card"),
+    A(f"{T}-f-s1-1", "defer", "defer/until",
+      "After we have records we should also"),
+    A(f"{T}-r-0", "reply-mark", "approve/plain",
+      "That fits the report card well: each fix states, before it lands, what it should change on the next card",
+      answers=[(f"{T}-f-s1-0", "each fix states, before it lands, what it should change on the next card, and the next card checks it", "keeps")],
+      conf="medium"),
+    A(f"{T}-r-1", "reply-mark", "approve/plain",
+      "Yes. Each fix would state, before the next run, what it predicts that run's card will show",
+      answers=[(f"{T}-f-s1-0", "Yes. Each fix would state, before the next run, what it predicts that run's card will show, and the next card then checks the prediction.", "closes")],
+      note="confirms the interpretation before designing"),
+    A(f"{T}-r-2", "reply-mark", "explain/status",
+      "futon2 already uses preregistration, but at cohort level",
+      answers=[(f"{T}-f-s1-0", "Nothing yet lets an individual fix declare a prediction against a card.", "keeps")],
+      note="names the gap the proposal has to fill"),
+    A(f"{T}-r-3", "reply-mark", "propose/design",
+      "**Where predictions live:** one file per preregistration under `futon2/holes/labs/wm-contract/preregistrations/`, committed.",
+      answers=[(f"{T}-f-s1-0", "**Prediction:** fields of the next card, and the value or condition each is expected to show.", "keeps")],
+      opens="card preregistration design"),
+    A(f"{T}-r-4", "reply-mark", "delegate/to-agent",
+      "The format and evaluator go to codex-28, who owns the report card.",
+      answers=[(f"{T}-f-s1-0", "Once they exist, I'll write the first batch against click 49's card, before the next click, covering today's merged fixes:", "keeps")],
+      within="card preregistration design"),
+    A(f"{T}-r-5", "reply-mark", "report/dispatched",
+      "Building the preregistration format, a validator, and the evaluator in the report card.",
+      answers=[(f"{T}-f-s1-0", "Tests cover each outcome (confirmed, refuted, not exercised, not yet applicable), a malformed file, and close-once.", "keeps")],
+      within="card preregistration design"),
+    A(f"{T}-r-6", "reply-mark", "propose/next-step",
+      "I write and commit the first preregistrations against click 49's card, so their commit times come before the run.",
+      answers=[(f"{T}-f-s1-0", "codex-35's close-time trigger publishes the next run's card, with its Preregistrations section, on the WIP site.", "closes")],
+      within="card preregistration design",
+      note="orders the work so predictions provably precede the run"),
+])
+
+T = "claude-4-turn-602"
+build("turn-FejOlN", [
+    A(f"{T}-f-s1-0", "ask-action", "ask-action/explain-failure",
+      "OK but we can't a clean row I want a very clear explanation of why"),
+    A(f"{T}-f-s2-0", "propose", "propose/method-first",
+      "We need to make the method good and then we will get good results."),
+    A(f"{T}-f-s3-0", "constrain", "constrain/for-now",
+      "So, please don't redispatch work if this comes back contrary to your prediction."),
+    A(f"{T}-r-0", "reply-mark", "constrain/accept",
+      "Agreed. If mkListNode's cold run (`bg-1103`) or codex-23's epsilonInfo trace (`bg-1098`) doesn't match its prediction, nothing more goes out.",
+      answers=[(f"{T}-f-s3-0", "If mkListNode's cold run (`bg-1103`) or codex-23's epsilonInfo trace (`bg-1098`) doesn't match its prediction, nothing more goes out.", "closes"),
+               (f"{T}-f-s1-0", "Instead you'll get a written explanation of why no row is clean, before any further work is dispatched.", "keeps")],
+      note="accepts the constraint and ties it to the explanation owed"),
+    A(f"{T}-r-1", "reply-mark", "report/done",
+      "I told codex-23 and codex-32 that when their current run finishes they should report and then stop.",
+      answers=[(f"{T}-f-s3-0", "I've also added your instruction to the notes I carry between wakes, so it holds after a context reset.", "closes")],
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "promise/explanation-outline",
+      "The explanation will cover:",
+      answers=[(f"{T}-f-s1-0", "**Each row:** what Lean produces and what the port produces, at the node where they differ.", "keeps"),
+               (f"{T}-f-s2-0", "**The method:** where it let us act on a wrong belief.", "keeps")],
+      opens="method post-mortem",
+      conf="medium"),
+])

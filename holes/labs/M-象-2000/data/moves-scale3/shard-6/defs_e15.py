@@ -1,0 +1,62 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild3 import build, A
+
+T = "claude-17-turn-511"
+build("turn-KngzaL", [
+    A(f"{T}-f-s1-0", "approve", "approve/plain", "Yes"),
+    A(f"{T}-f-s1-1", "qualify", "qualify/caveat",
+      "At risk of recreating the problem:"),
+    A(f"{T}-r-0", "reply-mark", "verify/checked-live",
+      "(what I checked)",
+      answers=[(f"{T}-f-s1-0", "(what I checked)", "keeps")],
+      conf="medium"),
+    A(f"{T}-r-1", "reply-mark", "report/diagnosis",
+      "(why the agreement still fails)",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "report/gap",
+      "(a record my check left behind)",
+      conf="medium"),
+    A(f"{T}-r-3", "reply-mark", "propose/next-step",
+      "(fixes) Each of these is a small change",
+      conf="medium"),
+    A(f"{T}-r-4", "reply-mark", "ask-action/one-decision",
+      "(one decision) Shall I bell fixes 1–3 to a Codex seat",
+      answers=[(f"{T}-f-s1-0", "(one decision)", "keeps")],
+      conf="medium"),
+])
+
+T = "claude-20-turn-1"
+build("turn-KqcgDB", [
+    A(f"{T}-f-s1-0", "report", "report/context",
+      "a few points from Rob..."),
+    A(f"{T}-f-s2-0", "report", "report/status-update",
+      "I checked in futon1 and 4 -"),
+    A(f"{T}-f-s2-1", "explain", "clarify/context",
+      "old configuration stuff."),
+    A(f"{T}-f-s3-0", "ask-action", "ask-action/commission",
+      "Also update mfuton-shared were your agents are adding in your code.",
+      within=f"{T}-f-s1-0"),
+    A(f"{T}-f-s4-0", "ask-action", "constrain/standing-rule",
+      "please ask them to get latest and use those configs -",
+      opens="use latest shared configs",
+      within=f"{T}-f-s1-0",
+      note="the standing config rule Rob's points established"),
+    A(f"{T}-r-0", "reply-mark", "report/done",
+      '("I checked in futon1 and 4") Both were already pulled last night',
+      answers=[(f"{T}-f-s2-0", '("I checked in futon1 and 4") Both were already pulled', "closes")]),
+    A(f"{T}-r-1", "reply-mark", "report/done",
+      '("Also update mfuton-shared") The local `main`',
+      answers=[(f"{T}-f-s3-0", '("Also update mfuton-shared")', "closes")]),
+    A(f"{T}-r-2", "reply-mark", "report/done",
+      '("a working arrangement to enforce") I added a section',
+      answers=[(f"{T}-f-s2-0", '("a working arrangement to enforce") I added a section', "closes")]),
+    A(f"{T}-r-3", "reply-mark", "report/done",
+      '("please ask them to get latest") claude-11 led',
+      answers=[(f"{T}-f-s4-0", '("please ask them to get latest")', "closes")],
+      within=f"{T}-f-s4-0"),
+    A(f"{T}-r-4", "reply-mark", "report-problem/observed",
+      "(an example of the problem) Two checkouts have LeanPy",
+      within=f"{T}-f-s4-0",
+      conf="medium"),
+])

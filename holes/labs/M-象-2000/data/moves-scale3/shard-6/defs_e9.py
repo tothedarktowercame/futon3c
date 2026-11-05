@@ -1,0 +1,62 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild3 import build, A
+
+T = "claude-2-turn-40"
+build("turn-DmXnCa", [
+    A(f"{T}-f-s1-0", "explain", "clarify/assertion",
+      "i should think it is fairly obvious that they are operational."),
+    A(f"{T}-f-s2-0", "redirect", "propose/redirect-scope",
+      "The definitions might not be equations",
+      opens="behavior-first certification",
+      note="reframes definitional work around behavior to certify"),
+    A(f"{T}-f-s3-0", "constrain", "constrain/for-now",
+      "it doesn't even really make sense to ask how to categorize them until we know what the behavior",
+      within=f"{T}-f-s2-0"),
+    A(f"{T}-f-s3-1", "redirect", "propose/next-step",
+      "we've got Clojure code that illustrates these points",
+      within=f"{T}-f-s2-0"),
+    A(f"{T}-r-0", "reply-mark", "report/evidence",
+      "(the roles, from `sec-catalog.tex`)",
+      answers=[(f"{T}-f-s1-0", "(the roles, from `sec-catalog.tex`)", "keeps")],
+      conf="medium"),
+    A(f"{T}-r-1", "reply-mark", "retract/correction",
+      "(my earlier packets) I told codex-10 to",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "report/evidence",
+      "(what the comparison shows for the paper)",
+      answers=[(f"{T}-f-s2-0", "(what the comparison shows for the paper)", "keeps")],
+      within=f"{T}-f-s2-0",
+      conf="medium"),
+    A(f"{T}-r-3", "reply-mark", "report/in-flight",
+      "(R10, running now)",
+      within=f"{T}-f-s2-0",
+      conf="medium"),
+    A(f"{T}-r-4", "reply-mark", "propose/next-step",
+      "(order after R10)",
+      answers=[(f"{T}-f-s2-0", "(order after R10)", "keeps")],
+      within=f"{T}-f-s2-0",
+      conf="medium"),
+    A(f"{T}-r-5", "reply-mark", "report/in-flight",
+      "(status)",
+      within=f"{T}-f-s2-0",
+      conf="medium"),
+])
+
+T = "claude-14-turn-10"
+build("turn-E5Dkcd", [
+    A(f"{T}-f-s1-0", "report", "report/context",
+      "i have 2 resets available"),
+    A(f"{T}-f-s1-1", "continue", "approve/plain",
+      "if the make progress we can keep going for a while!"),
+    A(f"{T}-r-0", "reply-mark", "report/evidence",
+      '("2 resets available") Good.',
+      answers=[(f"{T}-f-s1-0", '("2 resets available") Good.', "keeps")]),
+    A(f"{T}-r-1", "reply-mark", "report/done",
+      "(watch adjusted) Two changes so a quota stop comes straight to you",
+      conf="medium"),
+    A(f"{T}-r-2", "reply-mark", "ask-action/one-decision",
+      "(keep going?) The open question is whether the lemma work",
+      answers=[(f"{T}-f-s1-1", "(keep going?)", "keeps")],
+      conf="medium"),
+])

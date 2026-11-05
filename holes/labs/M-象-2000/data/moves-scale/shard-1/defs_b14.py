@@ -1,0 +1,65 @@
+import sys
+sys.path.insert(0, ".")
+from sbuild import build, A
+
+T = "claude-17-turn-362"
+build("turn-n3zH0f", [
+    A(f"{T}-f-s1-0", "propose", "propose/revision",
+      "Shall we revie the 象 annotator as well with further instructions"),
+    A(f"{T}-f-s2-0", "report-problem", "report-problem/observed",
+      'I see from the record above that you shared "Report-problem (pattern work)"'),
+    A(f"{T}-f-s2-1", "propose", "propose/session-backlog",
+      'issues should be saved in a "session backlog"'),
+    A(f"{T}-f-s3-0", "propose", "propose/system-commands",
+      'I could use commands like !unfinished in my REPL that are routed to "the system"'),
+    A(f"{T}-r-0", "reply-mark", "approve/plain",
+      "Yes, let's revise the annotator.",
+      answers=[(f"{T}-f-s1-0", "Yes, let's revise the annotator.", "closes"),
+               (f"{T}-f-s2-1", "A session backlog follows directly from the wiring", "closes")],
+      opens="session backlog wiring"),
+    A(f"{T}-r-1", "reply-mark", "report/design",
+      "(revising the 象 annotator) The revision is small",
+      answers=[(f"{T}-f-s1-0", "(revising the 象 annotator) The revision is small", "closes")],
+      within="session backlog wiring"),
+    A(f"{T}-r-2", "reply-mark", "report/design",
+      "(the session backlog) With that field, the backlog needs no further judgement",
+      answers=[(f"{T}-f-s2-1", "(the session backlog) With that field", "closes"),
+               (f"{T}-f-s2-0", "(the session backlog) With that field", "keeps")],
+      within="session backlog wiring"),
+    A(f"{T}-r-3", "reply-mark", "report/case-study",
+      "(what `!unfinished` would show now, compiled by hand from this session)",
+      answers=[(f"{T}-f-s3-0", "(what `!unfinished` would show now, compiled by hand from this session)", "closes"),
+               (f"{T}-f-s2-1", "(what `!unfinished` would show now, compiled by hand from this session)", "keeps")],
+      within="session backlog wiring"),
+    A(f"{T}-r-4", "reply-mark", "approve/plain",
+      "(`!` commands routed to the system) Agreed.",
+      answers=[(f"{T}-f-s3-0", "(`!` commands routed to the system) Agreed.", "closes")],
+      within="session backlog wiring"),
+    A(f"{T}-r-5", "reply-mark", "report/in-flight",
+      "(order of work)",
+      answers=[(f"{T}-f-s1-0", "(order of work)", "keeps")],
+      within="session backlog wiring",
+      conf="medium"),
+    A(f"{T}-r-6", "reply-mark", "ask-action/one-decision",
+      "(one confirmation) Step 3 changes what every live reading contains",
+      answers=[(f"{T}-f-s1-0", "(one confirmation) Step 3 changes what every live reading contains", "keeps")],
+      within="session backlog wiring"),
+])
+
+T = "claude-17-turn-6"
+build("turn-oTGuOV", [
+    A(f"{T}-f-s1-0", "report", "report/quoted-ask",
+      '"Shall I send that to kimi-1?"'),
+    A(f"{T}-f-s2-0", "approve", "approve/plain", "yes;"),
+    A(f"{T}-f-s2-1", "propose", "propose/optimisation",
+      "we could still orchestrate things so that 象 is as fast as possible."),
+    A(f"{T}-f-s4-0", "propose", "propose/division-of-labour",
+      "小象 could work in the .json and then 象 would be the one to persist the finalised annotation."),
+    A(f"{T}-f-s5-0", "explain", "explain/justification",
+      "Yes there are 2 packets here but it still makes sense."),
+    A(f"{T}-r-0", "reply-mark", "report/dispatched",
+      "(sent to kimi-1) It's with kimi-1, set up the way you describe.",
+      answers=[(f"{T}-f-s2-0", "It's with kimi-1, set up the way you describe.", "closes")],
+      opens="provisional draft pipeline"),
+])
+

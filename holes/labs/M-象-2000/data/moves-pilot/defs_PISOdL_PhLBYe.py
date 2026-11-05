@@ -1,0 +1,65 @@
+import sys
+sys.path.insert(0, ".")
+from build import build
+from defs_34pFgV import A
+
+T = "claude-13-turn-28"
+build("turn-PISOdL", [
+    A(f"{T}-f-s1-0", "ask-action", "ask-action/read-record",
+      "have a look at the recent claude-11 record."),
+    A(f"{T}-f-s2-0", "approve", "approve/plain",
+      "I like the idea of a warn!",
+      answers=[("claude-13-turn-27-r-4", "I like the idea of a warn!", "closes")],
+      note="approves the hook offer from the previous turn"),
+    A(f"{T}-r-0", "reply-mark", "report/case-study",
+      "claude-11 shows exactly the failure this hook is for.",
+      answers=[(f"{T}-f-s1-0", "Its Lean session servers (the warm `Init` server and the first Mathlib import) were started with `run_in_background`.", "closes")],
+      note="the requested read, matched to the hook's purpose"),
+    A(f"{T}-r-1", "reply-mark", "report/done",
+      "The warn hook is in and working:",
+      answers=[(f"{T}-f-s2-0", "**Script:** `futon3c/scripts/claude-hooks/bg_warn.py` (futon3c `66da03c9`).", "closes"),
+               ("claude-13-turn-27-r-4", "**Wiring:** `~/.claude/settings.json`, PreToolUse on `Bash|Monitor`.", "closes")]),
+    A(f"{T}-r-2", "reply-mark", "verify/checked-live",
+      "The pipe test covered 8 cases.",
+      answers=[(f"{T}-f-s2-0", "I also proved it live in this session: my own `sleep 0.1 &` produced the warning in my context, and the command still ran.", "closes")]),
+    A(f"{T}-r-3", "reply-mark", "qualify/scope",
+      "Other pouches pick it up the next time they load settings.",
+      answers=[(f"{T}-f-s2-0", "If the warning turns out to be too soft, the next step would be to deny `run_in_background` alone and keep warning on the rest.", "keeps")],
+      conf="medium"),
+])
+
+T = "claude-17-turn-547"
+build("turn-PhLBYe", [
+    A(f"{T}-f-s1-0", "explore", "explore/multiplicity",
+      "the fact that we can slice thes things in different ways is interesting,"),
+    A(f"{T}-f-s1-1", "explore", "explore/open-question",
+      "there are several different ways to slice the inference up as a natural deduction rule, I'm not sure which one is best."),
+    A(f"{T}-f-s2-0", "report-problem", "report-problem/observed",
+      "in practical terms, *Warnings* are still popping up after my turns."),
+    A(f"{T}-f-s3-0", "ask-action", "ask-action/inspect-live-case",
+      "I'll let this one sit there so you can inspect."),
+    A(f"{T}-r-0", "reply-mark", "report/diagnosis",
+      "The warnings popping up now aren't from the 象 recorder.",
+      answers=[(f"{T}-f-s2-0", "The new warnings come from `server-dead-client.el`:", "closes"),
+               (f"{T}-f-s3-0", "Both of your last turns were recorded through the JVM cleanly (`turn-elJzmq` is analysed; this one, `turn-PhLBYe`, is waiting for my reply to end).", "closes")],
+      note="separates stale warnings from the new source"),
+    A(f"{T}-r-1", "reply-mark", "explain/mechanism",
+      "Agency runs emacsclient calls against your Emacs, for example the blackboard projections, and kills them if they're slow.",
+      answers=[(f"{T}-f-s2-0", "The counter is at 1,183 drops in total, with 5 in the current 5-minute window", "keeps")]),
+    A(f"{T}-r-2", "reply-mark", "verify/checked-live",
+      "I timed the JVM turn route at about 1 ms per request.",
+      answers=[(f"{T}-f-s2-0", "Recording at send is synchronous, but it doesn't stall Emacs.", "closes")]),
+    A(f"{T}-r-3", "reply-mark", "report/context",
+      "Your Emacs has four tty frames besides the initial one:",
+      answers=[(f"{T}-f-s2-0", "**F16** on `/dev/pts/2`: this buffer", "keeps")]),
+    A(f"{T}-r-4", "reply-mark", "ask-action/one-decision",
+      "Is F12 (codex-10, on pts/21) a frame you still use?",
+      conf="medium",
+      note="two small decisions: close a frame; warnings to *Messages*"),
+    A(f"{T}-r-5", "reply-mark", "propose/alternative",
+      "rather than picking one now, 象 could produce more than one reading of the same pair, and we see which ones prove useful.",
+      answers=[(f"{T}-f-s1-0", "That fits the M-象-cascade view that multiplicity \"is information too\".", "keeps"),
+               (f"{T}-f-s1-1", "I'll put it in the lab note if you want that written.", "keeps")],
+      opens="象 multiple readings",
+      conf="medium"),
+])
