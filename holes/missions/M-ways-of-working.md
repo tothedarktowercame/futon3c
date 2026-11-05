@@ -60,7 +60,7 @@ and fix list: `~/notes/ways-of-working-audit/2026-11-04/SUMMARY.md`.
 | backlog-understood | `draw-pile` | on, failing | correct | failing: 242 open unplaced, 386 closed unattested |
 | inbox-zero | `git-clean` | off, failing | partly correct → population fixed 11-05 (`f41ed6adc`, declaration `3d72468ed`) | failing: 28 of 63 repos dirty or unpushed (storage 862 ahead, minus40 124 with no remote, futon2/futon3c ~900/700 untracked); 149 leaked fixture dirs excluded and reported |
 | intents-are-tracked | `intents-tracked` | on, failing | partly correct | failing, though 5 of 8 are false alarm, met, or unwitnessable |
-| E-autoclock-wow gate | none | not declared | no reading possible | gate not built (`admit-request`: zero lines); 52 E-kimi-task-* minted 11-04; no probe |
+| dispatches-name-an-agreed-item (E-autoclock-wow) | `autoclock-gate` | on, failing (declared 11-05, `9dd44d294`, `8eb7f2a08`) | — | failing: gate not built (`admit-request`: zero lines; claude-4); 53 E-kimi-task-* minted in 24 h |
 | records-carry-warrant | none | not built | — | unit is the test run (Joe 11-03); finding 5 blocks enumeration |
 | selection-gives-a-reason | none | not built | — | War Machine side |
 | eat-your-own-tail | none | not built | — | needs a design |
