@@ -203,6 +203,15 @@ Review notes:
   The per-promise GETs take 0.2-2.8 s each, so codex-13 is reworking the reconciler to prefetch by type
   and write through futon1b's 500-per-request batch route (`invoke-1793905059681-13247-2682105d`).
 
+- **Step 3b done** (codex-13 `c6aa30fd6`: bulk prefetch by type, futon1b batch route, 500 per chunk;
+  history edges now carry `:hx/valid-time`). Dry run 19:02Z: 102 s, 53 requests. Real run 19:04-19:20Z:
+  7,353 promises seen, 7,298 states and 170 history edges written in 16 chunks, 141 requests,
+  0 failed ids, 27 already current, 28 incomplete chains not written (missing-origin 9, invalid-origin 11,
+  missing-transition 7, invalid-creation-payload 1), `!deferred` empty. futon3c threads ~200-215 and
+  Agency at ~2 ms throughout. 7,327 state edges; `end=promise-status:open` returns 159.
+  `/api/alpha/obligations` still `truncated-input`, as expected until 3c. 3c dispatched to codex-13
+  (`invoke-1793906579443-13253-334a9c8c`).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
