@@ -691,11 +691,11 @@
         messages (atom nil)
         invoke (make-invoke {:memory-mode :full :evidence-store store})
         prompt "--- CURRENT TURN ---\nSurface: test\n---\n\nreview this packet"
-        delivered (str "minus40 memories injected before round 1\nFACT\n\n" prompt)
+        delivered (str "minus40 memories injected before round 1\nFACT 象 😀\n\n" prompt)
         response {:enabled true
                   :memories [{:id "cc:-home-joe/agency-send-mode-brief-trap"
                               :score 0.5276}]
-                  :block "minus40 memories injected before round 1\nFACT"
+                  :block "minus40 memories injected before round 1\nFACT 象 😀"
                   :elapsed-ms 17}]
     (with-redefs-fn
       {#'zai/inject-shell
@@ -725,7 +725,12 @@
         (is (= (count delivered) (:payload-chars (turn-start-body store))))
         (is (= delivered
                (payload-store/resolve-text
-                payload-root (:payload-sha256 (turn-start-body store)))))))))
+                payload-root (:payload-sha256 (turn-start-body store)))))
+        (let [offset (:payload-prompt-offset-bytes (turn-start-body store))
+              bytes (.getBytes ^String delivered java.nio.charset.StandardCharsets/UTF_8)]
+          (is (= prompt (String. bytes (int offset) (int (- (alength bytes) offset))
+                                 java.nio.charset.StandardCharsets/UTF_8))
+              "the offset recovers the pre-memory prompt exactly"))))))
 
 (deftest payload-store-failure-is-recorded-and-the-turn-continues
   (let [store (atom {:entries {} :order []})

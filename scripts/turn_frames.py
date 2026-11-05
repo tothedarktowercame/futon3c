@@ -76,9 +76,16 @@ def turn_start_prompt_result(body, root=None):
         path = os.path.join(root, "objects", str(sha)[:2], str(sha)) if valid else None
         try:
             if path and os.path.isfile(path):
-                with open(path, encoding="utf-8") as payload:
-                    return {"status": "payload", "text": payload.read(),
-                            "sha256": sha}
+                with open(path, "rb") as payload:
+                    raw = payload.read()
+                # The payload is what the model received: any injected memory
+                # block, then the prompt. "text" keeps the old :prompt meaning;
+                # the writer records where the prompt starts, in UTF-8 bytes.
+                offset = int(body.get("payload-prompt-offset-bytes") or 0)
+                return {"status": "payload",
+                        "text": raw[offset:].decode("utf-8"),
+                        "delivered": raw.decode("utf-8"),
+                        "sha256": sha}
         except OSError as exc:
             reason = "payload-unreadable:%s" % type(exc).__name__
         else:
@@ -996,7 +1003,7 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
         })
         if prompt_result is not None:
             frames[-1]["turn"]["payload"] = {
-                k: v for k, v in prompt_result.items() if k != "text"}
+                k: v for k, v in prompt_result.items() if k not in ("text", "delivered")}
         if eid in observed_by_turn:
             frames[-1]["observed"] = observed_by_turn[eid]
         if eid in card_by_turn:

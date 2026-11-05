@@ -1319,7 +1319,7 @@
 (defn- persist-turn-start!
   "Persist the original turn PROMPT and its pre-round injection receipt."
   [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition
-           injected injected-ms payload header]}]
+           injected injected-ms payload header prompt-offset-bytes]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
@@ -1338,7 +1338,10 @@
              (assoc :payload-sha256 (:sha256 payload)
                     :payload-chars (:chars payload)
                     :payload-bytes (:bytes payload)
-                    :payload-store "dispatch-payloads")
+                    :payload-store "dispatch-payloads"
+                    ;; The payload is prompt-with-memory; PROMPT lies at this
+                    ;; UTF-8 byte offset, after any injected memory block.
+                    :payload-prompt-offset-bytes (or prompt-offset-bytes 0))
              (:error payload) (assoc :payload-error (:error payload)))})))
 
 (defn- retain-provider-payload [text]
@@ -2534,7 +2537,11 @@ CALLS contains maps of tool name, arguments, and result digest."
                 prompt-with-memory (if (str/blank? block)
                                      prompt*
                                      (str block "\n\n" prompt*))
-                payload (retain-provider-payload prompt-with-memory)]
+                payload (retain-provider-payload prompt-with-memory)
+                prompt-offset-bytes (if (str/blank? block)
+                                      0
+                                      (alength (.getBytes (str block "\n\n")
+                                                          java.nio.charset.StandardCharsets/UTF_8)))]
             (persist-turn-start! {:evidence-store evidence-store
                                   :agent-id agent-id
                                   :sid sid
@@ -2543,6 +2550,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                   :profile profile*
                                   :prompt prompt*
                                   :payload payload
+                                  :prompt-offset-bytes prompt-offset-bytes
                                   :header (invoke-preview/header-preview prompt*)
                                   :injected injected
                                   :injected-ms injected-ms

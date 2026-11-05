@@ -203,6 +203,28 @@ class HarnessTest(unittest.TestCase):
             self.assertFalse(ma.fresh_packet(continued))
             self.assertTrue(ma.packet_body(ma.turn_text(continued)).startswith("CONTINUATION"))
 
+    def test_payload_offset_recovers_the_prompt_without_the_memory_block(self):
+        # Writer records where the prompt starts in UTF-8 bytes; a non-ASCII
+        # memory block makes byte and character offsets differ.
+        root = tempfile.mkdtemp(prefix="ma-payload-offset-")
+        self.addCleanup(__import__("shutil").rmtree, root)
+        memory = "minus40 memories 象 😀\nFACT\n\n"
+        payload = memory + S2_PACKET
+        sha = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        path = os.path.join(root, "objects", sha[:2], sha)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as out:
+            out.write(payload)
+        row = {"evidence/type": "coordination",
+               "evidence/body": {"event": "turn-start", "turn-id": "zt",
+                                 "dispatch-id": "invoke-z", "payload-sha256": sha,
+                                 "payload-prompt-offset-bytes": len(memory.encode("utf-8"))}}
+        with mock.patch.dict(os.environ, {"FUTON3C_DISPATCH_PAYLOAD_STORE": root}):
+            self.assertEqual(S2_PACKET.strip(), ma.turn_text(row))
+            self.assertTrue(ma.fresh_packet(row))
+            result = ma.tf.turn_start_prompt_result(row["evidence/body"])
+            self.assertEqual(payload, result["delivered"])
+
     def test_truncated_s2_episode_has_no_verdict(self):
         self.assertIsNone(ma.verdict(S2_TRUNCATED_REPLY))
         self.assertIsNone(ma.verdict("once this is PROVED we can splice ... not yet PROVED"))
