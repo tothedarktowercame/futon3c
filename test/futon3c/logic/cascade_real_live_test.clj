@@ -359,6 +359,7 @@
 
 (deftest graph-cache-rewalks-only-the-type-whose-count-moved  ; B
   (reset! live/graph-section-cache {})
+  (reset-refresh-in-flight!)
   (let [counts (atom {"mission-scope/pattern" 1})
         walked (atom [])]
     (with-redefs [live/*graph-count-reader* (fn [hx-type] (get @counts hx-type 0))
@@ -367,10 +368,32 @@
       (live/cascade-real-graph)
       (reset! walked [])
       (swap! counts assoc "held/on-mission" 5)  ; one append the count signal sees
+      ;; a moved count with a good entry is served stale at once and
+      ;; refreshed in the background; only that type is walked
       (let [g2 (live/cascade-real-graph)]
-        (is (= ["held/on-mission"] @walked))
-        (is (= ["held/on-mission"] (:rewalked (:cache g2))))
-        (is (= 6 (count (:reused (:cache g2)))))))))
+        (is (= [] (:rewalked (:cache g2))))
+        (is (= ["held/on-mission"] (:stale (:cache g2))))
+        (is (= 6 (count (:reused (:cache g2)))))
+        (is (wait-for #(= #{"held/on-mission"} (set @walked)))
+            "only the moved type is walked, in the background")))))
+
+(deftest graph-cache-moved-count-with-slow-walk-serves-cached-promptly
+  "01:00Z 2026-11-05: the pattern section's count moved 2146 -> 2147 and its
+   walk takes ~172 s; a request-path rewalk against the 90 s deadline failed
+   on every publish."
+  (reset-refresh-in-flight!)
+  (with-redefs [live/*graph-count-reader* (constantly 2)
+                live/fetch-edges (fn [_] (Thread/sleep 1500) [{:hx/endpoints [:a]} {:hx/endpoints [:b]}])]
+    (seed-graph-cache {"clock/clocked-on" {:count 1 :edges [{:hx/endpoints [:cached]}]
+                                           :fetched-at-ms (System/currentTimeMillis)}})
+    (swap! live/graph-section-cache
+           (fn [c] (into {} (map (fn [[t e]] [t (if (= t "clock/clocked-on") e (assoc e :count 2))]) c))))
+    (let [t0 (System/currentTimeMillis)
+          g (live/graph-sections*)]
+      (is (< (- (System/currentTimeMillis) t0) 1000))
+      (is (= [{:hx/endpoints [:cached]}] (:edges (get-in g [:fetches "clock/clocked-on"]))))
+      (is (true? (:stale? (get-in g [:fetches "clock/clocked-on"])))))
+    (is (wait-for #(= 2 (count (:edges (get @live/graph-section-cache "clock/clocked-on"))))))))
 
 (deftest graph-cache-max-age-serves-stale-and-refreshes-in-background  ; C
   (reset-refresh-in-flight!)

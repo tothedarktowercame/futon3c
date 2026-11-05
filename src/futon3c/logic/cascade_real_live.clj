@@ -684,14 +684,18 @@
 
 (defn- graph-stale-reason
   "When HX-TYPE's good entry is due only for revalidation, the reason keyword
-   (:age past the max-age backstop with an unmoved count, :count-read-failed),
-   else nil."
+   (:count-moved, :age past the max-age backstop, :count-read-failed), else
+   nil. Only a missing entry or a failed placeholder walks in the request path."
   [entry count-now now-ms]
   (when (and entry (not (:failed? entry)))
     (cond
       (nil? count-now) :count-read-failed
-      (and (= (:count entry) count-now)
-           (> (- now-ms (:fetched-at-ms entry 0)) graph-cache-max-age-ms)) :age
+      ;; a moved count with a good entry is also served stale and refreshed in
+      ;; the background: the pattern section's walk takes ~172 s against the
+      ;; 90 s request deadline, so a request-path rewalk can never succeed
+      ;; (2026-11-05, 01:00Z, count 2146 -> 2147)
+      (not= (:count entry) count-now) :count-moved
+      (> (- now-ms (:fetched-at-ms entry 0)) graph-cache-max-age-ms) :age
       :else nil)))
 
 (defn- graph-walk-needed?
