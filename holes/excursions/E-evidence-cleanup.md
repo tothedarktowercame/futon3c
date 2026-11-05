@@ -58,6 +58,35 @@ whose only reader is generic text search has no reason recorded in code, which i
 in those readers, and they are what has to move with it. R4 (`causal/*`) is for the
 later step: a causal model of how the GCC should be built from evidence.
 
+## Step 1 result: R0 flow map (codex-12, `6d6882a89`; reviewed by claude-8 2026-11-05)
+
+`holes/labs/E-evidence-cleanup/FLOWMAP.md` and `evidence-flowmap.edn`. `written-never-read`:
+artifact-activation, claude-N `:step` traces (`scripts/claude_ws_invoke_bridge.clj:243`),
+Giraffe/象 relationship-review proposals, and the 象-1 transcript. Writers that have readers:
+- the zai-1 transcript, read by 馬;
+- the wm-author transcript, read by its own transcript bug scan (`zai_api.clj:1697`);
+- the promise lifecycle, read by the obligations API (`agency/obligations_reader.clj`);
+- 馬, read by the `xiangma_port_export.py` and `xiang_turn_check.py` scripts;
+- xiang-turn-service, read by `xiangma_port_export.py`.
+
+Review notes:
+- Checked: the commit touches only these two files. All eight known writers are present.
+  `zai_api.clj:1697`, `operator_focus.clj:228`, `claude_ws_invoke_bridge.clj:243` and
+  `promise_history.clj:86` say what the rows claim. Volume matches `ev_attr` (artifact-activation
+  595, wm-author 962; the 601 earlier came from a join on `ev_fts_content`).
+- **Coverage is partial.** Only 10 writers are boxes. The broad rows (tickle and the work queues,
+  logic/*, peripherals, scripts, bells/whistles) are listed but not modelled, so the 4 findings
+  are a lower bound. The table itself says the tickle/work-queue writers have "none found beyond
+  generic search", but they cannot appear in the output.
+- `read-never-written` on `:evidence/obligation`, `:evidence/pattern-outcome` and
+  `:evidence/dispatch-graph` means reader and writer field names were not reconciled.
+  For promises, the "has a reader" conclusion comes from the table, not from the run.
+- A reader that is itself a Circus animal (馬 reading zai-1) or the writer reading itself
+  (the wm-author bug scan) explains why the record is kept, but it does not justify keeping it
+  in evidence. Writer and reader move together to a derived store.
+- The promise lifecycle has a real outside reader (the obligations API), so it is the clearest
+  case of state that belongs in its own store with that reader repointed.
+
 ## Steps (each a small handoff, with review between)
 
 1. **Discovery, per writer.** Find the design record that put it in evidence and what
