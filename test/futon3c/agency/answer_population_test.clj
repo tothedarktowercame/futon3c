@@ -8,7 +8,12 @@
   {:question {:agent "agent-a" :at-or-cutoff t
               :kinds #{:promise :agreement} :mode mode}
    :sources
-   [{:kind :evidence :filter {:tags ["promise-history"]}
+   [{:kind :hyperedge :filter {:type :promise/state :end "promise-status:open"}
+     :rows-fetched 2 :rows-used 2 :pages 1 :page-limit 1000 :complete? true}
+    {:kind :hyperedge
+     :filter {:type :promise/state :end "promise-obligation:checkable"}
+     :rows-fetched 1 :rows-used 1 :pages 1 :page-limit 1000 :complete? true}
+    {:kind :hyperedge :filter {:type :promise/history-event :ids ["p1" "p2"]}
      :rows-fetched 2 :rows-used 2 :pages 1 :page-limit 1000 :complete? true}
     {:kind :evidence
      :filter {:tags ["promise-outcome"]
@@ -40,7 +45,7 @@
                                      "2026-09-28T11:00:00Z")]
          [:kinds-mismatch #(assoc-in % [:question :kinds] #{:promise})]
          [:source-missing #(update % :sources pop)]
-         [:filter-mismatch #(assoc-in % [:sources 2 :filter :end] "agent:agent-b")]
+         [:filter-mismatch #(assoc-in % [:sources 4 :filter :end] "agent:agent-b")]
          [:incomplete-source #(assoc-in % [:sources 0 :complete?] false)]
          [:read-axis-mismatch #(assoc % :read
                                       {:mode :current :system-as-of :unpinned

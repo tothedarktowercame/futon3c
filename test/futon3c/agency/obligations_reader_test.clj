@@ -1,35 +1,73 @@
 (ns futon3c.agency.obligations-reader-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
-            [futon3c.agency.obligations-reader :as reader]))
+            [futon3c.agency.obligations :as obligations]
+            [futon3c.agency.obligations-reader :as reader]
+            [futon3c.agency.promise-log :as promise-log]))
 
-(def t "2026-09-28T12:00:00Z")
+(def t "2026-11-05T20:00:00Z")
 (defn empty-response [path]
   (if (str/includes? path "/evidence?") {:entries [] :count 0}
       {:hyperedges [] :count 0}))
 
-(deftest three-pages-join-in-order-and-preserve-as-of-basis
-  (let [paths (atom []) page (atom 0)]
+(defn- history-row [pid n type debtor creditor predecessor details]
+  {:evidence/id (str "promise-history:" pid ":" n)
+   :evidence/type type :evidence/author debtor
+   :evidence/at (format "2026-11-05T19:%02d:00Z" n)
+   :evidence/body
+   (merge {:history/format 3 :history/promise-id pid
+           :history/promise-sequence n
+           :history/payload-edn
+           (pr-str {:record {:id pid :agent debtor :beneficiary creditor
+                             :fulfilment-criterion {:kind :manual}}})}
+          details
+          (when predecessor {:history/predecessor predecessor}))})
+
+(defn- state-edge [pid status debtor creditor checkable?]
+  {:hx/id (str "promise-state:" pid) :hx/type :promise/state
+   :hx/endpoints (cond-> [pid (str "agent:" debtor) (str "agent:" creditor)
+                          (str "promise-status:" (name status))]
+                   checkable? (conj "promise-obligation:checkable"))
+   :hx/props {:promise-id pid :status status :debtor debtor :creditor creditor
+              :checkable? checkable?}})
+
+(defn- hyperedge-response [edges path]
+  (let [decoded (java.net.URLDecoder/decode path "UTF-8")
+        type (some-> (second (re-find #"type=([^&]+)" decoded)) keyword)
+        end (second (re-find #"end=([^&]+)" decoded))]
+    {:hyperedges (filterv #(and (= type (:hx/type %))
+                                (some #{end} (:hx/endpoints %))) edges)}))
+
+(deftest open-union-checkable-selects-agent-parties-and-preserves-release-semantics
+  (let [states [(state-edge "debt" :open "agent-a" "agent-b" true)
+                (state-edge "credit" :open "agent-b" "agent-a" true)
+                (state-edge "other" :open "agent-b" "agent-c" true)
+                (state-edge "closed" :closed "agent-a" "agent-b" true)]
+        creation #(history-row % 1 :promise/park-made
+                               (if (= % "credit") "agent-b" "agent-a")
+                               (if (= % "credit") "agent-a" "agent-b") nil {})
+        closed-one (creation "closed")
+        closed-two (history-row "closed" 2 :promise/released "agent-a" "agent-b"
+                                {:sequence 1 :id (:evidence/id closed-one)
+                                 :type :promise/park-made}
+                                {:release/basis :explicit :release/role :creditor
+                                 :release/by "agent-b" :act/stamp {:signer "agent-b"}})
+        histories [(creation "debt") (creation "credit") closed-one closed-two]
+        edges (into states (map promise-log/entry->hyperedge histories))
+        paths (atom [])]
     (binding [reader/*request!*
               (fn [_ _ path _]
                 (swap! paths conj path)
-                (if (str/includes? path "promise-history")
-                  (case (swap! page inc)
-                    1 {:entries [{:evidence/id "a"}]
-                       :next-cursor {:at "2026-09-28T11:00:00Z" :id "a"}}
-                    2 {:entries [{:evidence/id "b"}]
-                       :next-cursor {:at "2026-09-28T10:00:00Z" :id "b"}}
-                    3 {:entries [{:evidence/id "c"}]})
+                (if (str/includes? path "/hyperedges?")
+                  (hyperedge-response edges path)
                   (empty-response path)))]
-      (let [result (reader/read-inputs "http://store" "agent-a" t :as-of)
-            history-paths (filter #(str/includes? % "promise-history") @paths)]
-        (is (= ["a" "b" "c"] (mapv :evidence/id (:promise-history result))))
-        (is (= 3 (get-in result [:basis :pages :promise-history])))
-        (is (= 3 (get-in result [:basis :rows :promise-history])))
-        (is (every? #(and (str/includes? % "system-as-of=")
-                          (str/includes? % "valid-as-of=")) history-paths))
-        (is (str/includes? (second history-paths) "cursor-at="))
-        (is (str/includes? (second history-paths) "cursor-id="))))))
+      (let [inputs (reader/read-inputs "http://store" "agent-a" t :current)
+            result (obligations/obligations-as-of inputs "agent-a" t)]
+        (is (= ["debt"] (mapv :obligation/id (:owes result))))
+        (is (= ["credit"] (mapv :obligation/id (:owed result))))
+        (is (= [[:released "closed"]]
+               (mapv (juxt :status :obligation/id) (:ignored result))))
+        (is (not-any? #(str/includes? % "tags=promise-history") @paths))))))
 
 (deftest current-mode-omits-store-as-of-parameters
   (let [paths (atom [])]
@@ -47,18 +85,16 @@
   (let [n (atom 0)]
     (binding [reader/*request!*
               (fn [_ _ path _]
-                (if (str/includes? path "promise-history")
+                (if (str/includes? path "promise-status%3Aopen")
                   (let [i (swap! n inc)]
-                    {:entries [{:evidence/id (str i)}]
-                     :next-cursor {:at (format "2026-09-28T11:00:%02dZ" i)
-                                   :id (str i)}})
+                    {:hyperedges [] :next-cursor (str "next-" i)})
                   (empty-response path)))]
       (try
         (reader/read-inputs "http://store" "a" t :current)
         (is false "expected page cap refusal")
         (catch clojure.lang.ExceptionInfo e
           (is (= :truncated-input (:reason (ex-data e))))
-          (is (= :promise-history (:source (ex-data e))))
+          (is (= :promise-states-open (:source (ex-data e))))
           (is (= reader/max-pages (:pages (ex-data e)))))))))
 
 (deftest timeout-is-typed-with-source
@@ -69,7 +105,18 @@
       (is false "expected timeout")
       (catch clojure.lang.ExceptionInfo e
         (is (= :store-timeout (:reason (ex-data e))))
-        (is (= :promise-history (:source (ex-data e))))))))
+        (is (= :promise-states-open (:source (ex-data e))))))))
+
+(deftest as-of-before-state-log-is-typed-and-does-not-read
+  (let [calls (atom 0)]
+    (binding [reader/*request!* (fn [& _] (swap! calls inc))]
+      (is (= :as-of-before-state-log
+             (try (reader/read-inputs "http://store" "a"
+                                      "2026-11-05T19:04:21Z" :as-of)
+                  nil
+                  (catch clojure.lang.ExceptionInfo error
+                    (:reason (ex-data error))))))
+      (is (zero? @calls)))))
 
 (deftest fulfilment-check-survives-the-outcome-reader
   (let [check {:evidence/id "promise-check:x"
@@ -83,14 +130,29 @@
       (is (= [check]
              (:promise-outcomes (reader/read-inputs "http://store" "a" t :as-of)))))))
 
+(deftest missing-middle-history-remains-an-incomplete-obligation
+  (let [one (history-row "gap" 1 :promise/park-made "agent-a" "agent-b" nil {})
+        three (history-row "gap" 3 :promise/woken "agent-a" "agent-b"
+                           {:sequence 2 :id "promise-history:gap:2"
+                            :type :promise/woken} {})
+        edges (into [(state-edge "gap" :open "agent-a" "agent-b" true)]
+                    (map promise-log/entry->hyperedge [one three]))]
+    (binding [reader/*request!*
+              (fn [_ _ path _]
+                (if (str/includes? path "/hyperedges?")
+                  (hyperedge-response edges path)
+                  (empty-response path)))]
+      (let [inputs (reader/read-inputs "http://store" "agent-a" t :current)
+            result (obligations/obligations-as-of inputs "agent-a" t)]
+        (is (empty? (:owes result)))
+        (is (= :missing-transition (get-in result [:incomplete 0 :reason])))))))
+
 (deftest population-declares-actual-source-filters-and-counts
-  (let [history {:evidence/id "h"}
-        used {:evidence/id "o" :evidence/type :promise/lapsed}
+  (let [used {:evidence/id "o" :evidence/type :promise/lapsed}
         unused {:evidence/id "x" :evidence/type :something/else}]
     (binding [reader/*request!*
               (fn [_ _ path _]
                 (cond
-                  (str/includes? path "promise-history") {:entries [history]}
                   (str/includes? path "promise-outcome") {:entries [used unused]}
                   :else (empty-response path)))]
       (let [population (get-in (reader/read-inputs "http://store" "agent-a" t :as-of)
@@ -100,9 +162,9 @@
         (is (= {:tags ["promise-outcome"]
                 :types [:promise/fulfilled :promise/lapsed
                         :promise/fulfilment-check]}
-               (get-in population [:sources 1 :filter])))
-        (is (= 2 (get-in population [:sources 1 :rows-fetched])))
-        (is (= 1 (get-in population [:sources 1 :rows-used])))))))
+               (get-in population [:sources 3 :filter])))
+        (is (= 2 (get-in population [:sources 3 :rows-fetched])))
+        (is (= 1 (get-in population [:sources 3 :rows-used])))))))
 
 (deftest unreadable-agreement-is-kept-as-incomplete
   (let [bad {:hx/id "act:bad" :hx/type :agreement/record :hx/props {}}]
@@ -162,6 +224,6 @@
                   (empty-response path)))]
       (let [result (reader/read-inputs "http://store" "claude-17" t :current)]
         (is (= ["act:agreement"] (mapv :id (:agreements result))))
-        (is (= 1 (get-in result [:basis :population :sources 3 :rows-used])))
+        (is (= 1 (get-in result [:basis :population :sources 5 :rows-used])))
         (is (empty? (filter #(= :unknown-offer (:reason %))
                             (get-in result [:basis :reader-incomplete]))))))))

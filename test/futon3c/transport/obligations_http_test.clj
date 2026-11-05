@@ -13,7 +13,13 @@
 (defn population [agent at mode]
   {:question {:agent agent :at-or-cutoff at
               :kinds #{:promise :agreement} :mode mode}
-   :sources [{:kind :evidence :filter {:tags ["promise-history"]}
+   :sources [{:kind :hyperedge
+              :filter {:type :promise/state :end "promise-status:open"}
+              :rows-fetched 0 :rows-used 0 :pages 1 :page-limit 1000 :complete? true}
+             {:kind :hyperedge
+              :filter {:type :promise/state :end "promise-obligation:checkable"}
+              :rows-fetched 0 :rows-used 0 :pages 1 :page-limit 1000 :complete? true}
+             {:kind :hyperedge :filter {:type :promise/history-event :ids []}
               :rows-fetched 0 :rows-used 0 :pages 1 :page-limit 1000 :complete? true}
              {:kind :evidence
               :filter {:tags ["promise-outcome"]

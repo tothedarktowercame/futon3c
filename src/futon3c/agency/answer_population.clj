@@ -67,7 +67,11 @@
 
 (defn- source-role [{:keys [kind filter]}]
   (cond
-    (and (= :evidence kind) (= ["promise-history"] (:tags filter))) :promise-history
+    (and (= :hyperedge kind) (= :promise/state (:type filter))
+         (= "promise-status:open" (:end filter))) :promise-states-open
+    (and (= :hyperedge kind) (= :promise/state (:type filter))
+         (= "promise-obligation:checkable" (:end filter))) :promise-states-checkable
+    (and (= :hyperedge kind) (= :promise/history-event (:type filter))) :promise-history
     (and (= :evidence kind) (= ["promise-outcome"] (:tags filter))) :promise-outcomes
     (and (= :hyperedge kind) (= :agreement/record (:type filter))) :agreements
     (and (= :hyperedge kind) (= :offer/record (:type filter))) :offers
@@ -75,12 +79,19 @@
 
 (defn- required-roles [kinds]
   (cond-> #{}
-    (contains? kinds :promise) (into #{:promise-history :promise-outcomes})
+    (contains? kinds :promise)
+    (into #{:promise-states-open :promise-states-checkable
+            :promise-history :promise-outcomes})
     (contains? kinds :agreement) (into #{:agreements :offers})))
 
 (defn- filter-correct? [role filter agent]
   (case role
-    :promise-history (= {:tags ["promise-history"]} filter)
+    :promise-states-open (= {:type :promise/state :end "promise-status:open"} filter)
+    :promise-states-checkable
+    (= {:type :promise/state :end "promise-obligation:checkable"} filter)
+    :promise-history (and (= :promise/history-event (:type filter))
+                          (vector? (:ids filter))
+                          (= #{:type :ids} (set (keys filter))))
     :promise-outcomes (= {:tags ["promise-outcome"]
                           :types [:promise/fulfilled :promise/lapsed
                                   :promise/fulfilment-check]}

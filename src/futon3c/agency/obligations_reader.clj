@@ -1,17 +1,19 @@
 (ns futon3c.agency.obligations-reader
   "Complete, bounded, read-only adapter from futon1b to P9's pure input.
-   Promise history is repository-wide: filtering by author would omit promises
-   owed to AGENT-ID where another author is debtor. Evidence cursors are followed
-   to exhaustion, with a hard cap that refuses rather than returns partial data."
+   Promise states select only open or checkable promises involving AGENT-ID;
+   their immutable history chains are then read by promise endpoint. Every
+   paged source has a hard cap that refuses rather than returns partial data."
   (:require [clojure.string :as str]
             [futon3c.agency.agreement-record :as agreement]
             [futon3c.agency.offer-record :as offer]
+            [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.rule-record :as store])
   (:import [java.net URLEncoder]
            [java.time Instant]))
 
 (def page-limit 1000)
 (def max-pages 20)
+(def state-log-cutover "2026-11-05T19:04:22Z")
 (def ^:dynamic *request!* store/request!)
 
 (defn- encode [x] (URLEncoder/encode (str x) "UTF-8"))
@@ -48,7 +50,8 @@
             rows' (into rows entries)
             cursor (:next-cursor response)]
         (when (or (:truncated response) (:partial? response)
-                  (and (:incomplete response) (nil? cursor)))
+                  (and (:incomplete response) (nil? cursor))
+                  (and (nil? cursor) (= page-limit (count entries))))
           (truncated! source pages' (count rows')))
         (cond
           (nil? cursor) {:rows rows' :pages pages'}
@@ -61,23 +64,34 @@
                       "&cursor-id=" (encode (:id cursor)))
                  pages' rows' (conj seen cursor)))))))
 
-(defn- hyperedge-page [base type endpoint t mode source]
-  (let [path (str "/api/alpha/hyperedges?type=" (encode (keyword-string type))
-                  "&end=" (encode endpoint) "&limit=" page-limit
-                  "&include-total=false" (temporal-query mode t))
-        response (request! base path source)
-        rows (vec (:hyperedges response))]
-    (when (or (>= (count rows) page-limit) (:truncated response)
-              (:partial? response) (:incomplete response) (:next-cursor response))
-      (truncated! source 1 (count rows)))
-    {:rows rows :pages 1}))
+(defn- hyperedge-pages [base type endpoint t mode source]
+  (let [base-path (str "/api/alpha/hyperedges?type=" (encode (keyword-string type))
+                       "&end=" (encode endpoint) "&limit=" page-limit
+                       "&include-total=false" (temporal-query mode t))]
+    (loop [path base-path pages 0 rows [] seen #{}]
+      (let [response (request! base path source)
+            entries (vec (:hyperedges response))
+            pages' (inc pages)
+            rows' (into rows entries)
+            cursor (:next-cursor response)]
+        (when (or (:truncated response) (:partial? response)
+                  (and (:incomplete response) (nil? cursor)))
+          (truncated! source pages' (count rows')))
+        (cond
+          (nil? cursor) {:rows rows' :pages pages'}
+          (>= pages' max-pages) (truncated! source pages' (count rows'))
+          (or (not (string? cursor)) (contains? seen cursor))
+          (truncated! source pages' (count rows'))
+          :else
+          (recur (str base-path "&after=" (encode cursor))
+                 pages' rows' (conj seen cursor)))))))
 
 (defn- read-offer
   "An offer's ends are its author, seat and addressee, not its own id, so it is
    listed through the offeror's agent endpoint and picked out by id."
   [base id offeror t mode]
-  (let [{:keys [rows]} (hyperedge-page base :offer/record (str "agent:" offeror)
-                                       t mode :offers)]
+  (let [{:keys [rows]} (hyperedge-pages base :offer/record (str "agent:" offeror)
+                                        t mode :offers)]
     (some #(when (= id (:hx/id %)) %) rows)))
 
 (defn read-inputs
@@ -90,19 +104,44 @@
      (throw (ex-info "Invalid obligations read mode" {:reason :invalid-mode})))
    (when-not (try (Instant/parse t) true (catch Exception _ false))
      (throw (ex-info "Invalid obligations instant" {:reason :invalid-as-of})))
+   (when (and (= :as-of mode)
+              (.isBefore (Instant/parse t) (Instant/parse state-log-cutover)))
+     (throw (ex-info "Promise state log cannot answer this historical instant"
+                     {:reason :as-of-before-state-log
+                      :requested-at t :state-log-cutover state-log-cutover})))
    (let [started-at (str (Instant/now))
          ;; The declaration below names these same values, so it describes the
          ;; query that ran rather than a second copy of it.
-         history-tag "promise-history"
          outcome-tag "promise-outcome"
          outcome-types [:promise/fulfilled :promise/lapsed :promise/fulfilment-check]
-         history-page (evidence-pages base history-tag t mode :promise-history)
+         open-state-page (hyperedge-pages base :promise/state "promise-status:open"
+                                          t mode :promise-states-open)
+         ;; `obligations.clj` retains explicitly released checkable promises in
+         ;; :ignored, and a plain release does not discharge a checkable debt.
+         ;; This small indexed population (4 at the 2026-11-05 cutover) is the
+         ;; bounded closed-state supplement; never scan all closed states.
+         checkable-state-page
+         (hyperedge-pages base :promise/state "promise-obligation:checkable"
+                          t mode :promise-states-checkable)
+         party? (fn [edge]
+                  (let [props (:hx/props edge)]
+                    (or (= agent-id (:debtor props))
+                        (= agent-id (:creditor props)))))
+         selected-states (->> (concat (:rows open-state-page)
+                                      (:rows checkable-state-page))
+                              (filter party?)
+                              (map (juxt :hx/id identity))
+                              (into {}) vals (sort-by :hx/id) vec)
+         history-pages (mapv #(hyperedge-pages base :promise/history-event
+                                               (get-in % [:hx/props :promise-id])
+                                               t mode :promise-history)
+                             selected-states)
+         history (mapv promise-log/hyperedge->entry (mapcat :rows history-pages))
          outcome-page (evidence-pages base outcome-tag t mode :promise-outcomes)
-         history (:rows history-page)
          outcomes (->> (:rows outcome-page)
                        (filter #(contains? (set outcome-types) (:evidence/type %))) vec)
          endpoint (str "agent:" agent-id)
-         agreement-page (hyperedge-page base :agreement/record endpoint t mode :agreements)
+         agreement-page (hyperedge-pages base :agreement/record endpoint t mode :agreements)
          agreement-edges (:rows agreement-page)
          mapped (mapv (fn [edge]
                         (try {:record (agreement/hyperedge->record edge)}
@@ -127,11 +166,15 @@
                                    :issue {:obligation/id id :reason :unreadable-offer
                                            :record-id id :message (.getMessage e)}})))
                             offer-ids)
-         pages {:promise-history (:pages history-page)
+         pages {:promise-states-open (:pages open-state-page)
+                :promise-states-checkable (:pages checkable-state-page)
+                :promise-history (reduce + 0 (map :pages history-pages))
                 :promise-outcomes (:pages outcome-page)
                 :agreements (:pages agreement-page)
                 :offers (count offer-ids)}
-         rows {:promise-history (count history)
+         rows {:promise-states-open (count (:rows open-state-page))
+               :promise-states-checkable (count (:rows checkable-state-page))
+               :promise-history (count history)
                :promise-outcomes (count (:rows outcome-page))
                :agreements (count agreement-edges)
                :offers (count offer-ids)}
@@ -141,9 +184,22 @@
          {:question {:agent agent-id :at-or-cutoff t
                      :kinds #{:promise :agreement} :mode mode}
           :sources
-          [{:kind :evidence :filter {:tags [history-tag]}
+          [{:kind :hyperedge
+            :filter {:type :promise/state :end "promise-status:open"}
+            :rows-fetched (count (:rows open-state-page))
+            :rows-used (count (filter party? (:rows open-state-page)))
+            :pages (:pages open-state-page) :page-limit page-limit :complete? true}
+           {:kind :hyperedge
+            :filter {:type :promise/state :end "promise-obligation:checkable"}
+            :rows-fetched (count (:rows checkable-state-page))
+            :rows-used (count (filter party? (:rows checkable-state-page)))
+            :pages (:pages checkable-state-page) :page-limit page-limit :complete? true}
+           {:kind :hyperedge
+            :filter {:type :promise/history-event
+                     :ids (mapv #(get-in % [:hx/props :promise-id]) selected-states)}
             :rows-fetched (count history) :rows-used (count history)
-            :pages (:pages history-page) :page-limit page-limit :complete? true}
+            :pages (reduce + 0 (map :pages history-pages))
+            :page-limit page-limit :complete? true}
            {:kind :evidence
             :filter {:tags [outcome-tag] :types outcome-types}
             :rows-fetched (count (:rows outcome-page)) :rows-used (count outcomes)
