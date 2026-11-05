@@ -225,8 +225,10 @@
            (out (generate-new-buffer " *wm-follow-phases*")))
       (make-process
        :name "wm-follow-phases" :buffer out :noquery t
-       :command (list "dd" (concat "if=" wm-follow-phase-log) "bs=1"
-                      (format "skip=%d" offset) "status=none")
+       ;; tail -c +N starts at byte N (1-based) and copies in blocks;
+       ;; dd bs=1 made one read per byte.
+       :command (list "tail" "-c" (format "+%d" (1+ offset))
+                      wm-follow-phase-log)
        :sentinel
        (lambda (process _event)
          (when (memq (process-status process) '(exit signal))
