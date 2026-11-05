@@ -62,7 +62,18 @@
       (throw (ex-info "Settled file is already clean" {:reason :already-clean :path path})))
     (let [before (git! root "rev-parse" "HEAD")
           message (format "inbox-zero: settle %s (%s)" rel (name (:role/id role)))]
-      (git! root "commit" "--only" "-m" message "--" rel)
+      (when-not (zero? (:exit (sh/sh "git" "-C" root "diff" "--cached" "--quiet" "--" rel)))
+        (throw (ex-info "Settlement path already has staged content"
+                        {:reason :preexisting-staged-content :path path})))
+      (git! root "add" "--" rel)
+      (try
+        (when-not (= content-id (sha256 file))
+          (throw (ex-info "Settled file changed while staging"
+                          {:reason :content-changed-during-stage :path path})))
+        (git! root "commit" "--only" "-m" message "--" rel)
+        (catch Exception e
+          (sh/sh "git" "-C" root "reset" "-q" "HEAD" "--" rel)
+          (throw e)))
       (let [sha (git! root "rev-parse" "HEAD")
             names (-> (git! root "diff-tree" "--root" "--no-commit-id" "--name-only" "-r" sha)
                       str/split-lines vec)]
