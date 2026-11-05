@@ -52,7 +52,7 @@ and fix list: `~/notes/ways-of-working-audit/2026-11-04/SUMMARY.md`.
 
 | Way | Probe | Published | Audit verdict | Best reading of the way |
 |---|---|---|---|---|
-| 0. we-know-the-status | none yet | — | — | **failing**: 2 ways unreadable, 4 probes with no bad-case test, 4 probes with defects |
+| 0. status-is-known | `status-known` | on, failing (declared 11-05, `67232384b`, `fae2f7e6a`) | — | failing only on the 3 ways not built (eat-your-own-tail, records-carry-warrant, selection-gives-a-reason); the other 9 probed ways are fresh, readable, have a test file and a probe. Test-file presence is the weak part of (c): it does not prove the test constructs the bad case |
 | operator-turns-logged | `operator-turns` | on, holding | partly correct → join fixed 11-05 (`497e7b2f6`) | holding: 84/84 matched (10 min window; ratio ≥ 0.95 for turns ≥ 200 chars). Population still misses voxterm-direct, phone/cloud, IRC bridge, bell-prompt turns, other homes |
 | feedback-reaches-every-participant | `feedback-reaches` | on, failing | no reading possible → fixed 11-05 (`583264790`, `4c2dd02b9`) | failing: 28/420 bell returns unproved after 30 m; 51/58 replies fail the marks form; 0/425 bells lack a return path |
 | stays-alive-and-paid | `zone-health` | on, failing | correct; probe hardened 11-05 (futon3c `fff085d6a`, futon0 `6429d69`) | failing: federation (lucy), parked timers (Joe's rulings). A missing check now reads broken; a stopped disk-watch fails write-rate. Bills/runway: logged-in page only (Joe 11-05), not built |
