@@ -84,6 +84,15 @@ evidence and the library, including the 驴 and 狗 metadata. It can be rebuilt
 from scratch, which is also what makes incremental upkeep checkable. This is the
 store the Circus feeds, not the Evidence Landscape.
 
+### Written-never-read is feedback that reaches no one (Joe, 2026-11-05)
+
+`written-never-read` (R0, `diagramprover/wiring.clj`) is the opposite of M-formal-agency's
+"feedback reaches every participant": a record nobody reads gives nothing back to anyone.
+狗 is one way earlier work reaches an agent. A memory of this discussion could come
+back later as `狗: don't write spam to the evidence store`. So every Circus output needs a
+named reader: the agent through 狗 or 驴 lines, Joe through the REPL, or the GCC. A
+derived record without one fails the shape below.
+
 ## Shape (for MAP)
 
 One shape, six instances: *a hook on a participant act that produces references
