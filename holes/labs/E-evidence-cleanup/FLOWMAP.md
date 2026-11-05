@@ -149,6 +149,14 @@ are boxed respectively from `xiang/lu_memory.clj:46,197` and
  [{:finding :read-never-written, :field :evidence/generic-search, :readers [:reader/generic-search]}]}
 ```
 
+### Reader coverage rerun (final position, 2026-11-05)
+
+The verbatim reader-coverage result is recorded above under “Reader coverage
+rerun — 2026-11-05”. Re-running after all writer-coverage boxes gives exactly
+30 `:written-never-read` findings and the single intentional
+`:read-never-written` finding `:evidence/generic-search`; there are no orphaned
+concrete reader wires.
+
 ## Never read, by model class
 
 The classification follows “The evidence model” in
