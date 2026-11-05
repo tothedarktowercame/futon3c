@@ -741,6 +741,40 @@ claude-vs-codex behavior arbitrarily different."
           (should (string-match-p "first reply" buf))
           (should (string-match-p "second reply" buf)))))))
 
+(ert-deftest agent-chat-stale-accepted-turn-precedes-later-operator-send ()
+  "A queued turn outliving its process must not be bypassed by a later send."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let (calls callbacks)
+      (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-finish-turn-commits)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-scroll-to-bottom)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'redisplay)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'process-live-p)
+                 (lambda (_proc) nil)))
+        (agent-chat--queue-turn
+         (lambda (text cb)
+           (setq calls (append calls (list text))
+                 callbacks (append callbacks (list cb)))
+           'stale-recovery-process)
+         "agent" nil "accepted first" "joe" 'operator)
+        (insert "submitted later")
+        (agent-chat-send-input
+         (lambda (text cb)
+           (setq calls (append calls (list text))
+                 callbacks (append callbacks (list cb)))
+           'later-process)
+         "agent")
+        (should (equal calls '("accepted first")))
+        (should (= 1 (length agent-chat--queued-operator-turns)))
+        (funcall (car callbacks) "first reply")
+        (should (equal calls '("accepted first" "submitted later")))
+        (should-not agent-chat--queued-operator-turns)))))
+
 (ert-deftest agent-chat-unsolicited-queues-behind-operator-turn ()
   "The mirror race: an unsolicited resume arriving while an OPERATOR turn is in
 flight must QUEUE (and drain after), never signal — the park delivery path has

@@ -3655,7 +3655,8 @@ additionally posted to the evidence HTTP endpoint."
     ;; mid switch-to-buffer).
     (user-error "No agent-chat prompt here — switch to an initialized REPL buffer"))
   (agent-chat--repair-input-properties!)
-  (if (process-live-p agent-chat--pending-process)
+  (if (or (process-live-p agent-chat--pending-process)
+          agent-chat--queued-operator-turns)
       ;; Unified queueing (Joe, 2026-10-19): operator input queues behind any
       ;; in-flight turn, not only a background/unsolicited one. The refusal
       ;; ("still responding") previously made claude-vs-codex behavior feel
@@ -3663,7 +3664,15 @@ additionally posted to the evidence HTTP endpoint."
       ;; (which already queued) while Codex seats were busy on operator turns
       ;; (which were refused). Execution stays serialized: the drain only
       ;; starts the next queued turn after agent-chat--finish-pending-turn.
-      (agent-chat--queue-operator-turn call-async-fn agent-name hooks)
+      (progn
+        (agent-chat--queue-operator-turn call-async-fn agent-name hooks)
+        ;; A process can die without reaching its response callback.  In that
+        ;; state the buffer-local FIFO used to survive, but a later operator
+        ;; send bypassed it and launched immediately.  Recover the oldest
+        ;; accepted turn before the new one instead of starving the queue.
+        (unless (process-live-p agent-chat--pending-process)
+          (setq agent-chat--pending-process nil)
+          (agent-chat--drain-queued-operator-turns)))
     (let ((text (buffer-substring-no-properties
                  (marker-position agent-chat--input-start)
                  (point-max))))
