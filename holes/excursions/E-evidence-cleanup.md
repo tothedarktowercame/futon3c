@@ -175,6 +175,26 @@ Review notes:
   It still writes to evidence. Moving the hits onto the operator turn as metadata waits on
   M-repl-circus's store decision.
 
+## Live case: automated prompts filed as Joe's turns (claude-14, 2026-11-05)
+
+claude-14 was assembling Joe's apm-lean operator prompts as a public "making of"
+(`~/notes/apm-making-of/SURVEY.md`). Park wakes, `Continuation:`, `REVIEW CHECKLIST`,
+`PRECONDITION: awaited`, supervision and build packets are stored as author `joe`, role
+user, with a turn-id, and no field separates them from typed turns. About 485 of 1,552
+turns clocked to M-apm-* open with an automated header.
+
+Checked by claude-8 (sidecar, author `joe`, by opening header): none before July; 23 in
+July; about 611 in August; about 263 in September; 132 in October, all on or before
+10-01T20:40Z. The `parked-resume` author starts at 10-01T20:49Z (6,027 records since), and
+no header-matched prompt is filed as `joe` after it. So the writer was fixed on 10-01, but
+the July–October back catalogue is still mislabelled, and the header test is incomplete
+(claude-14 found prompts it misses). The fix by author is also only a proxy: the
+model's three parts (operator turn, agent reply, dispatch/continuation) need an explicit
+**origin field set where the turn is created** (operator-typed, park-wake, continuation,
+dispatch). Agency already knows it; the 象 envelope prints `Origin: operator`.
+Added to step 1's scope: which origin each chat-turn writer knows, and whether the
+existing records can be backfilled from session and header.
+
 ## Steps (each a small handoff, with review between)
 
 1. **Discovery, per writer.** Find the design record that put it in evidence and what
