@@ -734,16 +734,34 @@ def probe_cascade_standards(summary):
     if not summary:
         return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
                 "violations": [], "violation-count": 0, "evidence": ["summary.json absent"]}
-    std = summary.get("standards", {})
-    failing = [k for k, v in std.items() if k.startswith("s") and "-" in k and v is False]
+    std = summary.get("standards")
+    if not isinstance(std, dict) or not std:
+        # shape drift must not read as all-pass (zai-4 audit 2026-11-04)
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
+                "violations": [], "violation-count": 0,
+                "evidence": ["standards absent from summary: shape drift, not a pass"]}
+    failing, unchecked, ev = [], [], []
+    for k, v in std.items():
+        if not (k.startswith("s") and "-" in k):
+            continue
+        state = v.get("state") if isinstance(v, dict) else v
+        if v is False or state is False:
+            failing.append(k); ev.append(f"{k}: False")
+        elif state == "unchecked" or v == "unchecked":
+            # an unchecked standard does not pass (Joe 2026-11-05)
+            reason = (v.get("reason") if isinstance(v, dict) else None) or "no reason given"
+            unchecked.append(k); ev.append(f"{k}: unchecked - {reason}")
+        elif v is True or state is True:
+            ev.append(f"{k}: True")
     holes = summary.get("holes", {})
-    ev = [f"{k}: {v}" for k, v in std.items() if not isinstance(v, dict)]
     ev.append(f"honest holes: {len(holes) if isinstance(holes, (list, dict)) else holes}")
+    failing.extend(unchecked)
     failing.append("s6-readable")
     ev.append("s6-readable: False (Joe 2026-11-02: cannot keep a picture of the whole stack; sampled-question test not built)")
     return {"monitor": "on", "invariant": "failing" if failing else "holding",
-            "last-observation": summary.get("s4-evidence", {}).get("as-of") or std.get("s4-evidence", {}).get("as-of"),
-            "observed-at": iso(NOW), "violations": failing, "violation-count": len(failing), "evidence": ev}
+            "last-observation": std.get("s4-evidence", {}).get("as-of") if isinstance(std.get("s4-evidence"), dict) else None,
+            "observed-at": iso(NOW), "violations": failing, "violation-count": len(failing),
+            "evidence": ev}
 
 def probe_draw_pile(graph):
     if not graph:

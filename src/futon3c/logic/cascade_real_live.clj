@@ -254,6 +254,40 @@
    :O4 (o4-cluster-claims-from (get edges "cascade/cluster-member"))
    :O5 (o5-hole-claims-from (get edges "cascade/hole-target"))})
 
+(defn standards-map
+  "The one-queryable-self-account standards, each a reading that can be false.
+   s1-s4 have no honest check yet: they were hardcoded literals (Joe, 2026-11-05:
+   'true by construction cannot continue'), so they now report themselves as
+   :unchecked with the reason, and the probe counts :unchecked as not passing.
+   s4 in particular must not pass on an empty cascade/hole-target section that
+   nothing writes. s5-composed is genuinely computed: the cascade is one graph
+   only if some mission node carries both an O1 and an O4 claim."
+  [{:keys [o1 o4 o5 hole-edges now-ms]}]
+  (let [o5-checked-none? (zero? (count o5))]
+    {:s1-regenerates {:state :unchecked
+                      :reason "regeneration is not distinguished from answering: a fresh response proves the endpoint answered, not that the map regenerates from the substrate"}
+     :s2-evidence {:state :unchecked
+                   :reason "claims are not yet inspected for carried evidence; no check exists"}
+     :s3-reconstitution {:state :unchecked
+                         :reason "no reconstitution exercise exists; nothing is rebuilt from the page alone"}
+     :s4-honest-holes (if (and o5-checked-none? (seq hole-edges))
+                        {:state :unchecked :reason "hole-target edges present but not yet checked for honesty"}
+                        {:state :unchecked
+                         :reason "no producer writes cascade/hole-target edges; an empty section is not evidence of zero holes"})
+     ;; s4-evidence stays a typed transport fact: fetch-edges is loud on failure,
+     ;; so reaching here with an empty o5 means the authoritative query SUCCEEDED
+     ;; and found zero hole-target edges — a checked none at transport level
+     ;; (workshop/honest-holes-gate-composed-claims). The evidence rides in-band.
+     :s4-evidence (if o5-checked-none?
+                    {:checked "cascade/hole-target"
+                     :holes-found 0
+                     :basis "authoritative query succeeded; empty result is checked, not unread (transport-level only: no producer writes this type yet)"
+                     :as-of (java.time.Instant/ofEpochMilli now-ms)}
+                    {:checked "cascade/hole-target"
+                     :holes-found (count o5)
+                     :basis "hole-target edges present"})
+     :s5-composed (pos? (count (set/intersection o1 o4)))}))
+
 (defn cascade-real-summary
   "A live snapshot of the COMPOSING cascade for the operator view: per-dimension
    claim counts, the cross-dimension shared-mission-node overlaps (the composition
@@ -281,24 +315,8 @@
      :composition  {:O1xO4 (n o1 o4) :O5xO1 (n o5 o1) :O4xO3 (n o4 o3) :O1xO3 (n o1 o3)}
      :holes        (frequencies (keep #(prop (:hx/props %) :hole-kind)
                                       (get edges "cascade/hole-target")))
-     :standards    (let [o5-checked-none? (zero? (count o5))]
-                     ;; s4 flips on TYPED evidence, not set-emptiness: fetch-edges
-                     ;; is loud on transport failure, so reaching here with an
-                     ;; empty o5 means the authoritative query SUCCEEDED and found
-                     ;; zero hole-target edges — a checked none (workshop/
-                     ;; honest-holes-gate-composed-claims; the institution's first
-                     ;; compliance act, 2026-09-12). The evidence rides in-band.
-                     {:s1-regenerates true :s2-evidence true :s3-reconstitution true
-                      :s4-honest-holes true
-                      :s4-evidence (if o5-checked-none?
-                                     {:checked "cascade/hole-target"
-                                      :holes-found 0
-                                      :basis "authoritative query succeeded; empty result is checked, not unread"
-                                      :as-of (java.time.Instant/ofEpochMilli (System/currentTimeMillis))}
-                                     {:checked "cascade/hole-target"
-                                      :holes-found (count o5)
-                                      :basis "hole-target edges present"})
-                      :s5-composed (pos? (n o1 o4))})
+     :standards    (standards-map {:o1 o1 :o4 o4 :o5 o5 :hole-edges (get edges "cascade/hole-target")
+                                   :now-ms (System/currentTimeMillis)})
      :owners       {:O1 "claude-2" :O3 "claude-4" :O4 "claude-10"
                     :O5 "claude-4" :O7 "claude-10" :O2 "claude-1"}}))
 
