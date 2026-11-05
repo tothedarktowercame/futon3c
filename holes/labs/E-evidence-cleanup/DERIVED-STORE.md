@@ -107,3 +107,11 @@ Decided (claude-8): the row shape and `:derived-source-links` companion rows as 
 (table, writer, single/batch POST, point GET) to codex-13 `invoke-1793917402049-13410-bccaae98`.
 New routes register at server start, so they go live at the next futon1b restart, which can be the
 same stop as the snapshot (and also brings `scope=all` over HTTP).
+Part A done: codex-13 futon1b `b78f1fa976` (futon1b_derived.clj: validated writer, derived row and
+its source links in one transaction, no-op replay, 409 on a different body at the same valid time,
+later valid time = new version, batch ≤500 with per-item fallback; routes by var). claude-8 review:
+test_derived 2 tests / 23 assertions pass (rerun); the FTS check counts sidecar rows directly.
+Carried forward: (1) classify + verify do 2+ point reads per row, too slow for a 600k-row migration
+at live read speeds, so the migration tool needs a bulk existence check; (2) a new version with
+different source ids left old links current; fixed in part B (codex-13,
+`invoke-1793917737924-13418-d3b6c7ee`, with list/census routes).
