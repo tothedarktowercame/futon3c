@@ -310,6 +310,15 @@ Review notes:
   the ws bridge scripts likewise. Writer 2 (context-retrieval `:query`) to codex-12,
   `invoke-1793910934343-13284-bcc636af`.
 
+- **3f, full-history backfill** (codex-13 `479658ca1`; claude-8 `1c4d37acd`). `run!` takes
+  `:all-history? true`; history readback is per promise (`end=<pid>`), not the whole type. Review fix:
+  that readback threw out of the run, so one futon1b 503 would abort a ~100-chunk run; it now fails
+  its chunk like the state path (two tests, both fail on `479658ca1`; 14 tests / 48 assertions pass).
+  `user/claude8-reconcile` had vanished from the JVM (the `user` ns was reset); recreated by `intern`.
+  Dry run 20:38-20:42Z (after one 503 `expensive-read-busy`, retried): 49,908 history edges and 1 state
+  to write, 7,350 states current, the same 28 incomplete chains, 0 failed. Real run started 20:43Z
+  (`:real3`, retries on 503 up to 5 times).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
