@@ -427,7 +427,13 @@
                     reg/invoke-agent!
                     (fn [_ _ _]
                       (let [n (swap! invoked inc)]
-                        {:ok true :result "{}" :session-id (str "session-" n)
+                        {:ok true
+                         :result (case n
+                                   1 "{:status :diagnosed}"
+                                   2 "{:status :proposed :acceptance-test {:source {:text \"(ns cost.fixture)\"}}}"
+                                   3 "{:status :accepted}"
+                                   "{:status :succeeded :payload {}}")
+                         :session-id (str "session-" n)
                          :invoke-meta {:job-id (str "job-" n)}}))]
         (doseq [operation [:diagnosis :acceptance-proposal :acceptance-review]]
           (#'sut/producer-invoke! context "wm-author" operation {}))
@@ -443,6 +449,34 @@
              (set (map :role rows))))
       (is (every? #(= "wm-click-cost-4" (:click-id %)) rows))
       (is (= 5 (count (set (map :job-id rows))))))))
+
+(deftest producer-source-complaint-indexes-both-transport-invokes
+  (let [path (.toString (java.nio.file.Files/createTempFile
+                         "wm-seat-retry" ".jsonl"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        context {:click-id "wm-click-retry" :run-id "run-retry"}
+        answers (atom [(pr-str {:status :proposed
+                                :acceptance-test {:source {:text "(ns broken"}}})
+                       (pr-str {:status :proposed
+                                :acceptance-test
+                                {:source {:text "(ns repaired.acceptance-test)"}}})])
+        invoked (atom 0)]
+    (binding [seat-call-index/*path* path]
+      (with-redefs [reg/get-agent (fn [_] ready-agent)
+                    reg/invoke-agent!
+                    (fn [_ _ _]
+                      (let [n (swap! invoked inc)
+                            answer (first @answers)]
+                        (swap! answers rest)
+                        {:ok true :result answer :session-id (str "session-" n)
+                         :invoke-meta {:job-id (str "job-retry-" n)}}))]
+        (#'sut/producer-invoke! context "wm-author" :acceptance-proposal {})))
+    (let [rows (map #(json/read-str % :key-fn keyword)
+                    (str/split-lines (slurp path)))]
+      (is (= 2 @invoked))
+      (is (= ["job-retry-1" "job-retry-2"] (mapv :job-id rows)))
+      (is (= ["meta-acceptance-proposal" "meta-acceptance-proposal"]
+             (mapv :role rows))))))
 
 (deftest prose-then-final-map-is-the-answer
   ;; Live pin, click wm-click-76ca8902 (2026-11-05): wm-reviewer's whole

@@ -575,13 +575,23 @@
   ([seat operation request]
    (producer-invoke! nil seat operation request))
   ([seat-call-context seat operation request]
-  (let [agent (reg/get-agent seat)
+  (let [record-call! (fn [result]
+                       (when (and result seat-call-context)
+                         (seat-call-index/append!
+                          (seat-call-row seat-call-context
+                                         (case operation
+                                           :diagnosis :meta-diagnosis
+                                           :acceptance-proposal :meta-acceptance-proposal
+                                           :acceptance-review :meta-acceptance-review)
+                                         operation seat result nil))))
+        agent (reg/get-agent seat)
         prompt (producer-prompt operation request)
         options (when agent {:mode "work" :caller "war-machine"
                              :session-id (:agent/session-id agent)})
         result (when (and agent (invoke-capable? agent)
                           (available-seat-state? (:agent/status agent)))
                  (invoke-with-rate-limit-retry! seat prompt options))
+        _first-call (record-call! result)
         first-read (when (:ok result) (one-edn-map (:result result)))
         first-preview (when (:ok result) (response-preview (:result result)))
         read-retry (when (and (:ok result) (:read-error first-read))
@@ -601,6 +611,7 @@
                          "return the corrected map as one EDN map and nothing else."))
         read-second-result (when read-retry
                              (invoke-with-rate-limit-retry! seat (str prompt complaint) options))
+        _read-retry-call (record-call! read-second-result)
         envelope-result (or read-second-result result)
         envelope-read (if read-second-result
                         (when (:ok read-second-result) (one-edn-map (:result read-second-result)))
@@ -626,16 +637,8 @@
                                (invoke-with-rate-limit-retry! seat
                                                               (str prompt source-complaint)
                                                               options))
+        _source-retry-call (record-call! source-second-result)
         final-result (or source-second-result envelope-result)
-        _seat-call (when (and final-result seat-call-context)
-                     (seat-call-index/append!
-                      (seat-call-row seat-call-context
-                                     (case operation
-                                       :diagnosis :meta-diagnosis
-                                       :acceptance-proposal :meta-acceptance-proposal
-                                       :acceptance-review :meta-acceptance-review)
-                                     operation seat final-result
-                                     (:session-id options))))
         final-read (if source-second-result
                      (when (:ok source-second-result) (one-edn-map (:result source-second-result)))
                      envelope-read)
