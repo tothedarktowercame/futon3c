@@ -8,6 +8,7 @@
             [futon3c.giraffe.run :as giraffe-run]
             [futon3c.file-change.shadow-consumer :as shadow-consumer]
             [futon3c.file-change.shadow-ledger :as shadow-ledger]
+            [futon3c.file-change.settlement-consumer :as settlement-consumer]
             [futon3c.watcher.freshness :as freshness]
             [futon3c.watcher.multi :as sut]
             [futon3c.file-change.journal :as file-change-journal]))
@@ -743,3 +744,23 @@
         @task
         (is (= "new" (:computed-sha256 (poll probe 1))))
         (is (= 1 @calls))))))
+
+(deftest superseded-cycle-cannot-publish-settlement-health
+  (let [j (atom (file-change-journal/empty-state 4))
+        settlement (atom (settlement-consumer/empty-state [] 4))]
+    (reset! sut/!state {:run-id 2 :stopping? false})
+    (try
+      (with-redefs [sut/build-plan (fn [_ _]
+                                     {:root "/tmp" :label "test" :snapshot {}
+                                      :cache {} :moves {:renamed [] :deleted [] :added []}
+                                      :ingest-paths [] :first-cycle? false})
+                    sut/detect-cross-root-moves (constantly [])
+                    sut/heartbeat! (fn [& _])]
+        (sut/run-cycle! {:roots [{:path "/tmp" :label "test"}]
+                         :per-root-cache (atom {}) :run-id 1
+                         :event-n (atom 0) :cycle-n (atom 0)
+                         :cold-scan? false :commit-ingest? false
+                         :file-change-journal j
+                         :file-change-settlement settlement})
+        (is (nil? (:file-change-settlement-health @sut/!state))))
+      (finally (reset! sut/!state nil)))))

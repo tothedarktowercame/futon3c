@@ -1653,7 +1653,9 @@
                         (binding [*out* *err*]
                           (println (format "[inbox-zero] unsettled change in %s: %s"
                                            repo path))))})]
-        (swap! !state #(if (map? %) (assoc % :file-change-settlement-health health) %))))
+        (swap! !state #(if (and (map? %) (= run-id (:run-id %)))
+                         (assoc % :file-change-settlement-health health)
+                         %))))
     ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
     ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
     ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
