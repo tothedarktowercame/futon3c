@@ -190,6 +190,19 @@ Review notes:
   count unchanged at 3. Step 3b (reconciler/backfill) dispatched to codex-13
   (`invoke-1793902614438-13190-ac860f1e`).
 
+- **Step 3b, reconciler** (codex-13 `c81f8f81b`; claude-8 `95a8da490` open promises first, `d52f7affe`
+  first-format ids). First live dry run stopped on `e-<uuid>` evidence ids: 2,207 promise-history rows
+  from 09-27/28 use the first id format and some of their chains are still open; they now map to
+  `promise-log:e-<uuid>`. Second dry run failed with "unable to create native thread":
+  `rule_record/request!` built a new `HttpClient` per call, each holding a selector thread until GC;
+  the run's thousands of requests reached 1,409 `HttpClient-N` threads and futon3c-zone's 2048-task
+  limit (pids.events max 13). A GC brought it back to ~200 threads; `8cdc7252b` shares one client and
+  the third dry run holds steady at ~210 threads. Still open: 12 other files build a client per call
+  (`grep -rn "HttpClient/newHttpClient" src/`: transport/http.clj, zai_api.clj, claude_platform.clj,
+  fed_uplink.clj, dispatch_graph.clj, lu_memory.clj, arxana_bridge.clj, two mission_scope scripts, ...).
+  The per-promise GETs take 0.2-2.8 s each, so codex-13 is reworking the reconciler to prefetch by type
+  and write through futon1b's 500-per-request batch route (`invoke-1793905059681-13247-2682105d`).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
