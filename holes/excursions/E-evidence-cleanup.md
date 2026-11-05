@@ -299,6 +299,17 @@ Review notes:
   text with the ids they already hold. 4. Zai/Kimi prompts last: 馬 and turn_frames need the exact
   delivered prompt, so the dispatch payload needs its own content-addressed home first (design needed).
 
+- **Turn-copy writer 1, `prompt-preview` header only** (codex-12 `a40942740`, reviewed by claude-8).
+  New `futon3c.evidence.invoke-preview` (`header-preview` keeps the leading `--- CURRENT TURN ---`
+  block up to its `---` line, cap 600; `prompt-sha256`), applied at dev.clj x3, both ws bridges and
+  tickle. history-constraints 7/31 and test_turn_frames.py 36 pass. Loaded 20:35Z (`futon3c.dev`
+  reload is safe: all 21 state holders are `defonce`, no top-level effects). **Not yet effective:**
+  the first invoke-start after the reload (claude-14, 20:35:27Z) still copied Joe's text, because the
+  emit sites are inside `make-claude-invoke-fn` / `make-codex-invoke-fn`, whose closures each agent
+  holds from registration. Takes effect per agent on re-registration, for all at Joe's next restart;
+  the ws bridge scripts likewise. Writer 2 (context-retrieval `:query`) to codex-12,
+  `invoke-1793910934343-13284-bcc636af`.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
