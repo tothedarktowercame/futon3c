@@ -158,6 +158,9 @@ def fetch_operator_replies(operator_rows, cutoff, now=NOW,
                 for entry in rows:
                     if entry.get("evidence/id"): entries[entry["evidence/id"]] = entry
                 cursor = data.get("next-cursor")
+                if not cursor and len(rows) >= int(query["limit"]):
+                    raise RuntimeError(f"futon1b operator-reply bucket full with no "
+                                       f"next-cursor: {session_id} {iso(start)}")
                 if not cursor or not rows: break
                 query.update({"cursor-at": cursor["at"], "cursor-id": cursor["id"]})
             else:

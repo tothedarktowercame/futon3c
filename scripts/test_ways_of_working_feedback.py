@@ -183,6 +183,16 @@ class FetchOperatorRepliesPaginationTest(unittest.TestCase):
         self.assertIn("cursor-at=2026-11-03T10%3A00%3A30Z", seen_urls[1])
         self.assertIn("cursor-id=filler-999", seen_urls[1])
 
+    def test_full_page_without_cursor_fails_loudly(self):
+        page = {"entries": [self.reply_row(f"filler-{i}") for i in range(1000)],
+                "count": 1000}
+
+        with mock.patch.object(PROBE, "get_json", return_value=page):
+            with self.assertRaisesRegex(RuntimeError, "full with no next-cursor"):
+                PROBE.fetch_operator_replies(
+                    [self.operator_row()], NOW - datetime.timedelta(hours=2),
+                    now=NOW, base="http://store.test")
+
     def test_cursor_loop_fails_loudly(self):
         page = {"entries": [self.reply_row(f"filler-{i}") for i in range(1000)],
                 "count": 1000,
