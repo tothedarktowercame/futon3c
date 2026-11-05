@@ -938,7 +938,7 @@
 
 (defn- emit-context-evidence!
   "Emit a context-retrieval evidence entry synchronously. Returns the evidence ID."
-  [agent-id session-id turn-n query-text result-map evidence-id]
+  [agent-id session-id turn-id turn-n query-text result-map evidence-id]
   (try
     (when-let [store @!evidence-store]
       (let [result (boundary/append! store
@@ -951,8 +951,11 @@
                       :body {"event" "context-retrieval"
                              "agent-id" (str agent-id)
                              "at" (str (java.time.Instant/now))
+                             "session-id" (str (or session-id "dev-invoke"))
+                             "turn-id" (str turn-id)
                              "turn" turn-n
-                             "query" (subs query-text 0 (min 100 (count query-text)))
+                             "query-chars" (count query-text)
+                             "query-sha256" (invoke-preview/prompt-sha256 query-text)
                              "results" result-map}
                       :tags [:invoke :dev :context-retrieval :futon3a]})]
         (if (:ok result)
@@ -995,7 +998,7 @@
   "Post-turn context retrieval: search futon3a patterns against the A->B
    protopattern, emit evidence, notify desktop, update HUD lookback.
    Fire-and-forget — call from a future."
-  [{:keys [agent-id session-id prompt-str response-text turn-counter bb-opts
+  [{:keys [agent-id session-id prompt-str response-text turn-id turn-counter bb-opts
             publish-ready!]}]
   (try
     (let [user-msg (extract-user-message prompt-str)
@@ -1017,7 +1020,7 @@
                              {:agent-id (str agent-id)
                               :session-id (str session-id)
                               :surface "emacs-repl"}))))
-              eid (or (emit-context-evidence! agent-id session-id turn-n proto-text
+              eid (or (emit-context-evidence! agent-id session-id turn-id turn-n proto-text
                                               result-map evidence-id)
                       (str "t" turn-n))
               cert (str eid " \u00b7 " agent-id)]

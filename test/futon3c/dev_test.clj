@@ -1,5 +1,6 @@
 (ns futon3c.dev-test
   (:require [cheshire.core :as json]
+            [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
@@ -12,6 +13,7 @@
             [futon3c.blackboard]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.evidence.store]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.apm-conductor-v2 :as apm-v2]
             [futon3c.dev :as dev]))
@@ -573,6 +575,33 @@
         (finally
           (reset! store-atom old-store)
           (clock-store/reset-store!))))))
+
+(deftest context-retrieval-evidence-retains-identity-not-query-text
+  (let [store-atom (var-get #'dev/!evidence-store)
+        old-store @store-atom
+        appended (atom nil)
+        secret "operator message that must not be copied"
+        results [{:id "pattern/one" :title "One" :score 0.8 :rank 1}]]
+    (try
+      (reset! store-atom :test-store)
+      (with-redefs [boundary/append!
+                    (fn [_ entry]
+                      (reset! appended entry)
+                      {:ok true :entry (assoc entry :evidence/id "e-context-test")})]
+        (is (= "e-context-test"
+               (#'dev/emit-context-evidence!
+                "claude-test" "session-test" "claude-test-turn-4" 4
+                secret results "e-context-test"))))
+      (let [body (:body @appended)]
+        (is (= results (get body "results")))
+        (is (= "claude-test-turn-4" (get body "turn-id")))
+        (is (= "session-test" (get body "session-id")))
+        (is (= (count secret) (get body "query-chars")))
+        (is (string? (get body "query-sha256")))
+        (is (not (contains? body "query")))
+        (is (not (str/includes? (pr-str body) secret))))
+      (finally
+        (reset! store-atom old-store)))))
 
 (deftest make-claude-invoke-fn-uses-pouch-when-kangaroo-on
   (testing "Kangaroo warm path is wired behind its own flag"

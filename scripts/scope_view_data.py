@@ -251,8 +251,27 @@ def echoes(reply, memory_name, text, n=5):
     return found
 
 
-def retrieval_for(agent, session, source_text):
-    """The context-retrieval evidence whose query is this turn's prefix."""
+def _body_string(body, field):
+    """Read a string field from an API body map or its EDN-ish string form."""
+    if isinstance(body, dict):
+        value = body.get(field)
+        return value if isinstance(value, str) else None
+    match = re.search(r'"%s"\s+"((?:\\.|[^"\\])*)"' % re.escape(field),
+                      body or "", re.S)
+    if not match:
+        return None
+    try:
+        return json.loads('"' + match.group(1) + '"')
+    except json.JSONDecodeError:
+        return None
+
+
+def retrieval_for(agent, session, turn_id, source_text):
+    """The context-retrieval evidence retained for this exact turn.
+
+    New rows join on turn-id. Rows written before that reference existed keep
+    the legacy query-prefix fallback.
+    """
     q = urllib.parse.urlencode({"tags": "context-retrieval", "author": agent,
                                 "session-id": session, "limit": 50})
     req = urllib.request.Request(f"{FUTON1B}/api/alpha/evidence?{q}",
@@ -262,16 +281,18 @@ def retrieval_for(agent, session, source_text):
     prefix = source_text[:100]
     for e in entries:
         body = e.get("evidence/body") or ""
-        m = re.search(r'"query" "(.*?)", "results"', body, re.S)
-        if not m:
+        recorded_turn = _body_string(body, "turn-id")
+        query = _body_string(body, "query")
+        if recorded_turn != turn_id and not (query and query == prefix[:len(query)]):
             continue
-        query = m.group(1).replace('\\"', '"')
-        if query == prefix[:len(query)]:
+        if isinstance(body, dict):
+            results = body.get("results", [])
+        else:
             results = [{"id": r[0], "title": r[1], "score": float(r[2]), "rank": int(r[3])}
                        for r in re.findall(
                            r'\{:id "([^"]+)", :title "([^"]*)", :score ([0-9.]+), :rank (\d+)', body)]
-            return {"evidence-id": e.get("evidence/id"), "at": e.get("evidence/at"),
-                    "query": query, "results": results}
+        return {"evidence-id": e.get("evidence/id"), "at": e.get("evidence/at"),
+                "query": query or prefix, "results": results}
     return None
 
 
@@ -380,7 +401,7 @@ def build(session, turn, k, with_near):
         if e.get("rule"):
             legend[e["rule"]] = RELATION_GLOSS.get(e["rule"], e["rule"])
 
-    retrieval = retrieval_for(agent, session, source)
+    retrieval = retrieval_for(agent, session, turn, source)
     if retrieval:
         qid = turn + "-query"
         spans.append({"id": qid, "seg": op_seg, "start": 0, "end": len(retrieval["query"]),
