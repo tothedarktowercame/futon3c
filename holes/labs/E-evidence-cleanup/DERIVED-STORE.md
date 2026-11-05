@@ -93,3 +93,17 @@ var from the next restart. Reloaded `futon1b-text` and `zai-memory-1b` live. Liv
 Until futon1b's next restart, `scope=all` over HTTP still returns acts (the old route drops the
 parameter). Old `:invoke-start` rows from before writer 1 still carry 600-char prompt previews and
 count as acts; they go with the dev-invoke family in the migration.
+
+## Discovery and table build (2026-11-05 ~22:45Z)
+
+codex-13 `384fea4b30` (DERIVED-TABLE-DISCOVERY.md). Checked by claude-8: XTDB 2.1.0 pinned
+(deps.edn), `:erase-docs` probe in p2_queries.clj:80-90, evidence POST path futon1b_server.clj:896-910.
+Findings that shape the plan: no erase path exists and the FTS reconciler only adds, never removes, so
+the migration needs one operation that erases from XTDB and deletes the same ids from the five FTS
+tables, with a receipt first; evidence POSTs currently take ~0.9 s median, so the move must be batched
+(≤500) and paced; the store is 77 GiB and a consistent copy needs futon1b stopped, because the volume
+group has no free extents (`vgs`: VFree 0), so an LVM snapshot is not possible.
+Decided (claude-8): the row shape and `:derived-source-links` companion rows as proposed. Part A
+(table, writer, single/batch POST, point GET) to codex-13 `invoke-1793917402049-13410-bccaae98`.
+New routes register at server start, so they go live at the next futon1b restart, which can be the
+same stop as the snapshot (and also brings `scope=all` over HTTP).
