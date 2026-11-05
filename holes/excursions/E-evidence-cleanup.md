@@ -146,7 +146,10 @@ Review notes:
   stuck in the outbox since 10-28 and 16,249 `:conflict`s. d775f31f2 sent fresh appends through
   the same comparison, which would have stuck every new `park-made`. Fixed by comparing present
   keys only. The new test fails on the old comparison (2 failures) and passes on the fix. 4
-  namespaces: 46 tests, 200 assertions, 0 failures. Live-loaded both namespaces from master 17:2xZ.
+  namespaces: 46 tests, 200 assertions, 0 failures. Live-loaded both namespaces from master about 17:10Z. Verified live: the 13 stuck rows and 2 new
+  ones drained by 17:13Z (outbox 0, written +15), `:conflict` stopped at 16,288, and
+  `promise/history-event` hyperedges are readable in futon1b. Drains run at roughly 4–6 s per row
+  (the hyperedge POST dominates), which is enough for about 2,400 rows a day. Watch for bursts.
 
 ## Step 2 progress
 
