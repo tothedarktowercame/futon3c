@@ -181,3 +181,10 @@ plans all 7 replacements against live `pattern/library` targets.
 Method note: none of this is visible through the HTTP API, which does not
 project system-time. It was read over XTDB's pgwire
 (`127.0.0.1:34257`, `_system_from` / `FOR ALL SYSTEM_TIME`).
+
+## Completion criteria
+
+- The futon1b fetch-entity miss-path fix (P1) is on master — check: futon1b `git log --oneline ee8f41e` shows "narrow alias scan + hydrate by _id IN"; live absent-UUID GET /api/alpha/entity/<uuid> 404s in ≤ 2 s. **Met.**
+- Structured hyperedge ends accepted (P2) — check: futon1b sha e88536a on master. **Met.**
+- Zero malformed `:target-pattern` ends in the live `mission-scope/pattern` layer — check: XTDB pgwire audit per the item's §6 method (FOR ALL SYSTEM_TIME not needed; current layer): no `:entity-id` matching `#uuid "` and no `futon3-d/file/...flexiarg` refs among `:target-pattern` ends; expect 0 (was 7 on 2026-08-23). **Not met.**
+- The repair is made in `mission_scope_ingest` (the writer of record), not as a one-off store rewrite — check: an ingest dry run plans 0 replacements (was 7); re-ingest of a sampled hyperedge does not reintroduce a UUID or stringified end. **Not started.**

@@ -106,3 +106,11 @@ replication for exactly those reasons. So the list is a floor, not the design.
 - `futon0/README-federate.md` — the governing design.
 - `holes/excursions/E-port-wiring-map.md` — which futon1b answers where, and
   why `:7074` is not `:7073`.
+
+## Completion criteria
+
+- Evidence writes fan out to more than one failsafe target: post-futon1b! (or successor) accepts multiple targets with the self-dual-write guard applied per target — check: read of futon3c/src/futon3c/watcher/file_ingest.clj showing a target list, plus a test posting to two mock secondaries **Not started.**
+- Each event carries :origin/site and receivers do not re-fan (F-0) — check: test with two targets asserting no re-fan loop **Not started.**
+- The failsafe question (open question 4) has Joe's recorded answer for a post-Dionysus world — check: this file updated with the decision **Not started.**
+
+NB: Joe parked this item on 2026-08-14 ('not being solved yet'); the criteria above make it admissible, not urgent. Work should not start without Joe un-parking it.
