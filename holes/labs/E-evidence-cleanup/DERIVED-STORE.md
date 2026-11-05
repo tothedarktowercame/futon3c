@@ -141,7 +141,7 @@ claude-8 review fixes, all in futon1b:
   (25 s per 1,000; point reads were 0.28 s each). Dry run: 34 s per 1,000-row batch.
 - `46076d8` The pressure check read `:queue-depth`, which the snapshot does not have
   (`:requests/queued`), and one busy moment ended the run; it now waits up to 30 checks.
-Tests: test_migrate_derived 2 tests / 28 assertions (each new assertion fails on `ae1f0ba`).
+Tests: test_migrate_derived 2 tests / 28 assertions (by reading, each new check fails on `ae1f0ba`; not run against it).
 Live: loaded from master; run `aa-1` started ~23:20Z as a future in futon1b (`user/derived-aa1`,
 check with ~/notes/evidence-cleanup/check-aa1.clj); writes take 1.4-2.3 s per 1,000-row batch, but
 batches land ~2.5 min apart (source reads under live load), so ~1 h for 22,290 rows.
