@@ -45,21 +45,32 @@ every `on` probe has a constructed-bad-case test; every failing invariant has
 an owner item linked here; and the panel is published by a timer, not by
 hand.
 
-## State of the ways (2026-11-03 22:34 publish)
+## State of the ways (audited reading, 2026-11-04/05)
 
-| Way | Probe | State | Notes |
-|---|---|---|---|
-| operator-turns-logged | `operator-turns` | on, holding | 66/66 turns matched over 24 h (codex-7 `2493f725a`) |
-| feedback-reaches-every-participant | `feedback-reaches` | on, failing | 0/212 work bells without a return path; 1/210 returns unproved; replies found 80 of 89 operator turns (codex-15, join on turn id); 70/80 replies fail the marks form, judged from the first marked paragraph (Joe 11-03). Reads wait out futon1b busy 503s (`5b4398a5f`) |
-| stays-alive-and-paid | `zone-health` | on, failing | evidence backup now nightly (futon0 `fa1618c`); bills and runway by hand |
-| one-queryable-self-account | `cascade-standards` | on, failing | s6 readability not built |
-| backlog-understood | `draw-pile` | on, failing | |
-| inbox-zero | `git-clean` | off, failing | timer parked |
-| records-carry-warrant | none | not built | unit is the test run, not the commit (Joe 11-03; declaration corrected); finding 5 blocks enumeration |
-| intents-are-tracked | `intents-tracked` | on, failing | 6 of 13 open operator asks stale over 7 days (codex-7 `b3f026d55`; review `36f65dde3` and the session-key fix). Reconciled by hand: 1 met, 2 never answered, 3 unwitnessable (finding 6) |
-| selection-gives-a-reason | none | not built | War Machine side; futon2 rules apply |
-| eat-your-own-tail | none | not built | needs a design first |
-| real-users | none | unprobed by design | values live in futon7 |
+Eight Zai audits, one per way, each spot-checked by claude-16. Table, reasons
+and fix list: `~/notes/ways-of-working-audit/2026-11-04/SUMMARY.md`.
+
+| Way | Probe | Published | Audit verdict | Best reading of the way |
+|---|---|---|---|---|
+| 0. we-know-the-status | none yet | — | — | **failing**: 2 ways unreadable, 4 probes with no bad-case test, 4 probes with defects |
+| operator-turns-logged | `operator-turns` | on, failing | partly correct | holding: both violations are logged turns the 60 s exact-text join missed |
+| feedback-reaches-every-participant | `feedback-reaches` | on, failing | no reading possible | unknown: reply fetch caps at 1000 rows per bucket, no cursor |
+| stays-alive-and-paid | `zone-health` | on, failing | correct | failing (federation, parked-timers); probe drops missing checks, passes stale write-rate |
+| one-queryable-self-account | `cascade-standards` | on, failing | partly correct | failing on s6; s1–s3 are literal `true`; s4 reads an unfed section |
+| backlog-understood | `draw-pile` | on, failing | correct | failing: 242 open unplaced, 386 closed unattested |
+| inbox-zero | `git-clean` | off, failing | partly correct | failing; population counts fixture dirs, misses storage and minus40 |
+| intents-are-tracked | `intents-tracked` | on, failing | partly correct | failing, though 5 of 8 are false alarm, met, or unwitnessable |
+| E-autoclock-wow gate | none | not declared | no reading possible | no probe |
+| records-carry-warrant | none | not built | — | unit is the test run (Joe 11-03); finding 5 blocks enumeration |
+| selection-gives-a-reason | none | not built | — | War Machine side |
+| eat-your-own-tail | none | not built | — | needs a design |
+| real-users | none | unprobed by design | — | values live in futon7 |
+
+Way 0 (Joe, 2026-11-04): "we know the status of our ways of working". A way's
+status is known only if its reading is fresh, its probe has a test that
+constructs the bad case and sees it fail, and each failure names an owner item.
+A current reading is not yet the assurance that it stays current (Joe): the
+way-0 probe is what supplies that.
 
 ## Candidate ways not yet declared (Joe, 2026-11-03)
 
