@@ -67,6 +67,27 @@
         (note! "unwatched-nested" "s-nested" 5 (prompt "agent" "work"))
         (is (= 6 (pouch/note-turn-origin! "unwatched-nested" "s-nested" p)))))
 
+    (testing "headerless provider continuations do not count as turns"
+      (note! "unwatched-continuation" "s-continuation" 1
+             (prompt "agent" "semantic dispatch"))
+      (dotimes [_ 11]
+        (is (= 1 (pouch/note-turn-origin!
+                  "unwatched-continuation" "s-continuation"
+                  "tool_result continuation without a turn envelope"))))
+      (is (false? (pouch/unwatched-run?
+                   "unwatched-continuation" "s-continuation"))))
+
+    (testing "headerless continuations do not undo an operator reset"
+      (note! "operator-continuation" "s-operator-continuation" 6
+             (prompt "agent" "work"))
+      (is (zero? (pouch/note-turn-origin!
+                  "operator-continuation" "s-operator-continuation"
+                  (prompt "operator" "review"))))
+      (dotimes [_ 4]
+        (is (zero? (pouch/note-turn-origin!
+                    "operator-continuation" "s-operator-continuation"
+                    "provider continuation")))))
+
     (testing "ten non-operator turns stay below the token threshold"
       (let [calls (atom 0)]
         (with-redefs [pouch/session-context-tokens (constantly 199999)]

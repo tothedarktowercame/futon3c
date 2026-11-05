@@ -319,22 +319,31 @@
 (def ^:private current-turn-header-re
   #"(?ms)^--- CURRENT TURN ---[ \t]*\r?\n(.*?)(?:\r?\n---[ \t]*(?:\r?\n|$)|\z)")
 
-(defn- operator-turn-prompt?
-  "True only when the first CURRENT TURN header block says `Origin: operator`.
-   Text after that block is deliberately ignored, including quoted headers."
+(defn- turn-prompt-origin
+  "Classify the first CURRENT TURN header as :operator or :non-operator.
+   Return nil when PROMPT-STR is a provider/tool continuation with no turn
+   envelope. Text after the first block is deliberately ignored, including
+   quoted headers."
   [prompt-str]
   (when-let [[_ header] (re-find current-turn-header-re (str prompt-str))]
-    (boolean (re-find #"(?m)^Origin:[ \t]*operator[ \t]*\r?$" header))))
+    (if (re-find #"(?m)^Origin:[ \t]*operator[ \t]*\r?$" header)
+      :operator
+      :non-operator)))
 
 (defn note-turn-origin!
-  "Record one turn for (AGENT-ID, SESSION-ID), resetting the consecutive
-   non-operator count on an operator-origin CURRENT TURN header. Returns the
-   resulting count. Logs once when a run first becomes unwatched (> 5)."
+  "Record one semantic turn for (AGENT-ID, SESSION-ID), resetting the
+   consecutive non-operator count on an operator-origin CURRENT TURN header.
+   Headerless provider/tool continuations leave the count unchanged. Returns
+   the resulting count. Logs once when a run first becomes unwatched (> 5)."
   [agent-id session-id prompt-str]
   (let [k [(str agent-id) (some-> session-id str)]
-        operator? (operator-turn-prompt? prompt-str)
-        counts (swap! !turns-without-operator update k
-                      (fn [n] (if operator? 0 (inc (long (or n 0))))))
+        origin (turn-prompt-origin prompt-str)
+        counts (if origin
+                 (swap! !turns-without-operator update k
+                        (fn [n] (if (= :operator origin)
+                                  0
+                                  (inc (long (or n 0))))))
+                 @!turns-without-operator)
         n (long (get counts k))]
     (when (= 6 n)
       (println (format "[kangaroo] %s %d turns without an operator turn — auto-compact on"
