@@ -113,6 +113,12 @@ class AutoclockGateProbeTest(unittest.TestCase):
         self.assertFalse(PROBE.gate_present_at_seam(seam=seam_file(SEAM_WITHOUT_GATE)))
         self.assertTrue(PROBE.gate_present_at_seam(seam=seam_file(SEAM_WITH_GATE)))
 
+    def test_marker_in_a_comment_inside_the_seam_is_not_a_gate(self):
+        text = ("(defn create-invoke-job!\n  [req]\n"
+                "  ;; TODO: call admit-request here\n  (enqueue! req))\n"
+                "(defn other [] nil)\n")
+        self.assertFalse(PROBE.gate_present_at_seam(seam=seam_file(text)))
+
     def test_unreadable_repo_is_broken_not_holding(self):
         live = PROBE.probe_autoclock_gate(
             now=NOW, repo=pathlib.Path("/nonexistent-repo"),

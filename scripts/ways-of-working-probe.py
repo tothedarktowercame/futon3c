@@ -795,7 +795,8 @@ def gate_present_at_seam(seam=AUTOCLOCK_SEAM, marker=GATE_MARKER, name=SEAM_NAME
     rest = text[start:]
     nxt = re.search(r"^(\(defn |\(defn- |\(def )", rest[1:], re.M)
     body = rest[1:1 + nxt.start()] if nxt else rest
-    return marker in body
+    code = "\n".join(line.split(";", 1)[0] for line in body.splitlines())
+    return marker in code
 
 def probe_autoclock_gate(now=NOW, repo=AUTOCLOCK_REPO, seam=AUTOCLOCK_SEAM):
     violations = []
