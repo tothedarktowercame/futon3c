@@ -93,4 +93,85 @@ class IntentClassifierTest(unittest.TestCase):
         self.assertEqual(1, result["status-counts"]["met"])
         self.assertEqual(["b"], [x["session"] for x in result["violations"]])
 
+class StandingAndCensusTest(unittest.TestCase):
+    def test_standing_false_act_is_not_stale(self):
+        # Joe pasted "claude is thinking..." terminal output; 象 typed it as a
+        # clarify act but the act's own about marks it as pasted status text.
+        # Pasted text is not an open intent.  (standing? false alone is NOT
+        # the marker: 象 stamps it on real asks — codex-2's 10-21 pair — so
+        # a standing?-only filter would erase real violations.)
+        row = record()
+        row["acts"][0]["kind"] = "clarify"
+        row["acts"][0]["text"] = "claude is thinking..."
+        row["acts"][0]["standing?"] = False
+        row["acts"][0]["about"] = "the pasted 'claude is thinking' status line"
+        row["ports"]["still_open"] = [row["acts"][0]]
+        result = classify([row])
+        self.assertEqual(0, result["violation-count"])
+        self.assertNotIn("open", result["status-counts"])
+
+    def test_standing_false_real_ask_is_still_an_intent(self):
+        # Guard against over-filtering: codex-2-turn-1-f-s1-0 carries
+        # standing? false but is a real operator ask (no paste marker).
+        row = record(act="codex-2-turn-1-f-s1-0")
+        row["acts"][0]["standing?"] = False
+        row["acts"][0]["about"] = "claude-2's current activity"
+        result = classify([row])
+        self.assertEqual(1, result["status-counts"]["open"])
+        self.assertEqual(1, result["violation-count"])
+
+    def test_draft_artefact_not_counted_invalid(self):
+        # 象 sibling artefacts (.draft/.analysis/.candidates) are dicts
+        # without session_id/ports by design; they must not be read as turn
+        # records at all.
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = pathlib.Path(tmp)
+            (tmp / "turn-real.json").write_text(__import__("json").dumps(
+                record(session="s", act="a", age_days=0)))
+            for name in ("turn-x.draft.json", "turn-y.analysis.json",
+                         "turn-z.candidates.json"):
+                (tmp / name).write_text('{"stage": "draft"}')
+            valid, latest, invalid, unanalysed = PROBE.read_intent_records(tmp)
+            self.assertEqual(0, invalid)
+            self.assertEqual(1, len(valid))
+            self.assertEqual({"total": 0, "operator": 0}, unanalysed)
+
+    def test_unanalysed_operator_turn_is_typed_violation(self):
+        # A real turn record (session_id, created_at) with ports: null was
+        # never analysed: the intent was lost upstream.  It must surface as
+        # its own typed evidence line and a named violation, not as one
+        # silently skipped count.
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = pathlib.Path(tmp)
+            (tmp / "turn-un.json").write_text(__import__("json").dumps(
+                {"session_id": "u", "created_at": NOW.isoformat(),
+                 "origin": "operator", "ports": None}))
+            (tmp / "turn-empty.json").write_text(__import__("json").dumps(
+                {"session_id": "v", "created_at": NOW.isoformat(),
+                 "origin": "agent", "ports": None}))
+            valid, latest, invalid, unanalysed = PROBE.read_intent_records(tmp)
+            self.assertEqual({"total": 2, "operator": 1}, unanalysed)
+            result = PROBE.classify_intents(valid, latest, [], NOW,
+                                            lambda job: None, invalid, unanalysed)
+            self.assertEqual(1, result["violation-count"])
+            self.assertIn("operator-turns-never-analysed",
+                          [v["act-id"] for v in result["violations"]])
+            self.assertTrue(any("operator turns never analysed: 1 of 2" in e
+                                for e in result["evidence"]))
+
+    def test_unwitnessable_act_not_counted_stale(self):
+        # Finding 6: Zai seats write no assistant rows, so no probe can
+        # witness closure for their acts.  Stale-looking Zai acts are
+        # unwitnessable by construction — kept visible, not violations.
+        row = record(act="zai-5-turn-3-f-s1-0")
+        row["agent_id"] = "zai-5"
+        result = classify([row])
+        self.assertEqual(0, result["violation-count"])
+        self.assertEqual(1, result["unwitnessable-count"])
+        self.assertEqual(["zai-5-turn-3-f-s1-0"],
+                         [x["act-id"] for x in result["unwitnessable"]])
+
+
 if __name__ == "__main__": unittest.main()
