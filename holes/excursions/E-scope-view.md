@@ -538,3 +538,11 @@ spans: hovering "There" in the introduction outlined 552 words, the whole
 leaf-section scope, where the old page lit only the margin note; (4) the
 mixed-colour legend is replaced by a collapsed `Legend` listing span kinds.
 Screenshots in `~/notes/mark7-scopes/`.
+
+## Completion criteria
+
+- Adapter one (象 acts + pattern/memory retrieval sources) produces the shared data shape — check: `/home/joe/code/futon3c/scripts/scope_view_data.py` runs and its fixture regenerates byte-identically **Met.**
+- Adapter two (turn-analysis to owned-text spans) delivered and reviewed — check: the section at `/home/joe/code/futon3c/holes/excursions/E-scope-view.md:182` with the committed `turn-OfO380` spot check **Met.**
+- Adapter three (mark7 drop-in): the mark7 page renders its plates through the shared scope-view module with no regression Joe can see — check: the screen comparison at `/home/joe/code/futon3c/holes/excursions/E-scope-view.md:521` **Met.**
+- `xiang-scope-overlay.el` frozen (marks and jump-to-parent only) and retired once the page stands in for it in the REPL — check: a dated note in this file freezing it, then a retirement commit in futon3c **Not met.**
+- Per-turn memory retrieval recorded when it happens on the minus40 side (a per-turn context-retrieval-shaped record), so the view's `near` edges show what was actually in front of the agent — check: a minus40 producer writing per-turn retrieval records, consumed by adapter one **Not started.**

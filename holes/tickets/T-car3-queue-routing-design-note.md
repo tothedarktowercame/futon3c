@@ -73,3 +73,10 @@ The model in `test/futon3c/agency/car3_queue_model_test.clj` ratifies:
 - C3-C1 causal reconciliation: seq markers are present, unique for distinct
   turns, and stale/crossed turns are marked stale/reconciled rather than
   delivered as normal work.
+
+## Completion criteria
+
+- The model is ratified: the car3 model test passes for C3-Q1 ordered drain, C3-Q2 no-drop, C3-R1 per-surface reply routing, C3-D1 idempotency, C3-C1 causal reconciliation — check: `/home/joe/code/futon3c/test/futon3c/agency/car3_queue_model_test.clj` **Met.**
+- Capture gap closed at every in-repo accept site (stable :from/:surface/:msg-id; retry dedupe pinned by `accept-sites-must-supply-stable-msg-id-for-retry-dedupe` in turn_queue_v2_test.clj) — check: the test passes on futon3c master **Met.**
+- Phase 2 close condition: external/foreign surfaces either supply caller identity through adapters or the `"unknown"` fallback is formally accepted as the contract for non-futon3c ingress — check: a dated ruling line in this ticket **Not met.**
+- Accepted job/turn records persist the per-recipient sequence marker before any invoke — check: `:seq` present on accepted records read via `turn-queue/queue-view` **Not met.**

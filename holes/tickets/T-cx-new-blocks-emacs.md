@@ -33,3 +33,9 @@ first-turn wall time.
 ## Disposition
 Deferred. Bounded UX annoyance, not a correctness bug. Revisit after the drainer
 fix lands.
+
+## Completion criteria
+
+- Timing repro recorded: `cx new` from Joe's Emacs with Emacs-unresponsive time measured against the codex first-turn wall time, separating the agency wait from the first turn — check: numbers appended to this ticket **Not met.**
+- Joe's go-ahead recorded before any change (the ticket's own gate) — check: a dated line in this ticket or a bell record **Not met.**
+- The blocking path is converted (async spawn-and-return, or the wait removed) so `cx new` no longer blocks Emacs for the agency wait — check: `/home/joe/code/futon0/scripts/cx` has no synchronous wait_for_agency on the `new` path **Not started.**

@@ -46,3 +46,10 @@ a cascade. This is a source of examples, not a solution to R4 or R5.
    packet, after reviewing 1.)
 3. Diagram page rows and counts.
 4. Slow pass over the counts.
+
+## Completion criteria
+
+- Print: 馬 adds a per-pattern verdict (used / didn't-apply / missed) to its card and the Turn view shows it — check: turn records carry non-empty `:pattern_verdicts` (the port at `/home/joe/code/futon3c/scripts/xiangma_port_export.py:232` flips from not-built to counting rows) **Not met.**
+- Loop: 象's tags on turn n+1 attach as the outcome of row n — check: the `outcomeJoin` port in the same export reports joined rows **Not started.**
+- Diagram page: one row per turn in four columns (Read/Evaluate/Print/Loop) with per-pattern counts accumulating over a session — check: the page exists and renders a real session **Not started.**
+- Slow pass: the accumulated counts are used at least once (retrieval-weight adjustment, evidence against non-applying patterns, or missed-pattern link proposals) — check: a dated note here or in the pattern library recording the pass and its result **Not started.**

@@ -34,3 +34,9 @@ The preview disappears; focus remains in the REPL; its completed-turn Cooked
 line says `🐞 bugs attached`; the generated report names that REPL as context;
 and one pushed request reaches `codex-7`. Detaching removes the marker and
 subsequent reports remain durable without being pushed.
+
+## Completion criteria
+
+- The implemented UI contracts are landed in code (preview cleanup, background registration, focused-REPL context, Cooked-line marker, attach/detach/status) — check: `/home/joe/code/futon3c/emacs/report-futon-bug.el` and its test `/home/joe/code/futon3c/emacs/test/report-futon-bug-test.el` **Met.**
+- Live acceptance (continuous mode): saying 'bug report … rocket' with codex-7 attached leaves no preview, keeps focus in the REPL, shows `🐞 bugs attached` on the Cooked line, names that REPL in the report, and pushes one request to codex-7 — check: a dated witness note here or in the voxterm log **Not met.**
+- Detach: the marker is removed and subsequent reports stay durable without being pushed — check: same witness note **Not met.**
