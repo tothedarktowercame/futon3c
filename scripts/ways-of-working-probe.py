@@ -745,7 +745,49 @@ def probe_cascade_standards(summary):
             "last-observation": summary.get("s4-evidence", {}).get("as-of") or std.get("s4-evidence", {}).get("as-of"),
             "observed-at": iso(NOW), "violations": failing, "violation-count": len(failing), "evidence": ev}
 
-def probe_draw_pile(graph):
+# Joe, 2026-11-05: "Let's give the benefit of the doubt and assume that they
+# were all completed at the time of dispatch, punch them" — every E-kimi-task
+# file that existed in futon2 by this instant is punched. And: "In future
+# autoclock-wow will *not* assume that all dispatches completed" — an
+# E-kimi-task first added after this cutoff is punched only by its own
+# "DONE — confirmed <date> (Giraffe closing check)" status line.
+KIMI_AMNESTY_CUTOFF = "2026-11-05T00:40:00+00:00"
+
+def git_first_added(path):
+    """ISO datetime of the commit that first added PATH, or None. Walks up to
+    the containing repo; the oldest --diff-filter=A line is the first add."""
+    p = pathlib.Path(path)
+    repo = next((r for r in [p.parent, *p.parents] if (r / ".git").exists()), None)
+    if repo is None: return None
+    try: rel = p.relative_to(repo)
+    except ValueError: return None
+    rc, out, _ = run(["git", "log", "--diff-filter=A", "--format=%aI", "--", str(rel)], cwd=repo)
+    if rc != 0 or not out: return None
+    return parse_time(out.splitlines()[-1])
+
+def _punch_rules(stem, body_text, repair_store, first_added):
+    """Machine-minted completion rules (Joe, 2026-11-05). A punched item left
+    the drawable pile; it is not a violation and needs no placement."""
+    rules = []
+    if stem.startswith("T-repair-occ-"):
+        # "1 yes": DONE with a repair-store witness citing a dismissal or a
+        # landing sha. OPEN repair tickets stay drawable.
+        done = any(re.match(r"\*{0,2}status\*{0,2}:?\*{0,2}\s*\**\s*done\b", l, re.I)
+                   for l in body_text.splitlines()[:15])
+        occ = stem[len("T-repair-occ-"):]
+        store = pathlib.Path(repair_store) if repair_store else None
+        if done and store and (store / "ticket-links" / f"repair-occ-{occ}.edn").exists():
+            dismissed = bool(list((store / "dismissals").glob(f"repair-occ-{occ[:16]}*")))
+            sha = re.search(r"\b[0-9a-f]{40}\b", body_text)
+            if dismissed or sha: rules.append("repair-witness")
+    if stem.startswith("E-kimi-task-"):
+        if re.search(r"status\*{0,2}:?\*{0,2}\s*done\s*[—-]\s*confirmed", body_text[:2000], re.I):
+            rules.append("kimi-confirmed")
+        elif first_added is not None and first_added <= parse_time(KIMI_AMNESTY_CUTOFF):
+            rules.append("kimi-amnesty-2026-11-05")
+    return rules
+
+def probe_draw_pile(graph, commons_map_dir=None, ant_reads_dir=None, repair_store_dir=None):
     if not graph:
         return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
                 "violations": [], "violation-count": 0, "evidence": ["graph.json absent"]}
@@ -759,7 +801,8 @@ def probe_draw_pile(graph):
     total = len(stems) if stems else raw_total
     canonical = {i.get("stem") for i in items if _re.match(r"/home/joe/code/futon[0-9a-z]*/", i.get("path") or "")}
     placed = set()
-    for f in (HOME / "notes" / "commons-map").glob("placements-*.tsv"):
+    commons_map = pathlib.Path(commons_map_dir) if commons_map_dir else HOME / "notes" / "commons-map"
+    for f in commons_map.glob("placements-*.tsv") if commons_map.exists() else []:
         if f.name.startswith("placements-who"): continue
         for i, line in enumerate(f.read_text().splitlines()):
             if i == 0 or not line.strip(): continue
@@ -767,7 +810,7 @@ def probe_draw_pile(graph):
     # ant placements (claude-16, 2026-11-02 21:3xZ): an item counts as placed if a reader gave it a what,
     # a status and a cited way; those rows are committed under futon3c/holes/excursions/ant-reads/
     import json as _json
-    ant_dir = pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "ant-reads"
+    ant_dir = pathlib.Path(ant_reads_dir) if ant_reads_dir else pathlib.Path(__file__).resolve().parent.parent / "holes" / "excursions" / "ant-reads"
     ant_placed = set()
     for f in ant_dir.glob("*.A1.json") if ant_dir.exists() else []:
         try: r = _json.loads(f.read_text()).get("row") or {}
@@ -776,23 +819,42 @@ def probe_draw_pile(graph):
             ant_placed.add(r.get("stem") or f.name.split(".")[0])
     placed |= ant_placed
     committed = bool(ant_placed)  # the ant rows are on a committed path; the commons-map TSVs are not
-    unplaced = len(stems - placed) if stems else max(total - len(placed), 0)  # ids placed but not in the pile must not be subtracted (claude-16)
-    # claude-16 (2026-11-02 21:1xZ): over half the unplaced stems say closed in their own status line.
-    # A closed item needs an attestation upward (IT-4), not a placement; count the two apart.
-    _closed_re = _re.compile(r"^\*{0,2}status\*{0,2}:?\*{0,2}\s*.*\b(done|closed|complete[d]?|retired|superseded)\b", _re.I)
+    repair_store = repair_store_dir or "/home/joe/code/futon2/data/wm-repair-obligations"
     path_of = {}
     for i in items:
         st, pth = i.get("stem"), i.get("path") or ""
         if st and st not in path_of or (st and _re.match(r"/home/joe/code/futon[0-9a-z]*/", pth)): path_of[st] = pth
+    # punched items (Joe, 2026-11-05): completed machine-minted tickets leave
+    # the drawable pile; reported per rule, never as violations. An item that
+    # is placed is already out of the pile; punch is counted only for the rest
+    # so the per-rule counts are the effect on the drawable pile.
+    punch = {}
+    for st, pth in path_of.items():
+        if not pth or st in placed: continue
+        try: body = pathlib.Path(pth).read_text(errors="replace")
+        except Exception: continue
+        rules = _punch_rules(st, body, repair_store, git_first_added(pth))
+        if rules: punch[st] = rules[0]
+    drawable = stems - placed - set(punch)
+    unplaced = len(drawable) if stems else max(total - len(placed), 0)  # ids placed but not in the pile must not be subtracted (claude-16)
+    # claude-16 (2026-11-02 21:1xZ): over half the unplaced stems say closed in their own status line.
+    # A closed item needs an attestation upward (IT-4), not a placement; count the two apart.
+    # anchored 2026-11-05 (zai-5 audit): the status VALUE must start with the
+    # closure word, so "Status: open. Diagnosis complete" stays open.
+    _closed_re = _re.compile(r"^\*{0,2}status\*{0,2}:?\*{0,2}\s*\**\s*(done|closed|complete[d]?|retired|superseded)\b", _re.I)
     closed_unplaced = set()
-    for st in (stems - placed):
+    for st in drawable:
         try:
             head = pathlib.Path(path_of.get(st, "")).read_text(errors="replace").splitlines()[:15]
         except Exception:
             continue
         if any(_closed_re.search(l) for l in head): closed_unplaced.add(st)
-    open_unplaced = len(stems - placed) - len(closed_unplaced)
-    ev = [f"of the unplaced: {open_unplaced} open (need a placement), {len(closed_unplaced)} closed in their own status line (need an attestation upward, IT-4, not a placement; claude-16 finding 2026-11-02)",f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
+    open_unplaced = len(drawable) - len(closed_unplaced)
+    punch_counts = {r: sum(1 for v in punch.values() if v == r)
+                    for r in ("repair-witness", "kimi-amnesty-2026-11-05", "kimi-confirmed")}
+    ev = [f"of the unplaced: {open_unplaced} open (need a placement), {len(closed_unplaced)} closed in their own status line (need an attestation upward, IT-4, not a placement; claude-16 finding 2026-11-02)",
+          f"punched (completed machine-minted, not drawable, not violations): {len(punch)} items — repair-witness: {punch_counts['repair-witness']}, kimi-amnesty-2026-11-05: {punch_counts['kimi-amnesty-2026-11-05']}, kimi-confirmed: {punch_counts['kimi-confirmed']} (Joe rulings 2026-11-05; amnesty is dated, not a standing rule)",
+f"draw pile (unclocked missions, excursions, tickets): {total} distinct stems ({raw_total} items listed; the rest are worktree copies; {len(canonical)} stems on canonical repo paths)",
           f"placements read by the commons map: {len(placed) - len(ant_placed)} ids (advisory, under ~/notes) plus {len(ant_placed)} ant placements (what + status + cited way; committed under ant-reads/); {len(stems & placed) if stems else 0} of all placed ids are in the pile",
           "the pile on this page is the evidence of this failure"]
     return {"monitor": "on", "invariant": "failing" if unplaced or not committed else "holding",
