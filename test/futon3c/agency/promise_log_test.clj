@@ -80,3 +80,12 @@
            (try (promise-log/read-history) nil
                 (catch clojure.lang.ExceptionInfo error
                   (:reason (ex-data error))))))))
+
+(deftest first-format-evidence-ids-map-to-log-ids
+  ;; 2,207 promise-history rows from 2026-09-27/28 use e-<uuid> ids; the
+  ;; reconciler threw on the first one in an open chain.
+  (is (= "promise-log:e-3cfaa48d-a4de-40a7-afc0-ef127c9fbfd5"
+         (promise-log/hyperedge-id "e-3cfaa48d-a4de-40a7-afc0-ef127c9fbfd5")))
+  (is (= "promise-log:abc" (promise-log/hyperedge-id "promise-history:abc")))
+  (is (thrown? clojure.lang.ExceptionInfo (promise-log/hyperedge-id "e-not-a-uuid")))
+  (is (thrown? clojure.lang.ExceptionInfo (promise-log/hyperedge-id nil))))

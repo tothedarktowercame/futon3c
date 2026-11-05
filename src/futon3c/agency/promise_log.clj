@@ -7,13 +7,20 @@
            [java.time Instant]))
 
 (defn hyperedge-id
-  "Derive the stable operational id without changing promise-history identity."
+  "Derive the stable operational id without changing promise-history identity.
+   Rows from 2026-09-27/28 carry the first id format, e-<uuid> (2,207 rows);
+   some of their chains are still open, so they map to promise-log:e-<uuid>."
   [evidence-id]
-  (when-not (and (string? evidence-id)
-                 (str/starts-with? evidence-id "promise-history:"))
+  (cond
+    (and (string? evidence-id) (str/starts-with? evidence-id "promise-history:"))
+    (str "promise-log:" (subs evidence-id (count "promise-history:")))
+
+    (and (string? evidence-id) (re-matches #"e-[0-9a-f-]{36}" evidence-id))
+    (str "promise-log:" evidence-id)
+
+    :else
     (throw (ex-info "Promise history id has the wrong form"
-                    {:reason :invalid-promise-history-id :evidence/id evidence-id})))
-  (str "promise-log:" (subs evidence-id (count "promise-history:"))))
+                    {:reason :invalid-promise-history-id :evidence/id evidence-id}))))
 
 (defn entry->hyperedge
   "Turn one fixed promise-history entry into its lossless operational edge."
