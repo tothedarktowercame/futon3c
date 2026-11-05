@@ -6,6 +6,7 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zai-api :as zai]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.payload-store :as payload-store]
             [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.tools :as tools]))
 
@@ -683,9 +684,14 @@
 
 (deftest new-full-memory-turn-injects-before-round-one
   (let [store (atom {:entries {} :order []})
+        payload-root (str (java.nio.file.Files/createTempDirectory
+                           "zai-payload-test-"
+                           (make-array java.nio.file.attribute.FileAttribute 0)))
         calls (atom [])
         messages (atom nil)
         invoke (make-invoke {:memory-mode :full :evidence-store store})
+        prompt "--- CURRENT TURN ---\nSurface: test\n---\n\nreview this packet"
+        delivered (str "minus40 memories injected before round 1\nFACT\n\n" prompt)
         response {:enabled true
                   :memories [{:id "cc:-home-joe/agency-send-mode-brief-trap"
                               :score 0.5276}]
@@ -700,19 +706,38 @@
        #'memory-backend/boot-packet-string (constantly "")
        #'memory-backend/rehydration-string (constantly "")}
       (fn []
-        (is (= "done" (:result (invoke "review this packet" nil))))
-        (is (= "minus40 memories injected before round 1\nFACT\n\nreview this packet"
-               (get-in @messages [(dec (count @messages)) :content])))
+        (binding [zai/*dispatch-payload-store-root* payload-root]
+          (is (= "done" (:result (invoke prompt nil)))))
+        (is (= delivered (get-in @messages [(dec (count @messages)) :content])))
         (is (not (str/includes? (get-in @messages [0 :content]) "FACT")))
         (is (= ["timeout" "--signal=TERM" "20s" "python3" "-I"
                 "/home/joe/code/minus40/scripts/inject.py"
                 "--agent" "zai-test"]
                (first (first @calls))))
-        (is (= "review this packet" (second (first @calls))))
+        (is (= prompt (second (first @calls))))
         (is (= ["cc:-home-joe/agency-send-mode-brief-trap"]
                (:injected (turn-start-body store))))
         (is (= 17 (:injected-ms (turn-start-body store))))
-        (is (= "review this packet" (:prompt (turn-start-body store))))))))
+        (is (= prompt (:prompt (turn-start-body store))))
+        (is (= "--- CURRENT TURN ---\nSurface: test"
+               (:header (turn-start-body store))))
+        (is (= "dispatch-payloads" (:payload-store (turn-start-body store))))
+        (is (= (count delivered) (:payload-chars (turn-start-body store))))
+        (is (= delivered
+               (payload-store/resolve-text
+                payload-root (:payload-sha256 (turn-start-body store)))))))))
+
+(deftest payload-store-failure-is-recorded-and-the-turn-continues
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:memory-mode :none :evidence-store store})]
+    (with-redefs [zai/chat! (fn [_ _ _] (text-response "done"))
+                  payload-store/put-text! (fn [& _] (throw (ex-info "disk unavailable" {})))]
+      (binding [zai/*dispatch-payload-store-root* "/isolated-test-root"]
+        (is (= "done" (:result (invoke "still run" nil)))))
+      (is (= :payload-store-write-failed
+             (get-in (turn-start-body store) [:payload-error :kind])))
+      (is (= "disk unavailable"
+             (get-in (turn-start-body store) [:payload-error :message]))))))
 
 (deftest injection-is-typed-absent-and-never-fails-a-turn
   (doseq [{:keys [label memory-mode context shell-result expected-calls]}

@@ -13,6 +13,8 @@
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zaif-inputs]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.invoke-preview :as invoke-preview]
+            [futon3c.evidence.payload-store :as payload-store]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.pull-receipts :as pull-receipts]
@@ -60,6 +62,11 @@
 (def default-turn-timeout-ms
   "Default wall-clock envelope for one agentic Z.AI turn."
   (* 60 60 1000))
+
+(def ^:dynamic *dispatch-payload-store-root*
+  "Nil under tests unless a test explicitly supplies an isolated root."
+  (when-not (= "true" (System/getProperty "futon3c.test-run"))
+    payload-store/default-root))
 
 (defn- getenv [k]
   (some-> (System/getenv k) str/trim not-empty))
@@ -1312,20 +1319,37 @@
 (defn- persist-turn-start!
   "Persist the original turn PROMPT and its pre-round injection receipt."
   [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition
-           injected injected-ms]}]
+           injected injected-ms payload header]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-start
-     :body {:prompt (str prompt)
-            :injected (vec (or injected []))
-            :injected-ms (or injected-ms 0)
-            :requisition requisition
-            :prompt-chars (count (str prompt))
-            ;; Explicit join: Agency dispatch id -> this generated turn id.
-            :dispatch-id (str dispatch-id)
-            :turn-id (str turn-id)}})))
+     :body (cond-> {:prompt (str prompt)
+                    :injected (vec (or injected []))
+                    :injected-ms (or injected-ms 0)
+                    :requisition requisition
+                    :prompt-chars (count (str prompt))
+                    :header (or header "")
+                    ;; Explicit join: Agency dispatch id -> this generated turn id.
+                    :dispatch-id (str dispatch-id)
+                    :turn-id (str turn-id)}
+             (:sha256 payload)
+             (assoc :payload-sha256 (:sha256 payload)
+                    :payload-chars (:chars payload)
+                    :payload-bytes (:bytes payload)
+                    :payload-store "dispatch-payloads")
+             (:error payload) (assoc :payload-error (:error payload)))})))
+
+(defn- retain-provider-payload [text]
+  (try
+    (if *dispatch-payload-store-root*
+      (payload-store/put-text! *dispatch-payload-store-root* text)
+      {:error {:kind :payload-store-unconfigured
+               :message "dispatch payload store is disabled in this process"}})
+    (catch Throwable t
+      {:error {:kind :payload-store-write-failed
+               :message (or (.getMessage t) (.getName (class t)))}})))
 
 ;; (?U): mission ids may be non-ASCII, e.g. M-象-2000.
 (def ^:private work-target-re #"(?U)^[MET]-[^\W_][\w.-]*$")
@@ -2509,7 +2533,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                   {:block "" :injected [] :injected-ms 0})
                 prompt-with-memory (if (str/blank? block)
                                      prompt*
-                                     (str block "\n\n" prompt*))]
+                                     (str block "\n\n" prompt*))
+                payload (retain-provider-payload prompt-with-memory)]
             (persist-turn-start! {:evidence-store evidence-store
                                   :agent-id agent-id
                                   :sid sid
@@ -2517,6 +2542,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                   :turn-id turn-id
                                   :profile profile*
                                   :prompt prompt*
+                                  :payload payload
+                                  :header (invoke-preview/header-preview prompt*)
                                   :injected injected
                                   :injected-ms injected-ms
                                   :requisition (when admission
