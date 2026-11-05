@@ -36,6 +36,25 @@ Parts already in place:
 
 Everything here depends on E-evidence-cleanup.
 
+## Bearing on the Cascade Live thesis (Joe, 2026-11-05)
+
+If this works, it is the first large piece of progress on the apex question
+(`holes/excursions/apex-thesis-narration-2026-11-02.md:33`): "an account of itself structured
+enough that the work can steer itself, so that activity becomes inference rather than motion".
+Clean evidence plus a GCC that is written and queried as a graph are preconditions for that.
+They are not the inference itself, which still needs rules. M-ways-of-working is already
+writing such rules in its own terms:
+- the intermediate theses IT-1..IT-8 (`holes/excursions/intermediate-theses.json`). For example,
+  IT-2: "A closure without an independent witness is a reading, not a completion". IT-5: the
+  War Machine selects only from what survives IT-1..IT-3.
+- the probes of the ways of working (intents-are-tracked, feedback-reaches, …).
+- its chained-claim sweep, which joins an agent's final claim to Joe's next-turn stance. That
+  join runs over evidence parts 1 and 2 (turns and replies), which this cleanup makes findable.
+
+As GCC queries, these become inference rules evaluated over the graph. They stop being
+judgments made by reading JSON or prose. Writing them that way is a MAP-stage task shared
+with M-ways-of-working.
+
 ## Origin
 
 Joe searched the Evidence Landscape for a word from his own turn on 11-04
