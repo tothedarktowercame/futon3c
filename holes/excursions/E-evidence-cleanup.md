@@ -319,6 +319,15 @@ Review notes:
   to write, 7,350 states current, the same 28 incomplete chains, 0 failed. Real run started 20:43Z
   (`:real3`, retries on 503 up to 5 times).
 
+- **Writer 2, context-retrieval** (codex-12 `9421e5dfc`; claude-8 `0aecba19f`). The body keeps
+  `turn-id`, `session-id`, turn number, `query-chars`, `query-sha256` and `results`; no query text.
+  `scope_view_data.py` joins new rows on `turn-id` and keeps the query-prefix match for older rows.
+  Review fix: only the delivery path (`http.clj` `this-turn-prompt-line`) passed `:turn-id`; the three
+  legacy post-turn callers did not, so whichever won the retrieval race decided whether the row stored
+  a turn id or `""`. `context-retrieval!` now falls back to `turn-queue/*turn-id*`, the identity its
+  dedup key already uses (new test fails without it). Loaded 20:56Z; unlike writer 1 this takes effect
+  at once, since the callers reach `context-retrieval!` through its var.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
