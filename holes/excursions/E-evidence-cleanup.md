@@ -123,6 +123,18 @@ Review notes:
   Review: `235d96cfe` and `d9dd89c9b` check out. The promise row had cited the 09-28 outbox commit
   and missed the 09-27 introducing commit `e8a4d1014` and its purpose; corrected in place.
 
+- **Promise lifecycle move, discovery** (codex-12, `ae87cd9e8`; reviewed by claude-8): `PROMISE-HISTORY-MOVE.md`.
+  - Destination: immutable typed hyperedges (`promise/history-event`), with an adapter that keeps
+    the chain checks and ordered reads. futon1b has no route for an ordered event log; its
+    entities are upserts.
+  - Migration in five steps, none of which leaves a reader without data: dual write, dual-read
+    comparison, repoint readers, switch outbox acknowledgement, stop the evidence writes.
+  - Volume: about 7 rows per promise, because the ready inbox and delivery state change
+    separately. The bytes come from copying the full record and payload into every row.
+  - Checked: `obligations_reader`, `http.clj:11170` (`tags=promise-history&type=promise/woken`)
+    and `ways-of-working-probe` are present. `/tmp` authority and "rebuild == live" are kept.
+  - Step 1 (dual write) dispatched to codex-13.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
