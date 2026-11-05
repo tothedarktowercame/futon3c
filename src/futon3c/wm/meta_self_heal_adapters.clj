@@ -447,6 +447,9 @@
               "(click wm-click-c1dcd274, 2026-10-23: a declared {:pass 10} for a test that ran 15 assertions was refused as unattainable). ")
          :acceptance-review
          (str "This acceptance test was run before any repair, in the canonical checkout; the result is in :result. "
+              "How to read :result :cause-scope-receipt: :predicate-observed-result true means only that the healthy predicate was EVALUATED on the boundary's return value; whether it HELD is :healthy?, and the value found at the predicate's path is :predicate-observed-value. "
+              ":healthy? false with :failures 1 :errors 0 in the receipt is the red result that pins the injury; assert-repair signals it with an AssertionError, which clojure.test's summary counts as an error rather than a failure, so '0 failures, 1 errors' in :summary is expected for a correct red test "
+              "(click wm-click-4a702a29, 2026-11-05: a correct red test was refused twice on these two misreadings). "
               "Admit it only if it pins the injury (fails for the injury's reason), is the right test for the repair, and every assertion can pass after a correct repair. Inspect assertions for contradictions or impossible ordering constraints. When :author-unsatisfiable-claim is present, evaluate its exact assertion and reason as retained evidence and refuse the old test if the claim is sound. "
               "Every accepted answer must include :satisfiability {:can-pass-after-correct-repair? true :reason <nonblank-string>} explaining why the corrected assertions are satisfiable. "
               "Accept only with {:status :accepted :injury-id ... :source-record-pin ... :diagnosis-evidence-pin ... :proposal-evidence-pin ... :acceptance-test {:id ... :command ... :expected ...}}, "
