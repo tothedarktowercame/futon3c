@@ -5,6 +5,7 @@
 
 (def promise-id "park:state-1")
 (def record {:id promise-id :agent "debtor-1" :beneficiary "creditor-1"
+             :deadline "2026-11-05T19:00:00Z"
              :fulfilment-criterion {:kind :job-terminal-ok :job-id "job-1"}})
 (def transitions
   [:promise/park-made :promise/ready-enqueued :promise/ready-leased
@@ -36,7 +37,9 @@
     (is (= :promise/released (:terminal-transition closed)))
     (is (= "debtor-1" (:debtor closed)))
     (is (= "creditor-1" (:creditor closed)))
-    (is (= (:fulfilment-criterion record) (:fulfilment-criterion closed)))))
+    (is (= (:fulfilment-criterion record) (:fulfilment-criterion closed)))
+    (is (= (:deadline record) (:deadline closed)))
+    (is (true? (:checkable? closed)))))
 
 (deftest missing-middle-is-incomplete-not-a-guessed-state
   (let [state (promise-state/fold-state [(first rows) (nth rows 2)])]
@@ -57,10 +60,28 @@
     (is (some #{"promise-status:open"} (:hx/endpoints open-edge)))
     (is (not-any? #{"promise-status:closed"} (:hx/endpoints open-edge)))
     (is (some #{"promise-status:closed"} (:hx/endpoints closed-edge)))
+    (is (some #{"promise-obligation:checkable"} (:hx/endpoints closed-edge)))
     (is (not-any? #{"promise-status:open"} (:hx/endpoints closed-edge)))
     (is (= (:last-event-time (promise-state/fold-state rows))
            (:hx/valid-time closed-edge)))
     (is (not-any? nil? (vals (:hx/props open-edge))))))
+
+(deftest plain-release-keeps-checkable-index-but-noncheckable-does-not-get-it
+  (let [checkable (promise-state/state->hyperedge (promise-state/fold-state rows))
+        plain-record (dissoc record :fulfilment-criterion :deadline)
+        plain-rows (mapv #(assoc-in % [:evidence/body :history/payload-edn]
+                                    (pr-str {:record plain-record :changes []}))
+                         rows)
+        noncheckable (promise-state/state->hyperedge
+                      (promise-state/fold-state plain-rows))
+        explicit-rows (update rows 6 assoc-in [:evidence/body :release/basis] :explicit)
+        explicit-rows (update explicit-rows 6 assoc-in
+                              [:evidence/body :release/role] :creditor)]
+    (is (= :closed (get-in checkable [:hx/props :status])))
+    (is (some #{"promise-obligation:checkable"} (:hx/endpoints checkable)))
+    (is (not-any? #{"promise-obligation:checkable"} (:hx/endpoints noncheckable)))
+    (is (= :creditor
+           (:explicit-release-role (promise-state/fold-state explicit-rows))))))
 
 (deftest writer-replay-does-not-rewind-an-advanced-state
   (let [edges (atom {})]

@@ -1,6 +1,7 @@
 (ns futon3c.agency.promise-log
   "Operational hyperedge copy of prepared promise-history outbox entries."
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [futon3c.agency.rule-record :as store]
             [futon3c.substrate.client :as substrate])
   (:import [java.net URLEncoder]
@@ -27,7 +28,15 @@
   [entry]
   (let [body (:evidence/body entry)
         promise-id (:history/promise-id body)
-        agent (:evidence/author entry)]
+        agent (:evidence/author entry)
+        record (try (:record (edn/read-string (:history/payload-edn body)))
+                    (catch Throwable _ {}))
+        details (into (sorted-map)
+                      (remove (fn [[key _]]
+                                (or (contains? record key)
+                                    (= :awaiting key)
+                                    (= "history" (namespace key)))))
+                      body)]
     (when-not (and (string? promise-id) (not (str/blank? promise-id))
                    (string? agent) (not (str/blank? agent)))
       (throw (ex-info "Promise history entry lacks operational endpoints"
@@ -43,6 +52,8 @@
                         :history/transition-type (:evidence/type entry)
                         :history/event-time (:evidence/at entry)
                         :history/evidence-id (:evidence/id entry)}
+                 (seq details)
+                 (assoc :history/details-edn (pr-str details))
                  (some? (:history/predecessor body))
                  (assoc :history/predecessor (:history/predecessor body)))}))
 
@@ -99,17 +110,20 @@
     (throw (ex-info "Not a promise history hyperedge"
                     {:reason :invalid-promise-log-type :hx/id (:hx/id edge)})))
   (let [props (:hx/props edge)
+        details (some-> (:history/details-edn props) edn/read-string)
         endpoints (:hx/endpoints edge)]
     {:evidence/id (:history/evidence-id props)
      :evidence/type (:history/transition-type props)
      :evidence/author (second endpoints)
      :evidence/at (:history/event-time props)
-     :evidence/body (cond-> {:history/format 3
-                             :history/payload-edn (:history/payload-edn props)
-                             :history/promise-id (:history/promise-id props)
-                             :history/promise-sequence (:history/promise-sequence props)}
+     :evidence/body (merge
+                     details
+                     (cond-> {:history/format 3
+                              :history/payload-edn (:history/payload-edn props)
+                              :history/promise-id (:history/promise-id props)
+                              :history/promise-sequence (:history/promise-sequence props)}
                       (some? (:history/predecessor props))
-                      (assoc :history/predecessor (:history/predecessor props)))}))
+                      (assoc :history/predecessor (:history/predecessor props))))}))
 
 (defn read-history
   "Read the complete bounded operational promise-history population. OPTIONS

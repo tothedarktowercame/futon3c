@@ -1,5 +1,6 @@
 (ns futon3c.agency.promise-log-test
   (:require [clojure.test :refer [deftest is]]
+            [futon3c.agency.obligations :as obligations]
             [futon3c.agency.promise-log :as promise-log]))
 
 (def entry
@@ -30,6 +31,49 @@
                      :history/event-time "2026-11-05T12:00:00Z"
                      :history/evidence-id (:evidence/id entry)}}
          (promise-log/entry->hyperedge entry))))
+
+(deftest generic-details-round-trip-preserves-explicit-release-semantics
+  (let [record {:id "released" :agent "debtor" :beneficiary "creditor"
+                :fulfilment-criterion {:kind :manual}}
+        creation {:evidence/id "promise-history:create"
+                  :evidence/type :promise/park-made :evidence/author "debtor"
+                  :evidence/at "2026-11-05T12:00:00Z"
+                  :evidence/body {:history/format 3
+                                  :history/payload-edn (pr-str {:record record})
+                                  :history/promise-id "released"
+                                  :history/promise-sequence 1}}
+        release {:evidence/id "promise-history:release"
+                 :evidence/type :promise/released :evidence/author "debtor"
+                 :evidence/at "2026-11-05T12:01:00Z"
+                 :evidence/body {:history/format 3
+                                 :history/payload-edn (pr-str {:record record})
+                                 :history/promise-id "released"
+                                 :history/promise-sequence 2
+                                 :history/predecessor
+                                 {:sequence 1 :id (:evidence/id creation)
+                                  :type :promise/park-made}
+                                 :release/basis :explicit
+                                 :release/role :creditor
+                                 :release/by "creditor"
+                                 :act/stamp {:signer "creditor"}}}
+        rebuilt (mapv (comp promise-log/hyperedge->entry
+                            promise-log/entry->hyperedge)
+                      [creation release])
+        projected (obligations/obligations-as-of
+                   {:promise-history rebuilt :promise-outcomes []
+                    :agreements [] :offers []}
+                   "debtor" "2026-11-05T12:02:00Z")]
+    (is (= (select-keys (:evidence/body release)
+                        [:release/basis :release/role :release/by :act/stamp])
+           (select-keys (:evidence/body (second rebuilt))
+                        [:release/basis :release/role :release/by :act/stamp])))
+    (is (= [[:released "released"]]
+           (mapv (juxt :status :obligation/id) (:ignored projected))))
+    (is (empty? (:owes projected)))))
+
+(deftest row-without-details-omits-details-prop
+  (is (not (contains? (:hx/props (promise-log/entry->hyperedge entry))
+                      :history/details-edn))))
 
 (deftest write-requires-exact-readback-and-replays
   (let [edges (atom {})

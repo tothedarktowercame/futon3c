@@ -105,10 +105,13 @@
              (Instant/parse history-dual-write-at)))
 
 (defn- state-current? [states state]
-  (let [stored (get states (promise-state/state-id (:promise-id state)))]
-    (and stored
-         (>= (or (get-in stored [:hx/props :head-sequence]) 0)
-             (:head-sequence state)))))
+  (let [expected (promise-state/state->hyperedge state)
+        stored (get states (:hx/id expected))
+        stored-head (or (get-in stored [:hx/props :head-sequence]) 0)
+        expected-head (:head-sequence state)]
+    (or (> stored-head expected-head)
+        (and (= stored-head expected-head)
+             (promise-log/same-edge? expected stored)))))
 
 (defn- chunk-failures!
   [hx-type limit chunk requests]
@@ -181,14 +184,15 @@
                (let [edge (promise-state/state->hyperedge folded)]
                  (swap! planned-states conj edge)
                  (swap! edge-owners assoc (:hx/id edge) pid))))
-           (when (= :open (:status folded))
-             (doseq [row (filter before-history-dual-write? history)
+           (doseq [row history
+                   :when (or (= :open (:status folded))
+                             (not (before-history-dual-write? row)))
                      :let [edge (promise-log/entry->hyperedge row)]
                      :when (not (promise-log/same-edge?
                                  edge (get history-edges (:hx/id edge))))]
                (swap! counters update :history-edges-written inc)
                (swap! planned-history conj edge)
-               (swap! edge-owners assoc (:hx/id edge) pid))))))
+               (swap! edge-owners assoc (:hx/id edge) pid)))))
      ;; The prefetched heads are intentionally not checked again before each
      ;; chunk. A concurrent writer can only make this projection temporarily
      ;; stale; the stable ids and never-rewind prefetch make a rerun converge.

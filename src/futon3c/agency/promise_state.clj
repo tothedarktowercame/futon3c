@@ -36,7 +36,10 @@
         predecessor (:history/predecessor body)
         transition (:evidence/type row)
         evidence-id (:evidence/id row)
-        event-time (:evidence/at row)]
+        event-time (:evidence/at row)
+        explicit-release-role (when (and (= :promise/released transition)
+                                         (= :explicit (:release/basis body)))
+                                (:release/role body))]
     (cond
       (= :incomplete (:promise/state previous)) previous
 
@@ -53,16 +56,21 @@
 
         :else
         (if-let [record (creation-record row)]
-          {:promise-id promise-id
+          (let [criterion (:fulfilment-criterion record)
+                deadline (:deadline record)]
+            {:promise-id promise-id
            :status (if (contains? terminal-types transition) :closed :open)
            :head-sequence sequence
            :head-evidence-id evidence-id
            :terminal-transition (when (contains? terminal-types transition) transition)
            :debtor (:agent record)
            :creditor (:beneficiary record)
-           :fulfilment-criterion (:fulfilment-criterion record)
+           :fulfilment-criterion criterion
+           :deadline deadline
+           :checkable? (boolean (or criterion deadline))
+           :explicit-release-role explicit-release-role
            :creation-event-time event-time
-           :last-event-time event-time}
+           :last-event-time event-time})
           (incomplete promise-id :invalid-creation-payload
                       {:evidence-id evidence-id})))
 
@@ -85,7 +93,9 @@
                      :head-evidence-id evidence-id
                      :last-event-time event-time)
         (contains? terminal-types transition)
-        (assoc :status :closed :terminal-transition transition)))))
+        (assoc :status :closed :terminal-transition transition)
+        explicit-release-role
+        (assoc :explicit-release-role explicit-release-role)))))
 
 (defn fold-state
   "Fold one promise's complete history. Rows are ordered by promise sequence;
@@ -113,6 +123,7 @@
      :hx/endpoints (cond-> [promise-id]
                      debtor (conj (str "agent:" debtor))
                      creditor (conj (str "agent:" creditor))
+                     (:checkable? state) (conj "promise-obligation:checkable")
                      true (conj (str "promise-status:" (name (:status state)))))
      :hx/valid-time (:last-event-time state)
      :hx/props (present-values state)}))

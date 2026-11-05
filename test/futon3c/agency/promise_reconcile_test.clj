@@ -142,9 +142,16 @@
                   (chain (format "bulk-%04d" index) (< index 600)))))
        vec))
 
+(defn- history-edge-map [rows]
+  (into {} (map (fn [history-row]
+                  (let [edge (promise-log/entry->hyperedge history-row)]
+                    [(:hx/id edge) edge])))
+        rows))
+
 (deftest bulk-state-catch-up-uses-three-open-first-chunks-and-no-point-gets
   (let [rows (many-state-rows 1200)
-        edges (atom {}) writes (atom []) f (fixture rows edges writes)]
+        edges (atom (history-edge-map rows))
+        writes (atom []) f (fixture rows edges writes)]
     (with-store f
       (let [report (reconcile/run! {:page-sleep-ms 0})
             chunks @(:chunks f)]
@@ -158,7 +165,7 @@
 (deftest one-batch-payload-failure-is-reported-and-later-chunks-run
   (let [rows (many-state-rows 1200)
         failed-id (promise-state/state-id "bulk-0600")
-        edges (atom {}) writes (atom [])
+        edges (atom (history-edge-map rows)) writes (atom [])
         f (fixture rows edges writes #{failed-id})]
     (with-store f
       (let [report (reconcile/run! {:page-sleep-ms 0})]
@@ -166,6 +173,34 @@
         (is (= 1 (:failed-ids-count report)))
         (is (= [failed-id] (:failed-ids report)))
         (is (= 1199 (count @writes)))))))
+
+(deftest stale-details-and-state-shape-are-rewritten-then-left-current
+  (let [base (mapv #(assoc % :evidence/at "2026-11-05T18:00:00Z")
+                   (chain "rewrite" false))
+        rows (update base 1 assoc-in [:evidence/body :wake/reason] :dependency-ready)
+        folded (promise-state/fold-state rows)
+        expected-state (promise-state/state->hyperedge folded)
+        expected-history (mapv promise-log/entry->hyperedge rows)
+        stale-state (update expected-state :hx/props dissoc :checkable?)
+        stale-second (update (second expected-history) :hx/props
+                             dissoc :history/details-edn)
+        edges (atom (assoc (history-edge-map rows)
+                           (:hx/id stale-state) stale-state
+                           (:hx/id stale-second) stale-second))
+        writes (atom []) f (fixture rows edges writes)]
+    (with-store f
+      (let [first-report (reconcile/run! {:page-sleep-ms 0})]
+        (is (= 1 (:states-written first-report)))
+        (is (= 1 (:history-edges-written first-report)))
+        (is (= #{(:hx/id expected-state) (:hx/id stale-second)}
+               (set (map :hx/id @writes))))
+        (reset! writes [])
+        (reset! (:chunks f) [])
+        (let [second-report (reconcile/run! {:page-sleep-ms 0})]
+          (is (= 1 (:already-current second-report)))
+          (is (zero? (:states-written second-report)))
+          (is (zero? (:history-edges-written second-report)))
+          (is (empty? @writes)))))))
 
 (deftest edge-prefetch-overflow-refuses-instead-of-using-a-partial-map
   (let [rows (chain "overflow" false)
