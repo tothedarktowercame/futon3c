@@ -183,7 +183,16 @@
   ;; wm_click_repair_loop.py --continuous, owner claude-2; each click's
   ;; two-run Lean verdict is the criterion; repairs land as commits between
   ;; clicks. Issue-time accounting and the no-refund rule are unchanged.
-  288)
+  ;; Joe to claude-6, 2026-11-05 ~02:00Z, heard directly in claude-6's
+  ;; operator buffer, when 3 remained: "How about I allocate another 100
+  ;; clicks?  That sohuld be plenty without making it truly unbounded.  As
+  ;; long as we're making clear progress on the design it is worth it!"
+  ;; Allocated rises by 100 (288 -> 388); the 3 unspent stay. Lane:
+  ;; wm_click_repair_loop.py --continuous, owner claude-6, debugger attached,
+  ;; one self-heal shot then outside repair (Joe 2026-11-05), each repair a
+  ;; commit with a trail row. Issue-time accounting and the no-refund rule
+  ;; are unchanged.
+  388)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
