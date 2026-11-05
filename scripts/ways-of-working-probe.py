@@ -1012,6 +1012,59 @@ def probe_autoclock_gate(now=NOW, repo=AUTOCLOCK_REPO, seam=AUTOCLOCK_SEAM):
                          "counts 1 and 4 of the excursion's Probe section need per-job requisition data only the gate will write; this probe reads what exists today"],
             "denominator": f"{len(mints)} minted-excursion files in 24 h; gate {'present' if gate else 'absent'}"}
 
+# Way 0 — "we know the status of our ways of working" (Joe, 2026-11-04;
+# audit SUMMARY "Way 0"). A way's status counts as known only if (a) its
+# reading is fresh, (b) readable, (c) its probe has a bad-case test, and
+# (d) it declares a probe at all. This probe reads the other ways'
+# declarations and result files; it must never read its own result.
+STATUS_DECL = HOME / "code" / "futon3c" / "holes" / "excursions" / "ways-of-working.json"
+STATUS_FRESH = datetime.timedelta(minutes=30)
+# ways excluded from way 0, with the reason recorded in the evidence
+STATUS_EXCLUDED = {"real-users": "unprobed by design; values live in futon7 (cui-bono), Joe 2026-11-03"}
+# probe name -> test-file suffix where they differ (scripts/test_ways_of_working_<suffix>.py)
+STATUS_TEST_NAMES = {"feedback-reaches": "feedback", "intents-tracked": "intents",
+                     "operator-turns": "operator_turns", "autoclock-gate": "autoclock"}
+
+def probe_status_known(now=NOW, decl=STATUS_DECL, results_dir=None, scripts_dir=None):
+    results_dir = pathlib.Path(results_dir) if results_dir else RESULTS_DIR
+    scripts_dir = pathlib.Path(scripts_dir) if scripts_dir else pathlib.Path(__file__).resolve().parent
+    d = json.loads(pathlib.Path(decl).read_text())
+    violations, evidence = [], []
+    evidence.append("excluded: " + "; ".join(f"{k} — {v}" for k, v in STATUS_EXCLUDED.items()))
+    for w in d.get("ways", []):
+        way, name = w.get("id"), w.get("probe", "none")
+        if name == "status-known":  # never read its own result
+            continue
+        if way in STATUS_EXCLUDED:
+            continue
+        fails = []
+        if name == "none":
+            fails.append("d-declared")
+        else:
+            live = read_probe_result(results_dir, name)
+            first = str((live.get("evidence") or [""])[0])
+            if first.startswith("no result yet"):
+                fails.append("b-readable")
+                fails.append("a-fresh")
+            else:
+                observed = parse_time(live.get("observed-at"))
+                if not observed or abs(now - observed) > STATUS_FRESH:
+                    fails.append("a-fresh")
+                if live.get("monitor") == "broken" or live.get("invariant") == "unknown":
+                    fails.append("b-readable")
+            suffix = STATUS_TEST_NAMES.get(name, name)
+            if not (scripts_dir / f"test_ways_of_working_{suffix}.py").exists():
+                fails.append("c-can-fail")
+        line = f"{way}: " + (", ".join(fails) if fails else "known (a-d pass)")
+        if fails:
+            violations.append({"way": way, "probe": name, "fails": fails})
+        evidence.append(line)
+    return {"monitor": "on", "invariant": "failing" if violations else "holding",
+            "last-observation": iso(now), "observed-at": iso(now),
+            "violations": violations, "violation-count": len(violations),
+            "evidence": evidence,
+            "denominator": f"{len(violations)} of {len(d.get('ways', [])) - 2} ways (excl. status-known itself and {', '.join(STATUS_EXCLUDED)}) with a status that is not fully known"}
+
 RESULTS_DIR = HOME / ".cache" / "futon3c" / "ways-of-working" / "results"
 
 def build_probe_registry(summary=None, graph=None):
@@ -1027,7 +1080,8 @@ def build_probe_registry(summary=None, graph=None):
             "intents-tracked": lambda: probe_intents_tracked(),
             "operator-turns": lambda: probe_operator_turns(census=shared_operator_census()),
             "zone-health": lambda: probe_zone_health(),
-            "autoclock-gate": lambda: probe_autoclock_gate()}
+            "autoclock-gate": lambda: probe_autoclock_gate(),
+            "status-known": lambda: probe_status_known()}
 
 def broken_live(exc):
     return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),

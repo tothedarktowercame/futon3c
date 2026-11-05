@@ -18,6 +18,22 @@
  },
  "ways": [
   {
+   "id": "status-is-known",
+   "name": "We know the status of our ways of working",
+   "therefore": null,
+   "problem": "A way of working whose status is stale, unreadable, untested or undeclared is prose with a badge; nobody can tell which ways actually work.",
+   "invariant": "Every other declared way's status is known: its probe result is fresh (within 30 min), readable (not broken/unknown), backed by a bad-case test, and declared (probe not none). real-users stays unprobed by design (values in futon7); a way with no probe is listed as not built, never as fine (Joe 2026-11-04; audit SUMMARY Way 0).",
+   "declared-in": "~/notes/ways-of-working-audit/2026-11-04/SUMMARY.md (Way 0, Joe 2026-11-04)",
+   "built": [
+    "probe_status_known in scripts/ways-of-working-probe.py",
+    "scripts/test_ways_of_working_status.py"
+   ],
+   "probe": "status-known",
+   "pattern": null,
+   "patterns": [],
+   "scope-note": "reads only the other ways' declarations and result files; never its own result. Not-built ways (probe none) are violations of this way, listed as such."
+  },
+  {
    "id": "eat-your-own-tail",
    "name": "Make the running work its own observation surface",
    "therefore": null,
