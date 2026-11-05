@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import contextlib
 import datetime
+import difflib
 import importlib.util
 import io
 import json
@@ -41,6 +42,51 @@ class OperatorTurnProbeTest(unittest.TestCase):
         actual = wow.match_operator_turns(turns, rows, now)
         self.assertEqual(1, actual["matched"])
         self.assertEqual(1, len(actual["violations"]))
+
+    def test_clock_skewed_identical_turn_still_matches(self):
+        # Real false violation 1 (2026-11-04, claude-14): the futon1b evidence
+        # row lands 319 s before the transcript row, identical text.
+        now = datetime.datetime(2026, 11, 4, 0, 10, 34, tzinfo=UTC)
+        t = turn(now, "c33e6067", text="Mathlib 34 variant idea, spoken once and identically logged.")
+        rows = [evidence(now - datetime.timedelta(seconds=319), evidence_id="emacs-skew",
+                         text=t["text"])]
+        result = wow.match_operator_turns([t], rows, now + datetime.timedelta(minutes=1))
+        self.assertEqual(1, result["matched"])
+        self.assertEqual([], result["violations"])
+
+    def test_dictated_drift_turn_still_matches(self):
+        # Real false violation 2 (2026-11-04, claude-8): 426 s skew AND
+        # re-transcription drift (ratio 0.985 over ~4.4 KB, "end-of-day" vs
+        # "end-of-the-day").
+        now = datetime.datetime(2026, 11, 4, 3, 29, 46, tzinfo=UTC)
+        spoken = ("This is the end-of-day review. " + "We covered the pattern cascade and the "
+                  "ways of working today, and the probes are now audited one by one. ") * 8
+        transcribed = spoken.replace("end-of-day", "end-of-the-day").replace(
+            "audited one by one", "audited one-by-one")
+        t = turn(now, "45f399b3", text=spoken)
+        rows = [evidence(now - datetime.timedelta(seconds=426), evidence_id="emacs-drift",
+                         text=transcribed)]
+        self.assertLess(difflib.SequenceMatcher(None, spoken, transcribed).ratio(), 1.0)
+        self.assertGreaterEqual(len(spoken), 200)
+        result = wow.match_operator_turns([t], rows, now + datetime.timedelta(minutes=1))
+        self.assertEqual(1, result["matched"])
+        self.assertEqual([], result["violations"])
+
+    def test_different_text_within_window_stays_violation(self):
+        # The widened window must not match an unrelated turn: same transport,
+        # well inside 10 minutes, but different text (even a long one).
+        now = datetime.datetime(2026, 11, 3, 12, tzinfo=UTC)
+        spoken = "Please continue with the Mathlib port and close out the remaining sorries. " * 6
+        other = "Different work entirely: the git-clean probe needs the fixture dirs excluded. " * 6
+        t = turn(now - datetime.timedelta(minutes=10), "unrelated",
+                 vendor="claude", text=spoken)
+        rows = [evidence(now - datetime.timedelta(minutes=10, seconds=300),
+                         evidence_id="emacs-other", text=other)]
+        self.assertLess(difflib.SequenceMatcher(None, spoken, other).ratio(),
+                        0.95)
+        result = wow.match_operator_turns([t], rows, now)
+        self.assertEqual(0, result["matched"])
+        self.assertEqual(1, len(result["violations"]))
 
     def test_mature_missing_is_violation_but_young_missing_is_pending(self):
         now = datetime.datetime(2026, 11, 3, 12, tzinfo=UTC)
