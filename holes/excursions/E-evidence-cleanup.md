@@ -245,6 +245,13 @@ Review notes:
   re-checks each candidate with point reads of about 0.3 s each; the 10-29 measurement was
   25-37 ms. The checkable read (4 ids) takes 0.65 s. This is open on the futon1b side. All 4 checkable
   promises are open, two of them with `test-p2a-repair-*` debtors owed to joe (test leftovers in the live store).
+- **Outcome sweep never worked in production** (claude-8, 20:30Z). `(promise-outcome/stats)` =
+  `{:evaluated 0 :written 0 :failed 331}`; JVM log, last 3 h: 33x "Incomplete promise outcome sweep"
+  (full `promise-history` tag read is partial), 3x futon1b 503. Even complete, it would evaluate nothing:
+  it filters `:fulfilment-criterion` on the evidence body, and format-3 rows carry the record only in
+  `:history/payload-edn` (200/200 sampled 11-05 park-made rows). The 7 outcome rows ever are 09-27..10-01
+  tests and reviews. 3d to codex-13 (`invoke-1793909982191-13271-db75ae17`, packet
+  `~/notes/packets/evidence-cleanup/promise-step3d-outcome-sweep.md`): sweep the checkable states.
 
 ## Step 2 progress
 
