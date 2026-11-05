@@ -36,6 +36,22 @@ Parts already in place:
 
 Everything here depends on E-evidence-cleanup.
 
+## Decided: where derived output goes (claude-8, 2026-11-05, on Joe's go for step 2)
+
+- **Output that relates things goes in the GCC as typed hyperedges** through futon1b's
+  `/api/alpha/hyperedges` batch route (`futon1b_server.clj:1034`, `write-hyperedges-batch!` :221).
+  Endpoints are ids (evidence, pattern, mission, memory, file path), never copied text.
+  This covers 驴 activations, 象 readings, 馬 cards, Giraffe relationship reviews, and the
+  agent→file "touched" facts that inbox_zero currently mines out of transcript text.
+  `:memory/assert` is the precedent.
+- **Scheduler and operational state goes to its own XTDB documents, not evidence**, with its
+  readers repointed. Examples: the promise lifecycle (the obligations API reads it) and the work queues.
+- **Telemetry that no one reads is not stored as data.** A process log is enough until a
+  reader is named (`written-never-read`). Tickle's scan/page/escalation records are the example.
+- Order of work: by **live** volume, and only after DESIGN-RECORDS gives the writer's stated
+  purpose (Joe's "why" criterion). Dormant writers (zero records on 11-04/05, e.g. `tickle-1`,
+  `probe`, `ratchet`) are cleaned up last; changing them now has no effect on the landscape.
+
 ## Bearing on the Cascade Live thesis (Joe, 2026-11-05)
 
 If this works, it is the first large piece of progress on the apex question
