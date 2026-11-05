@@ -759,6 +759,70 @@ def probe_zone_health():
             "violation-count": len(fails), "evidence": ev,
             "denominator": f"{len(fails)} of {len(seen)} zone-health checks failing; bills and runway unwatched"}
 
+# E-autoclock-wow ("every dispatch names its META item",
+# holes/excursions/E-autoclock-wow.md): the gate (`admit-request` at the
+# `create-invoke-job!` seam) is designed but not built, so this probe reports
+# the gate's state from facts that exist today, not from the gate:
+#   1. whether `admit-request` appears in the `create-invoke-job!` body;
+#   2. how many `E-kimi-task-*.md` excursions were minted in the last 24 h
+#      (the per-dispatch-excursion workaround the gate should replace).
+# With no gate the reading is on/failing, never holding: the way's invariant
+# ("a request without an agreed requisition is refused") cannot hold while
+# nothing refuses anything (audit 2026-11-04; fix list item 8).
+AUTOCLOCK_WINDOW = datetime.timedelta(hours=24)
+AUTOCLOCK_REPO = HOME / "code" / "futon2"
+AUTOCLOCK_SEAM = HOME / "code" / "futon3c" / "src" / "futon3c" / "transport" / "http.clj"
+GATE_MARKER = "admit-request"
+SEAM_NAME = "create-invoke-job!"
+
+def recent_minted_kimi_tasks(now=NOW, repo=AUTOCLOCK_REPO, window=AUTOCLOCK_WINDOW):
+    """E-kimi-task-*.md files added to the futon2 repo inside the window."""
+    repo = pathlib.Path(repo)
+    rc, out, err = run(["git", "log", "--diff-filter=A", "--name-only", "--format=",
+                        f"--since={iso(now - window)}", "--",
+                        "holes/excursions/E-kimi-task-*.md"], cwd=repo, timeout=120)
+    if rc != 0:
+        raise RuntimeError(f"git log over {repo} failed: {err[:200]}")
+    return sorted({line.strip() for line in out.splitlines() if line.strip()})
+
+def gate_present_at_seam(seam=AUTOCLOCK_SEAM, marker=GATE_MARKER, name=SEAM_NAME):
+    """True when marker is called inside the seam def's own body."""
+    text = pathlib.Path(seam).read_text()
+    start = text.find(f"(defn {name}")
+    if start < 0: start = text.find(f"(defn- {name}")
+    if start < 0:
+        raise RuntimeError(f"seam {name} not found in {seam}")
+    rest = text[start:]
+    nxt = re.search(r"^(\(defn |\(defn- |\(def )", rest[1:], re.M)
+    body = rest[1:1 + nxt.start()] if nxt else rest
+    return marker in body
+
+def probe_autoclock_gate(now=NOW, repo=AUTOCLOCK_REPO, seam=AUTOCLOCK_SEAM):
+    violations = []
+    try:
+        gate = gate_present_at_seam(seam)
+        mints = recent_minted_kimi_tasks(now, repo)
+    except Exception as error:  # never turn missing evidence into holding
+        return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(now),
+                "last-observation": None, "violations": [], "violation-count": 0,
+                "evidence": [f"autoclock-gate read failed: {error}"],
+                "denominator": "unavailable because a required read failed"}
+    if not gate:
+        violations.append({"check": "gate-not-built",
+                           "summary": f"no {GATE_MARKER} at the {SEAM_NAME} seam; nothing refuses a request without an agreed requisition (owner: claude-4, E-autoclock-wow)"})
+    if mints:
+        violations.append({"check": "minted-excursion-workaround",
+                           "summary": f"{len(mints)} E-kimi-task-* excursions minted in the last 24 h; each is an agent-minted target with no operator turn behind it",
+                           "files": mints[:10]})
+    return {"monitor": "on",
+            "invariant": "holding" if (gate and not mints) else "failing",
+            "last-observation": iso(now), "observed-at": iso(now),
+            "violations": violations, "violation-count": len(violations),
+            "evidence": [f"gate {GATE_MARKER} at {SEAM_NAME}: {'present' if gate else 'absent (designed, zero lines; E-autoclock-wow gate design)'}",
+                         f"E-kimi-task-* minted in the last 24 h: {len(mints)}",
+                         "counts 1 and 4 of the excursion's Probe section need per-job requisition data only the gate will write; this probe reads what exists today"],
+            "denominator": f"{len(mints)} minted-excursion files in 24 h; gate {'present' if gate else 'absent'}"}
+
 RESULTS_DIR = HOME / ".cache" / "futon3c" / "ways-of-working" / "results"
 
 def build_probe_registry(summary=None, graph=None):
@@ -773,7 +837,8 @@ def build_probe_registry(summary=None, graph=None):
             "feedback-reaches": lambda: probe_feedback_reaches(shared_operator_census),
             "intents-tracked": lambda: probe_intents_tracked(),
             "operator-turns": lambda: probe_operator_turns(census=shared_operator_census()),
-            "zone-health": lambda: probe_zone_health()}
+            "zone-health": lambda: probe_zone_health(),
+            "autoclock-gate": lambda: probe_autoclock_gate()}
 
 def broken_live(exc):
     return {"monitor": "broken", "invariant": "unknown", "observed-at": iso(NOW),
