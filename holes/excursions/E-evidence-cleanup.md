@@ -363,6 +363,14 @@ Review notes:
   **Correction to the discovery:** it calls the request-commission archive durable, but on this host
   it is `/tmp/futon3c-invoke-jobs.edn.commissions` (the job store defaults to /tmp), which a reboot
   erases. Moving the job store is a server-config change for Joe.
+  Step A (codex-12 `c83bf4562`): `futon3c.evidence.payload-store` (sha256-named, sharded, atomic,
+  read-only objects; root `~/code/storage/dispatch-payloads`); Zai/Kimi store the exact
+  `prompt-with-memory` and `turn-start` gains `payload-sha256`/`-chars`/`-bytes`/`-store` and a
+  bounded `header`; `:prompt` kept; a store failure records `:payload-error` and the turn goes on.
+  Tests check the stored object against the exact `!messages` content with a memory block (40 tests /
+  209 assertions, rerun). Loaded 21:16Z; live root confirmed. Like writer 1, the new code sits in the
+  `make-invoke-fn` closure, so it takes effect when zai-1/象-1 re-register. Step B (readers) to
+  codex-12, `invoke-1793913257267-13342-f7f0cfda`.
 
 ## Step 2 progress
 
