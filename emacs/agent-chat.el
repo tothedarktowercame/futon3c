@@ -3276,6 +3276,87 @@ Operator turns queue here behind any in-flight turn, and unsolicited
 turns queue here behind an in-flight operator turn — each entry keeps its own
 :speaker and :origin so nothing is mis-attributed when it drains.")
 
+(defcustom agent-chat-queued-turns-file
+  (expand-file-name "agent-chat/queued-turns.el" user-emacs-directory)
+  "Durable store for turns accepted behind an in-flight turn.
+The store contains data only: transport functions and hooks are supplied by
+the recreated REPL buffer before a restored turn is drained."
+  :type 'file
+  :group 'agent-chat)
+
+(defun agent-chat--queue-store-key ()
+  "Return the durable queue key for the current agent/session, or nil."
+  (when (and (stringp agent-chat--agent-id)
+             (not (string-empty-p agent-chat--agent-id))
+             (stringp agent-chat--session-id)
+             (not (string-empty-p agent-chat--session-id))
+             (not (equal agent-chat--session-id "pending")))
+    (concat agent-chat--agent-id "\0" agent-chat--session-id)))
+
+(defun agent-chat--read-queue-store ()
+  "Read the durable queued-turn alist, returning nil for an absent store."
+  (when (file-readable-p agent-chat-queued-turns-file)
+    (condition-case err
+        (with-temp-buffer
+          (insert-file-contents agent-chat-queued-turns-file)
+          (read (current-buffer)))
+      (error
+       (message "agent-chat queued-turn store unreadable: %s"
+                (error-message-string err))
+       nil))))
+
+(defun agent-chat--write-queue-store (store)
+  "Atomically write queued-turn alist STORE."
+  (let ((dir (file-name-directory agent-chat-queued-turns-file)))
+    (make-directory dir t)
+    (let ((temporary (make-temp-file (expand-file-name ".queued-turns-" dir))))
+      (unwind-protect
+          (progn
+            (with-temp-file temporary
+              (let ((print-length nil) (print-level nil))
+                (prin1 store (current-buffer))
+                (insert "\n")))
+            (rename-file temporary agent-chat-queued-turns-file t))
+        (when (file-exists-p temporary)
+          (delete-file temporary))))))
+
+(defun agent-chat--serializable-queued-turn (entry)
+  "Return the data-only durable representation of queued ENTRY."
+  (list :text (plist-get entry :text)
+        :agent-name (plist-get entry :agent-name)
+        :speaker (plist-get entry :speaker)
+        :origin (plist-get entry :origin)
+        :provenance (copy-tree (plist-get entry :provenance))))
+
+(defun agent-chat--persist-queued-turns ()
+  "Persist the current session's accepted queued turns."
+  (when-let* ((key (agent-chat--queue-store-key)))
+    (let* ((store (agent-chat--read-queue-store))
+           (entries (mapcar #'agent-chat--serializable-queued-turn
+                            agent-chat--queued-operator-turns))
+           (cell (assoc key store)))
+      (if entries
+          (if cell
+              (setcdr cell entries)
+            (push (cons key entries) store))
+        (setq store (assoc-delete-all key store)))
+      (agent-chat--write-queue-store store))))
+
+(defun agent-chat--restore-queued-turns ()
+  "Restore this agent/session's data-only accepted FIFO from disk."
+  (when-let* ((key (agent-chat--queue-store-key))
+              (entries (cdr (assoc key (agent-chat--read-queue-store)))))
+    (unless agent-chat--queued-operator-turns
+      (setq agent-chat--queued-operator-turns (copy-tree entries)))))
+
+(defun agent-chat--hydrate-queued-transports (call-async-fn agent-name hooks)
+  "Attach current transport CALL-ASYNC-FN, AGENT-NAME and HOOKS to restored turns."
+  (dolist (entry agent-chat--queued-operator-turns)
+    (unless (functionp (plist-get entry :call-async-fn))
+      (plist-put entry :call-async-fn call-async-fn)
+      (plist-put entry :agent-name (or (plist-get entry :agent-name) agent-name))
+      (plist-put entry :hooks hooks))))
+
 (defun agent-chat--operator-speaker-p (speaker)
   "Non-nil when SPEAKER should be treated as the human operator."
   (equal (or speaker "joe") "joe"))
@@ -3291,7 +3372,8 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
                             :speaker speaker
                             :origin origin
                             :provenance (copy-tree (or agent-turn-origin-input
-                                                       (agent-turn-origin-decide origin speaker))))))))
+                                                       (agent-turn-origin-decide origin speaker)))))))
+  (agent-chat--persist-queued-turns))
 
 (defun agent-chat--queue-operator-turn (call-async-fn agent-name hooks)
   "Queue current input as an operator turn behind an in-flight turn."
@@ -3319,6 +3401,7 @@ turns queue here behind an in-flight operator turn — each entry keeps its own
            (origin (or (plist-get entry :origin) 'operator)))
       (setq agent-chat--queued-operator-turns
             (cdr agent-chat--queued-operator-turns))
+      (agent-chat--persist-queued-turns)
       (agent-chat--start-turn call-async-fn agent-name hooks text speaker origin))))
 
 (defun agent-chat--finish-pending-turn ()
@@ -3655,6 +3738,9 @@ additionally posted to the evidence HTTP endpoint."
     ;; mid switch-to-buffer).
     (user-error "No agent-chat prompt here — switch to an initialized REPL buffer"))
   (agent-chat--repair-input-properties!)
+  ;; Restored entries contain data only.  Reattach this buffer's current
+  ;; transport before the oldest accepted turn can be drained.
+  (agent-chat--hydrate-queued-transports call-async-fn agent-name hooks)
   (if (or (process-live-p agent-chat--pending-process)
           agent-chat--queued-operator-turns)
       ;; Unified queueing (Joe, 2026-10-19): operator input queues behind any
@@ -3776,6 +3862,7 @@ CONFIG keys:
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
+    (agent-chat--restore-queued-turns)
     (setq agent-chat--modeline-fn modeline-fn)
     (setq agent-chat--evidence-url evidence-url)
     (setq agent-chat--evidence-timeout (or evidence-timeout 1))

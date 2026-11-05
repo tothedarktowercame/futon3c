@@ -775,6 +775,63 @@ claude-vs-codex behavior arbitrarily different."
         (should (equal calls '("accepted first" "submitted later")))
         (should-not agent-chat--queued-operator-turns)))))
 
+(ert-deftest agent-chat-accepted-turn-survives-buffer-and-process-recreation ()
+  "A queued operator turn is restored and precedes a later send in a new buffer."
+  (let ((agent-chat-queued-turns-file (make-temp-file "agent-chat-turns-"))
+        calls callbacks)
+    (unwind-protect
+        (progn
+          (delete-file agent-chat-queued-turns-file)
+          (with-temp-buffer
+            (agent-chat-test--init-buffer)
+            (setq-local agent-chat--agent-id "codex-test"
+                        agent-chat--session-id "session-recreate")
+            (agent-chat--queue-turn (lambda (&rest _) 'old-process)
+                                    "agent" nil "accepted before loss"
+                                    "joe" 'operator)
+            ;; Agency has already accepted delivery of this continuation, so
+            ;; it belongs to the same durable FIFO rather than a second queue.
+            (agent-chat--queue-turn (lambda (&rest _) 'old-process)
+                                    "agent" nil "agency continuation"
+                                    "continuation" 'unsolicited)
+            (should (= 2 (length agent-chat--queued-operator-turns))))
+          (with-temp-buffer
+            (agent-chat-test--init-buffer)
+            (setq-local agent-chat--agent-id "codex-test"
+                        agent-chat--session-id "session-recreate")
+            (agent-chat--restore-queued-turns)
+            (should (= 2 (length agent-chat--queued-operator-turns)))
+            (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                       (lambda (&rest _) nil))
+                      ((symbol-function 'agent-chat-finish-turn-commits)
+                       (lambda (&rest _) nil))
+                      ((symbol-function 'agent-chat-scroll-to-bottom)
+                       (lambda (&rest _) nil))
+                      ((symbol-function 'redisplay) (lambda (&rest _) nil))
+                      ((symbol-function 'process-live-p) (lambda (_proc) nil)))
+              (insert "submitted after recreation")
+              (agent-chat-send-input
+               (lambda (text cb)
+                 (setq calls (append calls (list text))
+                       callbacks (append callbacks (list cb)))
+                 'new-process)
+               "agent")
+              (should (equal calls '("accepted before loss")))
+              (should (= 2 (length agent-chat--queued-operator-turns)))
+              (funcall (car callbacks) "restored reply")
+              (should (equal calls '("accepted before loss"
+                                     "agency continuation")))
+              (should (= 1 (length agent-chat--queued-operator-turns)))
+              (funcall (cadr callbacks) "continuation reply")
+              (should (equal calls '("accepted before loss"
+                                     "agency continuation"
+                                     "submitted after recreation")))
+              (should-not agent-chat--queued-operator-turns)
+              (should-not (cdr (assoc (agent-chat--queue-store-key)
+                                      (agent-chat--read-queue-store)))))))
+      (when (file-exists-p agent-chat-queued-turns-file)
+        (delete-file agent-chat-queued-turns-file)))))
+
 (ert-deftest agent-chat-unsolicited-queues-behind-operator-turn ()
   "The mirror race: an unsolicited resume arriving while an OPERATOR turn is in
 flight must QUEUE (and drain after), never signal — the park delivery path has
