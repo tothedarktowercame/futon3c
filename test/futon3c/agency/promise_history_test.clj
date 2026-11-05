@@ -257,3 +257,25 @@
                                                      :id "promise-history:pending"
                                                      :type :promise/park-made}}}]
     (is (= :pending (:reason (first (history/check-chains [later] [pending])))))))
+
+(deftest first-in-chain-row-matches-a-stored-copy-without-nil-keys
+  ;; futon1b does not store nil-valued keys: a first-in-chain row has
+  ;; :history/predecessor nil in the outbox but no such key when read back.
+  ;; Before 2026-11-05 that made the row a permanent :conflict, stuck in the
+  ;; outbox (live: 13 rows since 10-28, 16,249 conflicts).
+  (let [state (atom {:history-outbox {}})
+        rec {:id "park:nil-predecessor" :agent "agent" :session "session"
+             :awaiting #{"job"} :arrived {}}
+        conflicts-before (or (:conflict (history/stats)) 0)
+        eid (history/stage! state :promise/park-made rec 1000)
+        entry (get-in @state [:history-outbox eid])
+        stored (update entry :evidence/body
+                       #(into {} (remove (comp nil? val)) %))]
+    (is (contains? (:evidence/body entry) :history/predecessor))
+    (is (nil? (get-in entry [:evidence/body :history/predecessor])))
+    (swap! *evidence* #(-> % (assoc-in [:entries eid] stored)
+                           (update :order conj eid)))
+    (history/drain-now! state (fn [_]))
+    (is (empty? (:history-outbox @state))
+        "the stored copy without the nil key is the same row")
+    (is (= conflicts-before (or (:conflict (history/stats)) 0)))))

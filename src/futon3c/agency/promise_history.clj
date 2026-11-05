@@ -162,17 +162,25 @@
 (defn allocator-snapshot [] @(heads!))
 (defn restore-allocator! [snapshot]
   (locking !chain-cache (reset! (heads!) snapshot)))
+(defn- present-keys
+  "SELECT-KEYS without nil values. futon1b does not store a nil-valued key, so
+   a first-in-chain row (:history/predecessor nil) reads back without the key;
+   comparing raw select-keys made every such row a permanent conflict
+   (2026-11-05: 13 rows stuck in the outbox since 10-28, 16,249 conflicts)."
+  [m ks]
+  (into {} (remove (comp nil? val)) (select-keys m ks)))
+
 (defn- same-history-row? [a b]
-  (and (= (select-keys a [:evidence/id :evidence/type :evidence/at :evidence/author
-                          :evidence/session-id])
-          (select-keys b [:evidence/id :evidence/type :evidence/at :evidence/author
-                          :evidence/session-id]))
-       (= (select-keys (:evidence/body a)
-                       [:history/promise-id :history/promise-sequence
-                        :history/predecessor :history/payload-edn])
-          (select-keys (:evidence/body b)
-                       [:history/promise-id :history/promise-sequence
-                        :history/predecessor :history/payload-edn]))))
+  (and (= (present-keys a [:evidence/id :evidence/type :evidence/at :evidence/author
+                           :evidence/session-id])
+          (present-keys b [:evidence/id :evidence/type :evidence/at :evidence/author
+                           :evidence/session-id]))
+       (= (present-keys (:evidence/body a)
+                        [:history/promise-id :history/promise-sequence
+                         :history/predecessor :history/payload-edn])
+          (present-keys (:evidence/body b)
+                        [:history/promise-id :history/promise-sequence
+                         :history/predecessor :history/payload-edn]))))
 (defn drain-now! [state persist!]
   (register-pending! (vals (:history-outbox @state)))
   (doseq [[eid entry] (sort-by #(get-in (val %) [:evidence/body :history/promise-sequence])
