@@ -342,6 +342,14 @@ Review notes:
   spans should become offsets into the canonical record is open. (A duplicate work-mode bell,
   `…13306-54cf99a9`, failed without running.)
 
+- **Writer 3b, 馬 observations and cards** (codex-12 `c1f1559f2`; claude-8 `90ba2118a`). Runs of 8+
+  words copied from the source turn become `[quote <evidence-id>@start+len]`, offsets into the exact
+  source text (word-matched, so re-wrapped whitespace is caught); `quotes-replaced` counts them; the
+  card's nested strings get the same treatment. Review fix: codex matched only the operator turn, but
+  馬 reads the seat's reply in the same window and quotes it; every window row (and a harness turn's
+  final job text, as `job:<dispatch-id>`) is now a source with its own id. 25 + 37 Python tests pass.
+  `ma_observer.clj` runs the script fresh per turn, so no reload; no 馬 row since 18:19Z to check yet.
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
