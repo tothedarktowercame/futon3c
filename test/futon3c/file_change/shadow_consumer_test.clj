@@ -3,12 +3,15 @@
             [futon3c.file-change.journal :as journal]
             [futon3c.file-change.shadow-consumer :as shadow]))
 
-(defn authority [] {:run-id "g-1" :input-sha256 "abc123"})
+(defn authority [] {:run-id "g-1" :fresh? false
+                    :computed-sha256 "current123" :run-sha256 "old123"})
 
 (deftest startup-rebuilds-then-retains-a-due-demand-without-dispatch
   (let [j (atom (journal/empty-state 8))
         c (atom (shadow/empty-state 10 30 8))]
     (shadow/run-once! j c {:now-ms 0 :authority-read-fn authority})
+    (is (false? (get-in @c [:outcomes 0 :fresh?])))
+    (is (= "current123" (get-in @c [:outcomes 0 :computed-sha256])))
     (swap! j #(first (journal/observe % {:repo "r" :worktree "/r"
                                          :path "holes/missions/M-one.md" :content-id "h1"
                                          :operation :write :observed-at-ms 1})))
@@ -41,3 +44,18 @@
     (is (= :held (get-in health [:last-outcome :outcome])))
     (is (true? (get-in health [:consumer :rebuild-required?])))
     (is (empty? (:demands @c)))))
+
+(deftest failed-durable-sink-leaves-due-demand-pending-for-retry
+  (let [j (atom (journal/empty-state 8))
+        c (atom (shadow/empty-state 10 30 8))]
+    (shadow/run-once! j c {:now-ms 0 :authority-read-fn authority})
+    (is (thrown? Exception
+                 (shadow/run-once! j c
+                                   {:now-ms 10 :authority-read-fn authority
+                                    :demand-sink-fn
+                                    (fn [_] (throw (Exception. "disk full")))})))
+    (let [written (atom [])]
+      (shadow/run-once! j c {:now-ms 11 :authority-read-fn authority
+                             :demand-sink-fn #(swap! written conj %)})
+      (is (= 1 (count @written)))
+      (is (= 11 (:emitted-at-ms (first @written)))))))

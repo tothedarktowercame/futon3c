@@ -453,6 +453,31 @@
     (println "fresh:" (if fresh? "true" "false"))
     {:fresh? fresh? :newest newest :adapter-input-sha256 adapter-sha}))
 
+(defn current-missions-freshness
+  "Recompute the canonical missions adapter input and compare it with the
+  newest sealed field run. Read-only; unlike `newest-field-run`, this proves
+  whether the current input agrees with that run."
+  ([] (current-missions-freshness default-root))
+  ([root]
+   (let [newest (newest-field-run root)
+         manifest (when newest
+                    (edn/read-string
+                     (slurp (io/file root (:run-id newest) "manifest.edn"))))
+         edges-path (get-in manifest [:sources :edges :path])]
+     (when (and newest edges-path)
+       (let [adapter-result (-> (gm/missions->input
+                                 {:repos gm/default-repos
+                                  :edges-file edges-path})
+                                (update :input stale/annotate-input))
+             computed-sha (sha256 (.getBytes ^String
+                                             (print-edn (:input adapter-result))
+                                             "UTF-8"))
+             run-sha (:input-sha256 newest)]
+         {:fresh? (= computed-sha run-sha)
+          :computed-sha256 computed-sha
+          :run-sha256 run-sha
+          :run-id (:run-id newest)})))))
+
 ;; ---------------------------------------------------------------- main
 
 (defn- merge-args [args]

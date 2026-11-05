@@ -32,7 +32,8 @@
     (let [basis (journal/begin-rebuild @journal-state :giraffe-shadow)]
       (try
         (let [authority (authority-read-fn)]
-          (if-not (and (map? authority) (not-empty (:input-sha256 authority)))
+          (if-not (and (map? authority)
+                       (not-empty (:computed-sha256 authority)))
             (swap! consumer-state retain :outcomes
                    {:at-ms now-ms :outcome :held
                     :reason :giraffe-authority-unavailable})
@@ -43,7 +44,7 @@
                              (journal/rebuild-consumer
                               state :giraffe-shadow (:through-seq basis) now-ms
                               {:authority :giraffe-input
-                               :hash (:input-sha256 authority)
+                               :hash (:computed-sha256 authority)
                                :run-id (:run-id authority)})]
                          (vreset! receipt rebuilt)
                          state')))
@@ -57,7 +58,10 @@
                              (retain :outcomes
                                      {:at-ms now-ms :outcome :rebuilt
                                       :through-seq (:through-seq basis)
-                                      :authority-sha256 (:input-sha256 authority)})
+                                      :fresh? (boolean (:fresh? authority))
+                                      :computed-sha256 (:computed-sha256 authority)
+                                      :run-sha256 (:run-sha256 authority)
+                                      :run-id (:run-id authority)})
                              (retain-demands demands))))))))
         (catch Exception e
           (swap! consumer-state retain :outcomes
@@ -92,17 +96,31 @@
    :consumer (get-in (journal/health journal-state now-ms)
                      [:consumers :giraffe-shadow])})
 
+(defn record-refusal!
+  "Retain an isolated runtime refusal for watcher health."
+  [consumer-state now-ms e]
+  (swap! consumer-state retain :outcomes
+         {:at-ms now-ms :outcome :refused :reason :shadow-cycle-failed
+          :message (.getMessage ^Exception e)}))
+
 (defn run-once!
   "Consume bounded hints and retain projected outcomes without external calls."
   [journal-state consumer-state
-   {:keys [now-ms deadline-ms authority-read-fn warrant-demands read-limit]
-    :or {deadline-ms 300000 warrant-demands [] read-limit 256}}]
-  (ensure-registered! journal-state now-ms deadline-ms)
-  (rebuild-if-required! journal-state consumer-state now-ms authority-read-fn
-                        warrant-demands read-limit)
-  (consume-entries! journal-state consumer-state now-ms warrant-demands read-limit)
-  (swap! consumer-state
-         (fn [state]
-           (let [[projected due] (projector/due-demands (:projector state) now-ms)]
-             (-> state (assoc :projector projected) (retain-demands due)))))
-  (health @consumer-state @journal-state now-ms))
+   {:keys [now-ms deadline-ms authority-read-fn warrant-demands read-limit
+           demand-sink-fn]
+    :or {deadline-ms 300000 warrant-demands [] read-limit 256
+         demand-sink-fn (constantly nil)}}]
+  (locking consumer-state
+    (ensure-registered! journal-state now-ms deadline-ms)
+    (rebuild-if-required! journal-state consumer-state now-ms authority-read-fn
+                          warrant-demands read-limit)
+    (consume-entries! journal-state consumer-state now-ms warrant-demands read-limit)
+    (let [state @consumer-state
+          [projected due] (projector/due-demands (:projector state) now-ms)
+          due (mapv #(assoc % :emitted-at-ms now-ms) due)]
+      ;; Persist before clearing pending projector state. If the sink refuses,
+      ;; the demand remains pending and the next watcher cycle retries it.
+      (doseq [d due] (demand-sink-fn d))
+      (reset! consumer-state
+              (-> state (assoc :projector projected) (retain-demands due))))
+    (health @consumer-state @journal-state now-ms)))

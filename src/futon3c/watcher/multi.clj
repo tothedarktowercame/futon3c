@@ -29,6 +29,7 @@
             [futon3c.cyder :as cyder]
             [futon3c.file-change.journal :as file-change-journal]
             [futon3c.file-change.shadow-consumer :as file-change-shadow]
+            [futon3c.file-change.shadow-ledger :as shadow-ledger]
             [futon3c.giraffe.run :as giraffe-run]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
@@ -1371,6 +1372,23 @@
           (swap! journal-state file-change-journal/record-refusal at-ms (.getMessage e))
           {:outcome :refused :error (.getMessage e) :at-ms at-ms})))))
 
+(defn- poll-giraffe-freshness!
+  "Poll one single-flight freshness computation without blocking the watcher."
+  [probe]
+  (when probe
+    (if-let [task (:task @probe)]
+      (when (realized? task)
+        (try
+          (let [result @task]
+            (reset! probe {:task nil :last-result result})
+            result)
+          (catch Exception e
+            (reset! probe {:task nil :last-error (.getMessage e)})
+            nil)))
+      (do
+        (swap! probe assoc :task (future (giraffe-run/current-missions-freshness)))
+        nil))))
+
 ;; ---------- commit-vertex live ingestion ----------
 
 (defn query-repo-vars-by-file
@@ -1462,7 +1480,8 @@
 
 (defn run-cycle!
   [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
-           inbox-zero-options file-change-journal file-change-shadow]
+           inbox-zero-options file-change-journal file-change-shadow
+           file-change-giraffe-probe]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
@@ -1565,10 +1584,27 @@
     ;; Shadow only: consume hints and retain projected demand/health.  This
     ;; never invokes Giraffe, the registry, or a dispatcher.
     (when (and file-change-journal file-change-shadow)
-      (file-change-shadow/run-once!
-       file-change-journal file-change-shadow
-       {:now-ms (System/currentTimeMillis)
-        :authority-read-fn #(giraffe-run/newest-field-run giraffe-run/default-root)}))
+      (let [now-ms (System/currentTimeMillis)
+            read-authority #(if file-change-giraffe-probe
+                              (poll-giraffe-freshness! file-change-giraffe-probe)
+                              (giraffe-run/current-missions-freshness))]
+        (try
+          (file-change-shadow/run-once!
+           file-change-journal file-change-shadow
+           {:now-ms now-ms
+            :authority-read-fn read-authority
+            :demand-sink-fn
+            (fn [demand]
+              (shadow-ledger/append!
+               shadow-ledger/default-path
+               (if-let [authority (read-authority)]
+                 (assoc demand :authority authority)
+                 (throw (ex-info "Giraffe freshness probe pending"
+                                 {:error/type :giraffe-freshness-pending})))))})
+          (catch Exception e
+            (file-change-shadow/record-refusal! file-change-shadow now-ms e)
+            (binding [*out* *err*]
+              (println "[multi.file-change-shadow] refused:" (.getMessage e)))))))
     ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
     ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
     ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
@@ -1733,6 +1769,7 @@
         file-change-journal (atom (file-change-journal/empty-state
                                    file-change-journal-max-entries))
         file-change-shadow (atom (file-change-shadow/empty-state 30000 300000 256))
+        file-change-giraffe-probe (atom {:task nil})
         executor (Executors/newSingleThreadScheduledExecutor
                   (reify java.util.concurrent.ThreadFactory
                     (newThread [_ r]
@@ -1750,6 +1787,7 @@
                      :commit-ingest? commit-ingest?
                      :file-change-journal file-change-journal
                      :file-change-shadow file-change-shadow
+                     :file-change-giraffe-probe file-change-giraffe-probe
                      :inbox-zero-options inbox-zero-options}
         task #(#'safe-cycle! cycle-state)]
     (reset! !state {:executor executor
@@ -1763,6 +1801,7 @@
                     :commit-ingest? commit-ingest?
                     :file-change-journal file-change-journal
                     :file-change-shadow file-change-shadow
+                    :file-change-giraffe-probe file-change-giraffe-probe
                     :inbox-zero-options inbox-zero-options
                     :inbox-zero-writer writer
                     :inbox-zero (if inbox-zero-options
@@ -1807,7 +1846,8 @@
   (when-let [s @!state]
     (-> s
         (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer
-                :file-change-journal :file-change-shadow)
+                :file-change-journal :file-change-shadow
+                :file-change-giraffe-probe)
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
@@ -1848,5 +1888,6 @@
                  :commit-ingest? (:commit-ingest? s)
                  :file-change-journal (:file-change-journal s)
                  :file-change-shadow (:file-change-shadow s)
+                 :file-change-giraffe-probe (:file-change-giraffe-probe s)
                  :inbox-zero-options (:inbox-zero-options s)})
     (status nil)))

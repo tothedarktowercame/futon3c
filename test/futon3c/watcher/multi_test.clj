@@ -5,6 +5,8 @@
             [babashka.http-client :as http]
             [futon3.inbox-zero.watcher :as inbox-zero]
             [futon3c.cyder :as cyder]
+            [futon3c.giraffe.run :as giraffe-run]
+            [futon3c.watcher.freshness :as freshness]
             [futon3c.watcher.multi :as sut]
             [futon3c.file-change.journal :as file-change-journal]))
 
@@ -652,3 +654,36 @@
               :rearm :restart-watcher-after-file-change-shadow-reload}
              (:file-change-shadow (sut/status nil))))
       (finally (reset! sut/!state prior)))))
+
+(deftest shadow-refusal-does-not-abort-later-cycle-work
+  (let [prior @sut/!state
+        journal (atom (file-change-journal/empty-state 4))
+        shadow (atom {:projector nil :max-retained 4 :demands [] :outcomes []})
+        freshness-ran? (atom false)]
+    (try
+      (reset! sut/!state {:last-subtask nil})
+      (with-redefs [giraffe-run/current-missions-freshness
+                    (constantly {:fresh? true :computed-sha256 "x"
+                                 :run-sha256 "x" :run-id "g"})
+                    freshness/check+notify!
+                    (fn [_ _] (reset! freshness-ran? true) {:ok? true})]
+        (sut/run-cycle! {:roots [] :per-root-cache (atom {})
+                         :run-id 1 :event-n (atom 0) :cycle-n (atom 59)
+                         :cold-scan? false :commit-ingest? false
+                         :file-change-journal journal
+                         :file-change-shadow shadow})
+        (is @freshness-ran?)
+        (is (= :refused (:outcome (last (:outcomes @shadow))))))
+      (finally (reset! sut/!state prior)))))
+
+(deftest giraffe-freshness-probe-is-nonblocking-single-flight
+  (let [gate (promise)
+        task (future @gate)
+        probe (atom {:task task})
+        poll @#'sut/poll-giraffe-freshness!]
+    (is (nil? (poll probe)))
+    (is (identical? task (:task @probe)))
+    (deliver gate {:fresh? false :computed-sha256 "new" :run-sha256 "old"})
+    @task
+    (is (= "new" (:computed-sha256 (poll probe))))
+    (is (nil? (:task @probe)))))
