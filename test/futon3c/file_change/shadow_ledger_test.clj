@@ -19,3 +19,20 @@
     (is (= 0 (:misses score)))
     (is (= 1 (:covered-stale score)))
     (is (= 0 (:spurious-wakes score)))))
+
+(deftest repeated-unminted-stale-probes-share-the-last-fresh-window
+  (let [probes [{:at-ms 10 :fresh? true}
+                {:at-ms 20 :fresh? false :minted? false}
+                {:at-ms 30 :fresh? false :minted? false}]
+        score (ledger/score-probes [{:first-at-ms 15 :emitted-at-ms 21}] probes)]
+    (is (= 0 (:misses score)))
+    (is (= 2 (:covered-stale score)))))
+
+(deftest failed-probe-is-unscored-and-closes-the-window
+  (let [probes [{:at-ms 10 :fresh? true}
+                {:at-ms 20 :fresh? nil}
+                {:at-ms 30 :fresh? true}]
+        score (ledger/score-probes [{:first-at-ms 15}] probes)]
+    (is (= 1 (:unscored score)))
+    (is (= 0 (:misses score)))
+    (is (= 0 (:spurious-wakes score)))))

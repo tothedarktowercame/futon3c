@@ -29,9 +29,12 @@
   [journal-state consumer-state now-ms authority-read-fn warrant-demands read-limit]
   (when (= :rebuild-required
            (:status (journal/read-next @journal-state :giraffe-shadow read-limit)))
-    (let [basis (journal/begin-rebuild @journal-state :giraffe-shadow)]
+    (let [basis (journal/begin-rebuild @journal-state :giraffe-shadow)
+          _ (swap! consumer-state #(if (:rebuild-requested-at-ms %)
+                                     % (assoc % :rebuild-requested-at-ms now-ms)))
+          requested-at (:rebuild-requested-at-ms @consumer-state)]
       (try
-        (let [authority (authority-read-fn)]
+        (let [authority (authority-read-fn requested-at)]
           (if-not (and (map? authority)
                        (not-empty (:computed-sha256 authority)))
             (swap! consumer-state retain :outcomes
@@ -55,6 +58,7 @@
                               (:projector state) @receipt warrant-demands now-ms)]
                          (-> state
                              (assoc :projector projected)
+                             (dissoc :rebuild-requested-at-ms)
                              (retain :outcomes
                                      {:at-ms now-ms :outcome :rebuilt
                                       :through-seq (:through-seq basis)
@@ -106,8 +110,17 @@
 (defn record-held!
   "Retain a normal asynchronous wait state without calling it a refusal."
   [consumer-state now-ms reason]
-  (swap! consumer-state retain :outcomes
-         {:at-ms now-ms :outcome :held :reason reason}))
+  (swap! consumer-state
+         (fn [state]
+           (let [prior (last (:outcomes state))]
+             (if (and (= :held (:outcome prior)) (= reason (:reason prior)))
+               (update state :outcomes
+                       #(conj (vec (butlast %))
+                              (-> prior (assoc :last-at-ms now-ms)
+                                  (update :count (fnil inc 1)))))
+               (retain state :outcomes
+                       {:at-ms now-ms :last-at-ms now-ms :count 1
+                        :outcome :held :reason reason}))))))
 
 (defn run-once!
   "Consume bounded hints and retain projected outcomes without external calls."

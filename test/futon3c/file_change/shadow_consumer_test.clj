@@ -3,7 +3,7 @@
             [futon3c.file-change.journal :as journal]
             [futon3c.file-change.shadow-consumer :as shadow]))
 
-(defn authority [] {:run-id "g-1" :fresh? false
+(defn authority [& _] {:run-id "g-1" :fresh? false
                     :computed-sha256 "current123" :run-sha256 "old123"})
 
 (deftest startup-rebuilds-then-retains-a-due-demand-without-dispatch
@@ -26,7 +26,7 @@
 (deftest change-during-authority-read-is-consumed-after-rebuild
   (let [j (atom (journal/empty-state 8))
         c (atom (shadow/empty-state 10 30 8))
-        read-authority (fn []
+        read-authority (fn [_]
                          (swap! j #(first (journal/observe
                                            % {:repo "r" :worktree "/r"
                                               :path "holes/tickets/T-during.md"
@@ -70,8 +70,16 @@
         written (atom [])]
     (shadow/run-once! j c {:now-ms 30
                            :authority-read-fn
-                           (fn [] (swap! authority-calls inc) (authority))
+                           (fn [_] (swap! authority-calls inc) (authority))
                            :demand-sink-fn #(swap! written conj %)})
     (is (= 1 @authority-calls))
     (is (= 1 (count @written)))
     (is (empty? (filter #(= :refused (:outcome %)) (:outcomes @c))))))
+
+(deftest repeated-held-state-is-coalesced
+  (let [c (atom (shadow/empty-state 10 30 8))]
+    (dotimes [n 100]
+      (shadow/record-held! c n :giraffe-freshness-pending))
+    (is (= 1 (count (:outcomes @c))))
+    (is (= 100 (get-in @c [:outcomes 0 :count])))
+    (is (= 99 (get-in @c [:outcomes 0 :last-at-ms])))))

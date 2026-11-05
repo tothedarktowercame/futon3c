@@ -1376,22 +1376,35 @@
   "Return a result no older than MIN-AT-MS, starting at most one background
   computation when needed. Results remain reusable by rebuild and sink."
   [probe min-at-ms]
-  (when probe
+  (if-not probe
+    {:status :probe-not-armed}
+    (do
     (when-let [task (:task @probe)]
       (when (realized? task)
         (try
-          (let [result (assoc @task :at-ms (System/currentTimeMillis))]
-            (swap! probe assoc :task nil :last-result result :last-error nil))
+          (let [raw @task
+                result (when raw
+                         (assoc raw
+                                :started-at-ms (:task-started-at-ms @probe)
+                                :completed-at-ms (System/currentTimeMillis)))]
+            (swap! probe assoc :task nil :task-started-at-ms nil
+                   :last-result result
+                   :last-status (if result :available :legacy-invocation-absent)
+                   :last-error nil))
           (catch Exception e
-            (swap! probe assoc :task nil :last-error (.getMessage e))))))
-    (let [{:keys [task last-result]} @probe]
+            (swap! probe assoc :task nil :task-started-at-ms nil
+                   :last-error (.getMessage e))))))
+    (let [{:keys [task last-result last-status]} @probe]
       (cond
-        (and last-result (>= (:at-ms last-result) min-at-ms)) last-result
+        (and last-result (>= (:started-at-ms last-result) min-at-ms)) last-result
         task nil
+        (= :legacy-invocation-absent last-status)
+        {:status :legacy-invocation-absent}
         :else (do
-                (swap! probe assoc
-                       :task (future (giraffe-run/current-missions-freshness)))
-                nil)))))
+                (let [started-at-ms (System/currentTimeMillis)]
+                  (swap! probe assoc :task-started-at-ms started-at-ms
+                         :task (future (giraffe-run/current-missions-freshness))))
+                nil))))))
 
 ;; ---------- commit-vertex live ingestion ----------
 
@@ -1590,7 +1603,7 @@
     (when (and file-change-journal file-change-shadow)
       (let [now-ms (System/currentTimeMillis)
             read-authority #(poll-giraffe-freshness!
-                             file-change-giraffe-probe 0)]
+                             file-change-giraffe-probe %)]
         (try
           (file-change-shadow/run-once!
            file-change-journal file-change-shadow
@@ -1600,16 +1613,27 @@
             (fn [demand]
               (shadow-ledger/append!
                shadow-ledger/default-path
-               (if-let [authority
-                        (poll-giraffe-freshness!
-                         file-change-giraffe-probe (:first-at-ms demand))]
-                 (assoc demand :authority authority)
+               (if-let [authority (poll-giraffe-freshness!
+                                   file-change-giraffe-probe
+                                   (:first-at-ms demand))]
+                 (if (:computed-sha256 authority)
+                   (assoc demand :authority authority)
+                   (throw (ex-info "Giraffe authority unavailable"
+                                   {:error/type
+                                    (case (:status authority)
+                                      :legacy-invocation-absent
+                                      :giraffe-authority-invocation-absent
+                                      :probe-not-armed :probe-not-armed
+                                      :giraffe-freshness-pending)})))
                  (throw (ex-info "Giraffe freshness probe pending"
                                  {:error/type :giraffe-freshness-pending})))))})
           (catch Exception e
-            (if (= :giraffe-freshness-pending (:error/type (ex-data e)))
+            (if (contains? #{:giraffe-freshness-pending
+                             :giraffe-authority-invocation-absent
+                             :probe-not-armed}
+                           (:error/type (ex-data e)))
               (file-change-shadow/record-held!
-               file-change-shadow now-ms :giraffe-freshness-pending)
+               file-change-shadow now-ms (:error/type (ex-data e)))
               (do
                 (file-change-shadow/record-refusal! file-change-shadow now-ms e)
                 (binding [*out* *err*]

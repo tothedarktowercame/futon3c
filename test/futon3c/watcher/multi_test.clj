@@ -6,6 +6,8 @@
             [futon3.inbox-zero.watcher :as inbox-zero]
             [futon3c.cyder :as cyder]
             [futon3c.giraffe.run :as giraffe-run]
+            [futon3c.file-change.shadow-consumer :as shadow-consumer]
+            [futon3c.file-change.shadow-ledger :as shadow-ledger]
             [futon3c.watcher.freshness :as freshness]
             [futon3c.watcher.multi :as sut]
             [futon3c.file-change.journal :as file-change-journal]))
@@ -677,7 +679,7 @@
                                 :last-result {:fresh? true
                                               :computed-sha256 "x"
                                               :run-sha256 "x" :run-id "g"
-                                              :at-ms 0}})})
+                                              :started-at-ms Long/MAX_VALUE}})})
         (is @freshness-ran?)
         (is (= :refused (:outcome (last (:outcomes @shadow))))))
       (finally (reset! sut/!state prior)))))
@@ -685,7 +687,7 @@
 (deftest giraffe-freshness-probe-is-nonblocking-single-flight
   (let [gate (promise)
         task (future @gate)
-        probe (atom {:task task})
+        probe (atom {:task task :task-started-at-ms 0})
         poll @#'sut/poll-giraffe-freshness!]
     (is (nil? (poll probe 0)))
     (is (identical? task (:task @probe)))
@@ -695,5 +697,32 @@
     (is (nil? (:task @probe)))
     (is (= "new" (:computed-sha256 (poll probe 0)))
         "the same result remains available to a sink in this cycle")
-    (is (nil? (poll probe (inc (:at-ms (:last-result @probe)))))
-        "a later trigger starts a new probe instead of reusing stale data")))
+    (with-redefs [giraffe-run/current-missions-freshness (constantly nil)]
+      (is (nil? (poll probe (inc (:started-at-ms (:last-result @probe)))))
+          "a later trigger starts a new probe instead of reusing stale data"))))
+
+(deftest legacy-authority-cannot-enter-the-demand-ledger
+  (let [prior @sut/!state
+        journal (atom (file-change-journal/empty-state 4))
+        shadow (atom (assoc-in (shadow-consumer/empty-state 10 30 4)
+                               [:projector :giraffe-pending]
+                               {:first-at-ms 0 :last-at-ms 0 :changed-paths []
+                                :level-jump? true :trigger-basis :restart}))
+        task (future nil)
+        probe (atom {:task task :task-started-at-ms 0})
+        writes (atom [])]
+    @task
+    (try
+      (reset! sut/!state {:last-subtask nil})
+      (with-redefs [shadow-ledger/append! (fn [_ record]
+                                           (swap! writes conj record))]
+        (sut/run-cycle! {:roots [] :per-root-cache (atom {})
+                         :run-id 1 :event-n (atom 0) :cycle-n (atom 0)
+                         :cold-scan? false :commit-ingest? false
+                         :file-change-journal journal
+                         :file-change-shadow shadow
+                         :file-change-giraffe-probe probe})
+        (is (empty? @writes))
+        (is (= :giraffe-authority-invocation-absent
+               (:reason (last (:outcomes @shadow))))))
+      (finally (reset! sut/!state prior)))))
