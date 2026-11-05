@@ -167,6 +167,23 @@
           (is (= 1 (get-in summary [:composition :O1xO4])))
           (is (= {"gap" 1} (:holes summary))))))))
 
+(deftest standards-hold-no-true-by-construction
+  (testing "given empty inputs, no s1-s4 standard is the literal true (Joe 2026-11-05)"
+    (let [std (live/standards-map {:o1 #{} :o4 #{} :o5 #{} :hole-edges [] :now-ms 0})]
+      (doseq [k [:s1-regenerates :s2-evidence :s3-reconstitution :s4-honest-holes]]
+        (is (not= true (k std)) (str k " must not be a literal true"))
+        (is (= :unchecked (:state (k std))) (str k " reports itself unchecked"))
+        (is (string? (:reason (k std))) (str k " carries a reason")))
+      (is (false? (:s5-composed std)) "s5 is genuinely computed and fails on empty overlap")))
+  (testing "s4's reason distinguishes an empty section from present-but-unchecked edges"
+    (let [empty (live/standards-map {:o1 #{} :o4 #{} :o5 #{} :hole-edges [] :now-ms 0})
+          present (live/standards-map {:o1 #{} :o4 #{}
+                                       :o5 #{"x"} :hole-edges [{:hx/endpoints ["cascade/hole/x"]}]
+                                       :now-ms 0})]
+      (is (re-find #"no producer writes" (:reason (:s4-honest-holes empty))))
+      (is (= 1 (:holes-found (:s4-evidence present))))
+      (is (= :unchecked (:state (:s4-honest-holes present)))))))
+
 ;; --- §7 DISSOLUTION Checklist B: the per-section BODY structure -------------
 
 (deftest lineage-section-agent-to-target

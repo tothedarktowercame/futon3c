@@ -1,1 +1,56 @@
-{"as-of-ms":1790358119151,"consistent?":true,"dimensions":{"O3":164,"O2":0,"O1":176,"O4":234,"O5":0},"spine":{"canonical-mission-nodes":229,"O1-missions":176,"O4-missions":117},"composition":{"O1xO4":73,"O5xO1":0,"O4xO3":5,"O1xO3":4},"holes":{},"standards":{"s1-regenerates":true,"s2-evidence":true,"s3-reconstitution":true,"s4-honest-holes":true,"s4-evidence":{"checked":"cascade/hole-target","holes-found":0,"basis":"authoritative query succeeded; empty result is checked, not unread","as-of":"2026-09-25T17:41:59.151Z"},"s5-composed":true},"owners":{"O1":"claude-2","O3":"claude-4","O4":"claude-10","O5":"claude-4","O7":"claude-10","O2":"claude-1"}}
+{
+ "as-of-ms": 1790358119151,
+ "consistent?": true,
+ "dimensions": {
+  "O3": 164,
+  "O2": 0,
+  "O1": 176,
+  "O4": 234,
+  "O5": 0
+ },
+ "spine": {
+  "canonical-mission-nodes": 229,
+  "O1-missions": 176,
+  "O4-missions": 117
+ },
+ "composition": {
+  "O1xO4": 73,
+  "O5xO1": 0,
+  "O4xO3": 5,
+  "O1xO3": 4
+ },
+ "holes": {},
+ "standards": {
+  "s1-regenerates": {
+   "state": "unchecked",
+   "reason": "regeneration is not distinguished from answering: a fresh response proves the endpoint answered, not that the map regenerates from the substrate"
+  },
+  "s2-evidence": {
+   "state": "unchecked",
+   "reason": "claims are not yet inspected for carried evidence; no check exists"
+  },
+  "s3-reconstitution": {
+   "state": "unchecked",
+   "reason": "no reconstitution exercise exists; nothing is rebuilt from the page alone"
+  },
+  "s4-honest-holes": {
+   "state": "unchecked",
+   "reason": "no producer writes cascade/hole-target edges; an empty section is not evidence of zero holes"
+  },
+  "s4-evidence": {
+   "checked": "cascade/hole-target",
+   "holes-found": 0,
+   "basis": "authoritative query succeeded; empty result is checked, not unread (transport-level only: no producer writes this type yet)",
+   "as-of": "2026-09-25T17:41:59.151Z"
+  },
+  "s5-composed": true
+ },
+ "owners": {
+  "O1": "claude-2",
+  "O3": "claude-4",
+  "O4": "claude-10",
+  "O5": "claude-4",
+  "O7": "claude-10",
+  "O2": "claude-1"
+ }
+}
