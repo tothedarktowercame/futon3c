@@ -2,7 +2,10 @@
   (:require [clojure.test :refer [deftest is]]
             [futon3c.agency.artifact-activation :as activation]
             [futon3c.social.shapes :as shapes])
-  (:import [java.util.concurrent CountDownLatch TimeUnit]))
+  (:import [java.nio.charset StandardCharsets]
+           [java.security MessageDigest]
+           [java.util HexFormat]
+           [java.util.concurrent CountDownLatch TimeUnit]))
 
 (def observed-at "2026-09-28T21:00:00Z")
 (def descriptor
@@ -46,6 +49,34 @@
                (swap! ~store assoc (:evidence/id entry#) entry#)
                {:ok true :entry entry#})]
      ~@body))
+
+(defn- sha256-text [text]
+  (-> (HexFormat/of)
+      (.formatHex (.digest (MessageDigest/getInstance "SHA-256")
+                           (.getBytes text StandardCharsets/UTF_8)))))
+
+(deftest records-text-digest-without-copying-large-text
+  (let [marker "DISTINCTIVE-EVIDENCE-CLEANUP-MARKER"
+        text (str (apply str (repeat 11000 "x")) marker)
+        expected-sha (sha256-text text)
+        store (fake-store)]
+    (with-fake-recording store
+      (let [result (activation/record! store artifact text)
+            entry (:entry result)
+            printed (pr-str entry)]
+        (is (= :recorded (:status result)))
+        (is (= expected-sha (get-in entry [:evidence/body :text-sha256])))
+        (is (not (contains? (:evidence/body entry) :text)))
+        (is (not (contains? (:evidence/body entry) :text-truncated?)))
+        (is (not (.contains printed marker)))
+        (is (.contains printed expected-sha))
+        ;; Legacy records retain their copied text, but replay comparison
+        ;; ignores only the retired fields and does not append or conflict.
+        (swap! store assoc (:evidence/id entry)
+               (update entry :evidence/body assoc
+                       :text text :text-truncated? false))
+        (is (= :existing (:status (activation/record! store artifact text))))
+        (is (= 1 (count @store)))))))
 
 (deftest record-is-idempotent-and-input-sensitive
   (let [store (fake-store)]

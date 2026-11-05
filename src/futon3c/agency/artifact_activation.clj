@@ -11,7 +11,6 @@
            [java.util UUID]
            [java.util.concurrent Executors ThreadFactory]))
 
-(def ^:private max-text-bytes (* 64 1024))
 (def ^:private top-k 8)
 (def ^:private model-name "sentence-transformers/all-MiniLM-L6-v2")
 
@@ -148,15 +147,6 @@
          sort
          vec)))
 
-(defn- truncate-utf8 [text]
-  (let [bytes (.getBytes (str text) StandardCharsets/UTF_8)]
-    (if (<= (alength bytes) max-text-bytes)
-      [(str text) false]
-      (let [prefix (String. bytes 0 max-text-bytes StandardCharsets/UTF_8)]
-        ;; A cut inside a multibyte sequence becomes U+FFFD. Drop it so the
-        ;; stored text is valid and remains within the byte bound.
-        [(str/replace prefix #"\uFFFD$" "") true]))))
-
 (defn- record-id [artifact-id text-sha retrieval]
   (str "artifact-activation:"
        (UUID/nameUUIDFromBytes
@@ -172,7 +162,6 @@
   [artifact text retrieval hits]
   (let [text (str text)
         text-sha (sha256-text text)
-        [stored-text truncated?] (truncate-utf8 text)
         error (:error hits)
         ranked (if error []
                    (->> hits
@@ -188,8 +177,6 @@
         cited-set (set cited)
         weak (->> ranked (map :id) (remove cited-set) vec)
         body (cond-> {:artifact {:kind (:kind artifact) :id (:id artifact)}
-                      :text stored-text
-                      :text-truncated? truncated?
                       :text-sha256 text-sha
                       :retrieval retrieval
                       :library-commit nil
@@ -217,9 +204,14 @@
 (def ^:dynamic *descriptor-fn* retrieval-descriptor)
 
 (defn- comparable-entry [entry]
-  (select-keys entry [:evidence/id :evidence/subject :evidence/type
-                      :evidence/claim-type :evidence/author :evidence/at
-                      :evidence/body :evidence/tags]))
+  (let [comparable (select-keys entry [:evidence/id :evidence/subject :evidence/type
+                                       :evidence/claim-type :evidence/author :evidence/at
+                                       :evidence/body :evidence/tags])]
+    ;; Retained records written before text stopped being copied into evidence
+    ;; still replay exactly when every durable descriptor agrees.
+    (cond-> comparable
+      (map? (:evidence/body comparable))
+      (update :evidence/body dissoc :text :text-truncated?))))
 
 (defn record!
   "Retrieve and durably append one activation record. Exact replay is
