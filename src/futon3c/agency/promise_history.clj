@@ -182,38 +182,50 @@
           (present-keys (:evidence/body b)
                         [:history/promise-id :history/promise-sequence
                          :history/predecessor :history/payload-edn]))))
+
+(defn- shadow-write!
+  "Attempt the legacy evidence copy and classify its exact readback. This is
+   observability only: operational log/state durability controls outbox ack."
+  [entry]
+  (let [eid (:evidence/id entry)]
+    (try
+      (let [result (boundary/append! (backend) entry)
+            existing (when (or (:ok result)
+                               (= :duplicate-id (:error/code result)))
+                       (estore/get-entry* (backend) eid))]
+        (cond
+          (and existing (same-history-row? entry existing)) :shadow-ok
+          (or (:ok result) (= :duplicate-id (:error/code result))) :shadow-mismatch
+          :else :shadow-failed))
+      (catch Throwable _ :shadow-failed))))
+
 (defn drain-now! [state persist!]
   (register-pending! (vals (:history-outbox @state)))
   (doseq [[eid entry] (sort-by #(get-in (val %) [:evidence/body :history/promise-sequence])
                                (:history-outbox @state))]
-    (let [result (boundary/append! (backend) entry)
-          existing (when (or (:ok result) (= :duplicate-id (:error/code result)))
-                     (estore/get-entry* (backend) eid))
-          evidence-matches? (and existing (same-history-row? entry existing))]
-      (cond
-        evidence-matches?
+    (let [shadow-result (shadow-write! entry)]
+      (swap! !counts update shadow-result (fnil inc 0))
+      (try
+        ;; The operational history readback and state projection are the
+        ;; acknowledgement authority. The evidence append above is a shadow.
+        (promise-log/write! entry)
+        (promise-state/write! entry)
+        (swap! !counts update :written inc)
+        (when *after-outbox-append* (*after-outbox-append* entry))
+        (swap! !uncommitted-outbox-ids disj eid)
+        (locking !chain-cache (persist-heads! (heads!)))
+        (swap! state update :history-outbox dissoc eid)
+        (persist! @state)
+        (swap! !counts #(-> % (update :drained (fnil inc 0))
+                              (update :pending (fn [n] (max 0 (dec (or n 0)))))))
         (try
-          (promise-log/write! entry)
-          (promise-state/write! entry)
-          (swap! !counts update :written inc)
-          (when *after-outbox-append* (*after-outbox-append* entry))
-          (swap! !uncommitted-outbox-ids disj eid)
-          (locking !chain-cache (persist-heads! (heads!)))
-          (swap! state update :history-outbox dissoc eid)
-          (persist! @state)
-          (swap! !counts #(-> % (update :drained (fnil inc 0))
-                                (update :pending (fn [n] (max 0 (dec (or n 0)))))))
-          (try
-            (let [rec (:record (edn/read-string
-                                (get-in entry [:evidence/body :history/payload-edn])))]
-              (outcome/evaluate! (backend) eid rec (System/currentTimeMillis)))
-            (catch Throwable e (outcome/failed! e)))
-          (catch Throwable error
-            (outbox-failed! eid (:evidence/type entry)
-                            (or (:reason (ex-data error)) (.getMessage error)))))
-        (= :duplicate-id (:error/code result)) (swap! !counts update :conflict (fnil inc 0))
-        :else (outbox-failed! eid (:evidence/type entry)
-                              (or (:error/code result) :evidence-readback-mismatch))))))
+          (let [rec (:record (edn/read-string
+                              (get-in entry [:evidence/body :history/payload-edn])))]
+            (outcome/evaluate! (backend) eid rec (System/currentTimeMillis)))
+          (catch Throwable e (outcome/failed! e)))
+        (catch Throwable error
+          (outbox-failed! eid (:evidence/type entry)
+                          (or (:reason (ex-data error)) (.getMessage error))))))))
 ;; State atoms with a drain already queued. Every park/followup mutation calls
 ;; drain!, and each drain walks the whole outbox; with futon1b slow the queue
 ;; filled with redundant drains of the same entries (2026-10-28: 1,024 queued,

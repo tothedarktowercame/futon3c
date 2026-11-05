@@ -6,6 +6,8 @@
             [futon3c.agency.promise-outcome :as outcome]
             [futon3c.agency.parked-on :as park]
             [futon3c.agency.followup-queue :as queue]
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore]
             [futon3c.evidence.futon1b-backend :as f1b]))
 
 (def ^:dynamic *evidence* nil)
@@ -103,13 +105,15 @@
       (with-redefs [f1b/append-retry-ms 0]
         (binding [history/*backend* (f1b/make-futon1b-backend (str "http://127.0.0.1:" port))]
           (let [failed (:failed (history/stats))
+                shadow-failed (:shadow-failed (history/stats) 0)
                 woke (atom false)
                 result (park/park! request {})]
             (is (= :parked (:status result)))
             (park/note-completion! "dep" {:ok true} {:resume! (fn [_] (reset! woke true))})
             (is @woke)
             (is (history/await-writes! 5000))
-            (is (= 4 (- (:failed (history/stats)) failed)))
+            (is (= failed (:failed (history/stats))))
+            (is (= 4 (- (:shadow-failed (history/stats) 0) shadow-failed)))
             (is (empty? (:records (park/snapshot))))))))))
 
 (deftest followup-cancel-revalidate-and-expired-lease
@@ -162,6 +166,7 @@
   (let [state (atom {:history-outbox {}})
         persisted (atom nil)
         persist! #(reset! persisted %)
+        shadow-ok-before (:shadow-ok (history/stats) 0)
         rec {:id "park:allocator" :agent "agent" :session "session"
              :awaiting #{"job"} :arrived {}}]
     (history/stage! state :promise/park-made rec 1000)
@@ -178,7 +183,8 @@
       (is (= [1 2] (mapv #(get-in % [:evidence/body :history/promise-sequence]) entries)))
       (is (= 2 (count (set (map :evidence/id entries)))))
       (is (empty? (:history-outbox @state)))
-      (is (empty? (:history-outbox @persisted))))))
+      (is (empty? (:history-outbox @persisted)))
+      (is (= 1 (- (:shadow-ok (history/stats) 0) shadow-ok-before))))))
 
 (deftest outbox-waits-for-hyperedge-and-retries-without-losing-evidence
   (let [state (atom {:history-outbox {}})
@@ -208,6 +214,45 @@
     (history/drain-now! state persist!)
     (is (= 2 (count @*hyperedges*)))
     (is (= 1 (count (:entries @*evidence*))))))
+
+(deftest evidence-shadow-unavailable-does-not-block-operational-ack
+  (let [state (atom {:history-outbox {}})
+        persisted (atom nil)
+        eid (history/stage! state :promise/park-made
+                            {:id "park:shadow-down" :agent "agent" :awaiting #{} :arrived {}}
+                            1000)
+        before (history/stats)]
+    (with-redefs [boundary/append! (fn [& _] (throw (ex-info "evidence unavailable" {})))]
+      (history/drain-now! state #(reset! persisted %)))
+    (is (empty? (:history-outbox @state)))
+    (is (empty? (:history-outbox @persisted)))
+    (is (some? (get @*hyperedges* (promise-log/hyperedge-id eid))))
+    (is (some? (get @*hyperedges* "promise-state:park:shadow-down")))
+    (is (= 1 (- (:shadow-failed (history/stats) 0)
+                (:shadow-failed before 0))))
+    (is (= (:failed before) (:failed (history/stats))))
+    (is (not (contains? @@#'history/!failed-outbox-ids eid)))))
+
+(deftest conflicting-evidence-shadow-does-not-block-operational-ack
+  (let [state (atom {:history-outbox {}})
+        persisted (atom nil)
+        eid (history/stage! state :promise/park-made
+                            {:id "park:shadow-conflict" :agent "agent" :awaiting #{} :arrived {}}
+                            1000)
+        before (history/stats)]
+    (with-redefs [boundary/append! (fn [& _] {:error/code :duplicate-id})
+                  estore/get-entry* (fn [& _] {:evidence/id eid
+                                               :evidence/type :promise/not-the-row
+                                               :evidence/body {}})]
+      (history/drain-now! state #(reset! persisted %)))
+    (is (empty? (:history-outbox @state)))
+    (is (empty? (:history-outbox @persisted)))
+    (is (some? (get @*hyperedges* (promise-log/hyperedge-id eid))))
+    (is (some? (get @*hyperedges* "promise-state:park:shadow-conflict")))
+    (is (= 1 (- (:shadow-mismatch (history/stats) 0)
+                (:shadow-mismatch before 0))))
+    (is (= (:failed before) (:failed (history/stats))))
+    (is (not (contains? @@#'history/!failed-outbox-ids eid)))))
 
 (deftest state-write-failure-keeps-the-outbox-row
   (let [state (atom {:history-outbox {}})
