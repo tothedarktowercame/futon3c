@@ -122,8 +122,8 @@ Review notes:
   The bad-case test feeds 11 KB plus a marker; under the old 64 KB cap that marker would have
   been stored, so the test fails on the old code. Ran `artifact-activation-test` once (first
   run of a new test): 11 tests, 40 assertions, 0 failures. Live-loaded from master
-  16:53Z; the running JVM's `activation-record` returns a body without `:text`. Still to
-  check: the first new record in the sidecar after the reload. None had been written by 16:55Z.
+  16:53Z; the running JVM's `activation-record` returns a body without `:text`. Checked in
+  the store: the 5 records written 16:56–16:58Z have `:text-sha256` and no `:text` (about 2.7 KB each).
   It still writes to evidence. Moving the hits onto the operator turn as metadata waits on
   M-repl-circus's store decision.
 
