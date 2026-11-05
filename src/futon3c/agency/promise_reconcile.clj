@@ -109,24 +109,28 @@
                          :already-current 0
                          :incomplete-by-reason {}
                          :history-edges-written 0})]
-     (doseq [[pid history] (sort-by key groups)]
-       (let [folded (promise-state/fold-state history)]
-         (if (= :incomplete (:promise/state folded))
-           (swap! counters update-in [:incomplete-by-reason (:reason folded)]
-                  (fnil inc 0))
-           (let [current? (state-current? folded)]
-             (if current?
-               (swap! counters update :already-current inc)
-               (do
-                 (swap! counters update :states-written inc)
-                 (when-not dry-run?
-                   (write-edge! (promise-state/state->hyperedge folded)))))
-             (when (= :open (:status folded))
-               (doseq [row (filter before-history-dual-write? history)
-                       :when (not (history-edge-current? row))]
-                 (swap! counters update :history-edges-written inc)
-                 (when-not dry-run? (promise-log/write! row))))
-             (when-not dry-run? (swap! promise-state/!deferred dissoc pid))))))
+     ;; Open promises first: they are what current obligations read, and a full
+     ;; run writes thousands of edges at several seconds each.
+     (doseq [[pid history folded]
+             (->> groups
+                  (map (fn [[pid history]] [pid history (promise-state/fold-state history)]))
+                  (sort-by (fn [[pid _ folded]] [(if (= :open (:status folded)) 0 1) pid])))]
+       (if (= :incomplete (:promise/state folded))
+         (swap! counters update-in [:incomplete-by-reason (:reason folded)]
+                (fnil inc 0))
+         (let [current? (state-current? folded)]
+           (if current?
+             (swap! counters update :already-current inc)
+             (do
+               (swap! counters update :states-written inc)
+               (when-not dry-run?
+                 (write-edge! (promise-state/state->hyperedge folded)))))
+           (when (= :open (:status folded))
+             (doseq [row (filter before-history-dual-write? history)
+                     :when (not (history-edge-current? row))]
+               (swap! counters update :history-edges-written inc)
+               (when-not dry-run? (promise-log/write! row))))
+           (when-not dry-run? (swap! promise-state/!deferred dissoc pid)))))
      (let [report (merge {:promises-seen (count groups)
                           :pages-read pages
                           :dry-run? (boolean dry-run?)
