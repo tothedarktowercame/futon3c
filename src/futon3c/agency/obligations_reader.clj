@@ -74,8 +74,12 @@
             pages' (inc pages)
             rows' (into rows entries)
             cursor (:next-cursor response)]
+        ;; futon1b's type+end path emits no cursor and ignores `after`
+        ;; (futon1b_graph.clj hyperedges-indexed-type-end), so a full window
+        ;; with no cursor may be a silent cut at page-limit: refuse it.
         (when (or (:truncated response) (:partial? response)
-                  (and (:incomplete response) (nil? cursor)))
+                  (and (:incomplete response) (nil? cursor))
+                  (and (nil? cursor) (>= (count entries) page-limit)))
           (truncated! source pages' (count rows')))
         (cond
           (nil? cursor) {:rows rows' :pages pages'}
@@ -138,8 +142,15 @@
                              selected-states)
          history (mapv promise-log/hyperedge->entry (mapcat :rows history-pages))
          outcome-page (evidence-pages base outcome-tag t mode :promise-outcomes)
+         ;; Only outcomes for the selected promises: obligations.clj reports a
+         ;; fulfilment check whose promise has no creation row as :orphan-check,
+         ;; and the history here is bounded to this agent's open/checkable set.
+         selected-pids (set (map #(get-in % [:hx/props :promise-id]) selected-states))
          outcomes (->> (:rows outcome-page)
-                       (filter #(contains? (set outcome-types) (:evidence/type %))) vec)
+                       (filter #(contains? (set outcome-types) (:evidence/type %)))
+                       (filter #(contains? selected-pids
+                                           (get-in % [:evidence/body :promise-id])))
+                       vec)
          endpoint (str "agent:" agent-id)
          agreement-page (hyperedge-pages base :agreement/record endpoint t mode :agreements)
          agreement-edges (:rows agreement-page)

@@ -121,14 +121,47 @@
 (deftest fulfilment-check-survives-the-outcome-reader
   (let [check {:evidence/id "promise-check:x"
                :evidence/type :promise/fulfilment-check
-               :evidence/body {:promise-id "x" :verdict :unfulfilled}}]
+               :evidence/body {:promise-id "x" :verdict :unfulfilled}}
+        other {:evidence/id "promise-check:y"
+               :evidence/type :promise/fulfilment-check
+               :evidence/body {:promise-id "y" :verdict :unfulfilled}}
+        states [(state-edge "x" :open "a" "b" true)]]
+    (binding [reader/*request!*
+              (fn [_ _ path _]
+                (cond
+                  (str/includes? path "promise-outcome") {:entries [check other] :count 2}
+                  (str/includes? path "/hyperedges?") (hyperedge-response states path)
+                  :else (empty-response path)))]
+      (is (= [check]
+             (:promise-outcomes (reader/read-inputs "http://store" "a" t :as-of)))))))
+
+(deftest check-for-an-unselected-promise-is-not-an-orphan
+  ;; Live 2026-11-05: every agent showed the same 5-6 :orphan-check rows,
+  ;; checks of closed promises whose history the bounded read never fetches.
+  (let [check {:evidence/id "promise-check:closed"
+               :evidence/type :promise/fulfilment-check
+               :evidence/at "2026-11-05T19:30:00Z"
+               :evidence/body {:promise-id "closed-elsewhere" :verdict :unfulfilled}}]
     (binding [reader/*request!*
               (fn [_ _ path _]
                 (if (str/includes? path "promise-outcome")
                   {:entries [check] :count 1}
                   (empty-response path)))]
-      (is (= [check]
-             (:promise-outcomes (reader/read-inputs "http://store" "a" t :as-of)))))))
+      (let [inputs (reader/read-inputs "http://store" "agent-a" t :current)
+            result (obligations/obligations-as-of inputs "agent-a" t)]
+        (is (empty? (:incomplete result)))))))
+
+(deftest full-endpoint-window-without-cursor-refuses
+  ;; futon1b's type+end path returns no cursor, so 1000 rows may be a cut.
+  (binding [reader/*request!*
+            (fn [_ _ path _]
+              (if (str/includes? path "promise-status%3Aopen")
+                {:hyperedges (vec (repeat reader/page-limit {:hx/id "s"}))}
+                (empty-response path)))]
+    (is (= [:truncated-input :promise-states-open]
+           (try (reader/read-inputs "http://store" "a" t :current) nil
+                (catch clojure.lang.ExceptionInfo error
+                  ((juxt :reason :source) (ex-data error))))))))
 
 (deftest missing-middle-history-remains-an-incomplete-obligation
   (let [one (history-row "gap" 1 :promise/park-made "agent-a" "agent-b" nil {})
@@ -148,12 +181,16 @@
         (is (= :missing-transition (get-in result [:incomplete 0 :reason])))))))
 
 (deftest population-declares-actual-source-filters-and-counts
-  (let [used {:evidence/id "o" :evidence/type :promise/lapsed}
-        unused {:evidence/id "x" :evidence/type :something/else}]
+  (let [used {:evidence/id "o" :evidence/type :promise/lapsed
+              :evidence/body {:promise-id "p"}}
+        unused {:evidence/id "x" :evidence/type :something/else
+                :evidence/body {:promise-id "p"}}
+        states [(state-edge "p" :open "agent-a" "agent-b" false)]]
     (binding [reader/*request!*
               (fn [_ _ path _]
                 (cond
                   (str/includes? path "promise-outcome") {:entries [used unused]}
+                  (str/includes? path "/hyperedges?") (hyperedge-response states path)
                   :else (empty-response path)))]
       (let [population (get-in (reader/read-inputs "http://store" "agent-a" t :as-of)
                                [:basis :population])]
