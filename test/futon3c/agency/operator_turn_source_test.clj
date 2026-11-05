@@ -28,6 +28,15 @@
                       :awaiting (set jobs) :arrived {}}
              :changes [] :predecessor nil})}})
 
+(defn woken-edge [jobs]
+  {:hx/id "promise-log:woken" :hx/type :promise/history-event
+   :hx/endpoints ["park:one" "claude-17"]
+   :hx/props {:history/payload-edn (get-in (woken jobs) [:evidence/body :history/payload-edn])
+              :history/promise-id "park:one" :history/promise-sequence 2
+              :history/transition-type :promise/woken
+              :history/event-time "2026-09-28T00:00:00Z"
+              :history/evidence-id "promise-history:woken"}})
+
 (deftest park-resume-resolves-one-or-many-awaiting-jobs
   (is (= {:source-jobs ["job:a"] :basis :park-resume :park-id "park:one"}
          (source/source-jobs-for-turn operator parked-predecessor
@@ -78,39 +87,44 @@
           (cond
             (str/ends-with? path "/turn%3Ajoe") operator
             (str/ends-with? path "/turn%3Aagent") parked-predecessor
-            (str/includes? path "tags=promise-history") {:entries [(woken ["job:a"])]}
+            (str/includes? path "type=promise%2Fhistory-event")
+            {:hyperedges [(woken-edge ["job:a"])]}
             :else (throw (ex-info "unexpected request" {:path path}))))]
     (with-redefs [store/request! fake-request
+                  http/disclosure-audit-job (constantly nil)
                   http/standing-disclosures-for-job
                   (fn [job-id] [{:id "act:d" :source-job job-id :status :standing}])]
-      (let [response ((handler) {:request-method :get
-                                 :uri "/api/alpha/operator-turn/source-jobs"
-                                 :query-string "evidence=turn%3Ajoe"})
-            result (json/parse-string (:body response) true)]
-        (is (= 200 (:status response)) (pr-str result))
-        (is (= ["job:a"] (:source-jobs result)))
-        (is (= "act:d" (get-in result [:disclosures 0 :id])))
-        (is (every? #(= "GET" (first %)) @calls))
-        (is (every? nil? (map #(nth % 2) @calls)))))))
+      (binding [http/*woken-history-request!* fake-request]
+        (let [response ((handler) {:request-method :get
+                                   :uri "/api/alpha/operator-turn/source-jobs"
+                                   :query-string "evidence=turn%3Ajoe"})
+              result (json/parse-string (:body response) true)]
+          (is (= 200 (:status response)) (pr-str result))
+          (is (= ["job:a"] (:source-jobs result)))
+          (is (= "act:d" (get-in result [:disclosures 0 :id])))
+          (is (some #(str/includes? (second %) "end=park%3Aone") @calls))
+          (is (not-any? #(str/includes? (second %) "tags=promise-history") @calls))
+          (is (every? #(= "GET" (first %)) @calls))
+          (is (every? nil? (map #(nth % 2) @calls))))))))
 
-(deftest source-jobs-route-follows-history-cursor
-  ;; The woken row is on the second page; reading one page would give :none.
+(deftest source-jobs-route-refuses-full-cursorless-history-window
   (let [fake-request
         (fn [_ _ path _]
           (cond
             (str/ends-with? path "/turn%3Ajoe") operator
             (str/ends-with? path "/turn%3Aagent") parked-predecessor
-            (str/includes? path "cursor-id=c1") {:entries [(woken ["job:late"])]}
-            (str/includes? path "tags=promise-history")
-            {:entries [] :next-cursor {:at "2026-09-28T00:00:00Z" :id "c1"}}
+            (str/includes? path "type=promise%2Fhistory-event")
+            {:hyperedges (vec (repeat 1000 (woken-edge ["job:late"])))}
             :else (throw (ex-info "unexpected request" {:path path}))))]
     (with-redefs [store/request! fake-request
+                  http/disclosure-audit-job (constantly nil)
                   http/standing-disclosures-for-job (constantly [])]
-      (let [response ((handler) {:request-method :get
-                                 :uri "/api/alpha/operator-turn/source-jobs"
-                                 :query-string "evidence=turn%3Ajoe"})
-            result (json/parse-string (:body response) true)]
-        (is (= ["job:late"] (:source-jobs result)) (pr-str result))))))
+      (binding [http/*woken-history-request!* fake-request]
+        (let [response ((handler) {:request-method :get
+                                   :uri "/api/alpha/operator-turn/source-jobs"
+                                   :query-string "evidence=turn%3Ajoe"})]
+          (is (= 409 (:status response)))
+          (is (str/includes? (:body response) "truncated-input")))))))
 
 (deftest source-jobs-route-refuses-repeated-cursor
   (let [fake-request
@@ -118,12 +132,14 @@
           (cond
             (str/ends-with? path "/turn%3Ajoe") operator
             (str/ends-with? path "/turn%3Aagent") parked-predecessor
-            (str/includes? path "tags=promise-history")
-            {:entries [] :next-cursor {:at "2026-09-28T00:00:00Z" :id "same"}}
+            (str/includes? path "type=promise%2Fhistory-event")
+            {:hyperedges [] :next-cursor {:at "2026-09-28T00:00:00Z" :id "same"}}
             :else (throw (ex-info "unexpected request" {:path path}))))]
-    (with-redefs [store/request! fake-request]
-      (let [response ((handler) {:request-method :get
-                                 :uri "/api/alpha/operator-turn/source-jobs"
-                                 :query-string "evidence=turn%3Ajoe"})]
-        (is (= 409 (:status response)))
-        (is (str/includes? (:body response) "truncated-input"))))))
+    (with-redefs [store/request! fake-request
+                  http/disclosure-audit-job (constantly nil)]
+      (binding [http/*woken-history-request!* fake-request]
+        (let [response ((handler) {:request-method :get
+                                   :uri "/api/alpha/operator-turn/source-jobs"
+                                   :query-string "evidence=turn%3Ajoe"})]
+          (is (= 409 (:status response)))
+          (is (str/includes? (:body response) "truncated-input")))))))

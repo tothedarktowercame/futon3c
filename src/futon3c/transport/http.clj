@@ -132,6 +132,7 @@
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.promise-record :as promise-record]
             [futon3c.agency.promise-history :as promise-history]
+            [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.followup-queue :as followup-queue]
             [futon3c.inbox-zero.followup-validity :as followup-validity]
             [futon3c.dev.config :as dev-config]
@@ -11162,14 +11163,32 @@
           entry
           (recur (:evidence/in-reply-to entry) (inc depth)))))))
 
+(def ^:dynamic *woken-history-request!*
+  (fn [base method path body]
+    (rule-record-store/request! base method path body)))
+
 (defn- woken-history!
-  "Every promise/woken row of SESSION (see `evidence-all-pages!`)."
-  [base session]
-  (let [enc #(java.net.URLEncoder/encode (str %) "UTF-8")]
-    (evidence-all-pages!
-     base (str "/api/alpha/evidence?tags=promise-history&type="
-               (enc "promise/woken") "&session-id=" (enc session)
-               "&limit=1000"))))
+  "The promise/woken rows for PARK-ID from its bounded operational chain.
+   History edges do not carry session ids; the caller already has the exact
+   park/promise id stamped on the resumed predecessor."
+  [base park-id]
+  (let [enc #(java.net.URLEncoder/encode (str %) "UTF-8")
+        response (*woken-history-request!*
+                  base "GET"
+                  (str "/api/alpha/hyperedges?type=" (enc "promise/history-event")
+                       "&end=" (enc park-id) "&limit=1000&include-total=false") nil)
+        edges (vec (:hyperedges response))]
+    ;; futon1b's indexed type+end path has no usable cursor. A full window is
+    ;; not proof of exhaustion, so refuse instead of returning a short chain.
+    (when (or (>= (count edges) 1000) (:truncated response) (:partial? response)
+              (:incomplete response) (:next-cursor response))
+      (throw (ex-info "Promise woken history exceeded its bounded read"
+                      {:reason :truncated-input :source :promise-woken-history
+                       :park-id park-id :rows (count edges)})))
+    (->> edges
+         (map promise-log/hyperedge->entry)
+         (filter #(= :promise/woken (:evidence/type %)))
+         vec)))
 
 (defn standing-disclosures-for-job
   "Read JOB-ID's disclosure audit population and return standing choices."
@@ -11201,7 +11220,7 @@
                             (some-> source-ref str (str/starts-with? "park-")))
                     (str (or (get-in previous [:evidence/origin :source-id])
                              source-ref))))
-        history (if park-id (woken-history! base (:evidence/session-id operator)) [])
+        history (if park-id (woken-history! base park-id) [])
         resolved (operator-turn-source/source-jobs-for-turn
                   (assoc operator :chain/previous-agent-id (:evidence/id previous))
                   previous history)
