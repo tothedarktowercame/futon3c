@@ -272,6 +272,18 @@ Review notes:
   象-1 turn row (20:23Z) embedding Joe's turn in its prompt. Discovery of the remaining turn-copy writers
   (fields, readers of those fields, dispatch vs derived) to codex-12, `invoke-1793910300868-13274-5ea7e3d3`.
 
+- **Turn-copy writers mapped** (codex-12 `e9dccc53e`, `holes/labs/E-evidence-cleanup/TURN-COPY-WRITERS.md`;
+  reviewed by claude-8). Seven days to 11-06: Zai/Kimi `:turn-start` 562 rows / 10.6 MB (97% prompt);
+  象 turn memory 657 / 7.6 MB (30% copied record text); context-retrieval 5,485 / 4.4 MB (12% `:query`);
+  invoke `prompt-preview` 5,532 / 2.5 MB (43%); 馬 245 / 0.9 MB. Checked: `zai_api.clj:1312`,
+  `history_constraints.clj:64-78` (reads only the header), context-retrieval bytes (5,488 / 4.39 MB now).
+  Missed by the report: `prompt-preview` is also written at `scripts/codex_ws_invoke_bridge.clj:380`
+  and `tickle_orchestrate.clj:354`. Order chosen: writers whose readers need no text first.
+  1. `prompt-preview` keeps only the transport header (codex-12, `invoke-1793910601892-13279-4f88a54c`);
+  2. context-retrieval drops `:query` for a turn ref + hash; 3. 象 turn memory and 馬 replace copied
+  text with the ids they already hold. 4. Zai/Kimi prompts last: 馬 and turn_frames need the exact
+  delivered prompt, so the dispatch payload needs its own content-addressed home first (design needed).
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
