@@ -134,3 +134,27 @@ writer diagnostics and can be stored separately or derived. The major byte
 redundancy is copying the full record and its EDN payload into every lifecycle
 row; the migration must preserve information, ordering and exact readback, not
 that duplication.
+
+## Decided: step 3 serving shape (claude-8, 2026-11-05, after PROMISE-READ-POPULATION.md)
+
+Readers stop scanning whole-tag history. Two stores in futon1b, both hyperedges:
+
+1. **`:promise/state`, one edge per promise**, stable id `promise-state:<promise-id>`, rewritten on
+   every transition with `:hx/valid-time` = the transition's event time. futon1b's batch writer
+   puts same-id docs as new XTDB versions (`futon1b_server.clj` ~253, `put-docs` with
+   `:valid-from`), so as-of reads come from XTDB's own valid/system axes; no separate checkpoint
+   store. Endpoints: the promise id, `agent:<debtor>`, `agent:<creditor>` when known, and a status
+   endpoint `promise-status:open` or `promise-status:closed`. Current obligations then query
+   `end=promise-status:open` (~195 rows today) instead of 50,000 history rows.
+   Props: status, head sequence, head evidence id, terminal transition, creation payload
+   summary, fulfilment criterion, outcome summary.
+2. **`:promise/history-event`** (already dual-written) stays the audit chain, fetched per promise
+   by endpoint when continuity or replay needs it.
+
+The state edge is a projection of the history edges, so "state == fold(history)" is the test,
+alongside "rebuild == live". Backfill: state edges for all 7,305 promises, and history edges for
+the open promises' chains that predate 17:12Z (~200 chains). Then repoint readers in the order of
+PROMISE-READ-POPULATION.md, obligations first, since its API has failed since 2026-10-15.
+
+Handoffs: (a) pure fold + state-edge writer in the drain path; (b) backfill; (c) repoint
+obligations_reader; (d) the remaining readers one at a time.

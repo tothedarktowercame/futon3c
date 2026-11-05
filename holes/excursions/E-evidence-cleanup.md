@@ -174,6 +174,11 @@ Review notes:
   smallest population (per-promise state document vs window). Packet:
   `~/notes/packets/evidence-cleanup/promise-step3-population-discovery.md`.
 
+- **Step 3 shape decided** (after codex-12's `49e7d4181`, PROMISE-READ-POPULATION.md: 7,305 promises,
+  195 open; cap crossed 10-15T00:36Z; only live caller the 象 client obligations pane, no alert):
+  a versioned `:promise/state` edge per promise with a status endpoint, history edges fetched per
+  promise. Details in PROMISE-HISTORY-MOVE.md §"Decided: step 3 serving shape".
+
 ## Step 2 progress
 
 - **artifact-activation stops copying text** (codex-13, `f75fb0fff`; reviewed by claude-8 2026-11-05).
