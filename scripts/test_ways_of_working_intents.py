@@ -120,6 +120,14 @@ class StandingAndCensusTest(unittest.TestCase):
         self.assertEqual(1, result["status-counts"]["open"])
         self.assertEqual(1, result["violation-count"])
 
+    def test_about_mentioning_the_past_is_still_an_intent(self):
+        # "past" is not "pasted": an ask about the past week must stay open.
+        row = record(act="codex-2-turn-2-f-s1-0")
+        row["acts"][0]["about"] = "the past week's unfinished missions"
+        result = classify([row])
+        self.assertEqual(1, result["status-counts"]["open"])
+        self.assertEqual(1, result["violation-count"])
+
     def test_draft_artefact_not_counted_invalid(self):
         # 象 sibling artefacts (.draft/.analysis/.candidates) are dicts
         # without session_id/ports by design; they must not be read as turn

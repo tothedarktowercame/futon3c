@@ -311,7 +311,8 @@ def _is_pasted_text(act):
     standing asks too (codex-2's 10-21 pair, claude-15 f-s2-0); only the
     `about` field saying 'pasted' identifies non-intent text."""
     about = str(act.get("about") or "").lower()
-    return "past" in about  # pasted / paste
+    # "paste" (pasted/pastes), not "past": "the past week's plan" is a real ask.
+    return "paste" in about
 
 def read_intent_records(record_root=TURN_STORE, limit=INTENT_RECORD_LIMIT):
     """Read a bounded turn-record census and retain the newest valid row/session."""
