@@ -157,3 +157,13 @@ replaced row; the manifest written by migrate-derived drives an erase end to end
 5 tests / 27 assertions; test_text_search ALL PASS. Not loaded live (`futon1b-text` changed; load
 with the erase, after the snapshot).
 Erase waits for: the futon1b stop and snapshot (Joe), then Joe seeing the aa-1 counts.
+aa-1 result: paused once on sustained read pressure at 21,000 rows (the 60 s patience ran out),
+resumed by rerunning the same run id; complete ~23:58Z, 22,332 rows copied, 0 existing,
+257 MB + 13 MB of source bodies read. verify! (run aa-1): source 22,332 = manifest 22,332 = derived
+22,332, no body-hash mismatches, 20-row sample identical. Manifest:
+~/code/storage/derived-migration/artifact-activation/aa-1/.
+The family still grows: the writer (f75fb0fff) no longer copies text but still writes its rows to
+evidence (22,290 at inventory, 22,332 now). Before the erase can be called finished, the writer
+must write `:derived` instead, which needs the derived POST route live, i.e. the futon1b restart.
+Order after the stop: restart -> repoint writer -> final copy run (picks up rows since aa-1) ->
+verify -> Joe sees counts -> erase in 500-id batches.
