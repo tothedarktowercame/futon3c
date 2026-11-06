@@ -177,8 +177,12 @@
         (is (nil? (:ok resp)))
         (is (= :arxana.schema/unknown-body-field
                (get-in resp [:error :error/code]))))
-      (testing "registered-but-unimplemented ops answer :unsupported honestly"
+      (testing "scope/resolve is implemented (increment 4); malformed revisions are typed results"
         (let [resp (service/dispatch s p (req :scope/resolve
                                               {:artifact/revision-id "r"
                                                :strategy/revision-id "s"}))]
+          (is (nil? (:error resp)))
+          (is (= :invalid (get-in resp [:ok :result/status])))))
+      (testing "registered-but-unimplemented ops answer :unsupported honestly"
+        (let [resp (service/dispatch s p (req :entity/get {:entity/id "e1"}))]
           (is (= :unsupported (get-in resp [:error :error/category]))))))))
