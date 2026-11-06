@@ -121,6 +121,41 @@ Items: M-differentiable-substrate, M-differentiable-code,
 M-mission-scopes-into-substrate-2.
 Benefits: self, grant-math.
 
+## Section 4 material: the Futon City districts (built beside open)
+
+Joe (2026-11-06): the "Mission clusters" section of Cascade Live comes from
+clustering the Futon City graph, and behind its clustered patterns are
+missions completed or features built; a variant went into
+`~/code/powerbi-tui/skills-one-pager.md` (Figure 4, "~9,800 work-units across
+~200 mission-districts"). Below: the 12 districts served by
+`/api/alpha/cascade-real/graph` (`clusters`, 117 missions), each mission's
+status taken from the first Status line of its `M-*.md` (a regex, so a few may
+be misread; "no file" ones omitted).
+
+| district | built (closed) | still open |
+|---|---|---|
+| 00 futon1a / daily | futon1a-evidence, futon1a-rebuild, futon1a-workplan, forum-refactor, transport-adapters, f7-lead-report | pattern-ingest, essay-corpus-substrate, daily-scan, demonstration-foundry |
+| 01 agency unified | agency-unified-routing, invariant-queue-unstuck, portfolio-inference, reachable-from-boot, single-locus, structural-law, evidence-viewer-refinements, self-representing-stack | evaluate-policies, zaif-harness, bounded-disposition, cyder, state-snapshot-witness, vsatarcs-invariants-integration, trip-journal |
+| 02 typed holes | operational-readiness, pilot-appearance, typed-holes, typed-holes-example-first-flights, explore-aiqa | none |
+| 03 substrate live | live-geometric-stack, bounded-in-flight-state | chipwitz-corps, mission-scopes-into-substrate-2, populate-substrate-2, the-perfect-crime, web-arxana-ui-improvements, war-machine-wiring, live-efe-map, metric-harness |
+| 04 stack code | futonzero-capability, aif-head, futon3x-e2e, memes-arrows-patterns-diagrams, three-column-stack | patterns-done-right, the-futon-stack, text-sidecar, stack-inhabitation, categorical-code, differentiable-code, a-sorry-enterprise, self-improvement-loop, stack-geometry, artificial-stack-exchange |
+| 05 custom harness | futon1b-port, points-de-fuite, wm-policies-documented-run-2026-06-24, mission-peripheral | futonzero-mvp, custom-harness, single-entry-point, smart-emacs-cursor, vsatarcs-writer |
+| 06 pattern learning | capability-star-map, writing-ethics | a4a-structure-node, mission-coherence-patterns, pattern-application-diagnostic, pattern-mining, pattern-retrieval-calibration, pattern-posteriors, or-training-as-learning-system, peeragogy-rewrite, simulating-or-training-as-learning-system, learning-loop, superpod-mark3 |
+| 07 interest expressions | f6-arxiv, f6-eval, peripheral-phenomenology, interest-network-coupling | fold-ansatz, weird-modernism, futon-enrichment, expressions-of-interest, hypergraph-operator |
+| 08 rational reconstruction | stepper-calibration | diagramprover, stack-stereolithography |
+| 09 war machine | aif2, wm-policies | goals-and-holes, operational-vocabulary, action-cost-modelling, war-machine, war-machine-pilot, war-machine-tuning, recommendation-bindings |
+| 10 codex / IRC | codex-agent-behaviour, codex-irc-execution, improve-irc, typed-bells | none |
+| 11 coordination rewrite | coordination-rewrite, f6-agents, f6-ingest, f6-recursive, peripheral-gauntlet | none |
+
+Reading: three districts are finished (typed holes, codex/IRC, coordination
+rewrite): the coordination layer was built first. Districts 03, 04, 06 and 09
+are mostly open: substrate, stack self-description, pattern learning and the
+War Machine are where the open packets live. Each open packet (P1–P8) should
+name the district it continues and the built missions it stands on; e.g. P4
+"patterns that are earned" continues district 06, standing on
+capability-star-map; P1 spreads across 01, 04, 05 and 07, which is a sign it
+is more than one packet.
+
 ## Next
 
 - Joe corrects P1–P8 (one at a time, read aloud if wanted).
