@@ -6,10 +6,13 @@
             [clojure.edn :as edn] [clojure.set :as set]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.excursions :as e]
+            [futon3c.giraffe.missions :as missions]
             [futon3c.giraffe.pass :as pass]
             [futon3c.giraffe.run :as writer]
             [futon2.aif.outer-score :as score]
             [futon2.aif.outer-observation :as observation]
+            [futon2.aif.task-completion-surface :as completion]
+            [futon2.aif.wm.construction-inputs :as sources]
             [futon2.aif.mission-registry :as registry]))
 
 (def gr-1-input
@@ -24,6 +27,29 @@
 (defn interim-prerequisite [row]
   (first (filter #(= "M-interest-network-coupling" (:to %))
                  (get-in row [:graph-terms :prerequisites]))))
+
+(deftest requisition-records-never-enter-the-giraffe-population
+  (let [requisition {:id "E-kimi-task-103"
+                     :requisition-record? true
+                     :source {:path "holes/excursions/E-kimi-task-103.md"}}
+        ordinary {:id "E-ordinary"
+                  :requisition-record? false
+                  :source {:path "holes/excursions/E-ordinary.md"}}
+        declarations (fn [ids _]
+                       (mapv (fn [id] {:target id :path (str id ".md")}) ids))]
+    (with-redefs [registry/load-excursions
+                  (fn [_] {:excursions [requisition ordinary]})
+                  registry/live-excursion? (constantly true)
+                  missions/missions->input
+                  (fn [_] {:input {:items []} :excluded []})
+                  sources/target-source-declarations declarations
+                  completion/describe (fn [_] {:completion-class :fixture})]
+      (let [ids (set (map :id (get-in (e/missions-and-excursions->input
+                                       {:code-root "/fixture"
+                                        :edges-file "/unused"})
+                                      [:input :items])))]
+        (is (= #{:E-ordinary} ids))
+        (is (not (contains? ids :E-kimi-task-103)))))))
 
 (deftest reading-stage-reranks-the-pinned-pass
   (let [input (gr-1-fixture)
