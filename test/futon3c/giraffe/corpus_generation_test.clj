@@ -2,7 +2,10 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.giraffe.corpus-generation :as generation])
+            [futon3c.giraffe.corpus-generation :as generation]
+            [futon3c.giraffe.pass :as gp]
+            [futon3c.giraffe.readings :as readings]
+            [futon3c.giraffe.run :as run])
   (:import [java.nio.file CopyOption Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
            [java.util UUID]))
@@ -73,6 +76,33 @@
                                 (str (first (line-seq (io/reader
                                                       (io/file old-path "batch-00.jsonl")))))
                                 true)))))))
+
+(deftest resolved-record-pin-and-pre-publish-run-survive-pointer-switch
+  (let [{:keys [root pointer source-pin] :as f} (fixture)
+        resolved (:path (generation/resolve-generation pointer))
+        consumed (readings/consume
+                  {:checker (io/file resolved "check_edges.py")
+                   :members-file (io/file resolved "members.json")
+                   :batches [(io/file resolved "batch-00.jsonl")]
+                   :repos []})
+        pin (get-in consumed [:coverage :members 0 :record-pin])
+        input {:as-of "before-publish" :items [] :edges []}
+        pass-output (assoc (gp/pass input) :fixture-record-pin pin)
+        written (run/write-run!
+                 {:root (io/file root "runs") :run-id "before-publish"
+                  :adapter-result {:input input :rejected []
+                                   :readings-generation
+                                   (generation/resolve-generation pointer)}
+                  :pass-output pass-output
+                  :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"})]
+    (testing "new pins name the resolved immutable generation, not the pointer"
+      (is (.startsWith (str (:batch pin)) (str resolved)))
+      (is (not (.startsWith (str (:batch pin)) (.getAbsolutePath pointer)))))
+    (is (:ok? (run/verify-run (:dir written))))
+    (is (= :published
+           (:status (publish! f (assoc (record source-pin) :purpose "new")))))
+    (testing "verification seals run-local bytes and never follows the old batch pin"
+      (is (:ok? (run/verify-run (:dir written)))))))
 
 (deftest changed-source-rejects-and-keeps-pointer
   (let [{:keys [pointer source source-pin] :as f} (fixture)

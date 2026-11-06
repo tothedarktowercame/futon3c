@@ -20,6 +20,15 @@
     (some-> file .getParentFile .mkdirs)
     (jdbc/get-datasource {:dbtype "sqlite" :dbname (.getAbsolutePath file)})))
 
+(defn- ensure-column! [store column definition]
+  (let [columns (set (map :name
+                          (jdbc/execute! (:datasource store)
+                                         ["PRAGMA table_info(reread_requests)"]
+                                         query-opts)))]
+    (when-not (contains? columns column)
+      (jdbc/execute! (:datasource store)
+                     [(str "ALTER TABLE reread_requests ADD COLUMN " definition)]))))
+
 (defn open-store
   "Open PATH and ensure the queue schema. Tests must pass a temporary PATH."
   ([] (open-store default-path))
@@ -33,7 +42,13 @@
             "old_sha TEXT, source_path TEXT NOT NULL, state TEXT NOT NULL, "
             "requested_at_ms INTEGER NOT NULL, updated_at_ms INTEGER NOT NULL, "
             "lease_until_ms INTEGER, superseded_by_sha TEXT, superseded_reason TEXT, "
+            "attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT, landed_digest TEXT, "
             "PRIMARY KEY(target_id, source_sha))")])
+     ;; REREAD-1 databases predate worker outcomes. Keep the durable queue
+     ;; forward-compatible rather than requiring deletion/reconciliation.
+     (ensure-column! store "attempts" "attempts INTEGER NOT NULL DEFAULT 0")
+     (ensure-column! store "last_error" "last_error TEXT")
+     (ensure-column! store "landed_digest" "landed_digest TEXT")
      (jdbc/execute! (:datasource store)
                     ["CREATE INDEX IF NOT EXISTS reread_requests_state_idx ON reread_requests(state, requested_at_ms)"])
      store)))
@@ -41,7 +56,11 @@
 (defn- kw-state [row]
   (cond-> row
     (:state row) (update :state keyword)
-    (:superseded_reason row) (update :superseded_reason keyword)))
+    (:superseded_reason row) (update :superseded_reason keyword)
+    (:last_error row) (update :last_error keyword)))
+
+(defn- keyword-text [k]
+  (if-let [ns (namespace k)] (str ns "/" (name k)) (name k)))
 
 (defn requests
   "Return queue rows, optionally filtered by :target-id or :state."
@@ -139,4 +158,51 @@
       (some-> (jdbc/execute-one!
                tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
                    (:target_id row) (:source_sha row)] query-opts)
+              kw-state))))
+
+(defn active-claim?
+  "Is REQUEST still the live claimed row? Reconciliation may supersede it
+  while an Agency job is running."
+  [store request]
+  (= "claimed"
+     (:state (jdbc/execute-one!
+              (:datasource store)
+              ["SELECT state FROM reread_requests WHERE target_id=? AND source_sha=?"
+               (:target_id request) (:source_sha request)]
+              query-opts))))
+
+(defn settle!
+  "Record a terminal attempt OUTCOME for claimed REQUEST.
+
+  :landed and :superseded are terminal. :failed increments attempts and
+  returns to pending until MAX-ATTEMPTS, then remains visibly failed."
+  [store request outcome now-ms max-attempts]
+  {:pre [(contains? #{:landed :failed :superseded} (:status outcome))
+         (pos-int? max-attempts)]}
+  (jdbc/with-transaction [tx (:datasource store)]
+    (let [current (jdbc/execute-one!
+                   tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
+                       (:target_id request) (:source_sha request)] query-opts)]
+      (when current
+        (case (:status outcome)
+          :landed
+          (jdbc/execute! tx
+                         ["UPDATE reread_requests SET state='landed',landed_digest=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
+                          (:digest outcome) now-ms (:target_id request) (:source_sha request)])
+
+          :superseded
+          (jdbc/execute! tx
+                         ["UPDATE reread_requests SET state='superseded',superseded_reason=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
+                          (keyword-text (:reason outcome)) now-ms (:target_id request) (:source_sha request)])
+
+          :failed
+          (let [attempts (inc (long (or (:attempts current) 0)))
+                state (if (>= attempts max-attempts) "failed" "pending")]
+            (jdbc/execute! tx
+                           ["UPDATE reread_requests SET state=?,attempts=?,last_error=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
+                            state attempts (keyword-text (:reason outcome)) now-ms
+                            (:target_id request) (:source_sha request)]))))
+      (some-> (jdbc/execute-one!
+               tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
+                   (:target_id request) (:source_sha request)] query-opts)
               kw-state))))
