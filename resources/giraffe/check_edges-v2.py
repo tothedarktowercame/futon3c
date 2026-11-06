@@ -54,6 +54,7 @@ NEED_PREFIXES = tuple(VOCAB["need_goes_to_prefixes"])
 PLACEMENT_STATUS = set(VOCAB["statuses"])
 BENEFICIARIES = set(VOCAB["beneficiaries"])
 CONFIDENCE = set(VOCAB["confidence_levels"])
+WAY_WING = VOCAB["way_wing"]
 CODE = Path.home() / "code"
 WINDOW = 6
 
@@ -156,8 +157,15 @@ def main(paths):
             for way in ways:
                 if way not in WAYS:
                     problems.append(f"{tag} way {way!r} not allowed")
-        if placement.get("wing") not in WINGS:
-            problems.append(f"{tag} wing {placement.get('wing')!r} not allowed")
+        wing = placement.get("wing")
+        if wing not in WINGS:
+            problems.append(f"{tag} wing {wing!r} not allowed")
+        elif isinstance(ways, list) and not ways and wing != "none":
+            problems.append(f"{tag} wing {wing!r} given with no way; use 'none'")
+        elif isinstance(ways, list) and ways and ways[0] in WAY_WING \
+                and wing != WAY_WING[ways[0]]:
+            problems.append(f"{tag} wing {wing!r} does not follow first way "
+                            f"{ways[0]!r} (wing {WAY_WING[ways[0]]!r})")
         action = placement.get("action")
         if not allowed_action(action):
             problems.append(f"{tag} action {action!r} not allowed")

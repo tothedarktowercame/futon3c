@@ -9,4 +9,7 @@
     (doseq [field ["PLACEMENT" "what" "status" "ways" "wing" "action"
                    "need_goes_to" "finish" "beneficiary" "confidence"
                    "evidence"]]
-      (is (str/includes? contract field) field))))
+      (is (str/includes? contract field) field))
+    (doseq [value ["backlog-understood" "records-carry-warrant" "grant-math"
+                   "merge-into:" "backlog-understood -> B" "With no way, wing is none"]]
+      (is (str/includes? contract value) value))))

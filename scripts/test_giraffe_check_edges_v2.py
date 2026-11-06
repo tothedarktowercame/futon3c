@@ -63,6 +63,20 @@ class CombinedCheckerTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn("0 problems", result.stdout)
 
+    def test_wing_must_follow_first_way(self):
+        record = copy.deepcopy(self.record)
+        record["placement"]["wing"] = "D"
+        result = self.check(record)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("does not follow first way 'backlog-understood'", result.stdout)
+
+    def test_no_way_requires_wing_none(self):
+        record = copy.deepcopy(self.record)
+        record["placement"]["ways"] = []
+        result = self.check(record)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("given with no way", result.stdout)
+
     def test_unknown_way_prints_problem(self):
         record = copy.deepcopy(self.record)
         record["placement"]["ways"] = ["invented-way"]

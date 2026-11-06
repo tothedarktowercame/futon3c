@@ -19,6 +19,40 @@
            sort
            vec))
 
+;; A combined (link + placement) checker loads its placement vocabularies
+;; from JSON beside it rather than from Python literals; read the same files
+;; it reads, so the prompt carries the allowed values too.
+(defn- placement-contract [checker-path]
+  (let [checker (io/file checker-path)
+        here (.getParentFile (.getAbsoluteFile checker))
+        vocab-file (io/file here "placement-vocabularies.json")
+        ways-file (let [beside (io/file here "ways-of-working.json")]
+                    (if (.isFile beside)
+                      beside
+                      (io/file (.. here getParentFile getParentFile)
+                               "holes" "excursions" "ways-of-working.json")))]
+    (when-not (and (.isFile vocab-file) (.isFile ways-file))
+      (throw (ex-info "Giraffe placement vocabularies cannot be read"
+                      {:kind :giraffe-reread/checker-schema-unavailable
+                       :checker-path (str checker-path)
+                       :vocabularies (str vocab-file) :ways (str ways-file)})))
+    (let [v (json/parse-string (slurp vocab-file))
+          ways (map #(get % "id") (get (json/parse-string (slurp ways-file)) "ways"))
+          j (fn [k] (str/join ", " (get v k)))]
+      (str "Allowed placement status values: " (j "statuses") ".\n"
+           "Allowed WAY values (at most two, most-served first): " (str/join ", " ways) ".\n"
+           "Allowed WING values: " (j "wings") ". The wing follows the FIRST way: "
+           (str/join "; " (map (fn [[w g]] (str w " -> " g)) (sort (get v "way_wing"))))
+           ". With no way, wing is none.\n"
+           "Allowed ACTION values: " (j "actions") ", or a value starting with "
+           (j "action_prefixes") ".\n"
+           "need_goes_to is required when action is one of " (j "need_goes_to_actions")
+           " or starts with " (j "need_goes_to_prefixes") "; otherwise null.\n"
+           "Allowed BENEFICIARY values: " (j "beneficiaries") ".\n"
+           "Allowed CONFIDENCE values: " (j "confidence_levels") ".\n"
+           "placement.evidence needs at least two EVIDENCE citations into the source: "
+           "one for the way, one for the finish.\n"))))
+
 (defn checker-contract
   "Read the record shapes and vocabularies from CHECKER-PATH itself. The
   generation's checker is the authority that will judge the returned record;
@@ -38,6 +72,7 @@
          "Allowed KIND values: " (str/join ", " kinds) ".\n"
          "Allowed basis values: " (str/join ", " bases) ".\n"
          "Allowed status_as_read values: " (str/join ", " statuses) ".\n"
+         (when (re-find #"PLACEMENT\s+=" source) (placement-contract checker-path))
          "Use exactly these key names. An empty edges or unresolved list is valid.")))
 
 (defn reading-prompt [request checker-path]

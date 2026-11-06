@@ -1,12 +1,65 @@
 {
   "schema": "giraffe-placement-vocabularies-v1",
   "source": "holes/excursions/ant-prompts/A1-place.md",
-  "wings": ["A", "B", "C", "D", "V", "none"],
-  "actions": ["work", "close", "retire", "held", "rehome", "audit", "unsure"],
-  "action_prefixes": ["cluster:", "merge-into:"],
-  "need_goes_to_actions": ["close", "retire", "rehome"],
-  "need_goes_to_prefixes": ["merge-into:"],
-  "statuses": ["open", "closed", "stopped", "unsure"],
-  "beneficiaries": ["self", "company", "grant-math", "product", "job", "unsure"],
-  "confidence_levels": ["high", "medium", "low"]
+  "wings": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "V",
+    "none"
+  ],
+  "actions": [
+    "work",
+    "close",
+    "retire",
+    "held",
+    "rehome",
+    "audit",
+    "unsure"
+  ],
+  "action_prefixes": [
+    "cluster:",
+    "merge-into:"
+  ],
+  "need_goes_to_actions": [
+    "close",
+    "retire",
+    "rehome"
+  ],
+  "need_goes_to_prefixes": [
+    "merge-into:"
+  ],
+  "statuses": [
+    "open",
+    "closed",
+    "stopped",
+    "unsure"
+  ],
+  "beneficiaries": [
+    "self",
+    "company",
+    "grant-math",
+    "product",
+    "job",
+    "unsure"
+  ],
+  "confidence_levels": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "way_wing": {
+    "records-carry-warrant": "A",
+    "inbox-zero": "A",
+    "operator-turns-logged": "A",
+    "one-queryable-self-account": "B",
+    "backlog-understood": "B",
+    "feedback-reaches-every-participant": "C",
+    "real-users": "C",
+    "intents-are-tracked": "C",
+    "selection-gives-a-reason": "D",
+    "stays-alive-and-paid": "V"
+  },
+  "way_wing_source": "A1-place.md lines 27-29: wing follows from the FIRST way; eat-your-own-tail takes the wing of the way it serves (not checked); no ways means wing none"
 }
