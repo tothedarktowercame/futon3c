@@ -167,9 +167,13 @@ walk itself (futon1b cold pages) is still open.
    result as receipt (`5127f81da`, with a test). Spot-checked: 507 files, 0
    consumed, 171 inbox directories.
    **Open:**
-   - (a) ~~Joe decides the 507~~ — claude-6 endorses manifest-then-archive
-     (2026-11-06: "Giraffe doesn't read those files"); awaiting only Joe's
-     word to execute.
+   - (a) ~~Joe decides the 507~~ — **executed 2026-11-06 (Joe: "manifest
+     then archive")**: 593 files then in the inbox (grown from 507 since
+     the 11-03 discovery) manifested with per-file sha256, tarballed,
+     round-trip verified, and removed; archive at
+     `~/notes/packets/ways-of-working/wm-inbox-archive-20261106/`
+     (manifest.jsonl, wm-full-loop-inbox.tar.gz, archive.sha256
+     `05cffb94…`). New arrivals continue to accumulate until (b) is fixed.
    - (b) Agency could stop writing completion bellbacks for polling callers.
    - (c) 166 of the 171 directories are `ack-seat-*` / `pull-seat-*` test
      callers writing into the live inbox, the same shape as the
