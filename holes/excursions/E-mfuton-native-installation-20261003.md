@@ -1,6 +1,6 @@
 # E-mfuton-native-installation-20261003
 
-**Requisition:** in-progress — invoke-1790999811446-30715-8f3cacac
+**Requisition:** completed — 2026-11-06T07:22:22Z, job invoke-1790999811446-30715-8f3cacac, state done (Joe 2026-11-06: finished; Lisp curriculum off the table for now)
 
 **VERDICT (2026-10-09, provisional):** ACTIVE — Requisition header states in-progress with git dispatch on 2026-10-03, within the last 30 days. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
 

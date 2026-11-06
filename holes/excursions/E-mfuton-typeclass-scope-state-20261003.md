@@ -1,6 +1,6 @@
 # E-mfuton-typeclass-scope-state-20261003
 
-**Requisition:** in-progress — codex-13 job invoke-1790996880103-30698-7aafbdaf
+**Requisition:** completed — 2026-11-06T07:22:22Z, job invoke-1790996880103-30698-7aafbdaf, state done (Joe 2026-11-06: finished; Lisp curriculum off the table for now)
 
 **VERDICT (2026-10-09, provisional):** ACTIVE — Requisition marked in-progress and dispatched 2026-10-03 within the last 30 days; no completion or failure recorded yet. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
 
