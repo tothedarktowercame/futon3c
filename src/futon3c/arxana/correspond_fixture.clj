@@ -15,7 +15,10 @@
 
 (def gate-commit "17dc53aa3904a0fa2de6fe2d6b57fd1f467aa89a")
 
-(def futon5-root "/home/joe/code/futon5")
+(def futon5-root
+  "Fixture checkout used by the demo. An explicit environment override lets
+  isolated releases avoid reading or modifying the operator's live checkout."
+  (or (System/getenv "FUTON5_ROOT") "/home/joe/code/futon5"))
 
 (def fixture-dir
   "holes/tech-notes/paper/html-build/wysiwyg/arxana-fixture")
