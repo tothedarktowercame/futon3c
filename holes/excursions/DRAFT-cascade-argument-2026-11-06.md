@@ -156,6 +156,28 @@ name the district it continues and the built missions it stands on; e.g. P4
 capability-star-map; P1 spreads across 01, 04, 05 and 07, which is a sign it
 is more than one packet.
 
+## Where the Mozilla application stands (found 2026-11-06)
+
+- RFP: `~/mozilla/PUBLIC_2027_2028_Fellowship_RFP-2.pdf`. Letter of Intent due
+  17 December 2026; shortlist 16 February 2027; full application 12 March;
+  decisions 30 April; start 1 June 2027; up to $125,000
+  (`~/notes/commons-map/PLAN-november-2026.md:96-100`).
+- Draft letter: `futon7/holes/mozilla/LOI-draft-1.md` (claude-16, 2026-11-02;
+  Joe must rewrite it in his own words, per Mozilla's AI-use policy). Track II,
+  independent fellow; area: shared security and audit infrastructure for small
+  organisations; title "Finding the Gap: an open audit for AI agent work".
+- Weak points and the ten things to do before 17 December:
+  `futon7/holes/mozilla/FALLTHROUGH.md`. It says the War Machine is not the
+  pitch, and that the strongest missing piece is one outside group running
+  the audit on its own machines.
+- The argument graph lists Mozilla as one venue, "one projection of this
+  graph, not the whole of it" (`~/notes/argument-graph/apex.edn:153`), with
+  two draft claims projected into it: the maintainer claim and the open
+  curriculum claim.
+- The letter already names Cascade Live as the builder-profile link ("Live
+  map of the work") and cites "509 backlog items read and sorted" as traction:
+  this catch-up is that evidence, made current.
+
 ## Next
 
 - Joe corrects P1–P8 (one at a time, read aloud if wanted).
