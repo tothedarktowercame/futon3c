@@ -1,6 +1,7 @@
 (ns futon3c.giraffe.corpus-generation-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.giraffe.corpus-generation :as generation]
             [futon3c.giraffe.pass :as gp]
@@ -131,15 +132,52 @@
                :sha256 (:sha256 source-pin)}]
              members)))))
 
-(deftest concurrent-publisher-base-mismatch-keeps-winner
+(deftest concurrent-publisher-rebases-revalidates-and-keeps-both-records
+  (let [{:keys [root pointer generations source-pin] :as f} (fixture)
+        other-source (io/file root "M-two.md")
+        calls (atom 0)]
+    (spit other-source "other source\n")
+    (let [other-pin {:path (.getAbsolutePath other-source)
+                     :sha256 (generation/file-sha other-source)}
+          publish-other! #(generation/publish-generation!
+                           {:pointer pointer :generations-dir generations
+                            :claim {:target-id "M-two"
+                                    :source-path (:path other-pin)
+                                    :source-sha (:sha256 other-pin)
+                                    :old-sha nil}
+                            :replacement {:id "M-two" :source other-pin
+                                          :status_as_read "open" :purpose "winner"
+                                          :edges [] :unresolved []}})
+          result (publish! f (assoc (record source-pin) :purpose "rebased")
+                           {:before-switch-fn #(when (= 1 (swap! calls inc))
+                                                (is (= :published (:status (publish-other!)))))})
+          current (:path (generation/resolve-generation pointer))
+          records (->> ["batch-00.jsonl" "batch-reread.jsonl"]
+                       (map #(io/file current %))
+                       (filter #(.exists %))
+                       (mapcat #(line-seq (io/reader %)))
+                       (remove str/blank?)
+                       (map #(json/parse-string % true))
+                       (into {} (map (juxt :id identity))))]
+      (is (= :published (:status result)))
+      (is (= 2 (:attempts result)))
+      (is (= #{"M-one" "M-two"} (set (keys records))))
+      (is (= "rebased" (get-in records ["M-one" :purpose])))
+      (is (= "winner" (get-in records ["M-two" :purpose]))))))
+
+(deftest three-consecutive-pointer-moves-return-base-mismatch
   (let [{:keys [pointer generations base source-pin] :as f} (fixture)
-        winner (io/file generations "winner")]
-    (#'generation/copy-tree! base winner)
-    (let [result (publish! f (assoc (record source-pin) :purpose "loser")
-                           {:before-switch-fn #(install-pointer! pointer winner)})]
-      (is (= :giraffe-generation/base-mismatch (:reason result)))
-      (is (= (.getCanonicalPath winner)
-             (:path (generation/resolve-generation pointer)))))))
+        calls (atom 0)
+        move! (fn []
+                (let [winner (io/file generations (str "winner-" (swap! calls inc)))]
+                  (#'generation/copy-tree! base winner)
+                  (spit (io/file winner "race-marker") (str @calls))
+                  (install-pointer! pointer winner)))
+        result (publish! f (assoc (record source-pin) :purpose "loser")
+                         {:before-switch-fn move!})]
+    (is (= :giraffe-generation/base-mismatch (:reason result)))
+    (is (= 3 (:attempts result)))
+    (is (= 3 @calls))))
 
 (deftest checker-failure-rejects-cleans-staging-and-keeps-pointer
   (let [{:keys [pointer generations source-pin] :as f} (fixture)

@@ -160,17 +160,9 @@
                                           StandardCopyOption/REPLACE_EXISTING]))
       (finally (Files/deleteIfExists temp)))))
 
-(defn publish-generation!
-  "Publish one replacement record against POINTER's current generation.
-
-  CLAIM is {:target-id :source-path :source-sha}. REPLACEMENT is the checked
-  JSON record. Validation occurs in staging; source and base pins are checked
-  immediately before the atomic pointer switch. Returns a typed result and
-  removes staging on every refusal."
+(defn- publish-generation-attempt!
   [{:keys [pointer generations-dir claim replacement before-switch-fn]}]
   (let [{base-path :path base-digest :digest} (resolve-generation pointer)
-        generations-dir (or generations-dir
-                            (str (.getAbsolutePath (io/file pointer)) ".generations"))
         stage-parent (doto (io/file generations-dir ".staging") .mkdirs)
         staging (io/file stage-parent (str (UUID/randomUUID)))
         lock-path (.toPath (io/file generations-dir ".publish.lock"))]
@@ -179,6 +171,8 @@
       (apply-replacement! staging (:target-id claim) replacement
                           {:path (:source-path claim) :sha256 (:source-sha claim)}
                           (nil? (:old-sha claim)))
+      ;; Validation is deliberately repeated against this attempt's base. A
+      ;; successful retry must never carry forward validation from a stale base.
       (validate-staging! base-path base-digest staging (:target-id claim))
       (when before-switch-fn (before-switch-fn))
       (when-not (= (:source-sha claim) (file-sha (:source-path claim)))
@@ -210,6 +204,24 @@
         {:status :rejected :reason :giraffe-generation/checker-failed
          :details {:message (.getMessage exc)}})
       (finally (delete-tree! staging)))))
+
+(defn publish-generation!
+  "Publish one replacement record against POINTER's current generation.
+
+  CLAIM is {:target-id :source-path :source-sha}. REPLACEMENT is the checked
+  JSON record. Validation occurs in staging; source and base pins are checked
+  immediately before the atomic pointer switch. Returns a typed result and
+  removes staging on every refusal."
+  [{:keys [pointer generations-dir] :as opts}]
+  (let [generations-dir (or generations-dir
+                            (str (.getAbsolutePath (io/file pointer)) ".generations"))]
+    (loop [attempt 1]
+      (let [result (publish-generation-attempt!
+                    (assoc opts :generations-dir generations-dir))]
+        (if (and (= :giraffe-generation/base-mismatch (:reason result))
+                 (< attempt 3))
+          (recur (inc attempt))
+          (assoc result :attempts attempt))))))
 
 (defn migrate!
   "Plan or perform one-shot conversion of legacy corpus directory POINTER.
