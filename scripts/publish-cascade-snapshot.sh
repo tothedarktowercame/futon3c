@@ -73,13 +73,19 @@ python3 "$(dirname "$0")/partition-tree.py" "$WORK/graph.json" "$WORK/partition-
 # The argument labelling is live when Babashka is available to recompute it.
 # Keep the committed report as a typed, visibly marked snapshot fallback for
 # stripped-down timer environments.
+# Recompute on a copy under $WORK: the report depends on live way data, so
+# writing it beside apex.edn would leave futon7 with uncommitted changes after
+# every publish.
 argument_live=false
-if command -v bb >/dev/null 2>&1 && (cd "$ARGUMENT_DIR" && bb report.bb apex.edn "$WORK/wow.json" >/dev/null); then
+mkdir -p "$WORK/argument"
+cp "$ARGUMENT_DIR/apex.edn" "$ARGUMENT_DIR/report.bb" "$WORK/argument/"
+if command -v bb >/dev/null 2>&1 && (cd "$WORK/argument" && bb report.bb apex.edn "$WORK/wow.json" >/dev/null); then
   argument_live=true
+  cp "$WORK/argument/report.json" "$WORK/argument-report.json"
 else
   echo "  argument report could not be regenerated; using committed report.json as a snapshot" >&2
+  cp "$ARGUMENT_DIR/report.json" "$WORK/argument-report.json"
 fi
-cp "$ARGUMENT_DIR/report.json" "$WORK/argument-report.json"
 if command -v bb >/dev/null 2>&1; then
   bb -e '(require (quote [cheshire.core :as json]) (quote [clojure.edn :as edn]))
           (let [g (edn/read-string (slurp (first *command-line-args*)))]
