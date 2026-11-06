@@ -1,0 +1,12 @@
+{
+  "schema": "giraffe-placement-vocabularies-v1",
+  "source": "holes/excursions/ant-prompts/A1-place.md",
+  "wings": ["A", "B", "C", "D", "V", "none"],
+  "actions": ["work", "close", "retire", "held", "rehome", "audit", "unsure"],
+  "action_prefixes": ["cluster:", "merge-into:"],
+  "need_goes_to_actions": ["close", "retire", "rehome"],
+  "need_goes_to_prefixes": ["merge-into:"],
+  "statuses": ["open", "closed", "stopped", "unsure"],
+  "beneficiaries": ["self", "company", "grant-math", "product", "job", "unsure"],
+  "confidence_levels": ["high", "medium", "low"]
+}
