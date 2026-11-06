@@ -77,6 +77,7 @@
     (is (str/includes? (:prompt @seen)
                        (.getAbsolutePath (io/file (:pointer f) "members.json"))))
     (is (str/includes? (:prompt @seen) "never coin an id"))
+    (is (str/includes? (:prompt @seen) "own completion criteria") "criteria are not dependencies")
     (is (str/includes? (:prompt @seen) "grep -n"))
     (is (str/includes? (:prompt @seen) "sha256sum"))
     (let [prompt (:prompt @seen)]
