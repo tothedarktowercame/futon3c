@@ -1,6 +1,7 @@
 (ns futon3c.giraffe.reread-worker
   "One-at-a-time Giraffe reading worker. Not scheduled or started here."
   (:require [cheshire.core :as json]
+            [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.giraffe.corpus-generation :as generation]
@@ -10,14 +11,44 @@
 (def default-lease-ms (* 45 60 1000))
 (def terminal-states #{"done" "failed" "error" "cancelled" "timed-out" "rejected"})
 
-(defn reading-prompt [request]
+(defn- python-set-values [source constant-name]
+  (some->> (re-find (re-pattern (str "(?s)" constant-name "\\s*=\\s*\\{([^}]*)\\}")) source)
+           second
+           (re-seq #"\"([^\"]+)\"")
+           (map second)
+           sort
+           vec))
+
+(defn checker-contract
+  "Read the record shapes and vocabularies from CHECKER-PATH itself. The
+  generation's checker is the authority that will judge the returned record;
+  deriving the prompt from it prevents a second schema copy from drifting."
+  [checker-path]
+  (let [source (slurp checker-path)
+        shapes (second (re-find #"(?s)(EDGE\s+=.*?EVIDENCE\s+=.*?line\.\.line\+5})" source))
+        kinds (python-set-values source "KINDS")
+        bases (python-set-values source "BASES")
+        statuses (python-set-values source "STATUS")]
+    (when-not (and shapes (seq kinds) (seq bases) (seq statuses))
+      (throw (ex-info "Giraffe checker schema cannot be extracted"
+                      {:kind :giraffe-reread/checker-schema-unavailable
+                       :checker-path (str checker-path)})))
+    (str "The checker-enforced record schema is:\n"
+         shapes "\n"
+         "Allowed KIND values: " (str/join ", " kinds) ".\n"
+         "Allowed basis values: " (str/join ", " bases) ".\n"
+         "Allowed status_as_read values: " (str/join ", " statuses) ".\n"
+         "Use exactly these key names. An empty edges or unresolved list is valid.")))
+
+(defn reading-prompt [request checker-path]
   (str "Read exactly one Giraffe corpus member. Return ONLY one JSON object.\n\n"
        "Target: " (:target_id request) "\n"
        "Source path: " (:source_path request) "\n"
        "Required source sha256: " (:source_sha request) "\n\n"
        "Follow futon2/holes/labs/wm-contract/reconciliation/"
        "Q1-GIRAFFE-FIELD-STALENESS-zai6-2026-10-31.md. "
-       "Return fields id, source, status_as_read, purpose, edges, unresolved. "
+       "Return fields id, source, status_as_read, purpose, edges, unresolved.\n\n"
+       (checker-contract checker-path) "\n\n"
        "Every evidence quote must be verbatim and occur in its stated six-line window; "
        "source.path and source.sha256 must exactly equal the values above. "
        "Do not edit the corpus or mint Giraffe. "
@@ -149,7 +180,8 @@
     (throw (ex-info "A nonnegative new-item claim cap is required"
                     {:kind :giraffe-reread/new-item-cap-required})))
   (if-let [request (queue/claim! store now-ms lease-ms new-item-cap reader-id)]
-    (let [contact (contact-fn request (reading-prompt request))]
+    (let [checker (io/file pointer "check_edges.py")
+          contact (contact-fn request (reading-prompt request checker))]
       (cond
         (not (:ok contact))
         {:status :failed

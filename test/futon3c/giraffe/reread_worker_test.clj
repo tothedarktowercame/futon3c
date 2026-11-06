@@ -1,6 +1,7 @@
 (ns futon3c.giraffe.reread-worker-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.giraffe.corpus-generation :as generation]
             [futon3c.giraffe.reread-queue :as queue]
@@ -28,7 +29,15 @@
             (json/generate-string [(assoc old-pin :id "M-one")]))
       (spit (io/file base "batch-00.jsonl") (str (json/generate-string record) "\n"))
       (spit (io/file base "check_edges.py")
-            (str "#!/usr/bin/env python3\nimport json,pathlib,sys\n"
+            (str "#!/usr/bin/env python3\n\"\"\"\n"
+                 "EDGE = {\"to\": \"M-...|E-...|T-...\", \"kind\": KIND, \"basis\": \"declared|inferred\", \"evidence\": EVIDENCE, \"note\": \"...\"}\n"
+                 "UNRESOLVED = {\"raw_target\": \"text as written\", \"kind\": KIND, \"basis\": ..., \"evidence\": EVIDENCE, \"reason\": \"why it does not resolve\"}\n"
+                 "EVIDENCE = {\"path\": absolute file path, \"sha256\": sha256 of that file, \"line\": 1-based line where the quote starts, \"quote\": verbatim text, >= 12 chars, within lines line..line+5}\n"
+                 "\"\"\"\n"
+                 "KINDS = {\"depends-on\", \"unblocks\", \"part-of\", \"advances\", \"relates-to\", \"duplicates\", \"superseded-by\"}\n"
+                 "BASES = {\"declared\", \"inferred\"}\n"
+                 "STATUS = {\"open\", \"done-unmarked\", \"abandoned\", \"unclear\"}\n"
+                 "import json,pathlib,sys\n"
                  "m={x['id']:x for x in json.loads((pathlib.Path(__file__).parent/'members.json').read_text())}\n"
                  "r=json.loads(pathlib.Path(sys.argv[1]).read_text())\n"
                  "sys.exit(0 if r.get('source') == {'path':m[r['id']]['path'],'sha256':m[r['id']]['sha256']} else 1)\n"))
@@ -61,7 +70,15 @@
            (get-in @seen [:request :source_sha])))
     (is (re-find #"six-line window" (:prompt @seen)))
     (is (re-find #"Return ONLY one JSON object" (:prompt @seen)))
-    (is (re-find #"do not bell or whistle anyone" (:prompt @seen)))))
+    (is (re-find #"do not bell or whistle anyone" (:prompt @seen)))
+    (let [prompt (:prompt @seen)]
+      (doseq [key-name ["to" "kind" "basis" "evidence" "note"
+                        "raw_target" "reason" "path" "sha256" "line" "quote"]]
+        (is (str/includes? prompt key-name) (str "prompt names key " key-name)))
+      (doseq [value ["depends-on" "unblocks" "part-of" "advances" "relates-to"
+                     "duplicates" "superseded-by" "declared" "inferred"
+                     "open" "done-unmarked" "abandoned" "unclear"]]
+        (is (str/includes? prompt value) (str "prompt enumerates " value))))))
 
 (deftest failed-contact-retries-to-bound-then-stays-visible
   (let [f (fixture)
