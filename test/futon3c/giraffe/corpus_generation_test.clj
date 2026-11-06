@@ -176,8 +176,8 @@
         result (publish! f (assoc (record source-pin) :purpose "loser")
                          {:before-switch-fn move!})]
     (is (= :giraffe-generation/base-mismatch (:reason result)))
-    (is (= 3 (:attempts result)))
-    (is (= 3 @calls))))
+    (is (= generation/max-race-attempts (:attempts result)))
+    (is (= generation/max-race-attempts @calls))))
 
 (deftest checker-failure-rejects-cleans-staging-and-keeps-pointer
   (let [{:keys [pointer generations source-pin] :as f} (fixture)

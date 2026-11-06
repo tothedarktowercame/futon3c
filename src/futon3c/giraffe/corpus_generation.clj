@@ -205,6 +205,13 @@
          :details {:message (.getMessage exc)}})
       (finally (delete-tree! staging)))))
 
+(def max-race-attempts
+  "Tries before a base-pointer race is returned as :base-mismatch. Three was
+  too few once a second lane (second-reading on two Kimi seats) published
+  beside the two first readers: 3 of 10 results after the race fix were still
+  base-mismatch (2026-11-06 17:52-18:50Z)."
+  8)
+
 (defn publish-generation!
   "Publish one replacement record against POINTER's current generation.
 
@@ -219,8 +226,9 @@
       (let [result (publish-generation-attempt!
                     (assoc opts :generations-dir generations-dir))]
         (if (and (= :giraffe-generation/base-mismatch (:reason result))
-                 (< attempt 3))
-          (recur (inc attempt))
+                 (< attempt max-race-attempts))
+          (do (Thread/sleep (long (rand-int (* 500 attempt))))
+              (recur (inc attempt)))
           (assoc result :attempts attempt))))))
 
 (defn migrate!
