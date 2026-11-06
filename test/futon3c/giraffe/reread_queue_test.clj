@@ -75,7 +75,13 @@
 
 (deftest never-read-item-is-pending-once-with-no-old-sha
   (let [store (queue/open-store (temp-db))
-        result (queue/reconcile! store [(item "new")] {:members []} 10)]
+        ;; Coverage can retain a non-admitted member and its historical pin;
+        ;; :unread-new, not member absence, defines the capped work class.
+        result (queue/reconcile! store [(item "new")]
+                                 {:members [{:id "M-one" :status :ambiguous
+                                             :source {:path "/old/M-one.md"
+                                                      :sha256 "old"}}]}
+                                 10)]
     (is (= [:M-one] (get-in result [:drift :unread-new])))
     (is (= [[:pending nil "new"]]
            (mapv (juxt :state :old_sha :source_sha) (queue/requests store))))

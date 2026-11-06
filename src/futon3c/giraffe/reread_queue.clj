@@ -105,7 +105,13 @@
                      ["UPDATE reread_requests SET old_sha=?,source_path=?,state='pending',requested_at_ms=?,updated_at_ms=?,lease_until_ms=NULL,superseded_by_sha=NULL,superseded_reason=NULL WHERE target_id=? AND source_sha=?"
                       old-sha source-path now-ms now-ms target-id source-sha])
 
-      :else nil)))
+      :else
+      ;; Reconciliation is authoritative for whether this is never-read.
+      ;; Normalize rows created by an older classifier without resetting
+      ;; their age or attempt history.
+      (jdbc/execute! tx
+                     ["UPDATE reread_requests SET old_sha=?,source_path=? WHERE target_id=? AND source_sha=?"
+                      old-sha source-path target-id source-sha]))))
 
 (defn reconcile!
   "Reconcile OPEN-ITEMS and checked COVERAGE at NOW-MS.
@@ -119,6 +125,7 @@
   (let [drift (excursions/reading-drift open-items coverage)
         changed (set (concat (:reading-source-changed drift)
                              (:unread-new drift)))
+        unread (set (:unread-new drift))
         by-id (into {} (map (juxt (comp keyword :id) identity)) (:members coverage))
         open-by-id (into {} (map (juxt :id identity)) open-items)]
     (jdbc/with-transaction [tx (:datasource store)]
@@ -129,7 +136,8 @@
                     source (:source-pin item)
                     row {:target-id (name target-id)
                          :source-sha (:sha256 source)
-                         :old-sha (get-in old [:source :sha256])
+                         :old-sha (when-not (contains? unread target-id)
+                                    (get-in old [:source :sha256]))
                          :source-path (:path source)}]]
         (when-not (and (:source-sha row) (:source-path row))
           (throw (ex-info "Changed reading lacks a pinned source"
