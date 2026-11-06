@@ -14,6 +14,7 @@ BASE="${CASCADE_BASE:-http://localhost:7070}"
 SRC="${CASCADE_SRC:-/home/joe/code/futon3c/holes/excursions/pipeline-pattern-cascade-live.html}"
 WIP="${CASCADE_WIP:-/home/joe/code/futon3c/holes/excursions/wip-cards.json}"
 THESIS="${CASCADE_THESIS:-/home/joe/code/futon3c/holes/excursions/apex-thesis.json}"
+ARGUMENT_DIR="${CASCADE_ARGUMENT_DIR:-/home/joe/code/futon7/holes/argument-graph}"
 OUT="${CASCADE_OUT:-/var/www/zone.hyperreal.enterprises/wip/pipeline-pattern-cascade.html}"
 TRIES="${CASCADE_TRIES:-6}"
 WORK="$(mktemp -d)"
@@ -68,6 +69,27 @@ fi
 
 # regrow the tickets tree from the latest placements and the graph just fetched (claude-16's script, in the repo since 2eb1a4187)
 python3 "$(dirname "$0")/partition-tree.py" "$WORK/graph.json" "$WORK/partition-tree.json" >&2 || { echo "FATAL: partition-tree.py failed" >&2; exit 1; }
+
+# The argument labelling is live when Babashka is available to recompute it.
+# Keep the committed report as a typed, visibly marked snapshot fallback for
+# stripped-down timer environments.
+argument_live=false
+if command -v bb >/dev/null 2>&1 && (cd "$ARGUMENT_DIR" && bb report.bb apex.edn >/dev/null); then
+  argument_live=true
+else
+  echo "  argument report could not be regenerated; using committed report.json as a snapshot" >&2
+fi
+cp "$ARGUMENT_DIR/report.json" "$WORK/argument-report.json"
+if command -v bb >/dev/null 2>&1; then
+  bb -e '(require (quote [cheshire.core :as json]) (quote [clojure.edn :as edn]))
+          (let [g (edn/read-string (slurp (first *command-line-args*)))]
+            (print (json/generate-string (select-keys g [:nodes :edges]))))' \
+    "$ARGUMENT_DIR/apex.edn" > "$WORK/argument-source.json"
+else
+  echo 'null' > "$WORK/argument-source.json"
+fi
+printf '{"live":%s}\n' "$argument_live" > "$WORK/argument-meta.json"
+
 python3 - "$SRC" "$WIP" "$THESIS" "$WORK" "$OUT" "$BASE" <<'PY'
 import json, pathlib, sys, datetime
 
@@ -90,6 +112,9 @@ snapshot = {
     "giraffe-partition-2026-11-02.json":    json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/giraffe-partition-2026-11-02.json").read_text()),
     "layers.json":                          json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/layers.json").read_text()),
     "intermediate-theses.json":             json.loads(pathlib.Path("/home/joe/code/futon3c/holes/excursions/intermediate-theses.json").read_text()),
+    "argument-report.json":                 json.loads((work / "argument-report.json").read_text()),
+    "argument-source.json":                 json.loads((work / "argument-source.json").read_text()),
+    "argument-meta.json":                   json.loads((work / "argument-meta.json").read_text()),
     # claude-16's tickets tree (status > way or wing > cluster > item; requisitions apart; repair tickets one class;
     # unplaced live), regrown from A1-placements.tsv just before inlining (Joe's judgement on the Tickets section, 2026-11-02)
     "partition-tree.json":                  json.loads((work / "partition-tree.json").read_text()),

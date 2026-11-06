@@ -73,6 +73,9 @@
   .thesis-card details{color:var(--dim);font-size:10.5px}.thesis-card ul{margin:5px 0 0;padding-left:18px}
   .snapshot-marker{display:inline-block;margin-left:7px;padding:2px 6px;border:1px solid #d0913a;border-radius:10px;color:#f0bd70;background:#2b2418;font-size:10px;font-weight:600;vertical-align:middle}
   .argument-part{margin:26px 0 10px;padding:8px 12px;border-left:4px solid var(--accent);background:#111820;color:#dce8f5;font-size:18px}
+  .arg-counts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.arg-counts span{border:1px solid var(--line);border-radius:10px;padding:2px 8px;font-size:11px}
+  .arg-row{padding:5px 0;border-bottom:1px solid #1e2430;font-size:11.5px}.arg-IN{color:#3ddc84;font-weight:800}.arg-OUT,.arg-failing{color:#ff6b6b;font-weight:800}.arg-UNDEC{color:#e0a63b;font-weight:800}.arg-passing{color:#3ddc84;font-weight:800}
+  .arg-attack{margin:3px 0 0 18px;color:#ff9c9c}.arg-question{color:#cdd6e4}.arg-support{color:#8fa0b6}
 </style>
 </head>
 <body>
@@ -91,6 +94,11 @@
     <h2>The problem being solved — thesis (re-statable) <span class="snapshot-marker">snapshot of 2026-09-06 + 2026-11-02, not live</span></h2>
     <p class="muted">Read as prose: <a href="apex-thesis-narration-2026-11-02.html">the draft narration</a> (2026-11-02, for Joe to strike or keep line by line; the box below still renders <code>apex-thesis.json</code>).</p>
     <div id="thesis-body"><div class="gap">Loading live-thesis data…</div></div>
+  </section>
+
+  <section class="panel" id="argument-panel">
+    <h2>The argument and its attacks <span class="snapshot-marker" id="argument-snapshot" style="display:none"></span></h2>
+    <div id="argument-body"><div class="gap">Loading argument labelling…</div></div>
   </section>
 
   <h2 class="argument-part">2. The grounds</h2>
@@ -171,6 +179,12 @@
   </section>
 
   <h2 class="argument-part">7. What is undecided</h2>
+  <section class="panel" id="venue-tests-panel">
+    <h2>Mozilla's questions as tests <span class="snapshot-marker" id="venue-snapshot" style="display:none"></span></h2>
+    <div class="sub" style="margin-bottom:8px">A test passes only when answered by a warranted <code>:answers</code> edge whose answerer is IN.</div>
+    <div id="venue-tests-body"><div class="gap">Loading venue tests…</div></div>
+  </section>
+
   <section class="panel" id="holes-panel" style="display:none">
     <h2>Honest holes <span class="muted" id="holes-count"></span></h2>
     <div id="holes-body"></div>
@@ -194,6 +208,9 @@
   var EP_PARTITION="giraffe-partition-2026-11-02.json";
   var EP_TREE="partition-tree.json";  // claude-16's tickets tree, regrown at publish from A1-placements.tsv
   var EP_LAYERS="layers.json";
+  var EP_ARGUMENT="argument-report.json";
+  var EP_ARGUMENT_SOURCE="argument-source.json";
+  var EP_ARGUMENT_META="argument-meta.json";
   var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
@@ -859,6 +876,38 @@
     });
   }
 
+  function renderArgument(report,source,meta){
+    var sourceNodes={}, edges=(source&&source.edges)||[];
+    ((source&&source.nodes)||[]).forEach(function(n){sourceNodes[n.id]=n;});
+    var labels={}; (report.nodes||[]).forEach(function(n){labels[n.id]=n.label;});
+    function warranted(e){return e.warrant!=null;}
+    function attackers(id){return edges.filter(function(e){return warranted(e)&&
+      (e.rel==="attacks"||e.rel==="answers")&&e.to===id&&labels[e.from]==="IN";});}
+    var wanted=(report.nodes||[]).filter(function(n){return n.id==="apex"||
+      (n.kind==="cluster"&&["A","B","C","D"].indexOf(n.id)>=0)||n.kind==="claim"||n.label==="OUT";});
+    wanted.sort(function(a,b){var rank=function(n){return n.id==="apex"?0:n.kind==="cluster"?1:2;};
+      return rank(a)-rank(b)||String(a.id).localeCompare(String(b.id));});
+    var counts=(report.counts||{}), lc=counts.labels||{};
+    var countHtml="<div class='arg-counts'><span class='arg-IN'>IN "+(lc.IN||0)+"</span><span class='arg-OUT'>OUT "+(lc.OUT||0)+"</span><span class='arg-UNDEC'>UNDEC "+(lc.UNDEC||0)+"</span><span>sorries "+(counts.sorries||0)+"</span><span>pending attacks / answers / undercuts "+(counts["pending-attacks-answers-undercuts"]||0)+"</span></div>";
+    var rows=wanted.map(function(n){var raw=sourceNodes[n.id]||{}, support=n.support;
+      var supportText=support?(support.survives?"support survives":"support undercut"):"no warranted :supports edge";
+      var attacks=attackers(n.id).map(function(e){var a=sourceNodes[e.from]||{};
+        return "<div class='arg-attack'>attacked by <code>"+esc(e.from)+"</code>: "+esc(a.content||"content unavailable")+"</div>";}).join("");
+      return "<div class='arg-row'><span class='arg-"+esc(n.label)+"'>"+esc(n.label)+"</span> <code>"+esc(n.id)+"</code> <span class='muted'>("+esc(n.kind)+")</span> — "+esc(raw.content||"")+" <span class='arg-support'>· "+esc(supportText)+"</span>"+attacks+"</div>";
+    }).join("");
+    el("argument-body").innerHTML=countHtml+rows;
+    var tests=(report["venue-tests"]||[]).map(function(t){var raw=sourceNodes[t.id]||{};
+      return "<div class='arg-row'><span class='arg-"+esc(t.status)+"'>"+esc(t.status)+"</span> <span class='arg-question'>"+esc(raw.content||t.id)+"</span> <span class='muted'>· assessed "+esc(t.assessed||"unassessed")+"</span></div>";
+    }).join("");
+    el("venue-tests-body").innerHTML=tests||"<div class='gap'>No venue tests in the report.</div>";
+    if(!meta||!meta.live){["argument-snapshot","venue-snapshot"].forEach(function(id){var n=el(id); n.style.display="inline-block"; n.textContent="snapshot of "+esc(report["as-of"]||"unknown date")+", not live";});}
+  }
+  function loadArgument(){
+    Promise.all([requestJSON("argument report",EP_ARGUMENT),requestJSON("argument source",EP_ARGUMENT_SOURCE,true),requestJSON("argument metadata",EP_ARGUMENT_META,true)])
+      .then(function(xs){renderArgument(xs[0],xs[1],xs[2]);})
+      .catch(function(err){var msg="<div class='gap'>Argument labelling unavailable: "+esc(err&&err.message||err)+"</div>"; el("argument-body").innerHTML=msg; el("venue-tests-body").innerHTML=msg;});
+  }
+
   function loadAll(){
     if(loading) return;
     loading=true;
@@ -902,6 +951,7 @@
   }
 
   loadThesis();
+  loadArgument();
   loadWow();
   loadPartition(); loadTree();
   loadLayers();
