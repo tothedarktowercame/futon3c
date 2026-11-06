@@ -39,7 +39,7 @@
    "therefore": null,
    "position": "below-thesis-above-therefores",
    "problem": "The usual workflow puts the agent outside the process: wait for completion, inspect a summary, repair the visible result, declare success; learning starts after the state has gone cold.",
-   "invariant": "Every live system exposes a named observation surface, the responsible agent reads it while the system runs, at least one observation changes the next intervention, and the attachment is kept as machinery with a ratchet.",
+   "invariant": "Every live system exposes a named observation surface, the responsible agent reads it while the system runs, at least one observation changes the next intervention, and the attachment is kept as machinery with a ratchet. Checkable form (Joe + zai-9 2026-11-06, bounded per futonic-loop turn — no convergence claim, improvement stays in 味): (1) 香-during-化: an observation timestamped inside the run window; (2) 債-from-香: at least one emitted (應·債) cites an in-window observation; (3) 既-citable: the observation/obligation pair is recorded in a later-citable form (warrant/sorry/test-registry id) — the ratchet. The global 'the tail gets eaten' claim is the halting problem (Joe) and is deliberately not made.",
    "declared-in": "futon3/library/agent/eat-your-own-tail.flexiarg (Joe 2026-10-02; placed early in the cascade, Joe 2026-11-02 via claude-16)",
    "built": [
     "inbox-zero Reazon warning path",
@@ -49,7 +49,7 @@
    "probe": "none",
    "pattern": "agent/eat-your-own-tail",
    "patterns": [],
-   "note": "on none of the seven ways; retrieval gap per claude-16: 0 picks, 0 turn references, no mined edges"
+   "note": "on none of the seven ways; retrieval gap per claude-16: 0 picks, 0 turn references, no mined edges. Probe designed 2026-11-06 (tail-bite, not yet built): population = interventions in a 7-day window (test runs, timer runs, bellback-handled jobs); reads records, never recomputes; bad-case test = an intervention whose only observations postdate its completion, or whose emitted obligations cite nothing observed during it. Theorization: Peircean triad (spec=object, in-window observation=sign, cited (應·債) changing the next 咅=interpretant, ratchet=habit) expressed in futonic vocabulary; native-Chinese pass dispatched as futon2 E-kimi-task-354 (kimi-1) to test the glyphs as native words, not shorthand"
   },
   {
    "id": "records-carry-warrant",
