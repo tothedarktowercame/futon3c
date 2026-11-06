@@ -200,6 +200,25 @@ walk itself (futon1b cold pages) is still open.
    paging shape, with a before/after page measurement recorded in the
    ticket. Contention from the background loops stays a separate owner
    item (every other reader still goes through XTDB). zai-9.
+   **Fix C built (zai-9, futon1b `130b13c`, 2026-11-06):** the walk's
+   type-only paging shape is now served wholly from the SQLite sidecar's
+   current-doc projection (`hx_node.doc_edn`, backfilled once on the
+   catch-up after a checkpoint exists, gated by a marker, hook- and
+   repair-maintained) — ZERO XTDB calls per page, where the P3 re-check
+   path paid one point read per candidate (25-37 ms each). Before/after:
+   25.6 s live (2026-11-06 20:56Z, `type=mission-scope/pattern&limit=100`)
+   vs a sub-millisecond sidecar keyset page measured read-only against the
+   live `migration-store-21` file (count 2251, page of 100 in 0.0-0.2 ms).
+   **Live after-measurement pending the next sanctioned futon3c-zone
+   restart + one catch-up backfill** (agents do not restart futon3c, Joe
+   11-06); the expensive-read permit is bypassed for this shape from then
+   on. Semantics are the clock projection's — exact up to the checkpoint
+   plus hook repairs; a failed hook falls back to the scan path. Tests:
+   `test-hx-reads`, `test-hx-index` ALL PASS, including the constructed
+   bad case (a throwing XTDB query-fn must not be called) and the
+   documented bounded-staleness case (an unhooked type-change is served
+   until the next catch-up; production writes always hook, and a failed
+   hook flips reads-usable? off).
    **Journal volume settled same day:** start line demoted to opt-in debug
    (`-Dfuton1b.request.start.log=true` or a binding re-enables; futon1b
    `8092333`); end lines keep elapsed/outcome. Inert until the service
