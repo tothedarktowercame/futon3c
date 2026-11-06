@@ -73,8 +73,8 @@ def wrapper_python(real_python, memory_max, timeout_s, bin_dir, run_env):
     return w
 
 
-def test_files(repo, test_dir):
-    return sorted(str(p.relative_to(repo)) for p in (repo / test_dir).rglob("*_test.py"))
+def test_files(repo, test_dir, pattern):
+    return sorted(str(p.relative_to(repo)) for p in (repo / test_dir).rglob(pattern))
 
 
 def code_paths(repo, wanted):
@@ -154,6 +154,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True, type=Path)
     ap.add_argument("--test-dir", required=True)
+    ap.add_argument("--pattern", default="*_test.py",
+                    help="test-file glob under --test-dir (mfuton uses *_test.py; "
+                         "futon3c scripts use test_*.py)")
     ap.add_argument("--python", required=True, type=Path,
                     help="absolute path to the real interpreter (abs path required by the registry)")
     ap.add_argument("--index", type=Path, default=DEFAULT_ROOT / "index.json")
@@ -180,7 +183,7 @@ def main():
         k, _, v = item.partition("=")
         run_env[k] = v
     python = wrapper_python(a.python, a.memory_max, a.timeout, a.bin_dir, run_env)
-    all_files = test_files(repo, a.test_dir)
+    all_files = test_files(repo, a.test_dir, a.pattern)
     files = a.files or all_files
     known = set(all_files)
     unknown = [f for f in files if f not in known]
