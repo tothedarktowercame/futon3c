@@ -1,6 +1,7 @@
 (ns futon3c.giraffe.excursions
   "Combined mission/excursion census. Unread E dependency graphs remain unknown."
   (:require [futon2.aif.mission-registry :as registry]
+            [futon2.aif.task-requisition :as requisition]
             [futon2.aif.task-completion-surface :as completion]
             [futon2.aif.wm.construction-inputs :as sources]
             [futon3c.giraffe.missions :as missions]
@@ -13,7 +14,10 @@
   (let [code-root (or code-root registry/default-code-root)
         mission-input (missions/missions->input opts)
         loaded (registry/load-excursions code-root)
-        entries (vec (sort-by :id (filter registry/live-excursion? (:excursions loaded))))
+        entries (vec (sort-by :id
+                              (remove requisition/requisition-record?
+                                      (filter registry/live-excursion?
+                                              (:excursions loaded)))))
         declarations (sources/target-source-declarations
                       (mapv :id entries)
                       {:loaded-missions {:missions []} :loaded-excursions loaded
