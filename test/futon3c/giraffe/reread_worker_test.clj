@@ -46,7 +46,7 @@
 (defn- opts [f contact]
   {:store (:store f) :pointer (:pointer f) :generations-dir (:generations f)
    :contact-fn contact :now-ms 20 :lease-ms 100 :max-attempts 2
-   :new-item-cap 1})
+   :new-item-cap 1 :reader-id "reader-1"})
 
 (deftest one-request-dispatches-validates-publishes-and-lands
   (let [f (fixture)
@@ -98,3 +98,23 @@
                           {:ok true :record (:replacement f)})))]
     (is (= :superseded (:status result)))
     (is (= before (:path (generation/resolve-generation (:pointer f)))))))
+
+(deftest kimi-contact-uses-requisition-lifecycle
+  (let [completed (atom nil)
+        source {:path "/code/M-one.md" :sha256 "sha"}
+        record {:id "M-one" :source source :status_as_read "open"
+                :purpose "read" :edges [] :unresolved []}
+        result (worker/kimi-contact
+                {:reader-seat "kimi-1" :kimi-task-repo "/dedicated/repo"
+                 :poll-ms 0
+                 :task-runner (fn [_] {:ok true :task-id "E-kimi-task-1"
+                                       :job-id "invoke-1-2-abc"})
+                 :job-reader (fn [_] {:state "done"
+                                      :result (json/generate-string record)})
+                 :completer (fn [task job] (reset! completed [task job]))}
+                {:target_id "M-one" :source_path (:path source)
+                 :source_sha (:sha256 source)}
+                "packet")]
+    (is (:ok result))
+    (is (= record (:record result)))
+    (is (= ["E-kimi-task-1" "invoke-1-2-abc"] @completed))))

@@ -7,6 +7,7 @@
             [futon3c.giraffe.missions :as missions]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.reread-mint :as mint]
+            [futon3c.giraffe.reread-mint-batch :as mint-batch]
             [futon3c.giraffe.reread-queue :as queue]
             [futon3c.giraffe.reread-worker :as worker]
             [futon3c.giraffe.run :as giraffe-run]))
@@ -62,51 +63,70 @@
                    :at-ms (.lastModified latest-file)})}))
 
 (defn run-once!
-  "One reconciliation/worker/mint cycle. READER-SEAT is mandatory."
-  [{:keys [reader-seat store pointer generations-dir giraffe-root edges
-           snapshot-fn contact-fn mint-fn mint-coordinator now-ms new-item-cap]
+  "One reconciliation, parallel reader, and durably batched mint cycle."
+  [{:keys [reader-seat reader-seats kimi-task-repo store pointer generations-dir
+           giraffe-root edges snapshot-fn contact-fn contact-fns mint-fn now-ms
+           new-item-cap mint-window-ms mint-state-path]
     :or {pointer default-pointer giraffe-root default-root edges default-edges}}]
-  (when (str/blank? reader-seat)
-    (throw (ex-info "A named reader seat is required"
-                    {:kind :giraffe-reread/reader-seat-required})))
-  (when-not (and (integer? new-item-cap) (not (neg? new-item-cap)))
-    (throw (ex-info "FUTON3C_GIRAFFE_REREAD_NEW_ITEM_CAP is required"
-                    {:kind :giraffe-reread/new-item-cap-required})))
-  (let [now-ms (or now-ms (System/currentTimeMillis))
-        store (or store (queue/open-store))
-        snapshot ((or snapshot-fn authority-snapshot) {:pointer pointer :edges edges})
-        reconciliation (queue/reconcile! store (:open-items snapshot)
-                                         (:coverage snapshot) now-ms)
-        contact (or contact-fn
-                    (partial worker/agency-contact {:reader-seat reader-seat}))
-        result (worker/run-once!
-                 {:store store :pointer pointer :generations-dir generations-dir
-                 :contact-fn contact :now-ms now-ms :new-item-cap new-item-cap})
-        mint-result (when (= :landed (:status result))
-                      (let [coordinator (or mint-coordinator
-                                            (when mint-fn
-                                              (mint/coordinator mint-fn))
-                                            (if (and (= pointer default-pointer)
-                                                     (= giraffe-root default-root)
-                                                     (= edges default-edges))
-                                              (mint/shared-coordinator)
-                                              (mint/coordinator
-                                               #(mint/supported-mint!
-                                                 {:readings-root pointer
-                                                  :giraffe-root giraffe-root
-                                                  :edges edges}))))]
-                        (mint/request! coordinator)
-                        (mint/await-idle! coordinator (* 30 60 1000))))]
-    {:reconciliation reconciliation :worker result :mint mint-result}))
+  (let [reader-seats (vec (or (seq reader-seats)
+                              (when-not (str/blank? reader-seat) [reader-seat])))]
+    (when (empty? reader-seats)
+      (throw (ex-info "At least one named reader seat is required"
+                      {:kind :giraffe-reread/reader-seat-required})))
+    (when-not (and (integer? new-item-cap) (not (neg? new-item-cap)))
+      (throw (ex-info "FUTON3C_GIRAFFE_REREAD_NEW_ITEM_CAP is required"
+                      {:kind :giraffe-reread/new-item-cap-required})))
+    (when-not (pos-int? mint-window-ms)
+      (throw (ex-info "FUTON3C_GIRAFFE_REREAD_MINT_WINDOW_MS is required"
+                      {:kind :giraffe-reread/mint-window-required})))
+    (let [now-ms (or now-ms (System/currentTimeMillis))
+          store (or store (queue/open-store))
+          snapshot ((or snapshot-fn authority-snapshot) {:pointer pointer :edges edges})
+          reconciliation (queue/reconcile! store (:open-items snapshot)
+                                           (:coverage snapshot) now-ms)
+          contact-for (fn [seat]
+                        (or (get contact-fns seat)
+                            contact-fn
+                            (if (str/starts-with? seat "kimi-")
+                              (partial worker/kimi-contact
+                                       {:reader-seat seat :kimi-task-repo kimi-task-repo})
+                              (partial worker/agency-contact {:reader-seat seat}))))
+          jobs (mapv (fn [seat]
+                       (future
+                         (worker/run-once!
+                          {:store store :pointer pointer :generations-dir generations-dir
+                           :contact-fn (contact-for seat) :now-ms now-ms
+                           :new-item-cap new-item-cap :reader-id seat})))
+                     reader-seats)
+          results (mapv deref jobs)
+          landed (count (filter #(= :landed (:status %)) results))
+          actionable (filter #(contains? #{:pending :claimed} (:state %))
+                             (queue/requests store))
+          mint-result (mint-batch/step!
+                       {:path (or mint-state-path mint-batch/default-state-path)
+                        :window-ms mint-window-ms :now-ms now-ms
+                        :landed-count landed :queue-idle? (empty? actionable)
+                        :mint-fn (or mint-fn
+                                     #(mint/supported-mint!
+                                       {:readings-root pointer
+                                        :giraffe-root giraffe-root :edges edges}))})]
+      {:reconciliation reconciliation :workers results :mint mint-result})))
 
 (defn -main [& args]
   (let [health? (contains? (set args) "--health")
-        reader-seat (System/getenv "FUTON3C_GIRAFFE_REREAD_READER")
+        reader-seats (some-> (System/getenv "FUTON3C_GIRAFFE_REREAD_READERS")
+                             (str/split #",") (->> (remove str/blank?) vec))
+        kimi-task-repo (System/getenv "KIMI_TASK_REPO")
         cap-text (System/getenv "FUTON3C_GIRAFFE_REREAD_NEW_ITEM_CAP")
         new-item-cap (when (re-matches #"\d+" (or cap-text ""))
                        (Long/parseLong cap-text))
+        window-text (System/getenv "FUTON3C_GIRAFFE_REREAD_MINT_WINDOW_MS")
+        mint-window-ms (when (re-matches #"\d+" (or window-text ""))
+                         (Long/parseLong window-text))
         store (queue/open-store)]
     (println (pr-str (if health?
                        (health {:store store})
-                       (run-once! {:store store :reader-seat reader-seat
-                                   :new-item-cap new-item-cap}))))))
+                       (run-once! {:store store :reader-seats reader-seats
+                                   :kimi-task-repo kimi-task-repo
+                                   :new-item-cap new-item-cap
+                                   :mint-window-ms mint-window-ms}))))))

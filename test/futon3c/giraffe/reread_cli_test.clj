@@ -3,7 +3,6 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.giraffe.corpus-generation :as generation]
             [futon3c.giraffe.reread-cli :as cli]
-            [futon3c.giraffe.reread-mint :as mint]
             [futon3c.giraffe.reread-queue :as queue]
             [futon3c.giraffe.reread-worker :as worker]
             [futon3c.giraffe.run :as giraffe-run])
@@ -49,19 +48,20 @@
              (:kind (ex-data error)))))))
 
 (deftest landed-worker-result-requests-and-awaits-mint
-  (let [calls (atom 0)
-        coordinator (mint/coordinator
-                     (fn [] (swap! calls inc)
-                       {:status :minted :run-id "rerated-1"}))]
+  (let [calls (atom 0)]
     (with-redefs [queue/reconcile! (fn [& _] {:requests []})
+                  queue/requests (constantly [])
                   worker/run-once! (fn [_] {:status :landed})]
       (let [result (cli/run-once!
                     {:reader-seat "reader-1" :store {}
                      :snapshot-fn (fn [_] {:open-items [] :coverage {:members []}})
                      :contact-fn (fn [& _] (throw (Exception. "unused")))
-                     :mint-coordinator coordinator :now-ms 100 :new-item-cap 0})]
+                     :mint-fn (fn [] (swap! calls inc)
+                                {:status :minted :run-id "rerated-1"})
+                     :mint-state-path (io/file (temp-dir) "mint.edn")
+                     :mint-window-ms 1000 :now-ms 100 :new-item-cap 0})]
         (is (= 1 @calls))
-        (is (= "rerated-1" (get-in result [:mint :last-run-id])))))))
+        (is (= :minted (get-in result [:mint :status])))))))
 
 (deftest cli-cycle-refuses-without-new-item-cap
   (let [error (try (cli/run-once! {:reader-seat "reader-1"}) nil
