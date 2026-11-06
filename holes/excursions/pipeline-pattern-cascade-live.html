@@ -76,6 +76,7 @@
   .arg-counts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.arg-counts span{border:1px solid var(--line);border-radius:10px;padding:2px 8px;font-size:11px}
   .arg-row{padding:5px 0;border-bottom:1px solid #1e2430;font-size:11.5px}.arg-IN{color:#3ddc84;font-weight:800}.arg-OUT,.arg-failing{color:#ff6b6b;font-weight:800}.arg-UNDEC{color:#e0a63b;font-weight:800}.arg-passing{color:#3ddc84;font-weight:800}
   .arg-attack{margin:3px 0 0 18px;color:#ff9c9c}.arg-question{color:#cdd6e4}.arg-support{color:#8fa0b6}
+  .arg-grade{color:#f0bd70;font-weight:700;margin-left:5px}.arg-legend{color:#8fa0b6;font-size:11px;margin:0 0 8px}
 </style>
 </head>
 <body>
@@ -889,13 +890,15 @@
       return rank(a)-rank(b)||String(a.id).localeCompare(String(b.id));});
     var counts=(report.counts||{}), lc=counts.labels||{};
     var countHtml="<div class='arg-counts'><span class='arg-IN'>IN "+(lc.IN||0)+"</span><span class='arg-OUT'>OUT "+(lc.OUT||0)+"</span><span class='arg-UNDEC'>UNDEC "+(lc.UNDEC||0)+"</span><span>sorries "+(counts.sorries||0)+"</span><span>pending attacks / answers / undercuts "+(counts["pending-attacks-answers-undercuts"]||0)+"</span></div>";
-    var rows=wanted.map(function(n){var raw=sourceNodes[n.id]||{}, support=n.support;
+    var legend="<div class='arg-legend'>Grades: ◆◆ SORRY · ◆ WITNESS · ■ CAPABILITY · ● HABIT. OUT arguments remain OUT.</div>";
+    var rows=wanted.map(function(n){var raw=sourceNodes[n.id]||{}, support=n.support, grade=n.grade||{};
       var supportText=support?(support.survives?"support survives":"support undercut"):"no warranted :supports edge";
       var attacks=attackers(n.id).map(function(e){var a=sourceNodes[e.from]||{};
         return "<div class='arg-attack'>attacked by <code>"+esc(e.from)+"</code>: "+esc(a.content||"content unavailable")+"</div>";}).join("");
-      return "<div class='arg-row'><span class='arg-"+esc(n.label)+"'>"+esc(n.label)+"</span> <code>"+esc(n.id)+"</code> <span class='muted'>("+esc(n.kind)+")</span> — "+esc(raw.content||"")+" <span class='arg-support'>· "+esc(supportText)+"</span>"+attacks+"</div>";
+      var gradeText=n.label==="OUT"?"":"<span class='arg-grade'>"+esc((grade.symbol||"")+" "+(grade.word||"UNKNOWN"))+"</span>";
+      return "<div class='arg-row'><span class='arg-"+esc(n.label)+"'>"+esc(n.label)+"</span>"+gradeText+" <code>"+esc(n.id)+"</code> <span class='muted'>("+esc(n.kind)+")</span> — "+esc(raw.content||"")+" <span class='arg-support'>· "+esc(supportText)+"</span>"+attacks+"</div>";
     }).join("");
-    el("argument-body").innerHTML=countHtml+rows;
+    el("argument-body").innerHTML=countHtml+legend+rows;
     var tests=(report["venue-tests"]||[]).map(function(t){var raw=sourceNodes[t.id]||{};
       return "<div class='arg-row'><span class='arg-"+esc(t.status)+"'>"+esc(t.status)+"</span> <span class='arg-question'>"+esc(raw.content||t.id)+"</span> <span class='muted'>· assessed "+esc(t.assessed||"unassessed")+"</span></div>";
     }).join("");

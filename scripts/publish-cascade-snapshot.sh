@@ -74,7 +74,7 @@ python3 "$(dirname "$0")/partition-tree.py" "$WORK/graph.json" "$WORK/partition-
 # Keep the committed report as a typed, visibly marked snapshot fallback for
 # stripped-down timer environments.
 argument_live=false
-if command -v bb >/dev/null 2>&1 && (cd "$ARGUMENT_DIR" && bb report.bb apex.edn >/dev/null); then
+if command -v bb >/dev/null 2>&1 && (cd "$ARGUMENT_DIR" && bb report.bb apex.edn "$WORK/wow.json" >/dev/null); then
   argument_live=true
 else
   echo "  argument report could not be regenerated; using committed report.json as a snapshot" >&2
