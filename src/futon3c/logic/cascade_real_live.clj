@@ -777,11 +777,15 @@
                            [hx-type reason]))
                        graph-hyperedge-types)
         stale-t  (into #{} (map first) stale)
-        rewalk   (filter (fn [hx-type]
+        needed   (filter (fn [hx-type]
                            (and (not (contains? stale-t hx-type))
                                 (graph-walk-needed? (get cached hx-type) (get counts hx-type))))
                          graph-hyperedge-types)
-        reuse    (remove (into #{} (concat stale-t rewalk)) graph-hyperedge-types)
+        ;; A type with no good entry whose last walk failed is not re-walked
+        ;; in the request path until its backoff expires; it reports :failed.
+        held     (filter refresh-backoff-active needed)
+        rewalk   (remove (set held) needed)
+        reuse    (remove (into #{} (concat stale-t needed)) graph-hyperedge-types)
         pool     (Executors/newFixedThreadPool (int graph-fetch-workers))]
     (try
       (let [tasks (into {}
@@ -822,13 +826,17 @@
         ;; nothing good to keep, so the next call retries it
         (doseq [[hx-type result] results]
           (if (= :ok (:status result))
-            (swap! graph-section-cache assoc hx-type
-                   {:count (or (get counts hx-type) (count (:edges result)))
-                    :edges (:edges result)
-                    :fetched-at-ms (System/currentTimeMillis)})
-            (when-not (and (contains? @graph-section-cache hx-type)
+            (do (swap! graph-section-cache assoc hx-type
+                       {:count (or (get counts hx-type) (count (:edges result)))
+                        :edges (:edges result)
+                        :fetched-at-ms (System/currentTimeMillis)})
+                (swap! graph-refresh-backoff dissoc hx-type))
+            (do
+              (record-refresh-failure!
+               hx-type (ex-info (get-in result [:error :message] "walk failed") {}))
+              (when-not (and (contains? @graph-section-cache hx-type)
                            (not (:failed? (get @graph-section-cache hx-type))))
-              (swap! graph-section-cache assoc hx-type {:failed? true}))))
+                (swap! graph-section-cache assoc hx-type {:failed? true})))))
         (doseq [hx-type stale-t] (start-graph-refresh hx-type))
         {:fetches (merge (into {} (map (fn [hx-type]
                                          [hx-type {:status :ok
@@ -846,9 +854,19 @@
                                                                      (name reason))
                                                      :stale-since-ms (:fetched-at-ms entry)}])))
                                        stale)
+                         (into {} (map (fn [hx-type]
+                                         [hx-type {:status :failed
+                                                   :hyperedge-type hx-type
+                                                   :edges []
+                                                   :error {:message "refresh-backoff"
+                                                           :class "refresh-backoff"
+                                                           :data (pr-str (select-keys (refresh-backoff-active hx-type)
+                                                                                      [:next-refresh-at-ms :failure]))}}]))
+                               held)
                          results)
          :cache {:reused (vec (sort reuse))
                  :rewalked (vec (sort rewalk))
+                 :held (vec (sort held))
                  :stale (vec (sort stale-t))}})
       (finally
         (.shutdownNow pool)))))

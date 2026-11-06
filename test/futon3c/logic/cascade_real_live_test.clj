@@ -789,3 +789,37 @@
          (frequencies (for [r (live/lineage-section (pinned-edges "clock/clocked-on"))
                             :let [d (:dispatched-by r)]]
                         (cond (string? d) :caller (= :self d) :self :else :absent))))))
+
+(deftest graph-request-path-failure-backs-off-when-no-good-entry
+  (reset-refresh-in-flight!)
+  (reset-refresh-backoff!)
+  (let [now-ms (atom 1000)
+        attempts (atom 0)
+        fail? (atom true)]
+    (with-redefs [live/*graph-refresh-now-ms* #(long @now-ms)
+                  live/graph-refresh-initial-backoff-ms 100
+                  live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges
+                  (fn [hx-type]
+                    (when (= hx-type "mission-scope/pattern")
+                      (swap! attempts inc)
+                      (when @fail? (throw (ex-info "store busy" {}))))
+                    [{:hx/endpoints [:fresh hx-type]}])]
+      (reset! live/graph-section-cache {})
+      (let [first-result (live/graph-sections*)]
+        (is (= :failed (get-in first-result [:fetches "mission-scope/pattern" :status])))
+        (is (= 1 @attempts) "the cold walk runs once and fails"))
+      (dotimes [_ 100]
+        (let [result (live/graph-sections*)]
+          (is (= :failed (get-in result [:fetches "mission-scope/pattern" :status])))
+          (is (= "refresh-backoff"
+                 (get-in result [:fetches "mission-scope/pattern" :error :message])))
+          (is (some #{"mission-scope/pattern"} (get-in result [:cache :held])))))
+      (is (= 1 @attempts) "100 requests re-walk nothing inside backoff")
+      (reset! fail? false)
+      (swap! now-ms + 101)
+      (let [result (live/graph-sections*)]
+        (is (= :ok (get-in result [:fetches "mission-scope/pattern" :status]))))
+      (is (= 2 @attempts) "exactly one walk after expiry")
+      (is (nil? (get @live/graph-refresh-backoff "mission-scope/pattern"))
+          "a successful request-path walk resets the backoff"))))
