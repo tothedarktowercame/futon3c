@@ -134,7 +134,7 @@
     "War Machine outer selection (L5-18 :why)",
     "injury ledger and medic"
    ],
-   "probe": "none",
+   "probe": "selection-reason",
    "pattern": "ways-of-working/selection-gives-a-reason",
    "patterns": [
     "problems/g-over-cascade-is-undefined",

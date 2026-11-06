@@ -1179,6 +1179,95 @@ def probe_records_warrant(now=NOW, ledger=None):
             "violations": rows, "violation-count": len(rows), "evidence": evidence,
             "denominator": f"{len(rows)} of {claims} test-result claims in bellback replies carry no warrant id"}
 
+WM_RUNS = pathlib.Path("/home/joe/code/futon2/data/wm-runs")
+SELECTION_WINDOW = datetime.timedelta(days=7)
+
+def read_selection_index(root=WM_RUNS):
+    """One line per click in selection-record-index.edn (what the serving JVM
+    recorded it wrote). Never recompute selections — probe the records."""
+    entries = []
+    idx = root / "selection-record-index.edn"
+    if not idx.exists():
+        return entries
+    for line in idx.read_text(errors="replace").splitlines():
+        if not line.strip():
+            continue
+        run = re.search(r':run/id "([^"]+)"', line)
+        started = re.search(r':startedAt "([^"]+)"', line)
+        path = re.search(r':path "([^"]+)"', line)
+        if run and path:
+            entries.append({"run": run.group(1),
+                            "started-at": started.group(1) if started else None,
+                            "path": path.group(1)})
+    return entries
+
+def classify_selection_records(entries, now=NOW, window=SELECTION_WINDOW):
+    """claude-6's invariant (M-ways-of-working, 2026-11-06), per click in the
+    window: (a) the indexed selection record exists; (b) a chosen outcome
+    names a target and cascade-picks shows another cascade's pick; (c) an
+    abstention carries a typed :case."""
+    rows, checked = [], 0
+    for e in entries:
+        t = parse_time(e.get("started-at"))
+        if t and abs(now - t) > window:
+            continue
+        checked += 1
+        p = pathlib.Path(e["path"])
+        if not p.exists():
+            rows.append({"run": e["run"], "defect": "no-selection-record", "detail": e["path"]})
+            continue
+        s = p.read_text(errors="replace")
+        # Two spellings across the record population: the new per-click
+        # :outcome map (from 2026-11-06) and the legacy :selection-outcome
+        # (chosen/refused/not-exercised, typed by :kind/:reason). Both count.
+        m = re.search(r':outcome \{:status :([a-z-]+)', s) \
+            or re.search(r':selection-outcome \{.*?:status :([a-z-]+)', s)
+        if not m:
+            rows.append({"run": e["run"], "defect": "no-typed-outcome"})
+            continue
+        status = m.group(1)
+        # the typed reason (:case/:kind/:reason) may sit a few keys after the
+        # status (e.g. :not-exercised, :path :direct-task, :reason :task-supplied)
+        tail = s[m.end():m.end() + 200]
+        rm = re.search(r', :(?:case|kind|reason) :([a-z-]+)', tail)
+        case = rm.group(1) if rm else None
+        if status in ("chosen", "selected"):
+            pass  # reason is the runner-up, checked below
+        elif not case:
+            # abstained/refused/not-exercised: every non-selection must name
+            # its typed reason (:case, :kind or :reason)
+            rows.append({"run": e["run"], "defect": f"{status}-without-reason"})
+        if status in ("chosen", "selected"):
+            if not re.search(r':selection \{[^{}]*:selected \{[^{}]*:target "', s) \
+               and not re.search(r':selection \{[^{}]*:target "', s):
+                rows.append({"run": e["run"], "defect": "chosen-without-target"})
+                continue
+            picks = re.search(r':cascade-picks (\[[^\]]*\])', s)
+            n_picks = len(re.findall(r'"[^"]+"', picks.group(1))) if picks else 0
+            if n_picks < 2:
+                rows.append({"run": e["run"], "defect": "no-runner-up",
+                             "detail": f"{n_picks} cascade pick(s), no typed absence"})
+    return checked, rows
+
+def probe_selection_reason(now=NOW, root=WM_RUNS):
+    idx = root / "selection-record-index.edn"
+    if not idx.exists():
+        return broken_live(f"selection record index not found at {idx}")
+    entries = read_selection_index(root)
+    checked, rows = classify_selection_records(entries, now)
+    by_defect = {}
+    for r in rows:
+        by_defect[r["defect"]] = by_defect.get(r["defect"], 0) + 1
+    evidence = [f"population: clicks in selection-record-index.edn started within {SELECTION_WINDOW.days} days ({checked} of {len(entries)} indexed)",
+                "seam per claude-6 (2026-11-06): the selection records the serving JVM wrote; selections are never recomputed by this probe",
+                "chosen requires a :selected target and another cascade's pick in :cascade-picks; abstained requires a typed :case",
+                "passing fixtures: click ca5cf289 (abstained, :insufficient-comparison) and run 24328734 click 1 (chosen with runner-up)"]
+    return {"monitor": "on", "invariant": "failing" if rows else "holding",
+            "last-observation": iso(now), "observed-at": iso(now),
+            "violations": rows, "violation-count": len(rows), "evidence": evidence,
+            "denominator": f"{len(rows)} of {checked} clicks in window lack a carried reason" +
+                           (f" ({by_defect})" if by_defect else "")}
+
 def build_probe_registry(summary=None, graph=None):
     operator_cache = {}
     def shared_operator_census():
@@ -1194,6 +1283,7 @@ def build_probe_registry(summary=None, graph=None):
             "zone-health": lambda: probe_zone_health(),
             "autoclock-gate": lambda: probe_autoclock_gate(),
             "records-warrant": lambda: probe_records_warrant(),
+            "selection-reason": lambda: probe_selection_reason(),
             "status-known": lambda: probe_status_known()}
 
 def broken_live(exc):
