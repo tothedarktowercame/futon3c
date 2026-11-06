@@ -121,6 +121,26 @@ Items: M-differentiable-substrate, M-differentiable-code,
 M-mission-scopes-into-substrate-2.
 Benefits: self, grant-math.
 
+### P9. Argument as program (reflective packet) — grounds A and D
+
+*Thesis:* an argument is a proof and a proof is a program, so the stack's own
+argument can be made checkable part by part; the rule itself is not adopted by
+fiat but has to bottom out in real validation.
+Standard (Joe, 2026-11-06): flexiargs as flexiformal arguments (Kohlhase's
+programme), and the argumentation-theoretic work with Pease, Reed et al.
+(Pease et al. 2017, Lakatos-style collaborative mathematics). Evidence in
+between: "A First Proof Sprint" (arXiv:2602.13587), Lakatosian ideas used to
+good effect in real proofs, with wiring-diagram decomposition of claim
+dependencies.
+Items: M-diagramprover (the likely validator: diagrams whose leaves are
+checked), M-patterns-done-right (flexiargs), wp-argument-game-hybrid,
+wp-warrants-on-edges (begun: the grounded labelling on Cascade Live).
+In the graph: `futon7/holes/argument-graph/apex.edn` `:wp-argument-as-program`.
+
+**Every packet is reflective (Joe, 2026-11-06).** Each packet thesis must say
+how its own rule will be validated, down to a mechanical check, not only what
+it builds.
+
 ## Section 4 material: the Futon City districts (built beside open)
 
 Joe (2026-11-06): the "Mission clusters" section of Cascade Live comes from
