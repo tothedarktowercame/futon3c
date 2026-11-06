@@ -104,7 +104,7 @@
       (expire-leases! tx now-ms)
       (doseq [target-id changed
               :let [item (get open-by-id target-id)
-                    old (get by-id target-id)
+                    old (get by-id (keyword (name target-id)))
                     source (:source-pin item)
                     row {:target-id (name target-id)
                          :source-sha (:sha256 source)

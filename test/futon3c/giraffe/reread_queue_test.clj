@@ -13,6 +13,9 @@
 (defn- item [sha]
   {:id :M-one :source-pin {:path "/code/futon/holes/M-one.md" :sha256 sha}})
 
+(defn- string-item [sha]
+  {:id "M-one" :source-pin {:path "/code/futon/holes/M-one.md" :sha256 sha}})
+
 (defn- coverage [sha]
   {:members [{:id "M-one" :status :read
               :source {:path "/code/futon/holes/M-one.md" :sha256 sha}}]})
@@ -45,6 +48,11 @@
     (is (= [["sha-2" :superseded "sha-3"] ["sha-3" :pending nil]]
            (mapv (juxt :source_sha :state :superseded_by_sha)
                  (queue/requests store))))))
+
+(deftest string-target-id-retains-old-source-pin
+  (let [store (queue/open-store (temp-db))]
+    (queue/reconcile! store [(string-item "new")] (coverage "old") 10)
+    (is (= "old" (:old_sha (first (queue/requests store)))))))
 
 (deftest lease-expiry-is-reconciled
   (let [store (queue/open-store (temp-db))]

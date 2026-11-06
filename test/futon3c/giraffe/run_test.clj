@@ -96,6 +96,21 @@
               (str (name id)
                    " must occur exactly once per column, twice in the row")))))))
 
+(deftest manifest-records-resolved-readings-generation
+  (let [root (temp-root "generation-manifest")
+        adapter-result (assoc
+                        (gt/tickets->input
+                         {:tickets-dir tickets-dir :index-file index-file
+                          :edges-file edges-file :only pilot1-ids})
+                        :readings-generation
+                        {:pointer "/compat/corpus" :path "/generations/abc"
+                         :digest "abc"})
+        pass-output (gp/pass (:input adapter-result))
+        written (gr/write-run! {:root root :adapter-result adapter-result
+                                :pass-output pass-output :edges-file edges-file})]
+    (is (= {:pointer "/compat/corpus" :path "/generations/abc" :digest "abc"}
+           (get-in written [:manifest :readings-generation])))))
+
 (deftest planted-edit-is-reported-by-verify-run
   (let [root (temp-root "planted")
         {:keys [written]} (pilot-run root)

@@ -22,6 +22,7 @@
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
             [clojure.string :as str]
+            [futon3c.giraffe.corpus-generation :as corpus-generation]
             [futon3c.giraffe.missions :as gm]
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
@@ -291,6 +292,7 @@
                                    :cutoff (or priority-cutoff 20))
                             {:status :absent :reason :focus-relation-input-absent})
                           :invocation invocation
+                          :readings-generation (:readings-generation adapter-result)
                           :sources (cond-> {}
                                      index-file (assoc :tickets-index
                                                        {:path (str index-file)
@@ -461,8 +463,11 @@
   (let [combined? (= "missions-excursions" source)
         missions? (or combined? (= "missions" source))
         repo-roots (when missions? (or (seq repos) gm/default-repos))
+        readings-generation (when readings-root
+                              (corpus-generation/resolve-generation readings-root))
+        resolved-readings-root (:path readings-generation)
         reading-batches (when readings-root
-                          (->> (file-seq (io/file readings-root))
+                          (->> (file-seq (io/file resolved-readings-root))
                                (filter #(.isFile %))
                                (filter #(re-matches #"batch-.*\.jsonl" (.getName %)))
                                (sort-by #(.getName %))
@@ -478,16 +483,18 @@
            {:repos repo-roots :edges-file edges :only only-ids
             :include-tickets (boolean readings-root)
             :reading-checker (when readings-root
-                               (str (io/file readings-root "check_edges.py")))
+                               (str (io/file resolved-readings-root "check_edges.py")))
             :members-file (when readings-root
-                            (str (io/file readings-root "members.json")))
+                            (str (io/file resolved-readings-root "members.json")))
             :reading-batches reading-batches
             :reading-scope (when readings-root
                              :population/missions-excursions-tickets)})
           (gt/tickets->input {:tickets-dir default-tickets-dir
                               :index-file default-index-file
                               :edges-file edges :only only-ids}))
-        (update :input stale/annotate-input))))
+        (update :input stale/annotate-input)
+        (cond-> readings-generation
+          (assoc :readings-generation readings-generation)))))
 
 (defn current-missions-freshness
   "Rebuild the newest field run's persisted invocation and compare inputs.
