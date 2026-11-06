@@ -174,6 +174,24 @@ walk itself (futon1b cold pages) is still open.
    - (c) 166 of the 171 directories are `ack-seat-*` / `pull-seat-*` test
      callers writing into the live inbox, the same shape as the
      invoke-ledger test clobber.
+3. **futon1b cold pages — approach settled (Joe 2026-11-06: "OK to C").**
+   The `/hyperedges` type-only branch re-checks each row in XTDB
+   (`fetch-hyperedge-cols-by-ids`, one point-read per row). Baseline
+   25–37 ms/row (docstring, 2026-10-29); 2026-11-06 20:56Z: 25.6 s for
+   `type=mission-scope/pattern&limit=100` (~255 ms/row, load avg ~10,
+   futon1b-zone ~350% CPU with background census/doc-fetch loops).
+   **Fix (C): serve the type-only paging shape from the SQLite sidecar,
+   exactly as the `end-prefix` branch already is** ("served ONLY from the
+   sidecar"); extend the current-valid per-type projection to the walk's
+   paging shape, with a before/after page measurement recorded in the
+   ticket. Contention from the background loops stays a separate owner
+   item (every other reader still goes through XTDB). zai-9.
+   **Journal volume settled same day:** start line demoted to opt-in debug
+   (`-Dfuton1b.request.start.log=true` or a binding re-enables; futon1b
+   `8092333`); end lines keep elapsed/outcome. Inert until the service
+   restarts — deliberately NOT restarted yet because codex-21's uncommitted
+   M-jvm-arxana work (`futon1b_gates.clj` +51, `futon1b_arxana.clj`)
+   compiles from the same source tree; restart lands when theirs does.
 3. **The reply census misses most replies: cause found, fix dispatched.**
    codex-15 (`reply-census-discovery-REPORT.md`): final replies exist, but
    `in-reply-to` points at the latest session row, so tool activity makes a
