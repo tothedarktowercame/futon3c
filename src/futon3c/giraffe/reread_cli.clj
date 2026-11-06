@@ -64,11 +64,14 @@
 (defn run-once!
   "One reconciliation/worker/mint cycle. READER-SEAT is mandatory."
   [{:keys [reader-seat store pointer generations-dir giraffe-root edges
-           snapshot-fn contact-fn mint-fn mint-coordinator now-ms]
+           snapshot-fn contact-fn mint-fn mint-coordinator now-ms new-item-cap]
     :or {pointer default-pointer giraffe-root default-root edges default-edges}}]
   (when (str/blank? reader-seat)
     (throw (ex-info "A named reader seat is required"
                     {:kind :giraffe-reread/reader-seat-required})))
+  (when-not (and (integer? new-item-cap) (not (neg? new-item-cap)))
+    (throw (ex-info "FUTON3C_GIRAFFE_REREAD_NEW_ITEM_CAP is required"
+                    {:kind :giraffe-reread/new-item-cap-required})))
   (let [now-ms (or now-ms (System/currentTimeMillis))
         store (or store (queue/open-store))
         snapshot ((or snapshot-fn authority-snapshot) {:pointer pointer :edges edges})
@@ -77,8 +80,8 @@
         contact (or contact-fn
                     (partial worker/agency-contact {:reader-seat reader-seat}))
         result (worker/run-once!
-                {:store store :pointer pointer :generations-dir generations-dir
-                 :contact-fn contact :now-ms now-ms})
+                 {:store store :pointer pointer :generations-dir generations-dir
+                 :contact-fn contact :now-ms now-ms :new-item-cap new-item-cap})
         mint-result (when (= :landed (:status result))
                       (let [coordinator (or mint-coordinator
                                             (when mint-fn
@@ -99,7 +102,11 @@
 (defn -main [& args]
   (let [health? (contains? (set args) "--health")
         reader-seat (System/getenv "FUTON3C_GIRAFFE_REREAD_READER")
+        cap-text (System/getenv "FUTON3C_GIRAFFE_REREAD_NEW_ITEM_CAP")
+        new-item-cap (when (re-matches #"\d+" (or cap-text ""))
+                       (Long/parseLong cap-text))
         store (queue/open-store)]
     (println (pr-str (if health?
                        (health {:store store})
-                       (run-once! {:store store :reader-seat reader-seat}))))))
+                       (run-once! {:store store :reader-seat reader-seat
+                                   :new-item-cap new-item-cap}))))))

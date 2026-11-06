@@ -79,7 +79,7 @@
        (remove #(= target-id (:id (json/parse-string % true))))
        (str/join "\n")))
 
-(defn- apply-replacement! [staging target-id replacement source]
+(defn- apply-replacement! [staging target-id replacement source new-item?]
   (doseq [batch (batch-files staging)]
     (let [retained (remove-target (slurp batch) target-id)]
       (spit batch (if (str/blank? retained) "" (str retained "\n")))))
@@ -88,11 +88,14 @@
   (let [members-file (io/file staging "members.json")
         members (json/parse-string (slurp members-file) true)
         found? (some #(= target-id (:id %)) members)
-        members' (mapv #(if (= target-id (:id %))
-                          (merge % (select-keys source [:path :sha256]))
-                          %)
-                       members)]
-    (when-not found?
+        members' (if found?
+                   (mapv #(if (= target-id (:id %))
+                            (merge % (select-keys source [:path :sha256]))
+                            %)
+                         members)
+                   (conj members (assoc (select-keys source [:path :sha256])
+                                        :id target-id)))]
+    (when (and (not found?) (not new-item?))
       (throw (ex-info "Replacement target is absent from members.json"
                       {:kind :giraffe-generation/member-absent :target-id target-id})))
     (spit members-file (json/generate-string members' {:pretty true}))))
@@ -148,7 +151,8 @@
     (try
       (copy-tree! base-path staging)
       (apply-replacement! staging (:target-id claim) replacement
-                          {:path (:source-path claim) :sha256 (:source-sha claim)})
+                          {:path (:source-path claim) :sha256 (:source-sha claim)}
+                          (nil? (:old-sha claim)))
       (validate-staging! staging (:target-id claim))
       (when before-switch-fn (before-switch-fn))
       (when-not (= (:source-sha claim) (file-sha (:source-path claim)))

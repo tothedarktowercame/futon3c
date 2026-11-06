@@ -112,6 +112,25 @@
       (is (= :giraffe-generation/source-changed (:reason result)))
       (is (= before (:path (generation/resolve-generation pointer)))))))
 
+(deftest never-read-target-adds-a-member-and-validates
+  (let [{:keys [pointer generations source source-pin]} (fixture)
+        base (:path (generation/resolve-generation pointer))]
+    (spit (io/file base "members.json") "[]")
+    (spit (io/file base "batch-00.jsonl") "")
+    (let [result (generation/publish-generation!
+                  {:pointer pointer :generations-dir generations
+                   :claim {:target-id "M-one"
+                           :source-path (.getAbsolutePath source)
+                           :source-sha (:sha256 source-pin)
+                           :old-sha nil}
+                   :replacement (record source-pin)})
+          current (:path (generation/resolve-generation pointer))
+          members (json/parse-string (slurp (io/file current "members.json")) true)]
+      (is (= :published (:status result)))
+      (is (= [{:id "M-one" :path (.getAbsolutePath source)
+               :sha256 (:sha256 source-pin)}]
+             members)))))
+
 (deftest concurrent-publisher-base-mismatch-keeps-winner
   (let [{:keys [pointer generations base source-pin] :as f} (fixture)
         winner (io/file generations "winner")]
