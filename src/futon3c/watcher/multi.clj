@@ -1488,6 +1488,29 @@
 
 (declare stop-requested? status)
 
+(defn- record-heartbeat-health!
+  [root label cycle-n status error]
+  (let [entry (cond-> {:status status
+                       :root root
+                       :label label
+                       :cycle-n cycle-n
+                       :at (str (Instant/now))}
+                (= :failed status) (assoc :retryable? true :error error))]
+    (swap! !state
+           (fn [state]
+             (if (map? state)
+               (assoc-in state [:heartbeat-health root] entry)
+               state)))))
+
+(defn- require-file-ingest-success!
+  [path result]
+  (when (= :error (:status result))
+    (throw (ex-info "file ingest failed"
+                    {:error/type :watcher/file-ingest-failed
+                     :path path
+                     :result result})))
+  result)
+
 (defn describe-cycle-error
   "One line naming a cycle fault: message plus the ex-data keys that identify
   the failing subject (root, command, exit). Stays a string so existing
@@ -1513,7 +1536,7 @@
       (reconcile-file-change-journal!
        file-change-journal {:root root :label label :snapshot snapshot})
       (let [{:keys [renamed deleted added]} moves
-            cycle-ok? (atom true)
+            file-dispatch-ok? (atom true)
             ingest-paths (vec (remove cross-root-tos ingest-paths))
             deleted (vec (remove cross-root-froms deleted))
             cross-root-count (count (filter #(or (= root (:from-root %))
@@ -1526,10 +1549,9 @@
             dispatch-paths (if (and first-cycle? (not cold-scan?))
                              []
                              ingest-paths)]
-        ;; D0.2 (2026-06-25): isolate per-root file-ingest + heartbeat in a try
-        ;; so a futon1a "request timed out" here can't abort the cycle BEFORE
-        ;; commit-ingest — which had silently starved commit-ingest (cursors
-        ;; froze; D7a caught it). commit-ingest now ALWAYS runs per root.
+        ;; File dispatch owns cache settlement. Heartbeat is observability of
+        ;; that work, not part of its transaction: a failed heartbeat stays
+        ;; red/retryable without replaying already successful file dispatches.
         (try
           (when-not first-cycle?
             (doseq [p dispatch-paths]
@@ -1551,9 +1573,11 @@
                     :event-n ev-n :source source
                     :prior-manifest (or (get-in cache [p :declaration-manifest]) [])
                     :current-manifest current-manifest})
-                  (ingest-event! {:path p :root root :label label
-                                  :run-id run-id :event-n ev-n
-                                  :source source})))))
+                  (require-file-ingest-success!
+                   p
+                   (ingest-event! {:path p :root root :label label
+                                   :run-id run-id :event-n ev-n
+                                   :source source}))))))
           (doseq [p deleted]
             (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]
@@ -1572,24 +1596,38 @@
                                (get-in cache [from :declaration-manifest])
                                :current-manifest
                                (get-in snapshot [to :declaration-manifest])})))
-          (when-not (stop-requested?)
-            (heartbeat! {:root root :label label :run-id run-id
-                         :cycle-n n
-                         :files-seen (count snapshot)
-                         :files-changed (count ingest-paths)
-                         :n-deleted (count deleted)
-                         :n-renamed (count renamed)
-                         :n-added (count added)
-                         :n-cross-root-moves cross-root-count}))
           (catch Throwable t
-            (reset! cycle-ok? false)
+            (reset! file-dispatch-ok? false)
             (binding [*out* *err*]
-              (println (format "[cycle %d] %s: file-ingest/heartbeat error (commit-ingest still runs): %s"
+              (println (format "[cycle %d] %s: file-ingest error (cache unsettled; commit-ingest still runs): %s"
                                n label (.getMessage t))))))
+        (when (and @file-dispatch-ok? (not (stop-requested?)))
+          (let [heartbeat-activity (+ (count ingest-paths) (count deleted)
+                                      (count renamed) (count added)
+                                      cross-root-count)]
+            (try
+              (heartbeat! {:root root :label label :run-id run-id
+                           :cycle-n n
+                           :files-seen (count snapshot)
+                           :files-changed (count ingest-paths)
+                           :n-deleted (count deleted)
+                           :n-renamed (count renamed)
+                           :n-added (count added)
+                           :n-cross-root-moves cross-root-count})
+              ;; An idle heartbeat does no I/O; do not let it clear a prior
+              ;; store failure merely because there was nothing to publish.
+              (when (pos? heartbeat-activity)
+                (record-heartbeat-health! root label n :ok nil))
+              (catch Throwable t
+                (record-heartbeat-health! root label n :failed
+                                          (describe-cycle-error t))
+                (binding [*out* *err*]
+                  (println (format "[cycle %d] %s: heartbeat error (cache settles; retryable): %s"
+                                   n label (.getMessage t))))))))
         (when (and commit-ingest? (not (stop-requested?)))
           (ingest-new-commits-for-root!
            {:root root :label label :cycle-n n}))
-        (when @cycle-ok?
+        (when @file-dispatch-ok?
           (swap! per-root-cache assoc root snapshot))))
     (doseq [{:keys [from to from-root to-root from-label to-label hash]} cross-root-moves]
       (mark-subtask! {:phase :cross-root-move
@@ -1708,6 +1746,7 @@
                   :last-cycle-finished-at <Instant|nil>
                   :last-progress-at <Instant|nil>
                   :last-error <string|nil>
+                  :heartbeat-health <root→typed heartbeat status>
                   :last-subtask <map|nil>
                   :stopping? <boolean>}"}
   !state (atom nil))
@@ -1875,6 +1914,7 @@
                     :last-cycle-finished-at nil
                     :last-progress-at nil
                     :last-error nil
+                    :heartbeat-health {}
                     :last-subtask {:phase :boot}
                     :stopping? false})
     ;; Publish the complete ownership/status state before the zero-delay task

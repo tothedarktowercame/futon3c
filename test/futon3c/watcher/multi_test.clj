@@ -484,6 +484,76 @@
             (reset! sut/!state nil)))
         (is (false? @commit-called?))))))
 
+(deftest heartbeat-failure-settles-successful-file-snapshot
+  (testing "a post-ingest heartbeat failure does not replay unchanged files"
+    (let [root (doto (java.io.File/createTempFile "watch-heartbeat-" "")
+                 (.delete)
+                 (.mkdirs))
+          paths (mapv (fn [n]
+                        (let [f (io/file root (str "changed_" n ".clj"))]
+                          (spit f (str "(ns changed-" n ")\n"))
+                          (.getPath f)))
+                      (range 10))
+          dispatched (atom [])
+          cache (atom {})
+          old-state @sut/!state]
+      (with-redefs [sut/ingest-event!
+                    (fn [{:keys [path]}]
+                      (swap! dispatched conj path)
+                      {:status :ingested})
+                    sut/heartbeat!
+                    (fn [{:keys [files-changed]}]
+                      (when (pos? files-changed)
+                        (throw (ex-info "heartbeat unavailable"
+                                        {:error/type :heartbeat/unavailable}))))]
+        (reset! sut/!state {:stopping? false :heartbeat-health {}})
+        (try
+          (let [opts {:roots [{:path (.getPath root) :label "fixture"}]
+                      :per-root-cache cache
+                      :run-id 1 :event-n (atom 0) :cycle-n (atom 0)
+                      :cold-scan? true :commit-ingest? false}]
+            (sut/run-cycle! opts)
+            (is (= (set paths) (set @dispatched)))
+            (is (= :failed
+                   (get-in @sut/!state
+                           [:heartbeat-health (.getPath root) :status])))
+            (is (true? (get-in @sut/!state
+                               [:heartbeat-health (.getPath root) :retryable?])))
+            (sut/run-cycle! opts)
+            (is (= 10 (count @dispatched))
+                "the unchanged second snapshot dispatches no files"))
+          (finally
+            (reset! sut/!state old-state)))))))
+
+(deftest file-dispatch-failure-leaves-snapshot-unsettled
+  (testing "a failed file dispatch is replayed on the next cycle"
+    (let [root (doto (java.io.File/createTempFile "watch-dispatch-" "")
+                 (.delete)
+                 (.mkdirs))
+          changed (io/file root "changed.clj")
+          dispatches (atom 0)
+          heartbeats (atom 0)
+          cache (atom {})
+          old-state @sut/!state]
+      (spit changed "(ns changed)\n")
+      (with-redefs [sut/ingest-event! (fn [_]
+                                        (swap! dispatches inc)
+                                        (throw (ex-info "dispatch failed" {})))
+                    sut/heartbeat! (fn [_] (swap! heartbeats inc))]
+        (reset! sut/!state {:stopping? false :heartbeat-health {}})
+        (try
+          (let [opts {:roots [{:path (.getPath root) :label "fixture"}]
+                      :per-root-cache cache
+                      :run-id 1 :event-n (atom 0) :cycle-n (atom 0)
+                      :cold-scan? true :commit-ingest? false}]
+            (sut/run-cycle! opts)
+            (sut/run-cycle! opts)
+            (is (= 2 @dispatches) "the failed snapshot is retried")
+            (is (zero? @heartbeats) "heartbeat follows only successful dispatch")
+            (is (empty? @cache)))
+          (finally
+            (reset! sut/!state old-state)))))))
+
 (deftest safe-cycle-updates-heartbeat-state
   (testing "successful cycles stamp timestamps and touch CYDER"
     (let [touched? (atom false)]
