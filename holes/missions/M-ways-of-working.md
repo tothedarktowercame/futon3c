@@ -255,11 +255,25 @@ walk itself (futon1b cold pages) is still open.
    sessions above, futon1b holds only the operator's rows, and the 象 record
    has an empty `reply_text`. So no probe can see whether a Zai seat answered.
    This affects intents-tracked, feedback-reaches and the reply census.
-7. **futon3c's Python probe tests cannot be registered.** The registry wants
-   one repo-relative pytest file per record and an absolute interpreter, and
-   `/usr/bin/python3` has no pytest (the futon6 and marimo-zone venvs do).
-   So every ways-of-working build reports "warrant: none", the dirty tree by
-   construction. Fix: a futon3c venv with pytest, named in the packets.
+7. ~~**futon3c's Python probe tests cannot be registered.**~~ **Fixed 11-06
+   (zai-9, `24a015589` + the registration run):** the venv lives at
+   `/home/joe/code/storage/test-registry/futon3c-suite/venv` (pytest 9.2.0,
+   python 3.12) — outside the checkout, because a venv inside the repo puts
+   site-packages in the load closure and the `scope-not-committed` gate
+   correctly refuses the warrant; outside-repo venvs are fingerprinted by
+   dist ("immutable-by-convention", `test_registry.clj` python-fingerprint*).
+   `scripts/pytest_warrant_suite.py` gained `--pattern` (futon3c names are
+   `test_*.py`, the built-in default was mfuton's `*_test.py`), with a
+   bad-case test (`scripts/test_pytest_warrant_suite.py`). Sweep:
+   `WARRANT_AUTHOR=zai-9 PYTEST_ADDOPTS="-p no:cacheprovider" <venv>/bin/python
+   scripts/pytest_warrant_suite.py --repo . --test-dir scripts --pattern
+   'test_ways_of_working_*.py' --python <venv>/bin/python --code-paths
+   scripts/ways-of-working-probe.py --index …/futon3c-suite/index.json
+   --artifacts …/futon3c-suite/artifacts --bin-dir …/futon3c-suite/bin`.
+   All 10 probe test files registered, 78 passed, ~17 s, and `check` returns
+   `warrant? true` (e.g. `test-registry-f8a23ccc…`, `…155b5f874`). The
+   index is `storage/test-registry/futon3c-suite/index.json`; future probe
+   builds cite it instead of pasting counts.
 
 ## Hygiene: dispatch as a fourth generation (Joe, 2026-11-03)
 
