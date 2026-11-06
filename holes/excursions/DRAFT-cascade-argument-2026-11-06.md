@@ -156,6 +156,27 @@ name the district it continues and the built missions it stands on; e.g. P4
 capability-star-map; P1 spreads across 01, 04, 05 and 07, which is a sign it
 is more than one packet.
 
+## The argument laid over Cascade Live's own sections (2026-11-06)
+
+Joe: build the argument structure with the cascade, not by text-mining first.
+Each argument section below names the Cascade Live sections that already
+carry its material (inventory from CASCADE-SNAPSHOT-1, eb2f65da2).
+
+| # | argument section | Cascade Live sections that carry it | live? | missing |
+|---|---|---|---|---|
+| 1 | The question | Thesis (apex) | snapshot 09-06 | — |
+| 2 | The grounds | Thesis (wings A–D, V); Layers (perceive, believe, evaluate, select, act) | snapshot 11-02 | why these four and not others |
+| 3 | The practice | Declared ways of working (on, off, broken, not built) | snapshot 11-02, probes live | how each way was learned |
+| 4 | What was built first | Mission-cluster basins; Mission detail; Cited patterns; Agent/mission lineage | live | built vs open per district (draft table above); the "why first" sentence per district |
+| 5 | How work moves | WIP / Uxbridge; Composing cascade; Forward model; Ticket preparation | mixed | Uxbridge is a 08-22 snapshot |
+| 6 | The open packets | The 47 review rows (Giraffe partition) → to become packets P1…; Dimension read status | snapshot 11-02 | packets and theses (P1–P8 drafted) |
+| 7 | What is undecided | Honest holes; Held / deferred work | live | gated-on-Joe items as their own list |
+
+Reading the page top to bottom today does not follow this order: the live
+graph sections (4) sit between the grounds and the workflow, and the open
+work (6) is last. Re-ordering the page to follow the argument is a small
+change to the page, separate from making snapshot sections live.
+
 ## Where the Mozilla application stands (found 2026-11-06)
 
 - RFP: `~/mozilla/PUBLIC_2027_2028_Fellowship_RFP-2.pdf`. Letter of Intent due
