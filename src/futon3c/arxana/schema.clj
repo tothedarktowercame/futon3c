@@ -44,7 +44,34 @@
    {:schema-version 1
     :required #{:result/digest :result/evidence}
     :allowed #{:result/digest :result/evidence :acceptance}
-    :projection [:operation :result/digest :assertion/id]}})
+    :projection [:operation :result/digest :assertion/id]}
+
+   ;; Increment 6 (Project) registrations.
+   :correspondence/query
+   {:schema-version 1
+    :required #{}
+    :allowed #{:manifestation/id :artifact/revision-id :direction :methods
+               :verification :verification-floor :role :assessment-verdict
+               :current-only? :subject/id}
+    :projection [:operation [:result/assertions]]}
+
+   :subscription/open
+   {:schema-version 1
+    :required #{}
+    :allowed #{:topics :resume/cursor}
+    :projection [:operation :subscription/id :snapshot/cursor]}
+
+   :subscription/poll
+   {:schema-version 1
+    :required #{:subscription/id}
+    :allowed #{:subscription/id}
+    :projection [:operation :subscription/id]}
+
+   :subscription/ack
+   {:schema-version 1
+    :required #{:subscription/id :cursor}
+    :allowed #{:subscription/id :cursor}
+    :projection [:operation :subscription/id :acked]}})
 
 (defn operation-schema
   "Look up the registered schema for op in registry (default registry-v1).

@@ -42,7 +42,9 @@
         (is (= caps (:store/capabilities hs)))
         (is (= 1 (get-in hs [:operations :scope/resolve])))
         (is (false? (:subscription hs)))
-        (is (not (contains? (:operations hs) :correspondence/query))
+        (is (= 1 (get-in hs [:operations :correspondence/query]))
+            "increment 6 operations are registered and advertised")
+        (is (not (contains? (:operations hs) :action/compile))
             "unimplemented operations are absent, not advertised")))))
 
 ;;; Unknown-field refusal ------------------------------------------------------

@@ -1,26 +1,35 @@
 (ns futon3c.arxana.service
-  "Increment-3 service spine: capabilities handshake and envelope dispatch
-  plumbing. No D2 resolution, D4 correspondence, clients, or deployment — this
-  is the reversible seam those increments build against."
+  "Service spine: capabilities handshake and envelope dispatch plumbing.
+
+  Increment 4 wired :scope/resolve and :assertion/promote. Increment 6
+  (Project) adds :revision/ingest, :correspondence/query and the D3
+  subscription operations (open/poll/ack) over the store-backed journal, and
+  stamps :semantic/digest on operation responses per the registered D5
+  projection. The 3-arity dispatch (store provider msg) remains for pre-6
+  callers and answers :unsupported for increment-6 operations."
   (:require [futon3c.arxana.artifact :as artifact]
+            [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.envelope :as env]
+            [futon3c.arxana.journal :as journal]
             [futon3c.arxana.resolve.evaluator :as evaluator]
             [futon3c.arxana.resolve.promotion :as promotion]
             [futon3c.arxana.schema :as schema]
-            [futon3c.arxana.store :as store]))
+            [futon3c.arxana.store :as store]
+            [futon3c.arxana.subscribe :as subscribe]))
 
 (defn handshake
   "Capabilities handshake (D1 compat rule 7: mandatory). Reports the store's
   truth table verbatim — evidence, not aspiration — plus registered operation
   schema versions and projection versions."
-  [graph-store]
-  {:protocol/version env/protocol-version
-   :store/capabilities (store/capabilities graph-store)
-   :operations (schema/registered-versions)
-   :projections {:semantic/scope-resolve 1
-                 :error 1}
-   :consistency-mode :revision-precondition
-   :subscription false})
+  ([graph-store] (handshake graph-store false))
+  ([graph-store subscription?]
+   {:protocol/version env/protocol-version
+    :store/capabilities (store/capabilities graph-store)
+    :operations (schema/registered-versions)
+    :projections {:semantic/scope-resolve 1
+                  :error 1}
+    :consistency-mode :revision-precondition
+    :subscription (boolean subscription?)}))
 
 (defn register-strategy!
   "Register an executable strategy value in the graph store under its
@@ -42,47 +51,189 @@
     (when-let [e (:ok (store/get-entity graph-store srid))]
       (get-in e [:props :strategy]))))
 
+(defn- head-entity-id [artifact-id]
+  (str "arxana:head:" artifact-id))
+
+(defn- current-head [graph-store artifact-id]
+  (get-in (:ok (store/get-entity graph-store (head-entity-id artifact-id)))
+          [:props :head/revision-id]))
+
+(defn- ingest-revision
+  "revision/ingest handler (D3 write contract). Compares the expected head
+  against the current head entity, ingests canonical bytes as a new immutable
+  revision, and moves the head. Atomicity note: over the mock store this is a
+  check-then-write whose non-atomicity is reported honestly via
+  capabilities (:entity-compare-and-set false); the futon1b conditional
+  transaction route owns real atomic refusal (increment 2 / D7 A2). A stale
+  expected head is refused with the current head and recovery choices, never
+  silently retried."
+  [graph-store artifact-provider body]
+  (let [{:keys [artifact/id bytes media-type expected/revision-id]} body
+        ^bytes bs (cond
+                    (bytes? bytes) bytes
+                    (string? bytes) (.getBytes ^String bytes "UTF-8")
+                    :else nil)]
+    (cond
+      (nil? bs)
+      {:error (env/error :invalid :arxana.service/ingest-bytes
+                         {:reason ":bytes must be a UTF-8 string or base64 bytes"}
+                         nil)}
+
+      :else
+      (let [current (current-head graph-store id)]
+        (if (not= (if (= revision-id :absent) nil revision-id) current)
+          {:error (env/error :stale :arxana.service/head-precondition-failed
+                             {:target/id id
+                              :expected/revision-id revision-id
+                              :current/revision-id current}
+                             [:refresh :rebase-and-resubmit :export-patch])}
+          (let [{:keys [ok]} (artifact/ingest! artifact-provider id bs media-type)
+                rid (:artifact/revision-id ok)]
+            (store/put-entity! graph-store
+                               {:entity/id (head-entity-id id)
+                                :type :arxana/artifact-head
+                                :external-id id
+                                :props {:head/revision-id rid}})
+            {:ok {:artifact/id id
+                  :artifact/revision-id rid
+                  :head/revision-id rid}}))))))
+
+(defn- with-semantic-digest
+  "Stamp :semantic/digest on an :ok payload using the operation's registered
+  projection (D5 canonical semantic response digest). Errors use the error
+  projection; both exclude message ID, principal and timestamps."
+  [op payload]
+  (if (:error/category payload)
+    (assoc payload :semantic/digest (env/error-digest op payload))
+    (let [projection (get-in (schema/operation-schema op) [:ok :projection])]
+      (assoc payload :semantic/digest
+             (env/semantic-digest projection (assoc payload :operation op))))))
+
+(defn- publish!
+  "Append a journal event when the config carries a journal; nil-safe."
+  [cfg event]
+  (when-let [j (:journal cfg)]
+    (journal/append! j event)))
+
 (defn dispatch
-  "Validate an inbound envelope and its body against the schema registry.
-  Returns a D3 response envelope. :scope/resolve and :assertion/promote are
-  implemented (increment 4); other registered operations whose handlers are
-  not yet implemented answer :unsupported rather than pretending success."
-  [graph-store artifact-provider msg]
-  (let [{:keys [ok error]} (env/validate-envelope msg)]
-    (if error
-      {:protocol/version env/protocol-version
-       :message/id (:message/id msg)
-       :operation (:operation msg)
-       :error error}
-      (let [op (:operation ok)
-            {body :ok berr :error} (schema/validate-body op (:body ok))]
-        (cond
-          berr (env/response ok berr)
+  "Validate an inbound envelope and its body against the schema registry and
+  run the operation handler. Returns a D3 response envelope containing
+  exactly one of :ok or :error.
 
-          (= op :capabilities/handshake)
-          (env/response ok (handshake graph-store))
+  Config arity: {:graph-store s :artifact-provider p :correspondence-repo r
+  :journal j :subscriptions subs}. The 3-arity form is the pre-increment-6
+  seam: increment-6 operations answer :unsupported against it."
+  ([graph-store artifact-provider msg]
+   (dispatch {:graph-store graph-store :artifact-provider artifact-provider} msg))
+  ([cfg msg]
+   (let [{:keys [graph-store artifact-provider correspondence-repo
+                 subscriptions]} cfg
+         {:keys [ok error]} (env/validate-envelope msg)]
+     (if error
+       {:protocol/version env/protocol-version
+        :message/id (:message/id msg)
+        :operation (:operation msg)
+        :error error}
+       (let [op (:operation ok)
+             {body :ok berr :error} (schema/validate-body op (:body ok))]
+         (cond
+           berr (env/response ok berr)
 
-          (= op :scope/resolve)
-          (let [res (evaluator/evaluate
-                     {:artifact-provider artifact-provider
-                      :strategy-source (strategy-source graph-store)}
-                     (assoc body :request/id (:message/id ok)))]
-            (env/response ok res))
+           (= op :capabilities/handshake)
+           (env/response ok (handshake graph-store (some? subscriptions)))
 
-          (= op :assertion/promote)
-          (let [{:keys [ok error]}
-                (promotion/promote
-                 {:graph-store graph-store
-                  :artifact-provider artifact-provider
-                  :strategy-source (strategy-source graph-store)}
-                 (assoc body :principal/id (:principal/id ok)))]
-            (env/response ok (or ok error)))
+           (= op :scope/resolve)
+           (let [res (evaluator/evaluate
+                      {:artifact-provider artifact-provider
+                       :strategy-source (strategy-source graph-store)}
+                      (assoc body :request/id (:message/id ok)))]
+             (env/response ok (with-semantic-digest op res)))
 
-          :else
-          (env/response
-           ok
-           (env/error :unsupported :arxana.service/operation-not-implemented
-                      {:operation op
-                       :increment 4
-                       :note "resolve and promotion implemented; this handler lands in a later increment"}
-                      nil)))))))
+           (= op :assertion/promote)
+           (let [{rok :ok rerr :error}
+                 (promotion/promote
+                  {:graph-store graph-store
+                   :artifact-provider artifact-provider
+                   :strategy-source (strategy-source graph-store)}
+                  (assoc body :principal/id (:principal/id ok)))]
+             (if rerr
+               (env/response ok (with-semantic-digest op rerr))
+               (do
+                 (publish! cfg {:topic :assertion/promoted
+                                :cause/message-id (:message/id ok)
+                                :affected/ids [(:assertion/id rok)]
+                                :payload {:assertion/id (:assertion/id rok)
+                                          :acceptance/id (:acceptance/id rok)
+                                          :created? (:created? rok)}})
+                 (env/response ok (with-semantic-digest op rok)))))
+
+           (= op :revision/ingest)
+           (let [{rok :ok rerr :error} (ingest-revision graph-store artifact-provider body)]
+             (if rerr
+               (env/response ok (with-semantic-digest op rerr))
+               (do
+                 (publish! cfg {:topic :revision/ingested
+                                :cause/message-id (:message/id ok)
+                                :affected/ids [(:artifact/id rok)]
+                                :before/revision-id (:expected/revision-id body)
+                                :after/revision-id (:artifact/revision-id rok)
+                                :payload rok})
+                 (env/response ok (with-semantic-digest op rok)))))
+
+           (= op :correspondence/query)
+           (if-not correspondence-repo
+             (env/response ok (env/error :unsupported :arxana.service/operation-not-implemented
+                                         {:operation op :increment 6
+                                          :missing :correspondence-repo}
+                                         nil))
+             (let [filters (dissoc body :subject/id)
+                   assertions (if-let [subj (:subject/id body)]
+                                (let [ms (corr/all-manifestations correspondence-repo subj)
+                                      ids (set (map :manifestation/id ms))]
+                                  (filterv (fn [a]
+                                             (or (ids (:manifestation/id (:source a)))
+                                                 (ids (:manifestation/id (:target a)))))
+                                           (corr/query correspondence-repo filters)))
+                                (corr/query correspondence-repo filters))]
+               (env/response ok (with-semantic-digest
+                                 op
+                                 {:result/assertions assertions
+                                  :result/count (count assertions)}))))
+
+           (= op :subscription/open)
+           (if-not subscriptions
+             (env/response ok (env/error :unsupported :arxana.service/operation-not-implemented
+                                         {:operation op :increment 6
+                                          :missing :subscriptions}
+                                         nil))
+             (let [{rok :ok rerr :error}
+                   (subscribe/open subscriptions
+                                   (assoc body :principal/id (:principal/id ok)))]
+               (env/response ok (or (some->> rerr (with-semantic-digest op)) (with-semantic-digest op rok)))))
+
+           (= op :subscription/poll)
+           (if-not subscriptions
+             (env/response ok (env/error :unsupported :arxana.service/operation-not-implemented
+                                         {:operation op :increment 6
+                                          :missing :subscriptions}
+                                         nil))
+             (let [{rok :ok rerr :error} (subscribe/poll subscriptions body)]
+               (env/response ok (or (some->> rerr (with-semantic-digest op)) (with-semantic-digest op rok)))))
+
+           (= op :subscription/ack)
+           (if-not subscriptions
+             (env/response ok (env/error :unsupported :arxana.service/operation-not-implemented
+                                         {:operation op :increment 6
+                                          :missing :subscriptions}
+                                         nil))
+             (let [{rok :ok rerr :error} (subscribe/ack subscriptions body)]
+               (env/response ok (or (some->> rerr (with-semantic-digest op)) (with-semantic-digest op rok)))))
+
+           :else
+           (env/response
+            ok
+            (env/error :unsupported :arxana.service/operation-not-implemented
+                       {:operation op
+                        :increment 6
+                        :note "handler lands in a later increment (action/compile is increment 7)"}
+                       nil))))))))
