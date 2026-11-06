@@ -1243,10 +1243,13 @@ def classify_selection_records(entries, now=NOW, window=SELECTION_WINDOW):
                 rows.append({"run": e["run"], "defect": "chosen-without-target"})
                 continue
             picks = re.search(r':cascade-picks (\[[^\]]*\])', s)
-            n_picks = len(re.findall(r'"[^"]+"', picks.group(1))) if picks else 0
-            if n_picks < 2:
-                rows.append({"run": e["run"], "defect": "no-runner-up",
-                             "detail": f"{n_picks} cascade pick(s), no typed absence"})
+            targets = sorted(set(re.findall(r'"([^"]+)"', picks.group(1)))) if picks else []
+            # distinct targets, not picks: two cascades collapsing onto the
+            # same target is a one-option field, not a runner-up (claude-6
+            # review, 2026-11-06: the 10:4x loop paused for exactly that)
+            if len(targets) < 2:
+                rows.append({"run": e["run"], "defect": "no-distinct-runner-up",
+                             "detail": f"{len(targets)} distinct target(s): {targets[:3]}"})
     return checked, rows
 
 def probe_selection_reason(now=NOW, root=WM_RUNS):

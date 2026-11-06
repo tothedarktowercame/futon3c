@@ -65,6 +65,17 @@ class ClassifySelectionRecordsTest(unittest.TestCase):
         checked, rows = self.mod.classify_selection_records([entry("run-no-case", p)], now=NOW)
         self.assertEqual([r["defect"] for r in rows], ["abstained-without-reason"])
 
+    def test_bad_case_b_chosen_with_no_distinct_runner_up(self):
+        # claude-6 review 2026-11-06: two cascades picking the SAME target is
+        # a collapsed one-option field, not a runner-up — the 10:4x loop's
+        # clicks 2 and 3 today. The old pick-counting check let this pass.
+        p = self.write("collapsed.edn",
+                       CHOSEN.replace(':cascade-picks ["E-comprehension-foundation" "M-action-cost-modelling" '
+                                      '"E-comprehension-foundation" :no-pick]',
+                                      ':cascade-picks ["E-queries-and-scopes" "E-queries-and-scopes" :no-pick :no-pick]'))
+        checked, rows = self.mod.classify_selection_records([entry("run-collapsed", p)], now=NOW)
+        self.assertEqual([r["defect"] for r in rows], ["no-distinct-runner-up"])
+
     def test_bad_case_b_chosen_with_no_runner_up(self):
         # chosen, target named, but only one cascade picked and no typed absence
         p = self.write("one-pick.edn",
@@ -72,7 +83,7 @@ class ClassifySelectionRecordsTest(unittest.TestCase):
                                       '"E-comprehension-foundation" :no-pick]',
                                       ':cascade-picks [:no-pick "M-action-cost-modelling" :no-pick :no-pick]'))
         checked, rows = self.mod.classify_selection_records([entry("run-one-pick", p)], now=NOW)
-        self.assertEqual([r["defect"] for r in rows], ["no-runner-up"])
+        self.assertEqual([r["defect"] for r in rows], ["no-distinct-runner-up"])
 
     def test_bad_case_b_chosen_without_target(self):
         p = self.write("no-target.edn", CHOSEN.replace(':selected {:target "M-action-cost-modelling"}', "nil"))
