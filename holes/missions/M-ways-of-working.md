@@ -9,8 +9,9 @@ with patterns in `futon3/library/ways-of-working/` and
 `futon3/library/creativity-commons/`.
 **Excursions:** E-autoclock-wow
 **Published at:** https://zone.hyperreal.enterprises/wip/pipeline-pattern-cascade.html
-(Declared Ways of Working panel; published by hand while the
-`wip-cascade-snapshot` timer is parked).
+(Declared Ways of Working panel; published by the `wip-cascade-snapshot`
+timer — unparked 11-04, publishing every minute; earlier "by hand" note was
+out of date, claude-6 11-06).
 
 ## HEAD
 
@@ -166,8 +167,9 @@ walk itself (futon1b cold pages) is still open.
    result as receipt (`5127f81da`, with a test). Spot-checked: 507 files, 0
    consumed, 171 inbox directories.
    **Open:**
-   - (a) Joe decides the 507: manifest then archive (recommended), move to
-     `consumed/`, or leave.
+   - (a) ~~Joe decides the 507~~ — claude-6 endorses manifest-then-archive
+     (2026-11-06: "Giraffe doesn't read those files"); awaiting only Joe's
+     word to execute.
    - (b) Agency could stop writing completion bellbacks for polling callers.
    - (c) 166 of the 171 directories are `ack-seat-*` / `pull-seat-*` test
      callers writing into the live inbox, the same shape as the
