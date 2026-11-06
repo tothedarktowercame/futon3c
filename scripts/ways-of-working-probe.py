@@ -1179,6 +1179,85 @@ def probe_records_warrant(now=NOW, ledger=None):
             "violations": rows, "violation-count": len(rows), "evidence": evidence,
             "denominator": f"{len(rows)} of {claims} test-result claims in bellback replies carry no warrant id"}
 
+# eat-your-own-tail (tail-bite). Bounded per-turn form (Joe + zai-9
+# 2026-11-06): no convergence claim (that is the halting problem); each
+# intervention must show (1) 香 during 化 — a text observation timestamped
+# inside the run window, (2) 債 from 香 / 既 citable — the job's durable
+# result-summary cites a later-citable id (commit sha, warrant, test-registry,
+# requisition). Population: original (non-bellback) work jobs to agent seats
+# with a running lifecycle, started within TAIL_WINDOW. Records read, never
+# recomputed.
+TAIL_WINDOW = datetime.timedelta(days=7)
+TAIL_CITATION = re.compile(r"(test-registry-[0-9a-f]{16,}|\b[0-9a-f]{9,40}\b|E-kimi-task-\d+|sorry)")
+
+def parse_work_jobs(text):
+    """Original (non-bellback) invoke jobs to agent seats with a running
+    lifecycle, as records of their events and result-summary."""
+    jobs = []
+    for chunk in text.split("{:bellback-of nil, ")[1:]:
+        if ':type "running"' not in chunk:
+            continue  # not a run (http-callers, polls, undelivered briefs)
+        jid = re.search(r':job-id "([^"]+)"', chunk)
+        started = re.search(r':started-at "([^"]+)"', chunk)
+        summ = re.search(r':result-summary ("(?:[^"\\]|\\.)*")', chunk)
+        events = re.findall(r'\{:seq \d+, :type "([a-z-]+)", :at "([^"]+)"', chunk)
+        textev = re.findall(r':type "text", :at "([^"]+)", :text "', chunk)
+        if not jid:
+            continue
+        try:
+            summary = json.loads(summ.group(1)) if summ else ""
+        except Exception:  # noqa: BLE001
+            summary = ""
+        jobs.append({"id": jid.group(1),
+                     "started-at": started.group(1) if started else None,
+                     "summary": summary if isinstance(summary, str) else "",
+                     "events": events, "text-events": textev})
+    return jobs
+
+def classify_tail_bites(jobs, now=NOW, window=TAIL_WINDOW):
+    """Returns (population, violations). A work job violates when no text
+    observation falls inside its run window (香 not during 化), or when its
+    result-summary cites no durable id (no 債 recorded as citable 既)."""
+    rows = []
+    pop = 0
+    for j in jobs:
+        t = parse_time(j.get("started-at"))
+        if t and abs(now - t) > window:
+            continue
+        if not t:
+            continue  # undatable jobs are not interventions we can bound
+        pop += 1
+        ats = sorted(parse_time(at) for _typ, at in j["events"] if parse_time(at))
+        running = [parse_time(at) for typ, at in j["events"] if typ == "running" and parse_time(at)]
+        terminal = [parse_time(at) for typ, at in j["events"] if typ in ("done", "failed", "overrun") and parse_time(at)]
+        lo = min(running) if running else t
+        hi = max(terminal) if terminal else (max(ats) if ats else None)
+        in_window = [parse_time(a) for a in j["text-events"]
+                     if parse_time(a) and lo <= parse_time(a) and (hi is None or parse_time(a) <= hi)]
+        clause = None
+        if not in_window:
+            clause = "no-香-during-化: zero text observations inside the run window"
+        elif not TAIL_CITATION.search(j.get("summary") or ""):
+            clause = "no-citable-既: result-summary cites no durable id (sha/warrant/test-registry)"
+        if clause:
+            rows.append({"job": j["id"], "violation": clause})
+    return pop, rows
+
+def probe_tail_bite(now=NOW, ledger=None):
+    path = pathlib.Path(ledger or INVOKE_LEDGER)
+    if not path.exists():
+        return broken_live(f"invoke ledger not found at {path}")
+    jobs = parse_work_jobs(path.read_text(errors="replace"))
+    pop, rows = classify_tail_bites(jobs, now)
+    evidence = [f"population: {len(jobs)} original work jobs (running lifecycle) in {path}; {pop} started within {TAIL_WINDOW.days} days",
+                "clause 1 (香 during 化): at least one text event timestamped between the job's running and terminal events",
+                "clause 2 (既 citable): the durable result-summary cites a commit sha / test-registry id / warrant / requisition",
+                "bounded per-turn reading (2026-11-06): no convergence claim; improvement stays in 味"]
+    return {"monitor": "on", "invariant": "failing" if rows else "holding",
+            "last-observation": iso(now), "observed-at": iso(now),
+            "violations": rows, "violation-count": len(rows), "evidence": evidence,
+            "denominator": f"{len(rows)} of {pop} work jobs in window lack an in-run observation or a citable record"}
+
 WM_RUNS = pathlib.Path("/home/joe/code/futon2/data/wm-runs")
 SELECTION_WINDOW = datetime.timedelta(days=7)
 
@@ -1287,6 +1366,7 @@ def build_probe_registry(summary=None, graph=None):
             "autoclock-gate": lambda: probe_autoclock_gate(),
             "records-warrant": lambda: probe_records_warrant(),
             "selection-reason": lambda: probe_selection_reason(),
+            "tail-bite": lambda: probe_tail_bite(),
             "status-known": lambda: probe_status_known()}
 
 def broken_live(exc):
