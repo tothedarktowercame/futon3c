@@ -73,6 +73,65 @@
               (do (Thread/sleep poll-ms)
                   (recur (- remaining poll-ms))))))))))
 
+(defn kimi-contact
+  "Dispatch one reading through kimi-task.sh, whose committed excursion is
+  the Kimi requisition authority. KIMI-TASK-REPO should be a dedicated repo:
+  the script writes before committing, so using canonical futon2 would expose
+  a dirty-tree window to WM preflight. Tests inject TASK-RUNNER/JOB-READER and
+  COMPLETER and never touch a repository or Agency."
+  [{:keys [reader-seat caller kimi-task-repo timeout-ms poll-ms
+           task-runner job-reader completer]
+    :or {caller "giraffe-reread-worker" timeout-ms (* 40 60 1000) poll-ms 2000}}
+   request prompt]
+  (let [packet (java.io.File/createTempFile "giraffe-reread-" ".md")
+        default-runner
+        (fn [packet-path]
+          (let [result (shell/sh "env" (str "KIMI_TASK_REPO=" kimi-task-repo)
+                                 "bash" "/home/joe/code/futon3c/scripts/kimi-task.sh"
+                                 "--from" caller "--to" reader-seat "--purpose"
+                                 (str "Giraffe reading " (:target_id request)) packet-path)
+                text (str (:out result) "\n" (:err result))]
+            {:ok (zero? (:exit result))
+             :task-id (second (re-find #"task=(E-kimi-task-\d+)" text))
+             :job-id (second (re-find #"job=(invoke-[0-9]+-[0-9]+-[0-9a-f]+)" text))}))
+        default-reader (fn [job-id]
+                         (try (json/parse-string
+                               (slurp (str "http://localhost:7070/api/alpha/invoke/jobs/" job-id)) true)
+                              (catch Exception _ nil)))
+        default-completer (fn [task-id job-id]
+                            (shell/sh "env" (str "KIMI_TASK_REPO=" kimi-task-repo)
+                                      "bash" "/home/joe/code/futon3c/scripts/kimi-task.sh"
+                                      "--complete" task-id job-id))]
+    (try
+      (spit packet prompt)
+      (let [{:keys [ok task-id job-id]} ((or task-runner default-runner) (.getPath packet))]
+        (if-not (and ok task-id job-id)
+          {:ok false :reason :kimi-requisition-dispatch-failed}
+          (loop [remaining timeout-ms]
+            (if (neg? remaining)
+              {:ok false :reason :agency-job-timeout :job-id job-id :task-id task-id}
+              (let [response ((or job-reader default-reader) job-id)
+                    job (or (:job response) response)
+                    state (some-> (:state job) name)]
+                (if (contains? terminal-states state)
+                  (let [completion ((or completer default-completer) task-id job-id)
+                        completion-ok? (or (nil? (:exit completion))
+                                           (zero? (:exit completion)))]
+                    (cond
+                      (not completion-ok?)
+                      {:ok false :reason :kimi-requisition-completion-failed
+                       :job-id job-id :task-id task-id}
+
+                      (not= "done" state)
+                      {:ok false :reason :agency-job-failed :job-id job-id :state state}
+
+                      :else
+                      (if-let [record (some-> (job-text job) json-record)]
+                        {:ok true :record record :job-id job-id :task-id task-id}
+                        {:ok false :reason :reader-record-invalid-json :job-id job-id})))
+                  (do (Thread/sleep poll-ms) (recur (- remaining poll-ms)))))))))
+      (finally (.delete packet)))))
+
 (defn- record-matches-claim? [record request]
   (and (= (:target_id request) (:id record))
        (= (:source_path request) (get-in record [:source :path]))
@@ -82,12 +141,12 @@
   "Claim and process at most one request. CONTACT-FN receives REQUEST and PROMPT.
   It returns {:ok true :record map} or {:ok false :reason keyword}."
   [{:keys [store pointer generations-dir contact-fn now-ms lease-ms max-attempts
-           new-item-cap]
+           new-item-cap reader-id]
     :or {lease-ms default-lease-ms max-attempts default-max-attempts}}]
   (when-not (and (integer? new-item-cap) (not (neg? new-item-cap)))
     (throw (ex-info "A nonnegative new-item claim cap is required"
                     {:kind :giraffe-reread/new-item-cap-required})))
-  (if-let [request (queue/claim! store now-ms lease-ms new-item-cap)]
+  (if-let [request (queue/claim! store now-ms lease-ms new-item-cap reader-id)]
     (let [contact (contact-fn request (reading-prompt request))]
       (cond
         (not (:ok contact))

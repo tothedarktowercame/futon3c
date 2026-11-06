@@ -41,7 +41,7 @@
             "target_id TEXT NOT NULL, source_sha TEXT NOT NULL, "
             "old_sha TEXT, source_path TEXT NOT NULL, state TEXT NOT NULL, "
             "requested_at_ms INTEGER NOT NULL, updated_at_ms INTEGER NOT NULL, "
-            "lease_until_ms INTEGER, superseded_by_sha TEXT, superseded_reason TEXT, "
+            "lease_until_ms INTEGER, claimed_by TEXT, superseded_by_sha TEXT, superseded_reason TEXT, "
             "attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT, landed_digest TEXT, "
             "PRIMARY KEY(target_id, source_sha))")])
      ;; REREAD-1 databases predate worker outcomes. Keep the durable queue
@@ -49,6 +49,7 @@
      (ensure-column! store "attempts" "attempts INTEGER NOT NULL DEFAULT 0")
      (ensure-column! store "last_error" "last_error TEXT")
      (ensure-column! store "landed_digest" "landed_digest TEXT")
+     (ensure-column! store "claimed_by" "claimed_by TEXT")
      (jdbc/execute! (:datasource store)
                     ["CREATE INDEX IF NOT EXISTS reread_requests_state_idx ON reread_requests(state, requested_at_ms)"])
      store)))
@@ -81,7 +82,7 @@
 
 (defn- expire-leases! [tx now-ms]
   (jdbc/execute! tx
-                 ["UPDATE reread_requests SET state='pending', lease_until_ms=NULL, updated_at_ms=? WHERE state='claimed' AND lease_until_ms<=?"
+                 ["UPDATE reread_requests SET state='pending', lease_until_ms=NULL, claimed_by=NULL, updated_at_ms=? WHERE state='claimed' AND lease_until_ms<=?"
                   now-ms now-ms]))
 
 (defn- supersede-other! [tx target-id source-sha now-ms]
@@ -157,7 +158,7 @@
   NEW-ITEM-CAP is the per-cycle allowance already remaining for rows whose
   old_sha is nil. This worker claims at most one row per cycle, so positive
   values admit one and zero admits none."
-  [store now-ms lease-ms new-item-cap]
+  [store now-ms lease-ms new-item-cap reader-id]
   {:pre [(integer? now-ms) (pos-int? lease-ms)]}
   (jdbc/with-transaction [tx (:datasource store)]
     (expire-leases! tx now-ms)
@@ -170,8 +171,8 @@
                      new-item-cap]
                     query-opts)]
       (jdbc/execute! tx
-                     ["UPDATE reread_requests SET state='claimed',lease_until_ms=?,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='pending'"
-                      (+ now-ms lease-ms) now-ms (:target_id row) (:source_sha row)])
+                     ["UPDATE reread_requests SET state='claimed',lease_until_ms=?,claimed_by=?,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='pending'"
+                      (+ now-ms lease-ms) reader-id now-ms (:target_id row) (:source_sha row)])
       (some-> (jdbc/execute-one!
                tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
                    (:target_id row) (:source_sha row)] query-opts)

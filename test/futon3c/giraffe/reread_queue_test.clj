@@ -29,7 +29,7 @@
              :source_path "/code/futon/holes/M-one.md" :state :pending
              :requested_at_ms 10 :updated_at_ms 10 :lease_until_ms nil
              :superseded_by_sha nil :superseded_reason nil :attempts 0
-             :last_error nil :landed_digest nil}]
+             :last_error nil :landed_digest nil :claimed_by nil}]
            (queue/requests store)))
     (testing "the database is a cache of authority, not the only copy"
       (doseq [suffix ["" "-wal" "-shm"]
@@ -58,7 +58,7 @@
 (deftest lease-expiry-is-reconciled
   (let [store (queue/open-store (temp-db))]
     (queue/reconcile! store [(item "new")] (coverage "old") 10)
-    (is (= :claimed (:state (queue/claim! store 20 100 1))))
+    (is (= :claimed (:state (queue/claim! store 20 100 1 "reader"))))
     (queue/reconcile! store [(item "new")] (coverage "old") 119)
     (is (= :claimed (:state (first (queue/requests store)))))
     (queue/reconcile! store [(item "new")] (coverage "old") 120)
@@ -85,7 +85,7 @@
     (is (= [:M-one] (get-in result [:drift :unread-new])))
     (is (= [[:pending nil "new"]]
            (mapv (juxt :state :old_sha :source_sha) (queue/requests store))))
-    (let [request (queue/claim! store 15 100 1)]
+    (let [request (queue/claim! store 15 100 1 "reader")]
       (queue/settle! store request {:status :landed :digest "generation-1"} 16 3))
     (queue/reconcile! store [(item "new")]
                       {:members [{:id "M-one" :status :read
@@ -100,6 +100,17 @@
         items [(item "new")
                {:id :M-two :source-pin {:path "/code/M-two.md" :sha256 "two"}}]]
     (queue/reconcile! store items {:members []} 10)
-    (is (nil? (queue/claim! store 20 100 0)))
-    (is (= :claimed (:state (queue/claim! store 20 100 1))))
+    (is (nil? (queue/claim! store 20 100 0 "reader")))
+    (is (= :claimed (:state (queue/claim! store 20 100 1 "reader"))))
     (is (= 1 (count (filter #(= :pending (:state %)) (queue/requests store)))))))
+
+(deftest two-readers-hold-distinct-claims-and-leases
+  (let [store (queue/open-store (temp-db))
+        items [(item "one")
+               {:id :M-two :source-pin {:path "/code/M-two.md" :sha256 "two"}}]]
+    (queue/reconcile! store items {:members []} 10)
+    (let [claims @(future
+                    [(queue/claim! store 20 100 1 "zai-2")
+                     (queue/claim! store 20 200 1 "kimi-1")])]
+      (is (= #{"zai-2" "kimi-1"} (set (map :claimed_by claims))))
+      (is (= #{120 220} (set (map :lease_until_ms claims)))))))
