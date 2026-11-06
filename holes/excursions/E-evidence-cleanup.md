@@ -1,8 +1,14 @@
 # E-evidence-cleanup: take derived records out of the Evidence Landscape
 
-**Status:** OPEN (2026-11-05, Joe + claude-8). **Gates** [M-repl-circus](../missions/M-repl-circus.md)
-IDENTIFY → MAP: there is no point developing the Circus further while its output
-swamps the evidence it reads.
+**Status:** OPEN — CLOSURE CUTOVER REMAINS (audited 2026-11-06, Joe + codex-7).
+**Gates** [M-repl-circus](../missions/M-repl-circus.md) IDENTIFY → MAP: there is no
+point developing the Circus further while its output swamps the evidence it reads.
+
+The search-facing stop-the-line repair and the copy-writer repairs are live, but
+this excursion is **not complete** by its exit criteria.  The derived-table code
+and migration/erase tools exist; the serving futon1b JVM predates those routes,
+artifact activation still writes new rows to evidence, and no snapshot-backed
+erase has run.  The exact closure sequence is recorded under "Closure audit".
 
 **Stop-the-line finding** (Joe, 2026-11-05). Working note:
 `~/notes/stop-the-line/2026-11-05-evidence-derivatives.md`.
@@ -471,6 +477,41 @@ whether that classifier's labels are written back, and where: an attribute on th
    migrate them.
 
 ## Exit criteria
+
+### Closure audit (2026-11-06, codex-7)
+
+The excursion looked complete because its immediately visible failure is fixed:
+the default text search is act-scoped, and the live search for "Claude Platform
+usage" returned 5 acts while excluding 59 derivative matches.  That is a search
+projection, not completion of the underlying move.
+
+Checked against the running system and the records above:
+
+- **Live:** act-scoped search; artifact records no longer copy prompt text;
+  context retrieval stores a turn id/hash rather than query text; settled 象 and
+  馬 records retain references/locators rather than wholesale source records;
+  Zai/Kimi exact dispatch payloads have a content-addressed store; promise state
+  and history have moved to hyperedges and their readers were repointed.
+- **Prepared but not live:** futon1b's derived table, list/census routes,
+  resumable migration and manifested evidence erase.  The serving JVM started
+  2026-11-04 16:15Z, before commits `b78f1fa976`/`ed91c86c9`; a bounded route
+  probe therefore returns 404.
+- **Copied but not cut over:** artifact-activation run `aa-1` copied and verified
+  22,332 rows, but the writer still targets evidence and the source rows remain.
+- **Not done:** final family deltas, writer repoints to the derived table,
+  snapshot-backed source erases, migration of the remaining derived families,
+  and the post-cutover daily count/volume comparison.
+
+Closure order (each step has an observable rollback or refusal boundary):
+
+1. Restart futon1b through Drawbridge and prove derived point/batch/census routes.
+2. Repoint artifact activation; run and verify the final delta over `aa-1`.
+3. Take the required stopped-store snapshot; show Joe the manifested counts;
+   erase artifact source rows in bounded batches and verify XTDB plus FTS absence.
+4. Repeat classify → copy → verify → repoint → erase for each remaining derived
+   family.  Participant acts remain evidence.
+5. Rerun the phrase probes and the 24-hour record/byte census, then check the exit
+   criteria below and only then change the excursion to COMPLETE.
 
 - [ ] No writer copies operator-turn or reply text into a new evidence record.
 - [ ] Every derived writer listed above either writes to a derived store or attaches
