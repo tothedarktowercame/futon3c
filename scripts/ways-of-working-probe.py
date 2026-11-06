@@ -1113,6 +1113,72 @@ def probe_status_known(now=NOW, decl=STATUS_DECL, results_dir=None, scripts_dir=
 
 RESULTS_DIR = HOME / ".cache" / "futon3c" / "ways-of-working" / "results"
 
+# records-carry-warrant (finding 5's probe candidate, Joe 2026-11-03: "warrants
+# apply to tests, not to commits"). Population: bellback replies in the invoke
+# ledger whose durable result text makes a test-result claim. A claim without
+# a test-registry-… id is a pasted count: say-so, the thing this way refuses.
+INVOKE_LEDGER = os.environ.get("FUTON3C_INVOKE_JOBS_FILE", "/tmp/futon3c-invoke-jobs.edn")
+WARRANT_WINDOW = datetime.timedelta(days=7)
+WARRANT_CLAIM = re.compile(r"(\b\d+\s+tests?\b|\bRan \d+\b|\btests?\s+(?:ok|pass(?:ed)?)\b"
+                           r"|\b\d+\s+passed\b|\b0\s+failures?\b|\b\d+\s*/\s*\d+\s+(?:tests?|assert))", re.I)
+WARRANT_ID = re.compile(r"test-registry-[0-9a-f]{16,}")
+
+def parse_invoke_replies(text):
+    """Reply jobs (bellback-of non-nil) from the invoke-jobs ledger EDN, as
+    {id, started-at, text} where text is the :result-summary (the durable
+    coordination record of what was said back; the full reply may exceed it)."""
+    replies = []
+    for chunk in text.split("{:bellback-of ")[1:]:
+        if chunk.split(",", 1)[0].strip().startswith("nil"):
+            continue  # original bell, not a reply
+        jid = re.search(r':job-id "([^"]+)"', chunk)
+        started = re.search(r':started-at "([^"]+)"', chunk)
+        summ = re.search(r':result-summary ("(?:[^"\\]|\\.)*")', chunk)
+        if not (jid and summ):
+            continue
+        try:
+            summary = json.loads(summ.group(1))
+        except Exception:  # noqa: BLE001
+            summary = ""
+        replies.append({"id": jid.group(1),
+                        "started-at": started.group(1) if started else None,
+                        "text": summary if isinstance(summary, str) else ""})
+    return replies
+
+def classify_warrant_claims(replies, now=NOW, window=WARRANT_WINDOW):
+    """Returns (claims, violations). A reply is in the population if its
+    started-at is inside the window (or absent: undatable is not excused)."""
+    claims, rows = 0, []
+    for r in replies:
+        t = parse_time(r.get("started-at"))
+        if t and abs(now - t) > window:
+            continue
+        text = r.get("text") or ""
+        if not WARRANT_CLAIM.search(text):
+            continue
+        claims += 1
+        if WARRANT_ID.search(text):
+            continue  # carries a warrant id the reviewer can check
+        rows.append({"job": r["id"], "claim": (text[:140] + "…") if len(text) > 140 else text})
+    return claims, rows
+
+def probe_records_warrant(now=NOW, ledger=None):
+    path = pathlib.Path(ledger or INVOKE_LEDGER)
+    if not path.exists():
+        return broken_live(f"invoke ledger not found at {path}")
+    replies = parse_invoke_replies(path.read_text(errors="replace"))
+    claims, rows = classify_warrant_claims(replies, now)
+    undated = sum(1 for r in replies if not r.get("started-at"))
+    evidence = [f"population: {len(replies)} bellback replies in {path} ({undated} without started-at, counted in)",
+                f"window: replies started within {WARRANT_WINDOW.days} days of the probe run",
+                "claim test: a number+tests/assertions/passed/0-failures phrase in the reply's durable result-summary",
+                "a claim is carried when it cites a test-registry-… id; the id is checkable, the count is not",
+                "first reading (zai-9, 2026-11-06): 7 claims, 0 carried — every test claim in the ledger was a pasted count"]
+    return {"monitor": "on", "invariant": "failing" if rows else "holding",
+            "last-observation": iso(now), "observed-at": iso(now),
+            "violations": rows, "violation-count": len(rows), "evidence": evidence,
+            "denominator": f"{len(rows)} of {claims} test-result claims in bellback replies carry no warrant id"}
+
 def build_probe_registry(summary=None, graph=None):
     operator_cache = {}
     def shared_operator_census():
@@ -1127,6 +1193,7 @@ def build_probe_registry(summary=None, graph=None):
             "operator-turns": lambda: probe_operator_turns(census=shared_operator_census()),
             "zone-health": lambda: probe_zone_health(),
             "autoclock-gate": lambda: probe_autoclock_gate(),
+            "records-warrant": lambda: probe_records_warrant(),
             "status-known": lambda: probe_status_known()}
 
 def broken_live(exc):

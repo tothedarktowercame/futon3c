@@ -62,7 +62,7 @@
     "futon2/holes/labs/wm-contract/test-registry/ (logs, gitignored)",
     "code/CLAUDE.md coding-handoff protocol"
    ],
-   "probe": "none",
+   "probe": "records-warrant",
    "pattern": "ways-of-working/records-carry-warrant",
    "patterns": [
     "test-registry/judge-adequacy",
