@@ -60,7 +60,8 @@
     (is (= (get-in f [:replacement :source :sha256])
            (get-in @seen [:request :source_sha])))
     (is (re-find #"six-line window" (:prompt @seen)))
-    (is (re-find #"Return ONLY one JSON object" (:prompt @seen)))))
+    (is (re-find #"Return ONLY one JSON object" (:prompt @seen)))
+    (is (re-find #"do not bell or whistle anyone" (:prompt @seen)))))
 
 (deftest failed-contact-retries-to-bound-then-stays-visible
   (let [f (fixture)

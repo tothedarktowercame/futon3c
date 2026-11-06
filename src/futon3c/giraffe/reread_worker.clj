@@ -20,7 +20,9 @@
        "Return fields id, source, status_as_read, purpose, edges, unresolved. "
        "Every evidence quote must be verbatim and occur in its stated six-line window; "
        "source.path and source.sha256 must exactly equal the values above. "
-       "Do not edit the corpus or mint Giraffe."))
+       "Do not edit the corpus or mint Giraffe. "
+       "The worker reads the result from the finished job; end your turn with the JSON "
+       "record and do not bell or whistle anyone."))
 
 (defn- json-record [text]
   (let [candidate (or (second (re-find #"(?s)```(?:json)?\s*(\{.*?\})\s*```" (str text)))
