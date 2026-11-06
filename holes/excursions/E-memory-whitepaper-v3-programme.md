@@ -1,5 +1,7 @@
 # E-memory-whitepaper-v3-programme — finishing the M-memory-retrieval V3 whitepaper
 
+**Gate:** operator-decision — awaiting Joe: the questions recorded for this item in futon2 holes/tickets/T-giraffe-undetermined-triage.md (2026-11-06). Not for automated work until answered.
+
 **VERDICT (2026-10-09, provisional):** OPEN — V3 whitepaper finishing programme drafted 2026-08-10 with rungs queued ('Queue behind the retrieval rungs') and no completion recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
 
 **Drafted 2026-08-10 by ams-claude-1 (ground control) at Joe's request.**
