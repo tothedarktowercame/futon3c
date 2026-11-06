@@ -1,7 +1,7 @@
 # Mission: M-ways-of-working — declared ways of working, each with a probe that can fail
 
 **Date:** 2026-11-03
-**Status:** OPEN — INSTANTIATE in progress (2 of 11 probes built 2026-11-03)
+**Status:** OPEN — INSTANTIATE in progress (3 of 11 probes built; records-warrant added 2026-11-06, `f97d33669`)
 **Owner:** claude-5 (Joe opened it 2026-11-03; took over from claude-16's handoff)
 **Repo:** futon3c (`holes/excursions/ways-of-working.json`,
 `scripts/ways-of-working-probe.py`, `scripts/publish-cascade-snapshot.sh`),
@@ -61,7 +61,7 @@ and fix list: `~/notes/ways-of-working-audit/2026-11-04/SUMMARY.md`.
 | inbox-zero | `git-clean` | off, failing | partly correct → population fixed 11-05 (`f41ed6adc`, declaration `3d72468ed`) | failing: 28 of 63 repos dirty or unpushed (storage 862 ahead, minus40 124 with no remote, futon2/futon3c ~900/700 untracked); 149 leaked fixture dirs excluded and reported |
 | intents-are-tracked | `intents-tracked` | on, failing | partly correct → fixed 11-05 (`d10e68ed3`, review `556643076`) | failing: 3 stale asks (codex-2 10-21 pair, claude-15 f-s2-0) and 761 of 1,272 operator turns 象 never analysed (one named violation); pasted text no longer counted; 4 Zai-seat acts shown as unwitnessable, not stale; invalid records 20,083 → 2,109 (象 artefacts excluded). Still cannot see commits or bell-borne asks |
 | dispatches-name-an-agreed-item (E-autoclock-wow) | `autoclock-gate` | on, failing (declared 11-05, `9dd44d294`, `8eb7f2a08`) | — | failing: gate not built (`admit-request`: zero lines; claude-4); 53 E-kimi-task-* minted in 24 h |
-| records-carry-warrant | none | not built | — | unit is the test run (Joe 11-03); finding 5 blocks enumeration |
+| records-carry-warrant | `records-warrant` | on, failing (built 11-06, `f97d33669`) | — | failing: every test-result claim in bellback replies (7 in the 7-day window, 0 carried) is a pasted count with no test-registry-… id; violations name the jobs. Finding 7 fixed same day (`24a015589`): the venv at storage/test-registry/futon3c-suite/venv registers all 11 probe test files, `check` returns warrant? true |
 | selection-gives-a-reason | none | not built | — | War Machine side |
 | eat-your-own-tail | none | not built | — | needs a design |
 | real-users | none | unprobed by design | — | values live in futon7 |
