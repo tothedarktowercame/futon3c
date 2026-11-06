@@ -44,8 +44,8 @@
         (is (false? (:subscription hs)))
         (is (= 1 (get-in hs [:operations :correspondence/query]))
             "increment 6 operations are registered and advertised")
-        (is (not (contains? (:operations hs) :action/compile))
-            "unimplemented operations are absent, not advertised")))))
+        (is (= 1 (get-in hs [:operations :action/compile]))
+            "increment 7 compile is registered and advertised")))))
 
 ;;; Unknown-field refusal ------------------------------------------------------
 

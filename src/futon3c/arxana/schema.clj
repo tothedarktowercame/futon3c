@@ -71,7 +71,18 @@
    {:schema-version 1
     :required #{:subscription/id :cursor}
     :allowed #{:subscription/id :cursor}
-    :projection [:operation :subscription/id :acked]}})
+    :projection [:operation :subscription/id :acked]}
+
+   ;; Increment 7 (Compile): read-only intent-to-candidate compilation. The
+   ;; projection deliberately excludes presentation and opaque extensions;
+   ;; equality covers the semantic result and its non-executable candidate.
+   :action/compile
+   {:schema-version 1
+    :required #{:source-act/id :intent :trust-profile :grounding}
+    :allowed #{:source-act/id :intent :trust-profile :grounding
+               :operation/overrides :extensions}
+    :projection [:operation :status :candidate-action :alternatives
+                 :obligations :trust]}})
 
 (defn operation-schema
   "Look up the registered schema for op in registry (default registry-v1).

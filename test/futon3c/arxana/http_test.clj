@@ -95,9 +95,9 @@
                                                     {:subscription/id sid
                                                      :cursor 0})))]
             (is (= 0 (get-in acked [:ok :acked]))))))
-      (testing "unimplemented op is typed unsupported, never simulated"
+      (testing "compile is public and its schema refuses incomplete input"
         (let [resp (ajson/decode (post (envelope :action/compile {:intent "x"})))]
-          (is (= :unsupported (get-in resp [:error :error/category])))))
+          (is (= :missing (get-in resp [:error :error/category])))))
       (finally (server)))))
 
 (deftest ingest-promote-publish-flow-test

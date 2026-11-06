@@ -8,6 +8,7 @@
   projection. The 3-arity dispatch (store provider msg) remains for pre-6
   callers and answers :unsupported for increment-6 operations."
   (:require [futon3c.arxana.artifact :as artifact]
+            [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.envelope :as env]
             [futon3c.arxana.journal :as journal]
@@ -229,11 +230,16 @@
              (let [{rok :ok rerr :error} (subscribe/ack subscriptions body)]
                (env/response ok (or (some->> rerr (with-semantic-digest op)) (with-semantic-digest op rok)))))
 
+           (= op :action/compile)
+           (env/response ok
+                         (with-semantic-digest op
+                           (compiler/compile-action body)))
+
            :else
            (env/response
             ok
             (env/error :unsupported :arxana.service/operation-not-implemented
                        {:operation op
-                        :increment 6
-                        :note "handler lands in a later increment (action/compile is increment 7)"}
+                        :increment 7
+                        :note "operation is registered but has no public handler"}
                        nil))))))))
