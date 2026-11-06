@@ -201,6 +201,8 @@ change to the page, separate from making snapshot sections live.
 
 ## Next
 
+- Pending idea (Joe, 2026-11-06): populate the argument structure with Joe's own words, assembled by cut and paste from his recorded turns (as with the earlier EOI technique), so the draft is his text, not AI-generated. Not now: first understand the argument and improve the data behind it. Corpus fetched: `~/code/storage/operator-turns/operator-turns-since-2026-09-23.jsonl` (6,136 turns).
+
 - Joe corrects P1–P8 (one at a time, read aloud if wanted).
 - The remaining 29 clusters, then the ~470 open items with no recorded
   links, grouped by repo and wing.
