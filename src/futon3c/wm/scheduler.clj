@@ -9,7 +9,8 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.cyder :as cyder]
-            [futon3c.transport.http :as http])
+            [futon3c.transport.http :as http]
+            [futon2.aif.wm.action-scale :as action-scale])
   (:import [java.time Instant]
            [java.util UUID]
            [java.util.concurrent Executors ScheduledExecutorService
@@ -232,12 +233,27 @@
       (update :cascade-problems strip-next-belief))
     judgement))
 
+(defn attach-decision-action-scale
+  "M-action-cost-modelling cost signal (shape (a), operator-curated EDN):
+   the served judgement's decided action carries a :scale annotation.
+   Display-only — the futon2 selection law is untouched and no ranking,
+   score or gate changes.  Curated targets read
+   :scale-source :operator-curated; everything else carries a typed
+   per-action default.  An abstain decision (no :action) is left as is."
+  [judgement]
+  (if (map? judgement)
+    (cond-> judgement
+      (get-in judgement [:decision :action])
+      (update-in [:decision :action] action-scale/attach-scale))
+    judgement))
+
 (defn- render-payload-json
   [bundle]
   (let [{:keys [data judgement]} (http/wm-response-payload bundle)
         payload (http/stringify-wm-response
                  (-> data
-                     (assoc :judgement (trim-cascade-predictions judgement))
+                     (assoc :judgement (attach-decision-action-scale
+                                        (trim-cascade-predictions judgement)))
                      (assoc :pilot-inhabitations (http/derive-pilot-inhabitations))))]
     {:payload payload
      :body (json/generate-string payload)}))

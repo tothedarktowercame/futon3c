@@ -733,6 +733,22 @@ When Joe ratifies §5, ARGUE → CLOSED, VERIFY → IN_PROGRESS, and the mission
 
 Pending VERIFY.
 
+**Grounded progress 2026-11-06 (wm-author, WM full-loop attempt, cascade
+policy-1976c85ec3472cbaac53):** the shape-(a) cost-signal source landed —
+`futon2/src/futon2/aif/wm/action_scale.clj` with the operator-curated
+registry `futon2/resources/wm/action-scales.edn` (first curated entries:
+`wm-ui-hud-mode-rationale-hardcode` → `:minute`,
+`r3d-per-entity-attribution` → `:campaign`, per this mission's tied-sorries
+test case), and `futon3c.wm.scheduler/attach-decision-action-scale` now
+annotates the served judgement's decided action with `:scale` +
+`:scale-source` (display-only; the futon2 selection law is untouched).
+Both checked by tests (`futon2.aif.wm.action-scale-test`,
+`futon3c.wm.scheduler-test`). **The acceptance checkboxes stay unticked**:
+only the decided action carries the annotation today, not every entry of a
+served ranked-actions list (the H5b cascade-only path serves no flat
+ranked-actions field), and the work-breakdown gate / tied-sorries
+discrimination / Campaign-structure decisions are not done.
+
 ---
 
 ## 7. DOCUMENT (drafted 2026-05-27 evening after operator-paired INSTANTIATE close)

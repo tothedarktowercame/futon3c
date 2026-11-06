@@ -3,7 +3,8 @@
             [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
             [futon3c.agency.registry :as reg]
-            [futon3c.wm.scheduler :as scheduler]))
+            [futon3c.wm.scheduler :as scheduler]
+            [futon2.aif.wm.action-scale :as futon2.action-scale]))
 
 (deftest selection-failure-is-deposited-as-a-typed-loss
   (let [seen (atom nil)
@@ -70,6 +71,25 @@
   (testing "absent decision/cascade-problems keys change nothing"
     (is (= {:priorities []}
            (scheduler/trim-cascade-predictions {:priorities []})))))
+
+(deftest attach-decision-action-scale-annotates-the-decided-action
+  (testing "the served decision action carries the curated :scale (shape (a))"
+    (let [out (scheduler/attach-decision-action-scale
+               {:decision {:action {:type :address-sorry
+                                    :target "sorry/wm-ui-hud-mode-rationale-hardcode"}}})]
+      (is (= :minute (get-in out [:decision :action :scale])))
+      (is (= :operator-curated (get-in out [:decision :action :scale-source])))))
+  (testing "an uncurated target still carries a typed default scale"
+    (let [out (scheduler/attach-decision-action-scale
+               {:decision {:action {:type :advance-mission
+                                    :target "M-some-mission"}}})]
+      (is (contains? (set futon2.action-scale/scale-vocabulary)
+                     (get-in out [:decision :action :scale])))
+      (is (= :default (get-in out [:decision :action :scale-source])))))
+  (testing "an abstain decision with no action is unchanged"
+    (is (= {:decision {:refusal {:kind :no-acting-cascade-candidate}}}
+           (scheduler/attach-decision-action-scale
+            {:decision {:refusal {:kind :no-acting-cascade-candidate}}})))))
 
 (deftest refresh-uses-controller-generator-without-fixture-selector
   (testing "the generator owns controller selection; scheduler supplies no fixture override"
