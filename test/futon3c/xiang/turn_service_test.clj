@@ -34,6 +34,11 @@
   (let [bells (atom []) scheduled (atom []) jobs (atom {}) posted (atom [])
         clock (atom 1000000)
         s (svc/service (merge {:store (temp-store)
+                               ;; Most tests predate Platform-primary routing and
+                               ;; exercise the historical pool-primary behavior.
+                               :seat "象" :alternate "象-sonnet"
+                               :pool ["象-1" "象-2" "象-3" "象-4"]
+                               :pool-primary? true
                                :now-ms (fn [] @clock)
                                :schedule! (fn [delay thunk] (swap! scheduled conj [delay thunk]))
                                ;; Run the evidence append inline, so the
@@ -52,6 +57,15 @@
                                :deliver-notice (fn [p] (swap! posted conj [:notice p]) {:status 200})}
                               overrides))]
     {:svc s :bells bells :scheduled scheduled :jobs jobs :posted posted :clock clock}))
+
+(deftest production-routing-prefers-platform-then-kimi-pool
+  (let [h (harness {:seat "象-sonnet" :alternate nil
+                    :pool ["象-1" "象-2" "象-3" "象-4"]
+                    :pool-primary? false})]
+    (is (= "象-sonnet" (svc/analysis-seat (:svc h))))
+    (svc/bench-seat! (:svc h) "象-sonnet")
+    (is (= "象-1" (svc/analysis-seat (:svc h))))
+    (is (= "象-1" (svc/other-seat (:svc h) "象-sonnet")))))
 
 (defn- run-next!
   "Run the oldest scheduled thunk; returns [delay result]."

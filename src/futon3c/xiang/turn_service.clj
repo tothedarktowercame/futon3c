@@ -62,9 +62,10 @@
 
 (def defaults
   "The Emacs defcustoms, by their Emacs names."
-  {:seat "象"                                   ; session-mode-analysis-agent
-   :alternate "象-sonnet"                       ; session-mode-analysis-alternate
-   :pool ["象-1" "象-2" "象-3" "象-4"]           ; session-mode-analysis-pool
+  {:seat "象-sonnet"                            ; Claude Platform primary
+   :alternate nil                               ; pool is the fallback
+   :pool ["象-1" "象-2" "象-3" "象-4"]           ; Kimi fallback pool
+   :pool-primary? false                         ; old deployments may opt back in
    :bench-minutes 60                            ; session-mode-analysis-bench-minutes
    :caller "turn-capture"                       ; session-mode-analysis-caller
    :requisition "M-futon-seams"                 ; session-mode-analysis-requisition
@@ -219,19 +220,29 @@
 (defn other-seat
   "The seat to use when AGENT is out of usage."
   [svc agent]
-  (let [pool (cfg svc :pool) primary (cfg svc :seat) alternate (cfg svc :alternate)]
-    (cond (some #{agent} pool) (or (pool-seat svc) alternate)
-          (= agent primary) alternate
-          :else (or (pool-seat svc) primary))))
+  (let [pool (cfg svc :pool) primary (cfg svc :seat) alternate (cfg svc :alternate)
+        pool-primary? (cfg svc :pool-primary?)]
+    (cond (= agent primary) (or (pool-seat svc) alternate)
+          (some #{agent} pool) (if pool-primary?
+                                 (or (pool-seat svc) alternate
+                                     (and (not (benched? svc primary)) primary))
+                                 (or (pool-seat svc)
+                                     (and (not (benched? svc primary)) primary)
+                                     alternate))
+          :else (or (and (not (benched? svc primary)) primary)
+                    (pool-seat svc) alternate))))
 
 (defn analysis-seat
   "With a pool: its least-loaded unbenched seat, else the alternate.
    Without: the analysis agent unless it is benched."
   [svc]
-  (let [pool (cfg svc :pool) primary (cfg svc :seat) alternate (cfg svc :alternate)]
+  (let [pool (cfg svc :pool) primary (cfg svc :seat) alternate (cfg svc :alternate)
+        pool-primary? (cfg svc :pool-primary?)]
     (cond
+      (and (not pool-primary?) (not (benched? svc primary))) primary
       (seq pool) (or (pool-seat svc)
                      (and alternate (not (benched? svc alternate)) alternate)
+                     (and (not (benched? svc primary)) primary)
                      (first pool))
       (and alternate (benched? svc primary) (not (benched? svc alternate))) alternate
       :else primary)))
@@ -1268,7 +1279,7 @@
 ;; ---------------------------------------------------------------------------
 ;; Dispatch (session-mode--dispatch-analysis)
 
-(declare reap! dispatch-to!)
+(declare dispatch-to!)
 
 (defn- schedule-reap! [svc id agent tries store-busy-delays delay-s]
   ((cfg svc :schedule!) delay-s
