@@ -1,0 +1,13 @@
+# giraffe-reread.timer — NOT INSTALLED OR STARTED.
+# Installation/activation is a separate operator decision after corpus migration.
+[Unit]
+Description=Reconcile Giraffe reading drift every five minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=giraffe-reread.service
+
+[Install]
+WantedBy=timers.target

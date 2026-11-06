@@ -1,0 +1,15 @@
+# giraffe-reread.service — NOT INSTALLED OR STARTED.
+# Set FUTON3C_GIRAFFE_REREAD_READER to an explicitly chosen reader seat in an
+# EnvironmentFile before installation. The CLI refuses to dispatch without it.
+[Unit]
+Description=Reconcile and process one durable Giraffe re-read request
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/joe/code/futon3c
+EnvironmentFile=/home/joe/.config/futon3c/giraffe-reread.env
+ExecStart=/usr/local/bin/clojure -M -m futon3c.giraffe.reread-cli
+NoNewPrivileges=true
+StandardOutput=journal
+StandardError=journal
