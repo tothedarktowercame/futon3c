@@ -6,6 +6,7 @@
   generation; publishers replace the symlink atomically with rename(2)."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.giraffe.missions :as missions]
             [futon3c.giraffe.readings :as readings])
@@ -100,22 +101,47 @@
                       {:kind :giraffe-generation/member-absent :target-id target-id})))
     (spit members-file (json/generate-string members' {:pretty true}))))
 
-(defn- validate-staging! [staging target-id]
-  (let [batches (mapv #(.getAbsolutePath %) (batch-files staging))
-        result (readings/consume
-                {:checker (.getPath (io/file staging "check_edges.py"))
-                 :members-file (.getPath (io/file staging "members.json"))
-                 :batches batches :repos missions/default-repos
-                 :scope :population/missions-excursions-tickets})
+(defonce ^:private base-failing-id-cache (atom {}))
+
+(defn- consume-corpus [root]
+  (readings/consume
+   {:checker (.getPath (io/file root "check_edges.py"))
+    :members-file (.getPath (io/file root "members.json"))
+    :batches (mapv #(.getAbsolutePath %) (batch-files root))
+    :repos missions/default-repos
+    :scope :population/missions-excursions-tickets}))
+
+(defn- failing-record-ids [result]
+  (into #{}
+        (comp (filter (complement :passed?))
+              ;; A parse failure has no record id. Keep it as an explicit
+              ;; identity so a newly malformed staged line is a regression.
+              (map #(or (get-in % [:record :id]) :unidentified-record)))
+        (:checked-records result)))
+
+(defn- new-failing-record-ids [base-failing staged-failing]
+  (set/difference staged-failing base-failing))
+
+(defn- base-failing-ids [base base-digest]
+  (or (get @base-failing-id-cache base-digest)
+      (let [ids (failing-record-ids (consume-corpus base))]
+        (swap! base-failing-id-cache assoc base-digest ids)
+        ids)))
+
+(defn- validate-staging! [base base-digest staging target-id]
+  (let [result (consume-corpus staging)
         rows (get-in result [:coverage :members])
         row (some #(when (= target-id (:id %)) %) rows)
-        failed (filterv (complement :passed?) (:checked-records result))
+        staged-failing (failing-record-ids result)
+        new-failing (new-failing-record-ids
+                     (base-failing-ids base base-digest) staged-failing)
         ambiguous (filterv #(= :ambiguous (:status %)) rows)]
-    (when (or (not= :read (:status row)) (seq failed) (seq ambiguous))
+    (when (or (not= :read (:status row)) (seq new-failing) (seq ambiguous))
       (throw (ex-info "Replacement did not pass corpus validation"
                       {:kind :giraffe-generation/checker-failed
                        :target-id target-id :member row
-                       :failed-record-count (count failed)
+                       :failed-record-count (count staged-failing)
+                       :new-failing-record-ids (vec (sort-by str new-failing))
                        :ambiguous-members (mapv :id ambiguous)})))
     result))
 
@@ -153,7 +179,7 @@
       (apply-replacement! staging (:target-id claim) replacement
                           {:path (:source-path claim) :sha256 (:source-sha claim)}
                           (nil? (:old-sha claim)))
-      (validate-staging! staging (:target-id claim))
+      (validate-staging! base-path base-digest staging (:target-id claim))
       (when before-switch-fn (before-switch-fn))
       (when-not (= (:source-sha claim) (file-sha (:source-path claim)))
         (throw (ex-info "Claimed source changed during reading"

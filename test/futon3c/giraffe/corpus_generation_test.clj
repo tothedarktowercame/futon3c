@@ -147,8 +147,34 @@
         result (publish! f (record source-pin true))
         staging (io/file generations ".staging")]
     (is (= :giraffe-generation/checker-failed (:reason result)))
+    (is (= ["M-one"] (get-in result [:details :new-failing-record-ids])))
     (is (= before (:path (generation/resolve-generation pointer))))
     (is (empty? (or (seq (.listFiles staging)) [])))))
+
+(deftest correct-replacement-publishes-over-unrelated-base-failure
+  (let [{:keys [base pointer source-pin] :as f} (fixture)
+        other-source (io/file (:root f) "M-two.md")]
+    (spit other-source "other source\n")
+    (let [other-pin {:id "M-two" :path (.getAbsolutePath other-source)
+                     :sha256 (generation/file-sha other-source)}]
+      (spit (io/file base "members.json")
+            (json/generate-string [(assoc source-pin :id "M-one") other-pin]))
+      (spit (io/file base "batch-00.jsonl")
+            (str (json/generate-string (record source-pin)) "\n"
+                 (json/generate-string
+                  (assoc (record (dissoc other-pin :id) true) :id "M-two")) "\n"))
+      (let [result (publish! f (assoc (record source-pin) :purpose "replacement"))]
+        (is (= :published (:status result)))
+        (is (not= (.getCanonicalPath base)
+                  (:path (generation/resolve-generation pointer))))))))
+
+(deftest failing-id-comparison-rejects-a-new-other-member-regression
+  ;; apply-replacement! changes only the target's record and member pin, so it
+  ;; cannot currently break a different member. Pin the ID-level rule directly
+  ;; so a future broader staging transform cannot hide one new break behind one
+  ;; repaired record.
+  (is (= #{"M-two"}
+         (#'generation/new-failing-record-ids #{"M-one"} #{"M-two"}))))
 
 (deftest migration-dry-run-reports-without-writing
   (let [{:keys [root base]} (fixture)
