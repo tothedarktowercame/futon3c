@@ -834,3 +834,30 @@
                          :file-change-settlement settlement})
         (is (nil? (:file-change-settlement-health @sut/!state))))
       (finally (reset! sut/!state nil)))))
+
+(deftest returned-ingest-error-settles-snapshot
+  (testing "a per-file :status :error is logged, not replayed every cycle"
+    (let [root (doto (java.io.File/createTempFile "watch-ingest-error-" "")
+                 (.delete)
+                 (.mkdirs))
+          changed (io/file root "changed.clj")
+          dispatches (atom 0)
+          cache (atom {})
+          old-state @sut/!state]
+      (spit changed "(ns changed)\n")
+      (with-redefs [sut/ingest-event! (fn [_]
+                                        (swap! dispatches inc)
+                                        {:status :error :error "store timeout"})
+                    sut/heartbeat! (fn [_] nil)]
+        (reset! sut/!state {:stopping? false :heartbeat-health {}})
+        (try
+          (let [opts {:roots [{:path (.getPath root) :label "fixture"}]
+                      :per-root-cache cache
+                      :run-id 1 :event-n (atom 0) :cycle-n (atom 0)
+                      :cold-scan? true :commit-ingest? false}]
+            (sut/run-cycle! opts)
+            (sut/run-cycle! opts)
+            (is (= 1 @dispatches) "the unchanged file is not re-dispatched")
+            (is (seq @cache)))
+          (finally
+            (reset! sut/!state old-state)))))))

@@ -1502,15 +1502,6 @@
                (assoc-in state [:heartbeat-health root] entry)
                state)))))
 
-(defn- require-file-ingest-success!
-  [path result]
-  (when (= :error (:status result))
-    (throw (ex-info "file ingest failed"
-                    {:error/type :watcher/file-ingest-failed
-                     :path path
-                     :result result})))
-  result)
-
 (defn describe-cycle-error
   "One line naming a cycle fault: message plus the ex-data keys that identify
   the failing subject (root, command, exit). Stays a string so existing
@@ -1573,11 +1564,14 @@
                     :event-n ev-n :source source
                     :prior-manifest (or (get-in cache [p :declaration-manifest]) [])
                     :current-manifest current-manifest})
-                  (require-file-ingest-success!
-                   p
-                   (ingest-event! {:path p :root root :label label
-                                   :run-id run-id :event-n ev-n
-                                   :source source}))))))
+                  ;; A returned :status :error is logged and recorded as a
+                  ;; watcher-event (ingest-exit 1) by ingest-event!, and the
+                  ;; snapshot still settles, as before LOAD-F2: replaying a
+                  ;; root on every per-file error re-creates the store-load
+                  ;; loop this change removes.
+                  (ingest-event! {:path p :root root :label label
+                                  :run-id run-id :event-n ev-n
+                                  :source source})))))
           (doseq [p deleted]
             (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]
