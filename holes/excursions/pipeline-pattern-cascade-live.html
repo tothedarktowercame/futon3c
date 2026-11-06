@@ -72,6 +72,7 @@
   .thesis-card p{font-size:11.5px;color:#aeb8c7;margin:0 0 5px}
   .thesis-card details{color:var(--dim);font-size:10.5px}.thesis-card ul{margin:5px 0 0;padding-left:18px}
   .snapshot-marker{display:inline-block;margin-left:7px;padding:2px 6px;border:1px solid #d0913a;border-radius:10px;color:#f0bd70;background:#2b2418;font-size:10px;font-weight:600;vertical-align:middle}
+  .argument-part{margin:26px 0 10px;padding:8px 12px;border-left:4px solid var(--accent);background:#111820;color:#dce8f5;font-size:18px}
 </style>
 </head>
 <body>
@@ -85,38 +86,28 @@
 <main>
   <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.</div>
 
+  <h2 class="argument-part">1. The question</h2>
   <section class="panel" id="thesis-panel">
     <h2>The problem being solved — thesis (re-statable) <span class="snapshot-marker">snapshot of 2026-09-06 + 2026-11-02, not live</span></h2>
     <p class="muted">Read as prose: <a href="apex-thesis-narration-2026-11-02.html">the draft narration</a> (2026-11-02, for Joe to strike or keep line by line; the box below still renders <code>apex-thesis.json</code>).</p>
     <div id="thesis-body"><div class="gap">Loading live-thesis data…</div></div>
   </section>
 
-  <section class="panel" id="wow-panel">
-    <h2>Declared ways of working — which are on, off, broken or not built <span class="snapshot-marker">snapshot of 2026-11-02, not live</span> <span class="muted" id="wow-count"></span></h2>
-    <div class="sub" style="margin-bottom:10px">Each row is a way of working the stack has declared (the institution one layer under a therefore of the thesis). <b>monitor</b> says whether anything is watching it; <b>invariant</b> says whether what it promises holds right now. A way with no probe is prose until one is built, and is shown as such rather than guessed.</div>
-    <div id="wow-body"><div class="gap">Loading ways-of-working data…</div></div>
-  </section>
-
+  <h2 class="argument-part">2. The grounds</h2>
   <section class="panel" id="layers-panel">
     <h2>The layers — Beer's systems read as perceive, believe, evaluate, select, act <span class="snapshot-marker">snapshot of 2026-11-02, not live</span> <span class="muted" id="layers-count"></span></h2>
     <div class="sub" style="margin-bottom:10px">An organisational reading beside the institutional one (draft; nothing adopted). Each layer names its stage, the ways of working that live in it with their state, how many attested patterns stand beneath them (claude-16's reading: thin means little has surfaced), and the backlog rows whose situation is a deficiency of one of its ways. The last column is the secondary alignment: situation → the way of working that failed for that row.</div>
     <div id="layers-body"><div class="gap">Loading layers…</div></div>
   </section>
 
-  <section class="panel" id="section-status-panel" style="display:none">
-    <h2>Dimension read status</h2>
-    <div class="sub" style="margin-bottom:10px">Green zero means the substrate was read successfully and contained no rows. Red <b>READ FAILED</b> means the dimension is unavailable, not empty.</div>
-    <div class="section-health" id="section-status-body"></div>
+  <h2 class="argument-part">3. The practice</h2>
+  <section class="panel" id="wow-panel">
+    <h2>Declared ways of working — which are on, off, broken or not built <span class="snapshot-marker">snapshot of 2026-11-02, not live</span> <span class="muted" id="wow-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">Each row is a way of working the stack has declared (the institution one layer under a therefore of the thesis). <b>monitor</b> says whether anything is watching it; <b>invariant</b> says whether what it promises holds right now. A way with no probe is prose until one is built, and is shown as such rather than guessed.</div>
+    <div id="wow-body"><div class="gap">Loading ways-of-working data…</div></div>
   </section>
 
-  <section class="panel" id="header-panel" style="display:none">
-    <h2>The composing cascade — header metadata</h2>
-    <div id="dims" class="meta-row"></div>
-    <div id="spine" class="meta-row"></div>
-    <div id="composition" class="meta-row"></div>
-    <div id="standards" class="meta-row"></div>
-  </section>
-
+  <h2 class="argument-part">4. What was built first</h2>
   <section class="panel" id="basins-panel" style="display:none">
     <h2>Mission clusters → most-cited patterns (the basins) <span class="muted" id="basins-count"></span></h2>
     <div class="sub" style="margin-bottom:10px">Each basin is a mission cluster warranted by its top cited patterns (aggregated over member missions). A <b style="color:#e8a07a">hole-basin</b> is a cluster the cascade can't yet warrant — <i>where it suggests a missing/virtual pattern to seed</i> (Moran's lesson).</div>
@@ -134,19 +125,24 @@
     <div class="gap" id="patterns-gap"></div>
   </section>
 
-  <section class="panel" id="holes-panel" style="display:none">
-    <h2>Honest holes <span class="muted" id="holes-count"></span></h2>
-    <div id="holes-body"></div>
-  </section>
-
-  <section class="panel" id="held-panel" style="display:none">
-    <h2>Held / deferred work <span class="muted" id="held-count"></span></h2>
-    <div id="held-body"></div>
-  </section>
-
   <section class="panel" id="lineage-panel" style="display:none">
     <h2>Agent → mission lineage (the durable clock) <span class="muted" id="lineage-count"></span></h2>
     <div id="lineage-body"></div>
+  </section>
+
+  <h2 class="argument-part">5. How work moves</h2>
+  <section class="panel" id="wip-panel" style="display:none">
+    <h2>WIP / Uxbridge layer <span class="snapshot-marker">snapshot of 2026-08-22, not live</span> <span class="muted" id="wip-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">Red-ring control-loop gaps, with the age of each mark and the promotion test required to move it. Missing promotion tests are shown as findings, not hidden.</div>
+    <div id="wip-body"></div>
+  </section>
+
+  <section class="panel" id="header-panel" style="display:none">
+    <h2>The composing cascade — header metadata</h2>
+    <div id="dims" class="meta-row"></div>
+    <div id="spine" class="meta-row"></div>
+    <div id="composition" class="meta-row"></div>
+    <div id="standards" class="meta-row"></div>
   </section>
 
   <section class="panel" id="forward-panel" style="display:none">
@@ -155,21 +151,34 @@
     <div id="forward-body"></div>
   </section>
 
-  <section class="panel" id="wip-panel" style="display:none">
-    <h2>WIP / Uxbridge layer <span class="snapshot-marker">snapshot of 2026-08-22, not live</span> <span class="muted" id="wip-count"></span></h2>
-    <div class="sub" style="margin-bottom:10px">Red-ring control-loop gaps, with the age of each mark and the promotion test required to move it. Missing promotion tests are shown as findings, not hidden.</div>
-    <div id="wip-body"></div>
-  </section>
-
   <section class="panel" id="tickets-panel" style="display:none">
     <h2>Preparing what can be selected — tickets, placements, and the review rows <span class="snapshot-marker">snapshot of 2026-11-02, not live</span> <span class="muted" id="tickets-count"></span></h2>
     <div class="sub" style="margin-bottom:8px">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. One section, placed low (Joe, 2026-11-02: the outermost loop near the top read as a second Tickets section). The tree is the draw pile placed by ways of working; the pile is the evidence of the failing way <b>backlog-understood</b> above and stays here until that invariant holds. Rows marked <span class="wow-holding">review</span> are the 47 review-sheet rows, listed in full below the tree.</div>
     <div class="sub" style="margin-bottom:10px">unclocked = no clock lineage, live or durable · claim by clocking (<code>bell --mission &lt;id&gt;</code> or 3 doc-edits &lt;10 min)</div>
     <div id="tickets-body"></div>
-    <details class="part-group" id="partition-details"><summary><b>The 47 review rows</b> — the Giraffe partition over the review sheet <span class="snapshot-marker">snapshot of 2026-11-02, not live</span> <span class="muted" id="partition-count"></span></summary>
-      <div class="sub" style="margin:8px 0">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. Each row is an item from the review sheet of blocked unblockers, with its wing (the therefore it sits under), its situation (a state of the action situation, read from evidence), the advisory reading, and <b>what it still needs</b> before it could be selected. Readings are not decisions; nothing is applied.</div>
-      <div id="partition-body"><div class="gap">Loading partition data…</div></div>
-    </details>
+  </section>
+
+  <h2 class="argument-part">6. The open packets</h2>
+  <details class="part-group" id="partition-details"><summary><b>The 47 review rows</b> — the Giraffe partition over the review sheet <span class="snapshot-marker">snapshot of 2026-11-02, not live</span> <span class="muted" id="partition-count"></span></summary>
+    <div class="sub" style="margin:8px 0">The War Machine has an outer loop (select work) and an inner loop (do work). This is the loop outside both: it prepares what the outer loop may select. Each row is an item from the review sheet of blocked unblockers, with its wing (the therefore it sits under), its situation (a state of the action situation, read from evidence), the advisory reading, and <b>what it still needs</b> before it could be selected. Readings are not decisions; nothing is applied.</div>
+    <div id="partition-body"><div class="gap">Loading partition data…</div></div>
+  </details>
+
+  <section class="panel" id="section-status-panel" style="display:none">
+    <h2>Dimension read status</h2>
+    <div class="sub" style="margin-bottom:10px">Green zero means the substrate was read successfully and contained no rows. Red <b>READ FAILED</b> means the dimension is unavailable, not empty.</div>
+    <div class="section-health" id="section-status-body"></div>
+  </section>
+
+  <h2 class="argument-part">7. What is undecided</h2>
+  <section class="panel" id="holes-panel" style="display:none">
+    <h2>Honest holes <span class="muted" id="holes-count"></span></h2>
+    <div id="holes-body"></div>
+  </section>
+
+  <section class="panel" id="held-panel" style="display:none">
+    <h2>Held / deferred work <span class="muted" id="held-count"></span></h2>
+    <div id="held-body"></div>
   </section>
 </main>
 
