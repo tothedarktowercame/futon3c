@@ -173,8 +173,18 @@ walk itself (futon1b cold pages) is still open.
      round-trip verified, and removed; archive at
      `~/notes/packets/ways-of-working/wm-inbox-archive-20261106/`
      (manifest.jsonl, wm-full-loop-inbox.tar.gz, archive.sha256
-     `05cffb94…`). New arrivals continue to accumulate until (b) is fixed.
-   - (b) Agency could stop writing completion bellbacks for polling callers.
+     `05cffb94…`). No new arrivals since (see (b): suppressed from the
+     11-06 21:09Z restart onward).
+   - (b) ~~Agency could stop writing completion bellbacks for polling
+     callers~~ **Done** (`1b038af95`, codex-7, 11-04, "Suppress redundant WM
+     completion inboxes"): `polling-result-callers #{"wm-full-loop"}` is
+     excluded from `inbox-completion-bellback?`, with the constructed bad
+     case (`polling-machine-caller-does-not-receive-redundant-completion-inbox`,
+     auto_bellback_test.clj). Re-verified 11-06: test passes (the namespace's
+     20 failures are the unrelated typed-bells flag tests); the live inbox
+     had 0 wm-full-loop files and none arrived after the 11-06 21:09Z
+     service restart that first loaded the fix (the pre-restart JVM dated
+     from 10-20, which is why archived arrivals continued to 08:25Z).
    - (c) 166 of the 171 directories are `ack-seat-*` / `pull-seat-*` test
      callers writing into the live inbox, the same shape as the
      invoke-ledger test clobber.
