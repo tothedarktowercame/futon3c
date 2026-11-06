@@ -71,6 +71,14 @@
     (is (re-find #"six-line window" (:prompt @seen)))
     (is (re-find #"Return ONLY one JSON object" (:prompt @seen)))
     (is (re-find #"do not bell or whistle anyone" (:prompt @seen)))
+    (is (str/includes? (:prompt @seen)
+                       (str "python3 -I '" (.getAbsolutePath
+                                             (io/file (:pointer f) "check_edges.py")) "'")))
+    (is (str/includes? (:prompt @seen)
+                       (.getAbsolutePath (io/file (:pointer f) "members.json"))))
+    (is (str/includes? (:prompt @seen) "never coin an id"))
+    (is (str/includes? (:prompt @seen) "grep -n"))
+    (is (str/includes? (:prompt @seen) "sha256sum"))
     (let [prompt (:prompt @seen)]
       (doseq [key-name ["to" "kind" "basis" "evidence" "note"
                         "raw_target" "reason" "path" "sha256" "line" "quote"]]
@@ -79,6 +87,14 @@
                      "duplicates" "superseded-by" "declared" "inferred"
                      "open" "done-unmarked" "abandoned" "unclear"]]
         (is (str/includes? prompt value) (str "prompt enumerates " value))))))
+
+(deftest reader-self-check-scratch-is-durable-not-temporary
+  (let [path (worker/scratch-path
+              {:target_id "M-one" :source_sha (apply str (repeat 64 "a"))})]
+    (is (= (str (System/getProperty "user.home")
+                "/code/storage/giraffe-reread-scratch/M-one-aaaaaaaa.jsonl")
+           path))
+    (is (not (str/starts-with? path "/tmp/")))))
 
 (deftest failed-contact-retries-to-bound-then-stays-visible
   (let [f (fixture)

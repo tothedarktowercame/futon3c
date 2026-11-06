@@ -75,20 +75,55 @@
          (when (re-find #"PLACEMENT\s+=" source) (placement-contract checker-path))
          "Use exactly these key names. An empty edges or unresolved list is valid.")))
 
+(defn scratch-path
+  "Stable, non-temporary scratch path for REQUEST's reader self-check. The
+  worker does not create or consume this file; the contacted reader owns it."
+  [request]
+  (let [target (-> (str (:target_id request))
+                   (str/replace #"[^A-Za-z0-9._-]" "_"))
+        sha (subs (str (:source_sha request))
+                  0 (min 8 (count (str (:source_sha request)))))]
+    (.getAbsolutePath
+     (io/file (System/getProperty "user.home") "code" "storage"
+              "giraffe-reread-scratch" (str target "-" sha ".jsonl")))))
+
+(defn- shell-quote [value]
+  (str "'" (str/replace (str value) "'" "'\"'\"'") "'"))
+
 (defn reading-prompt [request checker-path]
-  (str "Read exactly one Giraffe corpus member. Return ONLY one JSON object.\n\n"
-       "Target: " (:target_id request) "\n"
-       "Source path: " (:source_path request) "\n"
-       "Required source sha256: " (:source_sha request) "\n\n"
-       "Follow futon2/holes/labs/wm-contract/reconciliation/"
-       "Q1-GIRAFFE-FIELD-STALENESS-zai6-2026-10-31.md. "
-       "Return fields id, source, status_as_read, purpose, edges, unresolved.\n\n"
-       (checker-contract checker-path) "\n\n"
-       "Every evidence quote must be verbatim and occur in its stated six-line window; "
-       "source.path and source.sha256 must exactly equal the values above. "
-       "Do not edit the corpus or mint Giraffe. "
-       "The worker reads the result from the finished job; end your turn with the JSON "
-       "record and do not bell or whistle anyone."))
+  (let [checker (.getAbsolutePath (io/file checker-path))
+        members (.getAbsolutePath (io/file (.getParentFile (io/file checker))
+                                           "members.json"))
+        scratch (scratch-path request)]
+    (str "Read exactly one Giraffe corpus member. Return ONLY one JSON object.\n\n"
+         "Target: " (:target_id request) "\n"
+         "Source path: " (:source_path request) "\n"
+         "Required source sha256: " (:source_sha request) "\n\n"
+         "Follow futon2/holes/labs/wm-contract/reconciliation/"
+         "Q1-GIRAFFE-FIELD-STALENESS-zai6-2026-10-31.md. "
+         "Return fields id, source, status_as_read, purpose, edges, unresolved.\n\n"
+         (checker-contract checker) "\n\n"
+         "Self-check before answering:\n"
+         "1. The only valid edge targets are ids present in " members
+         ". Take edge targets only from that members.json; never coin an id. "
+         "A name that is not a member id belongs in unresolved with raw_target, "
+         "kind, basis, evidence, and reason.\n"
+         "2. Obtain line numbers mechanically with `grep -n` or `nl -ba`; copy each "
+         "quote verbatim from that line or the five lines after it. Obtain every "
+         "evidence sha256 with `sha256sum` on the cited file.\n"
+         "3. Create the scratch directory and write the single JSON record as one line to "
+         scratch ". Run exactly:\n   python3 -I " (shell-quote checker) " "
+         (shell-quote scratch) "\n"
+         "4. Fix every printed problem line, overwrite the scratch record, and rerun until "
+         "the checker prints 0 problems. Only then return the record. If you cannot reach "
+         "0 problems, return the record anyway with a top-level self_check list containing "
+         "every remaining problem line; the checker tolerates extra top-level keys and the "
+         "worker will retain the failed attempt visibly.\n\n"
+         "Every evidence quote must be verbatim and occur in its stated six-line window; "
+         "source.path and source.sha256 must exactly equal the values above. "
+         "Do not edit the corpus or mint Giraffe. "
+         "The worker reads the result from the finished job; end your turn with the JSON "
+         "record and do not bell or whistle anyone.")))
 
 (defn- json-record [text]
   (let [candidate (or (second (re-find #"(?s)```(?:json)?\s*(\{.*?\})\s*```" (str text)))
