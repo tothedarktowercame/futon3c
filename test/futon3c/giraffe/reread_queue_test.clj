@@ -58,7 +58,7 @@
 (deftest lease-expiry-is-reconciled
   (let [store (queue/open-store (temp-db))]
     (queue/reconcile! store [(item "new")] (coverage "old") 10)
-    (is (= :claimed (:state (queue/claim! store 20 100))))
+    (is (= :claimed (:state (queue/claim! store 20 100 1))))
     (queue/reconcile! store [(item "new")] (coverage "old") 119)
     (is (= :claimed (:state (first (queue/requests store)))))
     (queue/reconcile! store [(item "new")] (coverage "old") 120)
@@ -72,3 +72,28 @@
       (is (= :superseded (:state row)))
       (is (= :source-returned-to-read (:superseded_reason row)))
       (is (= "read-sha" (:superseded_by_sha row))))))
+
+(deftest never-read-item-is-pending-once-with-no-old-sha
+  (let [store (queue/open-store (temp-db))
+        result (queue/reconcile! store [(item "new")] {:members []} 10)]
+    (is (= [:M-one] (get-in result [:drift :unread-new])))
+    (is (= [[:pending nil "new"]]
+           (mapv (juxt :state :old_sha :source_sha) (queue/requests store))))
+    (let [request (queue/claim! store 15 100 1)]
+      (queue/settle! store request {:status :landed :digest "generation-1"} 16 3))
+    (queue/reconcile! store [(item "new")]
+                      {:members [{:id "M-one" :status :read
+                                  :source {:path "/code/futon/holes/M-one.md"
+                                           :sha256 "new"}}]}
+                      20)
+    (is (= [[:landed "generation-1"]]
+           (mapv (juxt :state :landed_digest) (queue/requests store))))))
+
+(deftest new-item-claim-cap-is-fail-closed
+  (let [store (queue/open-store (temp-db))
+        items [(item "new")
+               {:id :M-two :source-pin {:path "/code/M-two.md" :sha256 "two"}}]]
+    (queue/reconcile! store items {:members []} 10)
+    (is (nil? (queue/claim! store 20 100 0)))
+    (is (= :claimed (:state (queue/claim! store 20 100 1))))
+    (is (= 1 (count (filter #(= :pending (:state %)) (queue/requests store)))))))

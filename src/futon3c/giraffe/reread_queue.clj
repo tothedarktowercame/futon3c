@@ -110,13 +110,15 @@
 (defn reconcile!
   "Reconcile OPEN-ITEMS and checked COVERAGE at NOW-MS.
 
-  Calls the pure `reading-drift` classifier. Changed targets become pending;
+  Calls the pure `reading-drift` classifier. Changed and never-read targets
+  become pending;
   a newer source supersedes an older request; returning to the corpus SHA
   supersedes outstanding work. Expired leases are released on every pass."
   [store open-items coverage now-ms]
   {:pre [(integer? now-ms) (not (neg? now-ms))]}
   (let [drift (excursions/reading-drift open-items coverage)
-        changed (set (:reading-source-changed drift))
+        changed (set (concat (:reading-source-changed drift)
+                             (:unread-new drift)))
         by-id (into {} (map (juxt (comp keyword :id) identity)) (:members coverage))
         open-by-id (into {} (map (juxt :id identity)) open-items)]
     (jdbc/with-transaction [tx (:datasource store)]
@@ -143,14 +145,21 @@
     {:drift drift :requests (requests store)}))
 
 (defn claim!
-  "Claim the oldest pending request through NOW-MS+LEASE-MS."
-  [store now-ms lease-ms]
+  "Claim the oldest pending request through NOW-MS+LEASE-MS.
+  NEW-ITEM-CAP is the per-cycle allowance already remaining for rows whose
+  old_sha is nil. This worker claims at most one row per cycle, so positive
+  values admit one and zero admits none."
+  [store now-ms lease-ms new-item-cap]
   {:pre [(integer? now-ms) (pos-int? lease-ms)]}
   (jdbc/with-transaction [tx (:datasource store)]
     (expire-leases! tx now-ms)
     (when-let [row (jdbc/execute-one!
                     tx
-                    ["SELECT target_id,source_sha FROM reread_requests WHERE state='pending' ORDER BY requested_at_ms,target_id,source_sha LIMIT 1"]
+                    [(str "SELECT target_id,source_sha FROM reread_requests "
+                          "WHERE state='pending' AND (old_sha IS NOT NULL OR ? > 0) "
+                          "ORDER BY CASE WHEN old_sha IS NULL THEN 1 ELSE 0 END, "
+                          "requested_at_ms,target_id,source_sha LIMIT 1")
+                     new-item-cap]
                     query-opts)]
       (jdbc/execute! tx
                      ["UPDATE reread_requests SET state='claimed',lease_until_ms=?,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='pending'"

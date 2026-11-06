@@ -81,9 +81,13 @@
 (defn run-once!
   "Claim and process at most one request. CONTACT-FN receives REQUEST and PROMPT.
   It returns {:ok true :record map} or {:ok false :reason keyword}."
-  [{:keys [store pointer generations-dir contact-fn now-ms lease-ms max-attempts]
+  [{:keys [store pointer generations-dir contact-fn now-ms lease-ms max-attempts
+           new-item-cap]
     :or {lease-ms default-lease-ms max-attempts default-max-attempts}}]
-  (if-let [request (queue/claim! store now-ms lease-ms)]
+  (when-not (and (integer? new-item-cap) (not (neg? new-item-cap)))
+    (throw (ex-info "A nonnegative new-item claim cap is required"
+                    {:kind :giraffe-reread/new-item-cap-required})))
+  (if-let [request (queue/claim! store now-ms lease-ms new-item-cap)]
     (let [contact (contact-fn request (reading-prompt request))]
       (cond
         (not (:ok contact))
@@ -108,7 +112,8 @@
                          {:pointer pointer :generations-dir generations-dir
                           :claim {:target-id (:target_id request)
                                   :source-path (:source_path request)
-                                  :source-sha (:source_sha request)}
+                                  :source-sha (:source_sha request)
+                                  :old-sha (:old_sha request)}
                           :replacement (:record contact)})]
           (if (= :published (:status published))
             {:status :landed :publication published

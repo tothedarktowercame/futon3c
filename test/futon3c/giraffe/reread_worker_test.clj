@@ -45,7 +45,8 @@
 
 (defn- opts [f contact]
   {:store (:store f) :pointer (:pointer f) :generations-dir (:generations f)
-   :contact-fn contact :now-ms 20 :lease-ms 100 :max-attempts 2})
+   :contact-fn contact :now-ms 20 :lease-ms 100 :max-attempts 2
+   :new-item-cap 1})
 
 (deftest one-request-dispatches-validates-publishes-and-lands
   (let [f (fixture)

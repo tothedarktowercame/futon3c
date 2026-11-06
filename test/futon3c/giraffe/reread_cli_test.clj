@@ -59,6 +59,12 @@
                     {:reader-seat "reader-1" :store {}
                      :snapshot-fn (fn [_] {:open-items [] :coverage {:members []}})
                      :contact-fn (fn [& _] (throw (Exception. "unused")))
-                     :mint-coordinator coordinator :now-ms 100})]
+                     :mint-coordinator coordinator :now-ms 100 :new-item-cap 0})]
         (is (= 1 @calls))
         (is (= "rerated-1" (get-in result [:mint :last-run-id])))))))
+
+(deftest cli-cycle-refuses-without-new-item-cap
+  (let [error (try (cli/run-once! {:reader-seat "reader-1"}) nil
+                   (catch clojure.lang.ExceptionInfo exc exc))]
+    (is (= :giraffe-reread/new-item-cap-required
+           (:kind (ex-data error))))))
