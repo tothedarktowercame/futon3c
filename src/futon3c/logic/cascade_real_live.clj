@@ -608,6 +608,42 @@
 
 (defonce graph-refresh-in-flight (atom #{}))
 
+(def ^:dynamic graph-refresh-initial-backoff-ms
+  "Delay after the first failed background walk. Repeated failures double it
+   up to graph-cache-max-age-ms. Dynamic so the asynchronous path can be
+   tested without waiting ten minutes."
+  (* 10 60 1000))
+
+(def ^:dynamic *graph-refresh-now-ms*
+  "Clock for refresh backoff accounting."
+  #(System/currentTimeMillis))
+
+;; hx-type -> {:backoff-ms n :next-refresh-at-ms t :failure ...}. This is
+;; deliberately separate from graph-section-cache: the latter remains the
+;; last good data, while this atom is only retry control for failed refreshes.
+(defonce graph-refresh-backoff (atom {}))
+
+(defn- refresh-backoff-active
+  [hx-type]
+  (let [state (get @graph-refresh-backoff hx-type)]
+    (when (and state (< (*graph-refresh-now-ms*) (:next-refresh-at-ms state)))
+      state)))
+
+(defn- record-refresh-failure!
+  [hx-type failure]
+  (swap! graph-refresh-backoff
+         (fn [states]
+           (let [previous-ms (get-in states [hx-type :backoff-ms])
+                 backoff-ms (min graph-cache-max-age-ms
+                                 (if previous-ms
+                                   (* 2 previous-ms)
+                                   graph-refresh-initial-backoff-ms))]
+             (assoc states hx-type
+                    {:backoff-ms backoff-ms
+                     :next-refresh-at-ms (+ (*graph-refresh-now-ms*) backoff-ms)
+                     :failure {:message (or (ex-message failure) (str failure))
+                               :class (.getName (class failure))}})))))
+
 (defn- daemon-factory [thread-name]
   (let [default-factory (Executors/defaultThreadFactory)]
     (reify java.util.concurrent.ThreadFactory
@@ -630,10 +666,11 @@
 (defn- start-graph-refresh
   "Start at most one background refresh of HX-TYPE. The refresh walks with no
    request deadline and swaps the cache only on success — a failed refresh
-   leaves the stale-but-good entry to be served again on the next call."
+   leaves the stale-but-good entry to be served during bounded retry backoff."
   [hx-type]
   (let [before @graph-refresh-in-flight]
-    (when (and (not (contains? before hx-type))
+    (when (and (nil? (refresh-backoff-active hx-type))
+               (not (contains? before hx-type))
                (compare-and-set! graph-refresh-in-flight before (conj before hx-type)))
       (.submit graph-refresh-pool
                ^Callable
@@ -649,11 +686,22 @@
                      (swap! graph-section-cache assoc hx-type
                             {:count (count edges)
                              :edges edges
-                             :fetched-at-ms (System/currentTimeMillis)}))
-                   (catch Throwable _          ;; keep the stale-but-good entry
-                     )
+                             :fetched-at-ms (System/currentTimeMillis)})
+                     (swap! graph-refresh-backoff dissoc hx-type))
+                   (catch Throwable failure
+                     ;; Keep the stale-but-good entry and prevent request
+                     ;; traffic from immediately starting the same costly walk.
+                     (record-refresh-failure! hx-type failure))
                    (finally
                      (swap! graph-refresh-in-flight disj hx-type))))))))
+
+(defn refresh-graph-section!
+  "Explicit operator refresh for HX-TYPE. Clear retry backoff and start the
+   ordinary background refresh; the last good entry remains available while
+   it runs."
+  [hx-type]
+  (swap! graph-refresh-backoff dissoc hx-type)
+  (start-graph-refresh hx-type))
 
 (defn- graph-count-reads
   "Parallel exact-count reads. Returns {hx-type count} for the types whose
@@ -793,7 +841,9 @@
                                                      :hyperedge-type hx-type
                                                      :edges (:edges entry)
                                                      :stale? true
-                                                     :stale-reason (name reason)
+                                                     :stale-reason (if (refresh-backoff-active hx-type)
+                                                                     "refresh-backoff"
+                                                                     (name reason))
                                                      :stale-since-ms (:fetched-at-ms entry)}])))
                                        stale)
                          results)

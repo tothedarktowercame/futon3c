@@ -5,7 +5,7 @@
   (:require [cheshire.core :as json]
             [clojure.edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.java.io :as io]
             [futon3c.agency.registry :as registry]
             [futon3c.logic.cascade-real :as cr]
@@ -335,6 +335,17 @@
   (when-let [v (ns-resolve 'futon3c.logic.cascade-real-live 'graph-refresh-in-flight)]
     (reset! @v #{})))
 
+(defn- reset-refresh-backoff! []
+  (reset! live/graph-refresh-backoff {}))
+
+(use-fixtures :each
+  (fn [test-fn]
+    (reset-refresh-backoff!)
+    (try
+      (test-fn)
+      (finally
+        (reset-refresh-backoff!)))))
+
 (defn- wait-for
   "Poll PRED until true or a 5 s deadline; returns PRED's value or nil."
   [pred]
@@ -476,6 +487,48 @@
       (is (wait-for #(= [{:hx/endpoints [:new]}]
                         (:edges (get @live/graph-section-cache "clock/clocked-on"))))
           "the single refresh swapped the entry on success"))))
+
+(deftest graph-swrv-failure-backs-off-request-storm-and-success-resets
+  (reset-refresh-in-flight!)
+  (reset-refresh-backoff!)
+  (let [now-ms (atom 1000)
+        attempts (atom 0)
+        fail? (atom true)]
+    (with-redefs [live/*graph-refresh-now-ms* #(long @now-ms)
+                  live/graph-refresh-initial-backoff-ms 100
+                  live/graph-refresh-deadline-ms 10
+                  live/*graph-count-reader* (constantly 1)
+                  live/fetch-edges
+                  (fn [hx-type]
+                    (when (= hx-type "mission-scope/pattern")
+                      (swap! attempts inc)
+                      (when @fail? (Thread/sleep 100)))
+                    [{:hx/endpoints [:fresh hx-type]}])]
+      (seed-graph-cache
+       {"mission-scope/pattern"
+        {:count 1
+         :edges [{:hx/endpoints [:last-good]}]
+         :fetched-at-ms (- (System/currentTimeMillis) live/graph-cache-max-age-ms 1)}})
+      (live/graph-sections*)
+      (is (wait-for #(and (= 1 @attempts)
+                          (empty? (refresh-in-flight))
+                          (contains? @live/graph-refresh-backoff "mission-scope/pattern")))
+          "the timed-out refresh records a backoff")
+      (dotimes [_ 100]
+        (let [result (live/graph-sections*)]
+          (is (= "refresh-backoff"
+                 (get-in result [:fetches "mission-scope/pattern" :stale-reason])))
+          (is (= [{:hx/endpoints [:last-good]}]
+                 (get-in result [:fetches "mission-scope/pattern" :edges])))))
+      (is (= 1 @attempts) "100 graph requests start no walk inside backoff")
+      (reset! fail? false)
+      (swap! now-ms + 101)
+      (live/graph-sections*)
+      (is (wait-for #(and (= 2 @attempts)
+                          (empty? (refresh-in-flight))))
+          "exactly one refresh starts after backoff expiry")
+      (is (nil? (get @live/graph-refresh-backoff "mission-scope/pattern"))
+          "a successful refresh resets the backoff"))))
 
 (deftest graph-swrv-every-type-due-at-once-all-refresh
   "Every section was walked together, so every section ages out together.
