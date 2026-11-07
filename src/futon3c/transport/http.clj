@@ -2840,7 +2840,10 @@
   ;; downstream contract parsers must read; :result-summary is a 220-char
   ;; whitespace-collapsed list-view digest and truncates structured payloads
   ;; (attempt-051 feature-card incident, 2026-07-25).
-  (let [view
+  (let [activity (when (= "running" (:state job))
+                   (some-> (reg/get-agent (str (:agent-id job)))
+                           :agent/invoke-activity str not-empty))
+        view
         (select-keys job [:job-id :agent-id :caller :surface :harness :mode :state
                           :created-at :started-at :finished-at
                           :terminal-code :terminal-message
@@ -2852,7 +2855,8 @@
                           ;; Without this the compacted job's :result nil is
                           ;; indistinguishable from a job that never produced one.
                           :events-trimmed
-                          :trace/delivery-observation :events])]
+                          :trace/delivery-observation :events])
+        view (cond-> view activity (assoc :invoke-activity activity))]
     (if (and (terminal-invoke-state? (:state job))
              (= "pending" (get-in job [:delivery :status])))
       (assoc view :state "delivering")

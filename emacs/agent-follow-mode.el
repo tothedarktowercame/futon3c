@@ -240,6 +240,11 @@ Like `agent-chat-insert-message', but tool-preview lines ([tool …]) get
           (when previews
             (setq result (car (reverse previews)))))))))
 
+(defun agent-follow--activity-preview (job events)
+  "Return JOB's live activity, falling back to its last completed tool."
+  (or (alist-get 'invoke-activity job)
+      (agent-follow--last-tool-preview events)))
+
 (defun agent-follow--update-progress (job-id caller running? last-tool)
   "Show/clear the REPL progress line for a followed JOB-ID.
 Never touches the progress line while the REPL streams its own turn."
@@ -309,7 +314,7 @@ Never touches the progress line while the REPL streams its own turn."
               (puthash job-id (float-time) agent-follow--live-jobs))))
           (agent-follow--update-progress
            job-id caller (equal state "running")
-           (agent-follow--last-tool-preview events)))))))
+           (agent-follow--activity-preview job events)))))))
 
 (defun agent-follow--fetch-pinned-job (buffer job-id)
   "Fetch pinned JOB-ID and render its current state into BUFFER."

@@ -138,10 +138,11 @@
                   :content {:type "string"}}
                  ["path" "content"])}
    {:name "run_shell"
-    :description "Run a shell command in cwd. Use for tests, builds, git diff, or focused inspection."
+    :description "Run a shell command in cwd. For a long-lived foreground server command use detached=true; do not add shell & when detached."
     :parameters (json-schema
                  {:command {:type "string"}
-                  :timeout_ms {:type "integer"}}
+                  :timeout_ms {:type "integer"}
+                  :detached {:type "boolean"}}
                  ["command"])}
    {:name "run_readonly"
     :description "Run a read-only shell command in cwd. Commands that mutate state (rm, mv, sed -i, redirects to a file) are rejected; 2>/dev/null, 2>&1 and pipes are fine."
@@ -784,7 +785,8 @@
           (tools/execute-tool backend :bash
                               [(:command args)
                                (cond-> {}
-                                 (:timeout_ms args) (assoc :timeout-ms (:timeout_ms args)))])
+                                 (:timeout_ms args) (assoc :timeout-ms (:timeout_ms args))
+                                 (:detached args) (assoc :detached? true))])
 
           "run_readonly"
           (tools/execute-tool backend :bash-readonly

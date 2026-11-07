@@ -45,6 +45,19 @@
      (try ~@body
        (finally (cleanup! ~sym)))))
 
+(deftest bash-detached-returns-without-waiting-for-process
+  (testing ":bash detached owns process detachment instead of relying on shell &"
+    (with-temp-dir dir
+      (let [backend (rb/make-real-backend {:cwd (.getPath dir)})
+            started (System/nanoTime)
+            result (tools/execute-tool backend :bash
+                                       ["sleep 2" {:detached? true}])
+            elapsed-ms (/ (- (System/nanoTime) started) 1000000.0)]
+        (is (true? (:ok result)))
+        (is (true? (get-in result [:result :detached])))
+        (is (pos-int? (get-in result [:result :pid])))
+        (is (< elapsed-ms 1000.0))))))
+
 ;; =============================================================================
 ;; 1. Read tool — real file contents
 ;; =============================================================================

@@ -164,3 +164,24 @@ as seen and not inserted; a running job still renders."
                  (events . (((seq . 1) (type . "text") (text . "hello"))
                             ((seq . 2) (type . "done"))))))))
       (should (null inserted)))))
+
+(ert-deftest agent-follow-progress-prefers-live-activity-over-completed-tool ()
+  "A running tool must not be labelled as the preceding completed tool."
+  (with-temp-buffer
+    (let ((agent-follow--agent-id "zai-10")
+          (agent-follow--seen (make-hash-table :test 'equal))
+          (agent-follow--live-jobs (make-hash-table :test 'equal))
+          (agent-follow--progress-jobs nil)
+          (agent-follow-include-own t)
+          shown)
+      (cl-letf (((symbol-function 'agent-follow--insert-message) (lambda (&rest _)))
+                ((symbol-function 'agent-chat-update-progress)
+                 (lambda (text &rest _) (setq shown text))))
+        (agent-follow--render-jobs
+         (list '((job-id . "job-1") (agent-id . "zai-10") (caller . "joe")
+                 (state . "running")
+                 (invoke-activity . "run_shell: launch Arxana JVM")
+                 (events . (((seq . 1) (type . "tool_use")
+                             (previews . ["check-demo-ports.sh"]))))))))
+      (should (string-match-p "launch Arxana JVM" shown))
+      (should-not (string-match-p "check-demo-ports" shown)))))

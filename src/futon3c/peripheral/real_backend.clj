@@ -218,23 +218,32 @@
 ;; =============================================================================
 
 (defn- run-command
-  "Execute a shell command and return {:exit N :out string :err string}."
-  [cwd command timeout-ms agent-id session-id]
+  "Execute a shell command and return {:exit N :out string :err string}.
+   With :detached? true, sever all streams and return after process start.
+   The command stays foreground; this runner, rather than shell `&`, detaches it."
+  [cwd command timeout-ms agent-id session-id {:keys [detached?]}]
   (let [pb (ProcessBuilder. ^java.util.List ["bash" "-c" command])
         _ (when agent-id
             (.putAll (.environment pb) (agent-context/agent-env agent-id session-id)))
         _ (.directory pb (io/file cwd))
         _ (.redirectErrorStream pb false)
-        proc (.start pb)
-        out-future (future (slurp (.getInputStream proc)))
-        err-future (future (slurp (.getErrorStream proc)))
-        finished? (.waitFor proc timeout-ms TimeUnit/MILLISECONDS)]
-    (if finished?
-      (let [exit (.exitValue proc)
-            out @out-future
-            err @err-future]
-        {:exit exit :out out :err err})
-      (do
+        _ (when detached?
+            (.redirectInput pb (java.lang.ProcessBuilder$Redirect/from
+                                (io/file "/dev/null")))
+            (.redirectOutput pb java.lang.ProcessBuilder$Redirect/DISCARD)
+            (.redirectError pb java.lang.ProcessBuilder$Redirect/DISCARD))
+        proc (.start pb)]
+    (if detached?
+      {:exit 0 :out "" :err "" :detached true :pid (.pid proc)}
+      (let [out-future (future (slurp (.getInputStream proc)))
+            err-future (future (slurp (.getErrorStream proc)))
+            finished? (.waitFor proc timeout-ms TimeUnit/MILLISECONDS)]
+        (if finished?
+          (let [exit (.exitValue proc)
+                out @out-future
+                err @err-future]
+            {:exit exit :out out :err err})
+          (do
         ;; Kill the WHOLE process tree, descendants first. destroyForcibly
         ;; on the bash child alone orphans grandchildren — found live
         ;; 2026-07-04: timed-out `clojure -M:node` runs left full XTDB/Arrow
@@ -243,10 +252,10 @@
         (doseq [h (iterator-seq (.iterator (.descendants (.toHandle proc))))]
           (try (.destroyForcibly ^java.lang.ProcessHandle h)
                (catch Throwable _)))
-        (.destroyForcibly proc)
-        {:exit -1 :out ""
-         :err (str "Command timed out after " timeout-ms "ms"
-                   " (process tree killed; pass {\"timeout_ms\": N} for long runs)")}))))
+            (.destroyForcibly proc)
+            {:exit -1 :out ""
+             :err (str "Command timed out after " timeout-ms "ms"
+                       " (process tree killed; pass {\"timeout_ms\": N} for long runs)")}))))))
 
 (defn- tool-bash
   "Execute a bash command. Args: [command] or [command {:timeout-ms N}].
@@ -261,7 +270,7 @@
         timeout (or (:timeout-ms opts) default-timeout)]
     (if (str/blank? command)
       {:ok false :error "Command must be a non-blank string"}
-      (let [result (run-command cwd command timeout agent-id session-id)]
+      (let [result (run-command cwd command timeout agent-id session-id opts)]
         (if (zero? (:exit result))
           {:ok true :result result}
           {:ok true :result result}))))))
