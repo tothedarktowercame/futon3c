@@ -1,7 +1,12 @@
 # M-repl-circus: the Circus as hooks around the shared REPL
 
-**Status:** OPEN — IDENTIFY (2026-11-05, Joe + claude-8). Progress to MAP is gated
-on [E-evidence-cleanup](../excursions/E-evidence-cleanup.md).
+**Status:** OPEN — MAP (ungated 2026-11-07, Joe + codex-7).
+
+The IDENTIFY → MAP gate, [E-evidence-cleanup](../excursions/E-evidence-cleanup.md),
+closed in futon3c `1ccde6689`.  Its prevention follow-ups are also live in
+futon1b (`4f43c51`, `fd4efb2`): retired derived families are rejected at the
+evidence boundary and current evidence contracts are audited by owner, shape,
+bytes, and rate.  MAP may now proceed without reopening the cleanup.
 
 **Related:** [M-giraffe](M-giraffe.md) (the loop 驴 → 象 → 狗 → 馬 → Giraffe → War
 Machine, §"Giraffe in futonic logic"), [M-象-2000](M-象-2000.md) (象 turn analysis;
@@ -34,7 +39,8 @@ Parts already in place:
 - `peripheral/memory_recall.clj:175`, which already finds memories through `:memory/assert`
   hyperedges and is one working case of the pattern.
 
-Everything here depends on E-evidence-cleanup.
+This design depended on E-evidence-cleanup through IDENTIFY.  That dependency is
+now discharged; MAP starts from its clean evidence/derived-store boundary.
 
 ## Decided: where derived output goes (claude-8, 2026-11-05, on Joe's go for step 2)
 
@@ -163,7 +169,8 @@ The instances are the six animals above.
 - [ ] For each animal: which GCC node and edge types it writes, and which XTQL queries it reads
   others through. No animal reads another's output by parsing evidence bodies.
 
-- [ ] E-evidence-cleanup has closed (gate to MAP).
+- [x] E-evidence-cleanup has closed (gate to MAP).  Closure: `1ccde6689`;
+  live admission defences: futon1b `4f43c51`, `fd4efb2`.
 - [ ] Each animal's trigger, input, output and output store are confirmed against
   the code, not only against this table. 狗's current code role and 猴's seat are
   the least certain.
