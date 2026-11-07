@@ -267,13 +267,23 @@
   ([cwd default-timeout args agent-id session-id]
   (let [command (first args)
         opts (when (map? (second args)) (second args))
-        timeout (or (:timeout-ms opts) default-timeout)]
-    (if (str/blank? command)
+        timeout (or (:timeout-ms opts) default-timeout)
+        ;; A bare shell background operator keeps the wrapper/process pipes
+        ;; alive in ways the harness cannot supervise.  Exclude && and >&1.
+        background-op? (and (string? command)
+                            (re-find #"(?<![&>])&(?![&])" command))]
+    (cond
+      (str/blank? command)
       {:ok false :error "Command must be a non-blank string"}
+
+      (and background-op? (not (:detached? opts)))
+      {:ok false
+       :error (str "Background shell '&' is not supervised. Resubmit the "
+                   "foreground server command with detached=true and omit '&'.")}
+
+      :else
       (let [result (run-command cwd command timeout agent-id session-id opts)]
-        (if (zero? (:exit result))
-          {:ok true :result result}
-          {:ok true :result result}))))))
+        {:ok true :result result})))))
 
 (defn- blank-quoted
   "Blank the contents of balanced quoted runs, preserving length, so that the

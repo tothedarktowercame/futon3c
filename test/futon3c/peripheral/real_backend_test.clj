@@ -58,6 +58,15 @@
         (is (pos-int? (get-in result [:result :pid])))
         (is (< elapsed-ms 1000.0))))))
 
+(deftest bash-refuses-unsupervised-background-operator
+  (with-temp-dir dir
+    (let [backend (rb/make-real-backend {:cwd (.getPath dir)})
+          result (tools/execute-tool backend :bash
+                                     ["mkdir -p demo && sleep 20 >log 2>&1 & echo $!"])]
+      (is (false? (:ok result)))
+      (is (str/includes? (:error result) "detached=true"))
+      (is (str/includes? (:error result) "omit '&'")))))
+
 ;; =============================================================================
 ;; 1. Read tool — real file contents
 ;; =============================================================================
