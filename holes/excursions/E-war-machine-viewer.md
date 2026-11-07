@@ -108,3 +108,46 @@ Emacs". Facts so far:
   could run inside code-server rather than beside it.
 
 Packet 1 does not depend on this choice; packets 2 and 4 do.
+
+## Second use: watch the giant connected component form (2026-11-07)
+
+Joe, 2026-11-07: "rather than just believing that a Giant Connected Component
+exists, I can watch it form there." This is the same viewer surface used for a
+second subject: the pattern graph that M-repl-circus and M-象-2000 rely on.
+
+**What exists (checked 2026-11-07):**
+- `futon3c/scripts/mined_pattern_graph.py` builds the graph from every 象
+  analysis plus the library and writes
+  `storage/operator-turns/mined-pattern-graph.json`. That file has 4,552 edges
+  and was **last written 2026-10-01**. Edge kinds: `why` and `how` (authored),
+  and `used-together`, `co-cited`, `rejected-beside` and `next-in-session`
+  (mined). Each mined edge cites the analysis file it came from, and so,
+  through that file, the time of its turn.
+- `futon3c/scripts/pattern_graph_diff.py` applies updates as an append-only
+  list of diffs. Its `applied/` directory is **empty**: no update has ever been
+  applied.
+- `futon3c/scripts/pattern_component_svg.py` draws the giant component as one
+  static SVG, named by a pattern it must contain (default `象/诺必践`).
+
+**Why VS Code in particular:** a browser page could animate this equally well.
+In VS Code each node is a file. Clicking a pattern as it joins the component
+opens its flexiarg beside the graph, so the edge that joined it can be checked
+against the pattern's text. That is the reading needed to decide whether the
+component is real or an artefact of loose edges. On 2026-09-30, dropping
+`co-rejected` removed 253 patterns that had joined the component only through
+that kind.
+
+**Packets (sketch; none dispatched):**
+- **G1. Replay data.** Order the existing graph's edges by their source turn's
+  time. Log each union of components: which pattern joined, through which edge
+  kind and which turn, and the size of the giant component after it. No model,
+  and no Agency.
+- **G2. Bring the graph up to date.** Rerun the builder over everything since
+  10-01, including the 象-sonnet readings, and apply the result through
+  `pattern_graph_diff.py` so the update is recorded. Then a daily timer
+  appends that day's edges. No Agency or evidence-store writes, so this can
+  run during the E-evidence-cleanup cutover.
+- **G3. View.** A VS Code webview: the graph grows along a time slider, the
+  giant component is highlighted, weak edge kinds can be toggled, and
+  clicking a node opens its file. G1's log is its data, the same way the
+  extractor table is the data for the WM views above.
