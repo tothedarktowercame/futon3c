@@ -72,8 +72,20 @@ Research DONE. Next: set `ENABLE_PROMPT_CACHING_1H=1` (low-risk, high-value), th
 recalibrate the joey threshold upward. Compaction needs no action (auto-on); tune
 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` only if we want leaner pouches.
 
+**Disposition update (2026-11-07, wm-author under reviewed cascade
+policy-e42819a7cc4dd32fc325).** (1) The joey threshold question is settled as MOOT
+for bytes: `FUTON3C_KANGAROO_JOEY_MAX_BYTES` is retired (agent_pouch.clj:132,
+2026-10-28) and replaced by a live-context token measure,
+`FUTON3C_KANGAROO_JOEY_MAX_TOKENS` (default 200000, agent_pouch.clj:160-163) —
+Claude Code 2.1.300 stopped transcript bytes tracking context, so byte-threshold
+recalibration has no referent; dev-laptop-env now exports the token knob instead
+of the retired one. (2) `ENABLE_PROMPT_CACHING_1H=1` is now set in
+scripts/dev-laptop-env (JVM and pouch children inherit it), enacting this ticket's
+own recorded disposition. Compaction: no action, auto-on (warm `/compact` and
+default-on cold monster compaction both shipped). Superseded parts closed.
+
 ## Completion criteria
 
 - Research findings recorded — check: the ticket's FINDINGS and Disposition sections (both knobs identified as env vars, compaction auto-on). **Met.**
-- The 1h-prompt-cache rollout is decided: ENABLE_PROMPT_CACHING_1H=1 set in dev-laptop-env, or a recorded decision not to — check: the env var present where the JVM and pouch children inherit it, or a decision line in this ticket naming the choice and decider. **Not met.**
-- The superseded parts are closed and the threshold question settled — check: a disposition line in this ticket recording that the joey threshold is retired (agent_pouch.clj:132, 2026-10-28) and that recalibration is moot, or what replaces it. **Not started.**
+- The 1h-prompt-cache rollout is decided: ENABLE_PROMPT_CACHING_1H=1 set in dev-laptop-env, or a recorded decision not to — check: the env var present where the JVM and pouch children inherit it, or a decision line in this ticket naming the choice and decider. **Met.**
+- The superseded parts are closed and the threshold question settled — check: a disposition line in this ticket recording that the joey threshold is retired (agent_pouch.clj:132, 2026-10-28) and that recalibration is moot, or what replaces it. **Met.**

@@ -35,12 +35,20 @@ export FUTON3C_DURABLE_QUEUE="${FUTON3C_DURABLE_QUEUE:-true}"
 # Takes effect for agents minted after start (cr new); existing agents stay cold
 # until re-minted. Set "false" to revert. Activated 2026-06-10.
 export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
-# Joey gate: a pouch warms only a SMALL session ("joey"). A "monster" (transcript
-# over FUTON3C_KANGAROO_JOEY_MAX_BYTES, default 2 MiB) stays COLD — warming a giant
-# history is a token-cost trap (the server-side prompt cache re-prefills it past its
-# 5-min TTL regardless of process warmth). Override per-agent at the REPL with
+# Joey gate: a pouch warms only a SMALL session ("joey"). A "monster" (live context
+# over FUTON3C_KANGAROO_JOEY_MAX_TOKENS, default 200000 tokens) stays COLD — warming
+# a giant context is a token-cost trap. The measure is the model's live context from
+# Claude Code's own usage records, NOT transcript bytes: the old bytes knob
+# FUTON3C_KANGAROO_JOEY_MAX_BYTES is retired (agent_pouch.clj:132, 2026-10-28) —
+# Claude Code 2.1.300 began logging API bookkeeping into the .jsonl, so file size
+# stopped tracking context. Override per-agent at the REPL with
 # (futon3c.agency.agent-pouch/allow-monster! "<id>"), or globally:
-export FUTON3C_KANGAROO_JOEY_MAX_BYTES="${FUTON3C_KANGAROO_JOEY_MAX_BYTES:-2097152}"
+export FUTON3C_KANGAROO_JOEY_MAX_TOKENS="${FUTON3C_KANGAROO_JOEY_MAX_TOKENS:-200000}"
+# 1-hour prompt-cache TTL (T-kangaroo-caching-and-compaction): Joe's turn gaps
+# routinely exceed the 5-min default TTL, so every turn re-prefilled full history.
+# Set here so the JVM and every pouch `claude` child inherit it (2026-11-07,
+# enacting the ticket's recorded disposition).
+export ENABLE_PROMPT_CACHING_1H="1"
 # export FUTON3C_KANGAROO_ALLOW_MONSTERS=true   # warm every session regardless of size
 # Durable per-agent monster overrides (E5: warming an ACTIVELY-USED monster WINS —
 # amortize the transcript read once at spawn instead of every cold turn; on the Max
