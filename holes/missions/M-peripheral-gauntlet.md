@@ -917,3 +917,14 @@ Time →
 | Phase 3 done | Patterns as landscape — not instruction | futon3a + futon3c | Agent uses pattern environmentally |
 | Phase 4 begins | futon3b validates the gauntlet | futon3b | First proof-path for a gauntlet gate |
 | Phase 4 complete | All 8 gates have proof-paths | all three repos | Full gauntlet demonstrated, futon3 fully replaced |
+
+## Postscript (2026-11-07): the WM roles on the gauntlet
+
+The mission stays closed; this is a pointer, not a reopening. Joe
+(2026-11-07) proposed a War Machine viewer in the spirit of this mission:
+where the gauntlet had Questor and the others, WM runs have wm-author,
+wm-reviewer and the other seats, and the operator should be able to follow
+one run across all of them, keep a lab notebook per run, and see where its
+time and tokens went phase by phase. That is gauntlet pattern
+`co-presence-over-co-location` (make presence visible) applied to WM.
+Sketch and data sources: `holes/excursions/E-war-machine-viewer.md`.
