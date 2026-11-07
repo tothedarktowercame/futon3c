@@ -196,6 +196,37 @@
             (is (= :deduped (:status r2)))
             (is (= 3 @calls) "only the original ran")))))))
 
+(deftest queue-view-shows-seq-on-accepted-records-before-invoke
+  ;; T-car3-queue-routing completion criterion: accepted job/turn records
+  ;; persist the per-recipient sequence marker before any invoke. Gate the
+  ;; process-fn so both turns are still pending (accepted, never invoked)
+  ;; when queue-view is read, and read :seq off the operator view.
+  (with-temp-v2
+    (fn []
+      (let [gate (promise)
+            started (promise)
+            mk (fn [n] {:to "seq-agent" :from "joe" :surface "bell"
+                        :msg-id (str "sq" n)
+                        :process-fn (fn [_] (deliver started true) @gate {:result n})})]
+        (let [r1 (turn-queue/accept-async! (mk 1))]
+          (is (true? (deref started 3000 false))
+              "first turn is mid-invoke and holding the drain gate")
+          (turn-queue/accept-async! (mk 2))
+          (turn-queue/accept-async! (mk 3))
+          (let [queued (->> (turn-queue/queue-view) :agents
+                            (filter #(= "seq-agent" (:agent-id %)))
+                            (mapcat :queued))
+                seqs (cons (-> r1 :entry :seq) (map :seq queued))]
+            (is (= 2 (count queued))
+                "the two not-yet-invoked turns are visible as pending in the view")
+            (is (every? pos-int? seqs)
+                "every accepted record carries its per-recipient :seq marker")
+            (is (apply distinct? seqs)
+                "distinct turns hold distinct seq markers")
+            (is (apply < seqs)
+                "seq follows accepted order")))
+        (deliver gate true)))))
+
 (deftest idle-drainer-does-not-enter-durable-drain-loop
   (let [drain-calls (atom 0)
         {:keys [running lock thread]}
