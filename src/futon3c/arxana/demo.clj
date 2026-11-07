@@ -10,6 +10,7 @@
   binds publicly. No deployment, no lucy, no restart of anything."
   (:gen-class)
   (:require [clojure.java.io :as io]
+            [futon3c.arxana.apm-fixture :as apm]
             [futon3c.arxana.artifact :as artifact]
             [futon3c.arxana.correspond-fixture :as fixture]
             [futon3c.arxana.digest :as digest]
@@ -50,9 +51,12 @@
 (defn build-stack
   "Verify the fixture and build the demo service config. Returns
   {:service-cfg .. :fixture .. :revisions {..} :strategy/revision-id ..
-   :artifact/revision-id ..}."
+   :artifact/revision-id ..}. The correspondence repository also carries the
+   APM a93J02 fixture (resources/arxana/apm-demo) for the two-pane
+   code-server demo; its artifact revisions are ingested alongside."
   []
   (let [{:keys [repo] :as fx} (fixture/build-fixture-repository)
+        apm (apm/assert-into-repository! repo)
         scopes (fixture/load-scopes)
         manifest (fixture/load-manifest)
         revisions (into {}
@@ -77,9 +81,30 @@
                    :journal j
                    :subscriptions subr}
      :fixture fx
+     :apm apm
      :revisions revisions
      :intro-revision-id (get revisions "intro-generated.tex")
      :strategy/revision-id srid}))
+
+(defn ingest-apm-revisions!
+  "Ingest the APM fixture's exact committed bytes (tex + html) into the
+  provider and set heads, so :scope/at-position revision pins resolve."
+  [{:keys [service-cfg apm]}]
+  (let [{:keys [artifact-provider graph-store]} service-cfg]
+    (doseq [[logical rid] (:revisions apm)]
+      (let [f (apm/fixture-resource logical)
+            {:keys [ok]} (artifact/ingest!
+                          artifact-provider logical (apm/file-bytes f)
+                          (if (= logical "index.html") "text/html" "text/x-tex"))]
+        (when-not (= rid (:artifact/revision-id ok))
+          (throw (ex-info "APM ingest revision mismatch"
+                          {:expected rid :actual (:artifact/revision-id ok)})))
+        (store/put-entity! graph-store
+                           {:entity/id (str "arxana:head:" logical)
+                            :type :arxana/artifact-head
+                            :external-id logical
+                            :props {:head/revision-id (:artifact/revision-id ok)}}))))
+  true)
 
 (defn ingest-fixture-revisions!
   "Ingest every fixture artifact's exact bytes into the provider so revision
@@ -113,6 +138,7 @@
    (http/preflight-ports! "127.0.0.1" demo-ports)
    (let [stack (build-stack)]
      (ingest-fixture-revisions! stack)
+     (ingest-apm-revisions! stack)
      {:server (http/start! {:port port :service-cfg (:service-cfg stack)})
       :stack stack})))
 

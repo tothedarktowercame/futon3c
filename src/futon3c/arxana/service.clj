@@ -150,6 +150,65 @@
                       (assoc body :request/id (:message/id ok)))]
              (env/response ok (with-semantic-digest op res)))
 
+           (= op :scope/at-position)
+           (if-not correspondence-repo
+             (env/response ok (env/error :unsupported :arxana.service/operation-not-implemented
+                                         {:operation op :missing :correspondence-repo}
+                                         nil))
+             (let [{:keys [artifact/revision-id position/codepoint subject/id]} body
+                   subject-mids (when id
+                                  (set (map :manifestation/id
+                                            (corr/all-manifestations correspondence-repo id))))
+                   enclosing
+                   (->> (corr/query correspondence-repo {})
+                        (filter (fn [a]
+                                  (or (nil? subject-mids)
+                                      (contains? subject-mids
+                                                 (get-in a [:source :manifestation/id])))))
+                        (keep (fn [a]
+                                (let [ep (:source a)
+                                      loc (:locator ep)]
+                                  (when (and (= revision-id (:artifact/revision-id ep))
+                                             (= :codepoint-range (:kind loc))
+                                             (<= (:start loc) codepoint (dec (:end loc))))
+                                    {:assertion/id (:id a)
+                                     :subject/id (get-in (corr/get-manifestation
+                                                          correspondence-repo
+                                                          (:manifestation/id ep))
+                                                         [:manifestation/subject])
+                                     :verification (:verification a)
+                                     :direction (:direction a)
+                                     :source {:artifact/revision-id (:artifact/revision-id ep)
+                                              :range {:start (:start loc) :end (:end loc)}}
+                                     :target {:manifestation/id
+                                              (get-in a [:target :manifestation/id])
+                                              :artifact/revision-id
+                                              (get-in a [:target :artifact/revision-id])
+                                              :locator (get-in a [:target :locator])}
+                                     :size (- (:end loc) (:start loc))}))))
+                        (sort-by (juxt :size :assertion/id)))
+                   minimal-count (some-> (first enclosing) :size)
+                   innermost-candidates (filter #(= minimal-count (:size %)) enclosing)]
+               (cond
+                 (empty? enclosing)
+                 (env/response ok (with-semantic-digest
+                                    op (env/error :missing :arxana.scope/no-enclosing-scope
+                                                  {:artifact/revision-id revision-id
+                                                   :position/codepoint codepoint}
+                                                  nil)))
+                 ;; Ambiguity is preserved, never resolved by ordering: two
+                 ;; distinct innermost scopes of equal size stay a candidate set.
+                 (> (count innermost-candidates) 1)
+                 (env/response ok (with-semantic-digest
+                                    op {:result/status :ambiguous
+                                        :result/scopes (mapv #(dissoc % :size) enclosing)
+                                        :result/innermost nil}))
+                 :else
+                 (env/response ok (with-semantic-digest
+                                    op {:result/status :resolved
+                                        :result/scopes (mapv #(dissoc % :size) enclosing)
+                                        :result/innermost (dissoc (first innermost-candidates) :size)})))))
+
            (= op :assertion/promote)
            (let [{rok :ok rerr :error}
                  (promotion/promote

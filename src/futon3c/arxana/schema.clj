@@ -34,6 +34,16 @@
     :allowed #{:artifact/revision-id :strategy/revision-id :subject/id :options}
     :projection env/scope-resolve-projection-v1}
 
+   ;; M-jvm-arxana two-pane demo (2026-11-07): position → smallest enclosing
+   ;; REGISTERED scope, over stored correspondence assertions whose source
+   ;; endpoint is a :codepoint-range locator on the requested revision. The
+   ;; projection pins the semantic result fields; clients cannot widen them.
+   :scope/at-position
+   {:schema-version 1
+    :required #{:artifact/revision-id :position/codepoint}
+    :allowed #{:artifact/revision-id :position/codepoint :subject/id}
+    :projection [:operation :result/status [:result/scopes] :result/innermost]}
+
    :revision/ingest
    {:schema-version 1
     :required #{:artifact/id :bytes :media-type :expected/revision-id}

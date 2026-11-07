@@ -1,0 +1,107 @@
+(Digesting apm-a93J02...
+(Processing content /var/www/zone.hyperreal.enterprises/wip/apm-highlight-demo/apm-a93J02.tex...
+Info:latex_dump:embedded using embedded TL2023 dump (no on-disk dump found)
+	at apm-a93J02; line 2 col 22 - line 2 col 22
+	In /home/runner/work/latexml-oxide/latexml-oxide/target/maxperf/build/latexml_engine-b3ce02687ac103b1/out/latex_dump_loader.rs:65:5
+Info:dump_reader:loaded Loaded 19153 entries from <embedded TL2023> (531 skipped, 0 errors)
+	at apm-a93J02; line 2 col 22 - line 2 col 22
+	In latexml_core/src/dump_reader.rs:181:3
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/base/ts1enc.dfu... )
+(Loading textcomp_sty.rs... )
+(Loading LaTeX.pool... )
+(Loading article_cls.rs... )
+(Loading amsgen_sty.rs... )
+(Loading amsbsy_sty.rs... )
+(Loading amstext_sty.rs... )
+(Loading amsopn_sty.rs... )
+(Loading amsmath_sty.rs... )
+(Loading amsfonts_sty.rs... )
+(Loading amssymb_sty.rs... )
+(Loading iftex_sty.rs... )
+(Loading t1.fontmap... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/base/t1enc.def...
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/base/t1enc.dfu... ) )
+(Loading t1enc.def... )
+(Loading fontenc_sty.rs... )
+(Loading utf8.def... )
+(Loading inputenc_sty.rs... )
+(Loading lmodern_sty.rs... )
+Warning:missing_file:upquote Can't find binding or file for 'upquote.sty'. no dispatcher entry, and no raw file found on disk.
+	at apm-a93J02; line 24 col 14 - line 24 col 14
+	In latexml_core/src/binding/content.rs:793:7
+(Loading upquote_sty.rs... )
+Info:ignore:\csdef Ignoring redefinition (\newcommand) of '{cs}'
+	at apm-a93J02; line 27 col 1 - line 27 col 4
+	In latexml_package/src/package/etoolbox_sty.rs:32:7
+Info:ignore:\csedef Ignoring redefinition (\newcommand) of '{cs}'
+	at apm-a93J02; line 27 col 1 - line 27 col 4
+	In latexml_package/src/package/etoolbox_sty.rs:32:7
+Info:ignore:\csgdef Ignoring redefinition (\newcommand) of '{cs}'
+	at apm-a93J02; line 27 col 1 - line 27 col 4
+	In latexml_package/src/package/etoolbox_sty.rs:32:7
+Info:ignore:\csxdef Ignoring redefinition (\newcommand) of '{cs}'
+	at apm-a93J02; line 27 col 1 - line 27 col 4
+	In latexml_package/src/package/etoolbox_sty.rs:32:7
+(Loading etoolbox_sty.rs... )
+(Loading microtype_sty.rs... )
+(Loading parskip_sty.rs... )
+(Loading color_sty.rs... )
+(Loading xcolor_sty.rs... )
+(Processing definitions /home/joe/code/storage/apm/new16/math-proofread-style.sty...
+Info:unexpected:options Applying option 'dvipsnames' from a repeat load of xcolor.sty
+	at math-proofread-style; line 5 col 16 - line 5 col 16
+	In latexml_core/src/binding/content.rs:363:9
+(Loading array_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/graphics/dvipsnam.def... ) )
+Info:ignore:\prime Ignoring redefinition of \prime
+	at apm-a93J02; line 44 col 1 - line 44 col 23
+	In latexml_core/src/state.rs:1181:9
+Info:ignore:\text Ignoring redefinition of \text
+	at apm-a93J02; line 44 col 1 - line 44 col 23
+	In latexml_core/src/state.rs:1181:9
+Info:ignore:\mathit Ignoring redefinition of \mathit
+	at apm-a93J02; line 44 col 1 - line 44 col 23
+	In latexml_core/src/state.rs:1181:9
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty... )
+(Loading ltxcmds_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty... )
+(Loading keyval_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty... )
+(Loading kvsetkeys_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty... )
+(Loading kvdefinekeys_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty... )
+(Loading kvoptions_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty...
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/infwarerr/infwarerr.sty... )
+(Loading infwarerr_sty.rs... ) )
+(Loading refcount_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty... )
+(Loading gettitlestring_sty.rs... )
+(Loading nameref_sty.rs... )
+(Loading url_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/bitset/bitset.sty...
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/intcalc/intcalc.sty... )
+(Loading intcalc_sty.rs... )
+(Processing definitions /usr/share/texlive/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty...
+(Loading pdftexcmds_sty.rs... ) )
+(Loading bigintcalc_sty.rs... ) )
+(Loading bitset_sty.rs... )
+(Loading hyperref_sty.rs... )
+(Loading bookmark_sty.rs... )
+Warning:missing_file:xurl Can't find binding or file for 'xurl.sty'. no dispatcher entry, and no raw file found on disk.
+	at apm-a93J02; line 50 col 10 - line 50 col 10
+	In latexml_core/src/binding/content.rs:793:7
+(Loading xurl_sty.rs... ) ) )
+(Building... )
+(Rewriting... )
+(Math Parsing...39 formulae ...[1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39]
+Info:cleanup:xmref LOSTNODES cleanup: 0 map entries — skipped
+	at Anonymous String
+	In latexml_math_parser/src/parser.rs:943:9
+ )
+(Finalizing... )
+Info:scan:db_status Scan: DBStatus: 133 objects
+Info:math:converted converted 39 Maths
+Info:xslt:stylesheet Applying XSLT stylesheet: embed:///LaTeXML-html5.xsl
+Status:conversion:1

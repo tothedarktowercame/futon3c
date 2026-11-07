@@ -212,6 +212,11 @@
     (when (= :codepoint-point (:kind loc))
       (when (some loc [:end])
         (throw (ex-info "point locators must not carry an end (no fabricated ranges)"
+                        {:type :arxana/locator-invalid :locator loc}))))
+    (when (= :codepoint-range (:kind loc))
+      (when-not (and (int? (:start loc)) (int? (:end loc))
+                     (<= 0 (:start loc) (:end loc)))
+        (throw (ex-info "codepoint-range locators require integer :start/:end with 0 <= start <= end (half-open, unicode codepoints)"
                         {:type :arxana/locator-invalid :locator loc}))))))
 
 (defn validate-assertion!
