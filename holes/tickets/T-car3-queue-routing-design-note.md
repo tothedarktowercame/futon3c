@@ -2,6 +2,8 @@
 
 **Status (2026-11-01): PARTIAL -- capture gap at futon3c accept sites CLOSED (all in-repo accept sites now supply stable :from/:surface/:msg-id).** Persisted route + seq markers exist (turn_queue.clj:213,241,523). Audit of every `turn-queue/accept-async!` / `accept-operator-block!` site in `futon3c/transport/http.clj` (auto-bellback, work-orders, parked-resume, bell ingress, invoke activation, REPL turn, whistle, compact, operator consult): each supplies `:from` and `:surface`; every site that previously fell back to a generated msg-id now passes `:msg-id (str job-id)` (auto-bellback, work-orders, parked-resume, bell ingress, whistle — the whistle site also gained an explicit `:id`). Retry safety is pinned by `accept-sites-must-supply-stable-msg-id-for-retry-dedupe` in `test/futon3c/agency/turn_queue_v2_test.clj`: a retried turn with a fresh id and no msg-id runs twice (`:msg-id-source :generated`), a retried turn with the stable msg-id dedupes. Remaining out-of-bounds: external/foreign callers whose surfaces genuinely carry no caller identity still normalize to `"unknown"` via `normalized-entry` (turn_queue.clj:410-432) — that fallback is now the contract for non-futon3c ingress only. Close when Phase 2 surface adapters confirm external surfaces or accept the fallback formally. Triage codex-5, reviewed claude-1; capture-gap closure by wm-author 2026-11-01.
 
+**Gate:** awaiting Joe's decision on whether `"unknown"` is the accepted caller identity for non-futon3c ingress (the close condition above). Added by claude-6 2026-11-07 after WM run 2026-11-07-57693c04 held on it.
+
 Status: model-only proposal for ratification. No implementation is included in
 this phase.
 
