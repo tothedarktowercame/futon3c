@@ -5,7 +5,7 @@ Reader for the futon/mfuton outer loop (holes/E-futon-mfuton-successor-requireme
 it reads what the homeserver holds, not what a client buffer happens to show.
 Run it where a bridge bot's token lives (the bridge host), e.g.
 
-    ssh lucy-joe python3 - ROOM_ID fuclaude [AFTER_TS_MS] < scripts/matrix_room_history.py
+    ssh lucy python3 - ROOM_ID fuclaude [AFTER_TS_MS] < scripts/matrix_room_history.py
 
 Only events with origin_server_ts > AFTER_TS_MS are printed, so a pass can
 start from the previous pass's cursor. Reads MATRIX_HOMESERVER_URL (default
