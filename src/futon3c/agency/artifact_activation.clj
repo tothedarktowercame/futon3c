@@ -3,9 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.pattern-search :as pattern-search]
-            [futon3c.evidence.backend]
-            [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.store :as evidence-store])
+            [futon3c.substrate.client :as substrate])
   (:import [java.nio.charset StandardCharsets]
            [java.security MessageDigest]
            [java.util UUID]
@@ -92,16 +90,10 @@
                                                    (paragraphs (:text section))))))))))
 
 (defn live-backend
-  "The serving JVM's futon1b evidence backend, as promise-history resolves it.
-   A nil store would fall through to the in-memory default store and the
-   record would never reach futon1b, so this throws when none is configured."
+  "Compatibility token for callers that used to pass the Evidence backend.
+   Activations now use futon1b's dedicated derived-record HTTP boundary."
   []
-  (or (when-let [v (some-> (find-ns 'futon3c.dev) (ns-resolve '!evidence-store))]
-        (let [candidate @(var-get v)]
-          (when (satisfies? futon3c.evidence.backend/EvidenceBackend candidate)
-            candidate)))
-      (throw (ex-info "Evidence backend unavailable"
-                      {:reason :evidence-backend-unavailable}))))
+  :derived-store)
 
 (defn- file-sha256 [file]
   (let [f (io/file file)
@@ -199,19 +191,33 @@
      :evidence/tags [:artifact-retrieval :weak-activation]}))
 
 (def ^:dynamic *search-fn* pattern-search/search)
-(def ^:dynamic *append-fn* boundary/append!)
-(def ^:dynamic *get-fn* evidence-store/get-entry*)
+(def ^:dynamic *append-fn* (fn [_ row] (substrate/write-derived! row)))
+(def ^:dynamic *get-fn* (fn [_ id] (substrate/derived-by-id! id)))
 (def ^:dynamic *descriptor-fn* retrieval-descriptor)
 
-(defn- comparable-entry [entry]
-  (let [comparable (select-keys entry [:evidence/id :evidence/subject :evidence/type
-                                       :evidence/claim-type :evidence/author :evidence/at
-                                       :evidence/body :evidence/tags])]
-    ;; Retained records written before text stopped being copied into evidence
-    ;; still replay exactly when every durable descriptor agrees.
+(defn derived-record
+  "Map the historical activation entry onto the dedicated derived table.
+   The writer version deliberately matches the migration transform, so replay
+   across the cutover is a no-op rather than a deterministic-id conflict."
+  [entry]
+  {:derived/id (str "derived:artifact-activation:" (:evidence/id entry))
+   :derived/family :artifact-activation
+   :derived/writer "futon3c/artifact-activation"
+   :derived/writer-version "f75fb0fff"
+   :derived/source-act-ids [(:evidence/id entry)]
+   :derived/subject (:evidence/subject entry)
+   :derived/at (:evidence/at entry)
+   :derived/body (:evidence/body entry)})
+
+(defn- comparable-row [row]
+  (let [comparable (select-keys row [:derived/id :derived/family :derived/writer
+                                     :derived/writer-version :derived/source-act-ids
+                                     :derived/subject :derived/at :derived/body])]
+    ;; The one-off migration removes copied text, but tolerate a row made by
+    ;; the pre-cleanup writer during a rolling cutover.
     (cond-> comparable
-      (map? (:evidence/body comparable))
-      (update :evidence/body dissoc :text :text-truncated?))))
+      (map? (:derived/body comparable))
+      (update :derived/body dissoc :text :text-truncated?))))
 
 (defn record!
   "Retrieve and durably append one activation record. Exact replay is
@@ -230,21 +236,22 @@
                   {:error {:reason (or (:error/code (ex-data t)) :search-failed)
                            :message (.getMessage t)}}))
          entry (activation-record artifact text descriptor hits)
-         existing (*get-fn* store (:evidence/id entry))]
+         row (derived-record entry)
+         existing (*get-fn* store (:derived/id row))]
      (cond
-       (= (comparable-entry existing) (comparable-entry entry))
-       {:status :existing :entry existing :evidence/id (:evidence/id entry)}
+       (= (comparable-row existing) (comparable-row row))
+       {:status :existing :entry existing :derived/id (:derived/id row)}
 
        existing
        (throw (ex-info "Weak-activation deterministic id conflict"
                        {:reason :activation-conflict
-                        :evidence/id (:evidence/id entry)}))
+                        :derived/id (:derived/id row)}))
 
        :else
-       (let [result (*append-fn* store entry)]
+       (let [result (*append-fn* store row)]
          (if (:ok result)
-           {:status :recorded :entry (:entry result)
-            :evidence/id (:evidence/id entry)}
+           {:status :recorded :entry (or (:entry result) row)
+            :derived/id (:derived/id row)}
            (throw (ex-info "Weak-activation append failed"
                            {:reason :activation-append-failed :result result}))))))))
 
@@ -254,21 +261,22 @@
   ([artifact text error] (record-error! nil artifact text error))
   ([store artifact text error]
    (let [entry (activation-record artifact text (*descriptor-fn*) {:error error})
-         existing (*get-fn* store (:evidence/id entry))]
+         row (derived-record entry)
+         existing (*get-fn* store (:derived/id row))]
      (cond
-       (= (comparable-entry existing) (comparable-entry entry))
-       {:status :existing :entry existing :evidence/id (:evidence/id entry)}
+       (= (comparable-row existing) (comparable-row row))
+       {:status :existing :entry existing :derived/id (:derived/id row)}
 
        existing
        (throw (ex-info "Weak-activation deterministic id conflict"
                        {:reason :activation-conflict
-                        :evidence/id (:evidence/id entry)}))
+                        :derived/id (:derived/id row)}))
 
        :else
-       (let [result (*append-fn* store entry)]
+       (let [result (*append-fn* store row)]
          (if (:ok result)
-           {:status :recorded :entry (:entry result)
-            :evidence/id (:evidence/id entry)}
+           {:status :recorded :entry (or (:entry result) row)
+            :derived/id (:derived/id row)}
            (throw (ex-info "Weak-activation append failed"
                            {:reason :activation-append-failed :result result}))))))))
 

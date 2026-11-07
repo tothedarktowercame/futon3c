@@ -89,6 +89,33 @@
                                       "Content-Type" "application/edn")
                       :body (pr-str payload)}))))
 
+(defn derived-by-id!
+  "Read one current derived row by exact id. Returns nil when it is absent."
+  [id]
+  (let [url (str (configured-url) "/api/alpha/derived/" (encode id))
+        response (http/get url {:headers (request-headers nil)
+                                :timeout 30000 :throw false})]
+    (case (:status response)
+      200 (response-body response)
+      404 nil
+      (throw (ex-info "derived point read failed"
+                      {:url url :status (:status response)
+                       :body (response-body response)})))))
+
+(defn write-derived!
+  "Write one validated derived row through futon1b's dedicated table."
+  [payload]
+  (let [url (str (configured-url) "/api/alpha/derived")
+        response (http/post url {:headers (assoc (request-headers nil)
+                                                 "Content-Type" "application/edn")
+                                 :body (pr-str payload)
+                                 :timeout 30000 :throw false})
+        body (response-body response)]
+    (if (#{200 201} (:status response))
+      body
+      (throw (ex-info "derived write failed"
+                      {:url url :status (:status response) :body body})))))
+
 ;; Keep one page comfortably inside short live-view deadlines. The substrate
 ;; permits 1,000, but several 1,000-row hydrations measured at 4-5 seconds,
 ;; leaving no room inside cascade-real's 5-second per-request timeout.

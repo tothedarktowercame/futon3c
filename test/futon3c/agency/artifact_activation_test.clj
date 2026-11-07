@@ -46,7 +46,7 @@
              activation/*get-fn* (fn [_# id#] (get @~store id#))
              activation/*append-fn*
              (fn [_# entry#]
-               (swap! ~store assoc (:evidence/id entry#) entry#)
+               (swap! ~store assoc (:derived/id entry#) entry#)
                {:ok true :entry entry#})]
      ~@body))
 
@@ -65,15 +65,15 @@
             entry (:entry result)
             printed (pr-str entry)]
         (is (= :recorded (:status result)))
-        (is (= expected-sha (get-in entry [:evidence/body :text-sha256])))
-        (is (not (contains? (:evidence/body entry) :text)))
-        (is (not (contains? (:evidence/body entry) :text-truncated?)))
+        (is (= expected-sha (get-in entry [:derived/body :text-sha256])))
+        (is (not (contains? (:derived/body entry) :text)))
+        (is (not (contains? (:derived/body entry) :text-truncated?)))
         (is (not (.contains printed marker)))
         (is (.contains printed expected-sha))
         ;; Legacy records retain their copied text, but replay comparison
         ;; ignores only the retired fields and does not append or conflict.
-        (swap! store assoc (:evidence/id entry)
-               (update entry :evidence/body assoc
+        (swap! store assoc (:derived/id entry)
+               (update entry :derived/body assoc
                        :text text :text-truncated? false))
         (is (= :existing (:status (activation/record! store artifact text))))
         (is (= 1 (count @store)))))))
@@ -93,7 +93,7 @@
               activation/*search-fn* (fn [_ _] hits)
               activation/*get-fn* (fn [_ id] (get @store id))
               activation/*append-fn* (fn [_ entry]
-                                       (swap! store assoc (:evidence/id entry) entry)
+                                       (swap! store assoc (:derived/id entry) entry)
                                        {:ok true :entry entry})]
       (activation/record! store artifact "packet")
       (is (= 3 (count @store)) "a different index produces a different id"))))
@@ -105,13 +105,13 @@
               (fn [_ _] (throw (ex-info "offline" {:error/code :search-offline})))
               activation/*get-fn* (fn [_ id] (get @store id))
               activation/*append-fn* (fn [_ entry]
-                                       (swap! store assoc (:evidence/id entry) entry)
+                                       (swap! store assoc (:derived/id entry) entry)
                                        {:ok true :entry entry})]
       (is (= :recorded (:status (activation/record! store artifact "packet"))))
       (let [entry (first (vals @store))]
         (is (= {:reason :search-offline :message "offline"}
-               (get-in entry [:evidence/body :error])))
-        (is (empty? (get-in entry [:evidence/body :hits])))))))
+               (get-in entry [:derived/body :error])))
+        (is (empty? (get-in entry [:derived/body :hits])))))))
 
 (deftest submit-does-not-wait-for-search
   (let [entered (CountDownLatch. 1)
@@ -153,7 +153,17 @@
                 activation/*append-fn* (fn [_ entry] (reset! appended entry) {:ok true :entry entry})]
         (activation/record! nil artifact "packet"))
       (is (= :search-returned-nothing
-             (get-in @appended [:evidence/body :error :reason]))))))
+             (get-in @appended [:derived/body :error :reason]))))))
+
+(deftest activation-maps-to-migration-compatible-derived-row
+  (let [entry (activation/activation-record artifact "packet" descriptor hits)
+        row (activation/derived-record entry)]
+    (is (= (str "derived:artifact-activation:" (:evidence/id entry))
+           (:derived/id row)))
+    (is (= :artifact-activation (:derived/family row)))
+    (is (= "f75fb0fff" (:derived/writer-version row)))
+    (is (= [(:evidence/id entry)] (:derived/source-act-ids row)))
+    (is (= (:evidence/body entry) (:derived/body row)))))
 
 (deftest real-descriptor-hashes-files-and-caches
   ;; Every other test fakes *descriptor-fn*; this one runs the real hashing.
