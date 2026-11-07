@@ -25,6 +25,20 @@
          (is (<= 0 (:elapsed-ms (ex-data error))))
          (is (.isCancelled pending))))))
 
+(deftest derived-write-carries-api-penholder
+  (let [seen (atom nil)
+        http-post-var (ns-resolve 'babashka.http-client 'post)]
+    (with-redefs-fn
+      {#'sut/configured-url (constantly "http://substrate.test")
+       http-post-var (fn [url options]
+                       (reset! seen [url options])
+                       {:status 201 :body (pr-str {:ok true :derived/id "derived:x"})})}
+      #(is (= {:ok true :derived/id "derived:x"}
+              (sut/write-derived! {:derived/id "derived:x"}))))
+    (is (= "api" (get-in @seen [1 :headers "X-Penholder"])))
+    (is (= "application/edn"
+           (get-in @seen [1 :headers "Content-Type"])))))
+
 (deftest hyperedge-read-follows-server-cursor
   (let [urls (atom [])
         get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
