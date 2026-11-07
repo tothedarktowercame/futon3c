@@ -30,6 +30,8 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.xiang.turn-store :as turn-store]
+            [futon3c.test-registry.sqlite-backend :as registry-sqlite]
+            [futon3c.aif.stack-generator :as stack-generator]
             [clojure.java.io :as io]
             [clojure.string :as str])
   (:import [java.nio.charset StandardCharsets]
@@ -1685,19 +1687,25 @@
           (is (= {:minibuffer-events 2
                   :routed-events 2}
                  (get-in result [:invoke-meta :surface-write])))
-          (is (= [{:agent-id "codex-8"
-                   :peripheral-id :emacs-cursor
-                   :event :minibuffer
-                   :payload {:command "refresh-context"
-                             :request-id "minibuffer-0"}}
-                  {:agent-id "codex-8"
-                   :peripheral-id :emacs-cursor
-                   :event :minibuffer
-                   :payload {:command "message"
-                             :message "Inspect current defun"
-                             :prompt "Inspect current defun"
-                             :request-id "minibuffer-1"}}]
-                 @sent)))))))
+          ;; The router attaches a dynamic :server-sent-at-ms delivery
+          ;; timestamp to each payload (http.clj maybe-route-surface-writes);
+          ;; compare stable fields exactly and the timestamp separately.
+          (let [events @sent]
+            (is (= [{:agent-id "codex-8"
+                     :peripheral-id :emacs-cursor
+                     :event :minibuffer
+                     :payload {:command "refresh-context"
+                               :request-id "minibuffer-0"}}
+                    {:agent-id "codex-8"
+                     :peripheral-id :emacs-cursor
+                     :event :minibuffer
+                     :payload {:command "message"
+                               :message "Inspect current defun"
+                               :prompt "Inspect current defun"
+                               :request-id "minibuffer-1"}}]
+                   (mapv #(update % :payload dissoc :server-sent-at-ms) events)))
+            (is (every? (fn [e] (pos-int? (get-in e [:payload :server-sent-at-ms])))
+                        events))))))))
 
 (deftest invoke-registered-codex-agent
   (testing "POST /api/alpha/invoke invokes codex agent via registry"
@@ -1958,9 +1966,15 @@
 
 (deftest invoke-job-delivery-records-on-job
   (testing "POST /api/alpha/invoke-delivery updates invoke-job delivery state via trace-id"
+    ;; Delivery records are first-write-wins (835c39cd0). For the explicit
+    ;; receipt to be the first write, the invoke must not auto-record: the
+    ;; surface is non-direct ("irc"), and the caller is a registered seat so
+    ;; finalize's caller-not-a-registered-seat poll fallback does not fire.
     (let [handler (make-handler)
           invoke-body (json/generate-string {"agent-id" "codex-delivery-job"
-                                             "prompt" "ship it"})
+                                             "prompt" "ship it"
+                                             "surface" "irc"
+                                             "caller" "irc-caller-seat"})
           delivery-body (json/generate-string {"agent-id" "codex-delivery-job"
                                                "invoke-trace-id" "invoke-job-trace-1"
                                                "surface" "irc"
@@ -1968,6 +1982,7 @@
                                                "delivered" true
                                                "note" "bridge-test"})]
       (register-mock-agent! "codex-delivery-job" :codex)
+      (register-mock-agent! "irc-caller-seat" :irc)
       (with-redefs [reg/invoke-agent! (fn [_ _ _]
                                         {:ok true
                                          :result "done"
@@ -2483,7 +2498,17 @@
                        (finish! second-id "2020-01-02T00:00:00Z")
                        (finish! sentinel-id "2020-01-03T00:00:00Z"))
           clock (constantly (java.time.Instant/parse "2020-01-20T00:00:00Z"))]
-      (reset! ledger-atom original)
+      ;; Isolate the fixture: earlier tests in this namespace share the
+      ;; isolated invoke-jobs ledger, and a retained (non-expired) foreign job
+      ;; changes BOTH the sentinel election and the archive order (dropped
+      ;; jobs are archived sorted by key, so the planted barrier would fire on
+      ;; "r9-newest-sentinel" before the target). Keep only this test's jobs.
+      (reset! ledger-atom
+              (let [ids #{target-id second-id sentinel-id}]
+                (-> original
+                    (update :jobs #(into {} (filter (fn [[k _]] (contains? ids k))) %))
+                    (update :job-order #(into [] (filter ids) %))
+                    (update :trace->job #(into {} (filter (fn [[_ v]] (contains? ids v))) %)))))
       (testing "post-publication directory-force failure preserves hot jobs"
         (let [outcome (try
                         (binding [http/*invoke-ledger-now* clock
@@ -2523,7 +2548,10 @@
                                 (fn [path]
                                   (swap! barriers inc)
                                   (#'http/force-commission-archive-directories! path))]
-                        (#'http/compact-invoke-jobs-ledger original))]
+                        ;; Compact the isolated fixture installed above, not
+                        ;; `original`, which may still contain jobs retained
+                        ;; from earlier tests in this shared namespace.
+                        (#'http/compact-invoke-jobs-ledger @ledger-atom))]
         (is (pos? @barriers)
             "existing-file retry repeats the directory durability barrier")
       (#'http/persist-invoke-jobs-ledger! compacted)
@@ -2799,32 +2827,24 @@
         (is (instance? java.time.Instant (java.time.Instant/parse (:last-active agent))))
         (is (= ["explore" "edit"] (:capabilities agent)))))))
 
-(deftest health-includes-evidence-count
-  (testing "GET /health includes evidence count from store"
-    (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-health-1"}
-                             :type :coordination
-                             :claim-type :step
-                             :author "codex"
-                             :session-id "sess-health-1"
-                             :body {:msg "first"}
-                             :tags [:health]})
-          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-health-2"}
-                             :type :reflection
-                             :claim-type :conclusion
-                             :author "claude"
-                             :session-id "sess-health-2"
-                             :body {:msg "second"}
-                             :tags [:health]})
-          expected-count (count (estore/query {}))
-          handler (make-handler)
+(deftest health-omits-unbounded-evidence-count
+  ;; Retired contract (2026-11-07): this test was `health-includes-evidence-count`,
+  ;; asserting an :evidence total on /health. That total was an unbounded
+  ;; full-store XTDB count and was deliberately removed from the liveness
+  ;; endpoint (futon1a#5, 2026-07-04; see the note in handle-health). The
+  ;; test now pins the removal: /health must NOT grow an unbounded evidence
+  ;; scan again. If store-size observability is wanted, it must arrive as a
+  ;; bounded/maintained metric with its own test.
+  (testing "GET /health does not perform an unbounded evidence count on the hot path"
+    (let [handler (make-handler)
           response (get-req handler "/health")]
       (is (= 200 (:status response)))
       (let [parsed (parse-body response)]
         (is (= "ok" (:status parsed)))
         (is (= 3 (:agents parsed)))
         (is (= 0 (:sessions parsed)))
-        (is (integer? (:evidence parsed)))
-        (is (= expected-count (:evidence parsed)))))))
+        (is (not (contains? parsed :evidence))
+            ":evidence total was removed (futon1a#5); do not re-add an unbounded count")))))
 
 (deftest health-includes-irc-send-hint
   (testing "GET /health includes IRC relay availability and send-base hint from config"
@@ -3466,7 +3486,21 @@
                                                       :claim "Close S6 by stepping Portfolio Inference using THE-STACK"
                                                      :observation-source {:kind "aif-stack"
                                                                            :path "futon5a/holes/stories/THE-STACK.aif.edn"}}))
-          response (get-req handler "/api/alpha/aif-stack/live")
+          ;; The candidate queue is a generated artifact
+          ;; (futon5a/data/stack-stereolithography-priority-queue.json) that is
+          ;; not checked in; pin it to a small hermetic fixture so this test
+          ;; verifies the endpoint's projection, not the live file's presence.
+          queue-fixture (java.io.File/createTempFile "aif-stack-queue" ".json")
+          _ (spit queue-fixture
+                  (json/generate-string
+                   {:generated-at "2026-11-07T00:00:00Z"
+                    :runs [{:family/id "human-visible-inspectability"
+                            :invariant/id "inv-hvi-1" :priority/score 1.0}
+                           {:family/id "strategic-closure-specification"
+                            :invariant/id "inv-scs-1" :priority/score 0.5}]}))
+          response (with-redefs [futon3c.aif.stack-generator/stack-priority-queue-json-path
+                                 (.getAbsolutePath queue-fixture)]
+                     (get-req handler "/api/alpha/aif-stack/live"))
           parsed (parse-body response)
           s6-node (first (filter #(= "S6" (:id %)) (:stack-nodes parsed)))
           queue (get parsed :candidate-queue)
@@ -3489,20 +3523,27 @@
              (get-in parsed [:reading :next-move :agenda :effect-witness :after])))
       (is (= "wm.close-s6.v2"
              (get-in parsed [:reading :next-move :agenda :successor :id])))
-      (is (= "underspecified"
+      ;; Successor contract current since 2026-09-17 (SPEC-flat-removal,
+      ;; 18fde4fe7): v2 is preregistered recommendation-grade with populated
+      ;; fields — the earlier "documented-but-underspecified" assertions were
+      ;; retired with that production change.
+      (is (= "recommendation-grade"
              (get-in parsed [:reading :next-move :agenda :successor :status])))
-      (is (= false
+      (is (= true
              (get-in parsed [:reading :next-move :agenda :successor :recommendation-grade?])))
       (is (= true
              (get-in parsed [:reading :next-move :agenda :successor :documented?])))
-      (is (= ["action-surface" "step-witness" "effect-witness" "successor-witness"]
-             (get-in parsed [:reading :next-move :agenda :successor :missing-fields])))
-      (is (= "clear the completed War Machine item and set the next item for work via the Candidate Queue invariant"
+      (is (nil?
+           (get-in parsed [:reading :next-move :agenda :successor :missing-fields]))
+          "all successor fields are populated; nothing is missing")
+      (is (contains? (get-in parsed [:reading :next-move :agenda :successor])
+                     :populated-fields))
+      (is (= futon3c.aif.stack-generator/s6-successor-specifically
              (get-in parsed [:reading :next-move :agenda :successor :specifically])))
       (is (= 1 (:live-self-step-count s6-node)))
       (is (= "PI loop step-count = 1; HGO spec-only" (:gap s6-node)))
       (is (string? (:generated-at queue)))
-      (is (pos? (:run-count queue)))
+      (is (= 2 (:run-count queue)))
       (is (pos? (:top-rank inspectability)))
       (is (pos? (:item-count inspectability)))
       (is (some #(= "human-visible-inspectability" %) (:families inspectability)))
@@ -3633,19 +3674,27 @@
 ;; AR-42: GET /api/alpha/test-registry/latest — which record covers a namespace.
 
 (deftest test-registry-latest-names-the-record-and-types-its-absence
-  (let [backend (atom {:entries {} :order []})
+  ;; The handler reads the maintained sqlite ledger
+  ;; (registry-sqlite/latest-run-for-namespace, AR-42 finding i), so the
+  ;; fixture appends through a real temp sqlite backend — an atom backend
+  ;; behind :evidence-store was never read by this route.
+  (let [db-path (str (Files/createTempDirectory "http-test-registry-latest"
+                                                (make-array java.nio.file.attribute.FileAttribute 0))
+                     "/registry.db")
+        backend (registry-sqlite/sqlite-backend db-path)
         append! (requiring-resolve 'futon3c.test-registry/append-record!)
         ;; an UNWARRANTED, failing run: the lookup must still find it, because a
         ;; warrant-filtering lookup would let it hide behind an older green run
         run (append! backend
                      {:kind :run :author "author" :run/id "r-latest-1"
+                      :repo/root "/tmp/http-test-registry-latest"
                       :ran-at "2026-09-25T01:00:00Z" :finished-at "2026-09-25T01:00:01Z"
                       :command ["clojure" "-M:test" "-n" "demo-latest-test"]
                       :code-files {"src/demo.clj" "blob"} :test-files {"test/demo_test.clj" "t"}
                       :results {:tests 1 :assertions 1 :failures 1 :errors 0 :exit 1}
                       :postcheck {:status :matched} :warrant? false}
                      nil)
-        config {:evidence-store backend}
+        config {:test-registry-backend backend}
         ask (fn [query-string]
               (http/handle-test-registry-latest
                {:request-method :get :uri "/api/alpha/test-registry/latest"
@@ -3665,9 +3714,14 @@
         (is (= 200 (:status response)))
         (is (false? (get-in (body response) [:latest :found])))
         (is (= "no-run-for-namespace" (get-in (body response) [:latest :reason])))))
-    (testing "a scan that filled its window did not establish absence"
-      (let [response (ask "namespace=futon3c.no-such-test&limit=1")]
-        (is (= "scan-window-exhausted" (get-in (body response) [:latest :reason])))))
+    ;; RETIRED (2026-11-07): "a scan that filled its window did not establish
+    ;; absence" expected :scan-window-exhausted from a limit=1 query. This
+    ;; endpoint no longer scans the evidence store — the sqlite
+    ;; namespace→newest-run ledger is maintained at registration, so absence
+    ;; is authoritative and there is no scan window to exhaust. The typed
+    ;; scan-window absence contract survives on the scan authority
+    ;; futon3c.test-registry/latest-run-for-namespace, covered by
+    ;; futon3c.test-registry-test/latest-run-for-namespace-types-its-absence.
     (testing "a request with no namespace is malformed, not absent"
       (let [response (ask "")]
         (is (= 400 (:status response)))

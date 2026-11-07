@@ -2097,7 +2097,7 @@
       s)))
 
 (defn- record-http-delivery!
-  [{:keys [agent-id caller surface result]}]
+  [{:keys [agent-id caller surface result job-id]}]
   (when (auto-record-direct-delivery-surface? surface)
     (when-let [trace-id (extract-trace-id (:invoke-meta result))]
       (let [receipt {:surface (direct-delivery-surface-label surface)
@@ -2106,7 +2106,12 @@
                      ;; server wrote it nor that the caller consumed it.
                      :delivered? false
                      :note "http-response-consumption-unconfirmed"}]
-        (record-invoke-job-delivery! trace-id receipt)
+        ;; Prefer the job-id key when known: finalize is what publishes the
+        ;; trace->job link, and this receipt must be able to precede it (the
+        ;; caller-not-a-registered-seat poll fallback fires at finalize).
+        (if job-id
+          (record-invoke-job-delivery-by-job-id! job-id receipt)
+          (record-invoke-job-delivery! trace-id receipt))
         (when-let [record-fn (*resolve-delivery-recorder*)]
           (try
             (record-fn (str agent-id) (str trace-id)
@@ -3302,23 +3307,30 @@
       (if (= ::invalid-command command)
         (json-response 400 {:record/type "test-registry/refusal"
                             :reason "invalid-command"})
-        (let [backend (test-registry-store-for-config config)
-              result (if command
-                       (registry-sqlite/latest-run-for-command backend command)
-                       (registry-sqlite/latest-run-for-namespace
-                        backend (get params "namespace")))]
-          (cond
-            (nil? result)
-            (json-response 200 {:latest {:found false
-                                         :reason (if command
-                                                   "no-run-for-command"
-                                                   "no-run-for-namespace")}})
+        (let [namespace (get params "namespace")]
+          (if (and (nil? command) (str/blank? (str namespace)))
+            ;; No lookup key at all is malformed, not absent (matches
+            ;; futon3c.test-registry/latest-run-for-namespace's
+            ;; :namespace-required refusal).
+            (json-response 400 {:record/type "test-registry/refusal"
+                                :reason "namespace-required"})
+            (let [backend (test-registry-store-for-config config)
+                  result (if command
+                           (registry-sqlite/latest-run-for-command backend command)
+                           (registry-sqlite/latest-run-for-namespace
+                            backend namespace))]
+              (cond
+                (nil? result)
+                (json-response 200 {:latest {:found false
+                                             :reason (if command
+                                                       "no-run-for-command"
+                                                       "no-run-for-namespace")}})
 
-            :else
-            (let [payload (some-> result :evidence/body :payload-edn edn/read-string)]
-              (json-response 200 {:latest {:found true
-                                           :entry-id (:evidence/id result)
-                                           :ran-at (:ran-at payload)}}))))))
+                :else
+                (let [payload (some-> result :evidence/body :payload-edn edn/read-string)]
+                  (json-response 200 {:latest {:found true
+                                               :entry-id (:evidence/id result)
+                                               :ran-at (:ran-at payload)}}))))))))
     (catch Throwable throwable
       (json-response 500 (local-store-refusal throwable :latest-endpoint-failed)))))
 
@@ -5892,11 +5904,16 @@
             (classify-terminal result no-evidence?)]
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                (or ev-opts []))
-        (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
+        ;; Record the direct-surface (http/emacs) receipt BEFORE finalize:
+        ;; delivery records are first-write-wins (835c39cd0), and finalize's
+        ;; caller-not-a-registered-seat poll fallback must only apply when no
+        ;; more informative receipt exists.
         (record-http-delivery! {:agent-id agent-id
                                 :caller caller
                                 :surface surface
+                                :job-id job-id
                                 :result result})
+        (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
         (if no-evidence?
           (json-response 502 {:ok false
                               :error "invoke-no-execution-evidence"
@@ -5993,7 +6010,14 @@
                           job-id timeout-ms
                           #(invoke-agent-with-session-recovery!
                             aid effective-prompt
-                            {:timeout-ms timeout-ms
+                            {;; NO :timeout-ms here: for a supervised job the
+                             ;; caller's response wait is the supervisor's soft
+                             ;; cap (overrun + late result finalizes normally).
+                             ;; Passing it down made reg/invoke-agent! detach
+                             ;; after the response wait and return a timeout
+                             ;; error as the turn's result — the job finalized
+                             ;; "failed" and the real late result was lost
+                             ;; (whistle-timeout-returns-pollable-supervised-job).
                              :model model :reasoning-effort reasoning-effort
                              :mission-id mission-id :evidence-store evidence-store
                              :caller caller
@@ -6016,12 +6040,14 @@
             (classify-terminal result no-evidence?)]
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                (or ev-opts []))
-        (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
         ;; HTTP direct responses are auto-delivered to caller; bell responses are not.
+        ;; Record before finalize for the same first-write-wins reason as above.
         (record-http-delivery! {:agent-id agent-id
                                 :caller caller
                                 :surface surface
+                                :job-id job-id
                                 :result result})
+        (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
         (when (and (:ok result) (not no-evidence?))
           (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
                  (or ev-opts [])))

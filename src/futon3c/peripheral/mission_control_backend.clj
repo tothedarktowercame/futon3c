@@ -915,40 +915,59 @@
    from the legacy `:md-file` filesystem-scan source. T-9b: also
    computes `:mission/days-stale` from `:mission/mtime` and overrides
    `:mission/status` to `:stale-in-progress` when an in-progress mission
-   has been untouched for more than `stale-in-progress-days`."
+   has been untouched for more than `stale-in-progress-days`.
+
+   Some hyperedges in the store carry :hx/props as an EDN *string*
+   (double-encoded by an older writer; 67 archived mission-docs observed
+   2026-11-07). Parse those back to a map. Entries that still yield no
+   :mission/id are not missions at all; returning nil lets the caller
+   drop them instead of manufacturing ghost entries whose nil id later
+   NPEs `compute-coverage` (str/lower-case on nil)."
   [props]
-  (let [g (fn [k] (get props k))
-        status-str (g :mission/status)
-        base-status (or (some-> status-str classify-status) :unknown)
-        phase-raw (g :mission/phase)
-        phase (cond
-                (nil? phase-raw) nil
-                (keyword? phase-raw) phase-raw
-                (string? phase-raw) (keyword phase-raw)
+  (let [props (cond
+                (map? props) props
+                ;; Double-encoded legacy rows: the string is an EDN map with
+                ;; string keys (as written by the older writer), so keywordize.
+                (string? props) (try
+                                  (let [v (edn/read-string props)]
+                                    (when (map? v)
+                                      (into {} (map (fn [[k x]] [(keyword k) x])) v)))
+                                  (catch Exception _ nil))
                 :else nil)
-        mtime (g :mission/mtime)
-        days-stale (days-since mtime)
-        status (apply-staleness-override base-status days-stale)
-        gates (g :mission/gates)]
-    (cond-> {:mission/id (g :mission/id)
-             :mission/status status
-             :mission/source :substrate-2
-             :mission/repo (g :mission/repo)
-             :mission/path (g :source-file)
-             :mission/title (g :mission/title)
-             :mission/date (g :mission/date)
-             :mission/blocked-by (g :mission/blocked-by)
-             :mission/owner (g :mission/owner)
-             :mission/raw-status (g :mission/raw-status)
-             :mission/summary (g :mission/summary)
-             :mission/cross-refs (or (g :mission/cross-refs) [])
-             :mission/code-paths (or (g :mission/code-paths) [])
-             :mission/phase phase
-             :mission/mtime mtime
-             :mission/days-stale days-stale
-             :mission/psrs (or (g :mission/psrs) [])
-             :mission/purs (or (g :mission/purs) [])}
-      gates (assoc :mission/gates gates))))
+        g (fn [k] (get props k))
+        mission-id (g :mission/id)]
+    (when (and mission-id (not (str/blank? (str mission-id))))
+      (let [status-str (g :mission/status)
+            base-status (or (some-> status-str classify-status) :unknown)
+            phase-raw (g :mission/phase)
+            phase (cond
+                    (nil? phase-raw) nil
+                    (keyword? phase-raw) phase-raw
+                    (string? phase-raw) (keyword phase-raw)
+                    :else nil)
+            mtime (g :mission/mtime)
+            days-stale (days-since mtime)
+            status (apply-staleness-override base-status days-stale)
+            gates (g :mission/gates)]
+        (cond-> {:mission/id mission-id
+                 :mission/status status
+                 :mission/source :substrate-2
+                 :mission/repo (g :mission/repo)
+                 :mission/path (g :source-file)
+                 :mission/title (g :mission/title)
+                 :mission/date (g :mission/date)
+                 :mission/blocked-by (g :mission/blocked-by)
+                 :mission/owner (g :mission/owner)
+                 :mission/raw-status (g :mission/raw-status)
+                 :mission/summary (g :mission/summary)
+                 :mission/cross-refs (or (g :mission/cross-refs) [])
+                 :mission/code-paths (or (g :mission/code-paths) [])
+                 :mission/phase phase
+                 :mission/mtime mtime
+                 :mission/days-stale days-stale
+                 :mission/psrs (or (g :mission/psrs) [])
+                 :mission/purs (or (g :mission/purs) [])}
+          gates (assoc :mission/gates gates))))))
 
 ;; Inventory reads come from several callers (HTTP routes, the stack
 ;; generator), about every 30 s. Each fetch is a whole-table hyperedge scan in
@@ -978,7 +997,8 @@
           (->> hxes
                (map :hx/props)
                (filter some?)
-               (mapv hyperedge-props->mission-entry)))))
+               (keep hyperedge-props->mission-entry)
+               (vec)))))
     (catch Exception _ nil)))
 
 (defn- fetch-substrate-2-missions
