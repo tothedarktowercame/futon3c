@@ -106,8 +106,12 @@
   "Write one validated derived row through futon1b's dedicated table."
   [payload]
   (let [url (str (configured-url) "/api/alpha/derived")
+        penholder (or (System/getenv "FUTON1B_PENHOLDER")
+                      (System/getenv "FUTON1A_PENHOLDER")
+                      "api")
         response (http/post url {:headers (assoc (request-headers nil)
-                                                 "Content-Type" "application/edn")
+                                                 "Content-Type" "application/edn"
+                                                 "X-Penholder" penholder)
                                  :body (pr-str payload)
                                  :timeout 30000 :throw false})
         body (response-body response)]
