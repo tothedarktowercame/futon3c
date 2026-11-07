@@ -4058,6 +4058,15 @@ RESPOND WITH ONLY:
                                         ;; path's stdout loop does.
                                         :on-event
                                         (bound-fn [event]
+                                          ;; Every claude turn opens with system/init. Report it,
+                                          ;; so a REPL showing "Queued" (stream accepted) moves to
+                                          ;; "Thinking" only once THIS turn has begun (2026-11-07).
+                                          (when (and (= "system" (:type event))
+                                                     (= "init" (str (:subtype event))))
+                                            (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
+                                                                                    'update-invoke-activity!)]
+                                              (try (update-activity! aid-val "thinking")
+                                                   (catch Throwable _))))
                                           (when (= "assistant" (:type event))
                                             (let [content (get-in event [:message :content])
                                                   tools (when (sequential? content)

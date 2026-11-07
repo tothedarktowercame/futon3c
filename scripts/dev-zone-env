@@ -48,6 +48,12 @@ export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
 # Joe: enable, effective at the NEXT restart. The joey gate
 # (FUTON3C_KANGAROO_JOEY_MAX_BYTES, 2 MiB default) still keeps big sessions cold.
 export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
+# Demultiplexing pouch reader (E-unsolicited-pouch-turns fix 1). Without it a
+# turn the agent starts itself (a background task finishing) is invisible to
+# Agency: the next operator message is queued behind it inside the CLI, its
+# output is drained as "stale", and its result is returned as the operator's
+# reply. Hit on claude-6 2026-11-07; Joe: enable (set live the same day).
+export FUTON3C_POUCH_DEMUX="${FUTON3C_POUCH_DEMUX:-true}"
 # Only the serving JVM may project peripheral state into the operator's Emacs.
 # Test and CLI JVMs intentionally do not inherit this explicit opt-in.
 export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"

@@ -2735,10 +2735,15 @@ line inserted by `agent-chat-finish-turn!'."
   (let ((s (downcase (or status-text ""))))
     (cond
      ((string-match-p "compact" s) 'compacting)
-     ((string-match-p "restor\|resum\|context" s) 'restoring)
-     ((string-match-p "bash\|tool\|read\|edit\|search\|command" s) 'tool)
-     ((string-match-p "stream\|preparing response" s) 'streaming)
-     ((string-match-p "queue\|start" s) 'queued)
+     ;; Queue notes first: "queued #2 behind … (from parked-resume …)" contains
+     ;; "resum".  These alternations were written "\|" (one backslash), which
+     ;; the reader turns into a literal "|", so until 2026-11-07 every activity
+     ;; but "compact" fell through to Thinking.
+     ((string-match-p "\\`queued\\|in-flight turn" s) 'queued)
+     ((string-match-p "restor\\|resum\\|context" s) 'restoring)
+     ((string-match-p "bash\\|tool\\|read\\|edit\\|search\\|command\\|using \\|\\`[[:alnum:]_/.-]+: " s) 'tool)
+     ((string-match-p "stream\\|preparing response\\|composing response" s) 'streaming)
+     ((string-match-p "queue\\|start" s) 'queued)
      (t 'inferring))))
 
 (defun agent-chat-insert-thinking ()

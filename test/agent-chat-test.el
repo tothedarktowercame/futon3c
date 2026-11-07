@@ -1562,3 +1562,18 @@ counted; a fresh one is kept for inspection."
                     (line-beginning-position) (point-max))))
     (should (null agent-chat--done-prompt-line))
     (should (null agent-chat--prefetched-prompt-line))))
+
+(ert-deftest agent-chat-progress-phase-classifies-activity ()
+  "Each activity string reaches its own phase.  Until 2026-11-07 the
+alternations were written with one backslash, so all of these but the
+compact case fell through to `inferring' (shown as Thinking)."
+  (dolist (case '(("compacting context" . compacting)
+                  ("queued #2 behind invoke-1 (from parked-resume, running 3m00s)" . queued)
+                  ("attached to the agent's in-flight turn; this turn starts after it" . queued)
+                  ("restoring session" . restoring)
+                  ("bash: git status" . tool)
+                  ("mcp/minus40/m40_find: terms" . tool)
+                  ("using Bash, Read" . tool)
+                  ("composing response" . streaming)
+                  ("thinking" . inferring)))
+    (should (eq (agent-chat--progress-phase (car case)) (cdr case)))))

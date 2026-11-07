@@ -1127,8 +1127,13 @@ CALLBACK is called with the final response text on completion."
                                ;; any earlier stream can never close this turn.
                                (setq done-event json-obj))
                               ((equal type "started")
-                               (agent-chat-turnline-update
-                                (if agent-chat--session-id 'restoring 'inferring)))
+                               ;; "started" means Agency ACCEPTED the stream,
+                               ;; not that the agent is working on it: the turn
+                               ;; may sit behind another one (2026-11-07,
+                               ;; claude-6 showed "Restoring" for minutes while
+                               ;; queued). The server's "thinking" activity at
+                               ;; the turn's system/init moves it on.
+                               (agent-chat-turnline-update 'queued))
                               ((equal type "invoke.activity")
                                (let ((activity (alist-get 'activity json-obj)))
                                  (when (stringp activity)
