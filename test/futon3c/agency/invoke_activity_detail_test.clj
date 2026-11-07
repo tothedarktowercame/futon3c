@@ -22,6 +22,12 @@
            (act/tool-details->activity
             [(bash {:command "git status --porcelain\nfoo\nbar"})])))))
 
+(deftest compound-run-shell-preserves-the-meaningful-last-clause
+  (is (= "run_shell: mkdir -p /tmp/demo … clojure -M -m demo.server"
+         (act/tool-details->activity
+          [{:name "run_shell"
+            :input {:command "mkdir -p /tmp/demo && cp app /tmp/demo && clojure -M -m demo.server"}}]))))
+
 (deftest a-bare-tool-name-is-still-better-than-nothing
   (is (= "bash" (act/tool-details->activity [(bash {})])))
   (is (= "bash" (act/tool-details->activity [{:name "Bash"}]))))

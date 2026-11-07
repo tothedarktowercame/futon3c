@@ -45,6 +45,18 @@
     (let [line (-> c str/trim (str/split #"\n") first str/trim)]
       (not-empty line))))
 
+(defn- command-summary
+  "Keep both ends of a compound command.  Setup clauses such as `mkdir` used
+   to consume the whole activity label and hide the server/test being run."
+  [command]
+  (when-let [line (first-command-line command)]
+    (let [clauses (->> (str/split line #"\s*(?:&&|\|\||;)\s*")
+                       (remove str/blank?)
+                       vec)]
+      (if (> (count clauses) 1)
+        (str (first clauses) " … " (last clauses))
+        line))))
+
 (defn- host-of
   [url]
   (when-let [u (some-> url str not-empty)]
@@ -60,7 +72,7 @@
                 prompt subagent_type notebook_path to]} input
         described (clip description max-detail-chars)]
     (case lower
-      "bash" (or described (clip (first-command-line command) max-detail-chars))
+      ("bash" "run_shell") (or described (clip (command-summary command) max-detail-chars))
       ("read" "notebookedit") (clip (basename (or file_path notebook_path)) max-detail-chars)
       ("edit" "write") (clip (basename file_path) max-detail-chars)
       ("grep" "glob") (clip (str pattern
