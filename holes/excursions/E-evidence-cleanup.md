@@ -1,14 +1,12 @@
 # E-evidence-cleanup: take derived records out of the Evidence Landscape
 
-**Status:** OPEN — CLOSURE CUTOVER REMAINS (audited 2026-11-06, Joe + codex-7).
+**Status:** COMPLETE — closure cutover verified 2026-11-07 (Joe + codex-7).
 **Gates** [M-repl-circus](../missions/M-repl-circus.md) IDENTIFY → MAP: there is no
 point developing the Circus further while its output swamps the evidence it reads.
 
-The search-facing stop-the-line repair and the copy-writer repairs are live, but
-this excursion is **not complete** by its exit criteria.  The derived-table code
-and migration/erase tools exist; the serving futon1b JVM predates those routes,
-artifact activation still writes new rows to evidence, and no snapshot-backed
-erase has run.  The exact closure sequence is recorded under "Closure audit".
+The search-facing repair, copy-writer repairs, derived-store cutover, migration,
+and snapshot-backed source erase are live and verified.  The exact closure
+receipts are recorded under "Closure completion" below.
 
 **Stop-the-line finding** (Joe, 2026-11-05). Working note:
 `~/notes/stop-the-line/2026-11-05-evidence-derivatives.md`.
@@ -513,10 +511,40 @@ Closure order (each step has an observable rollback or refusal boundary):
 5. Rerun the phrase probes and the 24-hour record/byte census, then check the exit
    criteria below and only then change the excursion to COMPLETE.
 
-- [ ] No writer copies operator-turn or reply text into a new evidence record.
-- [ ] Every derived writer listed above either writes to a derived store or attaches
+- [x] No writer copies operator-turn or reply text into a new evidence record.
+- [x] Every derived writer listed above either writes to a derived store or attaches
   references to the act it belongs to.
-- [ ] `my/evidence-landscape-search` for a phrase from a recent operator turn shows
+- [x] `my/evidence-landscape-search` for a phrase from a recent operator turn shows
   that turn, and shows no copies of it.
-- [ ] Per-day record count and volume measured again and compared with the table above.
-- [ ] Decision recorded on the copies already written.
+- [x] Per-day record count and volume measured again and compared with the table above.
+- [x] Decision recorded on the copies already written.
+
+### Closure completion (2026-11-07, codex-7)
+
+- Restarted futon1b and proved the derived point/batch/census routes.  Artifact
+  activation now writes the derived store (`62a9116bd`, authenticated by
+  `24c8ad5d7`; focused regression `d5124527b`).
+- The final stable source manifest contains 23,064 artifact activations.  All
+  23,064 were copied and point-verified in
+  `storage/derived-migration/artifact-activation/aa-final-20261107/`.
+- With futon1b stopped, copied the store byte-for-byte (92,329,924,937 bytes) to
+  `storage/futon1b-snapshots/evidence-cleanup-pre-erase-20261107T0015Z/`;
+  `evidence-cleanup-pre-erase-20261107T0015Z.snapshot-tree.sha256` is the tree
+  receipt.  Then erased all 23,064 manifested source records in bounded,
+  preimage-receipted batches.  Final evidence count for the family is zero;
+  derived census is 23,067, including three native post-cutover writes.
+- Two erase verifier defects exposed by the real run were repaired in futon1b:
+  current-record validation by point read (`0f2f610f`) and history validation
+  by per-id equality query (`b6d44f5a`).  `test-evidence-erase` passes 5 tests / 27
+  assertions after both repairs.
+- The 24-hour search probe for "argument is a proof" returned 5 participant acts
+  and removed 57 derivative matches from the default view (the unscoped view
+  contained 62).  Thus the original/operator acts remain inspectable while
+  derived copies do not appear in the Evidence Landscape.
+- The post-cutover 24-hour sidecar census (2026-11-06T01:37Z onward) is 11,336
+  records and 17.1 MB of indexed bodies, versus 13,483 records and about 53 MB
+  in the 2026-11-04/05 baseline.  That is 2,147 fewer records (15.9%) and 35.9
+  MB less indexed text (67.7%) despite continued participant activity.
+- Existing artifact copies were therefore migrated, verified, snapshotted, and
+  erased rather than left in the participant-act store.  Participant acts stay
+  evidence; derived state and references remain outside it.
