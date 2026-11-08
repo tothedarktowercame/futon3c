@@ -1,0 +1,34 @@
+{:increment :F2a
+ :date "2026-11-08"
+ :commits
+ {:base "5f42d4c1c"
+  :rebase-spike ["ef4cdbf52" "4d9ab4f0b" "3d3b586ec"]
+  :sequencer "d37b1e2e4"
+  :declaration-test "e25a0bd54"}
+ :artifact "formal-arxana:f1-conversation"
+ :contract
+ {:offset-unit :unicode-codepoint
+  :canonical-bytes :utf8-lf
+  :overlap-classes [:disjoint :identical :same-position :nested :partial-overlap]
+  :silent-winner? false
+  :cas-retries 0
+  :records [[:text/patch 1] [:text/conflict 1] [:text/alternative 1] [:text/choice 1]]
+  :choice-time-format "yyyy-MM-ddTHH:mm:ss.SSSZ"}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.text-rebase-test -n futon3c.arxana.formal-f2-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 13 :assertions 3304 :failures 0 :errors 0}}
+  {:command "clojure -M:test -d test/futon3c/arxana"
+   :result :interrupted-after-2751-private-http-operations
+   :finding "one stale declaration-count assertion found and corrected; no other failure observed before interruption"}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched []
+  :private-store-ports :ephemeral
+  :persistent-processes-left-running []}
+ :deferred [:F2b-scope-relocation-and-promotion
+            :F2c-emacs-client
+            :F2d-vscode-client]}
