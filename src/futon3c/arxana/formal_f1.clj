@@ -69,11 +69,22 @@
     :valid-time "2026-11-08" :revision/digest digest
     :turn/id turn-id}))
 
+(def operator-judgement
+  "Joe's judgement of turn-iWVzvT's reading, verbatim from its evidence record."
+  {:turn/id "turn-0ozt4x"
+   :evidence/id "emacs-5d1f629e9f6fcd876a973fad309feff9"
+   :time "2026-11-08T01:18:45Z"
+   :quote (str "s2 and s3 are good; s1 is plausible, but 🈲 (constrain) would "
+               "probably be better, because 🈸 is typically used for informational "
+               "requests, where is this \"please\" isn't really an ask but a boundary")})
+
 (defn- assessment [claim verdict reason]
   (records/make-assessment
    {:subject-clusion-id (:id claim) :verdict verdict :actor "joe"
     :policy {:id "operator-judgement" :revision 1}
-    :reason reason :time "2026-11-08T00:00:00Z"}))
+    :reason reason :quote (:quote operator-judgement)
+    :source-refs [(select-keys operator-judgement [:turn/id :evidence/id])]
+    :time (:time operator-judgement)}))
 
 (defn plan-turn
   "Pure deterministic plan from one settled Xiang turn and its analysis."
