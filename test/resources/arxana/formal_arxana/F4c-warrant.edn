@@ -1,7 +1,7 @@
 {:mission "M-formal-arxana" :increment :F4c
  :recorded-at "2026-11-08T21:06:00.000Z"
  :commits {:futon3c "1b76e8a4dd48bfae04f689ac8311774735c355c7"
-           :futon4a "abc7a3682c2e77f0e8e003447ab590fbbca4af5f"
+           :futon4a "84d0ce91c413412e8185c7cf90cb9cbe305f4b57"
            :futon3c-base "c4d57d85b0dd5cf2ee6497c397cb147e34e9741a"
            :futon4a-base "3d5e597c1ce99673ba64f616d847505e72eafb96"}
  :checks
