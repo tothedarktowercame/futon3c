@@ -1,0 +1,43 @@
+{:increment :F3b
+ :date "2026-11-08"
+ :commits
+ {:futon3c-base "f29fa8a84cc4594367e9fe3bb67b5cc07cd7a8d8"
+  :futon3c-code "9dacc19be78684e898a59e42faa33c4bfcb42aaf"
+  :apm-lean-fixture "2dd18b2c3547897cb07f8a35084f535b9da7f4c7"}
+ :sources
+ {:judged-alignment
+  {:path "/home/joe/code/storage/apm/mining/alignment/r2-judged/a93J02.judged.json"
+   :sha256 "87c7d08668f200301dfed8a7f7bee85d3571545226576d31cfa8870cf074b1db"}
+  :operator-judgement
+  {:turn/id "turn-YoF9El"
+   :evidence/id "emacs-8fdea78f5fab37bcf3fc65aa4aded28e"
+   :recorded-at "2026-11-08T01:27:29Z"
+   :retrieved-from "http://127.0.0.1:7073/api/alpha/evidence/emacs-8fdea78f5fab37bcf3fc65aa4aded28e"
+   :stored-verbatim? true}}
+ :records
+ {:steps 9
+  :candidate-correspondences 27
+  :methodological-divergences 1
+  :competing-candidates-preserved? true
+  :model-assessments-accepted? false
+  :human-verdicts-pinned-per-step? true
+  :contradicted-standings 0
+  :unaligned-declarations ["tsum_alternating_harmonic_mul_pow"]}
+ :fixture-correction
+ {:apm-primary-read-only? true
+  :bytes-source :git-show-pinned-commit
+  :worktree-path-dependency? false}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.formal-f3-test -n futon3c.arxana.formal-f3-correspond-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 9 :assertions 257 :failures 0 :errors 0}}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched []
+  :private-server-port :ephemeral
+  :persistent-processes-left-running []}
+ :deferred [:F3c-generated-informalisation :F3c-synthetic-contradiction
+            :F3d-relocation-and-projections]}
