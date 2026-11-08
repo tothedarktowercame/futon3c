@@ -181,6 +181,21 @@
                  [{:role :scene :endpoint/kinds #{:clusion}}
                   {:role :map :endpoint/kinds #{:clusion}}]
                  [:selected-at :theory/version])
+   (clusion-type :text/patch 1
+                 [{:role :base :endpoint/kinds #{:artifact-revision}}]
+                 [:artifact/id :patch/digest :author :operation/id :hunks])
+   (clusion-type :text/conflict 1
+                 [{:role :left :endpoint/kinds #{:clusion}}
+                  {:role :right :endpoint/kinds #{:clusion}}]
+                 [:artifact/id :base/revision-id :overlap/class])
+   (clusion-type :text/alternative 1
+                 [{:role :conflict :endpoint/kinds #{:clusion}}
+                  {:role :keeps :endpoint/kinds #{:clusion}}]
+                 [:result/digest :result/text])
+   (clusion-type :text/choice 1
+                 [{:role :conflict :endpoint/kinds #{:clusion}}
+                  {:role :alternative :endpoint/kinds #{:clusion}}]
+                 [:actor :chosen-at :reason])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]

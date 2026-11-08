@@ -60,6 +60,19 @@
     :allowed #{:artifact/revision-id}
     :projection [:operation :artifact/revision-id :revision/text :media-type]}
 
+   :text/submit-patch
+   {:schema-version 1
+    :required #{:artifact/id :patch}
+    :allowed #{:artifact/id :patch}
+    :projection [:operation :result/status :artifact/id :patch/id
+                 :head/revision-id :conflict/id [:alternative/ids]]}
+
+   :text/choose
+   {:schema-version 1
+    :required #{:artifact/id :conflict/id :alternative/id :actor :chosen-at}
+    :allowed #{:artifact/id :conflict/id :alternative/id :actor :chosen-at :reason}
+    :projection [:operation :result/status :artifact/id :choice/id :head/revision-id]}
+
    :formal-f1/linear
    {:schema-version 1 :required #{:manifest/revision-id}
     :allowed #{:manifest/revision-id}

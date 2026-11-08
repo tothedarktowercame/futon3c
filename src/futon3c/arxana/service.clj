@@ -13,6 +13,7 @@
             [futon3c.arxana.envelope :as env]
             [futon3c.arxana.external-ref :as external-ref]
             [futon3c.arxana.formal-f1-projection :as f1-projection]
+            [futon3c.arxana.formal-f2 :as f2]
             [futon3c.arxana.formal-f3-projection :as f3-projection]
             [futon3c.arxana.formal-f5-query :as f5-query]
             [futon3c.arxana.formal-f5-render :as f5-render]
@@ -393,6 +394,36 @@
                  (write/execute graph-store ok op (:record body))]
              (env/response ok (with-semantic-digest op (or werr wok))))
 
+           (= op :text/submit-patch)
+           (let [result (f2/submit!
+                         {:graph-store graph-store
+                          :artifact-provider artifact-provider
+                          :text-state (or (:text-state cfg)
+                                          (throw (ex-info "text-state required" {})))
+                          :current-head #(current-head graph-store %)
+                          :ingest #(ingest-revision graph-store artifact-provider
+                                                    {:artifact/id (:artifact/id body)
+                                                     :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)
+                                                     :media-type "text/markdown; charset=utf-8"
+                                                     :expected/revision-id %2
+                                                     :message/id (str (:message/id ok) ":ingest")})}
+                         ok body)]
+             (env/response ok (with-semantic-digest op (or (:error result) (:ok result)))))
+
+           (= op :text/choose)
+           (let [result (f2/choose!
+                         {:graph-store graph-store
+                          :text-state (or (:text-state cfg)
+                                          (throw (ex-info "text-state required" {})))
+                          :ingest #(ingest-revision graph-store artifact-provider
+                                                    {:artifact/id (:artifact/id body)
+                                                     :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)
+                                                     :media-type "text/markdown; charset=utf-8"
+                                                     :expected/revision-id %2
+                                                     :message/id (str (:message/id ok) ":choose-ingest")})}
+                         ok body)]
+             (env/response ok (with-semantic-digest op (or (:error result) (:ok result)))))
+
            (= op :external-reference/resolve)
            (env/response ok (with-semantic-digest
                               op (external-ref/resolve-reference (:reference body))))
@@ -421,6 +452,9 @@
              (if rerr
                (env/response ok (with-semantic-digest op rerr))
                (do
+                 (when-let [text-state (:text-state cfg)]
+                   (swap! text-state assoc-in [:heads (:artifact/id rok)]
+                          (:artifact/revision-id rok)))
                  (publish! cfg {:topic :revision/ingested
                                 :cause/message-id (:message/id ok)
                                 :affected/ids [(:artifact/id rok)]
