@@ -1,0 +1,40 @@
+{:increment :F5a
+ :date "2026-11-08"
+ :commits
+ {:futon3c-base "b8557381aedd"
+  :futon3c-code "71765908aaddc405c875d906509ac833c74575a9"
+  :futon5-code "95ea4435e31dcb21641b1993df5ccdb19ca7a509"}
+ :lean
+ {:toolchain "leanprover/lean4:v4.29.0-rc8"
+  :mathlib-revision "5ee50502f950"
+  :command "lake env lean FormalArxanaGeometry.lean"
+  :result :pass
+  :sorry-or-admit-count 0
+  :mathlib-unchanged? true
+  :kernel-record "F5a-kernel-run.edn"
+  :claims [:square-fibre-neg-one :cube-fibre-cardinality
+           :inversion-is-conjugation]}
+ :records
+ {:types [:geometry/entity :geometry/map :geometry/symmetry
+          :geometry/projection :geometry/preserves :geometry/satisfies
+          :geometry/fibre-of :geometry/member]
+  :coordinate-in-identity? false
+  :fibre-query :geometry/fibre
+  :fibre-query-source :stored-public-records
+  :kernel-principal "formal-f3a/evidence-adapter"
+  :stored-record-assertions-read-through [:entity/get :graph/query]}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f5-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 39 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.formal-f5-test -n futon3c.arxana.spine-test"
+   :result {:tests 13 :assertions 194 :failures 0 :errors 0}}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched []
+  :persistent-processes-left-running []
+  :mathlib-rebuilt? false}
+ :deferred [:F5b-rendering-and-futon4a :F5c-cube-map-change]}
