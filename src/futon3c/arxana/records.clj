@@ -68,6 +68,21 @@
   (let [without-id (dissoc attestation :id)]
     (assoc without-id :id (attestation-id without-id))))
 
+(def assessment-verdicts #{:candidate :accepted :rejected})
+(declare record-id)
+
+(defn make-assessment [assessment]
+  (when-not (assessment-verdicts (:verdict assessment))
+    (throw (ex-info "invalid assessment verdict" {:verdict (:verdict assessment)})))
+  (when-not (and (string? (:subject-clusion-id assessment))
+                 (:actor assessment) (:policy assessment) (:reason assessment)
+                 (:time assessment))
+    (throw (ex-info "assessment subject, attribution and reason required"
+                    {:assessment assessment})))
+  (let [without-id (dissoc assessment :id)]
+    (assoc without-id :id
+           (record-id [:assessment 1] without-id))))
+
 (defn record-id
   "Digest a non-'clusion record against its declaration's identity fields."
   [type-revision content]

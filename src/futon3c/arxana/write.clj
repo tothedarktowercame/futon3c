@@ -1,0 +1,53 @@
+(ns futon3c.arxana.write
+  "C2 validity boundary for immutable Formal Arxana writes."
+  (:require [futon3c.arxana.envelope :as env]
+            [futon3c.arxana.records :as records]
+            [futon3c.arxana.store :as store]))
+
+(defn- refusal [category code detail]
+  {:error (env/error category code detail nil)})
+
+(defn- checked-clusion [record]
+  (let [computed (records/make-clusion record)]
+    (when (and (:id record) (not= (:id record) (:id computed)))
+      (throw (ex-info "clusion id does not match semantic digest"
+                      {:error :arxana.clusion/id-mismatch
+                       :supplied (:id record) :computed (:id computed)})))
+    computed))
+
+(defn- checked-attestation [record]
+  (let [computed (records/make-attestation record)]
+    (when (and (:id record) (not= (:id record) (:id computed)))
+      (throw (ex-info "attestation id does not match digest"
+                      {:error :arxana.evidence/id-mismatch
+                       :supplied (:id record) :computed (:id computed)})))
+    computed))
+
+(defn- checked-assessment [record]
+  (let [computed (records/make-assessment record)]
+    (when (and (:id record) (not= (:id record) (:id computed)))
+      (throw (ex-info "assessment id does not match digest"
+                      {:error :arxana.assessment/id-mismatch
+                       :supplied (:id record) :computed (:id computed)})))
+    computed))
+
+(defn execute
+  "Validate at the JVM authority, then submit only the validated record to
+  futon1b's reserved atomic route."
+  [graph-store envelope operation record]
+  (try
+    (let [validated (case operation
+                      :clusion/assert (checked-clusion record)
+                      :evidence/append (checked-attestation record)
+                      :assessment/append (checked-assessment record))
+          command {:protocol/version env/protocol-version
+                   :message/id (:message/id envelope)
+                   :operation operation
+                   :principal/id (:principal/id envelope)
+                   :body {:record validated}}]
+      (store/conditional-write! graph-store command))
+    (catch clojure.lang.ExceptionInfo e
+      (refusal :invalid (or (:error (ex-data e)) :arxana.write/invalid-record)
+               (dissoc (ex-data e) :error)))
+    (catch Throwable e
+      (refusal :invalid :arxana.write/invalid-record {:message (.getMessage e)}))))

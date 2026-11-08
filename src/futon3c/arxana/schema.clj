@@ -50,6 +50,18 @@
     :allowed #{:artifact/id :bytes :media-type :expected/revision-id}
     :projection [:operation :artifact/id :artifact/revision-id]}
 
+   :clusion/assert
+   {:schema-version 1 :required #{:record} :allowed #{:record}
+    :projection [:operation :record/id :created?]}
+
+   :evidence/append
+   {:schema-version 1 :required #{:record} :allowed #{:record}
+    :projection [:operation :record/id :subject-clusion-id :created?]}
+
+   :assessment/append
+   {:schema-version 1 :required #{:record} :allowed #{:record}
+    :projection [:operation :record/id :subject-clusion-id :created?]}
+
    :assertion/promote
    {:schema-version 1
     :required #{:result/digest :result/evidence}

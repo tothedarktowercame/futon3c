@@ -16,7 +16,8 @@
             [futon3c.arxana.resolve.promotion :as promotion]
             [futon3c.arxana.schema :as schema]
             [futon3c.arxana.store :as store]
-            [futon3c.arxana.subscribe :as subscribe]))
+            [futon3c.arxana.subscribe :as subscribe]
+            [futon3c.arxana.write :as write]))
 
 (defn handshake
   "Capabilities handshake (D1 compat rule 7: mandatory). Reports the store's
@@ -226,6 +227,11 @@
                                           :acceptance/id (:acceptance/id rok)
                                           :created? (:created? rok)}})
                  (env/response ok (with-semantic-digest op rok)))))
+
+           (#{:clusion/assert :evidence/append :assessment/append} op)
+           (let [{wok :ok werr :error}
+                 (write/execute graph-store ok op (:record body))]
+             (env/response ok (with-semantic-digest op (or werr wok))))
 
            (= op :revision/ingest)
            (let [{rok :ok rerr :error} (ingest-revision graph-store artifact-provider body)]
