@@ -14,6 +14,7 @@
 (def fixture-commit "2dd18b2c3547897cb07f8a35084f535b9da7f4c7")
 (def informal-path "problems/a93J02/informal-solution.md")
 (def lean-main-path "problems/a93J02/lean/Main.lean")
+(def synthetic-witness-path "problems/a93J02/lean/SyntheticContradiction.lean")
 
 (def kernel-input-paths
   ["lean-toolchain" "lakefile.toml" "lake-manifest.json"
@@ -83,12 +84,54 @@
        :mathlib/metadata-after dependency-after
        :mathlib/unchanged? (= dependency-before dependency-after)})))
 
-(defn kernel-claim [revision-id]
+(defn run-contradiction-gate
+  "Compile the pinned Main module in the isolated worktree, then check the
+  labelled F3c negation witness. No dependency package is rebuilt or written."
+  [apm-root]
+  (let [actual-toolchain (str/trim (slurp (io/file apm-root "lean-toolchain")))
+        output-dir (io/file apm-root ".lake/build/lib/lean/problems/a93J02/lean")
+        _ (.mkdirs output-dir)
+        main-command ["lake" "env" "lean" "-o"
+                      ".lake/build/lib/lean/problems/a93J02/lean/Main.olean"
+                      lean-main-path]
+        witness-command ["lake" "env" "lean" synthetic-witness-path]
+        input-paths (conj kernel-input-paths synthetic-witness-path)
+        inputs (mapv (fn [path]
+                       {:path path :sha256 (sha256-bytes (file-bytes apm-root path))})
+                     input-paths)
+        dependency-before (dependency-metadata-digest apm-root)
+        main-run (run-process apm-root main-command)
+        witness-run (if (zero? (:exit-status main-run))
+                      (run-process apm-root witness-command)
+                      {:exit-status 125 :output "SKIPPED: Main module failed\n"
+                       :output/bytes (.getBytes "SKIPPED: Main module failed\n"
+                                                StandardCharsets/UTF_8)})
+        output (str "COMMAND 1: " (pr-str main-command) "\n" (:output main-run)
+                    "COMMAND 2: " (pr-str witness-command) "\n" (:output witness-run))
+        status (if (zero? (:exit-status main-run))
+                 (:exit-status witness-run) (:exit-status main-run))
+        dependency-after (dependency-metadata-digest apm-root)]
+    {:record/type :lean-kernel-run :record/version 1
+     :fixture/label :SYNTHETIC-negative
+     :toolchain actual-toolchain
+     :worktree/commit (git-output apm-root "rev-parse" "HEAD")
+     :command [main-command witness-command]
+     :exit-status status :outcome (if (zero? status) :passed :failed)
+     :output output :output/sha256 (sha256-bytes (.getBytes output StandardCharsets/UTF_8))
+     :inputs inputs
+     :mathlib/metadata-before dependency-before
+     :mathlib/metadata-after dependency-after
+     :mathlib/unchanged? (= dependency-before dependency-after)}))
+
+(defn kernel-claim
+  ([revision-id] (kernel-claim revision-id nil))
+  ([revision-id fixture-label]
   (records/make-clusion
    {:type-revision [:kernel-builds 1]
     :endpoints [{:role :artifact :kind :artifact-revision
                  :target {:artifact/revision-id revision-id}}]
-    :asserted-content {:language :lean}}))
+    :asserted-content (cond-> {:language :lean}
+                        fixture-label (assoc :fixture/label fixture-label))})))
 
 (defn- kernel-attestation [claim run]
   (records/make-attestation
@@ -98,20 +141,21 @@
     :standing (if (= :passed (:outcome run)) :verified :contradicted)
     :coverage :complete
     :method {:id "lean-kernel" :version (:toolchain run)}
-    :content {:outcome (:outcome run)
+    :content (cond-> {:outcome (:outcome run)
               :exit-status (:exit-status run)
               :command (:command run)
               :output (:output run)
               :output/sha256 (:output/sha256 run)
               :worktree/commit (:worktree/commit run)
               :mathlib/unchanged? (:mathlib/unchanged? run)}
+               (:fixture/label run) (assoc :fixture/label (:fixture/label run)))
     :source-refs (mapv #(select-keys % [:path :sha256]) (:inputs run))}))
 
 (defn append-kernel-run!
   "The sole F3a path from a Lean run into Arxana: assert the checked-property
   claim, then attach the complete kernel result through evidence/append."
   [cfg revision-id run]
-  (let [claim (kernel-claim revision-id)
+  (let [claim (kernel-claim revision-id (:fixture/label run))
         attestation (kernel-attestation claim run)
         dispatch (fn [suffix operation record]
                    (service/dispatch
@@ -239,9 +283,10 @@
     :source-refs [{:artifact/revision-id revision-id}]}))
 
 (defn -main [& [mode apm-root output-path]]
-  (when-not (= mode "lean-gate")
-    (throw (ex-info "usage: formal-f3 lean-gate APM_ROOT OUTPUT.edn" {})))
-  (let [record (run-lean-gate apm-root)]
+  (when-not (#{"lean-gate" "contradiction-gate"} mode)
+    (throw (ex-info "usage: formal-f3 (lean-gate|contradiction-gate) APM_ROOT OUTPUT.edn" {})))
+  (let [record ((if (= mode "lean-gate") run-lean-gate run-contradiction-gate)
+                apm-root)]
     (spit output-path (str (pr-str record) "\n"))
     (println (pr-str (select-keys record [:outcome :exit-status :output/sha256
                                           :mathlib/unchanged?])))))

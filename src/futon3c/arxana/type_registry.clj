@@ -121,6 +121,17 @@
                  [{:role :source :endpoint/kinds #{:manifestation-scope}}
                   {:role :target :endpoint/kinds #{:entity}}]
                  [:direction :relation/kind])
+   (clusion-type :generation-run 1
+                 [{:role :input :endpoint/kinds #{:artifact-revision}}
+                  {:role :output :endpoint/kinds #{:artifact-revision}}]
+                 [:model :prompt :configuration])
+   (clusion-type :synthetic-mutation 1
+                 [{:role :source :endpoint/kinds #{:artifact-revision}}
+                  {:role :mutation :endpoint/kinds #{:artifact-revision}}]
+                 [:label :diff])
+   (clusion-type :formalization-coverage 1
+                 [{:role :declaration :endpoint/kinds #{:entity}}]
+                 [:coverage/state :reason])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]

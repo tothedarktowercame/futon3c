@@ -63,11 +63,12 @@
              (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))))
 
 (deftest c1-declarations-are-resolved
-  ;; C1's twelve declarations plus F3a/F3b's versioned relation types.
-  (is (= 15 (count types/registry-v1)))
+  ;; C1's twelve declarations plus F3a/F3b/F3c's versioned relation types.
+  (is (= 18 (count types/registry-v1)))
   (is (every? #(contains? types/registry-v1 %)
               [[:kernel-builds 1] [:declaration-location 1]
-               [:correspondence 1]]))
+               [:correspondence 1] [:generation-run 1]
+               [:synthetic-mutation 1] [:formalization-coverage 1]]))
   (doseq [[_ declaration] types/registry-v1]
     (is (string? (:type/digest declaration)))
     (is (types/convergence-policies (:convergence/policy declaration)))
