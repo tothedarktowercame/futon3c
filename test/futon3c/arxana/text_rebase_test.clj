@@ -1,7 +1,7 @@
-(ns futon3c.arxana.spike.rebase-test
+(ns futon3c.arxana.text-rebase-test
   "Tests for the F2 three-way rebase spike. See SPIKE-f2-rebase.md."
   (:require [clojure.test :refer [deftest is testing]]
-            [futon3c.arxana.spike.rebase :as r]))
+            [futon3c.arxana.text-rebase :as r]))
 
 (defn- s
   "canonical bytes -> String, for assertions"

@@ -1,4 +1,4 @@
-(ns futon3c.arxana.spike.rebase
+(ns futon3c.arxana.text-rebase
   "VERIFY spike S2 (M-formal-arxana F2): deterministic three-way text rebase
   over canonical bytes.
 
@@ -16,7 +16,7 @@
   Offsets are CODEPOINT offsets into the canonical text, never byte
   offsets, so multi-byte characters (CJK, emoji) behave like ASCII.
 
-  Spike only — not for merge, not for the running futon3c JVM."
+  Production F2 text rebase contract."
   (:require [clojure.string :as str])
   (:import [java.nio.charset StandardCharsets]
            [java.security MessageDigest]
