@@ -5,11 +5,14 @@
   evidence attestation whose content names both revisions and preserves the
   complete candidate set."
   (:require [futon3c.arxana.artifact :as artifact]
+            [clojure.edn :as edn]
+            [clojure.walk :as walk]
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.formal-f1-export :as export]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.resolve.evaluator :as evaluator]
-            [futon3c.arxana.service :as service])
+            [futon3c.arxana.service :as service]
+            [futon3c.arxana.store :as store])
   (:import [java.nio.charset StandardCharsets]))
 
 (def resolver-method {:id "arxana.resolve/anchor" :version 1})
@@ -120,6 +123,7 @@
   "Turn one resolver result into append-only evidence about the unchanged
   interpretation claim. Candidates are never reduced to a chosen first."
   [{:keys [subject-clusion-id source-revision-id target-revision-id
+           application/id application/from-revision-id application/hunks
            strategy/revision-id resolution]}]
   (let [status (:result/status resolution)]
     (records/make-attestation
@@ -135,11 +139,16 @@
       :method (assoc resolver-method :strategy/revision-id revision-id)
       :content {:resolution/status status
                 :source/revision-id source-revision-id
+                :application/from-revision-id from-revision-id
                 :target/revision-id target-revision-id
+                :application/id id
+                :application/hunks hunks
                 :candidates (:result/candidates resolution)
                 :evidence (:result/evidence resolution)}
       :source-refs [{:artifact/revision-id source-revision-id}
-                    {:artifact/revision-id target-revision-id}]})))
+                    {:artifact/revision-id from-revision-id}
+                    {:artifact/revision-id target-revision-id}
+                    {:clusion/id id}]})))
 
 (defn append-relocations! [cfg relocation]
   (mapv (fn [r]
@@ -151,3 +160,61 @@
                   :principal/id "formal-f1-relocator"
                   :body {:record a}})))
         (:results relocation)))
+
+(defn- query! [graph-store q]
+  (let [{:keys [ok error]} (store/bounded-query! graph-store q)]
+    (if error (throw (ex-info "relocation store query failed" {:typed-error error})) ok)))
+
+(defn- revision-text! [graph-store revision-id]
+  (:revision/canonical-bytes
+   (query! graph-store {:query/type :revision-by-id :revision-id revision-id})))
+
+(defn relocate-application!
+  "Derive F1 relocation entirely from stored revisions, manifest and the
+  application record. This is called synchronously after the application is
+  appended; a fresh JVM instance can repeat it idempotently."
+  [cfg application]
+  (if (not= "formal-arxana:f1-conversation"
+            (get-in application [:asserted-content :artifact/id]))
+    {:result/status :not-f1-artifact}
+    (let [graph-store (:graph-store cfg)
+          manifest-head (:head/revision-id
+                         (query! graph-store {:query/type :artifact-head
+                                              :artifact-id "formal-arxana:f1-conversation-manifest"}))
+          manifest (walk/postwalk
+                    #(if (symbol? %) (keyword (namespace %) (name %)) %)
+                    (edn/read-string (revision-text! graph-store manifest-head)))
+          source-rid (:artifact/revision-id manifest)
+          first-subject (get-in manifest [:turns 0 :interpretations 0 :clusion/id])
+          subject-present? (:ok (store/get-entity graph-store first-subject))]
+      (if-not subject-present?
+        {:result/status :skipped-no-f1-records}
+        (let [source-text (revision-text! graph-store source-rid)
+              from-rid (some->> (:endpoints application)
+                                (filter #(= :from (:role %))) first :target
+                                :artifact/revision-id)
+              target-rid (some->> (:endpoints application)
+                                  (filter #(= :to (:role %))) first :target
+                                  :artifact/revision-id)
+              target-text (revision-text! graph-store target-rid)
+              provider (artifact/in-memory-provider)
+              _ (artifact/ingest! provider "formal-arxana:f1-conversation"
+                                  (.getBytes ^String source-text StandardCharsets/UTF_8)
+                                  "text/markdown; charset=utf-8")
+              _ (artifact/ingest! provider "formal-arxana:f1-conversation"
+                                  (.getBytes ^String target-text StandardCharsets/UTF_8)
+                                  "text/markdown; charset=utf-8")
+              exported {:markdown source-text :markdown/revision-id source-rid :manifest manifest}
+              registry (register-strategies exported)
+              run (relocate provider registry source-rid target-rid target-rid target-rid)
+              enriched (update run :results
+                               (fn [results]
+                                 (mapv #(assoc % :application/id (:id application)
+                                                :application/from-revision-id from-rid
+                                                :application/hunks
+                                                (get-in application [:asserted-content :patch :hunks]))
+                                       results)))
+              writes (append-relocations! cfg enriched)]
+          {:result/status :complete :target/revision-id target-rid
+           :application/id (:id application) :writes writes
+           :results (:results enriched)})))))

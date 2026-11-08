@@ -427,6 +427,10 @@
                           :artifact-provider artifact-provider
                           :clock (or (:text/clock cfg) fixed-event-time)
                           :before-cas (:text/before-cas cfg)
+                          :after-application
+                          #((requiring-resolve
+                             'futon3c.arxana.formal-f1-relocation/relocate-application!)
+                            cfg %)
                           :ingest #(ingest-revision graph-store artifact-provider
                                                     {:artifact/id (:artifact/id body)
                                                      :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)
@@ -441,6 +445,10 @@
                          {:graph-store graph-store
                           :clock (or (:text/clock cfg) fixed-event-time)
                           :before-cas (:text/before-cas cfg)
+                          :after-application
+                          #((requiring-resolve
+                             'futon3c.arxana.formal-f1-relocation/relocate-application!)
+                            cfg %)
                           :ingest #(ingest-revision graph-store artifact-provider
                                                     {:artifact/id (:artifact/id body)
                                                      :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)

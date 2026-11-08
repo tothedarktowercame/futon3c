@@ -129,7 +129,7 @@
                        :result/text (rebase/canonical-str bytes)}}))
 
 (defn submit!
-  [{:keys [graph-store ingest clock before-cas]} envelope {:keys [artifact/id patch]}]
+  [{:keys [graph-store ingest clock before-cas after-application]} envelope {:keys [artifact/id patch]}]
   (try
     (let [patch (rebase/->patch patch) prec (patch-record id patch)
           _ (assert! graph-store envelope prec "patch")
@@ -158,9 +158,10 @@
               (let [rid (get-in result [:ok :artifact/revision-id])
                     app (application-record id (:id prec) head rid applied-patch (clock))]
                 (assert! graph-store envelope app "application")
+                (let [relocation (when after-application (after-application app))]
                 {:ok {:result/status (if landed :rebased :applied) :artifact/id id
                       :patch/id (:id prec) :application/id (:id app)
-                      :head/revision-id rid}})))
+                      :head/revision-id rid :relocation relocation}}))))
           (let [last-app (last chain)
                 landed-record (record! graph-store (target last-app :change :clusion/id))
                 source-ops (into #{} (mapcat (comp :source-op-ids :a)
@@ -203,7 +204,7 @@
               :replacement (String. b (int pre) (int (- nb suf pre)))}]}))
 
 (defn choose!
-  [{:keys [graph-store ingest clock before-cas]} envelope body]
+  [{:keys [graph-store ingest clock before-cas after-application]} envelope body]
   (let [artifact-id (:artifact/id body) conflict-id (:conflict/id body)
         alternative-id (:alternative/id body) actor (:actor body)
         chosen-at (:chosen-at body) reason (:reason body)]
@@ -243,9 +244,10 @@
                         app (application-record artifact-id (:id choice) expected rid p (clock))]
                     (assert! graph-store envelope choice "choice")
                     (assert! graph-store envelope app "application")
+                    (let [relocation (when after-application (after-application app))]
                     {:ok {:result/status :chosen :artifact/id artifact-id
                           :choice/id (:id choice) :application/id (:id app)
-                          :head/revision-id rid}}))))))
+                          :head/revision-id rid :relocation relocation}})))))))
       (catch clojure.lang.ExceptionInfo e
         {:error (or (:typed-error (ex-data e))
                     (env/error :invalid :arxana.text/invalid-choice (ex-data e) nil))}))))
