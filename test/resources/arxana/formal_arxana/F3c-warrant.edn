@@ -1,0 +1,59 @@
+{:increment :F3c
+ :date "2026-11-08"
+ :commits
+ {:futon3c-base "6852e82991469bbc5b277671696f499ce044077d"
+  :futon3c-code "ac85c41e50e13224cef9531687f2c3f1026a5f73"
+  :apm-lean-base "2dd18b2c3547897cb07f8a35084f535b9da7f4c7"
+  :apm-lean-witness "249dd03e85bbbef1ebdecac340f47bc716eb8c7f"}
+ :generation
+ {:artifact/id "formal-f3:a93J02/generated-informal"
+  :model {:provider "OpenAI" :family "GPT-5/Codex"
+          :serving-snapshot :not-exposed}
+  :prompt-recorded-in-full? true
+  :configuration-recorded? true
+  :output/sha256 "52b5715e960053f799147ce909efefc95309e3f2583cc2999f9eb4e15126ddd9"
+  :standing :candidate}
+ :synthetic-negative
+ {:artifact/id "formal-f3:a93J02/SYNTHETIC-mutation"
+  :label :SYNTHETIC-negative
+  :artifact/sha256 "125b0a33347fe5e3caabfe9774c1d0b3f0ca5f30eb0fdc803dda6d3b086fc7dc"
+  :mutation/diff-recorded? true
+  :assessment {:actor "codex-21"
+               :policy {:id "formal-f3/SYNTHETIC-negative-fixture" :version 1}
+               :standing :contradicted
+               :kernel-attestation-cited? true}}
+ :lean-gate
+ {:toolchain "leanprover/lean4:v4.29.0-rc8"
+  :commands [["lake" "env" "lean" "-o"
+              ".lake/build/lib/lean/problems/a93J02/lean/Main.olean"
+              "problems/a93J02/lean/Main.lean"]
+             ["lake" "env" "lean"
+              "problems/a93J02/lean/SyntheticContradiction.lean"]]
+  :result {:exit-status 0 :outcome :passed
+           :output/sha256 "506aa95ea63a7c47304aefbe5722b02fa798a9507678ab84ed61d2d9598594f6"
+           :mathlib/unchanged? true}
+  :record "a93J02-SYNTHETIC-kernel-run.edn"
+  :record/sha256 "1b1e80c0f18df7690d3c396752027c86af68ff519147780185601410b732b34c"
+  :adapter-principal "formal-f3a/evidence-adapter"}
+ :residues
+ {:ambiguous-resolution-observations-materialised? true
+  :unaligned-declarations ["tsum_alternating_harmonic_mul_pow"]
+  :public-read-check? true
+  :f3b-divergence-mutated? false}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.formal-f3-test -n futon3c.arxana.formal-f3-correspond-test -n futon3c.arxana.formal-f3-generate-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 11 :assertions 315 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-f3-generate-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 48 :failures 0 :errors 0}}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched []
+  :private-server-port :ephemeral
+  :apm-primary-checkout-modified? false
+  :persistent-processes-left-running []}
+ :deferred [:F3d-relocation-and-projections]}
