@@ -1,5 +1,7 @@
 # Excursion: E-agency-work-orders — an order stays open until it is done
 
+> **Closure check 2026-11-08: partly done.** Done: the token design W1-W3 (claude-17, 2026-10-04) is built and running: work-order ledger with open/delivered/closed (cb1858253, `src/futon3c/agency/work_orders.clj`), the E3 stall check (2707421b5, `work_order_check.clj`), nudges and escalation at job end (81cdf6741), each with a test file; `GET /api/alpha/work-orders` answered on 2026-11-08 with closed order wo-08853747 carrying two nudges. Remains: the ledger is its own judge, not `futon3c.logic.xiang` (requirement 4); a delivered half of a multi-part order still closes when the bellback job ends, so the "first half" live case is not kept open (requirement 5, closure criterion 4); the original codex-19 order was never located. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Date:** 2026-10-03
 **Status:** IDENTIFY (requirements clear; not built).
 **Attached to:** M-象-2000. The open/closed judgement is P24's

@@ -1,6 +1,8 @@
 # E-codex-resume-after-JVM-restart — give codex a JVM-owned supervisor so it resumes like claude
 
-**Status: IDENTIFY (2026-07-04). Owner: claude-10 (dispatch/review). Ratified by Joe
+> **Closed 2026-11-08 (already done).** Agency now owns the Codex process per turn: a restored seat is rebuilt through `/api/alpha/agents/restore` (`roster_store/restore-on-boot!`), and each turn spawns `codex exec resume <sid> -` (`src/futon3c/agents/codex_cli.clj:310`), so no long-lived pouch is needed. Live check: codex-7 ran a job on session 01a1a3df-... at 2026-11-06T11:07Z, Agency restarted at about 21:09Z, and on 2026-11-07T19:30Z it ran a job (done) on the same session. Evidence: futon3c 89fd1159d (roster persistence), 5fc795979 (restored Codex seats run jobs, checked on solve-1), test `transport/http_test.clj` `agent-restore-registers-codex-exact-identity`. The Emacs codex-repl hang on a ghost seat (the 07-04 symptom) was not re-tested. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
+**Status: done, closed 2026-11-08, see the closure note (was: IDENTIFY (2026-07-04)). Owner: claude-10 (dispatch/review). Ratified by Joe
 2026-07-04 (emerged from a live codex-4 resume failure after a JVM crash).**
 
 ## The gap (operator intake)
@@ -62,5 +64,5 @@ U1 (transcript persistence — the adjacent non-claude-durability thread).
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
 
-- [ ] Codex agents get a JVM-owned supervisor mirroring the claude agent_pouch path
-- [ ] After a JVM restart, a codex agent resumes its session automatically (no ghost roster entry, last-active live), verified by a restart test
+- [x] Codex agents get a JVM-owned supervisor mirroring the claude agent_pouch path (per-turn exec resume: codex_cli.clj:310; 89fd1159d, 5fc795979)
+- [x] After a JVM restart, a codex agent resumes its session automatically (no ghost roster entry, last-active live), verified by a restart test (live: codex-7 same session across the 2026-11-06 restart; no automated restart test)

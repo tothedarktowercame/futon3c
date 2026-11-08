@@ -1,6 +1,8 @@
 # E-futon1b-postcommit-nested-nil
 
-**VERDICT (2026-10-09, provisional):** OPEN — Bug documented with fix options; only a client-side workaround landed, the upstream fix (drop nils or nil-insensitive compare) is not recorded as done. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+> **Closed 2026-11-08 (already done).** The upstream fix landed in futon1b on 2026-09-29: `drop-nil-values` removes nil-valued keys recursively before a minted act is written (`futon1b_server.clj:297`), and the failure path now invalidates the type's cached listings. Evidence: futon1b d7b8e95 (on master); test `test_act_ids.clj:106` posts nested nils (`{:who nil :inner {:ref nil}}`) and asserts 200, minted, listed, and the same act on retry (test not rerun here). Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
+**VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Bug documented with fix options; only a client-side workaround landed, the upstream fix (drop nils or nil-insensitive compare) is not recorded as done. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_)
 
 Logged 2026-09-27 by claude-17 (M-象-2000 P3-1). Not scheduled.
 
@@ -20,4 +22,4 @@ Client-side workaround in futon3c grant_record.clj: drop nils before writing.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
 
-- [ ] futon1b upstream fix lands (nils dropped in the transform, or nil-insensitive compare) so a committed write is never reported as failed, covered by a test
+- [x] futon1b upstream fix lands (nils dropped in the transform, or nil-insensitive compare) so a committed write is never reported as failed, covered by a test (futon1b d7b8e95)

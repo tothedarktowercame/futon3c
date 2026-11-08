@@ -1,6 +1,8 @@
 # E-futon1a-archivist — substrate-2 write-path governance (the archivist revival)
 
-**Status:** IDENTIFY (charter seed, 2026-06-30). Spun out of **C-cascade-real** as the governing
+> **Closed 2026-11-08 (already done).** The canonical mission-id write gate was built in futon1a and shown live on 2026-06-30 (non-canonical `mission:M-*` writes answered 400 on `/entity`), with 246 UUID-keyed mission nodes rekeyed onto canonical ids; see the 2026-06-30 Status section. futon1a has since been retired for futon1b (futon3c `CLAUDE.md`: "the retired futon1a XTDB 1 store on 7071 is gone"), so the deferred cleanup and the planned `futon1a/README-archivist.md` (never written) target a store that no longer runs. Evidence: futon1a f7fe27a, 29a19ca, a12b7a5; futon3c 431aca704. Whether futon1b needs an equivalent write-time id gate is a separate question. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
+**Status:** done, closed 2026-11-08, see the closure note (was: IDENTIFY (charter seed, 2026-06-30)). Spun out of **C-cascade-real** as the governing
 mechanism for its **Clause 3** (canonical / unambiguous contents). Owner: **TBD** (Joe to assign —
 substrate-2-adjacent; claude-2 owns the data model, so a *different* agent for the governance is
 fine, coordinating with claude-2).
@@ -107,7 +109,7 @@ Tooling: `futon3c/scripts/archivist_cleanup.bb` (penholder `joe`, gated `run-era
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-2, high confidence); not yet confirmed by the author._
 
-- [ ] One canonical id/type scheme per entity kind is registered in the descriptor registry and documented
-- [ ] A write with a non-canonical mission id is rejected or queued, demonstrated on the write-path gate
+- [x] One canonical id/type scheme per entity kind is registered in the descriptor registry and documented (f7fe27a, 29a19ca)
+- [x] A write with a non-canonical mission id is rejected or queued, demonstrated on the write-path gate (a12b7a5; live 400 recorded 2026-06-30)
 - [ ] O3 lineage references the canonical mission node so verify-live composition becomes meaningful
 - [ ] README-archivist.md exists in futon1a with the new-type request process

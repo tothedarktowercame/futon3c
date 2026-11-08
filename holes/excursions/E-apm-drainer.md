@@ -1,5 +1,7 @@
 # Excursion: E-apm-drainer — `announce` is bookkeeping, not dispatch
 
+> **Closure check 2026-11-08: partly done.** Done: the dispatch gap is closed by a two-step contract. `POST /api/alpha/invoke/activate` exists (d6f9ec2cf, `transport/http.clj` `handle-invoke-activate`), and the APM job port (4993addf4, `src/futon3c/apm/job_port.clj` `announce!`/`activate!`) is followed by `activate!` in `live_proof_phases.clj:349`, `:400`, `library_lane_phases.clj:504` and `role_job_reconciliation.clj:58`; announce stays a reservation. Remains: announce still answers `{:accepted true}` (recommendation 1); never-activated queued jobs are still not reaped (recommendation 3); no siege throughput measurement was taken (closure criterion 2), and the codex-8 specimen was not recorded as inspected. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Date:** 2026-08-22
 **Status:** IDENTIFY. Code path traced, leading explanation stated with evidence, one
 contradicting datapoint recorded honestly (see "What does not fit").

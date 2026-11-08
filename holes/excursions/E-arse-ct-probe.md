@@ -1,8 +1,10 @@
 # E-arse-ct-probe — does ArSE earn its keep? a codex swarm grounds one dark-tower conjecture in the math.CT scan
 
-**VERDICT (2026-10-09, provisional):** OPEN — Probe was built but still awaiting a go decision to dispatch, recorded 2026-06-12 with no dispatch or closure since. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+> **Closed 2026-11-08 (already done).** The probe ran on 2026-06-12: three grounded answers to the §4 conjecture sit in ArSE (threads ask-1781261851-26, ask-1781261851-27, ask-1781261852-28 in `~/code/storage/arse/entities.json`), each citing arXiv:1701.04732 and proposing SQ4 = underdetermined, and the same swarm then ran the §1-§8 conjectures. The usefulness verdict was positive: `futon5a/holes/excursions/E-exotype-ct-grounding.md:35` says this probe "validated the operation". Evidence: futon5a fd2be4c, `E-the-dark-tower-2.md:301-320` (checkpoint with line-cited verdicts). Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
 
-**Date:** 2026-06-12 · Joe + claude-6 · **Status: PROBE BUILT, awaiting go to dispatch**
+**VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Probe was built but still awaiting a go decision to dispatch, recorded 2026-06-12 with no dispatch or closure since. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_)
+
+**Date:** 2026-06-12 · Joe + claude-6 · **Status: done, closed 2026-11-08, see the closure note** (was: PROBE BUILT, awaiting go to dispatch)
 **Spawned from:** Joe's longstanding thesis that ArSE is *useful*, now testable because (a)
 typed bells → ArSE is live (M-typed-bells), (b) tonight's no-text + desync fixes make a codex
 swarm survivable, and (c) the superpod CT run gave us a real corpus.
@@ -100,6 +102,6 @@ stronger groundedness gate before it's useful.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
 
-- [ ] Record Joe's go/no-go decision for dispatching the codex swarm
-- [ ] Swarm answers one dark-tower section-4 conjecture grounded in the math.CT scan, Q&A landing in ArSE via typed bells
-- [ ] Record the usefulness verdict: grounded citable claims that sharpen the excursion, or a real negative finding
+- [x] Record Joe's go/no-go decision for dispatching the codex swarm (dispatched 2026-06-12; ArSE ask-1781261851-26..28)
+- [x] Swarm answers one dark-tower section-4 conjecture grounded in the math.CT scan, Q&A landing in ArSE via typed bells (ArSE ask-1781261851-26, -27, ask-1781261852-28)
+- [x] Record the usefulness verdict: grounded citable claims that sharpen the excursion, or a real negative finding (futon5a fd2be4c, E-exotype-ct-grounding.md:35)

@@ -1,6 +1,8 @@
 # E-APM-f12-defects — frame 12 (m03J01), defects D40–D48 + the ContDiff-⊤ corpus sweep
 
-**VERDICT (2026-10-09, provisional):** OPEN — Defect catalogue with confirmed/inapplicable findings and self-corrections but no overall closure statement. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
+> **Closed 2026-11-08 (already done).** Both named fixes are in futon3c master: `default-query-term-limit` is 12 and `:stdin-packet` terms are removed from the issued query (`src/futon3c/dispatch_with_recall.clj:20`, `:528`). The ContDiff-⊤ corpus disposition was carried out in apm-lean on 2026-10-13: t96A08 repaired to ∞, m01J04/m03J01/m95J05 reopened. Evidence: futon3c 395f5e2d5; `test/.../dispatch_with_recall_test.clj:123`; apm-lean a90887f66c, 361a51ed9b. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
+**VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Defect catalogue with confirmed/inapplicable findings and self-corrections but no overall closure statement. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_)
 
 Source: f12-guide's close report (bell `invoke-1787127271290-4993-afdeb624`,
 2026-08-19). Numbering assigned by ground control, continuing D27–D39 in
@@ -1420,5 +1422,5 @@ Neither will help f15. Both are correct.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-1, medium confidence); not yet confirmed by the author._
 
-- [ ] Ship the two named fixes: drop or rank-last :stdin-packet as a query-term source, and raise default-query-term-limit above 4
-- [ ] Record the corpus disposition for the ContDiff-top vacuity finding (frozen-statement defect class)
+- [x] Ship the two named fixes: drop or rank-last :stdin-packet as a query-term source, and raise default-query-term-limit above 4 (395f5e2d5)
+- [x] Record the corpus disposition for the ContDiff-top vacuity finding (frozen-statement defect class) (apm-lean a90887f66c, 361a51ed9b)

@@ -1,8 +1,10 @@
 # Excursion: the Arxana Clock — one surface for the system's time-drivers (E-arxana-clock)
 
-**VERDICT (2026-10-09, provisional):** OPEN — Status is IDENTIFY + MAP only (2026-06-26); incident fixes landed but the tail names a residual diagnosis still owed and no completion is recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
+> **Closed 2026-11-08 (already done).** The clock surface exists: the scan-primary aggregator `futon3c/scripts/arxana_clock.bb` reads cron, systemd and JVM threads (so a new driver appears without registering), and `futon4/dev/arxana-vsatarcs-clock.el` displays it (on futon4 main). The §8 residual was conditional on the evidence store staying frozen after `stop!`; that store has since been replaced by futon1b. Evidence: futon3c dddb65b27, futon4 c3c8490 (`git branch --contains` lists main), cars 1-4 in §6. The cadence enrichment for watchers and the stale-driver alarm named under car 3 were not built and would be new items. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
 
-**Date:** 2026-06-26 · **Status:** IDENTIFY + MAP grounded in live inventory (2026-06-26) — owned end-to-end by one agent (claude-10).
+**VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Status is IDENTIFY + MAP only (2026-06-26); incident fixes landed but the tail names a residual diagnosis still owed and no completion is recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_)
+
+**Date:** 2026-06-26 · **Status:** done, closed 2026-11-08, see the closure note (was: IDENTIFY + MAP grounded in live inventory (2026-06-26)) — owned end-to-end by one agent (claude-10).
 **Authored by:** claude-10.
 **Parent / relates:**
 [[README-clicks-and-ticks]] (futon2 — the clicks/ticks conceptual frame this realises) ·
@@ -139,6 +141,6 @@ regardless.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
 
-- [ ] One surface answers at a glance: what keeps the system ticking, when each last fired, when each fires next, across all three driver mechanisms
-- [ ] A new driver can register on the clock so it is visible rather than hidden
+- [x] One surface answers at a glance: what keeps the system ticking, when each last fired, when each fires next, across all three driver mechanisms (dddb65b27, futon4 c3c8490)
+- [x] A new driver can register on the clock so it is visible rather than hidden (car 4 scan: scripts/arxana_clock.bb)
 - [ ] The residual (evidence store still frozen after stop!) is diagnosed or ruled out separately

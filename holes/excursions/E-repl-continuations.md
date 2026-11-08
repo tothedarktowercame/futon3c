@@ -1,7 +1,9 @@
 # Excursion: E-repl-continuations — an agent parks its own REPL turn until its dependencies return, then self-resumes
 
+> **Closed 2026-11-08 (already done).** Park-and-self-resume is built and live: the durable parked-on engine with join release, deadline sweep and boot rehydrate (Car 1, 2a, 2b), the in-buffer continuation in the REPL (Car 3, live-verified by Joe 2026-06-30), and the agent-facing entry `POST /api/alpha/park` plus `agency_send.py --park`, documented in README-park.md and required on every dispatch by ~/code/CLAUDE.md. Delivery losses are tracked in E-park-delivery-losses; a cascade DAG flowing without Joe is a WM/cascade goal outside this excursion's HEAD. Evidence: 35ee51faa, 88377f2a5, d7210e59b, f3f4c77c4, f9b7fd4, e92763615, dea828a80 (`--park`); src/futon3c/agency/parked_on.clj, test/futon3c/agency/parked_on_test.clj; `GET /api/alpha/parked` answered ok with live parks on 2026-11-08. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Date:** 2026-06-30
-**Status:** IDENTIFY ratified (Joe, 2026-06-30) → **MAP in progress.** (Lifecycle: `futon4/holes/mission-lifecycle.md`; MAP = survey existing work, facts not design. Joe flagged this explicitly: *"be sure to include a formal MAP stage … this is the kind of thing where we want to be careful"* — much of the execution substrate already exists.)
+**Status:** **DONE, closed 2026-11-08, see the closure note.** (Was: IDENTIFY ratified (Joe, 2026-06-30) → MAP in progress; INSTANTIATE landed per §6-7.) (Lifecycle: `futon4/holes/mission-lifecycle.md`; MAP = survey existing work, facts not design. Joe flagged this explicitly: *"be sure to include a formal MAP stage … this is the kind of thing where we want to be careful"* — much of the execution substrate already exists.)
 **Repo:** futon3c — the turn/execution path: `transport/http.clj` (`invoke-executor`, `handle-bell`, autobell-back, async-accept), `agency/turn_queue.clj` (durable per-agent queue + drainer-v2), `agents/tickle*` (self-trigger), `agency/clock_lineage.clj` (durable per-agent state precedent).
 **Spawned from:** a REPL design turn (Joe, 2026-06-30) loosely connected to **C-cascade-real** — the cascade is a DAG of cross-agent dependencies; if each agent could park-until-deps-ready and self-resume, the cascade flows autonomously instead of Joe hand-cranking each step. Sibling of [[E-crossed-bells]] (makes bell *threads* visible) — this makes a turn's *continuation* durable.
 
@@ -176,6 +178,6 @@ This is the piece that makes the continuation *visible where Joe works* — the 
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
 
-- [ ] Implement the ergonomic agent-facing entry for 'park me on these deps and resume' on the existing turn-queue/durable-state engine.
-- [ ] Demonstrate live: an agent parks its REPL turn until its dependencies return and self-resumes, with the continuation payload durable across turns (survives LRU…
+- [x] Implement the ergonomic agent-facing entry for 'park me on these deps and resume' on the existing turn-queue/durable-state engine. (d7210e59b `POST /api/alpha/park`; dea828a80 `agency_send.py --park`)
+- [x] Demonstrate live: an agent parks its REPL turn until its dependencies return and self-resumes, with the continuation payload durable across turns (survives LRU… (f3f4c77c4, f9b7fd4, e92763615; live-verified by Joe 2026-06-30, §7)
 - [ ] Cascade DAG consumer check: a cross-agent dependency chain flows without Joe hand-cranking each step.

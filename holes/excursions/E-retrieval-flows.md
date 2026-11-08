@@ -1,9 +1,11 @@
 # E-retrieval-flows — memory retrieval as an evolving-operator flow
 
-**Status:** OPENED 2026-07-25 (Joe's direction). Theory recovered from existing
+> **Closed 2026-11-08 (already done).** The v0-v3 prototypes ran (v1 combined-graph sweep with results EDN, v3 spectral classification and connectivity meter), Rung 4 landed with the exploration-mass floor and collapse battery, and the hand-off to Rob was taken over by the M-memory-retrieval WS6 whitepaper (docs/retrieval-whitepaper.md, frozen 2026-07-31, sending gate Joe); sending it and recording Rob's response belong to WS6, not to this excursion. Evidence: 9a7140990 (holes/labs/M-typed-memories/retrieval_flow_sweep_v1.bb, retrieval-flow-sweep-v1-results.edn), 35f1fef44 (Rung 4, E-dynamic-queries.md:397), 07aa3af + be93d0f (spectra, meter), docs/retrieval-whitepaper.md:3-5. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
+**Status:** DONE, closed 2026-11-08, see the closure note. (Was: OPENED 2026-07-25 (Joe's direction).) Theory recovered from existing
 documents, not reinvented; v0 operator-sweep prototype run same day.
 
-**VERDICT (2026-10-09, provisional):** OPEN — Opened 2026-07-25 with a v0 same-day prototype, but no closure or successor hand-off is recorded; the flow remains a proposal. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+**VERDICT:** DONE, closed 2026-11-08, see the closure note. Was (2026-10-09, provisional): OPEN — Opened 2026-07-25 with a v0 same-day prototype, but no closure or successor hand-off is recorded; the flow remains a proposal. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 
 ## Provenance
 
@@ -210,6 +212,6 @@ reproduction recipe).
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-5, medium confidence); not yet confirmed by the author._
 
-- [ ] Run the v1 sweep on the combined graph (phase-4 + live bootstrap attachments + six draft rewrite rules via shared trigger-class patterns)
-- [ ] Wire the sustaining-band language into Rung 4's battery spec (exploration-mass floor as coefficient-space constraint)
+- [x] Run the v1 sweep on the combined graph (phase-4 + live bootstrap attachments + six draft rewrite rules via shared trigger-class patterns) (9a7140990)
+- [x] Wire the sustaining-band language into Rung 4's battery spec (exploration-mass floor as coefficient-space constraint) (35f1fef44; E-dynamic-queries §Rung 4 verification)
 - [ ] Show the note and correspondence table to Rob via the WS6 whitepaper docs/retrieval-whitepaper.md and record his response

@@ -1,7 +1,9 @@
 # Excursion: E-crossed-bells — a bell router / making mesh conversation threads visible
 
+> **Closed 2026-11-08 (already done).** The bell router was built on 2026-06-11 and turned on by default on 2026-06-27: replies carry `:bellback-of` (`transport/http.clj:1748`), each delivered bell is framed as a NEW request or a REPLY with its bell id and says how to answer in-thread (`http.clj:5471-5485`), and `src/futon3c/agency/bell_router.clj` builds the conversation graph (open, answered, crossings), served live at `GET /api/alpha/coordination/threads`. Evidence: futon3c b4ed15f37, 8d3f2f221 (default ON), test `test/futon3c/agency/bell_router_test.clj`; the endpoint answered on 2026-11-08. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Date:** 2026-06-11
-**Status:** IDENTIFY (design sketched from the agents' perspective; not built). Thinking
+**Status:** done, closed 2026-11-08, see the closure note (was: IDENTIFY (design sketched from the agents' perspective; not built)). Thinking
 captured at Joe's request — "it's kind of its own separate issue."
 **Repo:** futon3c — the bell/mesh path: `transport/http.clj` (handle-bell + auto-bellback),
 `social/coordination_ledger.clj` (mesh edges), `agency/turn_queue.clj` (reply-routes).
@@ -121,5 +123,5 @@ delivered.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-2, low confidence); not yet confirmed by the author._
 
-- [ ] A bell router in futon3c gives each delivered bell a visible conversation thread
-- [ ] Bell attribution is visible to the receiving agent, closing the auto-bellback Caller gap
+- [x] A bell router in futon3c gives each delivered bell a visible conversation thread (b4ed15f37, 8d3f2f221)
+- [x] Bell attribution is visible to the receiving agent, closing the auto-bellback Caller gap (b4ed15f37; http.clj:5471-5485)

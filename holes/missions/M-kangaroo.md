@@ -1,7 +1,9 @@
 # M-kangaroo — Warm-pouch persistent agent processes
 
+> **Closed 2026-11-08 (already done).** Warm pouches (agent_pouch.clj, gated in make-claude-invoke-fn) are live: the running Agency JVM (pid 521296, cwd ~/code/futon3c) has `FUTON3C_KANGAROO=true`, and `GET /api/alpha/agents/claude-6/pouch` returned `kangaroo-enabled true, warm true, turn-count 2` on 2026-11-08; later work builds on live pouches (compaction, demux, prompt caching). The cold-fallback bad case is covered by the tests in the second checklist item but was not re-run live in this check, so the fourth box stays unticked. Evidence: c0f47dbfc (review: eviction guard, warm-path parity), 523be5ebd, 5184cc51e, 8e2d2aa4c; /proc/521296/environ. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 Date: 2026-06-10
-**Status:** OPEN — INSTANTIATE v1 LANDED on master + LIVE-VALIDATED 2026-06-10 (agent_pouch.clj, gate in make-claude-invoke-fn, flag FUTON3C_KANGAROO default OFF). VERIFY ✅ — live real-claude `feed-turn!` ×2: turn1 spawn 7.6s → "ONE", turn2 warm 3.4s → "TWO" (≈2.2× faster even fresh; gap scales with session size = the 5.8MB win). ACTIVATION: next restart (closure-capture, like Car-3) + cr-new agents + flag ON. Reviewed: OFF byte-for-byte cold; ON→cold-fallback on any Throwable; feed-turn! evicts pouch on failure (no desync).
+**Status:** DONE, closed 2026-11-08, see the closure note. (Was: OPEN — INSTANTIATE v1 LANDED on master + LIVE-VALIDATED 2026-06-10 (agent_pouch.clj, gate in make-claude-invoke-fn, flag FUTON3C_KANGAROO default OFF). VERIFY ✅ — live real-claude `feed-turn!` ×2: turn1 spawn 7.6s → "ONE", turn2 warm 3.4s → "TWO" (≈2.2× faster even fresh; gap scales with session size = the 5.8MB win). ACTIVATION: next restart (closure-capture, like Car-3) + cr-new agents + flag ON. Reviewed: OFF byte-for-byte cold; ON→cold-fallback on any Throwable; feed-turn! evicts pouch on failure (no desync).)
 
 ## Acceptance checklist (2026-09-30)
 

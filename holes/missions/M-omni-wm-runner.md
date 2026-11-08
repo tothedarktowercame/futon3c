@@ -1,5 +1,7 @@
 # M-omni-wm-runner — fold the WM full-loop runner into the serving JVM
 
+> **Closure check 2026-11-08: partly done.** Done (checked from git and files only): Parcel A's selection ladder, override pins, typed exhaustion and in-process seam with tests (futon2 9ab503bd6; test/futon2/aif/full_loop_runner_test.clj:549, :586, :623, :4334); Parcel B's single-flight service and endpoints with the 409 and registry-status test (b79773c8f, 8f4b5e655; test/futon3c/wm/runner_service_test.clj:319; transport/http.clj:13183-13192); README-ground-control rewritten to the endpoint (e725a9b66, :56-65); futon2 CLAUDE.md I-0 and the deps.edn `:wm-full-loop` alias marked retired for clicks (futon2 6d78c894d). In-process clicks have since run (e.g. `wm-click-f8569fae`, cohort 46, cited in futon2 M-formal-war-machine.md:1100). Remains: the Java-process-count check is only a static source check (`service-source-has-no-process-spawn-surface`, runner_service_test.clj:462), not a witnessed stubbed click; no record found of the canary click's roster-visibility and no-click-JVM observations; no cohort-46 charter recording the cutover epoch was found. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Status:** OPEN — chartered 2026-07-26; parcel review and live cutover remain
 
 Chartered 2026-07-26 (Joe, emacs-repl: "let's do the fold-in, *then* restart

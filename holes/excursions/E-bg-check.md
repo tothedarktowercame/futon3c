@@ -1,5 +1,7 @@
 # E-bg-check — verify durable bg-process after a JVM restart
 
+> **Closed 2026-11-08 (already done).** This is a runbook for a facility that exists and works: the check below passed on 2026-11-08 against the JVM restarted 2026-11-06 (pid 521296): `bg.py list` returned `{:ok true …}`, a marker job's parent pid was the JVM's, it exited 0, and `tail` showed both `bg-check-ok` and `bg-check-done`. The runbook stays usable after future restarts. Evidence: e36c400 (facility), scripts/bg.py, futon3c.agency.bg-process; run by c3b with jobs bg-1794177040531-55 and bg-1794177049719-56 (forgotten afterwards). Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Owner:** claude-4 · **Date:** 2026-06-27 · **Relates to:** `futon3c.agency.bg-process`, `scripts/bg.py`, commit `e36c400`, futon3c CLAUDE.md "Durable background work".
 
 **Purpose.** A 30-second smoke test to confirm the durable background-process facility is healthy in a freshly-restarted futon3c JVM, and that a launched process is parented to the JVM (so it will survive pouch teardown).
@@ -53,6 +55,6 @@ Any deviation (step 1 errors, parent ≠ JVM, no captured output) means the faci
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-1, high confidence); not yet confirmed by the author._
 
-- [ ] After a JVM restart: scripts/bg.py list loads the facility and a marker job launches
-- [ ] Verify the launched process's parent is the JVM pid and both output lines are captured
-- [ ] Report any deviation rather than relying on bg-process until fixed
+- [x] After a JVM restart: scripts/bg.py list loads the facility and a marker job launches (2026-11-08, JVM pid 521296 started 2026-11-06)
+- [x] Verify the launched process's parent is the JVM pid and both output lines are captured (2026-11-08: parent 521296 == JVM; tail showed both lines)
+- [x] Report any deviation rather than relying on bg-process until fixed (2026-11-08: no deviation)

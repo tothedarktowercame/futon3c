@@ -1,18 +1,20 @@
 # E-dynamic-queries — retrieval that changes its query operator
 
+> **Closed 2026-11-08 (already done).** All four rungs are implemented dark and verified (Rungs 1-3 on 2026-07-23, 24 tests / 159 assertions; Rung 4 by Codex-4 in 35f1fef44, owner review PASS on 2026-07-27). The Rung 2 calibration gate was left unmet by design (frozen sample 13 against a minimum of 20), and `holes/missions/M-memory-retrieval.md` (Interface 2, and its open n≥20 promotion criterion) now holds that gate, so promotion is that mission's decision, not open work here. Evidence: 35f1fef44; `test/futon3c/peripheral/dynamic_queries_test.clj`, `dynamic_queries_rung4_test.clj`; `scripts/run_dynamic_queries_rung2_demo.clj`. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Date chartered:** 2026-07-23
 **Type:** E-prefix excursion; bounded dark companion to
 `M-typed-memories` and `M-shared-memory-control-build-test`.
-**Status:** RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
+**Status:** done, closed 2026-11-08, see the closure note (was: RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
 RUNG 2 ONE-OUTCOME OPERATOR UPDATE IMPLEMENTED DARK OVER PHASE 6,
 CALIBRATION GATE NOT MET (2026-07-23). RUNG 4 IMPLEMENTED DARK +
 VERIFIED 2026-07-27 (Codex-4 `35f1fef`, owner review PASS; see §Rung 4
-verification) under M-memory-retrieval WS1.
+verification) under M-memory-retrieval WS1.)
 **Boundary:** this excursion may rank only inside the Phase 1–4 admissible
 dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
 mutate memory, alter shared receipts, or affect live mission ordering.
 
-**VERDICT (2026-10-09, provisional):** OPEN — Rungs 1/3/4 implemented and rung 4 verified, but the stated calibration gate was NOT met, so the excursion's own success bar is unmet. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
+**VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Rungs 1/3/4 implemented and rung 4 verified, but the stated calibration gate was NOT met, so the excursion's own success bar is unmet. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_)
 
 ## HEAD
 
@@ -447,5 +449,5 @@ access was disabled.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
 
-- [ ] Rung 2's calibration gate is met by the one-outcome operator update, or a recorded decision closes it
-- [ ] All four rungs are implemented and verified dark within the Phase 1-4 admissible-subgraph boundary (no gate changes)
+- [x] Rung 2's calibration gate is met by the one-outcome operator update, or a recorded decision closes it (decision recorded: gate moved to M-memory-retrieval Interface 2)
+- [x] All four rungs are implemented and verified dark within the Phase 1-4 admissible-subgraph boundary (no gate changes) (Rungs 1-3 verified 2026-07-23; Rung 4 35f1fef44)

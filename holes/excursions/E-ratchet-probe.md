@@ -1,6 +1,8 @@
 # E-ratchet-probe — does review pushback ratchet agent behavior?
 
-Status: **DESIGNED 2026-08-02 (Joe + claude-10). Never run live.**
+> **Closed 2026-11-08 (already done).** The probe ran two full live cycles on 2026-08-02/03, each with a correction leg and an unprompted probe leg, both classified `held-in-context` in the cycle records below; cycle 1 satisfied the gate on citing the ratchet. P2 (artifact-level ratchet) was not exercised in either cycle and stays untested until a natural occasion. Evidence: futon3c 74a3475d (cycle 1 correction), fee47c2b + 37149a3a (cycle 1 probe), c98bf2fa (cycle 2 correction), 046b6fb6 (cycle 2 probe); sections "Cycle 1" and "Cycle 2" of this doc. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
+Status: **DONE, closed 2026-11-08, see the closure note.** (Was: DESIGNED 2026-08-02 (Joe + claude-10), never run live; two cycles have since run, 2026-08-02/03.)
 Trigger for writing this: Joe, 2026-08-02 — "the author≠reviewer that
 we've been using for ages is starting to turn into a 'ratchet' …
 pushback to the LLM driving better behavior or a meta learning event —
@@ -9,7 +11,7 @@ haven't tested it live yet ever." Do not cite the ratchet as receipted
 practice (to Rob or anyone) until ≥1 completed cycle below has a
 classified outcome.
 
-**VERDICT (2026-10-09, provisional):** ACTIVE — Designed-never-run header, but appended cycle records show probe cycles run with classified outcomes (2026-08-03) and P2 still untested — investigation ongoing. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
+**VERDICT:** DONE, closed 2026-11-08, see the closure note. Was (2026-10-09, provisional): ACTIVE — Designed-never-run header, but appended cycle records show probe cycles run with classified outcomes (2026-08-03) and P2 still untested — investigation ongoing. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
 ## The claim under test
 
@@ -218,6 +220,6 @@ accordingly: gates and harness, not instruction.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-4, high confidence); not yet confirmed by the author._
 
-- [ ] Run at least one full live probe cycle of the designed experiment (review pushback → later unprompted behavior or a durable meta-learning artifact).
-- [ ] Classify the cycle's outcome by the three learning locations (L0–L4 / L-artifact) in writing.
-- [ ] Only after a classified cycle may the ratchet be cited as receipted practice.
+- [x] Run at least one full live probe cycle of the designed experiment (review pushback → later unprompted behavior or a durable meta-learning artifact). (74a3475d, fee47c2b; cycle 2 c98bf2fa, 046b6fb6)
+- [x] Classify the cycle's outcome by the three learning locations (L0–L4 / L-artifact) in writing. (both cycles classified held-in-context; fee47c2b, 046b6fb6)
+- [x] Only after a classified cycle may the ratchet be cited as receipted practice. (condition met by cycle 1, 2026-08-03)

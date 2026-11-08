@@ -1,7 +1,9 @@
 # Excursion: E-per-turn-isolation — REPL replies dropped when bells interleave
 
+> **Closed 2026-11-08 (already done).** Fix (1), unified admission, landed as E2: REPL `invoke-stream` turns go through the durable turn-queue and the same per-agent drainer as bells, and the event sink is installed inside the turn's `process-fn` on the drainer thread, so an overlapping bell cannot clear or take over it; both flags default on since 2026-06-14. Fix (2) was not built as a per-job sink, since the drainer's exclusivity removes the overlap it guarded against; the overlap case was live-verified at fable-2 (turn-delivery-invariants.md, E2 D3/D4) rather than by an automated overlap test. Evidence: dab2e76b7; src/futon3c/transport/http.clj:6934 (`repl-through-queue?`), :7111-7125; src/futon3c/agency/invariants.clj:13-20 (default true); src/futon3c/agency/turn_queue.clj:902 (`drainer-v2-enabled?` default true); holes/missions/turn-delivery-invariants.md:92-106; test/futon3c/transport/http_test.clj:474 (queued REPL stream keeps its own turn-id). Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Date:** 2026-06-05
-**Status:** IDENTIFY (failure mode PINNED in code + evidence; fix scoped, not built).
+**Status:** DONE, closed 2026-11-08, see the closure note (was: IDENTIFY; fix built as E2 in dab2e76b7).
 **Repo:** futon3c (the bug is in `transport/http.clj` invoke-stream + the registry event-sink; the
 downstream symptom is in `emacs/claude-repl.el`).
 **Spawned from:** Joe observed a REPL reply that never reached him (`*claude-repl:claude-6*`), then similar
@@ -89,5 +91,5 @@ load-bearing pair.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-4, medium confidence); not yet confirmed by the author._
 
-- [ ] Build the scoped server-side fix in futon3c transport/http.clj unifying REPL-stream and bell admission through one per-agent path.
+- [x] Build the scoped server-side fix in futon3c transport/http.clj unifying REPL-stream and bell admission through one per-agent path. (dab2e76b7)
 - [ ] Demonstrate with a test that an overlapping bell invocation on the same agent no longer drops or cross-routes the REPL turn's streamed reply.

@@ -1,5 +1,7 @@
 # E-unified-live-surface — fold the live trackers into one CLJS app
 
+> **Closure check 2026-11-08: partly done.** Done: the chartered first slice O1 (`/live` route, JVM-served live pages, tiles and links; futon4 fccca05) and the O2 native panels (cascade summary, tickets, agent-to-mission lineage; futon4 0cc27b1), both in dev/web/webarxana/src/webarxana/client/live.cljs and reviewed 2026-07-05 (section "O1 + O2 LANDED + REVIEWED"). Remains: nothing listens on :3100 today (`ss -ltn`, 2026-11-08), so the O1 acceptance ("one bookmark shows all four surfaces") does not hold until WebArxana is served again; the doc's own unclaimed O2 continuation (held, holes, arrows panels; EFE overlay as a CLJS layer); a recorded decision on O3; and the evidence panel, gated on E-evidence-flow. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
+
 **Status: IDENTIFY (2026-07-05). Proposed by Joe (emacs-repl): "fold these live
 surfaces into one of the cljs apps (:3100 / /wa#/) — and combine them along with the
 evidence landscape viewer into one unified CLJS app." Charter by claude-18.
