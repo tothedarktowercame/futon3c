@@ -1,0 +1,30 @@
+{:mission "M-formal-arxana"
+ :increment :F4b
+ :recorded-at "2026-11-09T00:20:00.000Z"
+ :commits {:futon3c "e8b72784998f1dc942493704d5212217eba77fcb"
+           :futon3c-base "6b2f2bbdaa49e948da27e962d5c81ecbd5bad6ac"}
+ :operation {:dynamics {:id "formal-arxana/bounded-read" :version 1}
+             :effect "read-only role-reverse graph query"
+             :bound {:query/limit-max 10}
+             :harmless-because "It reads immutable ids and writes only attributable receipts."}
+ :checks
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f4-test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.compile-test"
+   :result "22 tests, 293 assertions, 0 failures, 0 errors"}
+  {:command "clj-kondo --lint <six changed Clojure files>"
+   :result "0 errors, 0 warnings"}
+  {:command "emacs -Q --batch -l futon4/dev/check-parens.el -- <six changed files>"
+   :result "pass"}]
+ :acceptance {:stored-capability-required true
+              :stored-admission-required true
+              :candidate-expected-revision-required true
+              :success-outcome :ran-with-output
+              :refusal-cases [:capability-missing :wrong-principal
+                              :wrong-dynamics :deferred-only
+                              :different-candidate :stale-revision]
+              :every-attempt-receipted true
+              :f4a-records-byte-identical true
+              :receipt-visible-in-composite-view true}
+ :not-run ["full Arxana suite (focused F4, C1 and Compile namespaces run)"
+           "live service reload/restart"
+           "non-read-only operation"
+           "Emacs view/demo (deferred to F4c)"]}
