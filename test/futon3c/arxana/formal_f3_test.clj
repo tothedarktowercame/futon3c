@@ -79,6 +79,11 @@
             (is (= "futon3c.arxana/evidence-adapter" (:producer stored)))
             (is (= (set (map :sha256 (:inputs run)))
                    (set (map :sha256 (:source-refs stored)))))))
+        (testing "kernel evidence from anyone but the adapter is refused"
+          (let [forged (assoc (:attestation kernel) :producer "someone-else")
+                r (dispatch cfg "forged-kernel" :evidence/append {:record forged})]
+            (is (= :arxana.evidence/kernel-without-adapter
+                   (get-in r [:error :error/code])) (pr-str r))))
         (testing "a failed run is retained as contradicted kernel evidence"
           (let [output "synthetic failing gate output\n"
                 failed (assoc run :outcome :failed :exit-status 1 :output output

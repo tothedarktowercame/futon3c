@@ -52,11 +52,27 @@
                       {:error :arxana.mark-occurrence/id-mismatch})))
     computed))
 
+(def kernel-evidence-principals
+  "Principals allowed to append basis :kernel evidence. Lean results enter
+  Arxana only through the evidence adapter (arxana-wiring.edn: lean-kernel ->
+  evidence-adapter -> write-ports); any other writer is refused here, at the
+  validity authority."
+  #{"formal-f3a/evidence-adapter"})
+
+(defn- check-kernel-provenance! [envelope operation record]
+  (when (and (= :evidence/append operation)
+             (= :kernel (:basis record))
+             (not (kernel-evidence-principals (:principal/id envelope))))
+    (throw (ex-info "kernel evidence must come through the evidence adapter"
+                    {:error :arxana.evidence/kernel-without-adapter
+                     :principal/id (:principal/id envelope)}))))
+
 (defn execute
   "Validate at the JVM authority, then submit only the validated record to
   futon1b's reserved atomic route."
   [graph-store envelope operation record]
   (try
+    (check-kernel-provenance! envelope operation record)
     (let [validated (case operation
                       :clusion/assert (checked-clusion record)
                       :evidence/append (checked-attestation record)
