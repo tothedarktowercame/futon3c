@@ -1,8 +1,10 @@
 (ns futon3c.agency.clock-decision
   "Durable decisions at turn admission and on Claude editing activity.
    Decisions are append-only; an activity decision supplements the admission
-   decision for the same turn. Publish RAM state only after verified persistence."
-  (:require [clojure.java.io :as io]
+   decision for the same turn. Publish RAM state only after verified persistence:
+   in futon1b, or, while futon1b is down, in the local outbox (see `spool!`)."
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.clock-lineage :as lineage]
             [futon3c.evidence.backend]
@@ -57,12 +59,31 @@
   (or (busy-write-codes (:error/code result))
       (busy-read-codes (get-in result [:invariant/violation :error/code]))))
 
+(defn- store-down?
+  "True when futon1b refused the connection, as opposed to answering slowly.
+  A read that could not connect is :futon1b-unreachable with acquired outcome
+  :unavailable (a timeout is :timeout); a write is :store-unreachable."
+  [data]
+  (or (= :unavailable (get-in data [:read :transport/acquired-outcome]))
+      (= :store-unreachable (get-in data [:receipt :error/code]))
+      (= :unavailable (get-in data [:receipt :invariant/violation
+                                     :transport/acquired-outcome]))))
+
 (defn- store-busy-error [what cause-message data cause]
   (ex-info (str "Turn not started: futon1b was busy while " what
                 " (" cause-message "). Nothing was recorded, so sending the"
                 " message again is safe.")
-           (assoc data :error/code :clock/store-busy)
+           (assoc data :error/code :clock/store-busy
+                  :clock/store-down? (store-down? data))
            cause))
+
+(def ^:dynamic *fail-fast-when-down*
+  "Bound true by `record!` when the decision can be spooled to the outbox: a
+  futon1b that refuses connections is then reported at once instead of being
+  waited out on the busy schedule (2026-11-08: futon1b was down 08:09-15:18;
+  waiting ten minutes per turn and then refusing lost a finished Codex job's
+  completion and a park wake)."
+  false)
 
 (def ^:dynamic *store-busy-waits-ms*
   "Pauses between attempts to record a turn's admission decision while futon1b
@@ -109,7 +130,9 @@
                                  (= :clock/store-busy code) {:busy e}
                                  :else (throw e)))))]
              (if-let [e (:busy outcome)]
-               (if-let [wait-ms (first @(:waits budget))]
+               (if-let [wait-ms (when-not (and *fail-fast-when-down*
+                                               (:clock/store-down? (ex-data e)))
+                                  (first @(:waits budget)))]
                  (do
                    (swap! (:waits budget) next)
                    (check-deadline!)
@@ -331,14 +354,127 @@
        (UUID/nameUUIDFromBytes
         (.getBytes (pr-str [agent-id session-id turn-id phase event-id]) "UTF-8"))))
 
+;; ---------------------------------------------------------------------------
+;; Outbox: decisions made while futon1b is down
+;;
+;; A decision is bookkeeping about a turn, not the turn. When futon1b refuses
+;; connections and this JVM already holds the session's clock, the decision is
+;; written to a local file (write to temp, then atomic rename) and the turn
+;; goes ahead. `replay-outbox!` appends the files to futon1b under their
+;; original stable ids once it answers again; a duplicate id means an earlier
+;; replay landed. Without a clock in RAM there is nothing safe to decide from,
+;; so admission still refuses as before.
+
+(def ^:dynamic *outbox-dir*
+  (or (System/getenv "FUTON3C_CLOCK_OUTBOX")
+      (str (System/getProperty "user.home") "/code/storage/clock-outbox")))
+
+(defonce ^:private outbox-lock (Object.))
+
+(defn- outbox-file [eid] (io/file *outbox-dir* (str eid ".edn")))
+
+(defn- decision-envelope [agent-id session-id turn-id eid decision]
+  {:evidence/id eid
+   :evidence/subject {:ref/type :agent :ref/id agent-id}
+   :evidence/type :coordination :evidence/claim-type :step
+   :evidence/author agent-id :evidence/at (:decided-at decision)
+   :evidence/session-id (or session-id turn-id)
+   :evidence/tags [:clock-decision]
+   :evidence/body decision})
+
+(defn- write-outbox! [envelope]
+  (locking outbox-lock
+    (let [f (outbox-file (:evidence/id envelope))]
+      (when-not (.exists f)
+        (io/make-parents f)
+        (let [tmp (io/file (str (.getPath f) ".tmp"))]
+          (spit tmp (pr-str envelope))
+          (java.nio.file.Files/move
+           (.toPath tmp) (.toPath f)
+           (into-array java.nio.file.CopyOption
+                       [java.nio.file.StandardCopyOption/ATOMIC_MOVE]))))
+      (edn/read-string (slurp f)))))
+
+(defn outbox-entries
+  "Envelopes waiting in the outbox, oldest decision first."
+  []
+  (locking outbox-lock
+    (->> (.listFiles (io/file *outbox-dir*))
+         (filter #(.endsWith (.getName ^java.io.File %) ".edn"))
+         (map #(edn/read-string (slurp %)))
+         (sort-by #(clock/decision-order (:evidence/body %)))
+         vec)))
+
+(defn replay-outbox!
+  "Append outboxed decisions to BACKEND under their stable ids, deleting each
+  file once futon1b holds it. Stops at the first failure and leaves the rest.
+  Returns {:replayed n :remaining m}."
+  [backend]
+  (locking outbox-lock
+    (let [entries (outbox-entries)
+          replayed (reduce (fn [n envelope]
+                             (let [r (boundary/append! backend envelope)]
+                               (if (or (:ok r) (= :duplicate-id (:error/code r)))
+                                 (do (io/delete-file (outbox-file (:evidence/id envelope)) true)
+                                     (inc n))
+                                 (reduced n))))
+                           0 entries)]
+      {:replayed replayed :remaining (- (count entries) replayed)})))
+
+(defn- replay-outbox-quietly! [backend]
+  (when (seq (.listFiles (io/file *outbox-dir*)))
+    (try (let [{:keys [replayed remaining]} (replay-outbox! backend)]
+           (when (pos? replayed)
+             (println (str "[clock-decision] replayed " replayed
+                           " outboxed decision(s) to futon1b; " remaining " left"))
+             (flush)))
+         (catch Throwable t
+           (println (str "[clock-decision] outbox replay deferred: " (ex-message t)))
+           (flush)))))
+
+(defn- spool!
+  "Decide from the clock this JVM holds and write the decision to the outbox."
+  [{:keys [agent-id session-id turn-id] :as context} cause]
+  (let [eid (decision-id context)
+        decision (merge (select-keys context [:agent-id :session-id :turn-id
+                                              :job-id :surface :phase :event-id])
+                        {:decided-at (str (Instant/now)) :decision-id eid
+                         :persisted-to :outbox}
+                        (decide context))
+        envelope (write-outbox! (decision-envelope agent-id session-id turn-id eid decision))
+        persisted (update (:evidence/body envelope) :clock #(merge (clock/empty-clock) %))]
+    (println (str "[clock-decision] futon1b down; decision " eid " for agent="
+                  agent-id " turn=" turn-id " written to the outbox ("
+                  (ex-message cause) ")"))
+    (flush)
+    (clock/set-decision! agent-id session-id persisted)
+    persisted))
+
+(declare record-durably!)
+
 (defn record!
   "Compute and durably append a decision. Stable event identity makes retries
-   idempotent. Returns the persisted decision, then projects it to clock-store."
+   idempotent. Returns the persisted decision, then projects it to clock-store.
+   If futon1b is down and this JVM holds the session's clock, the decision goes
+   to the outbox instead and the turn is not refused."
   [{:keys [agent-id turn-id session-id surface] :as context}]
   (when-not (and (seq agent-id) (seq turn-id) (seq surface))
     (throw (ex-info "Clock decision lacks turn identity"
                     {:error/code :clock/missing-identity
                      :agent-id agent-id :turn-id turn-id :surface surface})))
+  (let [spoolable? (some? (clock/stored-state agent-id session-id))]
+    (try
+      (binding [*fail-fast-when-down* spoolable?]
+        (record-durably! context))
+      (catch clojure.lang.ExceptionInfo e
+        (if (and spoolable?
+                 (= :clock/store-busy (:error/code (ex-data e)))
+                 (:clock/store-down? (ex-data e)))
+          (spool! context e)
+          (throw e))))))
+
+(defn- record-durably!
+  [{:keys [agent-id turn-id session-id] :as context}]
   (with-store-busy-budget
    (fn []
     (let [backend (evidence-store (:evidence-store context))
@@ -346,6 +482,7 @@
             (busy-read #(restore! backend agent-id session-id)))
         eid (decision-id context)
         existing (busy-read #(store/get-entry* backend eid))
+        _ (replay-outbox-quietly! backend)
         decision (or (:evidence/body existing)
                      (merge (select-keys context [:agent-id :session-id :turn-id
                                                   :job-id :surface :phase :event-id])
@@ -353,13 +490,7 @@
                             (decide context)))
         result (when-not existing
                  (boundary/append!
-                  backend {:evidence/id eid
-                           :evidence/subject {:ref/type :agent :ref/id agent-id}
-                           :evidence/type :coordination :evidence/claim-type :step
-                           :evidence/author agent-id :evidence/at (:decided-at decision)
-                           :evidence/session-id (or session-id turn-id)
-                           :evidence/tags [:clock-decision]
-                           :evidence/body decision}))
+                  backend (decision-envelope agent-id session-id turn-id eid decision)))
         duplicate (when (= :duplicate-id (:error/code result))
                       (busy-read #(store/get-entry* backend eid)))
         persisted (update (or (:evidence/body duplicate) decision)
