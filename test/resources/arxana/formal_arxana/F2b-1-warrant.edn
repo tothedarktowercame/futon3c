@@ -1,0 +1,44 @@
+{:increment :F2b-1
+ :date "2026-11-08"
+ :commits
+ {:futon3c "d492ce558"
+  :futon1b "2213797a3261a561a755e6408b1be10fbd00cacf"
+  :futon1b-change :none}
+ :composition
+ {:algorithm :symbolic-original-codepoint-anchors
+  :sequential-valid-patches :total
+  :far-apart-hunks-preserved? true
+  :provenance :per-hunk-source-operation-ids
+  :property-trials 600
+  :property "apply(base, compose-all(base, [p1 p2])) = apply(apply(base,p1),p2)"}
+ :offline-replay
+ {:online-applications 11
+  :online-authors 2
+  :includes [:inside-prior-insertion :deletion :conflict :choice]
+  :offline-hunks 5
+  :one-patch {:rebased-nonconflicting 4 :conflicting 1 :alternatives 2}
+  :sequential {:rebased 4 :conflicting 1 :alternatives 2}
+  :lost-intents 0
+  :verdict "single CAS sequencer suffices for offline replay (no intent lost)"
+  :evidence-doc "docs/arxana/F2b1-offline-replay.md"}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f2-test -n futon3c.arxana.text-rebase-test -n futon3c.arxana.formal-c1-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 17 :assertions 3951 :failures 0 :errors 0}}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :suite-scope
+ {:run [:formal-f2 :text-rebase :formal-c1]
+  :not-run :full-arxana-suite
+  :reason "packet explicitly requests the focused namespaces"}
+ :known-open
+ {:post-cas-pre-application-crash :typed-application-chain-gap}
+ :process-safety
+ {:shared-ports-touched []
+  :private-store-ports :ephemeral
+  :persistent-processes-left-running []}
+ :deferred [:F2b-2-scope-relocation-copy-ambiguity-and-promotion
+            :F2c-emacs-client
+            :F2d-vscode-client]}
