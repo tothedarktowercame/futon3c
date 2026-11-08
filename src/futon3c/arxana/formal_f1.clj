@@ -32,7 +32,7 @@
                 {:role :target :kind :external-ref :target (golden-targets turn-id)}]
     :asserted-content {:reading/state :candidate}}))
 
-(defn- attestation [analysis claim fragment]
+(defn- attestation [analysis claim fragment mark-records]
   (records/make-attestation
    {:subject-clusion-id (:id claim)
     :producer (:labeller analysis)
@@ -41,9 +41,10 @@
              :parameters {:interpretation-version (:interpretation_version analysis)
                           :vocabulary-version (:vocabulary_version analysis)}}
     :content {:rationale (:rationale fragment) :target (:target fragment)}
-    :source-refs [{:evidence/id (:evidence_id analysis)
-                   :source/sha256 (:source_sha256 analysis)
-                   :range [(:start fragment) (:end fragment)]}]}))
+    :source-refs (into [{:evidence/id (:evidence_id analysis)
+                         :source/sha256 (:source_sha256 analysis)
+                         :range [(:start fragment) (:end fragment)]}]
+                       (map (fn [mark] {:mark-occurrence/id (:id mark)}) mark-records))}))
 
 (defn- resolution [claim state]
   (records/make-clusion
@@ -77,17 +78,19 @@
 (defn plan-turn
   "Pure deterministic plan from one settled Xiang turn and its analysis."
   [turn-id turn analysis]
-  (let [fragments (for [sentence (:sentences analysis)
+  (let [mark-records (marks turn-id (:source_text turn))
+        fragments (for [sentence (:sentences analysis)
                         fragment (:fragments sentence)]
                     [(:id sentence) fragment])
         claims (mapv (fn [[sid f]] (interpretation turn-id sid (:intent f))) fragments)
-        attestations (mapv (fn [[_ f] c] (attestation analysis c f)) fragments claims)
+        attestations (mapv (fn [[_ f] c] (attestation analysis c f mark-records))
+                           fragments claims)
         resolutions (mapv #(resolution % :unique) claims)]
     {:turn/id turn-id
      :artifact/id (str "xiang:" turn-id)
      :logical-revision/id (str turn-id "@settled")
      :bytes (.getBytes ^String (:source_text turn) "UTF-8")
-     :marks (marks turn-id (:source_text turn))
+     :marks mark-records
      :references [(external-reference turn-id :turn turn-id (:source_sha256 analysis))
                   (external-reference turn-id :interpreter (:labeller analysis)
                                       (:request_sha256 analysis))]
