@@ -76,6 +76,18 @@
     :projection [:operation :rule/id :rule/version :action-intents :result/status
                  :result/truncation :result/total [:projection/fragments] :drops]}
 
+   :formal-f3/correspondence
+   {:schema-version 1 :required #{:manifest/revision-id}
+    :allowed #{:manifest/revision-id}
+    :projection [:operation :rule/id :rule/version :result/status
+                 [:projection/fragments] :drops]}
+
+   :formal-f3/manifestations
+   {:schema-version 1 :required #{:manifest/revision-id}
+    :allowed #{:manifest/revision-id}
+    :projection [:operation :rule/id :rule/version :result/status
+                 [:projection/fragments] :drops]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}
