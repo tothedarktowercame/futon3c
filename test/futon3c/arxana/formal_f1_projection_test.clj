@@ -75,6 +75,16 @@
                                      (:projection/fragments linear)))))
         (is (every? #(seq (:text %)) (:projection/fragments linear))
             "linear fragments carry the exported prose with marks inline")
+        (testing "each reading is placed inside its fragment's text"
+          (let [readings (mapcat :readings (:projection/fragments linear))]
+            (is (= (set (mapcat :interpretation/ids (:projection/fragments linear)))
+                   (set (map :interpretation/id readings))))
+            (doseq [f (:projection/fragments linear)
+                    {[s e] :range :as r} (:readings f)
+                    :let [n (.codePointCount ^String (:text f) 0 (count (:text f)))]]
+              (is (<= 0 s e n) (pr-str r))
+              (is (< s e) (pr-str r))
+              (is (keyword? (:intent r)) (pr-str r)))))
         (is (= expected (projected-ids outline)))
         (let [intent-of (into {} (map (juxt :interpretation/id :intent)
                                       (:projection/fragments outline)))

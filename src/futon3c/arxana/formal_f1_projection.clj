@@ -5,7 +5,10 @@
 
 (def rules
   {:formal-f1/linear
-   {:rule/id :formal-f1/linear :rule/version 1
+   ;; Version 2 (claude-13, 2026-11-08): each fragment lists its readings
+   ;; with their range inside the fragment text, intent and verdicts, so a
+   ;; client can mark the reading where it sits instead of the whole turn.
+   {:rule/id :formal-f1/linear :rule/version 2
     :drops [:graph-adjacency :resolver-diagnostics :presentation-layout]}
    :formal-f1/outline
    {:rule/id :formal-f1/outline :rule/version 1
@@ -93,7 +96,23 @@
                          mark-ids (mapv :mark-occurrence/id (:marks turn))]
                      ;; Resolve every emitted id through the public port.
                      (doseq [id (concat interp-ids mark-ids)] (get-record read! id))
-                     {:fragment/id (str "linear:" (:turn/id turn))
+                     {:readings
+                      (mapv (fn [{:keys [clusion/id range]}]
+                              (let [record (get-record read! id)
+                                    [turn-start] (:range turn)]
+                                {:interpretation/id id
+                                 :range [(- (first range) turn-start)
+                                         (- (second range) turn-start)]
+                                 :intent (some #(when (= :intent (:role %))
+                                                  (get-in % [:target :intent/id]))
+                                               (:endpoints record))
+                                 :verdicts (mapv :verdict
+                                                 (:result/assessments
+                                                  (graph read! {:query/type :assessments
+                                                                :subject/id id
+                                                                :query/limit 200})))}))
+                            (:interpretations turn))
+                      :fragment/id (str "linear:" (:turn/id turn))
                       :record/ids (vec (concat mark-ids interp-ids))
                       :turn/id (:turn/id turn)
                       :source/revision-id (:artifact/revision-id manifest)
