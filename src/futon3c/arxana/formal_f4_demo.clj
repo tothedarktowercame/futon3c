@@ -1,6 +1,7 @@
 (ns futon3c.arxana.formal-f4-demo
   "Private Formal Arxana F4 demonstration on loopback 7089."
-  (:require [futon3c.arxana.formal-f1-demo :as base]
+  (:require [futon3c.arxana.artifact :as artifact]
+            [futon3c.arxana.formal-f1-demo :as base]
             [futon3c.arxana.formal-f4 :as f4]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.service :as service])
@@ -18,11 +19,20 @@
         claim (first (:claims turn))
         evidence (first (filter #(= (:subject-clusion-id %) (:id claim))
                                 (:attestations turn)))
-        seed (call! cfg "f4-demo:seed" :revision/ingest
-                    {:artifact/id (:artifact/id turn)
-                     :bytes (:bytes turn)
-                     :media-type "text/plain; charset=utf-8"
-                     :expected/revision-id nil})
+        ;; F1's materialiser already made the turn's bytes the artifact head
+        ;; (byte revisions go through futon1b's CAS since 2390fcc03); seed
+        ;; only when it has not.
+        byte-revision (artifact/revision-id-for-bytes (:bytes turn))
+        head (get-in (call! cfg "f4-demo:head" :revision/head
+                            {:artifact/id (:artifact/id turn)})
+                     [:ok :head/revision-id])
+        seed (if (= head byte-revision)
+               {:ok {:artifact/revision-id head}}
+               (call! cfg "f4-demo:seed" :revision/ingest
+                      {:artifact/id (:artifact/id turn)
+                       :bytes (:bytes turn)
+                       :media-type "text/plain; charset=utf-8"
+                       :expected/revision-id head}))
         revision (get-in seed [:ok :artifact/revision-id])
         plan (f4/build-plan claim evidence revision)
         writes (f4/materialize! #(service/dispatch cfg %) plan)
