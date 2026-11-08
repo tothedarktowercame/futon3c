@@ -19,6 +19,7 @@
             [futon3c.arxana.formal-f5-query :as f5-query]
             [futon3c.arxana.formal-f5-render :as f5-render]
             [futon3c.arxana.formal-f6 :as f6]
+            [futon3c.arxana.formal-f6-page :as f6-page]
             [futon3c.arxana.journal :as journal]
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
@@ -358,6 +359,15 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
                                 (f6/argument-view read! (:argument/id body)))))
+
+           (= op :formal-f6/page)
+           (let [response (dispatch cfg {:protocol/version env/protocol-version
+                                         :message/id (str (:message/id ok) ":argument")
+                                         :operation :formal-f6/argument
+                                         :principal/id "formal-f6/projector"
+                                         :body {:argument/id (:argument/id body)}})]
+             (env/response ok (with-semantic-digest op
+                                (f6-page/project (:ok response)))))
 
            (contains? #{:formal-f6/move :formal-f6/re-support} op)
            (let [call! (fn [call-op call-body suffix]

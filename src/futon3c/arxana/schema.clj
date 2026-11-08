@@ -141,6 +141,10 @@
     :projection [:operation :argument/id [:items] [:supports] [:current/support-ids]
                  :result/status :drops]}
 
+   :formal-f6/page
+   {:schema-version 1 :required #{:argument/id} :allowed #{:argument/id}
+    :projection [:operation :argument/id :html [:item/ids] [:support/ids] :result/status]}
+
    :formal-f6/move
    {:schema-version 1
     :required #{:argument/id :item/id :zone :order :placed-at}

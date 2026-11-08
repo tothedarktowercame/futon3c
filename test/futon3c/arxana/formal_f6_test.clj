@@ -166,3 +166,16 @@
          (:error (ex-data
                   (try (f6/item :bad :diagram {:text "x" :layout {:x 3}} [])
                        (catch clojure.lang.ExceptionInfo e e)))))))
+
+(deftest page-operation-projects-the-public-stored-view
+  (with-stack
+    (fn [cfg]
+      (let [plan (fixture! cfg) aid (get-in plan [:argument :id])
+            page (call cfg "page:real-store" :formal-f6/page "f6-test" {:argument/id aid})
+            view (view cfg plan "page-source")]
+        (is (= :complete (get-in page [:ok :result/status])))
+        (is (= (set (map :record/id (get-in view [:ok :items])))
+               (set (get-in page [:ok :item/ids]))))
+        (doseq [row (get-in view [:ok :items])]
+          (is (re-find (re-pattern (str "data-record-id='" (:record/id row) "'"))
+                       (get-in page [:ok :html]))))))))
