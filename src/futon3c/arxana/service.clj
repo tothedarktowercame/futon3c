@@ -365,9 +365,29 @@
                                          :message/id (str (:message/id ok) ":argument")
                                          :operation :formal-f6/argument
                                          :principal/id "formal-f6/projector"
-                                         :body {:argument/id (:argument/id body)}})]
+                                         :body {:argument/id (:argument/id body)}})
+                 argument (:ok response)
+                 diagram (first (filter #(= :diagram (get-in % [:record :asserted-content :item/kind]))
+                                        (:items argument)))
+                 referenced (get-in diagram [:record :asserted-content :record/ids])
+                 records (mapv (fn [id]
+                                 (:ok (dispatch cfg {:protocol/version env/protocol-version
+                                                     :message/id (str (:message/id ok) ":record:" id)
+                                                     :operation :entity/get
+                                                     :principal/id "formal-f6/projector"
+                                                     :body {:entity/id id}}))) referenced)
+                 panel-id (fn [panel]
+                            (some #(when (= panel (get-in % [:record :asserted-content :entity/id]))
+                                     (get-in % [:record :id])) records))
+                 geometry (:ok (dispatch cfg {:protocol/version env/protocol-version
+                                               :message/id (str (:message/id ok) ":geometry")
+                                               :operation :geometry/render
+                                               :principal/id "formal-f6/projector"
+                                               :body {:value/id :neg-one
+                                                      :cartesian/panel-id (panel-id :panel/cartesian)
+                                                      :angular/panel-id (panel-id :panel/angular)}}))]
              (env/response ok (with-semantic-digest op
-                                (f6-page/project (:ok response)))))
+                                (f6-page/project argument geometry))))
 
            (contains? #{:formal-f6/move :formal-f6/re-support} op)
            (let [call! (fn [call-op call-body suffix]

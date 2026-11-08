@@ -15,11 +15,15 @@
         old (support "support-old" "diagram" "old-claim" false "joe" "changed proof target")
         current (support "support-new" "diagram" "claim" true "joe" "cube is current")
         view {:argument/id "argument" :items [diagram claim] :supports [old current]}
-        a (page/project view) b (page/project (assoc view :items [claim diagram]))]
+        geometry {:panels {:cartesian "<section><svg data-record-id='member-i'></svg></section>"
+                           :angular "<section><svg data-record-id='fibre-square'></svg></section>"}
+                  :geometry/record-ids ["member-i" "fibre-square"]}
+        a (page/project view geometry) b (page/project (assoc view :items [claim diagram]) geometry)]
     (is (= (:html a) (:html b)))
     (is (re-find #"<aside id=margin.*data-record-id='diagram'" (:html a)))
-    (is (re-find #"supports → claim" (:html a)))
-    (is (re-find #"formerly supported old-claim, changed by joe: changed proof target" (:html a)))
-    (is (not (re-find #"supports → old-claim" (:html a))))
+    (is (re-find #"supports “claim”" (:html a)))
+    (is (re-find #"formerly supported “old-claim”, changed by joe: changed proof target" (:html a)))
+    (is (not (re-find #"supports “old-claim”" (:html a))))
+    (is (re-find #"data-record-id='member-i'" (:html a)))
     (doseq [id ["diagram" "claim" "support-old" "support-new"]]
       (is (re-find (re-pattern (str "data-record-id='" id "'")) (:html a))))))

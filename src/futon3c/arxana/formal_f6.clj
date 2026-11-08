@@ -127,8 +127,13 @@
                      (map :id) set)]
     {:result/status :complete :argument/id argument-id :argument argument
      :items items
-     :supports (mapv (fn [record] {:record/id (:id record) :record record
-                                   :current? (contains? current (:id record))}) supports)
+     :supports (mapv (fn [record]
+                       (let [successions (mapv #(read-record read! %)
+                                               (reverse-ids read! [:f6/re-supports 1]
+                                                            :predecessor (:id record) :desc))]
+                         {:record/id (:id record) :record record
+                          :current? (contains? current (:id record))
+                          :supersession (first successions)})) supports)
      :current/support-ids (vec (sort current))
      :drops [:html :pixel-layout :editor-state]}))
 

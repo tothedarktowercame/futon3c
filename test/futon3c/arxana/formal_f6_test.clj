@@ -171,11 +171,46 @@
   (with-stack
     (fn [cfg]
       (let [plan (fixture! cfg) aid (get-in plan [:argument :id])
-            page (call cfg "page:real-store" :formal-f6/page "f6-test" {:argument/id aid})
-            view (view cfg plan "page-source")]
+            diagram (get-in plan [:items :diagram]) cube (get-in plan [:items :cube-claim])
+            page! #(call cfg (str "page:real-store:" %) :formal-f6/page "f6-test" {:argument/id aid})
+            page (page! "initial") view (view cfg plan "page-source")
+            _ (doseq [record (reverse (:records plan))]
+                (call cfg (str "reverse-replay:" (:id record)) :clusion/assert "f6-test"
+                      {:record record}))
+            replayed (page! "reverse-replayed")
+            slice (fn [html start end]
+                    (subs html (.indexOf html start) (.indexOf html end)))
+            initial-main (slice (get-in page [:ok :html]) "<main id=main>" "</main>")
+            _ (call cfg "page:move" :formal-f6/move "joe"
+                    {:argument/id aid :item/id (:id diagram) :zone :margin :order 8
+                     :placed-at "2026-11-08T12:00:00.000Z"})
+            moved (page! "moved")
+            moved-main (slice (get-in moved [:ok :html]) "<main id=main>" "</main>")
+            moved-margin (slice (get-in moved [:ok :html]) "<aside id=margin" "</aside>")
+            old-support (first (filter #(and (:current? %)
+                                             (= (:id diagram)
+                                                (get-in (first (filter (fn [e] (= :supporting-content (:role e)))
+                                                                       (get-in % [:record :endpoints])))
+                                                        [:target :clusion/id])))
+                                       (get-in view [:ok :supports])))
+            changed (call cfg "page:resupport" :formal-f6/re-support "joe"
+                          {:argument/id aid :supporting-content/id (:id diagram)
+                           :supported-claim/id (:id cube) :reason "cube replaces square"
+                           :changed-at "2026-11-08T12:00:01.000Z"})
+            after (page! "resupported")
+            after-margin (slice (get-in after [:ok :html]) "<aside id=margin" "</aside>")]
         (is (= :complete (get-in page [:ok :result/status])))
+        (is (= (get-in page [:ok :html]) (get-in replayed [:ok :html])))
         (is (= (set (map :record/id (get-in view [:ok :items])))
                (set (get-in page [:ok :item/ids]))))
         (doseq [row (get-in view [:ok :items])]
           (is (re-find (re-pattern (str "data-record-id='" (:record/id row) "'"))
-                       (get-in page [:ok :html]))))))))
+                       (get-in page [:ok :html]))))
+        (is (re-find (re-pattern (str "data-record-id='" (:id diagram) "'")) initial-main))
+        (is (not (re-find (re-pattern (str "data-record-id='" (:id diagram) "'")) moved-main)))
+        (is (re-find (re-pattern (str "data-record-id='" (:id diagram) "'")) moved-margin))
+        (is (re-find (re-pattern (str "data-record-id='" (get-in changed [:ok :support/id]) "'")) after-margin))
+        (is (re-find #"formerly supported.*changed by joe: cube replaces square" after-margin))
+        (is (not (re-find (re-pattern (str "class=support data-record-id='" (:record/id old-support) "'"))
+                          after-margin)))
+        (is (re-find #"data-record-id='arxana:clusion:sha256:" after-margin))))))
