@@ -1,0 +1,26 @@
+{:increment :F1b
+ :date "2026-11-08"
+ :commits
+ {:futon3c-code "5e5f18a3bc5508ae0f7b1c1a6fe2073a0bf24793"
+  :futon1b-base "3bb244c1cd1180ffc425761f0590b828d25b619d"}
+ :exporter {:id "futon3c.arxana/formal-f1-conversation"
+            :version 1
+            :offset-unit :unicode-codepoints-zero-based-end-exclusive
+            :outputs [:markdown :canonical-edn-manifest]}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f1-export-test"
+   :result {:tests 4 :assertions 33 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-f1-test"
+   :result {:tests 3 :assertions 42 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.http-test -n futon3c.arxana.store-http-test"
+   :result {:tests 4 :assertions 29 :failures 0 :errors 0}}
+  {:command "clojure -M test_formal_arxana_c2.clj" :repo :futon1b :result :pass}]
+ :gates {:clj-kondo {:errors 0 :warnings 0}
+         :check-parens :pass}
+ :mark-correction
+ {:reason "old matcher stored whole match including colon and used UTF-16 indexes"
+  :fixture-mark-counts [1 1 1 0]
+  :interpretation-ids-changed? false}
+ :reserved-revision-route-exercised? true
+ :live-services-touched? false
+ :deferred [:F1b2-relocation :F1c-views]}
