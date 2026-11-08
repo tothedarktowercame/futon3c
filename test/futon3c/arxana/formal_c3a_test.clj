@@ -18,6 +18,18 @@
     :endpoints [{:role :pattern :kind :external-ref :target {:ref/id endpoint}}
                 {:role :turn :kind :external-ref :target {:ref/id (str "turn-" n)}}]
     :asserted-content {:window [] :proposal "p"} :event-time (format "%08d" n)}))
+(defn occurrence-in-turn [n pattern turn]
+  (records/make-clusion
+   {:type-revision [:pattern/occurrence 1]
+    :endpoints [{:role :pattern :kind :external-ref :target {:ref/id pattern}}
+                {:role :turn :kind :external-ref :target {:ref/id turn}}]
+    :asserted-content {:window [] :proposal "p"} :event-time (format "%08d" n)}))
+(defn role-reverse [cfg mid role endpoint limit]
+  (service/dispatch cfg (envelope mid :graph/query
+                                  {:query/type :role-reverse
+                                   :edge/type [:pattern/occurrence 1]
+                                   :endpoint/role role :endpoint/id endpoint
+                                   :time/order :desc :query/limit limit})))
 
 (deftest bounded-watermarked-graph-query-over-http
   (gates/seed-mission-contract!)
@@ -39,8 +51,22 @@
                                                        :endpoint/role :pattern
                                                        :endpoint/id "hot"
                                                        :time/order :desc :query/limit 50}))]
-                (is (= :complete (get-in r [:ok :result/status])))
+                ;; added in review (claude-13): 55 matches under LIMIT 50 is a
+                ;; truncated answer from the real store, with its total
+                (is (= :truncated (get-in r [:ok :result/status])))
+                (is (= :limit (get-in r [:ok :result/truncation])))
+                (is (= 55 (get-in r [:ok :result/total])))
                 (is (= 50 (count (get-in r [:ok :result/edge-ids])))))
+              ;; added in review (claude-13): the index key includes the role.
+              ;; "dual" is a turn here, never a pattern.
+              (is (:ok (service/dispatch cfg (envelope "c-dual" :clusion/assert
+                                                        {:record (occurrence-in-turn 60 "other" "dual")}))))
+              (let [as-pattern (role-reverse cfg "q-dual-p" :pattern "dual" 50)
+                    as-turn (role-reverse cfg "q-dual-t" :turn "dual" 50)]
+                (is (= [] (get-in as-pattern [:ok :result/edge-ids])))
+                (is (= :complete (get-in as-pattern [:ok :result/status])))
+                (is (= 1 (count (get-in as-turn [:ok :result/edge-ids]))))
+                (is (= :complete (get-in as-turn [:ok :result/status]))))
               ;; Bypass the server hook deliberately: authoritative rows move,
               ;; sidecar watermark does not. The read must say stale.
               (f1/conditional-command! node

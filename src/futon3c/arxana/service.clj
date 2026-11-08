@@ -165,9 +165,11 @@
                          (or qerr
                              (if (= :stale-index (:status qok))
                                (env/error :stale :arxana.graph/index-behind qok [:retry])
-                               {:result/status :complete
-                                :result/edge-ids (:edge-ids qok)
-                                :result/watermark (:watermark qok)}))))]
+                               (cond-> {:result/status (if (:truncated? qok) :truncated :complete)
+                                        :result/edge-ids (:edge-ids qok)
+                                        :result/watermark (:watermark qok)}
+                                 (some? (:total qok)) (assoc :result/total (:total qok))
+                                 (:truncated? qok) (assoc :result/truncation :limit))))))]
              (env/response ok (with-semantic-digest op
                                                     (if (:error/category res) res
                                                         (cond-> res
