@@ -46,9 +46,11 @@
             edited (relocation/edit-successor exported unique-id ambiguous-id missing-id)
             successor (relocation/ingest-successor! cfg exported edited)
             successor-rid (get-in successor [:ok :artifact/revision-id])
+            ;; The actual head comes from the persistence authority (futon1b).
+            head (f1/current-head node "formal-arxana:f1-conversation")
             run (relocation/relocate provider registry
                                      (:markdown/revision-id exported) successor-rid
-                                     successor-rid successor-rid)
+                                     successor-rid head)
             by-id (into {} (map (juxt :subject-clusion-id identity) (:results run)))
             responses (relocation/append-relocations! cfg run)]
         (is (:ok (:markdown first-ingest)))
@@ -77,12 +79,31 @@
           (let [standings (set (mapcat (fn [id]
                                          (map :standing (f1/evidence-for node id)))
                                        [unique-id ambiguous-id missing-id]))]
-            (is (every? standings #{:verified :disputed :contradicted})
-                "new relocation standings coexist with original model attestations")))
+            (is (every? standings #{:verified :disputed :unverified})
+                "new relocation standings coexist with original model attestations")
+            (is (not (standings :contradicted))
+                "a deleted fragment is absence, not evidence against the reading"))
+          (let [relocation-of (fn [id]
+                                (->> (f1/evidence-for node id)
+                                     (filter #(= "arxana.resolve/anchor" (get-in % [:method :id])))
+                                     first))
+                amb (relocation-of ambiguous-id)
+                miss (relocation-of missing-id)
+                uniq (relocation-of unique-id)]
+            (is (= 2 (count (get-in amb [:content :candidates])))
+                "the stored attestation keeps every ambiguous candidate")
+            (is (= [:disputed :partial] [(:standing amb) (:coverage amb)]))
+            (is (= [:unverified :none] [(:standing miss) (:coverage miss)]))
+            (is (empty? (get-in miss [:content :candidates])))
+            (is (= [:verified :complete] [(:standing uniq) (:coverage uniq)]))
+            (is (= [(:markdown/revision-id exported) successor-rid]
+                   [(get-in uniq [:content :source/revision-id])
+                    (get-in uniq [:content :target/revision-id])]))))
         (testing "a read whose expected head is historical is stale before resolution"
           (let [stale (relocation/relocate provider registry
                                            (:markdown/revision-id exported) successor-rid
-                                           (:markdown/revision-id exported) successor-rid)]
+                                           (:markdown/revision-id exported)
+                                           (f1/current-head node "formal-arxana:f1-conversation"))]
             (is (= :stale (:result/status stale)))
             (is (empty? (:results stale)))))
         (testing "reusing the historical expected head for another write is refused"

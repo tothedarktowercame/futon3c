@@ -126,8 +126,10 @@
      {:subject-clusion-id subject-clusion-id
       :producer "futon3c.arxana.resolve"
       :basis :parser
+      ;; A deleted fragment is absence, not evidence against the reading:
+      ;; it stays :unverified with :coverage :none, never :contradicted.
       :standing (case status :resolved :verified :ambiguous :disputed
-                      :missing :contradicted :unverified)
+                      :unverified)
       :coverage (case status :resolved :complete :ambiguous :partial
                       :missing :none :partial)
       :method (assoc resolver-method :strategy/revision-id revision-id)
