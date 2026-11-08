@@ -2,12 +2,12 @@
   (:require [clojure.edn :as edn] [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon1b-arxana :as f1] [futon1b-gates :as gates] [futon1b-server :as f1-server]
-            [futon3c.arxana.artifact :as artifact] [futon3c.arxana.formal-f3 :as f3]
+            [futon3c.arxana.artifact :as artifact] [futon3c.arxana.digest :as digest] [futon3c.arxana.formal-f3 :as f3]
             [futon3c.arxana.formal-f5 :as f5] [futon3c.arxana.service :as service]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.store-http :as store-http] [xtdb.node :as xtn])
   (:import [java.io File] [java.nio.file Files]))
-(def lean-root "/home/joe/worktrees/futon5/formal-arxana-f5a/holes/labs/M-formal-arxana/f5-lean")
+(def lean-root "/home/joe/code/futon5/holes/labs/M-formal-arxana/f5-lean")
 (defn req [id op body] {:protocol/version "arxana.v1" :message/id id :operation op
                         :principal/id "formal-f5a-test" :body body})
 (defn get-record [cfg id] (get-in (service/dispatch cfg (req (str "get:" id) :entity/get
@@ -57,5 +57,33 @@
                    (get-in stored [:asserted-content :lean/declaration])))
             (is (= (get-in m [:kernel :attestation :id])
                    (get-in stored [:asserted-content :kernel/attestation-id])))))
-        (is (= :passed (:outcome run)))
-        (is (:mathlib/unchanged? run))))))
+        (testing "the fibre follows the stored member records, not a fixed set"
+          (let [extra (f5/entity :planted-extra :point)
+                link (f5/relation :geometry/member
+                                  [(f5/endpoint :fibre (get-in m [:entities :fibre]))
+                                   (f5/endpoint :member extra)] {})]
+            (doseq [r [extra link]]
+              (is (:ok (service/dispatch cfg (assoc (req (str "w:" (:id r)) :clusion/assert
+                                                          {:record r})
+                                                    :principal/id "formal-f5a/materialiser")))))
+            (is (= #{:i :neg-i :planted-extra}
+                   (set (:result/member-ids
+                         (get-in (service/dispatch cfg (req "f5:fibre:2" :geometry/fibre
+                                                            {:map/id :square :value/id :neg-one}))
+                                 [:ok])))))))
+        (testing "the cited kernel run checked these exact Lean bytes, sorry-free"
+          (is (= (digest/sha256-hex bytes)
+                 (:sha256 (first (filter #(= f5/lean-source (:path %)) (:inputs run))))))
+          (is (= [:passed true true ""]
+                 ((juxt :outcome :sorry-free? :mathlib/unchanged? :output) run)))
+          (let [source (String. ^bytes bytes "UTF-8")]
+            (doseq [decl ["square_fibre_neg_one" "cube_fibre_neg_one_card"
+                          "inversion_is_conjugation"]]
+              (is (re-find (re-pattern (str "theorem " decl " ")) source) decl))))))))
+
+(deftest lean-gate-refuses-sorry-even-on-exit-zero
+  (is (f5/sorry-free? "theorem t : True := trivial" ""))
+  (is (not (f5/sorry-free? "theorem t : 1 = 2 := by sorry" "")))
+  (is (not (f5/sorry-free? "theorem t : 1 = 2 := by admit" "")))
+  (is (not (f5/sorry-free? "theorem t : True := trivial"
+                           "t.lean:1:8: warning: declaration uses 'sorry'"))))

@@ -21,6 +21,12 @@
   (->> (file-seq (io/file root ".lake/packages/mathlib")) (filter #(.isFile ^File %))
        (map (fn [^File f] [(.getPath f) (.length f) (.lastModified f)])) sort vec
        digest/canonical-digest))
+(defn sorry-free?
+  "Lean exits 0 on `sorry`, so exit status alone cannot pass a run: the source
+  must contain no sorry/admit token and the output no sorry warning."
+  [source output]
+  (not (or (re-find #"\b(sorry|admit)\b" source)
+           (re-find #"declaration uses 'sorry'" output))))
 (defn run-lean-gate [root]
   (let [paths ["lean-toolchain" "lakefile.toml" "lake-manifest.json" lean-source]
         inputs (mapv (fn [p] {:path p :sha256 (digest/sha256-hex
@@ -29,7 +35,11 @@
         result (run root command) after (tree-metadata root)]
     {:record/type :lean-kernel-run :record/version 1 :toolchain toolchain
      :command command :exit-status (:exit-status result)
-     :outcome (if (zero? (:exit-status result)) :passed :failed)
+     :sorry-free? (sorry-free? (slurp (io/file root lean-source)) (:output result))
+     :outcome (if (and (zero? (:exit-status result))
+                       (sorry-free? (slurp (io/file root lean-source)) (:output result))
+                       (= before after))
+                :passed :failed)
      :output (:output result) :output/sha256 (digest/sha256-hex (:output/bytes result))
      :inputs inputs :mathlib/metadata-before before :mathlib/metadata-after after
      :mathlib/unchanged? (= before after)}))
