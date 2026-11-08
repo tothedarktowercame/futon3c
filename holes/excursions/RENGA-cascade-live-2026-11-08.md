@@ -136,3 +136,55 @@ crown; the "crown" is where one chooses to start reading the loop.
   2–3 are about the operator only; other participants (agents, learners,
   Murch, Peeragogy) never enter. Either a strand is missing or C belongs in
   verse 1 ("the people in it", plural, is asserted and never followed).
+
+---
+
+## Joe's reading of the breaks (2026-11-08)
+
+- **A value chain, not pawns in a line.** "It turns the WOWs into a value
+  chain rather than a set of pawns I push forward in a line with each
+  other." operator-turns-logged, the one way that holds, is "a bit like
+  'thickness'": the layer the others are built on. The four failing ways
+  in verses 3–6 "could correspond to roughly four weeks of work, *if* what
+  Mozilla was expecting was a turned-in computer program that passed their
+  tests (in reality, they aren't)."
+- **A semilattice, not a chain.** "we need a semilattice and not a chain:
+  we need to modify the ways of working to fit each other and to fit the
+  circumstances." The circumstances are small: "I'll be lucky if I have 5
+  people on a Peeragogy call on Monday." Library support: Alexander's
+  semilattice in cascades/declared-skeleton (plural, defeasible upstreams);
+  creativity-commons/process-fits-local-conditions ("the Producer reads the
+  Place … and uses existing artefacts there to evaluate its own work").
+- **Breaks B, C and E** are repairable in other ways. On C, "the loop is the
+  thing being built": the futon2 commits already show it.
+- **Viability follows benefit (break D).** "I could self-fund myself for
+  quite a while, but that doesn't prove *benefit*. My claim here is that
+  *benefit* should lead to viability." Example: a monk who gets free rent
+  for trimming the lawn and feeding the cats at a residential retreat
+  centre. "if there is *any* benefit there will be a surrounding context
+  that will sustain it where possible, almost by definition … my version of
+  Spinoza's axioms."
+
+This reverses draft D2. V is not a foundation every wing cites; it is what a
+surrounding context does when there is benefit, so it is evidence of benefit,
+read downstream.
+
+### D5 (DRAFT, replaces D2): Benefit Finds A Context That Sustains It
+
+```
+@flexiarg creativity-commons/benefit-finds-its-sustaining-context  (DRAFT, axiom)
+@title Benefit Finds A Context That Sustains It
++ IF:       A practice is kept alive, and one asks what keeps it alive.
++ HOWEVER:  Self-funding keeps a practice running without showing that it
+            benefits anyone; viability bought that way proves only stamina.
++ THEN:     Treat viability as the sign of benefit: name who is better off,
+            and look for the surrounding context that sustains the practice
+            in return (rent for lawn-trimming, a fee, a stipend, a
+            collaborator's time). Where no such context appears, read that
+            as missing benefit before reading it as missing money.
++ BECAUSE:  Where there is any benefit, some context sustains it where
+            possible, almost by definition (Joe's axiom, after Spinoza).
+@see-also creativity-commons/benefit-proportional-to-contribution,
+          creativity-commons/process-fits-local-conditions,
+          ways-of-working/stays-alive-and-paid
+```
