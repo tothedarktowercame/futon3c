@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [futon3c.arxana.digest :as digest])
   (:import [java.net URI URLEncoder]
+           [java.time Duration]
            [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
            [java.nio.charset StandardCharsets]))
 
@@ -10,7 +11,10 @@
   (merge {:status status :reference/id (:id reference)} extra))
 
 (defn resolve-reference
-  ([reference] (resolve-reference reference (HttpClient/newHttpClient)))
+  ([reference] (resolve-reference reference
+                                  (-> (HttpClient/newBuilder)
+                                      (.connectTimeout (Duration/ofSeconds 2))
+                                      .build)))
   ([reference ^HttpClient client]
    (try
      (let [[bytes schema]
@@ -23,7 +27,9 @@
              (let [separator (if (.contains ^String (:store/endpoint reference) "?") "&" "?")
                    url (str (:store/endpoint reference) separator "id="
                             (URLEncoder/encode (str (:record/id reference)) StandardCharsets/UTF_8))
-                   request (-> (HttpRequest/newBuilder (URI/create url)) .GET .build)
+                   ;; a hung authority is unavailable, not a hung prompt line
+                   request (-> (HttpRequest/newBuilder (URI/create url))
+                               (.timeout (Duration/ofSeconds 2)) .GET .build)
                    response (.send client request (HttpResponse$BodyHandlers/ofByteArray))]
                (if (<= 200 (.statusCode response) 299)
                  [(.body response)

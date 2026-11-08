@@ -124,6 +124,25 @@
                          (get-in (dispatch cfg "ref-down" :external-reference/resolve
                                            {:reference (assoc ref :store/endpoint "http://127.0.0.1:1/record")})
                                  [:ok :status])))
+                  ;; review (claude-13): an authority that accepts the
+                  ;; connection and never answers is unavailable within the
+                  ;; prompt budget, not a hang
+                  (let [hung (HttpServer/create (InetSocketAddress. "127.0.0.1" 0) 0)]
+                    (.createContext hung "/record"
+                                    (reify com.sun.net.httpserver.HttpHandler
+                                      (handle [_ _ex] (Thread/sleep 10000))))
+                    (.start hung)
+                    (try
+                      (let [t0 (System/nanoTime)
+                            r (dispatch cfg "ref-hung" :external-reference/resolve
+                                        {:reference (assoc ref :store/endpoint
+                                                           (str "http://127.0.0.1:"
+                                                                (.getPort (.getAddress hung))
+                                                                "/record"))})
+                            ms (/ (- (System/nanoTime) t0) 1e6)]
+                        (is (= :unavailable (get-in r [:ok :status])))
+                        (is (< ms 5000) (str "hung authority took " ms " ms")))
+                      (finally (.stop hung 0))))
                   (let [file (File/createTempFile "pattern-library-" ".md")]
                     (try
                       (spit file "pattern bytes")
@@ -155,7 +174,12 @@
                                                  {:pattern/id "pattern-1" :window ["turn-1"]})
                                        [:ok :score])]
                     (is (:ok (dispatch cfg "not-run-2" :attempt/append
-                                       {:record (attempt (:id p) :not-run)})))
+                                       ;; review (claude-13): same window as the
+                                       ;; score, as a real "no reader" receipt
+                                       ;; for that turn would be; without it the
+                                       ;; event lands under window "nil" and the
+                                       ;; check cannot see a not-run weight
+                                       {:record (attempt (:id p) :not-run true)})))
                     (is (= before (get-in (dispatch cfg "score-after" :aggregate/query
                                                     {:pattern/id "pattern-1" :window ["turn-1"]})
                                           [:ok :score]))))
