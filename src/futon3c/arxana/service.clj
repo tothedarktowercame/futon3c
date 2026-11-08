@@ -263,7 +263,18 @@
                          (call! read-op read-body (str "read:" (hash read-body))))
                  write! (fn [write-op write-body suffix]
                           (call! write-op write-body suffix))
-                 result (f4/execute read! write! (:principal/id ok)
+                 ;; The head of the artifact the candidate's revision belongs to,
+                 ;; read from the store at call time (nil if unknown).
+                 current-head! (fn [revision-id]
+                                 (let [row (:ok (store/bounded-query!
+                                                 graph-store {:query/type :revision-by-id
+                                                              :revision-id revision-id}))]
+                                   (when (= :ok (:status row))
+                                     (:head/revision-id
+                                      (:ok (store/bounded-query!
+                                            graph-store {:query/type :artifact-head
+                                                         :artifact-id (:revision/target-id row)}))))))
+                 result (f4/execute read! write! current-head! (:principal/id ok)
                                     (:message/id ok) body)]
              (env/response ok (with-semantic-digest op result)))
 

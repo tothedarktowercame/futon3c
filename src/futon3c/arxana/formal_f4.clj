@@ -18,8 +18,13 @@
 
 (defn build-plan
   "Build the separate, non-executable D6 stages for an F1 ask-action claim.
-  SOURCE-ATTESTATION is provenance; it is not copied into claim identity."
-  [source-claim source-attestation]
+  SOURCE-ATTESTATION is provenance; it is not copied into claim identity.
+  GROUNDING-REVISION is the turn's stored byte revision: the claim names a
+  logical `<turn>@settled` id, which is never an artifact head, so the
+  candidate's head-equals precondition must name the stored revision."
+  ([source-claim source-attestation]
+   (build-plan source-claim source-attestation nil))
+  ([source-claim source-attestation grounding-revision]
   (let [intent-record
         (intent/make-intent
          {:intent/type :action/request
@@ -40,7 +45,8 @@
                            :trust-profile/version 1
                            :trusted-interpreters {(:producer source-attestation) true}})
           :grounding {:artifact/revision-id
-                      (get-in source-claim [:endpoints 0 :target :artifact/revision-id])
+                      (or grounding-revision
+                          (get-in source-claim [:endpoints 0 :target :artifact/revision-id]))
                       :resolution-assertion {:resolution-assertion/id
                                              (str "formal-f4:resolution:" (:id source-claim))
                                              :evidence/outcome :unique}
@@ -99,7 +105,7 @@
      :stages {:intent intent-stage :candidate candidate-stage :decision decision-stage}
      :links links :composite composite :group group
      :records (vec (concat [intent-stage candidate-stage decision-stage]
-                           links [composite group]))}))
+                           links [composite group]))})))
 
 (defn materialize! [dispatch! plan]
   (mapv (fn [record]
@@ -138,7 +144,7 @@
         (get-in candidate-stage [:asserted-content :candidate/record :preconditions])))
 
 (defn- refusal-code
-  [principal candidate-stage capability-record decision-stage expected]
+  [principal candidate-stage capability-record decision-stage expected current-head]
   (let [candidate-id (get-in candidate-stage
                              [:asserted-content :candidate/record :candidate-action/id])
         cap-content (:asserted-content capability-record)
@@ -159,13 +165,17 @@
       (not= candidate-id (:candidate-action/id decision))
       :arxana.execution/admission-for-different-candidate
       (not= expected (expected-revision candidate-stage)) :arxana.execution/stale-revision
+      ;; Tripwire 4: the candidate's revision must still be the artifact's
+      ;; head in the store, not merely match what the caller says it is.
+      (not= current-head (expected-revision candidate-stage))
+      :arxana.execution/stale-revision
       :else nil)))
 
 (defn execute
   "Execute one bounded public read after checking stored capability and
   admission. Every path appends an attempt receipt and a successor composite;
   only success carries the separate D6 action receipt."
-  [read! write! principal request-id
+  [read! write! current-head! principal request-id
    {composite-id :composite/id capability-id :capability/id
     decision-id :decision/id expected :expected/revision-id
     attempted-at :attempted-at limit :query/limit}]
@@ -175,7 +185,9 @@
         candidate-stage (ok-record read! (stage-id :candidate))
         capability-record (ok-record read! capability-id)
         decision-stage (ok-record read! decision-id)
-        refusal (refusal-code principal candidate-stage capability-record decision-stage expected)
+        current-head (some-> candidate-stage expected-revision current-head!)
+        refusal (refusal-code principal candidate-stage capability-record decision-stage
+                              expected current-head)
         envelope {:query/type :role-reverse :edge/type [:d6/intends 1]
                   :endpoint/role :source-act :endpoint/id (stage-id :source-act)
                   :query/limit (min 10 (max 1 (or limit 10)))}
@@ -193,6 +205,7 @@
         attempt (records/make-attempt
                  {:subject/id composite-id :dynamics bounded-read-dynamics
                   :inputs {:envelope envelope :expected/revision-id expected
+                   :observed/head-revision-id current-head
                            :capability/id capability-id :decision/id decision-id}
                   :outcome outcome :reason reason :actor principal :time attempted-at})
         attempt-write (record! write! :attempt/append attempt request-id)

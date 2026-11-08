@@ -44,7 +44,8 @@
         attestation (first (filter #(= (:subject-clusion-id %) (:id claim))
                                    (:attestations turn)))]
     {:turn turn :claim claim :attestation attestation
-     :f4 (f4/build-plan claim attestation)}))
+     :f4 (f4/build-plan claim attestation
+                        (artifact/revision-id-for-bytes (:bytes turn)))}))
 
 (deftest typed-recursive-composite-and-stage-local-criticism
   (with-stack
@@ -154,6 +155,16 @@
   (with-stack
     (fn [_ cfg]
       (let [{:keys [turn f4]} (fixture-plan)
+            ;; Seed the turn through futon1b's CAS route. The service sends
+            ;; only STRING bytes there; F1's materialiser passes a byte array,
+            ;; which takes the provider path whose head :revision/head never
+            ;; reads (pre-existing; recorded in INSTANTIATE "F4b").
+            seeded (dispatch cfg "seed-turn-bytes" :revision/ingest
+                        {:artifact/id (:artifact/id turn)
+                         :bytes (String. ^bytes (:bytes turn) "UTF-8")
+                         :media-type "text/plain; charset=utf-8"
+                         :expected/revision-id nil})
+            _ (is (:ok seeded) (pr-str seeded))
             _ (formal-f1/materialize! cfg [turn])
             _ (f4/materialize! #(service/dispatch cfg %) f4)
             original-composite (read-record cfg (get-in f4 [:composite :id]))
@@ -178,6 +189,10 @@
                                    :attempted-at time :query/limit 3}}))]
         (is (:ok (assert-record! cfg "capability" capability)))
         (is (:ok (assert-record! cfg "admitted" admitted)))
+        (is (= expected (get-in (dispatch cfg "turn-head" :revision/head
+                                          {:artifact/id (:artifact/id turn)})
+                                [:ok :head/revision-id]))
+            "the candidate is grounded on the turn's stored head revision")
         (testing "success reads both grants from the store and records both receipts"
           (let [result (get-in (execute "execute-ok" "executor-a" (:id capability)
                                         (:id admitted) expected
@@ -250,4 +265,20 @@
                 (is (= :refused (:outcome attempt)) n)
                 (is (nil? (get-in receipt-stage
                                   [:asserted-content :action/receipt])) n)
-                (is (= [] (:result/edge-ids result)) n)))))))))
+                (is (= [] (:result/edge-ids result)) n)))))
+        (testing "a head moved after admission refuses even when the caller repeats the old revision"
+          ;; Review (claude-13): tripwire 4 is the STORED head, not the caller's claim.
+          (let [moved (dispatch cfg "move-turn-head" :revision/ingest
+                                {:artifact/id (:artifact/id turn)
+                                 :bytes (str (String. ^bytes (:bytes turn) "UTF-8")
+                                             "\nedited after admission")
+                                 :media-type "text/plain; charset=utf-8"
+                                 :expected/revision-id expected})
+                result (get-in (execute "after-move" "executor-a" (:id capability)
+                                        (:id admitted) expected
+                                        "2026-11-08T13:03:00.000Z") [:ok])
+                attempt (read-record cfg (:attempt/id result))]
+            (is (:ok moved) (pr-str moved))
+            (is (= :arxana.execution/stale-revision (:refusal/code result)))
+            (is (= :refused (:outcome attempt)))
+            (is (= [] (:result/edge-ids result)))))))))
