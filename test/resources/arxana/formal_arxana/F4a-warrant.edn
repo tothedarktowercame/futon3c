@@ -1,0 +1,27 @@
+{:mission "M-formal-arxana"
+ :increment :F4a
+ :recorded-at "2026-11-08T23:45:00.000Z"
+ :commits {:futon3c "2e642f30c2e3edfeb48c12b7e6e3f57efd4a5535"
+           :futon5 "79c20f949a85a56dcfa5adda5b1d576c1b30cd54"
+           :futon3c-base "f3affa115"}
+ :topology {:path "holes/labs/M-formal-arxana/f4-d6-composite.edn"
+            :sha256 "df69f83fa434bdc0decb523662f29d562f10d647a116b4e5093f2b8ef8cfffc8"}
+ :checks
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f4-test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.compile-test"
+   :result "21 tests, 239 assertions, 0 failures, 0 errors"
+   :stack "private in-process XTDB and futon1b on ephemeral loopback port"}
+  {:command "clj-kondo --lint <changed Clojure files>"
+   :result "0 errors, 0 warnings"}
+  {:command "emacs -Q --batch -l futon4/dev/check-parens.el -- <changed Clojure files>"
+   :result "pass"}]
+ :acceptance
+ {:separate-stages true
+  :candidate/non-executable true
+  :typed-ports true
+  :nested-composite true
+  :cycles-refused true
+  :stage-local-criticism true
+  :public-readback true}
+ :not-run ["full Arxana suite (focused F4a, C1, and Compile namespaces run)"
+           "live service reload/restart"
+           "execution or action receipt (deferred to F4b)"]}
