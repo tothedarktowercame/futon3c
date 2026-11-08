@@ -26,7 +26,7 @@
    {:schema-version 1
     :required #{:query/type}
     :allowed #{:query/type :edge/type :endpoint/role :endpoint/id :time/order
-               :query/limit :start/id :max-depth :max-nodes}
+               :query/limit :start/id :traversal/mode :max-depth :max-nodes}
     :projection [:operation :query/type :result/status :result/edge-ids
                  :result/nodes :result/truncation :result/watermark]}
 

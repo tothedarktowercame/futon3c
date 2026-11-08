@@ -151,6 +151,7 @@
                                             {:start/id (:start/id body)
                                              :edge/type (:edge/type body)
                                              :endpoint/role (:endpoint/role body)
+                                             :traversal/mode (:traversal/mode body)
                                              :max-depth (:max-depth body)
                                              :max-nodes (:max-nodes body)})
                        (let [{qok :ok qerr :error}
