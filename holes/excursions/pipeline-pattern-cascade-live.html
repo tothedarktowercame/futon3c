@@ -77,6 +77,19 @@
   .arg-row{padding:5px 0;border-bottom:1px solid #1e2430;font-size:11.5px}.arg-IN{color:#3ddc84;font-weight:800}.arg-OUT,.arg-failing{color:#ff6b6b;font-weight:800}.arg-UNDEC{color:#e0a63b;font-weight:800}.arg-passing{color:#3ddc84;font-weight:800}
   .arg-attack{margin:3px 0 0 18px;color:#ff9c9c}.arg-question{color:#cdd6e4}.arg-support{color:#8fa0b6}
   .arg-grade{color:#f0bd70;font-weight:700;margin-left:5px}.arg-legend{color:#8fa0b6;font-size:11px;margin:0 0 8px}
+  /* click path (2026-11-08) */
+  #clickpath{border-color:#3a5a8c}
+  #clickpath .cp-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+  #clickpath select,#clickpath button{background:#1e2430;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font:inherit}
+  #clickpath button.on{border-color:#5aa0ff;color:#cfe3ff}
+  body.cp-focus main > .panel:not(.cp-focused):not(#clickpath),body.cp-focus main > details:not(.cp-focused),body.cp-focus main > .argument-part:not(.cp-focused-part){display:none !important}
+  body.cp-focus .panel.cp-focused{display:block !important}
+  #cp-flexiarg{display:none;background:#121821;border:1px solid #3a5a8c;border-radius:10px;padding:12px 16px;margin:0 0 16px;font-size:12.5px}
+  #cp-flexiarg .cp-title{font-weight:700;color:#eaf1ff;margin-bottom:2px}
+  #cp-flexiarg .cp-src{color:#8fa0b6;font-size:11px;margin-bottom:8px}
+  #cp-flexiarg dl{margin:0;display:grid;grid-template-columns:7.5em 1fr;gap:4px 10px}
+  #cp-flexiarg dt{color:#5aa0ff;font-weight:700} #cp-flexiarg dd{margin:0;color:#d6dce6}
+  #cp-flexiarg .cp-hole{color:#e8a07a}
 </style>
 </head>
 <body>
@@ -89,6 +102,19 @@
 </header>
 <main>
   <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.</div>
+  <section class="panel" id="clickpath">
+    <h2>Read one module at a time</h2>
+    <div class="muted">Pick a module to hide the rest of the page, then turn on <b>Read as flexiarg</b> to see what the module says in pattern form (IF / HOWEVER / THEN / BECAUSE).
+      The flexiarg texts are written, not generated: each names its source (a library pattern, a renga verse, or a reading of the code), and a module with none shows as a hole.
+      The address bar keeps the choice, so a view can be linked (e.g. <code>#focus=wip-panel&amp;flexiarg=1</code>).</div>
+    <div class="cp-row">
+      <select id="cp-select"><option value="">Whole cascade</option></select>
+      <button id="cp-flex" type="button">Read as flexiarg</button>
+      <button id="cp-all" type="button">Show all</button>
+      <span class="muted" id="cp-note"></span>
+    </div>
+  </section>
+  <div id="cp-flexiarg"></div>
 
   <h2 class="argument-part">1. The question</h2>
   <section class="panel" id="thesis-panel">
@@ -961,6 +987,122 @@
   loadWip();
   loadAll();
   setInterval(loadAll,60000);
+})();
+</script>
+<script>
+/* Click path (claude-6 for Joe, 2026-11-08): focus one module; read it as flexiarg. */
+(function(){
+  var INTERP = {
+ "thesis-panel": {
+  "kind": "renga verse 1",
+  "title": "Close The Loop Over The People In It",
+  "source": "futon3c holes/excursions/RENGA-cascade-live-2026-11-08.md, verse 1 (claude-6 at Joe's direction, 2026-11-08)",
+  "if": "People do open-ended work alongside machines (software, mathematics).",
+  "however": "Help that is rented and opaque gets work done without the people getting better at it, and nobody can say why it chose what it did.",
+  "then": "Close a considerably faithful active-inference loop over the people in it: their turns are its observations, its choices come back explained, and their capability is what it is judged on.",
+  "because": "p(bloom) is people made more capable, not work made cheaper; a free-energy-minimising loop is both frugal (complexity is a cost) and explainable (G separates into risk and ambiguity)."
+ },
+ "wow-panel": {
+  "kind": "library pattern",
+  "title": "cascade-construction/renga-then-semilattice: Chain The Practices As A Renga, Then Let The Breaks Make It A Semilattice",
+  "source": "futon3/library/cascade-construction/renga-then-semilattice.flexiarg (draft 2026-11-08, for Joe's review)",
+  "conclusion": "To relate a set of practices, first chain them as a renga, one link at a time, and record where the chain breaks; then rebuild them as a semilattice whose extra edges are the ones the breaks called for.",
+  "if": "The practices are meant to support each other, but nothing says how one feeds the next.",
+  "however": "A list hides dependence, a tree forces a single parent, and a semilattice drawn straight away invents edges no one has tested.",
+  "then": "Write the practices as a renga, each verse taking up only the previous verse's THEN, so the set reads as a value chain. Record every place the chain cannot continue honestly. Then add the edges the breaks call for, each with its because, giving a semilattice; adjust the practices to fit each other and the circumstances rather than the chain.",
+  "because": "A renga link can be checked locally, one pair at a time, so its breaks are evidence rather than taste; Alexander's point is that the working structure is a semilattice, and the breaks say where its overlaps are."
+ },
+ "wip-panel": {
+  "kind": "reading of the generator's docstring",
+  "title": "Date Every Mark And Name What Would Promote It (the Uxbridge layer)",
+  "source": "claude-6's reading (2026-11-08) of futon3c holes/excursions/gen-wip-cards.py, lines 2-25; not yet a library pattern",
+  "if": "Control-loop nodes have a WR ruling that does not hold (the red rings), and a cascade mission would supply each missing mechanism (the blue ring).",
+  "however": "A status board usually omits the two fields that matter: when each mark was established, and what call would move the card to the next register (plan, built, ran, live).",
+  "then": "Give each red ring one card naming its supplier; date every mark so a card can be shown as visibly stale; record a promotion-test for each card, and show a null promotion-test as unmeasurable rather than as not done.",
+  "because": "An undated mark cannot be shown stale, and a card with no promotion-test cannot be moved by any evidence; promotion to live needs the artefact to produce its effect and a matched null control to fail (the m3 rule)."
+ },
+ "tickets-panel": {
+  "kind": "library pattern + renga verse 4",
+  "title": "workshop/one-queryable-self-account: One Queryable Self-Account",
+  "source": "futon3/library/workshop/one-queryable-self-account.flexiarg; renga verse 4 (2026-11-08) applies it to the backlog",
+  "conclusion": "The stack's account of itself must be ONE thing you can query: every state, with provenance, answerable; not several vocabularies reconciled by eyeball, and not a rendering you can look at but not ask.",
+  "if": "Any component records state, or any view presents it. (Renga verse 4: intents are tracked against the work that meets them.)",
+  "however": "Consolidation has cost and some legacy vocabularies persist; the account may be federated without being fragmented. (Verse 4: the work is a pile of ~800 items nobody has read, in four vocabularies, much of it stale or done.)",
+  "then": "Every state change lands in the account with provenance; every view is a query over the account; an unaskable question about stack state is a named gap, not silence. (Verse 4: read the pile into one queryable self-account: every item placed, stale items closed, waits on the operator typed as such.)",
+  "because": "Work steers itself only if it can see itself, and a self it cannot query is a self it cannot steer."
+ },
+ "forward-panel": {
+  "kind": "library pattern",
+  "title": "forward-model/the-forward-model-is-a-pattern-cascade: Model The Future Build As A Pattern Cascade, Not A Mission List",
+  "source": "futon3/library/forward-model/the-forward-model-is-a-pattern-cascade.flexiarg",
+  "conclusion": "Characterize the future build as a typed cascade of design patterns, boxes are patterns, wires are slot-adjacency, holes are patterns that should exist and do not, rather than as a list of missions.",
+  "if": "The stack has both a retrospective strategy layer, attested rulings composed into a semilattice, and mission-level forward models such as the backlog cascade, and the design patterns are indexed and slot-queryable.",
+  "however": "Every existing forward model boxes the future as missions; none characterizes the future build through patterns, so the reusable form of how we build stays implicit in prose.",
+  "then": "Model the next half-million lines as a cascade whose boxes are patterns and whose holes are the patterns that would have to be authored to reach the terminals, composed live from the indexed corpus rather than hand-drawn.",
+  "because": "Patterns are reusable where missions are one-off. A future modeled as patterns tells you not just what to build but the shape of building it."
+ }
+};
+  var main = document.querySelector('main');
+  var sel = document.getElementById('cp-select'), flexBtn = document.getElementById('cp-flex');
+  var view = document.getElementById('cp-flexiarg'), note = document.getElementById('cp-note');
+  var modules = [], part = null, partEl = null;
+  Array.prototype.forEach.call(main.children, function(el){
+    if (el.classList.contains('argument-part')) { part = el.textContent.trim(); partEl = el; return; }
+    var isPanel = el.tagName === 'SECTION' && el.classList.contains('panel');
+    if ((isPanel || el.tagName === 'DETAILS') && el.id && el.id !== 'clickpath') {
+      var h = el.querySelector(isPanel ? 'h2' : 'summary'), t = h ? (isPanel ? (h.childNodes[0].textContent || h.textContent) : h.textContent).trim() : el.id;
+      modules.push({id: el.id, title: t, part: part, partEl: partEl, el: el});
+    }
+  });
+  var lastPart = null, group = null;
+  modules.forEach(function(m){
+    if (m.part !== lastPart) { group = document.createElement('optgroup'); group.label = m.part || ''; sel.appendChild(group); lastPart = m.part; }
+    var o = document.createElement('option'); o.value = m.id;
+    o.textContent = m.title + (INTERP[m.id] ? '' : '  (no flexiarg yet)'); group.appendChild(o);
+  });
+  function esc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function state(){ var h = {}; location.hash.replace(/^#/, '').split('&').forEach(function(kv){ var p = kv.split('='); if (p[0]) h[p[0]] = decodeURIComponent(p[1] || ''); }); return h; }
+  function setState(focus, flex){ var parts = []; if (focus) parts.push('focus=' + encodeURIComponent(focus)); if (flex) parts.push('flexiarg=1'); history.replaceState(null, '', parts.length ? '#' + parts.join('&') : location.pathname + location.search); apply(); }
+  // A focused panel opens once, through its own fold toggle, so the page's
+  // fold state agrees; the page may fold it later when its data arrives.
+  var unfolded = {};
+  function unfold(el){
+    if (unfolded[el.id]) return;
+    var tryOpen = function(){ var h = el.querySelector('h2.fold'); if (el.classList.contains('folded') && h) { h.click(); unfolded[el.id] = true; return true; } return !!h; };
+    if (tryOpen()) return;
+    var obs = new MutationObserver(function(){ if (tryOpen()) obs.disconnect(); });
+    obs.observe(el, {attributes: true, attributeFilter: ['class'], subtree: true});
+  }
+  function apply(){
+    var h = state(), focus = h.focus || '', flex = h.flexiarg === '1';
+    modules.forEach(function(m){ m.el.classList.remove('cp-focused'); if (m.partEl) m.partEl.classList.remove('cp-focused-part'); });
+    var m = modules.filter(function(x){ return x.id === focus; })[0];
+    document.body.classList.toggle('cp-focus', !!m);
+    sel.value = m ? m.id : '';
+    flexBtn.classList.toggle('on', flex);
+    note.textContent = '';
+    if (m) { m.el.classList.add('cp-focused'); if (m.partEl) m.partEl.classList.add('cp-focused-part'); unfold(m.el); if (m.el.tagName === 'DETAILS') m.el.open = true; }
+    if (flex) {
+      var targets = m ? [m] : modules, html = '';
+      targets.forEach(function(t){
+        var f = INTERP[t.id];
+        if (!f) { if (m) html += '<div class="cp-title">' + esc(t.title) + '</div><div class="cp-hole">No flexiarg interpretation written for this module yet: a hole.</div>'; return; }
+        html += '<div class="cp-title">' + esc(f.title) + '</div><div class="cp-src">' + esc(f.kind) + ' · ' + esc(f.source) + (m ? '' : ' · module: ' + esc(t.title)) + '</div><dl>'
+          + (f.conclusion ? '<dt>conclusion</dt><dd>' + esc(f.conclusion) + '</dd>' : '')
+          + ['if','however','then','because'].map(function(k){ return '<dt>' + k.toUpperCase() + '</dt><dd>' + esc(f[k]) + '</dd>'; }).join('') + '</dl>';
+        if (!m) html += '<div style="height:12px"></div>';
+      });
+      view.innerHTML = html; view.style.display = 'block';
+      if (m) m.el.parentNode.insertBefore(view, m.el);
+      else main.insertBefore(view, document.getElementById('clickpath').nextSibling);
+      if (!m) note.textContent = Object.keys(INTERP).length + ' of ' + modules.length + ' modules have a flexiarg so far';
+    } else { view.style.display = 'none'; }
+  }
+  sel.addEventListener('change', function(){ setState(sel.value, state().flexiarg === '1'); window.scrollTo(0, 0); });
+  flexBtn.addEventListener('click', function(){ setState(state().focus || '', state().flexiarg !== '1'); });
+  document.getElementById('cp-all').addEventListener('click', function(){ setState('', false); });
+  window.addEventListener('hashchange', apply);
+  apply();
 })();
 </script>
 </body>
