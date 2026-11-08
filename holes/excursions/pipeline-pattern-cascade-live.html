@@ -91,6 +91,18 @@
   #cp-flexiarg dl{margin:0;display:grid;grid-template-columns:7.5em 1fr;gap:4px 10px}
   #cp-flexiarg dt{color:#5aa0ff;font-weight:700} #cp-flexiarg dd{margin:0;color:#d6dce6}
   #cp-flexiarg .cp-hole{color:#e8a07a}
+  #cp-chain{margin:10px 0 4px;max-width:1000px}
+  #cp-chain .cp-sq{cursor:pointer} #cp-chain .cp-sq:focus{outline:none}
+  #cp-chain .cp-sq:hover rect,#cp-chain .cp-sq.cp-on rect{stroke-width:3}
+  #cp-chain .cp-sq.cp-on rect{filter:drop-shadow(0 0 5px #5aa0ff)}
+  #cp-chain .cp-k{fill:#7b8698;font-size:7.5px;letter-spacing:.3px}
+  #cp-chain .cp-lab{fill:#dce4ef;font-size:10.5px;font-weight:700}
+  #cp-chain .cp-sub{fill:#8fa0b6;font-size:8.5px}
+  #cp-chain .cp-out{fill:#9fb3c9;font-size:8.5px;font-style:italic}
+  #cp-chain .cp-brk{fill:#ff9c9c;font-size:9.5px;font-weight:700}
+  #cp-chain .cp-cyc{fill:#8fc0ff;font-size:9.5px;font-weight:700}
+  #cp-chain .cp-break.cp-on path{stroke-width:3}
+  .cp-chip{display:inline-block;margin:2px 3px;padding:1px 8px;border:1px dashed var(--line);border-radius:9px;color:#93bdf8;font-size:11px;text-decoration:none}
 </style>
 </head>
 <body>
@@ -104,13 +116,16 @@
 <main>
   <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.</div>
   <section class="panel" id="clickpath">
-    <h2>Read one module at a time</h2>
-    <div class="muted">Pick a module to hide the rest of the page, then turn on <b>Read as flexiarg</b> to see what the module says in pattern form (IF / HOWEVER / THEN / BECAUSE).
-      The flexiarg texts are written, not generated: each names its source (a library pattern, a renga verse, or a reading of the code), and a module with none shows as a hole.
-      The address bar keeps the choice, so a view can be linked (e.g. <code>#focus=wip-panel&amp;flexiarg=1</code>).</div>
+    <h2>The cascade, as a chain of patterns</h2>
+    <div class="muted">Each square is one verse of the Cascade Live renga (2026-11-08), drawn as a pattern: IF and HOWEVER go in, BECAUSE is the ground they share, THEN is what it builds.
+      Each verse's THEN is the next verse's IF (dashed arrows). The square's colour is the state of the way of working it stands on: green holding, amber failing, red dashed a hole.
+      Red and blue curves, and the dashed squares below, are the five places the chain breaks. <b>Click a square</b> to see only the modules of this page that verse stands on, with the verse written out; click it again, or <b>Show all</b>, to return.
+      The flexiarg texts are written, not generated, and each names its source.</div>
+    <div id="cp-chain"></div>
+    <div id="cp-loose" class="cp-row"></div>
     <div class="cp-row">
-      <select id="cp-select"><option value="">Whole cascade</option></select>
-      <button id="cp-flex" type="button">Read as flexiarg</button>
+      <select id="cp-select"><option value="">or pick one module</option></select>
+      <button id="cp-flex" type="button">Read modules as flexiarg</button>
       <button id="cp-all" type="button">Show all</button>
       <span class="muted" id="cp-note"></span>
     </div>
@@ -991,81 +1006,107 @@
 })();
 </script>
 <script>
-/* Click path (claude-6 for Joe, 2026-11-08): focus one module; read it as flexiarg. */
+/* Click path (claude-6 for Joe, 2026-11-08).
+   The chain: the seven verses of the Cascade Live renga drawn as pattern squares
+   (IF top-left, HOWEVER bottom-right, BECAUSE bottom-left, THEN top-right), each
+   verse's THEN feeding the next verse's IF, with the five recorded breaks drawn.
+   Clicking a square shows only the modules that verse stands on, with the verse
+   in flexiarg form.  Source: futon3c holes/excursions/RENGA-cascade-live-2026-11-08.md. */
 (function(){
-  var INTERP = {
- "thesis-panel": {
-  "kind": "renga verse 1",
-  "title": "Close The Loop Over The People In It",
-  "source": "futon3c holes/excursions/RENGA-cascade-live-2026-11-08.md, verse 1 (claude-6 at Joe's direction, 2026-11-08)",
-  "if": "People do open-ended work alongside machines (software, mathematics).",
-  "however": "Help that is rented and opaque gets work done without the people getting better at it, and nobody can say why it chose what it did.",
-  "then": "Close a considerably faithful active-inference loop over the people in it: their turns are its observations, its choices come back explained, and their capability is what it is judged on.",
-  "because": "p(bloom) is people made more capable, not work made cheaper; a free-energy-minimising loop is both frugal (complexity is a cost) and explainable (G separates into risk and ambiguity)."
- },
- "wow-panel": {
-  "kind": "library pattern",
-  "title": "cascade-construction/renga-then-semilattice: Chain The Practices As A Renga, Then Let The Breaks Make It A Semilattice",
-  "source": "futon3/library/cascade-construction/renga-then-semilattice.flexiarg (draft 2026-11-08, for Joe's review)",
-  "conclusion": "To relate a set of practices, first chain them as a renga, one link at a time, and record where the chain breaks; then rebuild them as a semilattice whose extra edges are the ones the breaks called for.",
-  "if": "The practices are meant to support each other, but nothing says how one feeds the next.",
-  "however": "A list hides dependence, a tree forces a single parent, and a semilattice drawn straight away invents edges no one has tested.",
-  "then": "Write the practices as a renga, each verse taking up only the previous verse's THEN, so the set reads as a value chain. Record every place the chain cannot continue honestly. Then add the edges the breaks call for, each with its because, giving a semilattice; adjust the practices to fit each other and the circumstances rather than the chain.",
-  "because": "A renga link can be checked locally, one pair at a time, so its breaks are evidence rather than taste; Alexander's point is that the working structure is a semilattice, and the breaks say where its overlaps are."
- },
- "wip-panel": {
-  "kind": "reading of the generator's docstring",
-  "title": "Date Every Mark And Name What Would Promote It (the Uxbridge layer)",
-  "source": "claude-6's reading (2026-11-08) of futon3c holes/excursions/gen-wip-cards.py, lines 2-25; not yet a library pattern",
-  "if": "Control-loop nodes have a WR ruling that does not hold (the red rings), and a cascade mission would supply each missing mechanism (the blue ring).",
-  "however": "A status board usually omits the two fields that matter: when each mark was established, and what call would move the card to the next register (plan, built, ran, live).",
-  "then": "Give each red ring one card naming its supplier; date every mark so a card can be shown as visibly stale; record a promotion-test for each card, and show a null promotion-test as unmeasurable rather than as not done.",
-  "because": "An undated mark cannot be shown stale, and a card with no promotion-test cannot be moved by any evidence; promotion to live needs the artefact to produce its effect and a matched null control to fail (the m3 rule)."
- },
- "tickets-panel": {
-  "kind": "library pattern + renga verse 4",
-  "title": "workshop/one-queryable-self-account: One Queryable Self-Account",
-  "source": "futon3/library/workshop/one-queryable-self-account.flexiarg; renga verse 4 (2026-11-08) applies it to the backlog",
-  "conclusion": "The stack's account of itself must be ONE thing you can query: every state, with provenance, answerable; not several vocabularies reconciled by eyeball, and not a rendering you can look at but not ask.",
-  "if": "Any component records state, or any view presents it. (Renga verse 4: intents are tracked against the work that meets them.)",
-  "however": "Consolidation has cost and some legacy vocabularies persist; the account may be federated without being fragmented. (Verse 4: the work is a pile of ~800 items nobody has read, in four vocabularies, much of it stale or done.)",
-  "then": "Every state change lands in the account with provenance; every view is a query over the account; an unaskable question about stack state is a named gap, not silence. (Verse 4: read the pile into one queryable self-account: every item placed, stale items closed, waits on the operator typed as such.)",
-  "because": "Work steers itself only if it can see itself, and a self it cannot query is a self it cannot steer."
- },
- "forward-panel": {
-  "kind": "library pattern",
-  "title": "forward-model/the-forward-model-is-a-pattern-cascade: Model The Future Build As A Pattern Cascade, Not A Mission List",
-  "source": "futon3/library/forward-model/the-forward-model-is-a-pattern-cascade.flexiarg",
-  "conclusion": "Characterize the future build as a typed cascade of design patterns, boxes are patterns, wires are slot-adjacency, holes are patterns that should exist and do not, rather than as a list of missions.",
-  "if": "The stack has both a retrospective strategy layer, attested rulings composed into a semilattice, and mission-level forward models such as the backlog cascade, and the design patterns are indexed and slot-queryable.",
-  "however": "Every existing forward model boxes the future as missions; none characterizes the future build through patterns, so the reusable form of how we build stays implicit in prose.",
-  "then": "Model the next half-million lines as a cascade whose boxes are patterns and whose holes are the patterns that would have to be authored to reach the terminals, composed live from the indexed corpus rather than hand-drawn.",
-  "because": "Patterns are reusable where missions are one-off. A future modeled as patterns tells you not just what to build but the shape of building it."
- }
-};
+  var INTERP = {"thesis-panel": {"kind": "renga verse 1", "title": "Close The Loop Over The People In It", "source": "futon3c holes/excursions/RENGA-cascade-live-2026-11-08.md, verse 1 (claude-6 at Joe's direction, 2026-11-08)", "if": "People do open-ended work alongside machines (software, mathematics).", "however": "Help that is rented and opaque gets work done without the people getting better at it, and nobody can say why it chose what it did.", "then": "Close a considerably faithful active-inference loop over the people in it: their turns are its observations, its choices come back explained, and their capability is what it is judged on.", "because": "p(bloom) is people made more capable, not work made cheaper; a free-energy-minimising loop is both frugal (complexity is a cost) and explainable (G separates into risk and ambiguity)."}, "wow-panel": {"kind": "library pattern", "title": "cascade-construction/renga-then-semilattice: Chain The Practices As A Renga, Then Let The Breaks Make It A Semilattice", "source": "futon3/library/cascade-construction/renga-then-semilattice.flexiarg (draft 2026-11-08, for Joe's review)", "conclusion": "To relate a set of practices, first chain them as a renga, one link at a time, and record where the chain breaks; then rebuild them as a semilattice whose extra edges are the ones the breaks called for.", "if": "The practices are meant to support each other, but nothing says how one feeds the next.", "however": "A list hides dependence, a tree forces a single parent, and a semilattice drawn straight away invents edges no one has tested.", "then": "Write the practices as a renga, each verse taking up only the previous verse's THEN, so the set reads as a value chain. Record every place the chain cannot continue honestly. Then add the edges the breaks call for, each with its because, giving a semilattice; adjust the practices to fit each other and the circumstances rather than the chain.", "because": "A renga link can be checked locally, one pair at a time, so its breaks are evidence rather than taste; Alexander's point is that the working structure is a semilattice, and the breaks say where its overlaps are."}, "wip-panel": {"kind": "reading of the generator's docstring", "title": "Date Every Mark And Name What Would Promote It (the Uxbridge layer)", "source": "claude-6's reading (2026-11-08) of futon3c holes/excursions/gen-wip-cards.py, lines 2-25; not yet a library pattern", "if": "Control-loop nodes have a WR ruling that does not hold (the red rings), and a cascade mission would supply each missing mechanism (the blue ring).", "however": "A status board usually omits the two fields that matter: when each mark was established, and what call would move the card to the next register (plan, built, ran, live).", "then": "Give each red ring one card naming its supplier; date every mark so a card can be shown as visibly stale; record a promotion-test for each card, and show a null promotion-test as unmeasurable rather than as not done.", "because": "An undated mark cannot be shown stale, and a card with no promotion-test cannot be moved by any evidence; promotion to live needs the artefact to produce its effect and a matched null control to fail (the m3 rule)."}, "tickets-panel": {"kind": "library pattern + renga verse 4", "title": "workshop/one-queryable-self-account: One Queryable Self-Account", "source": "futon3/library/workshop/one-queryable-self-account.flexiarg; renga verse 4 (2026-11-08) applies it to the backlog", "conclusion": "The stack's account of itself must be ONE thing you can query: every state, with provenance, answerable; not several vocabularies reconciled by eyeball, and not a rendering you can look at but not ask.", "if": "Any component records state, or any view presents it. (Renga verse 4: intents are tracked against the work that meets them.)", "however": "Consolidation has cost and some legacy vocabularies persist; the account may be federated without being fragmented. (Verse 4: the work is a pile of ~800 items nobody has read, in four vocabularies, much of it stale or done.)", "then": "Every state change lands in the account with provenance; every view is a query over the account; an unaskable question about stack state is a named gap, not silence. (Verse 4: read the pile into one queryable self-account: every item placed, stale items closed, waits on the operator typed as such.)", "because": "Work steers itself only if it can see itself, and a self it cannot query is a self it cannot steer."}, "forward-panel": {"kind": "library pattern", "title": "forward-model/the-forward-model-is-a-pattern-cascade: Model The Future Build As A Pattern Cascade, Not A Mission List", "source": "futon3/library/forward-model/the-forward-model-is-a-pattern-cascade.flexiarg", "conclusion": "Characterize the future build as a typed cascade of design patterns, boxes are patterns, wires are slot-adjacency, holes are patterns that should exist and do not, rather than as a list of missions.", "if": "The stack has both a retrospective strategy layer, attested rulings composed into a semilattice, and mission-level forward models such as the backlog cascade, and the design patterns are indexed and slot-queryable.", "however": "Every existing forward model boxes the future as missions; none characterizes the future build through patterns, so the reusable form of how we build stays implicit in prose.", "then": "Model the next half-million lines as a cascade whose boxes are patterns and whose holes are the patterns that would have to be authored to reach the terminals, composed live from the indexed corpus rather than hand-drawn.", "because": "Patterns are reusable where missions are one-off. A future modeled as patterns tells you not just what to build but the shape of building it."}};
+  var VERSES = [{"n": "1", "title": "Close the loop over the people in it", "state": "crown", "way": "(the apex)", "modules": ["thesis-panel", "argument-panel"], "if": "People do open-ended work alongside machines (software, mathematics).", "however": "Help that is rented and opaque gets work done without the people getting better at it, and nobody can say why it chose what it did.", "then": "Close a considerably faithful active-inference loop over the people in it: their turns are its observations, its choices come back explained, and their capability is what it is judged on.", "because": "p(bloom) is people made more capable, not work made cheaper; a free-energy-minimising loop is both frugal (complexity is a cost) and explainable (G separates into risk and ambiguity).", "out": "turns are observations"}, {"n": "2", "title": "Turns become observations", "state": "holding", "way": "operator-turns-logged (holding)", "modules": ["wow-panel"], "if": "The loop takes the people's turns as its observations.", "however": "Turns are spoken and then gone; what was said cannot update anything that never received it.", "then": "Log every operator turn, with its intent marked, where the loop reads from.", "because": "An unrecorded ask is not an observation.", "out": "intents recorded"}, {"n": "3", "title": "What was asked stays open", "state": "failing", "way": "intents-are-tracked (failing)", "modules": [], "if": "Turns are recorded with their intent.", "however": "A record of what was asked is not a record of what was done about it; asks sink into the log.", "then": "Keep each intent open until it is met or withdrawn, linked to what met it.", "because": "A loop that loses the ask cannot be judged against it.", "out": "asks tracked"}, {"n": "4", "title": "The asks point into a backlog", "state": "failing", "way": "backlog-understood (failing), status-is-known (holding)", "modules": ["tickets-panel", "partition-details", "basins-panel", "cascade-panel"], "if": "Intents are tracked against the work that meets them.", "however": "The work is a pile of ~800 items nobody has read, in four vocabularies, much of it stale or done.", "then": "Read the pile into one queryable self-account: every item placed, stale items closed, waits on the operator typed as such.", "because": "You cannot steer by an account you cannot query.", "out": "one account"}, {"n": "5", "title": "Choose from the account", "state": "failing", "way": "selection-gives-a-reason (failing)", "modules": ["header-panel", "forward-panel"], "if": "The work is one queryable account.", "however": "Reading it in shape (what blocks what) ranks by file position and tie-breaks; it says nothing about worth.", "then": "Choose the next action by expected free energy over policies, with preferences learned from the operator's rulings.", "because": "A choice is accountable when it can say why this and not that, in terms the operator set.", "out": "a choice"}, {"n": "6", "title": "The outcome carries its warrant", "state": "failing", "way": "records-carry-warrant (failing)", "modules": ["wip-panel"], "if": "A choice is made and acted on.", "however": "The report of what happened can be made up, trimmed, or true only of a copy of the machine.", "then": "Every relied-on outcome carries the record it came from.", "because": "A loop that learns from unwarranted outcomes learns its own story.", "out": "warranted outcomes"}, {"n": "7", "title": "Capability, not only output", "state": "hole", "way": "no way of working covers this yet", "modules": [], "if": "Outcomes are warranted.", "however": "A warranted record of machine work does not show that any person got better at anything.", "then": "Record the moves and rulings a person reuses without being told (a proof move carried to the next problem; a ruling the next choice follows unprompted).", "because": "The opening verse judges the loop on capability.", "out": "people more capable"}];
+  var GHOSTS = {
+    "B": {title: "4′ Mathematics: the pile is a blueprint", note: "Break B, a fork at verse 4. In mathematics the pile is a problem's blueprint (lemmas, routes, blocked-on notes), not a backlog. The same verse holds with “blueprint” for “pile”; from here the chain runs twice: the tutor and Cascade Live run verses 4–7 over different piles."},
+    "D": {title: "Viability (wing V)", note: "Break D. No verse's THEN gives “machines and money must keep running” as its IF. Joe, 2026-11-08: “My claim here is that *benefit* should lead to viability”, so viability is read downstream, as what a surrounding context does when there is benefit (draft D5, “Benefit Finds A Context That Sustains It”)."},
+    "E": {title: "Other participants (wing C)", note: "Break E. Verses 2–3 are about the operator only; other participants (agents, learners, Murch, Peeragogy) never enter. Either a strand is missing or wing C belongs in verse 1 (“the people in it”, plural, is asserted and never followed)."},
+    "A": {title: "Rulings → preferences", note: "Break A, between verses 3 and 5. “Preferences learned from the operator's rulings” has no mechanism today: rulings live in memory files and notes, and nothing carries them into C. Verse 5 asserts a link verse 3 does not supply."},
+    "C": {title: "The cycle 7 → 1", note: "Break C. Verse 7's THEN feeds verse 1's IF: the chain closes into a loop. The “crown” is where one chooses to start reading the loop. Joe, 2026-11-08: the loop is the thing being built."}
+  };
   var main = document.querySelector('main');
   var sel = document.getElementById('cp-select'), flexBtn = document.getElementById('cp-flex');
   var view = document.getElementById('cp-flexiarg'), note = document.getElementById('cp-note');
-  var modules = [], part = null, partEl = null;
+  var svgBox = document.getElementById('cp-chain'), loose = document.getElementById('cp-loose');
+  var modules = [], byId = {}, part = null, partEl = null;
   Array.prototype.forEach.call(main.children, function(el){
     if (el.classList.contains('argument-part')) { part = el.textContent.trim(); partEl = el; return; }
     var isPanel = el.tagName === 'SECTION' && el.classList.contains('panel');
     if ((isPanel || el.tagName === 'DETAILS') && el.id && el.id !== 'clickpath') {
-      var h = el.querySelector(isPanel ? 'h2' : 'summary'), t = h ? (isPanel ? (h.childNodes[0].textContent || h.textContent) : h.textContent).trim() : el.id;
-      modules.push({id: el.id, title: t, part: part, partEl: partEl, el: el});
+      var h = el.querySelector(isPanel ? 'h2' : 'summary');
+      var t = h ? (isPanel ? (h.childNodes[0].textContent || h.textContent) : h.textContent).trim() : el.id;
+      var m = {id: el.id, title: t, part: part, partEl: partEl, el: el}; modules.push(m); byId[el.id] = m;
     }
   });
+  function esc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // ---- the drawing
+  var S = 92, STEP = 140, X0 = 30, Y0 = 96, NS = 'http://www.w3.org/2000/svg';
+  var COL = {crown: ['#16202e', '#5aa0ff'], holding: ['#14251b', '#3ddc84'], failing: ['#2b2418', '#e0a63b'], hole: ['#26181a', '#ff6b6b']};
+  function mk(tag, attrs, parent){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function txt(parent, x, y, s, attrs){ var t = mk('text', Object.assign({x: x, y: y}, attrs || {}), parent); t.textContent = s; return t; }
+  function wrap(parent, x, y, s, width, attrs){ var words = s.split(' '), line = '', dy = 0; words.forEach(function(w){ if ((line + ' ' + w).trim().length > width) { txt(parent, x, y + dy, line.trim(), attrs); dy += 12; line = w; } else line += ' ' + w; }); if (line.trim()) txt(parent, x, y + dy, line.trim(), attrs); }
+  var svg = mk('svg', {viewBox: '0 0 1000 450', width: '100%', role: 'img', 'aria-label': 'The Cascade Live renga drawn as a chain of pattern squares'}, svgBox);
+  var defs = mk('defs', {}, svg);
+  var mkr = mk('marker', {id: 'cp-arr', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 6, markerHeight: 6, orient: 'auto'}, defs); mk('path', {d: 'M0,0 L8,4 L0,8 z', fill: '#8fa0b6'}, mkr);
+  var mkr2 = mk('marker', {id: 'cp-arr-r', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 6, markerHeight: 6, orient: 'auto'}, defs); mk('path', {d: 'M0,0 L8,4 L0,8 z', fill: '#ff6b6b'}, mkr2);
+  var squares = {};
+  function square(key, x, y, state, label, sub, dashed){
+    var g = mk('g', {'class': 'cp-sq', 'data-key': key, tabindex: 0}, svg), c = COL[state];
+    mk('rect', {x: x - 8, y: y - 8, width: S + 16, height: S + 16, rx: 7, fill: c[0], stroke: c[1], 'stroke-width': 1.6, 'stroke-dasharray': dashed ? '5 4' : ''}, g);
+    var tl = [x + 6, y + 6], tr = [x + S - 6, y + 6], bl = [x + 6, y + S - 6], br = [x + S - 6, y + S - 6];
+    [[bl, tl], [bl, br], [tl, tr], [br, tr]].forEach(function(p){ mk('line', {x1: p[0][0], y1: p[0][1], x2: p[1][0], y2: p[1][1], stroke: '#8fa0b6', 'stroke-width': 1, 'marker-end': 'url(#cp-arr)'}, g); });
+    [tl, bl, br].forEach(function(p){ mk('circle', {cx: p[0], cy: p[1], r: 3.2, fill: '#0f1115', stroke: '#c8d0dc'}, g); });
+    mk('circle', {cx: tr[0], cy: tr[1], r: 4, fill: '#0f1115', stroke: c[1], 'stroke-width': 1.8}, g);
+    txt(g, tl[0] + 6, tl[1] + 12, 'IF', {'class': 'cp-k'}); txt(g, br[0] - 6, br[1] - 16, 'HOWEVER', {'class': 'cp-k', 'text-anchor': 'end'});
+    txt(g, bl[0] + 6, bl[1] - 6, 'BECAUSE', {'class': 'cp-k'}); txt(g, tr[0] - 8, tr[1] + 12, 'THEN', {'class': 'cp-k', 'text-anchor': 'end'});
+    wrap(g, x + S / 2, y + S + 22, label, 22, {'class': 'cp-lab', 'text-anchor': 'middle'});
+    if (sub) wrap(g, x + S / 2, y + S + 48, sub, 26, {'class': 'cp-sub', 'text-anchor': 'middle'});
+    squares[key] = {g: g, tl: tl, tr: tr, bl: bl, br: br};
+    g.addEventListener('click', function(){ pick(key); });
+    g.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(key); } });
+    return squares[key];
+  }
+  VERSES.forEach(function(v, i){ square(v.n, X0 + i * STEP, Y0, v.state, v.n + '. ' + v.title, v.way, v.state === 'hole'); });
+  square('B', X0 + 3 * STEP, Y0 + 178, 'hole', GHOSTS.B.title, 'break B: fork', true);
+  square('D', X0 + 5 * STEP + 40, Y0 + 178, 'hole', GHOSTS.D.title, 'break D: links to no verse', true);
+  square('E', X0 + 1 * STEP + 40, Y0 + 178, 'hole', GHOSTS.E.title, 'break E: never enters 2–3', true);
+  // THEN of each verse -> IF of the next
+  for (var i = 0; i < VERSES.length - 1; i++) {
+    var a = squares[VERSES[i].n].tr, b = squares[VERSES[i + 1].n].tl, broken = VERSES[i].n === '3' || VERSES[i].n === '4';
+    mk('line', {x1: a[0] + 4, y1: a[1], x2: b[0] - 5, y2: b[1], stroke: '#8fa0b6', 'stroke-dasharray': '4 3', 'marker-end': 'url(#cp-arr)'}, svg);
+    txt(svg, (a[0] + b[0]) / 2, a[1] - 18, VERSES[i].out, {'class': 'cp-out', 'text-anchor': 'middle'});
+  }
+  // fork B from verse 3's THEN
+  var s3 = squares['3'].tr, sb = squares['B'].tl;
+  mk('path', {d: 'M' + (s3[0] + 4) + ',' + (s3[1] + 4) + ' C' + (s3[0] + 30) + ',' + (s3[1] + 120) + ' ' + (sb[0] - 40) + ',' + (sb[1] - 30) + ' ' + (sb[0] - 5) + ',' + sb[1], fill: 'none', stroke: '#8fa0b6', 'stroke-dasharray': '4 3', 'marker-end': 'url(#cp-arr)'}, svg);
+  // break A: verse 3 -> verse 5 has no mechanism
+  var a3 = squares['3'].tr, a5 = squares['5'].tl;
+  var gA = mk('g', {'class': 'cp-sq cp-break', 'data-key': 'A', tabindex: 0}, svg);
+  mk('path', {d: 'M' + a3[0] + ',' + (a3[1] - 14) + ' C' + (a3[0] + 60) + ',' + (a3[1] - 78) + ' ' + (a5[0] - 60) + ',' + (a5[1] - 78) + ' ' + a5[0] + ',' + (a5[1] - 14), fill: 'none', stroke: '#ff6b6b', 'stroke-width': 1.6, 'stroke-dasharray': '2 4', 'marker-end': 'url(#cp-arr-r)'}, gA);
+  txt(gA, (a3[0] + a5[0]) / 2, a3[1] - 66, 'A: rulings → preferences (no mechanism)', {'class': 'cp-brk', 'text-anchor': 'middle'});
+  gA.addEventListener('click', function(){ pick('A'); });
+  // break C: the cycle 7 -> 1
+  var c7 = squares['7'].tr, c1 = squares['1'].tl;
+  var gC = mk('g', {'class': 'cp-sq cp-break', 'data-key': 'C', tabindex: 0}, svg);
+  mk('path', {d: 'M' + (c7[0] + 8) + ',' + (c7[1] + 4) + ' C' + (c7[0] + 60) + ',' + (c7[1] - 95) + ' ' + (c1[0] - 50) + ',' + (c1[1] - 95) + ' ' + (c1[0] - 6) + ',' + (c1[1] - 4), fill: 'none', stroke: '#5aa0ff', 'stroke-width': 1.2, 'stroke-dasharray': '6 4', 'marker-end': 'url(#cp-arr)'}, gC);
+  txt(gC, 500, 14, 'C: the chain closes — capability (7) feeds the first verse (1)', {'class': 'cp-cyc', 'text-anchor': 'middle'});
+  gC.addEventListener('click', function(){ pick('C'); });
+
+  // modules on no verse yet
+  var placed = {}; VERSES.forEach(function(v){ v.modules.forEach(function(id){ placed[id] = true; }); });
+  var unplaced = modules.filter(function(m){ return !placed[m.id]; });
+  loose.innerHTML = '<span class="muted">On no verse yet:</span> ' + unplaced.map(function(m){ return '<a href="#focus=' + esc(m.id) + '" class="cp-chip">' + esc(m.title) + '</a>'; }).join(' ');
+
+  // dropdown of all modules (secondary)
   var lastPart = null, group = null;
   modules.forEach(function(m){
     if (m.part !== lastPart) { group = document.createElement('optgroup'); group.label = m.part || ''; sel.appendChild(group); lastPart = m.part; }
-    var o = document.createElement('option'); o.value = m.id;
-    o.textContent = m.title + (INTERP[m.id] ? '' : '  (no flexiarg yet)'); group.appendChild(o);
+    var o = document.createElement('option'); o.value = m.id; o.textContent = m.title + (INTERP[m.id] ? '' : '  (no flexiarg yet)'); group.appendChild(o);
   });
-  function esc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // ---- state
   function state(){ var h = {}; location.hash.replace(/^#/, '').split('&').forEach(function(kv){ var p = kv.split('='); if (p[0]) h[p[0]] = decodeURIComponent(p[1] || ''); }); return h; }
-  function setState(focus, flex){ var parts = []; if (focus) parts.push('focus=' + encodeURIComponent(focus)); if (flex) parts.push('flexiarg=1'); history.replaceState(null, '', parts.length ? '#' + parts.join('&') : location.pathname + location.search); apply(); }
-  // A focused panel opens once, through its own fold toggle, so the page's
-  // fold state agrees; the page may fold it later when its data arrives.
+  function setState(o){ var parts = []; ['verse', 'focus'].forEach(function(k){ if (o[k]) parts.push(k + '=' + encodeURIComponent(o[k])); }); if (o.flexiarg) parts.push('flexiarg=1'); history.replaceState(null, '', parts.length ? '#' + parts.join('&') : location.pathname + location.search); apply(); }
+  function pick(key){ var h = state(); if (h.verse === key) setState({}); else setState({verse: key, flexiarg: h.flexiarg === '1'}); }
   var unfolded = {};
   function unfold(el){
     if (unfolded[el.id]) return;
@@ -1074,34 +1115,48 @@
     var obs = new MutationObserver(function(){ if (tryOpen()) obs.disconnect(); });
     obs.observe(el, {attributes: true, attributeFilter: ['class'], subtree: true});
   }
+  function flexBlock(f, extra){
+    return '<div class="cp-title">' + esc(f.title) + '</div><div class="cp-src">' + esc(f.kind) + ' · ' + esc(f.source) + (extra || '') + '</div><dl>'
+      + (f.conclusion ? '<dt>conclusion</dt><dd>' + esc(f.conclusion) + '</dd>' : '')
+      + ['if', 'however', 'then', 'because'].map(function(k){ return '<dt>' + k.toUpperCase() + '</dt><dd>' + esc(f[k]) + '</dd>'; }).join('') + '</dl>';
+  }
   function apply(){
-    var h = state(), focus = h.focus || '', flex = h.flexiarg === '1';
+    var h = state(), flex = h.flexiarg === '1', v = null, ghost = null, ids = [];
+    VERSES.forEach(function(x){ if (x.n === h.verse) v = x; });
+    if (!v && GHOSTS[h.verse]) ghost = h.verse;
+    if (v) ids = v.modules.slice(); else if (h.focus && byId[h.focus]) ids = [h.focus];
+    Object.keys(squares).forEach(function(k){ squares[k].g.classList.toggle('cp-on', k === h.verse); });
+    Array.prototype.forEach.call(svg.querySelectorAll('.cp-break'), function(g){ g.classList.toggle('cp-on', g.getAttribute('data-key') === h.verse); });
     modules.forEach(function(m){ m.el.classList.remove('cp-focused'); if (m.partEl) m.partEl.classList.remove('cp-focused-part'); });
-    var m = modules.filter(function(x){ return x.id === focus; })[0];
-    document.body.classList.toggle('cp-focus', !!m);
-    sel.value = m ? m.id : '';
+    var focusing = !!(v || ghost || ids.length);
+    document.body.classList.toggle('cp-focus', focusing);
+    ids.forEach(function(id){ var m = byId[id]; if (!m) return; m.el.classList.add('cp-focused'); if (m.partEl) m.partEl.classList.add('cp-focused-part'); unfold(m.el); if (m.el.tagName === 'DETAILS') m.el.open = true; });
+    sel.value = (!v && ids.length === 1) ? ids[0] : '';
     flexBtn.classList.toggle('on', flex);
     note.textContent = '';
-    if (m) { m.el.classList.add('cp-focused'); if (m.partEl) m.partEl.classList.add('cp-focused-part'); unfold(m.el); if (m.el.tagName === 'DETAILS') m.el.open = true; }
+    var html = '';
+    if (v) {
+      html += flexBlock({title: 'Verse ' + v.n + ': ' + v.title, kind: 'renga verse ' + v.n, source: 'RENGA-cascade-live-2026-11-08.md · way of working: ' + v.way, if: v.if, however: v.however, then: v.then, because: v.because});
+      html += '<div class="cp-src" style="margin-top:8px">' + (v.modules.length ? 'Modules this verse stands on (shown below): ' + v.modules.map(function(id){ return byId[id] ? esc(byId[id].title) : esc(id); }).join(' · ') : '<span class="cp-hole">No module on this page shows this verse yet: a hole.</span>') + '</div>';
+    } else if (ghost) {
+      html += '<div class="cp-title">' + esc(GHOSTS[ghost].title) + '</div><div class="cp-src">recorded break · RENGA-cascade-live-2026-11-08.md</div><div>' + esc(GHOSTS[ghost].note) + '</div>';
+    }
     if (flex) {
-      var targets = m ? [m] : modules, html = '';
-      targets.forEach(function(t){
-        var f = INTERP[t.id];
-        if (!f) { if (m) html += '<div class="cp-title">' + esc(t.title) + '</div><div class="cp-hole">No flexiarg interpretation written for this module yet: a hole.</div>'; return; }
-        html += '<div class="cp-title">' + esc(f.title) + '</div><div class="cp-src">' + esc(f.kind) + ' · ' + esc(f.source) + (m ? '' : ' · module: ' + esc(t.title)) + '</div><dl>'
-          + (f.conclusion ? '<dt>conclusion</dt><dd>' + esc(f.conclusion) + '</dd>' : '')
-          + ['if','however','then','because'].map(function(k){ return '<dt>' + k.toUpperCase() + '</dt><dd>' + esc(f[k]) + '</dd>'; }).join('') + '</dl>';
-        if (!m) html += '<div style="height:12px"></div>';
+      (ids.length ? ids : modules.map(function(m){ return m.id; })).forEach(function(id){
+        var f = INTERP[id], m = byId[id]; if (!m) return;
+        if (f) html += '<div style="height:12px"></div>' + flexBlock(f, ' · module: ' + esc(m.title));
+        else if (ids.length) html += '<div style="height:12px"></div><div class="cp-title">' + esc(m.title) + '</div><div class="cp-hole">No flexiarg interpretation written for this module yet: a hole.</div>';
       });
+      if (!ids.length) note.textContent = Object.keys(INTERP).length + ' of ' + modules.length + ' modules have a flexiarg so far';
+    }
+    if (html) {
       view.innerHTML = html; view.style.display = 'block';
-      if (m) m.el.parentNode.insertBefore(view, m.el);
-      else main.insertBefore(view, document.getElementById('clickpath').nextSibling);
-      if (!m) note.textContent = Object.keys(INTERP).length + ' of ' + modules.length + ' modules have a flexiarg so far';
-    } else { view.style.display = 'none'; }
+      main.insertBefore(view, document.getElementById('clickpath').nextSibling);
+    } else view.style.display = 'none';
   }
-  sel.addEventListener('change', function(){ setState(sel.value, state().flexiarg === '1'); window.scrollTo(0, 0); });
-  flexBtn.addEventListener('click', function(){ setState(state().focus || '', state().flexiarg !== '1'); });
-  document.getElementById('cp-all').addEventListener('click', function(){ setState('', false); });
+  sel.addEventListener('change', function(){ setState({focus: sel.value, flexiarg: state().flexiarg === '1'}); });
+  flexBtn.addEventListener('click', function(){ var h = state(); setState({verse: h.verse, focus: h.focus, flexiarg: h.flexiarg !== '1'}); });
+  document.getElementById('cp-all').addEventListener('click', function(){ setState({}); });
   window.addEventListener('hashchange', apply);
   apply();
 })();
