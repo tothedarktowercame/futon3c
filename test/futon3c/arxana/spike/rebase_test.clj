@@ -188,7 +188,14 @@
               (is (= [(str "a-" i) (str "b-" i)] (:op-ids c))))
             ;; no silent winner: neither alternative is byte-equal to just
             ;; applying one side alone when the other side conflicts
-            (is (every? #(= 2 (count (:retained %))) (:alternatives ab)))))))
+            (is (every? #(= 2 (count (:retained %))) (:alternatives ab)))
+            ;; added in review (claude-13): the two alternatives must
+            ;; actually differ whenever the two sides differ on their own;
+            ;; two identical "alternatives" are a silent winner in disguise
+            (when-not (r/bytes= (r/apply-patch text a) (r/apply-patch text b))
+              (is (not (r/bytes= (:bytes (first (:alternatives ab)))
+                                 (:bytes (second (:alternatives ab)))))
+                  (str "alternatives identical (disguised winner), trial " i)))))))
     (println "property tally:" @tally)
     (is (pos? (:mergeable @tally)) "no mergeable cases generated")
     (is (pos? (:conflict @tally)) "no conflict cases generated")))
