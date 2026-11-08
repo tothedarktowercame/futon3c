@@ -1,5 +1,6 @@
 (ns futon3c.arxana.formal-f3-generate-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.set]
+            [clojure.test :refer [deftest is testing]]
             [futon1b-arxana :as f1]
             [futon1b-gates :as gates]
             [futon1b-server :as f1-server]
@@ -38,6 +39,13 @@
                 :body {:entity/id id}})
           [:ok :record]))
 
+(defn assessments-of [cfg id]
+  (get-in (service/dispatch
+           cfg {:protocol/version "arxana.v1" :message/id (str "f3c:ass:" id)
+                :operation :graph/query :principal/id "formal-f3c-test"
+                :body {:query/type :assessments :subject/id id :query/limit 50}})
+          [:ok :result/assessments]))
+
 (deftest generated-synthetic-and-residue-records-remain-distinct
   (with-stack
     (fn [cfg]
@@ -54,16 +62,29 @@
             lean-revision (:artifact/revision-id (first base))
             informal-revision (:artifact/revision-id (second base))
             alignment (f3b/read-alignment alignment-path)
+            ;; F3b's records exist first, as in the real pipeline, so F3c
+            ;; could (wrongly) assess the genuine divergence.
+            f3b-rows (f3b/materialise! cfg (f3b/plan alignment informal-revision))
+            _ (is (every? #(every? :ok (:writes %)) f3b-rows))
             result (f3c/materialise! cfg {:lean-revision lean-revision
                                           :informal-revision informal-revision
                                           :alignment alignment})
             revisions (vals (:revisions result))]
         (testing "generated, synthetic, witness, and authored artifacts are separate"
+          (is (every? #(get-in % [:response :ok]) (:ingested result))
+              "every F3c artifact was ingested as its own new artifact")
+          (is (empty? (clojure.set/intersection
+                       (set (map :artifact/id (:ingested result)))
+                       #{"formal-f3:a93J02/lean-main" "formal-f3:a93J02/authored-informal"})))
           (is (= 3 (count (set revisions))))
           (is (not-any? #{informal-revision} revisions))
           (is (not-any? #{lean-revision} revisions))
           (is (= f3c/synthetic-label
                  (get-in result [:mutation :asserted-content :label])))
+          (doseq [{:keys [artifact/id media-type]} (:ingested result)
+                  :when (not= id f3c/generated-artifact-id)]
+            (is (re-find #"SYNTHETIC" id) id)
+            (is (re-find #"fixture=SYNTHETIC-negative" media-type) id))
           (is (= f3c/synthetic-label
                  (get-in result [:synthetic-claim :asserted-content :fixture/label]))))
         (testing "generation run records the complete model contract and both revisions"
@@ -92,7 +113,13 @@
           (is (= :contradicted (get-in result [:contradiction :standing])))
           (is (= (get-in result [:kernel :attestation :id])
                  (get-in result [:contradiction :kernel/attestation-id])))
-          (is (some? (get-record cfg (get-in result [:kernel :attestation :id])))))
+          (is (some? (get-record cfg (get-in result [:kernel :attestation :id]))))
+          (let [stored (assessments-of cfg (get-in result [:synthetic-claim :id]))
+                kernel-id (get-in result [:kernel :attestation :id])]
+            (is (= 1 (count stored)))
+            (is (= [{:attestation/id kernel-id}] (:source-refs (first stored)))
+                "the stored contradiction cites the kernel attestation")
+            (is (= :contradicted (:standing (first stored))))))
         (testing "ambiguous and unaligned residues are public records"
           (is (seq (get-in result [:residues :ambiguous])))
           (is (= ["tsum_alternating_harmonic_mul_pow"]
@@ -108,4 +135,8 @@
           (let [divergence (first (filter :divergence?
                                           (:records (f3b/plan alignment informal-revision))))]
             (is (= false (get-in divergence [:evidence :content :contradiction?])))
+            (is (= [["joe" :accepted]]
+                   (mapv (juxt :actor :verdict)
+                         (assessments-of cfg (get-in divergence [:claim :id]))))
+                "the genuine divergence keeps only Joe's acceptance")
             (is (= :unverified (get-in divergence [:evidence :standing])))))))))

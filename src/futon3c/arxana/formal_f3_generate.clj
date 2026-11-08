@@ -11,6 +11,8 @@
 (def synthetic-artifact-id "formal-f3:a93J02/SYNTHETIC-mutation")
 (def witness-artifact-id "formal-f3:a93J02/SYNTHETIC-lean-witness")
 (def synthetic-label :SYNTHETIC-negative)
+;; When codex-21 authored these records: the commit time of futon3c ac85c41e5.
+(def f3c-authored-at "2026-11-08T17:13:39Z")
 
 (def generation-prompt
   (str "Explain the proof in the exact Lean artifact problems/a93J02/lean/Main.lean "
@@ -109,14 +111,14 @@
     {:subject-clusion-id (:id claim) :verdict :candidate :actor "codex-21"
      :policy {:id "formal-f3/model-output-is-candidate" :version 1}
      :reason "Generated informalisation is model output, not acceptance."
-     :time "2026-11-08T00:00:00Z" :basis :model})])
+     :time f3c-authored-at :basis :model})])
 
 (defn contradiction-assessment [claim kernel-attestation-id]
   (records/make-assessment
    {:subject-clusion-id (:id claim) :verdict :rejected :actor "codex-21"
     :policy {:id "formal-f3/SYNTHETIC-negative-fixture" :version 1}
     :reason "The deliberately mutated log 3 statement is contradicted by the cited Lean kernel witness."
-    :time "2026-11-08T00:00:00Z" :basis :fixture-author :standing :contradicted
+    :time f3c-authored-at :basis :fixture-author :standing :contradicted
     :fixture/label synthetic-label :kernel/attestation-id kernel-attestation-id
     :source-refs [{:attestation/id kernel-attestation-id}]}))
 
