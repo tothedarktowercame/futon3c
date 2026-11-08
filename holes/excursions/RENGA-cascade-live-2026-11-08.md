@@ -188,3 +188,31 @@ read downstream.
           creativity-commons/process-fits-local-conditions,
           ways-of-working/stays-alive-and-paid
 ```
+
+## Evidence for verse 7 from the operator (Joe, 2026-11-08)
+
+Joe's own account of what the year gave him, recorded as the first evidence
+on verse 7 (capability, not only output):
+
+- PLoP 2026: "a lot of people are working on getting software systems to do
+  useful aligned work on their own, but not that many are going via an AIF
+  route, and that route has promise" (a small seminar discussion, not taken
+  as flattery).
+- "the *concrete* return of having an AIF-driven software factory or
+  programming partner … has not materialised yet, but the *learning* has been
+  pretty strong. I've been learning AIF 'by immersion' … I understand G and C
+  pretty well, and I can place beta and F in context."
+- "Fundamentally, though, what I've been learning about is how to develop
+  systems that don't break and aren't fake … the *resistance* that the War
+  Machine project has offered is a benefit above-and-beyond 'building stuff
+  with AI for fun and profit'." He judges it worth the opportunity cost of
+  more client projects, because his capabilities grow more this way.
+- Everyday benefits that do not depend on the War Machine: Claude Code
+  sessions in Emacs; complex multi-agent dispatches overnight.
+- "Getting AI agents to solve 96% of my UT Austin prelim problems has taught
+  me very little about mathematics, but it has taught me a lot about AI!"
+  (The tutor lessons are the attempt to turn that around.)
+
+"Systems that don't break and aren't fake" maps onto two wings: A (aren't
+fake: records carry warrant, no self-certification) and V read as robustness
+(don't break). It is also the plain-language problem statement S7.3 asks for.
