@@ -1,0 +1,41 @@
+{:increment :F3d
+ :date "2026-11-08"
+ :commits
+ {:futon3c-base "3b8b78b98e9d5da2b390b5aa6f13bfd83e06bd2c"
+  :futon3c-code "4c963898687d93218d545a44e00b1cdfcb5d1269"
+  :futon4a-code "511e47b301aa446c227f926275964c4ae5547d71"}
+ :relocation
+ {:source :authored-informal
+  :successor-ingest :expected-head-cas
+  :cases [:resolved :ambiguous :missing]
+  :all-candidates-preserved? true
+  :correspondences-mutated? false
+  :lean-revision-mutated? false
+  :declaration-locations-mutated? false
+  :evidence-read-back-through :entity/get}
+ :projections
+ {:operations [:formal-f3/correspondence :formal-f3/manifestations]
+  :source-ports [:revision/get :entity/get :graph/query]
+  :synthetic-label-preserved? true
+  :divergence-contradicted? false
+  :fragments-carry-record-ids? true
+  :same-correspondence-ids-in-both? true}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f3-projection-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 344 :failures 0 :errors 0}}
+  {:command "emacs -Q --batch -L lisp -l test/futon4a-formal-f1-test.el -l test/futon4a-formal-f3-test.el -f ert-run-tests-batch-and-exit"
+   :result {:tests 9 :unexpected 0}}
+  {:command "test/e2e-formal-f3-demo.sh"
+   :port 7196 :result :pass :owned-process-stopped? true}
+  {:command "test/stop-f3-demo-test.sh"
+   :result :pass :foreign-process-preserved? true}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens {:clojure :pass :elisp :pass}
+  :bash-syntax :pass :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched []
+  :test-port 7196
+  :persistent-processes-left-running []}
+ :deferred []}
