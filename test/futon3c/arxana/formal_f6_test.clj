@@ -81,10 +81,21 @@
                               {:argument/id argument-id :item/id (:id diagram)
                                :zone :margin :order 1 :offset/x 12 :offset/y 0
                                :placed-at "2026-11-08T00:00:02.000Z"})
+            current-after (fn [suffix]
+                            (get-in (item-row (view cfg plan suffix) (:id diagram))
+                                    [:placement :id]))
+            at-margin (current-after "at-margin")
             move-main (call cfg "move:main" :formal-f6/move "joe"
                             {:argument/id argument-id :item/id (:id diagram)
                              :zone :main :order 3 :offset/x 0 :offset/y 0
                              :placed-at "2026-11-08T00:00:03.000Z"})
+            at-main (current-after "at-main")
+            ;; written last but placed earlier: must not become current
+            backdated (call cfg "move:backdated" :formal-f6/move "joe"
+                            {:argument/id argument-id :item/id (:id diagram)
+                             :zone :margin :order 9 :offset/x 0 :offset/y 0
+                             :placed-at "2026-11-08T00:00:02.500Z"})
+            after-backdated (current-after "after-backdated")
             moved (view cfg plan "moved")
             diagram-row (item-row moved (:id diagram))
             supports-moved (mapv :record (get-in moved [:ok :supports]))]
@@ -98,7 +109,11 @@
           (is (:ok move-main))
           (is (= diagram-before (get-record cfg (:id diagram))))
           (is (= supports-before supports-moved))
-          (is (= 3 (count (:placement/history-ids diagram-row))))
+          (is (= (get-in move-margin [:ok :placement/id]) at-margin))
+          (is (= (get-in move-main [:ok :placement/id]) at-main))
+          (is (:ok backdated))
+          (is (= (get-in move-main [:ok :placement/id]) after-backdated))
+          (is (= 4 (count (:placement/history-ids diagram-row))))
           (is (= :main (get-in diagram-row [:placement :asserted-content :zone])))
           (is (= 3 (get-in diagram-row [:placement :asserted-content :order]))))
         (testing "re-support appends an attributable edge and keeps the old one"
@@ -125,6 +140,22 @@
             (is (= "joe" (get-in (get-record cfg new-id) [:asserted-content :actor])))
             (is (= 2 (count diagram-supports)))
             (is (contains? (set (get-in after [:ok :current/support-ids])) new-id))
+            (is (not (contains? (set (get-in after [:ok :current/support-ids]))
+                                (:id old-support))))
+            (is (= {(:id old-support) false new-id true}
+                   (into {} (for [row (get-in after [:ok :supports])
+                                  :when (#{(:id old-support) new-id} (:record/id row))]
+                              [(:record/id row) (:current? row)]))))
+            (let [supersession (get-record cfg (get-in changed [:ok :supersession/id]))
+                  role-id (fn [role] (get-in (first (filter #(= role (:role %))
+                                                            (:endpoints supersession)))
+                                             [:target :clusion/id]))]
+              (is (= [:f6/re-supports 1] (:type-revision supersession)))
+              (is (= new-id (role-id :successor)))
+              (is (= (:id old-support) (role-id :predecessor)))
+              (is (= "joe" (get-in supersession [:asserted-content :actor])))
+              (is (= "the diagram now explains the cube fibre"
+                     (get-in supersession [:asserted-content :reason]))))
             (is (false? (get-in repeated [:ok :created?])))
             (is (= new-id (get-in repeated [:ok :support/id])))
             (is (= 2 (count (support-records final (:id diagram)))))
