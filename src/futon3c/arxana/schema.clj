@@ -94,6 +94,11 @@
     :projection [:operation :result/status :map/id :value/id :fibre/id
                  [:result/member-ids] [:record/ids] :kernel/attestation-id]}
 
+   :geometry/render
+   {:schema-version 1 :required #{:map/id :value/id}
+    :allowed #{:map/id :value/id :cartesian/panel-id :angular/panel-id}
+    :projection [:operation :html [:panel/ids] [:geometry/record-ids] :panels]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}
