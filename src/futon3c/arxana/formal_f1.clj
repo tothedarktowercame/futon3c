@@ -52,14 +52,26 @@
     :endpoints [{:role :subject :kind :clusion :target {:clusion/id (:id claim)}}]
     :asserted-content {:resolution/state state}}))
 
-(defn- marks [turn-id text]
-  (mapv (fn [[glyph colon]]
-          (let [start (.indexOf ^String text ^String glyph)]
-            (records/make-mark-occurrence
-             {:glyph glyph :form (if (seq colon) :colon :plain)
-              :artifact/revision-id (str turn-id "@settled")
-              :locator {:codepoint-range [start (inc start)]}})))
-        (re-seq #"([㊥㊭㊣㊟🈖🈯㊢㊩㊬🈹🈡🈳🈲🈸㊯㊝㊮🈕🈰🈝🈘㊫])(:?)" text)))
+(def mark-pattern
+  (re-pattern "([㊥㊭㊣㊟🈖🈯㊢㊩㊬🈹🈡🈳🈲🈸㊯㊝㊮🈕🈰🈝🈘㊫])(:?)"))
+
+(defn mark-occurrences
+  "Return one revision-pinned entity per mark occurrence. Matcher offsets are
+  converted from JVM UTF-16 indexes to Unicode codepoint offsets."
+  [turn-id text]
+  (let [matcher (re-matcher mark-pattern text)]
+    (loop [out []]
+      (if (.find matcher)
+        (let [utf16-start (.start matcher 1)
+              start (.codePointCount ^String text 0 utf16-start)
+              glyph (.group matcher 1)
+              colon (.group matcher 2)]
+          (recur (conj out
+                       (records/make-mark-occurrence
+                        {:glyph glyph :form (if (seq colon) :colon :plain)
+                         :artifact/revision-id (str turn-id "@settled")
+                         :locator {:codepoint-range [start (inc start)]}}))))
+        out))))
 
 (defn- external-reference [turn-id kind record-id digest]
   (records/make-external-reference
@@ -89,7 +101,7 @@
 (defn plan-turn
   "Pure deterministic plan from one settled Xiang turn and its analysis."
   [turn-id turn analysis]
-  (let [mark-records (marks turn-id (:source_text turn))
+  (let [mark-records (mark-occurrences turn-id (:source_text turn))
         fragments (for [sentence (:sentences analysis)
                         fragment (:fragments sentence)]
                     [(:id sentence) fragment])

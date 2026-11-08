@@ -83,6 +83,31 @@
                          {:reason ":bytes must be a UTF-8 string or base64 bytes"}
                          nil)}
 
+      (and (get (store/capabilities graph-store) :entity-compare-and-set)
+           (string? bytes))
+      (let [{route-ok :ok route-error :error}
+            (store/conditional-write!
+             graph-store
+             {:protocol/version env/protocol-version
+              :message/id (:message/id body)
+              :operation :revision/ingest
+              :principal/id "arxana-service"
+              :body {:target/id id :expected/revision-id revision-id
+                     :command {:revision/canonical-bytes bytes
+                               :revision/media-type media-type}}})]
+        (if route-error
+          {:error route-error}
+          (let [{provider-ok :ok} (artifact/ingest! artifact-provider id bs media-type)
+                provider-rid (:artifact/revision-id provider-ok)
+                store-rid (:revision/id route-ok)]
+            (if (not= provider-rid store-rid)
+              {:error (env/error :failed :arxana.service/revision-digest-disagreement
+                                 {:provider/revision-id provider-rid
+                                  :store/revision-id store-rid} nil)}
+              {:ok {:artifact/id id :artifact/revision-id store-rid
+                    :head/revision-id (:head/revision-id route-ok)
+                    :duplicate? (:duplicate? route-ok)}}))))
+
       :else
       (let [current (current-head graph-store id)]
         (if (not= (if (= revision-id :absent) nil revision-id) current)
@@ -296,7 +321,8 @@
                                    :result/watermark (:watermark qok)})))))
 
            (= op :revision/ingest)
-           (let [{rok :ok rerr :error} (ingest-revision graph-store artifact-provider body)]
+           (let [{rok :ok rerr :error} (ingest-revision graph-store artifact-provider
+                                                         (assoc body :message/id (:message/id ok)))]
              (if rerr
                (env/response ok (with-semantic-digest op rerr))
                (do
