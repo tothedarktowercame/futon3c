@@ -127,6 +127,16 @@
             (is (= :arxana.composite/port-type-mismatch
                    (get-in result [:error :error/code])))
             (is (nil? (read-record cfg (:id bad))))))
+        (testing "through the public port a self-containing composite cannot even be named"
+          ;; Review (claude-13): ids are content hashes and a port target must
+          ;; already be stored, so no write can close a cycle; a forged
+          ;; self-reference fails the identity check before the cycle check.
+          (let [forged (assoc (:group f4)
+                              :endpoints [{:role :child :kind :clusion
+                                           :target {:clusion/id (:id (:group f4))}}])
+                result (dispatch cfg "bad:forged-cycle" :clusion/assert {:record forged})]
+            (is (:error result))
+            (is (nil? (read-record cfg (:id forged))))))
         (testing "direct cycles are refused by the validity boundary"
           (let [self (assoc (:group f4)
                             :endpoints [{:role :child :kind :clusion
