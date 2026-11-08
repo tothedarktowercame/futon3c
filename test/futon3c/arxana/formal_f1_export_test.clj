@@ -1,5 +1,6 @@
 (ns futon3c.arxana.formal-f1-export-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [cheshire.core :as json]
+            [clojure.test :refer [deftest is]]
             [futon1b-arxana :as f1]
             [futon1b-gates :as gates]
             [futon1b-server :as f1-server]
@@ -63,8 +64,23 @@
                                                   (second (:range entry)))))
         (doseq [{:keys [glyph range]} (:marks entry)]
           (is (= glyph (export/codepoint-substring (:markdown a) (first range) (second range)))))
-        (doseq [{:keys [range]} (:interpretations entry)]
-          (is (not-empty (export/codepoint-substring (:markdown a) (first range) (second range)))))))))
+        ;; Independent of the materialiser: the 象 analysis records each
+        ;; fragment's text. The successor reading (turn-iWVzvT) covers s1.
+        (let [analysis (json/parse-string
+                        (slurp (str (System/getProperty "user.home")
+                                    "/.emacs-graph/session-turn-analysis/"
+                                    (:turn/id plan) ".json.analysis.json"))
+                        true)
+              texts (vec (for [sentence (:sentences analysis)
+                               fragment (:fragments sentence)]
+                           (:text fragment)))
+              expected (cond-> texts
+                         (= "turn-iWVzvT" (:turn/id plan)) (conj (first texts)))]
+          (is (= expected
+                 (mapv (fn [{:keys [range]}]
+                         (export/codepoint-substring (:markdown a) (first range) (second range)))
+                       (:interpretations entry)))
+              (str (:turn/id plan) ": each interpretation range covers its fragment text")))))))
 
 (deftest private-stack-ingest-and-drift-gate
   (with-stack
