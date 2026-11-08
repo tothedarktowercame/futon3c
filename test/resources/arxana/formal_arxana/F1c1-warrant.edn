@@ -1,0 +1,42 @@
+{:increment :F1c1
+ :date "2026-11-08"
+ :commits
+ {:futon3c-code "5b08367ff6db0e98d407dafe26b1b783d3e935d1"
+  :futon3c-base "05994a2ba45fd4ba0e22891a424b27d22fea4452"
+  :futon1b-public-read "063e2505c76fcd0d9209c905a47eca63fc0af26e"}
+ :projection-rules
+ [{:id :formal-f1/linear :version 1
+   :carries [:ordered-prose :inline-marks :record-ids]
+   :drops [:graph-adjacency :resolver-diagnostics :presentation-layout]}
+  {:id :formal-f1/outline :version 1
+   :carries [:interpretations :attestations :assessments :resolutions
+             :relocations :supersedes :record-ids]
+   :drops [:source-prose-layout :executable-action :presentation-layout]}
+  {:id :formal-f1/gcc :version 1
+   :carries [:intent :target :standing :record-ids :typed-truncation]
+   :drops [:non-action-prose :execution-authority :admission :presentation-layout]}]
+ :ports
+ {:reads-only [:entity/get :graph/query :revision/get]
+  :futon1b-internals-read-directly? false
+  :entity-get-backed-by :reserved-record-by-id}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f1-projection-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 125 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-f1-projection-test -n futon3c.arxana.spine-test -n futon3c.arxana.store-http-test -n futon3c.arxana.formal-f1-test"
+   :result {:tests 10 :assertions 229 :failures 0 :errors 0}}
+  {:repo :futon1b
+   :command "clojure -M:node -m test-arxana-conditional"
+   :result "24/24 PASS"}]
+ :acceptance
+ {:interpretation-ids-cross-all-three? true
+  :all-fragment-record-ids-resolve? true
+  :competing-readings-visible? true
+  :assessment-is-not-latest-wins? true
+  :model-evidence-implies-accepted? false
+  :gcc-bounded-and-non-executable? true}
+ :gates {:clj-kondo {:errors 0 :warnings 0}
+         :check-parens :pass
+         :git-diff-check :pass}
+ :live-services-touched? false
+ :deferred [:F1c2-futon4a-rendering]}
