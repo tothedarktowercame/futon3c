@@ -1,0 +1,45 @@
+{:increment :F1c2
+ :date "2026-11-08"
+ :commits
+ {:futon3c-code "b02a4db9c"
+  :futon3c-base "f6c8e61da3e103f1b15f2b89ab05f4bfa9d51265"
+  :futon4a-code "814783c"
+  :futon4a-base "fb8927a173a2f490e71030b143afb3a1eb443086"}
+ :private-stack
+ {:store :in-process-xtdb-via-ephemeral-futon1b-http
+  :public-bind "127.0.0.1:7085"
+  :occupied-port-policy :refuse-before-store-start
+  :manifest-revision-id
+  "arxana:revision:sha256:8fc4c0ba8c570f58ac034cdc496bf94467467d4d9c88e795eab1036faedf401c"
+  :deterministic-across-launches? true}
+ :emacs
+ {:views [:formal-f1/linear :formal-f1/outline :formal-f1/gcc]
+  :standing-dimensions [:resolution :assessment :evidence-qualification]
+  :faces [:candidate :accepted :rejected]
+  :record-id-text-properties? true
+  :entity-get-at-point? true
+  :relocation-hook [:resolved :ambiguous-all-candidates :missing-unverified]
+  :gcc-non-executable? true}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f1-demo-test -n futon3c.arxana.formal-f1-projection-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 4 :assertions 169 :failures 0 :errors 0}}
+  {:command "emacs -Q --batch -L lisp -l test/futon4a-formal-f1-test.el -f ert-run-tests-batch-and-exit"
+   :result {:tests 6 :unexpected 0}}
+  {:command "FUTON3C_ROOT=/home/joe/worktrees/futon3c/formal-arxana-f1c2 test/e2e-formal-f1-demo.sh"
+   :result "PASS on fresh-censused 127.0.0.1:17185; owned PID stopped; port free"}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :bash-syntax :pass
+  :git-diff-check :pass}
+ :process-safety
+ {:pid-recorded-at-start? true
+  :proc-cmdline-checked-before-signal? true
+  :kill-by-name? false
+  :shared-services
+  {7070 {:pid 521296 :touched? false}
+   7073 {:pid 1747159 :touched? false}
+   7084 {:pid 250790 :touched? false}}
+  :packet-ports-left-running []}
+ :deferred []}
