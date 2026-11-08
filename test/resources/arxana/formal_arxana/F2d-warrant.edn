@@ -1,0 +1,28 @@
+{:mission "M-formal-arxana"
+ :increment :F2d
+ :recorded-at "2026-11-08T20:31:00.000Z"
+ :commits {:futon6 "99606aca3db767753e9fae2448aeb1dda9fa48cc"
+           :futon3c-base "3f7ef2efce895e26cdbc6a19bd4abf1f6afa0adc"
+           :futon4a-base "3d5e597c1ce99673ba64f616d847505e72eafb96"}
+ :checks
+ [{:command "node --test test/"
+   :cwd "futon6/tools/arxana-vscode"
+   :result "35 tests, 35 pass, 0 fail (all prior suites plus F2d)"}
+  {:command "node --check extension.js && node --check lib/f2.js"
+   :result "pass"}
+  {:command "scripts/f2-cross-client.sh"
+   :result {:status :pass
+            :exact-head-sha256 "f002851cad14afe4217c67b266afa7f42eae8a8dd3465e7eb7848f27b79f6e9a"
+            :missing-scopes 1
+            :conflict-alternatives 2
+            :observations ["Emacs edit plus stale VS edit rebased to exact expected revision/get bytes"
+                           "inside-scope VS edit surfaced one missing scope"
+                           "same-range Emacs/VS edits left two alternatives and no choice"
+                           "explicit VS choice became exact head and reopened Emacs saw it"]}]
+ :fixture {:relocation "Captured from entity/get on a private formal-f2-demo; nested location/range offsets retained"
+           :path "tools/arxana-vscode/test/fixtures/f2-relocation-live.json"}
+ :runtime {:shared-ports-touched false
+           :test-service "pid-owned private futon3c.arxana.formal-f2-demo on ephemeral loopback port"
+           :left-running false}
+ :not-run ["installation or restart of shared code-server :8097"
+           "writes to live futon1b"]}
