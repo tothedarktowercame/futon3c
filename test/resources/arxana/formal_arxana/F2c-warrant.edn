@@ -2,7 +2,7 @@
  :increment :F2c
  :recorded-at "2026-11-08T19:56:00.000Z"
  :commits {:futon3c "60cf939674a7914eb3de466502fe251e8520c99f"
-           :futon4a "e147ba11fccbea8732e8b27f5a22ef38339d22ee"}
+           :futon4a "18e4ebf69eb2d46ee51aa47ef6369444e1d1a90d"}
  :checks
  [{:command "clojure -M:test -n futon3c.arxana.formal-f2-demo-test -n futon3c.arxana.formal-f2-markup-test"
    :result "3 tests, 86 assertions, 0 failures, 0 errors"}
@@ -11,7 +11,7 @@
   {:command "emacs -Q --batch -l futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- changed-files"
    :result "OK in both repositories"}
   {:command "emacs -Q --batch -L lisp -l test/futon4a-formal-f2-test.el -f ert-run-tests-batch-and-exit"
-   :result "2 tests, 0 unexpected"}
+   :result "3 tests, 0 unexpected; includes requested-revision-only relocation rendering"}
   {:command "test/stop-f2-demo-test.sh"
    :result "PASS; the same-name twin remained alive"}
   {:command "test/e2e-formal-f2-demo.sh"
