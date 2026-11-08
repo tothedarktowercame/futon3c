@@ -1,0 +1,36 @@
+{:increment :F5b
+ :date "2026-11-08"
+ :commits
+ {:futon3c-base "c8dfd92a6332f559016842935f7bff3ffb14d084"
+  :futon3c-code "562799e551c0cadf79fd1130df7bb98b53bbb38e"
+  :futon4a-code "c1837bf403f9877d29d63f6299dbb1339e0c97c1"}
+ :renderer
+ {:operation :geometry/render
+  :panels [:cartesian-plane-circle :angular-projection]
+  :source-ports [:geometry/fibre :entity/get :graph/query]
+  :deterministic? true
+  :drawn-objects-carry-record-ids? true
+  :mathematical-values :exact-rational-turns
+  :presentation-type [:geometry/placement 1]
+  :coordinates-in-mathematical-identity? false}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f5-render-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 45 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.formal-f5-test -n futon3c.arxana.formal-f5-render-test -n futon3c.arxana.spine-test"
+   :result {:tests 15 :assertions 255 :failures 0 :errors 0}}
+  {:command "emacs -Q --batch -L lisp -l test/futon4a-formal-f5-test.el -f ert-run-tests-batch-and-exit"
+   :result {:tests 1 :unexpected 0}}
+  {:command "FUTON4A_F5_PORT=7198 scripts/launch-f5-demo.sh; curl geometry/render; scripts/stop-f5-demo.sh"
+   :result :pass :owned-process-stopped? true}
+  {:command "test/stop-f5-demo-test.sh"
+   :result :pass :foreign-process-preserved? true}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens {:clojure :pass :elisp :pass}
+  :elisp-byte-compile {:warnings 0 :errors 0}
+  :bash-syntax :pass :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched [] :test-ports [7197 7198]
+  :persistent-processes-left-running []}
+ :deferred [:F5c-cube-map-change]}
