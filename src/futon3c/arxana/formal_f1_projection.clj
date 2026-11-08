@@ -11,8 +11,16 @@
    {:rule/id :formal-f1/outline :rule/version 1
     :drops [:source-prose-layout :executable-action :presentation-layout]}
    :formal-f1/gcc
-   {:rule/id :formal-f1/gcc :rule/version 1
-    :drops [:non-action-prose :execution-authority :admission :presentation-layout]}})
+   {:rule/id :formal-f1/gcc :rule/version 2
+    ;; DERIVE-F1 §2 item 1: the GCC view shows the action-bearing fragments.
+    ;; intent-vocabulary/v1 has no action field, so the rule declares which
+    ;; intents direct or redirect work (claude-13, F1c-1 review, 2026-11-08).
+    ;; Readings with other intents (propose, approve, qualify, ...) are dropped.
+    ;; A vector: canonical Arxana payloads refuse sets.
+    :action-intents [:ask-action :constrain :continue :defer :delegate
+                     :prioritize :redirect :withdraw]
+    :drops [:non-action-interpretations :non-action-prose :execution-authority
+            :admission :presentation-layout]}})
 
 (defn- codepoint-substring [^String s start end]
   (.substring s (.offsetByCodePoints s 0 start) (.offsetByCodePoints s 0 end)))
@@ -27,30 +35,27 @@
 (defn- graph [read! body]
   (ok! (read! :graph/query body)))
 
-(defn- reverse-ids [read! type role id]
-  (:result/edge-ids
-   (graph read! {:query/type :role-reverse :edge/type type
-                 :endpoint/role role :endpoint/id id
-                 :time/order :asc :query/limit 200})))
-
-(defn- attestations [read! id]
-  (mapv #(get-record read! %)
-        (:result/attestation-ids
-         (graph read! {:query/type :attestations :subject/id id :query/limit 200}))))
-
-(defn- assessments [read! id]
-  (:result/assessments
-   (graph read! {:query/type :assessments :subject/id id :query/limit 200})))
-
 (defn- related [read! id]
-  (let [resolution-ids (reverse-ids read! [:resolution-observation 1] :subject id)
-        predecessor-ids (reverse-ids read! [:supersedes 1] :predecessor id)
-        successor-ids (reverse-ids read! [:supersedes 1] :successor id)]
-    {:attestations (attestations read! id)
-     :assessments (assessments read! id)
-     :resolutions (mapv #(get-record read! %) resolution-ids)
+  ;; Each bounded read can come back :truncated; a view that drops records
+  ;; must say so (Lean `Read`: truncation is visible), so keep the statuses.
+  (let [q (fn [body] (graph read! (assoc body :query/limit 200)))
+        reverse-q (fn [type role]
+                    (q {:query/type :role-reverse :edge/type type :endpoint/role role
+                        :endpoint/id id :time/order :asc}))
+        att (q {:query/type :attestations :subject/id id})
+        ass (q {:query/type :assessments :subject/id id})
+        res (reverse-q [:resolution-observation 1] :subject)
+        pre (reverse-q [:supersedes 1] :predecessor)
+        suc (reverse-q [:supersedes 1] :successor)
+        truncated (vec (keep (fn [[k r]] (when (= :truncated (:result/status r)) k))
+                             [[:attestations att] [:assessments ass] [:resolutions res]
+                              [:supersedes pre] [:supersedes suc]]))]
+    {:attestations (mapv #(get-record read! %) (:result/attestation-ids att))
+     :assessments (:result/assessments ass)
+     :resolutions (mapv #(get-record read! %) (:result/edge-ids res))
      :supersedes (mapv #(get-record read! %)
-                       (distinct (concat predecessor-ids successor-ids)))}))
+                       (distinct (concat (:result/edge-ids pre) (:result/edge-ids suc))))
+     :truncated (vec (distinct truncated))}))
 
 (defn- standing [related]
   {:resolution (mapv #(get-in % [:asserted-content :resolution/state])
@@ -121,15 +126,22 @@
                  :intent (get-in claim [:endpoints 1 :target :intent/id])
                  :target (get-in claim [:endpoints 2 :target])
                  :standing (standing rel)
-                 :relations (select-keys rel [:resolutions :supersedes])}))
+                 :relations (select-keys rel [:resolutions :supersedes])
+                 :related/truncated (:truncated rel)}))
             (for [turn (:turns manifest) entry (:interpretations turn)] [turn entry])))))
 
 (defn gcc
   [read! manifest limit]
   (let [rule (:formal-f1/gcc rules)
+        claims (for [turn (:turns manifest) entry (:interpretations turn)]
+                 [turn entry (get-record read! (:clusion/id entry))])
+        actions (filter (fn [[_ _ claim]]
+                          (some #{(get-in claim [:endpoints 1 :target :intent/id])}
+                                (:action-intents rule)))
+                        claims)
         all (mapv
-             (fn [[turn entry]]
-               (let [id (:clusion/id entry) claim (get-record read! id)
+             (fn [[turn entry claim]]
+               (let [id (:clusion/id entry)
                      rel (related read! id)]
                  {:fragment/id (str "gcc:" id)
                   :record/ids (into [id] (map :id (concat (:attestations rel)
@@ -141,8 +153,9 @@
                   :intent (get-in claim [:endpoints 1 :target :intent/id])
                   :target (get-in claim [:endpoints 2 :target])
                   :standing (standing rel)
+                  :related/truncated (:truncated rel)
                   :candidate/non-executable? true}))
-             (for [turn (:turns manifest) entry (:interpretations turn)] [turn entry]))
+             actions)
         n (count all) limit (long (min 200 (max 1 limit)))]
     (assoc rule
            :result/status (if (> n limit) :truncated :complete)
@@ -156,3 +169,4 @@
       :formal-f1/linear (linear read! m)
       :formal-f1/outline (outline read! m)
       :formal-f1/gcc (gcc read! m (or limit 50)))))
+(def rules-gcc (:formal-f1/gcc rules))

@@ -73,7 +73,7 @@
    :formal-f1/gcc
    {:schema-version 1 :required #{:manifest/revision-id :query/limit}
     :allowed #{:manifest/revision-id :query/limit}
-    :projection [:operation :rule/id :rule/version :result/status
+    :projection [:operation :rule/id :rule/version :action-intents :result/status
                  :result/truncation :result/total [:projection/fragments] :drops]}
 
    :clusion/assert

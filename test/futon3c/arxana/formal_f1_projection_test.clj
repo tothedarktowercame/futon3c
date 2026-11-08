@@ -7,6 +7,7 @@
             [futon3c.arxana.formal-f1 :as f1a]
             [futon3c.arxana.formal-f1-export :as export]
             [futon3c.arxana.formal-f1-projection :as projection]
+            [futon3c.arxana.records :as records]
             [futon3c.arxana.formal-f1-relocation :as relocation]
             [futon3c.arxana.service :as service]
             [futon3c.arxana.store-http :as store-http]
@@ -75,8 +76,21 @@
         (is (every? #(seq (:text %)) (:projection/fragments linear))
             "linear fragments carry the exported prose with marks inline")
         (is (= expected (projected-ids outline)))
-        (is (= expected (projected-ids gcc))
-            "the same interpretation identities cross all three projections")
+        (let [intent-of (into {} (map (juxt :interpretation/id :intent)
+                                      (:projection/fragments outline)))
+              actions (set (filter #((set (:action-intents projection/rules-gcc)) (intent-of %))
+                                   expected))]
+          (is (= actions (projected-ids gcc))
+              "GCC carries exactly the action-bearing readings, under the same ids")
+          (is (every? (comp (set (:action-intents projection/rules-gcc)) intent-of)
+                      (projected-ids gcc)))
+          (is (some #{:propose :approve :qualify} (map intent-of expected))
+              "the fixtures do contain non-action readings for GCC to drop")
+          (is (not-any? #{:propose :approve :qualify} (map intent-of (projected-ids gcc))))
+          (is (contains? (projected-ids gcc) (get-in (last plans) [:claims 0 :id]))
+              "the rejected ask-action reading stays visible in GCC")
+          (is (contains? (projected-ids gcc) (get-in (last plans) [:claims 3 :id]))
+              "and so does its constrain successor"))
         (testing "every emitted record id resolves through public entity/get"
           (doseq [view [linear outline gcc]
                   fragment (:projection/fragments view)
@@ -95,13 +109,24 @@
             (is (seq (get-in ask [:standing :resolution])))
             (is (seq (get-in ask [:standing :evidence-qualification])))))
         (testing "model evidence never launders a reading into acceptance"
-          (let [model-only (some #(when (and (some (comp #{:model} :basis)
-                                                   (get-in % [:standing :evidence-qualification]))
-                                              (empty? (get-in % [:standing :assessment]))) %)
-                                 (:projection/fragments outline))]
-            (is model-only)
-            (is (not-any? #(= :accepted (:verdict %))
-                          (get-in model-only [:standing :assessment])))))
+          ;; Only Joe's two assessments accept anything: s2 and s3 of turn-iWVzvT.
+          (let [[_ s2 s3] (:claims (last plans))
+                accepted (fn [view]
+                           (set (keep #(when (some (comp #{:accepted} :verdict)
+                                                   (get-in % [:standing :assessment]))
+                                         (:interpretation/id %))
+                                      (:projection/fragments view))))]
+            (is (= #{(:id s2) (:id s3)} (accepted outline)))
+            (is (< 2 (count (filter #(some (comp #{:model} :basis)
+                                           (get-in % [:standing :evidence-qualification]))
+                                    (:projection/fragments outline))))
+                "more readings carry model evidence than are accepted")
+            (is (every? (fn [f] (every? #(= "joe" (:actor %))
+                                        (get-in f [:standing :assessment])))
+                        (:projection/fragments outline)))))
+        (testing "no related read was silently cut"
+          (doseq [view [outline gcc] f (:projection/fragments view)]
+            (is (= [] (:related/truncated f)))))
         (testing "assessment removal changes standing, not semantic ids"
           (let [base-read (fn [op body]
                             (service/dispatch cfg (request (str "read:" (name op) ":" (hash body))
@@ -122,7 +147,44 @@
                                                   :query/limit 2})]
             (is (= :truncated (:result/status limited)))
             (is (= :limit (:result/truncation limited)))
-            (is (= (count expected) (:result/total limited)))
+            (is (= (count (projected-ids gcc)) (:result/total limited)))
             (is (every? :candidate/non-executable? (:projection/fragments limited)))))
+        (testing "every fragment names the records it shows"
+          (doseq [view [outline gcc] f (:projection/fragments view)]
+            (is (some #{(:interpretation/id f)} (:record/ids f))))
+          (doseq [f (:projection/fragments linear)]
+            (is (every? (set (:record/ids f))
+                        (concat (:interpretation/ids f) (:mark-occurrence/ids f))))))
+        (testing "a truncated related read is reported, not hidden"
+          (let [cut (fn [op body]
+                      (let [r (service/dispatch cfg (request (str "cut:" (hash body)) op body))]
+                        (if (and (= op :graph/query) (= :attestations (:query/type body)))
+                          (assoc-in r [:ok :result/status] :truncated) r)))]
+            (is (every? #(= [:attestations] (:related/truncated %))
+                        (:projection/fragments (projection/outline cut (:manifest exported)))))))
+        (testing "a second, conflicting assessment shows beside the first"
+          (let [s3 (get-in (last plans) [:claims 2])
+                review (records/make-assessment
+                        {:subject-clusion-id (:id s3) :verdict :rejected
+                         :actor "review-fixture" :policy {:id "review" :revision 1}
+                         :reason "conflicting fixture" :time "2026-11-08T12:00:00Z"})
+                _ (is (:ok (service/dispatch cfg (request "conflict" :assessment/append
+                                                          {:record review}))))
+                again (project! :formal-f1/outline {:manifest/revision-id manifest-rid})
+                f (some #(when (= (:id s3) (:interpretation/id %)) %)
+                        (:projection/fragments again))]
+            (is (= #{:accepted :rejected}
+                   (set (map :verdict (get-in f [:standing :assessment])))))))
         (doseq [view [linear outline gcc]]
           (is (seq (:drops view)) "each projection names what it omits"))))))
+
+(defn- ns-refers-from-store []
+  (filter #(re-find #"futon1b|arxana\.store|xtdb"
+                    (str (some-> ^clojure.lang.Var % .ns ns-name)))
+          (vals (ns-refers 'futon3c.arxana.formal-f1-projection))))
+
+(deftest projection-namespace-cannot-reach-the-store
+  ;; Public ports only: the projector may read EDN, nothing else.
+  (is (= '#{clojure.edn}
+         (set (map ns-name (vals (ns-aliases 'futon3c.arxana.formal-f1-projection))))))
+  (is (empty? (ns-refers-from-store))))
