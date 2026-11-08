@@ -185,6 +185,6 @@
                                                :strategy/revision-id "s"}))]
           (is (nil? (:error resp)))
           (is (= :invalid (get-in resp [:ok :result/status])))))
-      (testing "registered-but-unimplemented ops answer :unsupported honestly"
+      (testing "entity/get is a public read and types absence"
         (let [resp (service/dispatch s p (req :entity/get {:entity/id "e1"}))]
-          (is (= :unsupported (get-in resp [:error :error/category]))))))))
+          (is (= :missing (get-in resp [:error :error/category]))))))))

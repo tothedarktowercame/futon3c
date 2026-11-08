@@ -12,6 +12,7 @@
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.envelope :as env]
             [futon3c.arxana.external-ref :as external-ref]
+            [futon3c.arxana.formal-f1-projection :as f1-projection]
             [futon3c.arxana.journal :as journal]
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
@@ -171,6 +172,37 @@
            (= op :capabilities/handshake)
            (env/response ok (handshake graph-store (some? subscriptions)))
 
+           (= op :entity/get)
+           (let [{record :ok read-error :error}
+                 (store/get-entity graph-store (:entity/id body))]
+             (env/response ok
+                           (if read-error read-error
+                               (with-semantic-digest
+                                 op {:entity/id (:entity/id body)
+                                     :record record}))))
+
+           (= op :revision/get)
+           (let [{revision :ok read-error :error}
+                 (artifact/revision-bytes artifact-provider
+                                          (:artifact/revision-id body))]
+             (env/response ok
+                           (if read-error read-error
+                               (with-semantic-digest
+                                 op {:artifact/revision-id (:artifact/revision-id body)
+                                     :revision/text (String. ^bytes (:bytes revision) "UTF-8")
+                                     :media-type (:media-type revision)}))))
+
+           (contains? #{:formal-f1/linear :formal-f1/outline :formal-f1/gcc} op)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":" (name read-op)
+                                                         ":" (hash read-body))
+                                        :operation read-op
+                                        :principal/id "formal-f1-projector"
+                                        :body read-body}))
+                 projected (f1-projection/project read! op body)]
+             (env/response ok (with-semantic-digest op projected)))
+
            (= op :graph/query)
            (let [res (if (= :traverse (:query/type body))
                        (graph-read/traverse graph-store
@@ -195,6 +227,7 @@
                                (env/error :stale :arxana.graph/index-behind qok [:retry])
                                (cond-> {:result/status (if (:truncated? qok) :truncated :complete)
                                         :result/edge-ids (:edge-ids qok)
+                                        :result/attestation-ids (:attestation-ids qok)
                                         :result/receipts (:receipts qok)
                                         :result/assessments (:assessments qok)
                                         :result/watermark (:watermark qok)}

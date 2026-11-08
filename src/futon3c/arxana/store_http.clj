@@ -41,7 +41,33 @@
 
 (defrecord HttpStore [base-url principal ^HttpClient client]
   store/ArxanaGraphStore
-  (get-entity [_ _] (unsupported :entity/get))
+  (get-entity [_ entity-id]
+    (let [request (-> (HttpRequest/newBuilder
+                       (URI/create (str (str/replace base-url #"/$" "")
+                                        "/api/alpha/arxana/query")))
+                      (.header "Accept" "application/edn")
+                      (.header "Content-Type" "application/edn")
+                      (.header "x-arxana-principal" principal)
+                      (.POST (HttpRequest$BodyPublishers/ofString
+                              (pr-str {:query/type :record-by-id
+                                       :record-id entity-id})))
+                      .build)]
+      (try
+        (let [response (.send client request (HttpResponse$BodyHandlers/ofString))
+              status (.statusCode response) body (edn/read-string (.body response))]
+          (cond
+            (not (<= 200 status 299))
+            {:error (env/error (category-for-status status body)
+                               :arxana.store/query-http-error body nil)}
+            (= :ok (:status body)) {:ok (:record body)}
+            (= :missing (:status body))
+            {:error (env/error :missing :arxana.store/record-not-found
+                               {:entity/id entity-id} nil)}
+            :else {:error (env/error :failed :arxana.store/query-invalid-response
+                                     body nil)}))
+        (catch Exception e
+          {:error (env/error :unavailable :arxana.store/http-unavailable
+                             {:message (.getMessage e)} [:retry])}))))
   (find-entities [_ _] (unsupported :entity/query))
   (put-entity! [_ _] (unsupported :entity/put))
   (get-hyperedge [_ _] (unsupported :hyperedge/get))

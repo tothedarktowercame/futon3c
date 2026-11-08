@@ -20,7 +20,7 @@
    {:schema-version 1
     :required #{:entity/id}
     :allowed #{:entity/id}
-    :projection [:operation :entity/id]}
+    :projection [:operation :entity/id :record]}
 
    :graph/query
    {:schema-version 1
@@ -29,7 +29,7 @@
                :query/limit :start/id :traversal/mode :max-depth :max-nodes
                :subject/id :interpreter/id}
     :projection [:operation :query/type :result/status :result/edge-ids
-                 :result/receipts :result/assessments :result/nodes
+                 :result/attestation-ids :result/receipts :result/assessments :result/nodes
                  :result/truncation :result/total :result/watermark]}
 
    :scope/resolve
@@ -53,6 +53,28 @@
     :required #{:artifact/id :bytes :media-type :expected/revision-id}
     :allowed #{:artifact/id :bytes :media-type :expected/revision-id}
     :projection [:operation :artifact/id :artifact/revision-id]}
+
+   :revision/get
+   {:schema-version 1
+    :required #{:artifact/revision-id}
+    :allowed #{:artifact/revision-id}
+    :projection [:operation :artifact/revision-id :revision/text :media-type]}
+
+   :formal-f1/linear
+   {:schema-version 1 :required #{:manifest/revision-id}
+    :allowed #{:manifest/revision-id}
+    :projection [:operation :rule/id :rule/version [:projection/fragments] :drops]}
+
+   :formal-f1/outline
+   {:schema-version 1 :required #{:manifest/revision-id}
+    :allowed #{:manifest/revision-id}
+    :projection [:operation :rule/id :rule/version [:projection/fragments] :drops]}
+
+   :formal-f1/gcc
+   {:schema-version 1 :required #{:manifest/revision-id :query/limit}
+    :allowed #{:manifest/revision-id :query/limit}
+    :projection [:operation :rule/id :rule/version :result/status
+                 :result/truncation :result/total [:projection/fragments] :drops]}
 
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
