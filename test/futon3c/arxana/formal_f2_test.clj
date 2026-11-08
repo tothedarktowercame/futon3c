@@ -268,7 +268,14 @@
                     ["[OFF-1]" "[OFF-2]" "[OFF-3]" "[OFF-4]" "[OFF-5]"]))
         (is (some #(.contains ^String (get-in % [:asserted-content :result/text]) "[OFF-4]")
                   one-alts))
-        (is (some #{(:deletion/patch-id active-one)}
-                  (get-in one-conflict [:asserted-content :conflicting/change-ids])))
-        (is (some #{(:deletion/patch-id active-seq)}
-                  (get-in seq-record [:asserted-content :conflicting/change-ids])))))))
+        ;; Review (claude-13): lost intent in the one-patch form means a
+        ;; non-conflicting offline hunk missing from an alternative.
+        (is (= 2 (count one-alts)))
+        (doseq [alt one-alts token ["[OFF-1]" "[OFF-2]" "[OFF-3]" "[OFF-5]"]]
+          (is (.contains ^String (get-in alt [:asserted-content :result/text]) token)
+              (str token " missing from alternative " (:id alt))))
+        (is (= [(:deletion/patch-id active-one)]
+               (get-in one-conflict [:asserted-content :conflicting/change-ids]))
+            "the conflict names the deletion it overrides, and only it")
+        (is (= [(:deletion/patch-id active-seq)]
+               (get-in seq-record [:asserted-content :conflicting/change-ids])))))))
