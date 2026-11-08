@@ -251,6 +251,14 @@
   "Derived standing is stage-local. It never rewrites the composite."
   [read! {:keys [composite/id]}]
   (let [composite (ok-record read! id)
+        root-id (if (= [:d6/composite 2] (:type-revision composite))
+                  (get-in (first (:endpoints composite)) [:target :clusion/id]) id)
+        attempt-rows (get-in (read! :graph/query {:query/type :attempts
+                                                  :subject/id root-id
+                                                  :interpreter/id (:id bounded-read-dynamics)
+                                                  :query/limit 100})
+                             [:ok :result/receipts])
+        attempts (mapv #(ok-record read! (:receipt_id %)) attempt-rows)
         rows (mapv
               (fn [{:keys [role target]}]
                 (let [rid (:clusion/id target)
@@ -278,5 +286,7 @@
                                    :attempt/outcome (:outcome attempt)))))
               (:endpoints composite))]
     {:rule/id :formal-f4/composite :rule/version 1
-     :composite/id id :composite/record composite :stages rows
+     :composite/id id :predecessor/id (when (not= root-id id) root-id)
+     :composite/record composite :stages rows
+     :attempts (mapv #(select-keys % [:id :outcome :reason :actor :time]) attempts)
      :drops [:stage-record-content :assessment-reasons :evidence-content]}))

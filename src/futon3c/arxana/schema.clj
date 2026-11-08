@@ -108,7 +108,8 @@
 
    :formal-f4/composite
    {:schema-version 1 :required #{:composite/id} :allowed #{:composite/id}
-    :projection [:operation :rule/id :rule/version :composite/id [:stages] :drops]}
+    :projection [:operation :rule/id :rule/version :composite/id :predecessor/id
+                 [:stages] [:attempts] :drops]}
 
    :formal-f4/execute
    {:schema-version 1
