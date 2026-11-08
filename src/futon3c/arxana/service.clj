@@ -18,6 +18,7 @@
             [futon3c.arxana.formal-f4 :as f4]
             [futon3c.arxana.formal-f5-query :as f5-query]
             [futon3c.arxana.formal-f5-render :as f5-render]
+            [futon3c.arxana.formal-f6 :as f6]
             [futon3c.arxana.journal :as journal]
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
@@ -347,6 +348,32 @@
                                       :event-time selected-at)
                      {wok :ok werr :error} (write/execute graph-store ok :clusion/assert selection)]
                  (env/response ok (with-semantic-digest op (or werr wok))))))
+
+           (= op :formal-f6/argument)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":f6-read:"
+                                                         (hash read-body))
+                                        :operation read-op :principal/id "formal-f6/projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op
+                                (f6/argument-view read! (:argument/id body)))))
+
+           (contains? #{:formal-f6/move :formal-f6/re-support} op)
+           (let [call! (fn [call-op call-body suffix]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":f6:" suffix)
+                                        :operation call-op :principal/id (:principal/id ok)
+                                        :body call-body}))
+                 read! (fn [read-op read-body]
+                         (call! read-op read-body (str "read:" (hash read-body))))
+                 write! (fn [write-op write-body suffix]
+                          (call! write-op write-body suffix))
+                 result (if (= op :formal-f6/move)
+                          (f6/move! read! write! (:principal/id ok) (:message/id ok) body)
+                          (f6/re-support! read! write! (:principal/id ok)
+                                          (:message/id ok) body))]
+             (env/response ok (with-semantic-digest op result)))
 
            (= op :graph/query)
            (let [res (if (= :traverse (:query/type body))

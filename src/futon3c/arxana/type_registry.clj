@@ -181,6 +181,22 @@
                  [{:role :scene :endpoint/kinds #{:clusion}}
                   {:role :map :endpoint/kinds #{:clusion}}]
                  [:selected-at :theory/version])
+   (clusion-type :f6/item 1 [] [:item/id :item/kind :content :record/ids])
+   (clusion-type :f6/contains 1
+                 [{:role :argument :endpoint/kinds #{:clusion}}
+                  {:role :item :endpoint/kinds #{:clusion}}] [])
+   (clusion-type :f6/supports 1
+                 [{:role :supported-claim :endpoint/kinds #{:clusion}}
+                  {:role :supporting-content :endpoint/kinds #{:clusion}}]
+                 [:method :evidence :actor :asserted-at :reason])
+   (clusion-type :f6/re-supports 1
+                 [{:role :successor :endpoint/kinds #{:clusion}}
+                  {:role :predecessor :endpoint/kinds #{:clusion}}]
+                 [:actor :changed-at :reason] :cycle :acyclic)
+   (clusion-type :f6/placement 1
+                 [{:role :argument :endpoint/kinds #{:clusion}}
+                  {:role :item :endpoint/kinds #{:clusion}}]
+                 [:zone :order :offset/x :offset/y :placed-at :actor])
    (clusion-type :text/patch 1
                  [{:role :base :endpoint/kinds #{:artifact-revision}}]
                  [:artifact/id :patch/digest :author :operation/id :hunks])

@@ -136,6 +136,25 @@
     :allowed #{:map/id :selected-at}
     :projection [:operation :record/id :created?]}
 
+   :formal-f6/argument
+   {:schema-version 1 :required #{:argument/id} :allowed #{:argument/id}
+    :projection [:operation :argument/id [:items] [:supports] [:current/support-ids]
+                 :result/status :drops]}
+
+   :formal-f6/move
+   {:schema-version 1
+    :required #{:argument/id :item/id :zone :order :placed-at}
+    :allowed #{:argument/id :item/id :zone :order :offset/x :offset/y :placed-at}
+    :projection [:operation :result/status :placement/id :item/id :argument/id]}
+
+   :formal-f6/re-support
+   {:schema-version 1
+    :required #{:argument/id :supporting-content/id :supported-claim/id :reason :changed-at}
+    :allowed #{:argument/id :supporting-content/id :supported-claim/id :reason :changed-at
+               :method :evidence}
+    :projection [:operation :result/status :support/id :supersession/id
+                 :created? :current/support-id]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}
