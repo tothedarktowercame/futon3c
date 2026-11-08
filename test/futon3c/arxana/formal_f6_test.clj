@@ -214,3 +214,65 @@
         (is (not (re-find (re-pattern (str "class=support data-record-id='" (:record/id old-support) "'"))
                           after-margin)))
         (is (re-find #"data-record-id='arxana:clusion:sha256:" after-margin))))))
+
+(defn- article-block
+  "The <article> element whose data-record-id is id, from html."
+  [html id]
+  (let [m (re-matcher (re-pattern (str "<article class='item [a-z-]+' data-record-id='"
+                                       (java.util.regex.Pattern/quote id) "'>"))
+                      html)]
+    (when (.find m)
+      (subs html (.start m) (+ (.indexOf ^String html "</article>" (int (.start m))) 10)))))
+
+(deftest page-is-independent-of-write-order-and-embeds-the-f5-render
+  ;; Review (claude-13): the delivered write-order check re-asserted records
+  ;; already in the store, which writes nothing. Here two separate stores
+  ;; receive the same records in opposite orders.
+  (let [records (fn []
+                  (let [geometry (f5/plan "kernel:f5-fixture")
+                        projector (f5-projector/plan)
+                        plan (f6/plan geometry (:panels projector) "kernel:f5-fixture")]
+                    {:plan plan :projector projector
+                     :records (vec (concat (:records geometry) (:records projector)
+                                           (:records plan)))}))
+        page-in (fn [order-fn]
+                  (with-stack
+                    (fn [cfg]
+                      (let [{:keys [plan projector records]} (records)]
+                        (doseq [record (order-fn records)]
+                          (is (:ok (assert-record! cfg record)) (str (:id record))))
+                        ;; fixture ids happen to sort in placement order; move
+                        ;; the square claim last so id order and order differ
+                        (is (:ok (call cfg "order:square-last" :formal-f6/move "joe"
+                                       {:argument/id (get-in plan [:argument :id])
+                                        :item/id (get-in plan [:items :square-claim :id])
+                                        :zone :main :order 10
+                                        :placed-at "2026-11-08T12:00:00.000Z"})))
+                        {:plan plan
+                         :page (call cfg "page:order" :formal-f6/page "f6-test"
+                                     {:argument/id (get-in plan [:argument :id])})
+                         :render (f5-projector/render! cfg (:panels projector))}))))
+        forward (page-in identity)
+        backward (page-in reverse)
+        html (get-in forward [:page :ok :html])
+        diagram-id (get-in forward [:plan :items :diagram :id])
+        block (article-block html diagram-id)
+        render (get-in forward [:render :ok])
+        svg-of (fn [panel] (second (re-find #"(?s)(<svg.*?</svg>)" panel)))]
+    (is (string? html) (pr-str (:page forward)))
+    (is (= html (get-in backward [:page :ok :html])))
+    (testing "items in a column follow their placement order"
+      (let [main (subs html (.indexOf ^String html "<main id=main>")
+                       (.indexOf ^String html "</main>"))
+            expected (map #(get-in forward [:plan :items % :id])
+                          [:cube-claim :definition :diagram :square-claim])]
+        (is (= expected
+               (->> (re-seq #"<article class='item [a-z-]+' data-record-id='([^']+)'" main)
+                    (map second))))))
+    (testing "the diagram block embeds F5's own render of the stored panels"
+      (is (string? block))
+      (is (seq (:geometry/record-ids render)))
+      (is (.contains ^String block ^String (svg-of (get-in render [:panels :cartesian]))))
+      (is (.contains ^String block ^String (svg-of (get-in render [:panels :angular]))))
+      (doseq [id (:geometry/record-ids render)]
+        (is (.contains ^String block ^String id) id)))))
