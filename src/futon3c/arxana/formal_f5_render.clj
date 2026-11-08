@@ -104,12 +104,21 @@
                                   (map #(record read! %) (:record/ids answer))))
         circle-id (endpoint-id map-record :domain)
         ids (common-record-ids answer points [circle-id])
+        summary (str "<section id=summary style='grid-column:1/-1'><h2>The "
+                     (escape (name map-id)) " map z ↦ z<sup>" power "</sup> on the unit circle: "
+                     "its fibre over −1</h2><table><tr><th>point</th><th>angle (turns)</th>"
+                     "<th>" power "θ (turns)</th></tr>"
+                     (apply str (for [{:keys [point turn]} points]
+                                  (str "<tr><td>" (escape (name (get-in point [:asserted-content :entity/id])))
+                                       "</td><td>" turn "</td><td>" (mod (* power turn) 1)
+                                       "</td></tr>")))
+                     "</table><p>" (count points) " points; each maps to −1 (½ turn).</p></section>")
         a (cartesian read! cart-panel circle-id points ids)
         b (angular (:id map-record) power points ids)
         html (str "<!doctype html><html><head><meta charset=utf-8><title>Formal Arxana F5</title>"
                   "<style>body{font:16px sans-serif;display:grid;grid-template-columns:1fr 1fr;gap:1rem}"
                   "section{border:1px solid #999;padding:1rem}svg{width:100%;height:auto}.records{font:11px monospace;overflow-wrap:anywhere}"
                   "@media(max-width:700px){body{grid-template-columns:1fr}}</style></head><body>"
-                  a b "</body></html>")]
+                  summary a b "</body></html>")]
         {:html html :map/id map-id :panel/ids [(:id cart-panel) (:id angular-panel)]
          :geometry/record-ids ids :panels {:cartesian a :angular b}}))))

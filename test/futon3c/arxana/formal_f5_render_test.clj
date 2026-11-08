@@ -52,6 +52,14 @@
                  (rendered-record-ids (get-in before [:panels :cartesian]))))
           (is (= (:geometry/record-ids before)
                  (rendered-record-ids (get-in before [:panels :angular])))))
+        (testing "a text table states the fibre for readers without SVG"
+          (let [html (:html before)
+                summary (subs html (.indexOf ^String html "<section id=summary")
+                              (.indexOf ^String html "<section id=cartesian>"))]
+            (is (re-find #"The square map z ↦ z<sup>2</sup>" summary))
+            (is (re-find #"<td>i</td><td>1/4</td><td>1/2</td>" summary) summary)
+            (is (re-find #"<td>neg-i</td><td>3/4</td><td>1/2</td>" summary) summary)
+            (is (re-find #"2 points;" summary))))
         (testing "panel-local placement changes Cartesian only"
           (let [point (get-in geometry [:entities :i])
                 move (p/placement (:cartesian panels) point 17 -9 "2026-11-08T18:00:00Z")
