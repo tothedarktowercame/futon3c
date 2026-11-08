@@ -44,10 +44,13 @@
   later drag is a new record; the store's ascending time order decides which
   is current (a content-id sort would pick an arbitrary one)."
   [read! panel-id point-id]
-  (->> (reverse-ids read! [:geometry/placement 1] :panel panel-id)
+  (->> (:result/edge-ids
+        (ok! (read! :graph/query {:query/type :role-reverse :edge/type [:geometry/placement 1]
+                                  :endpoint/role :panel :endpoint/id panel-id
+                                  :time/order :desc :query/limit 200})))
        (map #(record read! %))
        (filter #(= point-id (endpoint-id % :subject)))
-       last))
+       first))
 (defn- common-record-ids [answer points extra-ids]
   (->> (concat (:record/ids answer) extra-ids
                (mapcat (fn [x] [(get-in x [:point :id])
@@ -93,7 +96,7 @@
         answer (fibre/fibre read! (assoc body :map/id map-id))]
     (if (:error/category answer)
       answer
-      (let [power (case map-id :square 2 :cube 3 nil)
+      (let [power (fibre/map-power (record read! (:map/record-id answer)))
         points (point-data read! (:fibre/id answer))
         cart-panel (record read! (or (:cartesian/panel-id body) (panel-id :panel/cartesian)))
         angular-panel (record read! (or (:angular/panel-id body) (panel-id :panel/angular)))

@@ -240,11 +240,19 @@
                                         :body read-body}))
                  scene (f5-query/scene-record)
                  map-record (f5-query/named-record read! (:map/id body) :map)]
-             (if-not map-record
+             (cond
+               (not (f5-query/iso-instant? (:selected-at body)))
+               (env/response ok (with-semantic-digest op
+                                  {:error/category :invalid
+                                   :error/code :arxana.geometry/selected-at-not-iso-instant
+                                   :error/detail {:selected-at (:selected-at body)
+                                                  :expected "yyyy-MM-ddTHH:mm:ss.SSSZ"}}))
+               (nil? map-record)
                (env/response ok (with-semantic-digest op
                                   {:error/category :missing
                                    :error/code :arxana.geometry/unknown-map
                                    :error/detail {:map/id (:map/id body)}}))
+               :else
                (let [endpoint (fn [role r] {:role role :kind :clusion
                                              :target {:clusion/id (:id r)}})
                      selected-at (:selected-at body)

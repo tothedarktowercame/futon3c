@@ -13,6 +13,27 @@
   (:result/edge-ids (ok! (read! :graph/query {:query/type :role-reverse :edge/type type
                                               :endpoint/role role :endpoint/id id
                                               :time/order :asc :query/limit 200}))))
+(defn- newest-ids
+  "Newest first. futon1b orders role-reverse edges by the record's
+  :event-time; ascending with a limit would return the OLDEST page."
+  [read! type role id]
+  (:result/edge-ids (ok! (read! :graph/query {:query/type :role-reverse :edge/type type
+                                              :endpoint/role role :endpoint/id id
+                                              :time/order :desc :query/limit 200}))))
+(def iso-instant
+  "The only selection/placement time format: futon1b compares :event-time as
+  text, so mixed widths or formats (epoch ms vs 1000, with vs without
+  millis) would order wrongly."
+  #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z")
+(defn iso-instant? [x] (boolean (and (string? x) (re-matches iso-instant x))))
+(def ^:private superscripts {\² 2 \³ 3 \⁴ 4 \⁵ 5 \⁶ 6 \⁷ 7 \⁸ 8 \⁹ 9})
+(defn map-power
+  "The exponent n of a stored power map, read from its :map/definition
+  (:z↦zⁿ); nil for any other map."
+  [map-record]
+  (let [d (str (get-in map-record [:asserted-content :map/definition]))]
+    (when-let [[_ sup] (re-matches #":?z↦z(.)" d)]
+      (superscripts (first sup)))))
 (defn- endpoint-id [r role]
   (get-in (first (filter #(= role (:role %)) (:endpoints r))) [:target :clusion/id]))
 (defn- typed [category code detail]
@@ -25,10 +46,14 @@
                               (= kind (get-in % [:asserted-content :object/kind]))) links)]
     (when (= 1 (count matches))
       (record read! (endpoint-id (first matches) :object)))))
+(defn current-map-record [read!]
+  (let [scene (record read! (:id (scene-record)))
+        ids (newest-ids read! [:geometry/selection 1] :scene (:id scene))]
+    (when (seq ids) (record read! (endpoint-id (record read! (first ids)) :map)))))
 (defn current-map-id [read!]
   (let [scene (record read! (:id (scene-record)))
-        ids (reverse-ids read! [:geometry/selection 1] :scene (:id scene))
-        selection (when (seq ids) (record read! (last ids)))
+        ids (newest-ids read! [:geometry/selection 1] :scene (:id scene))
+        selection (when (seq ids) (record read! (first ids)))
         map-record (when selection (record read! (endpoint-id selection :map)))]
     (get-in map-record [:asserted-content :map/id])))
 (defn fibre [read! body]
@@ -53,7 +78,7 @@
                      {:expected expected :actual (count members) :fibre/id fibre-id})
               (let [member-records (mapv #(record read! (endpoint-id % :member)) members)]
                 {:result/status :complete :map/id map-id :value/id value-id
-                 :fibre/id fibre-id
+                 :fibre/id fibre-id :map/record-id (:id map-record)
                  :result/member-ids (mapv #(get-in % [:asserted-content :entity/id]) member-records)
                  :record/ids (vec (concat [(:id link) fibre-id (:id map-record) (:id value-record)]
                                           (map :id members) (map :id member-records)))

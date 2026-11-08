@@ -20,7 +20,8 @@
         selection (assoc (relation :geometry/selection
                                    [(endpoint :scene (:scene entities))
                                     (endpoint :map (get-in base [:maps :square]))]
-                                   {:selected-at 1000}) :event-time 1000)]
+                                   {:selected-at "2026-11-08T00:00:00.000Z"})
+                         :event-time "2026-11-08T00:00:00.000Z")]
     {:panels {:cartesian cartesian :angular angular}
      :values values :selection selection
      :records (vec (concat [cartesian angular selection] values))}))
