@@ -20,6 +20,7 @@
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
             [futon3c.arxana.resolve.promotion :as promotion]
+            [futon3c.arxana.records :as records]
             [futon3c.arxana.schema :as schema]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.subscribe :as subscribe]
@@ -230,6 +231,31 @@
                                         :operation read-op :principal/id "formal-f5-projector"
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op (f5-render/render read! body))))
+
+           (= op :geometry/select)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":f5-select:" (hash read-body))
+                                        :operation read-op :principal/id "formal-f5-selector"
+                                        :body read-body}))
+                 scene (f5-query/scene-record)
+                 map-record (f5-query/named-record read! (:map/id body) :map)]
+             (if-not map-record
+               (env/response ok (with-semantic-digest op
+                                  {:error/category :missing
+                                   :error/code :arxana.geometry/unknown-map
+                                   :error/detail {:map/id (:map/id body)}}))
+               (let [endpoint (fn [role r] {:role role :kind :clusion
+                                             :target {:clusion/id (:id r)}})
+                     selected-at (:selected-at body)
+                     selection (assoc (records/make-clusion
+                                       {:type-revision [:geometry/selection 1]
+                                        :endpoints [(endpoint :scene scene) (endpoint :map map-record)]
+                                        :asserted-content {:selected-at selected-at
+                                                           :theory/version "formal-arxana/geometry-v1"}})
+                                      :event-time selected-at)
+                     {wok :ok werr :error} (write/execute graph-store ok :clusion/assert selection)]
+                 (env/response ok (with-semantic-digest op (or werr wok))))))
 
            (= op :graph/query)
            (let [res (if (= :traverse (:query/type body))

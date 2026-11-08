@@ -95,9 +95,14 @@
                  [:result/member-ids] [:record/ids] :kernel/attestation-id]}
 
    :geometry/render
-   {:schema-version 1 :required #{:map/id :value/id}
+   {:schema-version 1 :required #{:value/id}
     :allowed #{:map/id :value/id :cartesian/panel-id :angular/panel-id}
     :projection [:operation :html [:panel/ids] [:geometry/record-ids] :panels]}
+
+   :geometry/select
+   {:schema-version 1 :required #{:map/id :selected-at}
+    :allowed #{:map/id :selected-at}
+    :projection [:operation :record/id :created?]}
 
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}

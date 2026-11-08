@@ -73,7 +73,7 @@
                                                                 (str "data-record-id='" (:id point) "'"))))))]
                 (is (< (Math/abs (- cx 120.0)) 0.01) "i at a quarter turn: x = 150 + 0 - 30")
                 (is (< (Math/abs (- cy 80.0)) 0.01) "y = 150 - 110 + 40")))))
-        (testing "new graph member and exact turn value propagate to both panels"
+        (testing "an undeclared extra member is refused by the F5c cardinality contract"
           (let [point (f5/entity :eighth-turn :point)
                 value (p/relation :geometry/value [(p/endpoint :point point)]
                                   {:turn/numerator 1 :turn/denominator 8})
@@ -82,18 +82,13 @@
                                     (p/endpoint :member point)] {})]
             (doseq [r [point value member]]
               (is (:ok (p/write! cfg r))) (is (= r (get-record cfg (:id r)))))
-            (let [after (render cfg panels "f5b:member")]
-              (is (not= (get-in before [:panels :cartesian]) (get-in after [:panels :cartesian])))
-              (is (not= (get-in before [:panels :angular]) (get-in after [:panels :angular])))
-              (is (re-find #"cx='227\.782' cy='72\.218'" (get-in after [:panels :cartesian])))
-              (is (re-find #"eighth-turn" (get-in after [:panels :angular])))
-              (testing "every stored member is drawn in both panels"
-                (doseq [pt [(get-in geometry [:entities :i]) (get-in geometry [:entities :neg-i])
-                            point]
-                        panel [:cartesian :angular]]
-                  (is (re-find (re-pattern (str "<g data-record-id='" (:id pt) "'"))
-                               (get-in after [:panels panel]))
-                      (str panel " draws " (get-in pt [:asserted-content :entity/id]))))))))))))
+            (let [answer (:error (service/dispatch cfg
+                                                   (req "f5b:member" :geometry/render
+                                                        {:map/id :square :value/id :neg-one
+                                                         :cartesian/panel-id (get-in panels [:cartesian :id])
+                                                         :angular/panel-id (get-in panels [:angular :id])})))]
+              (is (= :conflict (:error/category answer)))
+              (is (= :arxana.geometry/cardinality-mismatch (:error/code answer))))))))))
 
 (defn- render-after-writing [record-order]
   (with-stack

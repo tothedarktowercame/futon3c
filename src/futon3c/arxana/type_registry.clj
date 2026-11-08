@@ -157,6 +157,11 @@
                   {:role :map :endpoint/kinds #{:clusion}}
                   {:role :value :endpoint/kinds #{:clusion}}]
                  [:theory/version :kernel/attestation-id])
+   (clusion-type :geometry/fibre-of 2
+                 [{:role :fibre :endpoint/kinds #{:clusion}}
+                  {:role :map :endpoint/kinds #{:clusion}}
+                  {:role :value :endpoint/kinds #{:clusion}}]
+                 [:theory/version :kernel/attestation-id :lean/declaration :fibre/cardinality])
    (clusion-type :geometry/member 1
                  [{:role :fibre :endpoint/kinds #{:clusion}}
                   {:role :member :endpoint/kinds #{:clusion}}]
@@ -168,6 +173,14 @@
                  [{:role :panel :endpoint/kinds #{:clusion}}
                   {:role :subject :endpoint/kinds #{:clusion}}]
                  [:offset/x :offset/y :placed-at :theory/version])
+   (clusion-type :geometry/named 1
+                 [{:role :scene :endpoint/kinds #{:clusion}}
+                  {:role :object :endpoint/kinds #{:clusion}}]
+                 [:name :object/kind :theory/version])
+   (clusion-type :geometry/selection 1
+                 [{:role :scene :endpoint/kinds #{:clusion}}
+                  {:role :map :endpoint/kinds #{:clusion}}]
+                 [:selected-at :theory/version])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]

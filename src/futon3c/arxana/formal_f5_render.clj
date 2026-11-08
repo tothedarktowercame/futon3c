@@ -75,33 +75,38 @@
                        "' cy='" (fmt y) "' r=7/><text x='" (fmt (+ x 9)) "' y='" (fmt y) "'>"
                        (escape (get-in point [:asserted-content :entity/id])) "</text></g>")))
          "</g></svg><h3>Records</h3>" (records-list ids) "</section>")))
-(defn- angular [map-id points ids]
+(defn- angular [map-id power points ids]
   (str "<section id=angular><h2>Angular projection (cut at 0 turns)</h2>"
        "<svg viewBox='0 0 600 180' role=img><line data-record-id='" (escape map-id)
        "' x1=30 y1=70 x2=570 y2=70 stroke='#456'/>"
        (apply str
               (for [{:keys [point turn]} points
-                    :let [x (+ 30 (* 540 turn)) doubled (mod (* 2 turn) 1)]]
+                    :let [x (+ 30 (* 540 turn)) image (mod (* power turn) 1)]]
                 (str "<g data-record-id='" (escape (:id point)) "'><circle cx='" (fmt x)
                      "' cy='70' r='7'/><text x='" (fmt x) "' y='45'>"
                      (escape (get-in point [:asserted-content :entity/id])) "</text><text x='"
-                     (fmt x) "' y='105'>2θ=" (fmt doubled) "</text></g>")))
+                     (fmt x) "' y='105'>" power "θ=" (fmt image) "</text></g>")))
        "</svg><h3>Records</h3>" (records-list ids) "</section>"))
 
 (defn render [read! body]
-  (let [answer (fibre/fibre read! body)
+  (let [map-id (or (:map/id body) (fibre/current-map-id read!))
+        answer (fibre/fibre read! (assoc body :map/id map-id))]
+    (if (:error/category answer)
+      answer
+      (let [power (case map-id :square 2 :cube 3 nil)
         points (point-data read! (:fibre/id answer))
         cart-panel (record read! (or (:cartesian/panel-id body) (panel-id :panel/cartesian)))
         angular-panel (record read! (or (:angular/panel-id body) (panel-id :panel/angular)))
-        map-record (first (filter #(= (:map/id body) (get-in % [:asserted-content :map/id]))
+        map-record (first (filter #(= map-id (get-in % [:asserted-content :map/id]))
                                   (map #(record read! %) (:record/ids answer))))
         circle-id (endpoint-id map-record :domain)
         ids (common-record-ids answer points [circle-id])
-        a (cartesian read! cart-panel circle-id points ids) b (angular (:id map-record) points ids)
+        a (cartesian read! cart-panel circle-id points ids)
+        b (angular (:id map-record) power points ids)
         html (str "<!doctype html><html><head><meta charset=utf-8><title>Formal Arxana F5</title>"
                   "<style>body{font:16px sans-serif;display:grid;grid-template-columns:1fr 1fr;gap:1rem}"
                   "section{border:1px solid #999;padding:1rem}svg{width:100%;height:auto}.records{font:11px monospace;overflow-wrap:anywhere}"
                   "@media(max-width:700px){body{grid-template-columns:1fr}}</style></head><body>"
                   a b "</body></html>")]
-    {:html html :panel/ids [(:id cart-panel) (:id angular-panel)]
-     :geometry/record-ids ids :panels {:cartesian a :angular b}}))
+        {:html html :map/id map-id :panel/ids [(:id cart-panel) (:id angular-panel)]
+         :geometry/record-ids ids :panels {:cartesian a :angular b}}))))

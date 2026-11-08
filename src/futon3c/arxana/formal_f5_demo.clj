@@ -1,7 +1,6 @@
 (ns futon3c.arxana.formal-f5-demo
   "Private Formal Arxana F5 demonstration on loopback 7087."
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [futon3c.arxana.formal-f1-demo :as base]
             [futon3c.arxana.formal-f3 :as f3]
             [futon3c.arxana.formal-f5 :as f5]
@@ -11,17 +10,21 @@
            [java.nio.file Files]))
 (def default-port 7087)
 (def lean-root "/home/joe/code/futon5/holes/labs/M-formal-arxana/f5-lean")
-(def kernel-resource "test/resources/arxana/formal_arxana/F5a-kernel-run.edn")
 (defn prepare! [{:keys [cfg]}]
   (let [bytes (Files/readAllBytes (.toPath (io/file lean-root f5/lean-source)))
         ingested (f3/ingest-manifestations! cfg [{:artifact/id "formal-f5:lean-geometry-demo"
                                                   :media-type "text/x-lean" :bytes bytes}])
-        run (edn/read-string (slurp kernel-resource))
+        run (f5/run-lean-gate lean-root)
         geometry (f5/materialise! cfg (:artifact/revision-id (first ingested)) run)
-        presentation (projector/materialise! cfg)]
-    (when-not (and (every? :ok (:writes geometry)) (every? :ok (:writes presentation)))
-      (throw (ex-info "F5 demo fixture failed" {:geometry geometry :presentation presentation})))
-    {:geometry geometry :presentation presentation}))
+        presentation (projector/materialise! cfg)
+        cube (projector/cube-plan geometry (get-in geometry [:kernel :attestation :id]))
+        cube-writes (mapv #(projector/write! cfg %) (:records cube))]
+    (when-not (and (= :passed (:outcome run)) (every? :ok (:writes geometry))
+                   (every? :ok (:writes presentation)) (every? :ok cube-writes))
+      (throw (ex-info "F5 demo fixture failed" {:run run :geometry geometry
+                                                 :presentation presentation :cube cube-writes})))
+    {:run run :geometry geometry :presentation presentation
+     :cube (assoc cube :writes cube-writes)}))
 (defn start! ([] (start! default-port)) ([port]
   (let [h (base/start! port)]
     (try (assoc h :f5/prepared (prepare! h))

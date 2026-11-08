@@ -57,7 +57,7 @@
                    (get-in stored [:asserted-content :lean/declaration])))
             (is (= (get-in m [:kernel :attestation :id])
                    (get-in stored [:asserted-content :kernel/attestation-id])))))
-        (testing "the fibre follows the stored member records, not a fixed set"
+        (testing "the fibre detects a stored member count that contradicts its Lean-backed cardinality"
           (let [extra (f5/entity :planted-extra :point)
                 link (f5/relation :geometry/member
                                   [(f5/endpoint :fibre (get-in m [:entities :fibre]))
@@ -66,11 +66,10 @@
               (is (:ok (service/dispatch cfg (assoc (req (str "w:" (:id r)) :clusion/assert
                                                           {:record r})
                                                     :principal/id "formal-f5a/materialiser")))))
-            (is (= #{:i :neg-i :planted-extra}
-                   (set (:result/member-ids
-                         (get-in (service/dispatch cfg (req "f5:fibre:2" :geometry/fibre
-                                                            {:map/id :square :value/id :neg-one}))
-                                 [:ok])))))))
+            (let [err (:error (service/dispatch cfg (req "f5:fibre:2" :geometry/fibre
+                                                       {:map/id :square :value/id :neg-one})))]
+              (is (= :conflict (:error/category err)))
+              (is (= :arxana.geometry/cardinality-mismatch (:error/code err))))))
         (testing "the cited kernel run checked these exact Lean bytes, sorry-free"
           (is (= (digest/sha256-hex bytes)
                  (:sha256 (first (filter #(= f5/lean-source (:path %)) (:inputs run))))))

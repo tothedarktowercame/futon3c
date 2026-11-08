@@ -64,7 +64,7 @@
 
 (deftest c1-declarations-are-resolved
   ;; C1's declarations plus the versioned F3 and F5 relation types.
-  (is (= 28 (count types/registry-v1)))
+  (is (= 31 (count types/registry-v1)))
   (is (every? #(contains? types/registry-v1 %)
               [[:kernel-builds 1] [:declaration-location 1]
                [:correspondence 1] [:generation-run 1]
@@ -73,7 +73,9 @@
                [:geometry/symmetry 1] [:geometry/projection 1]
                [:geometry/preserves 1] [:geometry/satisfies 1]
                [:geometry/fibre-of 1] [:geometry/member 1]
-               [:geometry/value 1] [:geometry/placement 1]]))
+               [:geometry/value 1] [:geometry/placement 1]
+               [:geometry/fibre-of 2] [:geometry/named 1]
+               [:geometry/selection 1]]))
   (doseq [[_ declaration] types/registry-v1]
     (is (string? (:type/digest declaration)))
     (is (types/convergence-policies (:convergence/policy declaration)))

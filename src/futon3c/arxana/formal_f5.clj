@@ -52,9 +52,13 @@
 (defn relation [type endpoints content]
   (records/make-clusion {:type-revision [type 1] :endpoints endpoints
                          :asserted-content (assoc content :theory/version theory-version)}))
+(defn relation-rev [type revision endpoints content]
+  (records/make-clusion {:type-revision [type revision] :endpoints endpoints
+                         :asserted-content (assoc content :theory/version theory-version)}))
 (defn plan [kernel-attestation-id]
   (let [complex (entity :complex :space) circle (entity :circle :space)
         i (entity :i :point) neg-i (entity :neg-i :point) neg-one (entity :neg-one :point)
+        scene (entity :unit-circle-scene :scene)
         fibre (entity :square-over-neg-one :fibre) rotations (entity :circle-rotations :symmetry-group)
         invariant (entity :unit-norm :invariant)
         square (relation :geometry/map [(endpoint :domain circle) (endpoint :codomain circle)]
@@ -68,9 +72,18 @@
                             {:symmetry/id :inversion-conjugation
                              :kernel/attestation-id kernel-attestation-id
                              :lean/declaration "inversion_is_conjugation"})
-        fibre-of (relation :geometry/fibre-of [(endpoint :fibre fibre) (endpoint :map square)
-                                               (endpoint :value neg-one)]
-                           {:kernel/attestation-id kernel-attestation-id})
+        fibre-of (relation-rev :geometry/fibre-of 2
+                               [(endpoint :fibre fibre) (endpoint :map square)
+                                (endpoint :value neg-one)]
+                               {:kernel/attestation-id kernel-attestation-id
+                                :lean/declaration "square_fibre_neg_one"
+                                :fibre/cardinality 2})
+        named [(relation :geometry/named [(endpoint :scene scene) (endpoint :object square)]
+                         {:name :square :object/kind :map})
+               (relation :geometry/named [(endpoint :scene scene) (endpoint :object cube)]
+                         {:name :cube :object/kind :map})
+               (relation :geometry/named [(endpoint :scene scene) (endpoint :object neg-one)]
+                         {:name :neg-one :object/kind :point})]
         members [(relation :geometry/member [(endpoint :fibre fibre) (endpoint :member i)] {})
                  (relation :geometry/member [(endpoint :fibre fibre) (endpoint :member neg-i)] {})]
         preserves (relation :geometry/preserves [(endpoint :map conjugation) (endpoint :invariant invariant)] {})
@@ -78,13 +91,13 @@
                         [i neg-i neg-one])
         projection (relation :geometry/projection [(endpoint :subject circle)]
                              {:projection/id :cartesian-circle})]
-    {:entities {:complex complex :circle circle :i i :neg-i neg-i :neg-one neg-one
+    {:entities {:complex complex :circle circle :scene scene :i i :neg-i neg-i :neg-one neg-one
                 :fibre fibre :rotations rotations :unit-norm invariant}
      :maps {:square square :cube cube :conjugation conjugation}
-     :records (vec (concat (vals {:complex complex :circle circle :i i :neg-i neg-i
+    :records (vec (concat (vals {:complex complex :circle circle :scene scene :i i :neg-i neg-i
                                   :neg-one neg-one :fibre fibre :rotations rotations :invariant invariant})
                            [square cube conjugation symmetry fibre-of preserves projection]
-                           members satisfies))
+                           named members satisfies))
      :fibre-of fibre-of :members members :symmetry symmetry}))
 (defn- write! [cfg record]
   (service/dispatch cfg {:protocol/version "arxana.v1" :message/id (str "formal-f5a:" (:id record))
