@@ -210,6 +210,24 @@
    ]
   },
   {
+   "id": "files-mirrored-in-graph",
+   "name": "What is on disk is in the graph",
+   "therefore": "B",
+   "problem": "A file the substrate has not ingested is invisible to every query, so the self-account silently omits it; nobody can tell missing from absent.",
+   "invariant": "Every tracked file under the watcher roots is reflected in substrate-2 at its current commit, and a lag or a missing entity is reported rather than assumed away (Joe 2026-11-08: 'filesystem-fully-reflected-in-graph-database … is actually pretty useful'; 'If we had full validation of substrate-2 working all the time, I'd say it's guaranteed to work').",
+   "declared-in": "Joe, claude-6 REPL session 2026-11-08 (after the militant-pacifism patterns reached substrate-2 as :pattern/library entities without a manual step)",
+   "built": [
+    "futon3c watcher (file_ingest, projections/flexiarg)",
+    "futon3c.watcher.freshness (D7a substrate-2 commit-freshness alarm: freshness only, not completeness)"
+   ],
+   "probe": "none",
+   "pattern": "ways-of-working/files-mirrored-in-graph",
+   "patterns": [
+    "cascades/declared-skeleton",
+    "workshop/one-queryable-self-account"
+   ]
+  },
+  {
    "id": "real-users",
    "name": "The work has real users, and we can say who",
    "therefore": "C",
