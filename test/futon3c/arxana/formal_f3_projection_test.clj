@@ -1,5 +1,7 @@
 (ns futon3c.arxana.formal-f3-projection-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.arxana.formal-f3-projection :as projection]
             [futon1b-arxana :as f1] [futon1b-gates :as gates]
             [futon1b-server :as f1-server]
             [futon3c.arxana.artifact :as artifact]
@@ -77,7 +79,8 @@
                                                                         (get-in c [:mutation :id])
                                                                         (get-in c [:generation :id]))
                                                                       (map :record/id corr)))})))
-        manifest {:manifest/version 1 :correspondences corr :manifestations manifestations}
+        manifest {:manifest/version 1 :correspondences corr :manifestations manifestations
+                  :coverage (mapv :id (get-in c [:residues :unaligned]))}
         mi (service/dispatch cfg (req "f3d:manifest" :revision/ingest
                                       {:artifact/id "formal-f3:projection-manifest"
                                        :bytes (pr-str manifest) :media-type "application/edn"
@@ -122,4 +125,26 @@
                         (map :correspondence/id of)))
             (doseq [view [outline manifestations] fragment (:projection/fragments view)
                     id (:record/ids fragment)]
-              (is (= id (:id (get-record cfg id)))))))))))
+              (is (= id (:id (get-record cfg id)))))
+            (doseq [f of]
+              (is (= (:correspondence/id f) (first (:record/ids f)))
+                  "each fragment names its own correspondence first"))
+            (is (some #(= [:ambiguous] (:resolution %)) of)
+                "stored ambiguity reaches the view")
+            (is (= ["tsum_alternating_harmonic_mul_pow"]
+                   (map :declaration/name (:coverage/fragments outline))))
+            (is (= #{f3c/synthetic-artifact-id f3c/witness-artifact-id}
+                   (set (keep #(when (:synthetic/label %) (:artifact/id %))
+                              (:projection/fragments manifestations))))
+                "SYNTHETIC label comes from stored media type")))
+        (testing "a manifest that forgets the synthetic class cannot unlabel it"
+          (let [read! (fn [op body]
+                        (let [r (service/dispatch cfg (req (str "fx:" (hash body)) op body))]
+                          (if (= op :revision/get)
+                            (update-in r [:ok :revision/text]
+                                       #(clojure.string/replace % ":class :synthetic" ":class :genuine"))
+                            r)))
+                forged (projection/project read! :formal-f3/correspondence
+                                           {:manifest/revision-id (:manifest-rid p)})]
+            (is (some #(= :SYNTHETIC-negative (:synthetic/label %))
+                      (:projection/fragments forged)))))))))

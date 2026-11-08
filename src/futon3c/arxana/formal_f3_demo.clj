@@ -49,7 +49,8 @@
                  :record/ids (vec (cons (if (= (:artifact/id x) f3c/synthetic-artifact-id)
                                           (get-in c [:mutation :id]) (get-in c [:generation :id]))
                                         (map :record/id corr)))})))
-        manifest {:manifest/version 1 :correspondences corr :manifestations manifestations}
+        manifest {:manifest/version 1 :correspondences corr :manifestations manifestations
+                  :coverage (mapv :id (get-in c [:residues :unaligned]))}
         mr (service/dispatch cfg (req "f3-demo:manifest" :revision/ingest
                                       {:artifact/id "formal-f3:demo-manifest"
                                        :bytes (pr-str manifest) :media-type "application/edn"

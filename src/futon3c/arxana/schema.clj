@@ -80,7 +80,7 @@
    {:schema-version 1 :required #{:manifest/revision-id}
     :allowed #{:manifest/revision-id}
     :projection [:operation :rule/id :rule/version :result/status
-                 [:projection/fragments] :drops]}
+                 [:projection/fragments] [:coverage/fragments] :drops]}
 
    :formal-f3/manifestations
    {:schema-version 1 :required #{:manifest/revision-id}
