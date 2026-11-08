@@ -171,6 +171,7 @@
                                (cond-> {:result/status (if (:truncated? qok) :truncated :complete)
                                         :result/edge-ids (:edge-ids qok)
                                         :result/receipts (:receipts qok)
+                                        :result/assessments (:assessments qok)
                                         :result/watermark (:watermark qok)}
                                  (some? (:total qok)) (assoc :result/total (:total qok))
                                  (:truncated? qok) (assoc :result/truncation :limit))))))]

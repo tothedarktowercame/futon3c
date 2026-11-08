@@ -29,7 +29,8 @@
                :query/limit :start/id :traversal/mode :max-depth :max-nodes
                :subject/id :interpreter/id}
     :projection [:operation :query/type :result/status :result/edge-ids
-                 :result/receipts :result/nodes :result/truncation :result/watermark]}
+                 :result/receipts :result/assessments :result/nodes
+                 :result/truncation :result/total :result/watermark]}
 
    :scope/resolve
    {:schema-version 1
