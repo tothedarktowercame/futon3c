@@ -1,0 +1,21 @@
+{:increment :bytes-cas
+ :recorded-at "2026-11-08T21:22:00.000Z"
+ :commits {:futon3c "2390fcc0341d268097c9f70ddec7fca36bcee059"
+           :base "5ec2bac81e21bff2c12c2950f9af76e74d29d8a5"}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.bytes-cas-test -n futon3c.arxana.formal-f1-test -n futon3c.arxana.formal-f2-test -n futon3c.arxana.formal-f3-correspond-test -n futon3c.arxana.formal-f4-test -n futon3c.arxana.formal-f5-test"
+   :result {:tests 16 :assertions 446 :failures 0 :errors 0}}
+  {:command "clj-kondo --lint <four changed Clojure files>"
+   :result {:errors 0 :warnings 0}}
+  {:command "emacs -Q --batch -l futon4/dev/check-parens.el <four changed Clojure files>"
+   :result :ok}]
+ :contract
+ {:cas-byte-arrays true
+  :strict-utf8 true
+  :invalid-utf8-code :arxana.service/ingest-bytes-not-utf8
+  :absent-equivalents [nil :absent]
+  :equal-replay "stable message id returns the first outcome with duplicate? true"
+  :f1-public-heads true
+  :string-workarounds-removed true
+  :shared-services-touched false}
+ :not-run ["all Arxana namespaces" "HTTP namespace tests" "F3/F5 Lean gates"]}
