@@ -89,13 +89,24 @@
             (recur (into (pop queue) nexts) (into seen (map first nexts)))))
       nil)))
 
-(defn- compose-chain [graph-store chain]
-  (reduce (fn [combined app]
+(defn- compose-chain [graph-store artifact-id patch-id chain]
+  (try
+   (reduce (fn [combined app]
             (let [from (target app :from :artifact/revision-id)
                   p (internal-patch (revision! graph-store from)
                                     (get-in app [:asserted-content :patch]))]
               (if combined (rebase/compose combined p) p)))
-          nil chain))
+          nil chain)
+   (catch clojure.lang.ExceptionInfo e
+     ;; text_rebase/compose refuses a later change that edits inside text an
+     ;; earlier change inserted. Until F2b composes such chains, say so typed.
+     (throw (ex-info "application chain not composable"
+                     {:typed-error (env/error :conflict :arxana.text/chain-not-composable
+                                              {:artifact/id artifact-id
+                                               :patch/id patch-id
+                                               :application/ids (mapv :id chain)
+                                               :cause (ex-message e)}
+                                              [:refresh :manual-rebase])})))))
 
 (defn- conflict-record [artifact-id base head left right overlap]
   (records/make-clusion
@@ -129,7 +140,7 @@
                                                  {:artifact/id id :gap/from base :gap/to head
                                                   :patch/id (:id prec)}
                                                  [:refresh :manual-rebase])})))
-      (let [landed (when (seq chain) (compose-chain graph-store chain))
+      (let [landed (when (seq chain) (compose-chain graph-store id (:id prec) chain))
             outcome (if landed (rebase/rebase base-text landed incoming)
                         {:result (rebase/apply-patch base-text incoming)})]
         (if-let [bytes (:result outcome)]
@@ -165,13 +176,23 @@
       {:error (or (:typed-error (ex-data e))
                   (env/error :invalid :arxana.text/invalid-patch (ex-data e) nil))})))
 
-(defn- whole-replacement [from-text to-text author op-id]
-  {:author author :op-id op-id
-   :hunks [{:start 0 :end (.codePointCount ^String from-text 0 (.length ^String from-text))
-            :replacement to-text}]})
+(defn- minimal-replacement
+  "One hunk covering only what differs between from-text and to-text, in
+  codepoints. A whole-text hunk would make every older offline patch conflict
+  with the choice when it is rebased across it."
+  [^String from-text ^String to-text author op-id]
+  (let [a (.toArray (.codePoints from-text)) b (.toArray (.codePoints to-text))
+        na (alength a) nb (alength b)
+        pre (loop [i 0] (if (and (< i na) (< i nb) (= (aget a i) (aget b i))) (recur (inc i)) i))
+        suf (loop [j 0] (if (and (< j (- na pre)) (< j (- nb pre))
+                                 (= (aget a (- na 1 j)) (aget b (- nb 1 j))))
+                          (recur (inc j)) j))]
+    {:author author :op-id op-id
+     :hunks [{:start pre :end (- na suf)
+              :replacement (String. b (int pre) (int (- nb suf pre)))}]}))
 
 (defn choose!
-  [{:keys [graph-store ingest clock]} envelope body]
+  [{:keys [graph-store ingest clock before-cas]} envelope body]
   (let [artifact-id (:artifact/id body) conflict-id (:conflict/id body)
         alternative-id (:alternative/id body) actor (:actor body)
         chosen-at (:chosen-at body) reason (:reason body)]
@@ -196,6 +217,7 @@
                                [:refresh :recompute-conflict])}
             :else
             (let [text (get-in alternative [:asserted-content :result/text])
+                  _ (when before-cas (before-cas {:artifact/id artifact-id :expected expected}))
                   result (ingest text expected)]
               (if-let [error (:error result)] {:error error}
                   (let [choice (records/make-clusion
@@ -206,7 +228,7 @@
                                                     :reason (or reason "chosen")}})
                         rid (get-in result [:ok :artifact/revision-id])
                         from-text (revision! graph-store expected)
-                        p (whole-replacement from-text text actor (str "choice:" (:id choice)))
+                        p (minimal-replacement from-text text actor (str "choice:" (:id choice)))
                         app (application-record artifact-id (:id choice) expected rid p (clock))]
                     (assert! graph-store envelope choice "choice")
                     (assert! graph-store envelope app "application")

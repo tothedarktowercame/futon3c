@@ -440,6 +440,7 @@
            (let [result (f2/choose!
                          {:graph-store graph-store
                           :clock (or (:text/clock cfg) fixed-event-time)
+                          :before-cas (:text/before-cas cfg)
                           :ingest #(ingest-revision graph-store artifact-provider
                                                     {:artifact/id (:artifact/id body)
                                                      :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)

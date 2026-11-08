@@ -140,3 +140,54 @@
         (is (= :conflict (get-in conflict [:ok :result/status])))
         (is (= :applied (get-in moved [:ok :result/status])))
         (is (= :arxana.text/conflict-head-moved (get-in choice [:error :error/code])))))))
+
+(deftest choice-records-the-minimal-edit-and-loses-a-race
+  ;; Review of F2a-2 (claude-13): the choice application was a whole-text
+  ;; replacement, and choose! had no race seam.
+  (with-stack
+    (fn [_ a b]
+      (let [aid "formal-arxana:f1-conversation"
+            exported (export/export (f1a/add-operator-judgement (f1a/plan-fixtures)))
+            base (get-in (export/ingest! a exported) [:markdown :ok :artifact/revision-id])
+            n (cp-count (:markdown exported))
+            conflict! (fn [from tag]
+                        (submit a aid {:base from :author "a" :op-id (str tag "-l")
+                                       :hunks [{:start 0 :end 1 :replacement "L"}]} (str tag "-l"))
+                        (submit b aid {:base from :author "b" :op-id (str tag "-r")
+                                       :hunks [{:start 0 :end 1 :replacement "R"}]} (str tag "-r")))
+            choose (fn [cfg c alt mid]
+                     (dispatch cfg :text/choose
+                               {:artifact/id aid :conflict/id (get-in c [:ok :conflict/id])
+                                :alternative/id alt :actor "joe"
+                                :chosen-at "2026-11-08T15:00:00.000Z"} mid))]
+        (testing "the stored choice application touches only the changed codepoint"
+          (let [c (conflict! base "m")
+                alt (some #(when (.startsWith ^String (get-in (get-record a %)
+                                                              [:asserted-content :result/text])
+                                              "R") %)
+                          (get-in c [:ok :alternative/ids]))
+                choice (choose b c alt "minimal")
+                app (get-record a (get-in choice [:ok :application/id]))]
+            (is (= :chosen (get-in choice [:ok :result/status])))
+            (is (= [{:start 0 :end 1 :replacement "R"}]
+                   (get-in app [:asserted-content :patch :hunks])))
+            (testing "an offline patch from before the conflict is refused typed, not as invalid"
+              ;; The choice edits inside text the left patch inserted, which
+              ;; text-rebase/compose cannot compose yet (F2b).
+              (let [stale (submit a aid (insertion base "offline" "far" n "\nfar") "far")]
+                (is (= :arxana.text/chain-not-composable (get-in stale [:error :error/code])))
+                (is (get-record a (get-in stale [:error :error/detail :patch/id])))))))
+        (testing "a write landing between the head check and the CAS defeats the choice"
+          (let [c (conflict! (get-head a aid) "race")
+                once (atom false)
+                moved (atom nil)
+                hooked (assoc b :text/before-cas
+                              (fn [_]
+                                (when (compare-and-set! once false true)
+                                  (reset! moved (submit a aid (insertion (get-head a aid)
+                                                                         "third" "mover" 20 "M")
+                                                        "mover")))))
+                choice (choose hooked c (first (get-in c [:ok :alternative/ids])) "raced-choice")]
+            (is (:error choice))
+            (is (= (get-in @moved [:ok :head/revision-id]) (get-head a aid))
+                "the head is the concurrent write, not the chosen alternative")))))))
