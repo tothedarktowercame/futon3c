@@ -110,6 +110,15 @@
    {:schema-version 1 :required #{:composite/id} :allowed #{:composite/id}
     :projection [:operation :rule/id :rule/version :composite/id [:stages] :drops]}
 
+   :formal-f4/execute
+   {:schema-version 1
+    :required #{:composite/id :capability/id :decision/id :expected/revision-id
+                :attempted-at :query/limit}
+    :allowed #{:composite/id :capability/id :decision/id :expected/revision-id
+               :attempted-at :query/limit}
+    :projection [:operation :result/status :refusal/code :attempt/id :attempt/outcome
+                 :composite/id [:result/edge-ids] :action/receipt]}
+
    :geometry/fibre
    {:schema-version 1 :required #{:map/id :value/id}
     :allowed #{:map/id :value/id}

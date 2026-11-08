@@ -228,6 +228,16 @@
                  [{:role :candidate :endpoint/kinds #{:clusion}}
                   {:role :decision :endpoint/kinds #{:clusion}}]
                  [])
+   (clusion-type :d6/capability 1
+                 [{:role :candidate :endpoint/kinds #{:clusion}
+                   :endpoint/type-revisions #{[:d6/candidate-stage 1]}}]
+                 [:principal/id :dynamics :granted-by :granted-at]
+                 :cycle :acyclic)
+   (clusion-type :d6/receipt-stage 1
+                 [{:role :decision :endpoint/kinds #{:clusion}
+                   :endpoint/type-revisions #{[:d6/decision-stage 1]}}]
+                 [:attempt/id :action/receipt]
+                 :cycle :acyclic)
    (assoc
     (clusion-type :d6/composite 1
                   [{:role :source-act :endpoint/kinds #{:clusion}
@@ -245,6 +255,22 @@
                   [{:role :child :endpoint/kinds #{:clusion}
                     :endpoint/type-revisions #{[:d6/composite 1]
                                                [:d6/composite-group 1]}}]
+                  [:dynamics :topology/evidence] :cycle :acyclic)
+    :composition/typed-ports? true)
+   (assoc
+    (clusion-type :d6/composite 2
+                  [{:role :predecessor :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/composite 1]}}
+                   {:role :source-act :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:interpretation 1]}}
+                   {:role :intent :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/intent-stage 1]}}
+                   {:role :candidate :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/candidate-stage 1]}}
+                   {:role :decision :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/decision-stage 1]}}
+                   {:role :receipt :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/receipt-stage 1]}}]
                   [:dynamics :topology/evidence] :cycle :acyclic)
     :composition/typed-ports? true)
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
@@ -299,7 +325,8 @@
   #{["馬/occurrence" 1]
     ["xiang/read" 1]
     ["embedding" "all-MiniLM-L6-v2"]
-    ["formal-arxana/d6-compose" 1]})
+    ["formal-arxana/d6-compose" 1]
+    ["formal-arxana/bounded-read" 1]})
 
 (defn known-dynamics? [{:keys [id version]}]
   (contains? dynamics-v1 [(str id) version]))

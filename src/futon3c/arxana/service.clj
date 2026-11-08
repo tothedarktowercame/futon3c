@@ -253,6 +253,20 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op (f4/project read! body))))
 
+           (= op :formal-f4/execute)
+           (let [call! (fn [call-op call-body suffix]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":f4-exec:" suffix)
+                                        :operation call-op :principal/id (:principal/id ok)
+                                        :body call-body}))
+                 read! (fn [read-op read-body]
+                         (call! read-op read-body (str "read:" (hash read-body))))
+                 write! (fn [write-op write-body suffix]
+                          (call! write-op write-body suffix))
+                 result (f4/execute read! write! (:principal/id ok)
+                                    (:message/id ok) body)]
+             (env/response ok (with-semantic-digest op result)))
+
            (= op :geometry/fibre)
            (let [read! (fn [read-op read-body]
                          (dispatch cfg {:protocol/version env/protocol-version

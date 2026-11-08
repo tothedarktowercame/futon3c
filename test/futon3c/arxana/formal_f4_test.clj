@@ -146,3 +146,108 @@
                                 nil
                                 (catch clojure.lang.ExceptionInfo e
                                   (ex-data e))))))))))))
+
+(defn assert-record! [cfg mid record]
+  (dispatch cfg mid :clusion/assert {:record record}))
+
+(deftest bounded-execution-requires-stored-capability-and-admission
+  (with-stack
+    (fn [_ cfg]
+      (let [{:keys [turn f4]} (fixture-plan)
+            _ (formal-f1/materialize! cfg [turn])
+            _ (f4/materialize! #(service/dispatch cfg %) f4)
+            original-composite (read-record cfg (get-in f4 [:composite :id]))
+            deferred (read-record cfg (get-in f4 [:stages :decision :id]))
+            candidate-stage (get-in f4 [:stages :candidate])
+            capability (records/make-clusion
+                        {:type-revision [:d6/capability 1]
+                         :endpoints [(f4/endpoint :candidate candidate-stage)]
+                         :asserted-content {:principal/id "executor-a"
+                                            :dynamics f4/bounded-read-dynamics
+                                            :granted-by "fixture-author"
+                                            :granted-at "2026-11-08T13:00:00.000Z"}})
+            admitted (f4/admitted-decision candidate-stage (:candidate f4))
+            expected (get-in f4 [:candidate :preconditions 0 :revision/id])
+            execute (fn [mid principal cap decision revision time]
+                      (service/dispatch
+                       cfg {:protocol/version "arxana.v1" :message/id mid
+                            :operation :formal-f4/execute :principal/id principal
+                            :body {:composite/id (get-in f4 [:composite :id])
+                                   :capability/id cap :decision/id decision
+                                   :expected/revision-id revision
+                                   :attempted-at time :query/limit 3}}))]
+        (is (:ok (assert-record! cfg "capability" capability)))
+        (is (:ok (assert-record! cfg "admitted" admitted)))
+        (testing "success reads both grants from the store and records both receipts"
+          (let [result (get-in (execute "execute-ok" "executor-a" (:id capability)
+                                        (:id admitted) expected
+                                        "2026-11-08T13:01:00.000Z") [:ok])
+                attempt (read-record cfg (:attempt/id result))
+                successor (read-record cfg (:composite/id result))
+                receipt-stage (read-record cfg
+                                           (get-in (last (:endpoints successor))
+                                                   [:target :clusion/id]))
+                view (get-in (dispatch cfg "view-success" :formal-f4/composite
+                                       {:composite/id (:id successor)}) [:ok])]
+            (is (= :ok (:result/status result)))
+            (is (= :ran-with-output (:outcome attempt)))
+            (is (seq (:result/edge-ids result)))
+            (is (= :applied (get-in receipt-stage
+                                    [:asserted-content :action/receipt :receipt/outcome])))
+            (is (nil? (get-in receipt-stage
+                              [:asserted-content :action/receipt :predicted-effects])))
+            (is (= :ran-with-output
+                   (:attempt/outcome (last (:stages view)))))
+            (is (= original-composite
+                   (read-record cfg (get-in f4 [:composite :id]))))
+            (is (= deferred (read-record cfg (:id deferred))))))
+        (testing "each failed boundary check is typed and leaves a refused receipt"
+          (let [wrong-principal (records/make-clusion
+                                 (assoc capability :id nil
+                                        :asserted-content
+                                        (assoc (:asserted-content capability)
+                                               :principal/id "someone-else")))
+                wrong-dynamics (records/make-clusion
+                                (assoc capability :id nil
+                                       :asserted-content
+                                       (assoc (:asserted-content capability)
+                                              :dynamics f4/dynamics)))
+                other-decision (records/make-clusion
+                                (assoc admitted :id nil
+                                       :asserted-content
+                                       (update (:asserted-content admitted)
+                                               :decision/record assoc
+                                               :candidate-action/id "other-candidate")))
+                _ (doseq [[mid r] [["wrong-principal" wrong-principal]
+                                   ["wrong-dynamics" wrong-dynamics]
+                                   ["other-decision" other-decision]]]
+                    (is (:ok (assert-record! cfg mid r))))
+                cases [["no-cap" "executor-a" "missing-cap" (:id admitted) expected
+                        :arxana.execution/capability-missing]
+                       ["principal" "executor-a" (:id wrong-principal) (:id admitted) expected
+                        :arxana.execution/principal-not-capable]
+                       ["dynamics" "executor-a" (:id wrong-dynamics) (:id admitted) expected
+                        :arxana.execution/dynamics-not-capable]
+                       ["deferred" "executor-a" (:id capability) (:id deferred) expected
+                        :arxana.execution/not-admitted]
+                       ["other-admission" "executor-a" (:id capability) (:id other-decision) expected
+                        :arxana.execution/admission-for-different-candidate]
+                       ["stale" "executor-a" (:id capability) (:id admitted) "old-revision"
+                        :arxana.execution/stale-revision]]]
+            (doseq [[n principal cap decision revision code] cases]
+              (let [result (get-in (execute (str "refuse-" n) principal cap decision revision
+                                            (str "2026-11-08T13:02:0"
+                                                 (.indexOf cases [n principal cap decision revision code])
+                                                 ".000Z"))
+                                   [:ok])
+                    attempt (read-record cfg (:attempt/id result))
+                    successor (read-record cfg (:composite/id result))
+                    receipt-stage (read-record cfg
+                                               (get-in (last (:endpoints successor))
+                                                       [:target :clusion/id]))]
+                (is (= :refused (:result/status result)) n)
+                (is (= code (:refusal/code result)) n)
+                (is (= :refused (:outcome attempt)) n)
+                (is (nil? (get-in receipt-stage
+                                  [:asserted-content :action/receipt])) n)
+                (is (= [] (:result/edge-ids result)) n)))))))))

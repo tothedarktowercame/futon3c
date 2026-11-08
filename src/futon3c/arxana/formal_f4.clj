@@ -10,6 +10,8 @@
    :sha256 "df69f83fa434bdc0decb523662f29d562f10d647a116b4e5093f2b8ef8cfffc8"})
 
 (def dynamics {:id "formal-arxana/d6-compose" :version 1})
+(def bounded-read-dynamics {:id "formal-arxana/bounded-read" :version 1})
+(declare ok-record)
 
 (defn endpoint [role record]
   {:role role :kind :clusion :target {:clusion/id (:id record)}})
@@ -107,6 +109,128 @@
                       :body {:record record}}))
         (:records plan)))
 
+(defn capability
+  [candidate-stage principal actor granted-at]
+  (records/make-clusion
+   {:type-revision [:d6/capability 1]
+    :endpoints [(endpoint :candidate candidate-stage)]
+    :asserted-content {:principal/id principal :dynamics bounded-read-dynamics
+                       :granted-by actor :granted-at granted-at}}))
+
+(defn admitted-decision [candidate-stage candidate]
+  (let [decision (admission/make-admission-decision
+                  {:decision/status :admitted
+                   :policy/id "formal-f4/bounded-read-policy" :policy/revision 1
+                   :actor "formal-f4-admission" :reasons ["bounded read-only query"]
+                   :conditions [{:query/max-limit 10}]
+                   :candidate-action/id (:candidate-action/id candidate)})]
+    (records/make-clusion
+     {:type-revision [:d6/decision-stage 1]
+      :endpoints [(endpoint :candidate candidate-stage)]
+      :asserted-content {:decision/id (:admission/id decision)
+                         :decision/record decision}})))
+
+(defn- record! [write! op record suffix]
+  (write! op {:record record} (str suffix ":" (:id record))))
+
+(defn- expected-revision [candidate-stage]
+  (some #(when (= :revision/head-equals (:type %)) (:revision/id %))
+        (get-in candidate-stage [:asserted-content :candidate/record :preconditions])))
+
+(defn- refusal-code
+  [principal candidate-stage capability-record decision-stage expected]
+  (let [candidate-id (get-in candidate-stage
+                             [:asserted-content :candidate/record :candidate-action/id])
+        cap-content (:asserted-content capability-record)
+        decision (get-in decision-stage [:asserted-content :decision/record])]
+    (cond
+      (nil? capability-record) :arxana.execution/capability-missing
+      (not= [:d6/capability 1] (:type-revision capability-record))
+      :arxana.execution/invalid-capability-record
+      (not= principal (:principal/id cap-content)) :arxana.execution/principal-not-capable
+      (not= bounded-read-dynamics (:dynamics cap-content)) :arxana.execution/dynamics-not-capable
+      (not= (:id candidate-stage)
+            (get-in capability-record [:endpoints 0 :target :clusion/id]))
+      :arxana.execution/capability-for-different-candidate
+      (nil? decision-stage) :arxana.execution/admission-missing
+      (not= [:d6/decision-stage 1] (:type-revision decision-stage))
+      :arxana.execution/invalid-admission-record
+      (not= :admitted (:decision/status decision)) :arxana.execution/not-admitted
+      (not= candidate-id (:candidate-action/id decision))
+      :arxana.execution/admission-for-different-candidate
+      (not= expected (expected-revision candidate-stage)) :arxana.execution/stale-revision
+      :else nil)))
+
+(defn execute
+  "Execute one bounded public read after checking stored capability and
+  admission. Every path appends an attempt receipt and a successor composite;
+  only success carries the separate D6 action receipt."
+  [read! write! principal request-id
+   {composite-id :composite/id capability-id :capability/id
+    decision-id :decision/id expected :expected/revision-id
+    attempted-at :attempted-at limit :query/limit}]
+  (let [composite (ok-record read! composite-id)
+        by-role (into {} (map (juxt :role identity) (:endpoints composite)))
+        stage-id #(get-in by-role [% :target :clusion/id])
+        candidate-stage (ok-record read! (stage-id :candidate))
+        capability-record (ok-record read! capability-id)
+        decision-stage (ok-record read! decision-id)
+        refusal (refusal-code principal candidate-stage capability-record decision-stage expected)
+        envelope {:query/type :role-reverse :edge/type [:d6/intends 1]
+                  :endpoint/role :source-act :endpoint/id (stage-id :source-act)
+                  :query/limit (min 10 (max 1 (or limit 10)))}
+        query-result (when-not refusal (read! :graph/query envelope))
+        query-error (:error query-result)
+        ids (get-in query-result [:ok :result/edge-ids])
+        outcome (cond refusal :refused
+                      query-error :failed
+                      (seq ids) :ran-with-output
+                      :else :ran-no-output)
+        reason (or refusal
+                   (when query-error :arxana.execution/bounded-read-failed)
+                   (if (seq ids) :arxana.execution/bounded-read-returned
+                       :arxana.execution/bounded-read-empty))
+        attempt (records/make-attempt
+                 {:subject/id composite-id :dynamics bounded-read-dynamics
+                  :inputs {:envelope envelope :expected/revision-id expected
+                           :capability/id capability-id :decision/id decision-id}
+                  :outcome outcome :reason reason :actor principal :time attempted-at})
+        attempt-write (record! write! :attempt/append attempt request-id)
+        action-receipt
+        (when (= :ran-with-output outcome)
+          (admission/make-receipt
+           {:request/id request-id :operation/id "formal-arxana/bounded-read"
+            :candidate-action/id
+            (get-in candidate-stage [:asserted-content :candidate/record
+                                     :candidate-action/id])
+            :admission/id (get-in decision-stage [:asserted-content :decision/id])
+            :revision/before expected :revision/after expected
+            :actual-effects [{:effect :read :record/ids (vec ids)}]
+            :deviations [] :outcome :applied :evidence [(:id attempt)]}))
+        receipt-stage (records/make-clusion
+                       {:type-revision [:d6/receipt-stage 1]
+                        :endpoints [(endpoint :decision decision-stage)]
+                        :asserted-content {:attempt/id (:id attempt)
+                                           :action/receipt action-receipt}})
+        successor (records/make-clusion
+                   {:type-revision [:d6/composite 2]
+                    :endpoints [(endpoint :predecessor composite)
+                                (assoc (by-role :source-act) :role :source-act)
+                                (assoc (by-role :intent) :role :intent)
+                                (assoc (by-role :candidate) :role :candidate)
+                                (endpoint :decision decision-stage)
+                                (endpoint :receipt receipt-stage)]
+                    :asserted-content {:dynamics dynamics
+                                       :topology/evidence topology-evidence}})
+        stage-write (record! write! :clusion/assert receipt-stage request-id)
+        composite-write (record! write! :clusion/assert successor request-id)]
+    {:result/status (if refusal :refused (if query-error :failed :ok))
+     :refusal/code refusal :attempt/id (:id attempt) :attempt/outcome outcome
+     :action/receipt action-receipt :composite/id (:id successor)
+     :result/edge-ids (vec ids)
+     :writes {:attempt attempt-write :receipt-stage stage-write
+              :composite composite-write}}))
+
 (defn- ok-record [read! id]
   (get-in (read! :entity/get {:entity/id id}) [:ok :record]))
 
@@ -129,12 +253,16 @@
                       attestations (mapv #(ok-record read! %) attestation-ids)
                       critical-evidence (filterv #(contains? #{:contradicted :disputed}
                                                              (:standing %))
-                                                 attestations)]
-                  {:port role :record/id rid :type-revision (:type-revision record)
-                   :assessment/verdicts (mapv :verdict assessments)
-                   :evidence/attestation-ids (mapv :id critical-evidence)
-                   :criticised? (boolean (or (seq assessments)
-                                             (seq critical-evidence)))}))
+                                                 attestations)
+                      attempt-id (get-in record [:asserted-content :attempt/id])
+                      attempt (when attempt-id (ok-record read! attempt-id))]
+                  (cond-> {:port role :record/id rid :type-revision (:type-revision record)
+                           :assessment/verdicts (mapv :verdict assessments)
+                           :evidence/attestation-ids (mapv :id critical-evidence)
+                           :criticised? (boolean (or (seq assessments)
+                                                     (seq critical-evidence)))}
+                    attempt (assoc :attempt/id attempt-id
+                                   :attempt/outcome (:outcome attempt)))))
               (:endpoints composite))]
     {:rule/id :formal-f4/composite :rule/version 1
      :composite/id id :composite/record composite :stages rows
