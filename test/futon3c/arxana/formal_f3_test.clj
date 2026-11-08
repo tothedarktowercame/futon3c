@@ -14,7 +14,7 @@
            [java.nio.charset StandardCharsets]))
 
 (def futon3c-root "/home/joe/code/futon3c")
-(def apm-root "/home/joe/worktrees/apm-lean/formal-arxana-f3a")
+(def apm-root "/home/joe/code/apm-lean")
 
 (defn with-stack [f]
   (gates/seed-mission-contract!)

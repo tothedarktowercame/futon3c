@@ -11,6 +11,7 @@
 
 (def lean-toolchain "leanprover/lean4:v4.29.0-rc8")
 (def historical-informal-commit "fe78c85d1a1b4267f6db16fda884ad403128e2df")
+(def fixture-commit "2dd18b2c3547897cb07f8a35084f535b9da7f4c7")
 (def informal-path "problems/a93J02/informal-solution.md")
 (def lean-main-path "problems/a93J02/lean/Main.lean")
 
@@ -132,6 +133,14 @@
                        :result (dissoc result :output/bytes)})))
     (:output/bytes result)))
 
+(defn pinned-bytes [apm-root commit path]
+  (let [result (run-process apm-root ["git" "show" (str commit ":" path)])]
+    (when-not (zero? (:exit-status result))
+      (throw (ex-info "pinned fixture source is unavailable"
+                      {:commit commit :path path
+                       :result (dissoc result :output/bytes)})))
+    (:output/bytes result)))
+
 (defn manifestation-plans [futon3c-root apm-root]
   [{:artifact/id "formal-f3:a93J02/authored-informal"
     :role :authored-informal
@@ -145,19 +154,24 @@
    {:artifact/id "formal-f3:a93J02/current-informal-latex"
     :role :authored-informal-latex
     :media-type "text/markdown; charset=utf-8"
-    :bytes (file-bytes apm-root informal-path)}
+    :source/commit fixture-commit
+    :bytes (pinned-bytes apm-root fixture-commit informal-path)}
    {:artifact/id "formal-f3:a93J02/problem-md" :role :problem-markdown
     :media-type "text/markdown; charset=utf-8"
-    :bytes (file-bytes apm-root "problems/a93J02/problem.md")}
+    :source/commit fixture-commit
+    :bytes (pinned-bytes apm-root fixture-commit "problems/a93J02/problem.md")}
    {:artifact/id "formal-f3:a93J02/problem-tex" :role :problem-tex
     :media-type "text/x-tex; charset=utf-8"
-    :bytes (file-bytes apm-root "problems/a93J02/problem.tex")}
+    :source/commit fixture-commit
+    :bytes (pinned-bytes apm-root fixture-commit "problems/a93J02/problem.tex")}
    {:artifact/id "formal-f3:a93J02/proof-outline" :role :proof-outline
     :media-type "text/markdown; charset=utf-8"
-    :bytes (file-bytes apm-root "problems/a93J02/proof-outline.md")}
+    :source/commit fixture-commit
+    :bytes (pinned-bytes apm-root fixture-commit "problems/a93J02/proof-outline.md")}
    {:artifact/id "formal-f3:a93J02/lean-main" :role :readable-lean
     :media-type "text/x-lean; charset=utf-8"
-    :bytes (file-bytes apm-root lean-main-path)}
+    :source/commit fixture-commit
+    :bytes (pinned-bytes apm-root fixture-commit lean-main-path)}
    {:artifact/id "formal-f3:a93J02/authored-tex" :role :authored-tex
     :media-type "text/x-tex; charset=utf-8"
     :bytes (file-bytes futon3c-root "resources/arxana/apm-demo/apm-a93J02.tex")}

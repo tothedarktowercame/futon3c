@@ -117,6 +117,10 @@
                  [{:role :declaration :endpoint/kinds #{:entity}}
                   {:role :artifact :endpoint/kinds #{:artifact-revision}}]
                  [])
+   (clusion-type :correspondence 1
+                 [{:role :source :endpoint/kinds #{:manifestation-scope}}
+                  {:role :target :endpoint/kinds #{:entity}}]
+                 [:direction :relation/kind])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]
