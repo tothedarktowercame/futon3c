@@ -1,0 +1,41 @@
+{:increment :F5c
+ :date "2026-11-08"
+ :commits
+ {:futon3c-base "6be9ab21bdd8b26043572bc2005bcabddcff3ffb"
+  :futon3c-code "b8a573214f7bfbeaf233ef7786a26d17f64847a9"
+  :futon4a-code "2ada0ccfde9f2c2eaae20ffa247e01c492c3c9d7"
+  :futon5-lean "582d7a8e88a6479ff55b9b184bdac0a3907311f3"}
+ :semantic-change
+ {:selection-type [:geometry/selection 1]
+  :selection-order :event-time-ascending-latest
+  :before :square :after :cube
+  :square-members [:i :neg-i]
+  :cube-members [:cube-root-1 :neg-one :cube-root-3]
+  :cube-turns [[1 6] [1 2] [5 6]]
+  :map-and-value-lookup :stored-geometry/named
+  :cardinality-enforced? true
+  :old-records-preserved? true}
+ :lean
+ {:command "lake env lean FormalArxanaGeometry.lean"
+  :fresh-run-in-acceptance? true :sorry-free? true :mathlib-unchanged? true
+  :declaration "cube_fibre_neg_one_card"
+  :prebuilt-packages "/home/joe/code/apm-lean/.lake/packages"
+  :mathlib-rebuilt? false}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f5-change-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 75 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.formal-f5-test -n futon3c.arxana.formal-f5-render-test -n futon3c.arxana.formal-f5-change-test -n futon3c.arxana.spine-test"
+   :result {:tests 17 :assertions 413 :failures 0 :errors 0}}
+  {:command "emacs -Q --batch -L lisp -l test/futon4a-formal-f5-test.el -f ert-run-tests-batch-and-exit"
+   :result {:tests 4 :unexpected 0}}
+  {:command "private demo :7200 render square; select cube; render cube; stop"
+   :result :pass :owned-process-stopped? true}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0} :check-parens :pass
+  :elisp-byte-compile {:warnings 0 :errors 0}
+  :stop-script-foreign-process-test :pass :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched [] :test-ports [7199 7200]
+  :persistent-processes-left-running []}
+ :deferred []}
