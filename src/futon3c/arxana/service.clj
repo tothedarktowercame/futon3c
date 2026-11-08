@@ -14,6 +14,7 @@
             [futon3c.arxana.external-ref :as external-ref]
             [futon3c.arxana.formal-f1-projection :as f1-projection]
             [futon3c.arxana.formal-f3-projection :as f3-projection]
+            [futon3c.arxana.formal-f5-query :as f5-query]
             [futon3c.arxana.journal :as journal]
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
@@ -212,6 +213,14 @@
                                         :body read-body}))
                  projected (f3-projection/project read! op body)]
              (env/response ok (with-semantic-digest op projected)))
+
+           (= op :geometry/fibre)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":f5:" (hash read-body))
+                                        :operation read-op :principal/id "formal-f5-query"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op (f5-query/fibre read! body))))
 
            (= op :graph/query)
            (let [res (if (= :traverse (:query/type body))

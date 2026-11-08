@@ -132,6 +132,35 @@
    (clusion-type :formalization-coverage 1
                  [{:role :declaration :endpoint/kinds #{:entity}}]
                  [:coverage/state :reason])
+   (clusion-type :geometry/entity 1 [] [:entity/id :entity/kind :theory/version])
+   (clusion-type :geometry/map 1
+                 [{:role :domain :endpoint/kinds #{:clusion}}
+                  {:role :codomain :endpoint/kinds #{:clusion}}]
+                 [:map/id :map/definition :theory/version])
+   (clusion-type :geometry/symmetry 1
+                 [{:role :carrier :endpoint/kinds #{:clusion}}
+                  {:role :map :endpoint/kinds #{:clusion}}]
+                 [:symmetry/id :theory/version])
+   (clusion-type :geometry/projection 1
+                 [{:role :subject :endpoint/kinds #{:clusion}}]
+                 [:projection/id :theory/version])
+   (clusion-type :geometry/preserves 1
+                 [{:role :map :endpoint/kinds #{:clusion}}
+                  {:role :invariant :endpoint/kinds #{:clusion}}]
+                 [:theory/version])
+   (clusion-type :geometry/satisfies 1
+                 [{:role :subject :endpoint/kinds #{:clusion}}
+                  {:role :invariant :endpoint/kinds #{:clusion}}]
+                 [:theory/version])
+   (clusion-type :geometry/fibre-of 1
+                 [{:role :fibre :endpoint/kinds #{:clusion}}
+                  {:role :map :endpoint/kinds #{:clusion}}
+                  {:role :value :endpoint/kinds #{:clusion}}]
+                 [:theory/version :kernel/attestation-id])
+   (clusion-type :geometry/member 1
+                 [{:role :fibre :endpoint/kinds #{:clusion}}
+                  {:role :member :endpoint/kinds #{:clusion}}]
+                 [:theory/version])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]

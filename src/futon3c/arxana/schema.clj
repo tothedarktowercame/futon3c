@@ -88,6 +88,12 @@
     :projection [:operation :rule/id :rule/version :result/status
                  [:projection/fragments] :drops]}
 
+   :geometry/fibre
+   {:schema-version 1 :required #{:map/id :value/id}
+    :allowed #{:map/id :value/id}
+    :projection [:operation :result/status :map/id :value/id :fibre/id
+                 [:result/member-ids] [:record/ids] :kernel/attestation-id]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}
