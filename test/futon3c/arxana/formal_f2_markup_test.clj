@@ -1,5 +1,6 @@
 (ns futon3c.arxana.formal-f2-markup-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.arxana.formal-f1-relocation :as relocation]
             [futon1b-arxana :as f1]
             [futon1b-gates :as gates]
             [futon1b-server :as f1-server]
@@ -94,7 +95,14 @@
               (is att)
               (is (= :resolved (get-in att [:content :resolution/status])))
               (is (= shifted-head (get-in att [:content :target/revision-id])))
-              (is (get-in att [:content :application/id])))))
+              (is (get-in att [:content :application/id]))
+              ;; Review (claude-13): the relocated range holds the scope's text.
+              (let [[s0 e0] (candidate-range att)
+                    entry (some #(when (= id (:clusion/id %)) %) entries)]
+                (is (= (export/codepoint-substring (:markdown exported)
+                                                   (first (:range entry)) (second (:range entry)))
+                       (export/codepoint-substring (text vscode shifted-head) s0 e0)))
+                (is (= (+ 6 (first (:range entry))) s0) "shifted by the EMACS line")))))
 
         (testing "changed content is explicit missing and cites application hunks"
           (let [before (head emacs) [start end] (candidate-range (at-target emacs changed before))
@@ -148,3 +156,24 @@
             (is (= chosen (get-in att [:content :target/revision-id])))
             (is (= (get-in choice [:ok :application/id])
                    (get-in att [:content :application/id])))))))))
+
+(deftest relocation-failure-does-not-hide-a-landed-edit
+  ;; Review (claude-13): relocation runs after the CAS and the application
+  ;; record; if it throws, the edit has still landed.
+  (with-stack
+    (fn [emacs _]
+      (let [plans (f1a/add-operator-judgement (f1a/plan-fixtures))
+            _ (f1a/materialize! emacs plans)
+            exported (export/export plans)
+            _ (export/ingest! emacs exported)
+            base (:markdown/revision-id exported)
+            result (with-redefs [relocation/relocate-application!
+                                 (fn [& _] (throw (ex-info "resolver down" {})))]
+                     (submit emacs base "emacs-relocation-fails"
+                             {:start 0 :end 0 :replacement "LANDED\n"}))
+            rid (get-in result [:ok :head/revision-id])]
+        (is (= :applied (get-in result [:ok :result/status])) (pr-str result))
+        (is (= :failed (get-in result [:ok :relocation :result/status])))
+        (is (= rid (head emacs)))
+        (is (.startsWith ^String (text emacs rid) "LANDED"))
+        (is (record emacs (get-in result [:ok :application/id])))))))

@@ -128,6 +128,21 @@
     :asserted-content {:result/digest (rebase/revision-digest bytes)
                        :result/text (rebase/canonical-str bytes)}}))
 
+(defn- relocate-after!
+  "Run the post-application hook. The revision CAS and the application record
+  have already landed, so a relocation failure must not turn the response into
+  an error: it is reported beside the new head, and a fresh instance can rerun
+  relocation from the stored application."
+  [after-application app]
+  (when after-application
+    (try (after-application app)
+         (catch Exception e
+           {:result/status :failed
+            :error (or (:typed-error (ex-data e))
+                       (env/error :failed :arxana.text/relocation-failed
+                                  {:application/id (:id app) :cause (ex-message e)}
+                                  [:retry]))}))))
+
 (defn submit!
   [{:keys [graph-store ingest clock before-cas after-application]} envelope {:keys [artifact/id patch]}]
   (try
@@ -158,7 +173,7 @@
               (let [rid (get-in result [:ok :artifact/revision-id])
                     app (application-record id (:id prec) head rid applied-patch (clock))]
                 (assert! graph-store envelope app "application")
-                (let [relocation (when after-application (after-application app))]
+                (let [relocation (relocate-after! after-application app)]
                 {:ok {:result/status (if landed :rebased :applied) :artifact/id id
                       :patch/id (:id prec) :application/id (:id app)
                       :head/revision-id rid :relocation relocation}}))))
@@ -244,7 +259,7 @@
                         app (application-record artifact-id (:id choice) expected rid p (clock))]
                     (assert! graph-store envelope choice "choice")
                     (assert! graph-store envelope app "application")
-                    (let [relocation (when after-application (after-application app))]
+                    (let [relocation (relocate-after! after-application app)]
                     {:ok {:result/status :chosen :artifact/id artifact-id
                           :choice/id (:id choice) :application/id (:id app)
                           :head/revision-id rid :relocation relocation}})))))))
