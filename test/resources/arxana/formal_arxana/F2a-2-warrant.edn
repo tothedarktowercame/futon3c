@@ -1,0 +1,41 @@
+{:increment :F2a-2
+ :date "2026-11-08"
+ :commits
+ {:futon1b "2213797"
+  :futon3c "ec6cc61239683e7f01f70f0c57be18735d64dde1"}
+ :contract
+ {:sequencer :futon1b-artifact-head-cas
+  :decision-state :stored-records-only
+  :application-type [:text/application 1]
+  :application-chain :any-ancestor
+  :chain-gap :arxana.text/application-chain-gap
+  :choice-cas? true
+  :event-time-format "yyyy-MM-ddTHH:mm:ss.SSSZ"
+  :ram-cache-authoritative? false}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f2-test -n futon3c.arxana.text-rebase-test -n futon3c.arxana.formal-c1-test"
+   :stack :private-xtdb-futon1b-http
+   :instances 2
+   :result {:tests 14 :assertions 3306 :failures 0 :errors 0}
+   :coverage [:cross-instance-rebase :three-revision-ancestor
+              :cross-instance-conflict-choice :chosen-bytes-at-head
+              :real-interleaved-cas-race :durable-losing-patch
+              :raw-ingest-chain-gap :stale-choice]}
+  {:command "clojure -M test_arxana_conditional.clj"
+   :repo :futon1b
+   :result :pass}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :suite-scope
+ {:run [:formal-f2 :text-rebase :formal-c1 :futon1b-arxana-conditional]
+  :not-run :full-arxana-suite
+  :reason "packet explicitly permits the focused F2/C1/rebase namespaces"}
+ :process-safety
+ {:shared-ports-touched []
+  :private-store-ports :ephemeral
+  :persistent-processes-left-running []}
+ :deferred [:F2b-scope-relocation-and-promotion
+            :F2c-emacs-client
+            :F2d-vscode-client]}
