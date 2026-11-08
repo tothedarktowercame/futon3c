@@ -20,7 +20,7 @@
                                 (:attestations turn)))
         seed (call! cfg "f4-demo:seed" :revision/ingest
                     {:artifact/id (:artifact/id turn)
-                     :bytes (String. ^bytes (:bytes turn) "UTF-8")
+                     :bytes (:bytes turn)
                      :media-type "text/plain; charset=utf-8"
                      :expected/revision-id nil})
         revision (get-in seed [:ok :artifact/revision-id])

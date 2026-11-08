@@ -26,7 +26,10 @@
             [futon3c.arxana.schema :as schema]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.subscribe :as subscribe]
-            [futon3c.arxana.write :as write]))
+            [futon3c.arxana.write :as write])
+  (:import [java.nio ByteBuffer]
+           [java.nio.charset CharacterCodingException CodingErrorAction
+            StandardCharsets]))
 
 (def ^:private fixed-event-time-formatter
   (-> (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd'T'HH:mm:ss.SSSX")
@@ -76,6 +79,14 @@
   (get-in (:ok (store/get-entity graph-store (head-entity-id artifact-id)))
           [:props :head/revision-id]))
 
+(defn- decode-utf8-strict [^bytes bs]
+  (try
+    (str (-> (.newDecoder StandardCharsets/UTF_8)
+             (.onMalformedInput CodingErrorAction/REPORT)
+             (.onUnmappableCharacter CodingErrorAction/REPORT)
+             (.decode (ByteBuffer/wrap bs))))
+    (catch CharacterCodingException _ nil)))
+
 (defn- ingest-revision
   "revision/ingest handler (D3 write contract). Compares the expected head
   against the current head entity, ingests canonical bytes as a new immutable
@@ -90,16 +101,25 @@
         ^bytes bs (cond
                     (bytes? bytes) bytes
                     (string? bytes) (.getBytes ^String bytes "UTF-8")
-                    :else nil)]
+                    :else nil)
+        cas? (get (store/capabilities graph-store) :entity-compare-and-set)
+        canonical-text (cond
+                         (string? bytes) bytes
+                         (and cas? (bytes? bytes)) (decode-utf8-strict bs)
+                         :else nil)]
     (cond
       (nil? bs)
       {:error (env/error :invalid :arxana.service/ingest-bytes
                          {:reason ":bytes must be a UTF-8 string or base64 bytes"}
                          nil)}
 
-      (and (get (store/capabilities graph-store) :entity-compare-and-set)
-           (string? bytes))
-      (let [{route-ok :ok route-error :error}
+      (and cas? (bytes? bytes) (nil? canonical-text))
+      {:error (env/error :invalid :arxana.service/ingest-bytes-not-utf8
+                         {:reason ":bytes must be strict UTF-8 for conditional ingest"}
+                         nil)}
+
+      cas?
+      (let [route-response
             (store/conditional-write!
              graph-store
              {:protocol/version env/protocol-version
@@ -107,8 +127,9 @@
               :operation :revision/ingest
               :principal/id "arxana-service"
               :body {:target/id id :expected/revision-id revision-id
-                     :command {:revision/canonical-bytes bytes
-                               :revision/media-type media-type}}})]
+                     :command {:revision/canonical-bytes canonical-text
+                               :revision/media-type media-type}}})
+            {route-ok :ok route-error :error} route-response]
         (if route-error
           {:error route-error}
           (let [{provider-ok :ok} (artifact/ingest! artifact-provider id bs media-type)
@@ -120,7 +141,7 @@
                                   :store/revision-id store-rid} nil)}
               {:ok {:artifact/id id :artifact/revision-id store-rid
                     :head/revision-id (:head/revision-id route-ok)
-                    :duplicate? (:duplicate? route-ok)}}))))
+                    :duplicate? (boolean (:duplicate? route-response))}}))))
 
       :else
       (let [current (current-head graph-store id)]

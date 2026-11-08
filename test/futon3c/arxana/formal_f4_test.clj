@@ -155,13 +155,9 @@
   (with-stack
     (fn [_ cfg]
       (let [{:keys [turn f4]} (fixture-plan)
-            ;; Seed the turn through futon1b's CAS route. The service sends
-            ;; only STRING bytes there; F1's materialiser passes a byte array,
-            ;; which takes the provider path whose head :revision/head never
-            ;; reads (pre-existing; recorded in INSTANTIATE "F4b").
             seeded (dispatch cfg "seed-turn-bytes" :revision/ingest
                         {:artifact/id (:artifact/id turn)
-                         :bytes (String. ^bytes (:bytes turn) "UTF-8")
+                         :bytes (:bytes turn)
                          :media-type "text/plain; charset=utf-8"
                          :expected/revision-id nil})
             _ (is (:ok seeded) (pr-str seeded))
