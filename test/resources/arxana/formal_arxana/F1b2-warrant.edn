@@ -1,0 +1,40 @@
+{:increment :F1b2
+ :date "2026-11-08"
+ :commits
+ {:futon3c-code "0a64e20b64bf9c436e560d1f5fbcd684a51b9595"
+  :futon3c-base "9d63e40f24ae2a61d2779a9f550b6c157fcb8454"
+  :futon1b-base "3bb244c1cd1180ffc425761f0590b828d25b619d"}
+ :strategy
+ {:resolver {:id "arxana.resolve/anchor" :version 1}
+  :registration :content-addressed-value-registry
+  :source :first-exported-markdown-revision
+  :fuzzy? false}
+ :recording
+ {:record-kind :evidence-attestation
+  :reason "relocation qualifies the unchanged interpretation claim; it does not assert new meaning"
+  :original-clusions-mutated? false
+  :manifest-ranges-mutated? false}
+ :cases
+ {:unrelated-prefix-edit :resolved-unique-shifted
+  :duplicated-fragment :ambiguous-all-candidates
+  :deleted-fragment :missing
+  :historical-expected-head :stale-no-finder-run
+  :successor-write :expected-revision-CAS}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f1-relocation-test"
+   :stack :private-xtdb-futon1b-http
+   :result {:tests 1 :assertions 18 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-f1-relocation-test -n futon3c.arxana.formal-f1-export-test -n futon3c.arxana.formal-f1-test -n futon3c.arxana.resolve-test"
+   :result :pass}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :identity
+ {:golden-interpretation-ids-preserved? true
+  :strategies-per-exported-interpretation 1}
+ :live-services-touched? false
+ :deferred
+ [{:item :deleted-region-hunk-metadata
+   :reason "exact F0 anchors honestly return missing after deletion; recovery across deletion requires separately evidenced edit-hunk provenance"}
+  :F1c-views]}
