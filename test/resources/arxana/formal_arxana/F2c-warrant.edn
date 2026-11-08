@@ -1,0 +1,22 @@
+{:mission "M-formal-arxana"
+ :increment :F2c
+ :recorded-at "2026-11-08T19:56:00.000Z"
+ :commits {:futon3c "60cf939674a7914eb3de466502fe251e8520c99f"
+           :futon4a "e147ba11fccbea8732e8b27f5a22ef38339d22ee"}
+ :checks
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f2-demo-test -n futon3c.arxana.formal-f2-markup-test"
+   :result "3 tests, 86 assertions, 0 failures, 0 errors"}
+  {:command "clj-kondo --lint src/futon3c/arxana/formal_f2_demo.clj test/futon3c/arxana/formal_f2_demo_test.clj"
+   :result "0 errors, 0 warnings"}
+  {:command "emacs -Q --batch -l futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- changed-files"
+   :result "OK in both repositories"}
+  {:command "emacs -Q --batch -L lisp -l test/futon4a-formal-f2-test.el -f ert-run-tests-batch-and-exit"
+   :result "2 tests, 0 unexpected"}
+  {:command "test/stop-f2-demo-test.sh"
+   :result "PASS; the same-name twin remained alive"}
+  {:command "test/e2e-formal-f2-demo.sh"
+   :result "PASS; independent Emacs buffers returned :applied then :rebased and the refreshed head contained both edits"}]
+ :scope
+ {:shared-services-touched false
+  :test-runtime "test-owned ephemeral loopback port and pid"
+  :not-run ["full futon3c suite" "full futon4a ERT suite"]}}
