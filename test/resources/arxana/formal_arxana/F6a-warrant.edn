@@ -1,0 +1,31 @@
+{:warrant/id :formal-arxana/F6a
+ :base/sha "10616bc636e82518193526d95ed0fcd5e08db266"
+ :implementation/sha "84023b732cc28d18d46e23d595e113db8f50573d"
+ :record-types [[:f6/item 1]
+                [:f6/contains 1]
+                [:f6/supports 1]
+                [:f6/re-supports 1]
+                [:f6/placement 1]]
+ :operations [:formal-f6/argument
+              :formal-f6/move
+              :formal-f6/re-support]
+ :decisions {:same-claim-re-support :idempotent
+             :layout-authority :projection-record
+             :support-history :append-only}
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f6-test"
+   :result {:tests 2 :assertions 56 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-f5-test -n futon3c.arxana.formal-f5-render-test -n futon3c.arxana.formal-f5-change-test -n futon3c.arxana.formal-f6-test"
+   :result {:tests 8 :assertions 355 :failures 0 :errors 0}}
+  {:command "clj-kondo --lint src/futon3c/arxana/formal_f6.clj src/futon3c/arxana/schema.clj src/futon3c/arxana/service.clj src/futon3c/arxana/type_registry.clj test/futon3c/arxana/formal_f6_test.clj"
+   :result {:errors 0 :warnings 0}}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el -- src/futon3c/arxana/formal_f6.clj src/futon3c/arxana/schema.clj src/futon3c/arxana/service.clj src/futon3c/arxana/type_registry.clj test/futon3c/arxana/formal_f6_test.clj"
+   :result :ok}]
+ :acceptance {:public-read-roundtrip true
+              :move-preserves-content-and-support true
+              :placement-history-count 3
+              :re-support-preserves-predecessor true
+              :unattributed-re-support-refused true
+              :nested-layout-leak-refused true}
+ :not-run [:full-arxana-suite :lean-gates :live-services]
+ :deferred [:formal-arxana/F6b-html-emacs-demo]}
