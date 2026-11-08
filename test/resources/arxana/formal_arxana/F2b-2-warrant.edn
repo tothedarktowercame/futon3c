@@ -1,0 +1,38 @@
+{:increment :F2b-2
+ :date "2026-11-08"
+ :commits
+ {:futon3c "d1f0728ba"
+  :futon1b "2213797a3261a561a755e6408b1be10fbd00cacf"
+  :futon1b-change :none}
+ :contract
+ {:trigger :synchronous-after-stored-application
+  :authoritative-state :stored-records-only
+  :resolver :formal-f1-existing-f0-anchor
+  :source-reconstruction [:stored-manifest :stored-revisions :stored-interpretations]
+  :attestation-names [:source-revision :previous-revision :target-revision
+                      :application-id :application-hunks :all-candidates]
+  :outcomes {:untouched :resolved
+             :changed :missing-with-hunk-evidence
+             :deleted :missing-with-claim-unchanged
+             :copied :ambiguous-all-candidates
+             :chosen-conflict :chosen-head-only}}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f2-test -n futon3c.arxana.formal-f2-markup-test -n futon3c.arxana.formal-f1-relocation-test -n futon3c.arxana.text-rebase-test -n futon3c.arxana.formal-c1-test"
+   :stack :private-xtdb-futon1b-http
+   :instances 2
+   :result {:tests 19 :assertions 4042 :failures 0 :errors 0}}
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :suite-scope
+ {:run [:formal-f2 :formal-f2-markup :formal-f1-relocation :text-rebase :formal-c1]
+  :not-run :full-arxana-suite
+  :reason "packet explicitly requests focused namespaces"}
+ :documentation "docs/arxana/F2b2-semantic-relocation.md"
+ :process-safety
+ {:shared-ports-touched []
+  :private-store-ports :ephemeral
+  :persistent-processes-left-running []}
+ :deferred [:F2c-emacs-client :F2d-vscode-client
+            :post-cas-pre-application-crash-window]}
