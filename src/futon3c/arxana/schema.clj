@@ -60,6 +60,11 @@
     :allowed #{:artifact/revision-id}
     :projection [:operation :artifact/revision-id :revision/text :media-type]}
 
+   :revision/head
+   {:schema-version 1
+    :required #{:artifact/id} :allowed #{:artifact/id}
+    :projection [:operation :artifact/id :head/revision-id]}
+
    :text/submit-patch
    {:schema-version 1
     :required #{:artifact/id :patch}

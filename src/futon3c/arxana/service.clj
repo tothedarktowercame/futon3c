@@ -27,6 +27,13 @@
             [futon3c.arxana.subscribe :as subscribe]
             [futon3c.arxana.write :as write]))
 
+(def ^:private fixed-event-time-formatter
+  (-> (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd'T'HH:mm:ss.SSSX")
+      (.withZone java.time.ZoneOffset/UTC)))
+
+(defn- fixed-event-time []
+  (.format fixed-event-time-formatter (java.time.Instant/now)))
+
 (defn handshake
   "Capabilities handshake (D1 compat rule 7: mandatory). Reports the store's
   truth table verbatim — evidence, not aspiration — plus registered operation
@@ -187,15 +194,35 @@
                                      :record record}))))
 
            (= op :revision/get)
-           (let [{revision :ok read-error :error}
-                 (artifact/revision-bytes artifact-provider
-                                          (:artifact/revision-id body))]
+           (let [{local :ok}
+                 (artifact/revision-bytes artifact-provider (:artifact/revision-id body))
+                 stored (when-not local
+                          (:ok (store/bounded-query!
+                                graph-store {:query/type :revision-by-id
+                                             :revision-id (:artifact/revision-id body)})))
+                 revision (or local
+                              (when (= :ok (:status stored))
+                                {:bytes (.getBytes ^String (:revision/canonical-bytes stored) "UTF-8")
+                                 :media-type (:revision/media-type stored)}))
+                 read-error (when-not revision
+                              (env/error :missing :arxana.artifact/revision-not-found
+                                         {:artifact/revision-id (:artifact/revision-id body)} nil))]
              (env/response ok
                            (if read-error read-error
                                (with-semantic-digest
                                  op {:artifact/revision-id (:artifact/revision-id body)
                                      :revision/text (String. ^bytes (:bytes revision) "UTF-8")
                                      :media-type (:media-type revision)}))))
+
+           (= op :revision/head)
+           (let [{qok :ok qerr :error}
+                 (store/bounded-query! graph-store {:query/type :artifact-head
+                                                    :artifact-id (:artifact/id body)})]
+             (env/response ok
+                           (if qerr qerr
+                               (with-semantic-digest
+                                 op {:artifact/id (:artifact/id body)
+                                     :head/revision-id (:head/revision-id qok)}))))
 
            (contains? #{:formal-f1/linear :formal-f1/outline :formal-f1/gcc} op)
            (let [read! (fn [read-op read-body]
@@ -398,9 +425,8 @@
            (let [result (f2/submit!
                          {:graph-store graph-store
                           :artifact-provider artifact-provider
-                          :text-state (or (:text-state cfg)
-                                          (throw (ex-info "text-state required" {})))
-                          :current-head #(current-head graph-store %)
+                          :clock (or (:text/clock cfg) fixed-event-time)
+                          :before-cas (:text/before-cas cfg)
                           :ingest #(ingest-revision graph-store artifact-provider
                                                     {:artifact/id (:artifact/id body)
                                                      :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)
@@ -413,8 +439,7 @@
            (= op :text/choose)
            (let [result (f2/choose!
                          {:graph-store graph-store
-                          :text-state (or (:text-state cfg)
-                                          (throw (ex-info "text-state required" {})))
+                          :clock (or (:text/clock cfg) fixed-event-time)
                           :ingest #(ingest-revision graph-store artifact-provider
                                                     {:artifact/id (:artifact/id body)
                                                      :bytes (if (bytes? %1) (String. ^bytes %1 "UTF-8") %1)
@@ -452,9 +477,6 @@
              (if rerr
                (env/response ok (with-semantic-digest op rerr))
                (do
-                 (when-let [text-state (:text-state cfg)]
-                   (swap! text-state assoc-in [:heads (:artifact/id rok)]
-                          (:artifact/revision-id rok)))
                  (publish! cfg {:topic :revision/ingested
                                 :cause/message-id (:message/id ok)
                                 :affected/ids [(:artifact/id rok)]

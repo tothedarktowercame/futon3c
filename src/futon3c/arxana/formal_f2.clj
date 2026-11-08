@@ -1,14 +1,12 @@
 (ns futon3c.arxana.formal-f2
-  "F2a: codepoint patches, single-CAS sequencing, and durable conflicts."
-  (:require [futon3c.arxana.artifact :as artifact]
-            [futon3c.arxana.envelope :as env]
+  "F2a store-derived patch sequencing; futon1b CAS is the only sequencer."
+  (:require [futon3c.arxana.envelope :as env]
             [futon3c.arxana.records :as records]
+            [futon3c.arxana.store :as store]
             [futon3c.arxana.text-rebase :as rebase]
             [futon3c.arxana.write :as write]))
 
 (def iso-millis #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z")
-
-(defn state [] (atom {:applications {} :conflicts {} :alternatives {}}))
 
 (defn- endpoint [role kind id]
   {:role role :kind kind :target (case kind
@@ -19,29 +17,93 @@
   (records/make-clusion
    {:type-revision [:text/patch 1]
     :endpoints [(endpoint :base :artifact-revision (:base patch))]
-    :asserted-content {:artifact/id artifact-id
-                       :patch/digest (rebase/patch-digest patch)
+    :asserted-content {:artifact/id artifact-id :patch/digest (rebase/patch-digest patch)
                        :author (:author patch) :operation/id (:op-id patch)
                        :hunks (:hunks (rebase/->patch patch))}}))
 
 (defn- assert! [graph-store envelope record suffix]
-  (write/execute graph-store (assoc envelope :message/id
-                                    (str (:message/id envelope) ":" suffix ":" (:id record)))
-                 :clusion/assert record))
+  (let [r (write/execute graph-store
+                         (assoc envelope :message/id
+                                (str (:message/id envelope) ":" suffix ":" (:id record)))
+                         :clusion/assert record)]
+    (when-let [error (:error r)]
+      (throw (ex-info "record write refused" {:typed-error error})))
+    r))
 
-(defn- revision-bytes! [provider rid]
-  (let [{:keys [ok error]} (artifact/revision-bytes provider rid)]
-    (if error (throw (ex-info "revision unavailable" {:typed-error error})) (:bytes ok))))
+(defn- query! [graph-store query]
+  (let [{:keys [ok error]} (store/bounded-query! graph-store query)]
+    (if error (throw (ex-info "store query refused" {:typed-error error})) ok)))
 
-(defn- internal-patch [base-bytes patch]
-  (assoc patch :base (rebase/revision-digest base-bytes)))
+(defn- head! [graph-store artifact-id]
+  (:head/revision-id (query! graph-store {:query/type :artifact-head
+                                          :artifact-id artifact-id})))
 
-(defn- conflict-record [artifact-id base left right overlap]
+(defn- revision! [graph-store revision-id]
+  (let [r (query! graph-store {:query/type :revision-by-id :revision-id revision-id})]
+    (if (= :ok (:status r)) (:revision/canonical-bytes r)
+        (throw (ex-info "revision missing"
+                        {:typed-error (env/error :missing :arxana.text/revision-not-found
+                                                 {:revision-id revision-id} nil)})))))
+
+(defn- internal-patch [base-text patch]
+  (assoc patch :base (rebase/revision-digest base-text)))
+
+(defn- application-record [artifact-id change-id from to patch event-time]
+  (assoc
+   (records/make-clusion
+    {:type-revision [:text/application 1]
+     :endpoints [(endpoint :change :clusion change-id)
+                 (endpoint :from :artifact-revision from)
+                 (endpoint :to :artifact-revision to)]
+     :asserted-content {:artifact/id artifact-id :event-time event-time
+                        :patch (select-keys patch [:author :op-id :hunks])}})
+   :event-time event-time))
+
+(defn- target [record role key]
+  (some->> (:endpoints record) (filter #(= role (:role %))) first :target key))
+
+(defn- record! [graph-store id]
+  (let [{:keys [ok error]} (store/get-entity graph-store id)]
+    (if error (throw (ex-info "record missing" {:typed-error error})) ok)))
+
+(defn- applications-from [graph-store artifact-id revision]
+  (let [r (query! graph-store {:query/type :role-reverse
+                               :edge-type [:text/application 1]
+                               :endpoint-role :from :endpoint-id revision
+                               :limit 200 :order :asc})]
+    (when (= :stale-index (:status r))
+      (throw (ex-info "application index behind"
+                      {:typed-error (env/error :stale :arxana.text/application-index-behind
+                                               r [:retry])})))
+    (->> (:edge-ids r) (map #(record! graph-store %))
+         (filter #(= artifact-id (get-in % [:asserted-content :artifact/id]))) vec)))
+
+(defn- find-chain [graph-store artifact-id from to]
+  (loop [queue (conj clojure.lang.PersistentQueue/EMPTY [from []]) seen #{from}]
+    (if-let [[revision path] (peek queue)]
+      (if (= revision to) path
+          (let [nexts (for [app (applications-from graph-store artifact-id revision)
+                            :let [next (target app :to :artifact/revision-id)]
+                            :when (not (seen next))]
+                        [next (conj path app)])]
+            (recur (into (pop queue) nexts) (into seen (map first nexts)))))
+      nil)))
+
+(defn- compose-chain [graph-store chain]
+  (reduce (fn [combined app]
+            (let [from (target app :from :artifact/revision-id)
+                  p (internal-patch (revision! graph-store from)
+                                    (get-in app [:asserted-content :patch]))]
+              (if combined (rebase/compose combined p) p)))
+          nil chain))
+
+(defn- conflict-record [artifact-id base head left right overlap]
   (records/make-clusion
    {:type-revision [:text/conflict 1]
     :endpoints [(endpoint :left :clusion (:id left))
                 (endpoint :right :clusion (:id right))]
     :asserted-content {:artifact/id artifact-id :base/revision-id base
+                       :computed-against/head-revision-id head
                        :overlap/class overlap}}))
 
 (defn- alternative-record [conflict patch bytes]
@@ -53,119 +115,104 @@
                        :result/text (rebase/canonical-str bytes)}}))
 
 (defn submit!
-  "Submit PATCH. INGEST is a function of bytes and expected revision returning
-  the revision/ingest result. It is called once: a further race is surfaced."
-  [{:keys [graph-store artifact-provider text-state ingest current-head]} envelope
-   {:keys [artifact/id patch]}]
+  [{:keys [graph-store ingest clock before-cas]} envelope {:keys [artifact/id patch]}]
   (try
-    (let [patch (rebase/->patch patch)
-          prec (patch-record id patch)
+    (let [patch (rebase/->patch patch) prec (patch-record id patch)
           _ (assert! graph-store envelope prec "patch")
-          base (:base patch)
-          current (or (get-in @text-state [:heads id]) (current-head id))
-          base-bytes (revision-bytes! artifact-provider base)
-          ip (internal-patch base-bytes patch)]
-      (cond
-        (= base current)
-        (let [bytes (rebase/apply-patch base-bytes ip)
-              result (ingest bytes current)]
-          (if-let [err (:error result)]
-            {:error err}
-            (let [rid (get-in result [:ok :artifact/revision-id])]
-              (swap! text-state (fn [s] (-> s
-                                            (assoc-in [:heads id] rid)
-                                            (assoc-in [:applications [id base rid]]
-                                                      {:patch patch :record prec}))))
-              {:ok {:result/status :applied :artifact/id id :patch/id (:id prec)
-                    :head/revision-id rid}})))
-
-        (nil? current)
-        {:error (env/error :stale :arxana.text/head-unknown
-                           {:artifact/id id :base/revision-id base} [:refresh])}
-
-        :else
-        (if-let [{landed :patch landed-record :record}
-                 (get-in @text-state [:applications [id base current]])]
-          (let [out (rebase/rebase base-bytes (internal-patch base-bytes landed) ip)]
-            (if-let [bytes (:result out)]
-              (let [result (ingest bytes current)]
-                (if-let [err (:error result)]
-                  {:error (env/error :conflict :arxana.text/rebase-raced
-                                     {:artifact/id id :patch/id (:id prec)
-                                      :current/revision-id current
-                                      :cause err} [:refresh :resubmit])}
-                  (let [rid (get-in result [:ok :artifact/revision-id])]
-                    (swap! text-state (fn [s] (-> s
-                                                  (assoc-in [:heads id] rid)
-                                                  (assoc-in [:applications [id current rid]]
-                                                            {:patch patch :record prec}))))
-                    {:ok {:result/status :rebased :artifact/id id :patch/id (:id prec)
-                          :head/revision-id rid}})))
-              (let [overlap (-> out :conflicts first :class)
-                    conflict (conflict-record id base landed-record prec overlap)
-                    alternatives (mapv (fn [{:keys [choice bytes]}]
-                                         (alternative-record conflict
-                                                             (if (= choice (:op-id landed))
-                                                               landed-record prec)
-                                                             bytes))
-                                       (:alternatives out))]
-                (assert! graph-store envelope conflict "conflict")
-                (doseq [a alternatives] (assert! graph-store envelope a "alternative"))
-                (swap! text-state (fn [s]
-                                    (-> s
-                                        (assoc-in [:conflicts (:id conflict)]
-                                                  {:record conflict :expected current})
-                                        (update :alternatives merge
-                                                (into {} (map (juxt :id identity) alternatives))))))
-                {:ok {:result/status :conflict :artifact/id id :patch/id (:id prec)
-                      :conflict/id (:id conflict)
-                      :head/revision-id current
-                      :alternative/ids (mapv :id alternatives)}})))
-          {:error (env/error :conflict :arxana.text/rebase-base-not-parent
-                             {:artifact/id id :base/revision-id base
-                              :current/revision-id current :patch/id (:id prec)}
-                             [:refresh :manual-rebase])})))
+          base (:base patch) head (head! graph-store id)
+          base-text (revision! graph-store base)
+          incoming (internal-patch base-text patch)
+          chain (when (not= base head) (find-chain graph-store id base head))]
+      (when (and (not= base head) (nil? chain))
+        (throw (ex-info "application chain gap"
+                        {:typed-error (env/error :conflict :arxana.text/application-chain-gap
+                                                 {:artifact/id id :gap/from base :gap/to head
+                                                  :patch/id (:id prec)}
+                                                 [:refresh :manual-rebase])})))
+      (let [landed (when (seq chain) (compose-chain graph-store chain))
+            outcome (if landed (rebase/rebase base-text landed incoming)
+                        {:result (rebase/apply-patch base-text incoming)})]
+        (if-let [bytes (:result outcome)]
+          (let [applied-patch (if landed (rebase/transform incoming landed) incoming)
+                _ (when before-cas (before-cas {:artifact/id id :expected head}))
+                result (ingest bytes head)]
+            (if-let [error (:error result)]
+              {:error (env/error :conflict :arxana.text/rebase-raced
+                                 {:artifact/id id :patch/id (:id prec)
+                                  :expected/revision-id head :cause error}
+                                 [:refresh :resubmit])}
+              (let [rid (get-in result [:ok :artifact/revision-id])
+                    app (application-record id (:id prec) head rid applied-patch (clock))]
+                (assert! graph-store envelope app "application")
+                {:ok {:result/status (if landed :rebased :applied) :artifact/id id
+                      :patch/id (:id prec) :application/id (:id app)
+                      :head/revision-id rid}})))
+          (let [last-app (last chain)
+                landed-record (record! graph-store (target last-app :change :clusion/id))
+                conflict (conflict-record id base head landed-record prec
+                                          (-> outcome :conflicts first :class))
+                alternatives (mapv (fn [{:keys [choice bytes]}]
+                                     (alternative-record conflict
+                                                         (if (= choice (:op-id landed))
+                                                           landed-record prec) bytes))
+                                   (:alternatives outcome))]
+            (assert! graph-store envelope conflict "conflict")
+            (doseq [a alternatives] (assert! graph-store envelope a "alternative"))
+            {:ok {:result/status :conflict :artifact/id id :patch/id (:id prec)
+                  :conflict/id (:id conflict) :head/revision-id head
+                  :alternative/ids (mapv :id alternatives)}}))))
     (catch clojure.lang.ExceptionInfo e
       {:error (or (:typed-error (ex-data e))
                   (env/error :invalid :arxana.text/invalid-patch (ex-data e) nil))})))
 
+(defn- whole-replacement [from-text to-text author op-id]
+  {:author author :op-id op-id
+   :hunks [{:start 0 :end (.codePointCount ^String from-text 0 (.length ^String from-text))
+            :replacement to-text}]})
+
 (defn choose!
-  [{:keys [graph-store text-state ingest]} envelope
-   body]
-  (let [artifact-id (:artifact/id body)
-        conflict-id (:conflict/id body)
-        alternative-id (:alternative/id body)
-        actor (:actor body)
-        chosen-at (:chosen-at body)
-        reason (:reason body)]
-  (cond
-    (not (and (string? actor) (seq actor) (re-matches iso-millis chosen-at)))
-    {:error (env/error :invalid :arxana.text/choice-attribution
-                       {:actor actor :chosen-at chosen-at
-                        :required-time "yyyy-MM-ddTHH:mm:ss.SSSZ"} nil)}
-    :else
-    (let [conflict (get-in @text-state [:conflicts conflict-id])
-          alternative (get-in @text-state [:alternatives alternative-id])]
+  [{:keys [graph-store ingest clock]} envelope body]
+  (let [artifact-id (:artifact/id body) conflict-id (:conflict/id body)
+        alternative-id (:alternative/id body) actor (:actor body)
+        chosen-at (:chosen-at body) reason (:reason body)]
+    (try
       (cond
-        (or (nil? conflict) (nil? alternative))
-        {:error (env/error :missing :arxana.text/choice-target
-                           {:conflict/id conflict-id :alternative/id alternative-id} nil)}
-        (not= conflict-id (get-in alternative [:endpoints 0 :target :clusion/id]))
-        {:error (env/error :invalid :arxana.text/alternative-not-in-conflict
-                           {:conflict/id conflict-id :alternative/id alternative-id} nil)}
+        (not (and (string? actor) (seq actor) (re-matches iso-millis chosen-at)))
+        {:error (env/error :invalid :arxana.text/choice-attribution
+                           {:actor actor :chosen-at chosen-at
+                            :required-time "yyyy-MM-ddTHH:mm:ss.SSSZ"} nil)}
         :else
-        (let [expected (:expected conflict)
-              result (ingest (:result/text (:asserted-content alternative)) expected)]
-          (if-let [err (:error result)]
-            {:error err}
-            (let [choice (records/make-clusion
-                          {:type-revision [:text/choice 1]
-                           :endpoints [(endpoint :conflict :clusion conflict-id)
-                                       (endpoint :alternative :clusion alternative-id)]
-                           :asserted-content {:actor actor :chosen-at chosen-at
-                                              :reason (or reason "chosen")}})
-                  rid (get-in result [:ok :artifact/revision-id])]
-              (assert! graph-store envelope choice "choice")
-              (swap! text-state assoc-in [:heads artifact-id] rid)
-              {:ok {:result/status :chosen :artifact/id artifact-id :choice/id (:id choice)
-                    :head/revision-id rid}}))))))))
+        (let [conflict (record! graph-store conflict-id)
+              alternative (record! graph-store alternative-id)
+              expected (get-in conflict [:asserted-content :computed-against/head-revision-id])
+              current (head! graph-store artifact-id)]
+          (cond
+            (not= conflict-id (target alternative :conflict :clusion/id))
+            {:error (env/error :invalid :arxana.text/alternative-not-in-conflict
+                               {:conflict/id conflict-id :alternative/id alternative-id} nil)}
+            (not= expected current)
+            {:error (env/error :stale :arxana.text/conflict-head-moved
+                               {:expected/revision-id expected :current/revision-id current}
+                               [:refresh :recompute-conflict])}
+            :else
+            (let [text (get-in alternative [:asserted-content :result/text])
+                  result (ingest text expected)]
+              (if-let [error (:error result)] {:error error}
+                  (let [choice (records/make-clusion
+                                {:type-revision [:text/choice 1]
+                                 :endpoints [(endpoint :conflict :clusion conflict-id)
+                                             (endpoint :alternative :clusion alternative-id)]
+                                 :asserted-content {:actor actor :chosen-at chosen-at
+                                                    :reason (or reason "chosen")}})
+                        rid (get-in result [:ok :artifact/revision-id])
+                        from-text (revision! graph-store expected)
+                        p (whole-replacement from-text text actor (str "choice:" (:id choice)))
+                        app (application-record artifact-id (:id choice) expected rid p (clock))]
+                    (assert! graph-store envelope choice "choice")
+                    (assert! graph-store envelope app "application")
+                    {:ok {:result/status :chosen :artifact/id artifact-id
+                          :choice/id (:id choice) :application/id (:id app)
+                          :head/revision-id rid}}))))))
+      (catch clojure.lang.ExceptionInfo e
+        {:error (or (:typed-error (ex-data e))
+                    (env/error :invalid :arxana.text/invalid-choice (ex-data e) nil))}))))
