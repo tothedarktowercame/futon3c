@@ -779,6 +779,18 @@
        (= "status" (:subtype event))
        (contains? event :compact_result)))
 
+(defn- compaction-event?
+  "Does EVENT belong to a `/compact` reply? The CLI announces a compaction with
+   system/status \"compacting\", reports it with a status carrying
+   :compact_result, and records a system/compact_boundary. No other turn
+   emits these."
+  [event]
+  (and (= "system" (:type event))
+       (or (compact-status-event? event)
+           (= "compact_boundary" (:subtype event))
+           (and (= "status" (:subtype event))
+                (= "compacting" (:status event))))))
+
 (defn- read-compact*
   "Read the reply to a `/compact` control line.
 
@@ -978,6 +990,20 @@
               (vreset! tools (java.util.ArrayList.))
               (vreset! open? true))
             (ensure-open! [] (when-not @open? (start-turn!)))
+            (claim-compaction! [event]
+              ;; A task_notification seen after the compact waiter registered
+              ;; makes start-turn! file the compaction as agent-initiated, and
+              ;; every later notification keeps the waiter losing turns
+              ;; (claude-6, 2026-11-08: compacted at 05:02:08, logged as an
+              ;; unsolicited turn, waiter held the turn queue for its 60 min
+              ;; timeout). Notification counting cannot tell the turns apart;
+              ;; the events can: only a compaction emits compaction events.
+              (when (and (nil? @owner)
+                         (compaction-event? event)
+                         (:compact? (.peek q)))
+                (when-let [w (.poll q)]
+                  (reset! owner w)
+                  (vreset! turn-id (:turn-id w)))))
             (finish-turn! [event trailer-inferred?]
               (when-let [s (:session_id event)] (vreset! sid s))
               (let [body (str @text)
@@ -1051,7 +1077,7 @@
                       ;; prompt is subsequently registered before that init.
                       "task_notification" (do (swap! notification-seq inc)
                                               (vreset! agent-initiated? true))
-                      (do (ensure-open!) (emit! event)))
+                      (do (ensure-open!) (claim-compaction! event) (emit! event)))
 
                     "assistant"
                     (do (ensure-open!)
@@ -1092,14 +1118,18 @@
           (.start t))))))
 
 (defn- feed-line-demux!
-  "ON path: enqueue a waiter, write LINE, and await THIS turn's result."
-  [pouch line timeout-ms on-event turn-id]
+  "ON path: enqueue a waiter, write LINE, and await THIS turn's result.
+   COMPACT? marks the waiter of a `/compact` control: the demux hands it the
+   turn that carries compaction events even when that turn opened as
+   agent-initiated."
+  [pouch line timeout-ms on-event turn-id & {:keys [compact?]}]
   (let [{:keys [waiters closed?] :as demux} (:demux pouch)
         ^LinkedBlockingQueue q waiters]
     (ensure-demux! pouch)
     (let [w {:promise (promise)
              :on-event on-event
              :turn-id turn-id
+             :compact? (boolean compact?)
              :notification-seq @(:notification-seq demux)}]
       ;; Pair with fail-demux-waiters!: close-and-drain and check-and-register
       ;; share one monitor, so a waiter can never appear after shutdown drained
@@ -1229,7 +1259,8 @@
                    (reset! before-cost (:last-total-cost-usd (get @!pouches aid)))
                    (if (:demux pouch)
                      (feed-line-demux! pouch (control-line) timeout on-event
-                                       (str "pouch-compact-" (java.util.UUID/randomUUID)))
+                                       (str "pouch-compact-" (java.util.UUID/randomUUID))
+                                       :compact? true)
                      (do
                        (.write ^BufferedWriter (:writer pouch)
                                (str (control-line) "\n"))

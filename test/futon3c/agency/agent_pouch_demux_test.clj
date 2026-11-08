@@ -379,3 +379,59 @@
       (pouch/evict! "demux-owner-evict")
       (is (= :failed-explicitly (deref outcome 2000 :still-hung))
           "eviction fails the current owner instead of parking it forever"))))
+
+(defn- notification-then-compaction-bin
+  "Replays claude-6, 2026-11-08 05:00-05:02: after /compact is written, a
+   background task notifies and takes a turn of its own, another notification
+   lands, and only then does the compaction run. Ordinary user lines get an
+   ordinary reply."
+  []
+  (let [f (java.io.File/createTempFile "fake-claude-notify-compact-" ".py")]
+    (spit f
+          (str "#!/usr/bin/env python3\n"
+               "import json, sys\n"
+               "sid = 'notify-compact'\n"
+               "def emit(o): print(json.dumps(o), flush=True)\n"
+               "for line in sys.stdin:\n"
+               "    content = json.loads(line).get('message', {}).get('content')\n"
+               "    if content == '/compact':\n"
+               "        emit({'type':'system','subtype':'task_notification'})\n"
+               "        emit({'type':'system','subtype':'init','session_id':sid})\n"
+               "        emit({'type':'assistant','message':{'content':"
+               "[{'type':'text','text':'AUTONOMOUS'}]}})\n"
+               "        emit({'type':'result','session_id':sid,'is_error':False})\n"
+               "        emit({'type':'system','subtype':'task_notification'})\n"
+               "        emit({'type':'system','subtype':'status','status':'compacting','session_id':sid})\n"
+               "        emit({'type':'system','subtype':'status','status':None,"
+               "'compact_result':'success','session_id':sid})\n"
+               "        emit({'type':'system','subtype':'init','session_id':sid})\n"
+               "        emit({'type':'system','subtype':'compact_boundary','session_id':sid})\n"
+               "        emit({'type':'result','session_id':sid,'num_turns':0,'is_error':False})\n"
+               "        continue\n"
+               "    text = content[0]['text']\n"
+               "    emit({'type':'system','subtype':'init','session_id':sid})\n"
+               "    emit({'type':'assistant','message':{'content':"
+               "[{'type':'text','text':'reply:' + text}]}})\n"
+               "    emit({'type':'result','session_id':sid,'is_error':False})\n"))
+    (.setExecutable f true)
+    (.deleteOnExit f)
+    (.getAbsolutePath f)))
+
+(deftest a-compaction-after-a-notification-reaches-its-waiter
+  ;; claude-6, 2026-11-08: a notification observed after the compact waiter
+  ;; registered filed the compaction as agent-initiated; the waiter then lost
+  ;; every later turn and held the seat's turn queue until its timeout.
+  (demux-on!)
+  (let [bin (notification-then-compaction-bin)
+        sink-turns (atom [])]
+    (pouch/set-unsolicited-sink! (fn [_ turn] (swap! sink-turns conj turn)))
+    (is (= "reply:warm" (:result (pouch/feed-turn! "demux-notify-compact" "warm"
+                                                   {:claude-bin bin :timeout-ms 5000}))))
+    (let [r (pouch/compact-pouch! "demux-notify-compact" {:timeout-ms 5000})]
+      (is (true? (:ok r)) "the compaction's own turn completes the compact waiter")
+      (is (= "success" (:compact-result r))))
+    (is (= ["AUTONOMOUS"] (mapv :result @sink-turns))
+        "the background task's turn still goes to the unsolicited sink, and only it")
+    (is (= "reply:after" (:result (pouch/feed-turn! "demux-notify-compact" "after"
+                                                    {:claude-bin bin :timeout-ms 5000})))
+        "the next fed turn reads its own reply")))
