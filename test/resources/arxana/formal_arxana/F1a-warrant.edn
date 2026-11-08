@@ -1,0 +1,14 @@
+{:increment :F1a
+ :date "2026-11-08"
+ :scope [:settled-turn-materialiser :operator-assessment :mark-occurrence-route]
+ :private-stack
+ {:command "clojure -M:test -n futon3c.arxana.formal-f1-test"
+  :result {:tests 2 :assertions 14 :failures 0 :errors 0}}
+ :futon1b
+ {:command "clojure -M test_formal_arxana_c2.clj"
+  :result :pass}
+ :gates
+ {:clj-kondo :pass
+  :check-parens :pass}
+ :live-services-touched? false
+ :deferred [:F1b-export-relocation :F1c-futon4a-projections]}

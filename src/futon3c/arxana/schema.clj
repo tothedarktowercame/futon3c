@@ -73,6 +73,10 @@
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}
 
+   :mark-occurrence/assert
+   {:schema-version 1 :required #{:record} :allowed #{:record}
+    :projection [:operation :record/id :created?]}
+
    :external-reference/resolve
    {:schema-version 1 :required #{:reference} :allowed #{:reference}
     :projection [:operation :status :reference/id :revision/digest]}

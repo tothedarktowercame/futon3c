@@ -45,6 +45,13 @@
                       {:error :arxana.external-reference/id-mismatch})))
     computed))
 
+(defn- checked-mark-occurrence [record]
+  (let [computed (records/make-mark-occurrence record)]
+    (when (and (:id record) (not= (:id record) (:id computed)))
+      (throw (ex-info "mark occurrence id does not match digest"
+                      {:error :arxana.mark-occurrence/id-mismatch})))
+    computed))
+
 (defn execute
   "Validate at the JVM authority, then submit only the validated record to
   futon1b's reserved atomic route."
@@ -55,7 +62,8 @@
                       :evidence/append (checked-attestation record)
                       :assessment/append (checked-assessment record)
                       :attempt/append (checked-attempt record)
-                      :external-reference/assert (checked-external-reference record))
+                      :external-reference/assert (checked-external-reference record)
+                      :mark-occurrence/assert (checked-mark-occurrence record))
           command {:protocol/version env/protocol-version
                    :message/id (:message/id envelope)
                    :operation operation

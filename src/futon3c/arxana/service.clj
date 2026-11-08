@@ -267,7 +267,7 @@
                  (env/response ok (with-semantic-digest op rok)))))
 
            (#{:clusion/assert :evidence/append :assessment/append
-              :attempt/append :external-reference/assert} op)
+              :attempt/append :external-reference/assert :mark-occurrence/assert} op)
            (let [{wok :ok werr :error}
                  (write/execute graph-store ok op (:record body))]
              (env/response ok (with-semantic-digest op (or werr wok))))

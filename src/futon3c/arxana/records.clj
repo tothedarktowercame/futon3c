@@ -113,6 +113,13 @@
       (assoc without-id :id
              (record-id [:external-reference 1] without-id)))))
 
+(defn make-mark-occurrence [occurrence]
+  (let [required [:glyph :form :artifact/revision-id :locator]]
+    (when-not (every? #(some? (get occurrence %)) required)
+      (throw (ex-info "mark occurrence is incomplete" {:required required})))
+    (let [without-id (dissoc occurrence :id)]
+      (assoc without-id :id (record-id [:mark-occurrence 1] without-id)))))
+
 (defn record-id
   "Digest a non-'clusion record against its declaration's identity fields."
   [type-revision content]
