@@ -1,0 +1,43 @@
+{:increment :F3a
+ :date "2026-11-08"
+ :bases
+ {:futon3c "36d70684e9b13eb7df79a4de71425b1870a2e750"
+  :apm-lean "2dd18b2c3547897cb07f8a35084f535b9da7f4c7"}
+ :lean-gate
+ {:toolchain "leanprover/lean4:v4.29.0-rc8"
+  :command ["lake" "env" "lean" "problems/a93J02/lean/Main.lean"]
+  :result {:exit-status 0
+           :outcome :passed
+           :output/sha256
+           "e345f8a3612ed06a1c3c49ade2cfb8ecbe9f17dc58767324d4c98e499bf6d164"
+           :mathlib/unchanged? true}
+  :record "a93J02-kernel-run.edn"
+  :record/sha256
+  "f1a5a6b363584f164960af32ba97964d3df80aa188740b2ca08278883921a5a6"
+  :deterministic-rerun? true}
+ :fixture
+ {:private-stack :in-process-xtdb-via-ephemeral-futon1b-http
+  :manifestation-count 10
+  :html/producer {:tool "latexml_oxide" :version "0.7.5"}
+  :producer-log/sha256
+  "3b65504af07eb81231138c5520ce84b56f8360e49a6cca6752314a9606e64133"
+  :identical-informal-copies
+  {:futon3c-current "f8ea208411ec0c0e923699c6c4aa1dd9a41934619eb5db15716b5e451fcbd2e8"
+   :apm-lean-commit "fe78c85d1a1b4267f6db16fda884ad403128e2df"
+   :same-revision-id? true}
+  :current-apm-lean-informal
+  {:sha256 "13701dc01777fc348cdba316a5fc893859681f2d250ab4c06d1dcc383875b951"
+   :status :latex-normalised-successor
+   :same-revision-id? false}}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.formal-f3-test"
+   :result {:tests 8 :assertions 88 :failures 0 :errors 0}}]
+ :gates
+ {:clj-kondo {:errors 0 :warnings 0}
+  :check-parens :pass
+  :git-diff-check :pass}
+ :process-safety
+ {:shared-ports-touched []
+  :private-server-port :ephemeral
+  :persistent-processes-left-running []}
+ :deferred [:F3b-correspondences :F3c-model-output :F3d-projections]}

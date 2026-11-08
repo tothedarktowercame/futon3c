@@ -110,6 +110,13 @@
                  [{:role :needing :endpoint/kinds #{:external-ref}}
                   {:role :supplier :endpoint/kinds #{:external-ref}}]
                  [:class])
+   (clusion-type :kernel-builds 1
+                 [{:role :artifact :endpoint/kinds #{:artifact-revision}}]
+                 [:language])
+   (clusion-type :declaration-location 1
+                 [{:role :declaration :endpoint/kinds #{:entity}}
+                  {:role :artifact :endpoint/kinds #{:artifact-revision}}]
+                 [])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]
