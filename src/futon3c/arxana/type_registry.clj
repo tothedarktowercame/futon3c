@@ -167,7 +167,7 @@
    (clusion-type :geometry/placement 1
                  [{:role :panel :endpoint/kinds #{:clusion}}
                   {:role :subject :endpoint/kinds #{:clusion}}]
-                 [:offset/x :offset/y :theory/version])
+                 [:offset/x :offset/y :placed-at :theory/version])
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]

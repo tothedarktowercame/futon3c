@@ -54,12 +54,25 @@
                  (rendered-record-ids (get-in before [:panels :angular])))))
         (testing "panel-local placement changes Cartesian only"
           (let [point (get-in geometry [:entities :i])
-                move (p/placement (:cartesian panels) point 17 -9)
+                move (p/placement (:cartesian panels) point 17 -9 "2026-11-08T18:00:00Z")
                 _ (is (:ok (p/write! cfg move))) _ (is (= move (get-record cfg (:id move))))
                 after (render cfg panels "f5b:moved")]
             (is (not= (get-in before [:panels :cartesian]) (get-in after [:panels :cartesian])))
             (is (= (get-in before [:panels :angular]) (get-in after [:panels :angular])))
-            (is (= geometry-ids (mapv :id (:records geometry))))))
+            (is (= (:geometry/record-ids before) (:geometry/record-ids after))
+                "a drag changes no geometry record id")
+            (is (= (:id point) (:id (get-record cfg (:id point)))))
+            (testing "a second drag of the same point is the one drawn"
+              (let [move2 (p/placement (:cartesian panels) point -30 40 "2026-11-08T18:00:05Z")
+                    _ (is (:ok (p/write! cfg move2)))
+                    again (render cfg panels "f5b:moved-again")
+                    [cx cy] (map #(Double/parseDouble %)
+                                 (rest (re-find #"cx='([0-9.]+)' cy='([0-9.]+)'"
+                                                (subs (get-in again [:panels :cartesian])
+                                                      (.indexOf ^String (get-in again [:panels :cartesian])
+                                                                (str "data-record-id='" (:id point) "'"))))))]
+                (is (< (Math/abs (- cx 120.0)) 0.01) "i at a quarter turn: x = 150 + 0 - 30")
+                (is (< (Math/abs (- cy 80.0)) 0.01) "y = 150 - 110 + 40")))))
         (testing "new graph member and exact turn value propagate to both panels"
           (let [point (f5/entity :eighth-turn :point)
                 value (p/relation :geometry/value [(p/endpoint :point point)]
@@ -73,4 +86,33 @@
               (is (not= (get-in before [:panels :cartesian]) (get-in after [:panels :cartesian])))
               (is (not= (get-in before [:panels :angular]) (get-in after [:panels :angular])))
               (is (re-find #"cx='227\.782' cy='72\.218'" (get-in after [:panels :cartesian])))
-              (is (re-find #"eighth-turn" (get-in after [:panels :angular]))))))))))
+              (is (re-find #"eighth-turn" (get-in after [:panels :angular])))
+              (testing "every stored member is drawn in both panels"
+                (doseq [pt [(get-in geometry [:entities :i]) (get-in geometry [:entities :neg-i])
+                            point]
+                        panel [:cartesian :angular]]
+                  (is (re-find (re-pattern (str "<g data-record-id='" (:id pt) "'"))
+                               (get-in after [:panels panel]))
+                      (str panel " draws " (get-in pt [:asserted-content :entity/id]))))))))))))
+
+(defn- render-after-writing [record-order]
+  (with-stack
+    (fn [cfg]
+      (let [bytes (Files/readAllBytes (.toPath (io/file lean-root f5/lean-source)))
+            rid (:artifact/revision-id (first (f3/ingest-manifestations!
+                                               cfg [{:artifact/id "formal-f5b:test-lean"
+                                                     :media-type "text/x-lean" :bytes bytes}])))
+            run (edn/read-string (slurp "test/resources/arxana/formal_arxana/F5a-kernel-run.edn"))
+            kernel (f3/append-kernel-run! cfg rid run)
+            geometry (f5/plan (get-in kernel [:attestation :id]))
+            presentation (p/plan)
+            records (record-order (concat (:records geometry) (:records presentation)))]
+        (doseq [r records] (is (:ok (p/write! cfg r))))
+        (:html (render cfg (:panels presentation) "f5b:order"))))))
+
+(deftest f5b-bytes-do-not-depend-on-write-order
+  ;; Same records, written in opposite orders to two fresh stores: same page.
+  (let [forward (render-after-writing identity)
+        backward (render-after-writing reverse)]
+    (is (string? forward))
+    (is (= forward backward))))

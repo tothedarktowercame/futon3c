@@ -39,11 +39,15 @@
                           (get-in value [:asserted-content :turn/denominator]))})))
        (sort-by #(str (get-in % [:point :asserted-content :entity/id]))) vec))
 
-(defn- placement [read! panel-id point-id]
+(defn- placement
+  "The panel's latest placement for point-id. Placements are immutable, so a
+  later drag is a new record; the store's ascending time order decides which
+  is current (a content-id sort would pick an arbitrary one)."
+  [read! panel-id point-id]
   (->> (reverse-ids read! [:geometry/placement 1] :panel panel-id)
        (map #(record read! %))
        (filter #(= point-id (endpoint-id % :subject)))
-       (sort-by :id) last))
+       last))
 (defn- common-record-ids [answer points extra-ids]
   (->> (concat (:record/ids answer) extra-ids
                (mapcat (fn [x] [(get-in x [:point :id])

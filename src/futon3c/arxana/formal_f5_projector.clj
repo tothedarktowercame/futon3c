@@ -26,9 +26,14 @@
                          :body {:record record}}))
 (defn materialise! [cfg]
   (let [p (plan)] (assoc p :writes (mapv #(write! cfg %) (:records p)))))
-(defn placement [panel point dx dy]
-  (relation :geometry/placement [(endpoint :panel panel) (endpoint :subject point)]
-            {:offset/x dx :offset/y dy}))
+(defn placement
+  "A drag is an event: placed-at is part of its identity (dragging back to an
+  earlier offset is a new placement) and is its :event-time, which is what
+  the store's role-reverse index orders by."
+  [panel point dx dy placed-at]
+  (assoc (relation :geometry/placement [(endpoint :panel panel) (endpoint :subject point)]
+                   {:offset/x dx :offset/y dy :placed-at placed-at})
+         :event-time placed-at))
 (defn render! [cfg panels]
   (service/dispatch cfg {:protocol/version "arxana.v1" :message/id "formal-f5b:render"
                          :operation :geometry/render :principal/id "formal-f5b/client"
