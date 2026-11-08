@@ -47,6 +47,15 @@ are styled faintly to distinguish them from the deterministic recognized/explici
 lexicon fires on nearly every turn, so it is the noisiest candidate layer."
   :type 'boolean :group 'session-mode)
 
+(defcustom session-mode-lexicon-file
+  "/home/joe/code/storage/lexicon/lexicon-vocab.json"
+  "Generated deterministic lexicon vocabulary used to mark agent replies."
+  :type 'file :group 'session-mode)
+
+(defcustom session-mode-show-lexicon t
+  "When non-nil, underline lexicon terms in finalised agent replies."
+  :type 'boolean :group 'session-mode)
+
 (defcustom session-mode-rnode-vocabulary-file
   "/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-vocabulary.json"
   "Generated deterministic R-node cue vocabulary."
@@ -346,6 +355,178 @@ instead is robust both ways.)"
           "what if\\|i think we\\|we want\\|the goal is\\|next we\\)\\b"))
 
 (defvar-local session-mode--overlays nil "Markup overlays this mode owns in the buffer.")
+(defvar-local session-mode--turn-text-regions nil
+  "Recent ((TURN SIDE BEG-MARKER . END-MARKER)) transcript regions.")
+(defvar-local session-mode--last-agent-region nil
+  "Markers bounding the most recently inserted agent reply segment.")
+
+(defvar session-mode--lexicon-key nil)
+(defvar session-mode--lexicon-regexp nil)
+(defvar session-mode--lexicon-forms nil)
+(defvar session-mode--lexicon-entities nil)
+(defvar session-mode--lexicon-levels nil)
+
+(defun session-mode--json-object-hash (object)
+  "Return an equal-tested hash table populated from JSON alist OBJECT."
+  (let ((table (make-hash-table :test 'equal :size (max 20 (length object)))))
+    (dolist (entry object table)
+      (puthash (symbol-name (car entry)) (cdr entry) table))))
+
+(defun session-mode--load-lexicon ()
+  "Load and compile `session-mode-lexicon-file' when it has changed."
+  (when (file-readable-p session-mode-lexicon-file)
+    (let* ((attrs (file-attributes session-mode-lexicon-file))
+           (key (list (expand-file-name session-mode-lexicon-file)
+                      (file-attribute-modification-time attrs))))
+      (unless (equal key session-mode--lexicon-key)
+        (let* ((json-array-type 'list)
+               (data (json-read-file session-mode-lexicon-file))
+               (forms (alist-get 'forms data))
+               (form-table (make-hash-table :test 'equal :size (length forms))))
+          (dolist (form forms)
+            (puthash (alist-get 'form form) form form-table))
+          (setq session-mode--lexicon-regexp
+                (regexp-opt (mapcar (lambda (form) (alist-get 'form form)) forms))
+                session-mode--lexicon-forms form-table
+                session-mode--lexicon-entities
+                (session-mode--json-object-hash (alist-get 'entities data))
+                session-mode--lexicon-levels
+                (session-mode--json-object-hash (alist-get 'levels data))
+                session-mode--lexicon-key key)))))
+  session-mode--lexicon-regexp)
+
+(defun session-mode--lexicon-word-char-p (char)
+  "Return non-nil when CHAR is ASCII alphanumeric, underscore, or hyphen."
+  (and char (or (and (>= char ?a) (<= char ?z))
+                (and (>= char ?A) (<= char ?Z))
+                (and (>= char ?0) (<= char ?9))
+                (memq char '(?_ ?-)))))
+
+(defun session-mode--lexicon-whole-form-p (beg end text)
+  "Return non-nil when TEXT at BEG..END obeys lexicon word boundaries."
+  (or (and (= (length text) 1) (> (aref text 0) 127))
+      (and (not (session-mode--lexicon-word-char-p (char-before beg)))
+           (not (session-mode--lexicon-word-char-p (char-after end))))))
+
+(defun session-mode--lexicon-blocked-p (beg end)
+  "Return non-nil when BEG..END is code or a rendered link."
+  (or (text-property-not-all beg end 'agent-chat-in-fence nil)
+      (text-property-not-all beg end 'agent-chat-link-target nil)
+      (seq-some (lambda (overlay)
+                  (or (overlay-get overlay 'agent-chat-code)
+                      (overlay-get overlay 'agent-chat-link)))
+                (overlays-in beg end))))
+
+(defun session-mode--lexicon-level (entity)
+  "Return the level display record for ENTITY."
+  (gethash (let ((level (alist-get 'level entity)))
+             (if (numberp level) (number-to-string level) "none"))
+           session-mode--lexicon-levels))
+
+(defun session-mode--lexicon-help (entity level)
+  "Build hover text for ENTITY and LEVEL."
+  (string-join
+   (delq nil
+         (list (alist-get 'name entity)
+               (and (alist-get 'status entity)
+                    (format "status: %s" (alist-get 'status entity)))
+               (format "liveness: %s" (or (alist-get 'label level) "unknown"))
+               (alist-get 'what entity)
+               (and (alist-get 'path entity)
+                    (format "path: %s" (alist-get 'path entity)))))
+   "\n"))
+
+(defun session-mode--lexicon-open (&optional event)
+  "Open the lexicon URL at EVENT or point."
+  (interactive (list last-nonmenu-event))
+  (let* ((pos (if (and event (eventp event)) (posn-point (event-end event)) (point)))
+         (overlay (seq-find (lambda (candidate)
+                              (overlay-get candidate 'session-mode-lexicon))
+                            (overlays-at pos)))
+         (url (and overlay (overlay-get overlay 'session-mode-lexicon-url))))
+    (when url (browse-url url))))
+
+(defvar session-mode--lexicon-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'session-mode--lexicon-open)
+    (define-key map [mouse-1] #'session-mode--lexicon-open)
+    map))
+
+(defun session-mode--clear-lexicon (&optional beg end)
+  "Remove lexicon overlays in BEG..END, or the whole buffer."
+  (remove-overlays (or beg (point-min)) (or end (point-max))
+                   'session-mode-lexicon t))
+
+(defun session-mode--mark-lexicon-region (beg end)
+  "Mark lexicon forms in the agent-text region BEG..END."
+  (session-mode--clear-lexicon beg end)
+  (when (and session-mode-show-lexicon (session-mode--load-lexicon) (< beg end))
+    (let ((case-fold-search t))
+      (save-excursion
+        (goto-char beg)
+        (while (re-search-forward session-mode--lexicon-regexp end t)
+          (let* ((match-beg (match-beginning 0))
+                 (match-end (match-end 0))
+                 (text (match-string-no-properties 0))
+                 (form (gethash (downcase text) session-mode--lexicon-forms))
+                 (entity (and form (gethash (alist-get 'entity form)
+                                            session-mode--lexicon-entities))))
+            (when (and entity
+                       (session-mode--lexicon-whole-form-p match-beg match-end text)
+                       (not (session-mode--lexicon-blocked-p match-beg match-end)))
+              (let* ((level (session-mode--lexicon-level entity))
+                     (colour (or (alist-get 'colour level) "#a0a0a0"))
+                     (overlay (make-overlay match-beg match-end)))
+                (overlay-put overlay 'session-mode-lexicon t)
+                (overlay-put overlay 'session-mode-lexicon-url (alist-get 'url entity))
+                (overlay-put overlay 'face
+                             `(:underline (:color ,colour
+                                           :style ,(if (eq t (alist-get 'common form))
+                                                       'dots 'line))))
+                (overlay-put overlay 'help-echo
+                             (session-mode--lexicon-help entity level))
+                (overlay-put overlay 'mouse-face 'highlight)
+                (overlay-put overlay 'keymap session-mode--lexicon-map)
+                (overlay-put overlay 'follow-link t)
+                (overlay-put overlay 'evaporate t)))))))))
+
+(defun session-mode--agent-regions ()
+  "Return all inserted agent message body regions in the current buffer."
+  (let ((agent-names (delete-dups
+                      (delq nil (mapcar (lambda (name) (and name (format "%s" name)))
+                                        (list (bound-and-true-p agent-chat--agent-name)
+                                              (bound-and-true-p agent-chat--agent-id))))))
+        regions)
+    (save-excursion
+      (goto-char (point-min))
+      (while-let ((start (text-property-any (point) (point-max)
+                                             'agent-chat-message-start t)))
+        (goto-char start)
+        (let* ((line-end (line-end-position))
+               (prefix-end (and (re-search-forward ": " line-end t) (point)))
+               (speaker (and prefix-end
+                             (buffer-substring-no-properties start (- prefix-end 2))))
+               (next (or (text-property-any (min (1+ start) (point-max)) (point-max)
+                                            'agent-chat-message-start t)
+                         (and (boundp 'agent-chat--input-start)
+                              (markerp agent-chat--input-start)
+                              (marker-position agent-chat--input-start))
+                         (point-max))))
+          (when (and prefix-end (member speaker agent-names) (< prefix-end next))
+            (push (cons prefix-end next) regions))
+          (goto-char (max (1+ start) next))))
+      (nreverse regions))))
+
+(defun session-mode--mark-current-turn-lexicon ()
+  "Mark only agent regions belonging to the current finalised turn."
+  (dolist (entry session-mode--turn-text-regions)
+    (when (and (equal (car entry) agent-chat--current-turn-id)
+               (equal (cadr entry) "agent")
+               (marker-position (car (cddr entry)))
+               (marker-position (cdr (cddr entry))))
+      (session-mode--mark-lexicon-region
+       (marker-position (car (cddr entry)))
+       (marker-position (cdr (cddr entry)))))))
 
 (defun session-mode--clear ()
   (mapc #'delete-overlay session-mode--overlays)
@@ -559,6 +740,10 @@ and explicit/cued counts.  Deterministic — the same spotter, summarized."
   (session-mode--fetch-turn-sigils)   ; refresh the per-turn pattern sigils from XTDB
   (session-mode--clear)
   (let ((c (session-mode--scan)))
+    (session-mode--clear-lexicon)
+    (when session-mode-show-lexicon
+      (dolist (region (session-mode--agent-regions))
+        (session-mode--mark-lexicon-region (car region) (cdr region))))
     ;; Only chatter the spot-count summary when the operator ASKED (C-c s g);
     ;; the automatic after-change/turn-end refresh stays silent (was distracting).
     (when (called-interactively-p 'interactive)
@@ -574,6 +759,17 @@ and explicit/cued counts.  Deterministic — the same spotter, summarized."
   (setq session-mode-show-cues (not session-mode-show-cues))
   (session-mode-refresh)
   (message "session-mode: cue markers %s" (if session-mode-show-cues "ON" "OFF")))
+
+(defun session-mode-toggle-lexicon ()
+  "Toggle deterministic lexicon markup in agent replies."
+  (interactive)
+  (setq session-mode-show-lexicon (not session-mode-show-lexicon))
+  (if session-mode-show-lexicon
+      (dolist (region (session-mode--agent-regions))
+        (session-mode--mark-lexicon-region (car region) (cdr region)))
+    (session-mode--clear-lexicon))
+  (message "session-mode: lexicon markup %s"
+           (if session-mode-show-lexicon "ON" "OFF")))
 
 ;; --- Hover: posframe detail card on cursor-over + raise the matching comb tooth in the
 ;; session-overview panel (the two surfaces cross-reference by mission name). ---
@@ -723,13 +919,15 @@ Returns non-nil if a sigil was placed."
             (push ov session-mode--overlays))
           t)))))
 
-(defun session-mode--finish-turn-advice (&rest _)
+(defun session-mode--finish-turn-advice (&optional _elapsed continued)
   "Decorate the just-ended turn's flair, in the buffer that ended it.
 The current turn's `context-retrieval' evidence is written server-side async AFTER
 turn-end, so it isn't queryable immediately.  Poll with CHEAP fetches (no scan) until
 the retrieval lands, then place ONLY the new sigil — no full re-scan on the turn-end
 path, so the only remaining cost is the unavoidable wait for the server's write."
   (when (bound-and-true-p session-mode)
+    (unless continued
+      (ignore-errors (session-mode--mark-current-turn-lexicon)))
     (let ((tries 0) (placed nil))
       (while (and (not placed) (< tries 12))
         (ignore-errors (session-mode--fetch-turn-sigils))
@@ -745,6 +943,7 @@ path, so the only remaining cost is the unavoidable wait for the server's write.
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c s g") #'session-mode-refresh)
     (define-key map (kbd "C-c s c") #'session-mode-toggle-cues)
+    (define-key map (kbd "C-c s l") #'session-mode-toggle-lexicon)
     (define-key map (kbd "C-c s o") #'session-overview)   ; this session's overview panel
     map)
   "Keymap for `session-mode'.")
@@ -769,6 +968,7 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
     (remove-hook 'post-command-hook #'session-mode--hover-post-command t)
     (when (timerp session-mode--idle-timer) (cancel-timer session-mode--idle-timer))
     (session-mode--hover-hide)
+    (session-mode--clear-lexicon)
     (unless global-session-mode-turn-tags-mode (session-mode-turn-tags-mode -1))
     (session-mode--clear)))
 
@@ -1852,8 +2052,6 @@ to talk off the record."
   "Saved operator sentence labels; independent of inferred phrase cues.")
 (defvar-local session-mode--last-operator-text nil)
 (defvar-local session-mode--last-operator-region nil)
-(defvar-local session-mode--turn-text-regions nil
-  "Recent ((TURN SIDE BEG-MARKER . END-MARKER)) transcript regions.")
 
 (defun session-mode--retain-recent-turn-regions (regions)
   "Keep the regions of the three newest turns with operator text, and of

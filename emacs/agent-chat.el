@@ -2354,7 +2354,8 @@ and changes no text, only the face property."
       (overlay-get overlay 'agent-chat-link)
       (overlay-get overlay 'agent-chat-tool-details)
       (overlay-get overlay 'session-mode-mark)
-      (overlay-get overlay 'session-mode-rnode-tag)))
+      (overlay-get overlay 'session-mode-rnode-tag)
+      (overlay-get overlay 'session-mode-lexicon)))
 
 (defun agent-chat--delete-renderer-overlays (start end)
   "Delete chat/session renderer overlays between START and END."
