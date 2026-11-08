@@ -48,6 +48,10 @@
                        :actor "reviewer" :policy {:id "review" :revision 1}
                        :reason "does not fit" :time "2026-11-08T00:00:01Z"})]
         (is (:ok (service/dispatch cfg (request "claim" :clusion/assert claim))))
+        (is (false? (get-in (service/dispatch cfg (request "claim-reasserted"
+                                                           :clusion/assert claim))
+                            [:ok :created?]))
+            "same semantic claim under another producer/message remains one record")
         (is (:ok (service/dispatch cfg (request "e1" :evidence/append e1))))
         (is (:ok (service/dispatch cfg (request "e2" :evidence/append e2))))
         (is (:ok (service/dispatch cfg (request "a1" :assessment/append accepted))))
