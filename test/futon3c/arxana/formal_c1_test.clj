@@ -64,7 +64,7 @@
 
 (deftest c1-declarations-are-resolved
   ;; C1's declarations plus the versioned F3 and F5 relation types.
-    (is (= 37 (count types/registry-v1)))
+    (is (= 45 (count types/registry-v1)))
   (is (every? #(contains? types/registry-v1 %)
               [[:kernel-builds 1] [:declaration-location 1]
                [:correspondence 1] [:generation-run 1]

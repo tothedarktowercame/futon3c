@@ -2,7 +2,8 @@
   "C2 validity boundary for immutable Formal Arxana writes."
   (:require [futon3c.arxana.envelope :as env]
             [futon3c.arxana.records :as records]
-            [futon3c.arxana.store :as store]))
+            [futon3c.arxana.store :as store]
+            [futon3c.arxana.type-registry :as types]))
 
 (defn- refusal [category code detail]
   {:error (env/error category code detail nil)})
@@ -14,6 +15,52 @@
                       {:error :arxana.clusion/id-mismatch
                        :supplied (:id record) :computed (:id computed)})))
     computed))
+
+(defn- stored-record [graph-store id]
+  (:ok (store/get-entity graph-store id)))
+
+(defn- composition-record? [record]
+  (boolean (get (types/declaration (:type-revision record))
+                :composition/typed-ports?)))
+
+(defn validate-composite!
+  "Validate port revisions and acyclicity against authoritative stored records.
+  This is in the JVM validity boundary, before the reserved persistence route."
+  [graph-store record]
+  (let [decl (types/declaration (:type-revision record))]
+    (when (:composition/typed-ports? decl)
+      (doseq [[endpoint role-decl] (map vector (:endpoints record) (:roles decl))]
+        (let [target-id (get-in endpoint [:target :clusion/id])
+              target (stored-record graph-store target-id)]
+          (when (= target-id (:id record))
+            (throw (ex-info "composite directly contains itself"
+                            {:error :arxana.composite/cycle :record/id (:id record)})))
+          (when-not target
+            (throw (ex-info "composite port target does not exist"
+                            {:error :arxana.composite/missing-target
+                             :role (:role endpoint) :target/id target-id})))
+          (when-not ((:endpoint/type-revisions role-decl) (:type-revision target))
+            (throw (ex-info "composite port target has the wrong type revision"
+                            {:error :arxana.composite/port-type-mismatch
+                             :role (:role endpoint)
+                             :expected (:endpoint/type-revisions role-decl)
+                             :actual (:type-revision target)})))))
+      (letfn [(children [id]
+                (let [r (stored-record graph-store id)]
+                  (when (and r (composition-record? r))
+                    (map #(get-in % [:target :clusion/id]) (:endpoints r)))))
+              (reaches? [id target seen]
+                (cond (= id target) true
+                      (seen id) false
+                      :else (boolean (some #(reaches? % target (conj seen id))
+                                           (children id)))))]
+        (doseq [endpoint (:endpoints record)
+                :let [child (get-in endpoint [:target :clusion/id])]]
+          (when (reaches? child (:id record) #{})
+            (throw (ex-info "composite introduces an indirect cycle"
+                            {:error :arxana.composite/cycle
+                             :record/id (:id record) :via child})))))))
+  record)
 
 (defn- checked-attestation [record]
   (let [computed (records/make-attestation record)]
@@ -74,7 +121,8 @@
   (try
     (check-kernel-provenance! envelope operation record)
     (let [validated (case operation
-                      :clusion/assert (checked-clusion record)
+                      :clusion/assert (validate-composite! graph-store
+                                                           (checked-clusion record))
                       :evidence/append (checked-attestation record)
                       :assessment/append (checked-assessment record)
                       :attempt/append (checked-attempt record)

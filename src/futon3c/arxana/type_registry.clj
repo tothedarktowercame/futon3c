@@ -207,6 +207,46 @@
                  [{:role :conflict :endpoint/kinds #{:clusion}}
                   {:role :alternative :endpoint/kinds #{:clusion}}]
                  [:actor :chosen-at :reason])
+   (clusion-type :d6/intent-stage 1
+                 [{:role :source :endpoint/kinds #{:clusion}}]
+                 [:intent/id :intent/record])
+   (clusion-type :d6/candidate-stage 1
+                 [{:role :intent :endpoint/kinds #{:clusion}}]
+                 [:candidate/id :candidate/record :candidate/non-executable?])
+   (clusion-type :d6/decision-stage 1
+                 [{:role :candidate :endpoint/kinds #{:clusion}}]
+                 [:decision/id :decision/record])
+   (clusion-type :d6/intends 1
+                 [{:role :source-act :endpoint/kinds #{:clusion}}
+                  {:role :intent :endpoint/kinds #{:clusion}}]
+                 [])
+   (clusion-type :d6/compiles-to 1
+                 [{:role :intent :endpoint/kinds #{:clusion}}
+                  {:role :candidate :endpoint/kinds #{:clusion}}]
+                 [])
+   (clusion-type :d6/decides 1
+                 [{:role :candidate :endpoint/kinds #{:clusion}}
+                  {:role :decision :endpoint/kinds #{:clusion}}]
+                 [])
+   (assoc
+    (clusion-type :d6/composite 1
+                  [{:role :source-act :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:interpretation 1]}}
+                   {:role :intent :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/intent-stage 1]}}
+                   {:role :candidate :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/candidate-stage 1]}}
+                   {:role :decision :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/decision-stage 1]}}]
+                  [:dynamics :topology/evidence] :cycle :acyclic)
+    :composition/typed-ports? true)
+   (assoc
+    (clusion-type :d6/composite-group 1
+                  [{:role :child :endpoint/kinds #{:clusion}
+                    :endpoint/type-revisions #{[:d6/composite 1]
+                                               [:d6/composite-group 1]}}]
+                  [:dynamics :topology/evidence] :cycle :acyclic)
+    :composition/typed-ports? true)
    {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:glyph :form :artifact/revision-id :locator]
@@ -258,7 +298,8 @@
   implementations add a version; they never reinterpret an old receipt."
   #{["馬/occurrence" 1]
     ["xiang/read" 1]
-    ["embedding" "all-MiniLM-L6-v2"]})
+    ["embedding" "all-MiniLM-L6-v2"]
+    ["formal-arxana/d6-compose" 1]})
 
 (defn known-dynamics? [{:keys [id version]}]
   (contains? dynamics-v1 [(str id) version]))

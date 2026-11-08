@@ -106,6 +106,10 @@
     :projection [:operation :rule/id :rule/version :result/status
                  [:projection/fragments] :drops]}
 
+   :formal-f4/composite
+   {:schema-version 1 :required #{:composite/id} :allowed #{:composite/id}
+    :projection [:operation :rule/id :rule/version :composite/id [:stages] :drops]}
+
    :geometry/fibre
    {:schema-version 1 :required #{:map/id :value/id}
     :allowed #{:map/id :value/id}
