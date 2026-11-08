@@ -1,0 +1,26 @@
+{:vocabulary/id :intent-vocabulary/v1
+ :vocabulary/revision 1
+ :intents
+ [{:id "gist" :mark "㊥" :gloss "gist"}
+  {:id "propose" :mark "㊭" :gloss "propose"}
+  {:id "approve" :mark "㊣" :gloss "approve"}
+  {:id "disagree" :mark "🈚" :gloss "disagree"}
+  {:id "qualify" :mark "㊟" :gloss "qualify"}
+  {:id "explain" :mark "🈖" :gloss "explain"}
+  {:id "clarify" :mark "🈯" :gloss "clarify (includes asking a question)"}
+  {:id "report" :mark "㊢" :gloss "report"}
+  {:id "report-problem" :mark "㊩" :gloss "report-problem"}
+  {:id "verify" :mark "㊬" :gloss "verify"}
+  {:id "retract" :mark "🈹" :gloss "retract (take back something you said)"}
+  {:id "withdraw" :mark "🈡" :gloss "withdraw (end an earlier act)"}
+  {:id "unresolved" :mark "🈳" :gloss "unresolved"}
+  {:id "constrain" :mark "🈲" :gloss "constrain"}
+  {:id "ask-action" :mark "🈸" :gloss "ask-action"}
+  {:id "delegate" :mark "㊯" :gloss "delegate"}
+  {:id "prioritize" :mark "㊝" :gloss "prioritize"}
+  {:id "collect" :mark "㊮" :gloss "collect"}
+  {:id "extend" :mark "🈕" :gloss "extend"}
+  {:id "continue" :mark "🈰" :gloss "continue"}
+  {:id "defer" :mark "🈝" :gloss "defer"}
+  {:id "redirect" :mark "🈘" :gloss "redirect"}
+  {:id "explore" :mark "㊫" :gloss "explore"}]}

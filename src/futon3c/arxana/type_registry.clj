@@ -1,0 +1,151 @@
+(ns futon3c.arxana.type-registry
+  "C1 registry for immutable, versioned Formal Arxana record declarations.
+
+  This is schema/identity only.  It deliberately provides no persistence
+  operation; C2 owns the authoritative write ports."
+  (:require [clojure.walk :as walk]
+            [futon3c.arxana.digest :as digest]))
+
+(def endpoint-kinds
+  #{:entity :artifact-revision :manifestation-scope :clusion :external-ref})
+
+(def convergence-policies
+  #{:append-only :cas :per-user-lww})
+
+(def cycle-policies
+  #{:acyclic :bounded-cyclic :fixed-point})
+
+(defn declaration-key [{:keys [type/id type/revision]}]
+  [id revision])
+
+(defn declaration-digest [declaration]
+  (str "arxana:type:sha256:"
+       (digest/canonical-digest
+        (walk/postwalk (fn [x] (if (set? x) (vec (sort x)) x))
+                       (dissoc declaration :type/digest)))))
+
+(defn validate-declaration
+  "Return DECLARATION with its digest, or throw on an incomplete/rich schema.
+  The identity projection is data in the declaration, never an implementation
+  convention hidden from clients."
+  [declaration]
+  (let [{:keys [type/id type/revision record/kind roles arity endpoint/kinds
+                identity/content-fields convergence/policy recursion/cycle-policy]}
+        declaration
+        role-names (mapv :role roles)]
+    (when-not (and (keyword? id) (pos-int? revision))
+      (throw (ex-info "type id and positive revision required" {:declaration declaration})))
+    (when-not (#{:clusion :entity :attestation :assessment :receipt :event} kind)
+      (throw (ex-info "unsupported record kind" {:record/kind kind})))
+    (when (not= (count role-names) (count (distinct role-names)))
+      (throw (ex-info "roles must be unique" {:roles role-names})))
+    (when (and (= :clusion kind) (not= arity (count roles)))
+      (throw (ex-info "clusion arity must equal declared roles"
+                      {:arity arity :roles role-names})))
+    (when-not (every? endpoint-kinds kinds)
+      (throw (ex-info "unknown endpoint kind" {:endpoint/kinds kinds})))
+    (when-not (vector? content-fields)
+      (throw (ex-info "identity content fields must be an ordered vector"
+                      {:identity/content-fields content-fields})))
+    (when-not (convergence-policies policy)
+      (throw (ex-info "resolved convergence policy required" {:policy policy})))
+    (when-not (cycle-policies cycle-policy)
+      (throw (ex-info "resolved cycle policy required" {:cycle-policy cycle-policy})))
+    (assoc declaration :type/digest (declaration-digest declaration))))
+
+(defn register-declaration
+  "Pure immutable registry update. Equal replay is idempotent; changing an
+  existing [type-id revision] is refused and must mint a new revision."
+  [registry declaration]
+  (let [declaration (validate-declaration declaration)
+        k (declaration-key declaration)]
+    (if-let [existing (get registry k)]
+      (if (= existing declaration)
+        {:registry registry :declaration existing :created? false}
+        (throw (ex-info "type declaration revision is immutable"
+                        {:error :arxana.type/in-place-edit-refused
+                         :type-key k
+                         :existing-digest (:type/digest existing)
+                         :proposed-digest (:type/digest declaration)})))
+      {:registry (assoc registry k declaration)
+       :declaration declaration
+       :created? true})))
+
+(defn- clusion-type [id revision roles content-fields & {:keys [cycle]
+                                                          :or {cycle :bounded-cyclic}}]
+  {:type/id id
+   :type/revision revision
+   :record/kind :clusion
+   :roles roles
+   :arity (count roles)
+   :endpoint/kinds (set (mapcat :endpoint/kinds roles))
+   :identity/content-fields content-fields
+   :identity/default [:type-revision :ordered-role-labelled-endpoints
+                      :declared-asserted-content]
+   :convergence/policy :append-only
+   :recursion/cycle-policy cycle})
+
+(def declarations-v1
+  [(clusion-type :interpretation 1
+                 [{:role :source :endpoint/kinds #{:manifestation-scope}}
+                  {:role :intent :endpoint/kinds #{:entity}}
+                  {:role :target :endpoint/kinds #{:entity :external-ref}}]
+                 [:reading/state])
+   (clusion-type :resolution-observation 1
+                 [{:role :subject :endpoint/kinds #{:clusion :manifestation-scope}}]
+                 [:resolution/state])
+   (clusion-type :supersedes 1
+                 [{:role :successor :endpoint/kinds #{:clusion}}
+                  {:role :predecessor :endpoint/kinds #{:clusion}}]
+                 [] :cycle :acyclic)
+   (clusion-type :pattern/proposal 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :pattern :endpoint/kinds #{:external-ref}}]
+                 [:intent])
+   (clusion-type :pattern/occurrence 1
+                 [{:role :pattern :endpoint/kinds #{:external-ref}}
+                  {:role :turn :endpoint/kinds #{:external-ref}}]
+                 [:window :proposal])
+   (clusion-type :needs 1
+                 [{:role :needing :endpoint/kinds #{:external-ref}}
+                  {:role :supplier :endpoint/kinds #{:external-ref}}]
+                 [:class])
+   {:type/id :mark-occurrence :type/revision 1 :record/kind :entity
+    :roles [] :arity 0 :endpoint/kinds #{}
+    :identity/content-fields [:glyph :form :artifact/revision-id :locator]
+    :identity/default [:type-revision :declared-asserted-content]
+    :convergence/policy :append-only :recursion/cycle-policy :acyclic}
+   {:type/id :evidence-attestation :type/revision 1 :record/kind :attestation
+    :roles [] :arity 0 :endpoint/kinds #{}
+    :identity/content-fields [:subject-clusion-id :producer :basis :standing
+                              :coverage :method :content :source-refs]
+    :identity/default [:type-revision :declared-asserted-content]
+    :convergence/policy :append-only :recursion/cycle-policy :acyclic}
+   {:type/id :assessment :type/revision 1 :record/kind :assessment
+    :roles [] :arity 0 :endpoint/kinds #{}
+    :identity/content-fields [:subject-clusion-id :verdict :actor :policy :reason :time]
+    :identity/default [:type-revision :declared-asserted-content]
+    :convergence/policy :append-only :recursion/cycle-policy :acyclic}
+   {:type/id :operation-attempt :type/revision 1 :record/kind :receipt
+    :roles [] :arity 0 :endpoint/kinds #{}
+    :identity/content-fields [:dynamics :inputs :outcome :reason :actor :time]
+    :identity/default [:type-revision :declared-asserted-content]
+    :convergence/policy :append-only :recursion/cycle-policy :acyclic}
+   {:type/id :proposal/shown :type/revision 1 :record/kind :event
+    :roles [] :arity 0 :endpoint/kinds #{}
+    :identity/content-fields [:proposal-id :attestation-id :surface :actor :time]
+    :identity/default [:type-revision :declared-asserted-content]
+    :convergence/policy :append-only :recursion/cycle-policy :acyclic}])
+
+(def registry-v1
+  (:registry
+   (reduce (fn [{:keys [registry]} declaration]
+             (register-declaration registry declaration))
+           {:registry {}}
+           declarations-v1)))
+
+(defn declaration [type-revision]
+  (or (get registry-v1 type-revision)
+      (throw (ex-info "unknown type revision"
+                      {:error :arxana.type/unknown-revision
+                       :type-revision type-revision}))))

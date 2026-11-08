@@ -18,14 +18,11 @@
                     (file-name-directory (or load-file-name buffer-file-name)))
   "Path to xiaoxiang_preview.py.")
 
+;; BEGIN GENERATED INTENT-VOCABULARY/V1
 (defconst xiaoxiang-preview-marks
-  '(("approve" . "㊣") ("disagree" . "🈚") ("clarify" . "🈯") ("report" . "㊢")
-    ("report-problem" . "㊩") ("verify" . "㊬") ("retract" . "🈹") ("withdraw" . "🈡")
-    ("propose" . "㊭") ("qualify" . "㊟") ("explain" . "🈖") ("constrain" . "🈲")
-    ("ask-action" . "🈸") ("delegate" . "㊯") ("prioritize" . "㊝") ("collect" . "㊮")
-    ("extend" . "🈕") ("continue" . "🈰") ("defer" . "🈝") ("redirect" . "🈘")
-    ("explore" . "㊫"))
-  "Intent to mark, as in the CLAUDE.md reply proforma key.")
+  '(("gist" . "㊥") ("propose" . "㊭") ("approve" . "㊣") ("disagree" . "🈚") ("qualify" . "㊟") ("explain" . "🈖") ("clarify" . "🈯") ("report" . "㊢") ("report-problem" . "㊩") ("verify" . "㊬") ("retract" . "🈹") ("withdraw" . "🈡") ("unresolved" . "🈳") ("constrain" . "🈲") ("ask-action" . "🈸") ("delegate" . "㊯") ("prioritize" . "㊝") ("collect" . "㊮") ("extend" . "🈕") ("continue" . "🈰") ("defer" . "🈝") ("redirect" . "🈘") ("explore" . "㊫"))
+  "Generated from intent-vocabulary/v1; do not edit this region.")
+;; END GENERATED INTENT-VOCABULARY/V1
 
 (defgroup xiaoxiang-preview nil "小象 fast mode." :group 'tools)
 

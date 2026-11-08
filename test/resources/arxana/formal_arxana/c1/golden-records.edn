@@ -1,0 +1,99 @@
+{:f1
+ [{:name :turn-4qzbnC-delegate
+   :record {:type-revision [:interpretation 1]
+            :endpoints [{:role :source :kind :manifestation-scope
+                         :target {:artifact/revision-id "turn-4qzbnC@settled" :locator {:sentence 1}}}
+                        {:role :intent :kind :entity :target {:intent/id :delegate}}
+                        {:role :target :kind :external-ref
+                         :target {:ref/store :agency :ref/id "claude-19"}}]
+            :asserted-content {:reading/state :candidate}}
+   :expected-id "arxana:clusion:sha256:dc230e64fa0036456fa9299cd8aaed625130431b479831a345fc0e4567cfbb8b"}
+  {:name :turn-pHxXNI-ask-action
+   :record {:type-revision [:interpretation 1]
+            :endpoints [{:role :source :kind :manifestation-scope
+                         :target {:artifact/revision-id "turn-pHxXNI@settled" :locator {:sentence 1}}}
+                        {:role :intent :kind :entity :target {:intent/id :ask-action}}
+                        {:role :target :kind :external-ref
+                         :target {:ref/store :mission :ref/id "M-formal-arxana"}}]
+            :asserted-content {:reading/state :candidate}}
+   :expected-id "arxana:clusion:sha256:d30530d9a5a5225595f39a867fe7d1a6ebc350deeb543ce82ccf6c7f014a1f0f"}
+  {:name :turn-PdGx4U-propose
+   :record {:type-revision [:interpretation 1]
+            :endpoints [{:role :source :kind :manifestation-scope
+                         :target {:artifact/revision-id "turn-PdGx4U@settled" :locator {:fragment "s1"}}}
+                        {:role :intent :kind :entity :target {:intent/id :propose}}
+                        {:role :target :kind :external-ref
+                         :target {:ref/store :mission :ref/id "M-formal-arxana"}}]
+            :asserted-content {:reading/state :candidate}}
+   :expected-id "arxana:clusion:sha256:49b95aa43bcc53f04c1be3a407cbf361f7ab3b1ee4a06d61c9e5b3e41974fb86"}
+  {:name :turn-iWVzvT-ask-action
+   :record {:type-revision [:interpretation 1]
+            :endpoints [{:role :source :kind :manifestation-scope
+                         :target {:artifact/revision-id "turn-iWVzvT@settled" :locator {:fragment "s1"}}}
+                        {:role :intent :kind :entity :target {:intent/id :ask-action}}
+                        {:role :target :kind :external-ref
+                         :target {:ref/store :mission :ref/id "M-formal-arxana"}}]
+            :asserted-content {:reading/state :candidate}}
+   :expected-id "arxana:clusion:sha256:17aec51561b7ddc10b19b95cd538084b189c396d6b3c71ec9f61109b43b16f4b"}]
+
+ :repl-circus
+ [{:name :proposal-turn-NgDb6h
+   :record {:type-revision [:pattern/proposal 1]
+            :endpoints [{:role :turn :kind :external-ref
+                         :target {:ref/store :xiang-turn-store :ref/id "turn-NgDb6h"
+                                  :ref/evidence "emacs-eb5066f4bef987138f074ada9ca752fe"}}
+                        {:role :pattern :kind :external-ref
+                         :target {:ref/store :pattern-library
+                                  :ref/id "problems/fundamentals-drowned-by-backlog"}}]
+            :asserted-content {:intent :proposed}}
+   :expected-id "arxana:clusion:sha256:5ffa66aff5fcd8526dbbda411a44d74208d28a6bf4dd345e5205c0c307c8c762"
+   :attestations
+   [{:record {:subject-clusion-id "arxana:clusion:sha256:5ffa66aff5fcd8526dbbda411a44d74208d28a6bf4dd345e5205c0c307c8c762"
+              :producer "futon3a-notions-search" :basis :model
+              :standing :unverified :coverage :complete
+              :method {:id "embedding" :version "all-MiniLM-L6-v2" :parameters {:top 3}}
+              :content {:rank 2 :score 0.4411} :source-refs []}
+     :expected-id "arxana:attestation:sha256:ce33036cbe52f1512b2d6aea4af29fa62e331d00396c930e0d0f1631580501f3"}]}
+  {:name :occurrence-turn-x3SMUF
+   :record {:type-revision [:pattern/occurrence 1]
+            :endpoints [{:role :pattern :kind :external-ref
+                         :target {:ref/store :pattern-library
+                                  :ref/id "process/recorded-but-not-surfaced"}}
+                        {:role :turn :kind :external-ref
+                         :target {:ref/store :xiang-turn-store :ref/id "turn-x3SMUF"}}]
+            :asserted-content
+            {:window ["turn-Xhj4EM" "turn-EyTXgc" "turn-4sGXo0" "turn-eGZUot"
+                      "turn-imlMIH" "turn-GHQFV8" "turn-KsI8bT" "turn-x3SMUF"]
+             :proposal "proposal:record-time-lu"}}
+   :expected-id "arxana:clusion:sha256:ce586c6a7816bab9d7a2614574754479e35ada5fd77533213215c54b12abfe6c"
+   :attestations
+   [{:record {:subject-clusion-id "arxana:clusion:sha256:ce586c6a7816bab9d7a2614574754479e35ada5fd77533213215c54b12abfe6c"
+              :producer "馬-sonnet" :basis :model :standing :unverified :coverage :complete
+              :method {:id "馬/occurrence" :version 1 :parameters {:window-n 8}}
+              :content {:turn-mapped 4 :chain-mapped 4} :source-refs []}
+     :expected-id "arxana:attestation:sha256:37039d3e764e5c3072e032212b916dde636fc6b989deb17e7e5a51fed84fb6d5"}]}
+  {:name :attempt-turn-Ndo9tN
+   :type-revision [:operation-attempt 1]
+   :content {:dynamics {:id "馬/occurrence" :version 1}
+             :inputs {:turn "turn-Ndo9tN"
+                      :pattern "cascade-construction/run-it-on-a-real-case"}
+             :outcome :not-run :reason "no reader"
+             :actor {:tool "futon3c.xiang.ma-occurrence/verdict!"}
+             :time "2026-11-08T03:43:04.370122311Z"}
+   :expected-id "arxana:record:sha256:dfcef1196a59dc1fa47f74630e65aaa948c75a26d7a440e92d926c5535ae8110"}
+  {:name :needs-T-car3-phase2-impl
+   :record {:type-revision [:needs 1]
+            :endpoints [{:role :needing :kind :external-ref
+                         :target {:ref/store :holes-tickets :ref/id "T-car3-phase2-impl"}}
+                        {:role :supplier :kind :external-ref
+                         :target {:ref/store :holes-tickets :ref/id "T-car3-queue-routing"}}]
+            :asserted-content {:class :closure}}
+   :expected-id "arxana:clusion:sha256:f13f979ac8cf9ee2ba585e247983b56b79a98b19bc105880851f69a6ab2dd35c"
+   :attestations
+   [{:record {:subject-clusion-id "arxana:clusion:sha256:f13f979ac8cf9ee2ba585e247983b56b79a98b19bc105880851f69a6ab2dd35c"
+              :producer "zai-2" :basis :model :standing :unverified :coverage :complete
+              :method {:id "giraffe/prose-reading" :version "pilot-1"}
+              :content {:note "Phase 2 follows the ratified Phase-1 model."}
+              :source-refs [{:ref/store :holes-tickets :ref/id "T-car3-phase2-impl.md"
+                             :locator {:line 5}}]}
+     :expected-id "arxana:attestation:sha256:24b86e5325c23ec38105772e048e1e7fa7f3576d033bef37ed2fdbf9ce3f38a8"}]}]}
