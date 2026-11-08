@@ -11,7 +11,7 @@
   "87c7d08668f200301dfed8a7f7bee85d3571545226576d31cfa8870cf074b1db")
 (def joe-evidence-id "emacs-8fdea78f5fab37bcf3fc65aa4aded28e")
 (def joe-turn-id "turn-YoF9El")
-(def joe-recorded-at "2026-11-08T01:27:29Z")
+(def joe-recorded-at "2026-11-08T01:27:30Z")  ; turn-YoF9El created-at
 (def joe-quote
   "So, I looked at it, not deeply, but I agree with the judge's readings.  The point at the end is crucial: \"a methodological divergence\".  It looks like the mark8 reader was really reaching to find some connections that weren't there.  Note also that there was never a request in the formalisation work that the formal proof *should* follow the informal proof, so divergence is expected.  This puts some feedback pressure on mark8, but that's a separate issue.")
 
@@ -100,22 +100,33 @@
     :source-refs [{:turn/id joe-turn-id :evidence/id joe-evidence-id}]}))
 
 (defn- divergence-records [informal-revision step]
-  (let [candidate {:decl "tendsto_tsum_powerSeries_nhdsWithin_lt"
+  ;; The informal step argues by dominated convergence; Main.lean's
+  ;; tendsto_sum_alternating_harmonic proves the result through Abel's limit
+  ;; theorem (Mathlib tendsto_tsum_powerSeries_nhdsWithin_lt, Main.lean l.85).
+  ;; The target is the Main.lean declaration, an F3a entity; the Mathlib
+  ;; lemma is content, not identity.
+  (let [candidate {:decl "tendsto_sum_alternating_harmonic"
                    :score nil :shared []}
         claim (correspondence informal-revision step candidate
                               :methodological-divergence)
         evidence (records/make-attestation
+                  ;; Who said it: claude-13 and codex-21 named the divergence
+                  ;; in DERIVE-F3 (round 5) and EXERCISE-F3; that is model
+                  ;; work. Joe's agreement is the separate human assessment.
                   {:subject-clusion-id (:id claim)
-                   :producer "formal-f3/divergence-adapter"
-                   :basis :human :standing :disputed :coverage :partial
+                   :producer "claude-13+codex-21/DERIVE-F3"
+                   :basis :model :standing :unverified :coverage :partial
                    :method {:id "formal-f3/method-comparison" :version 1}
                    :content {:informal/method :dominated-convergence
                              :formal/method :abel-limit-theorem
+                             :formal/mathlib-lemma "tendsto_tsum_powerSeries_nhdsWithin_lt"
                              :resolution/state :unique
                              :outcome :methodological-divergence
                              :contradiction? false}
                    :source-refs [{:alignment/sha256 alignment-sha256
-                                  :step/id (:edge step)}]})
+                                  :step/id (:edge step)}
+                                 {:document "futon4/holes/labs/M-formal-arxana/DERIVE-F3.md"
+                                  :section "Clarifications 3"}]})
         assessment (records/make-assessment
                     {:subject-clusion-id (:id claim) :verdict :accepted
                      :actor "joe" :policy joe-policy :reason joe-quote

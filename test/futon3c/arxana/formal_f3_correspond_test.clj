@@ -83,8 +83,25 @@
           (is (= :methodological-divergence
                  (get-in divergence [:claim :asserted-content :relation/kind])))
           (is (= false (get-in divergence [:evidence :content :contradiction?])))
-          (is (= :disputed (get-in divergence [:evidence :standing])))
+          (is (= [:model :unverified] ((juxt :basis :standing) (:evidence divergence)))
+              "the divergence reading is the agents' (model); Joe's agreement is the assessment")
+          (is (= "tendsto_sum_alternating_harmonic"
+                 (get-in divergence [:claim :endpoints 1 :target :declaration/name]))
+              "targets the Main.lean declaration, not the Mathlib lemma")
           (is (= :accepted (get-in divergence [:human-assessment :verdict]))))
         (testing "the unused helper is explicit rather than dropped"
           (is (= ["tsum_alternating_harmonic_mul_pow"]
                  (:unaligned-declarations plan)))))))))
+
+(deftest joe-quote-is-the-evidence-text
+  ;; Copied from futon1b evidence emacs-8fdea78f5fab37bcf3fc65aa4aded28e on
+  ;; 2026-11-08; independent of the constant the materialiser uses.
+  (is (= (str "So, I looked at it, not deeply, but I agree with the judge's readings.  "
+              "The point at the end is crucial: \"a methodological divergence\".  "
+              "It looks like the mark8 reader was really reaching to find some connections "
+              "that weren't there.  Note also that there was never a request in the "
+              "formalisation work that the formal proof *should* follow the informal proof, "
+              "so divergence is expected.  This puts some feedback pressure on mark8, "
+              "but that's a separate issue.")
+         f3b/joe-quote))
+  (is (= "2026-11-08T01:27:30Z" f3b/joe-recorded-at)))
