@@ -189,6 +189,11 @@
                   {:role :right :endpoint/kinds #{:clusion}}]
                  [:artifact/id :base/revision-id :computed-against/head-revision-id
                   :overlap/class])
+   (clusion-type :text/conflict 2
+                 [{:role :left :endpoint/kinds #{:clusion}}
+                  {:role :right :endpoint/kinds #{:clusion}}]
+                 [:artifact/id :base/revision-id :computed-against/head-revision-id
+                  :overlap/class :conflicting/change-ids])
    (clusion-type :text/application 1
                  [{:role :change :endpoint/kinds #{:clusion}}
                   {:role :from :endpoint/kinds #{:artifact-revision}}

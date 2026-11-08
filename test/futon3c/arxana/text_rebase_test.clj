@@ -200,6 +200,41 @@
     (is (pos? (:mergeable @tally)) "no mergeable cases generated")
     (is (pos? (:conflict @tally)) "no conflict cases generated")))
 
+(deftest property-sequential-composition-is-total
+  (let [rnd (java.util.Random. 20261109)]
+    (doseq [i (range 600)]
+      (let [base (rand-text rnd (+ 12 (.nextInt rnd 80)))
+            n1 (.codePointCount ^String base 0 (count base))
+            p1 (rand-patch rnd (r/revision-digest base) "a" (str "p1-" i) n1)
+            after1 (s (r/apply-patch base p1))
+            n2 (.codePointCount ^String after1 0 (count after1))
+            p2 (rand-patch rnd (r/revision-digest after1) "a" (str "p2-" i) n2)
+            sequential (r/apply-patch after1 p2)
+            composed (r/compose-all base [p1 p2])]
+        (is (r/bytes= sequential (r/apply-patch base composed))
+            (str "sequential composition changed bytes, trial " i)))))
+  (testing "edits inside an earlier insertion fold into that hunk"
+    (let [base "alpha omega"
+          p1 {:base (r/revision-digest base) :author "a" :op-id "insert"
+              :hunks [{:start 6 :end 6 :replacement "new paragraph "}]}
+          after (s (r/apply-patch base p1))
+          p2 {:base (r/revision-digest after) :author "a" :op-id "typo"
+              :hunks [{:start 7 :end 10 :replacement "NEW"}]}
+          composed (r/compose-all base [p1 p2])]
+      (is (= "alpha nNEWparagraph omega"
+             (s (r/apply-patch base composed))))
+      (is (= #{"insert" "typo"}
+             (set (:source-op-ids (first (:hunks composed))))))))
+  (testing "far-apart changes remain separate hunks"
+    (let [base "0123456789abcdefghij"
+          p1 {:base (r/revision-digest base) :author "a" :op-id "left"
+              :hunks [{:start 1 :end 2 :replacement "L"}]}
+          after (s (r/apply-patch base p1))
+          p2 {:base (r/revision-digest after) :author "a" :op-id "right"
+              :hunks [{:start 18 :end 19 :replacement "R"}]}
+          composed (r/compose-all base [p1 p2])]
+      (is (= 2 (count (:hunks composed)))))))
+
 ;;; ---------------------------------------------------------------------
 ;;; 4. Multi-byte characters: codepoint vs byte offsets
 

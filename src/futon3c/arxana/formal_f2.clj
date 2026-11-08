@@ -91,12 +91,14 @@
 
 (defn- compose-chain [graph-store artifact-id patch-id chain]
   (try
-   (reduce (fn [combined app]
-            (let [from (target app :from :artifact/revision-id)
-                  p (internal-patch (revision! graph-store from)
-                                    (get-in app [:asserted-content :patch]))]
-              (if combined (rebase/compose combined p) p)))
-          nil chain)
+   (let [base-revision (target (first chain) :from :artifact/revision-id)
+         base-text (revision! graph-store base-revision)
+         patches (mapv (fn [app]
+                         (internal-patch
+                          (revision! graph-store (target app :from :artifact/revision-id))
+                          (get-in app [:asserted-content :patch])))
+                       chain)]
+     (rebase/compose-all base-text patches))
    (catch clojure.lang.ExceptionInfo e
      ;; text_rebase/compose refuses a later change that edits inside text an
      ;; earlier change inserted. Until F2b composes such chains, say so typed.
@@ -108,14 +110,15 @@
                                                :cause (ex-message e)}
                                               [:refresh :manual-rebase])})))))
 
-(defn- conflict-record [artifact-id base head left right overlap]
+(defn- conflict-record [artifact-id base head left right overlap change-ids]
   (records/make-clusion
-   {:type-revision [:text/conflict 1]
+   {:type-revision [:text/conflict 2]
     :endpoints [(endpoint :left :clusion (:id left))
                 (endpoint :right :clusion (:id right))]
     :asserted-content {:artifact/id artifact-id :base/revision-id base
                        :computed-against/head-revision-id head
-                       :overlap/class overlap}}))
+                       :overlap/class overlap
+                       :conflicting/change-ids (vec (sort change-ids))}}))
 
 (defn- alternative-record [conflict patch bytes]
   (records/make-clusion
@@ -160,8 +163,16 @@
                       :head/revision-id rid}})))
           (let [last-app (last chain)
                 landed-record (record! graph-store (target last-app :change :clusion/id))
+                source-ops (into #{} (mapcat (comp :source-op-ids :a)
+                                             (:conflicts outcome)))
+                op->change (into {} (map (fn [app]
+                                           [(get-in app [:asserted-content :patch :op-id])
+                                            (target app :change :clusion/id)])
+                                         chain))
+                conflicting-change-ids (keep op->change source-ops)
                 conflict (conflict-record id base head landed-record prec
-                                          (-> outcome :conflicts first :class))
+                                          (-> outcome :conflicts first :class)
+                                          conflicting-change-ids)
                 alternatives (mapv (fn [{:keys [choice bytes]}]
                                      (alternative-record conflict
                                                          (if (= choice (:op-id landed))

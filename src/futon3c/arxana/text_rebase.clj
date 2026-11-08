@@ -234,6 +234,76 @@
               :op-id (str (:op-id p1) "+" (:op-id p2))
               :hunks merged})))
 
+(defn- codepoints [^String s]
+  (mapv (fn [cp] (String. (Character/toChars (int cp)))) (.toArray (.codePoints s))))
+
+(defn- apply-symbolic
+  "Apply a patch to symbolic codepoints. Replacement tokens inherit the
+  provenance of what they replace as well as the current operation."
+  [tokens patch deleted]
+  (let [patch (->patch patch)]
+    (loop [hs (reverse (:hunks patch)), tokens tokens, deleted deleted]
+      (if-let [{:keys [start end replacement]} (first hs)]
+        (let [removed (subvec tokens start end)
+              inherited (into #{(:op-id patch)} (mapcat :sources removed))
+              replacement (mapv #(hash-map :text % :origin nil :sources inherited)
+                                (codepoints replacement))
+              deleted (reduce (fn [m {:keys [origin sources]}]
+                                (if (some? origin)
+                                  (update m origin (fnil into #{})
+                                          (conj (set sources) (:op-id patch)))
+                                  m))
+                              deleted removed)]
+          (recur (rest hs)
+                 (vec (concat (subvec tokens 0 start) replacement (subvec tokens end)))
+                 deleted))
+        [tokens deleted]))))
+
+(defn compose-all
+  "Compose valid sequential PATCHES into one patch against BASE. Unlike
+  `compose`, this is total when a later patch edits text inserted by an
+  earlier patch. It preserves separated hunks by using retained original
+  codepoints as anchors. Each resulting hunk carries :source-op-ids for
+  conflict attribution; this metadata does not affect application."
+  [base patches]
+  (let [base (canonical-str base)
+        initial (mapv (fn [i t] {:text t :origin i :sources #{}})
+                      (range) (codepoints base))
+        [tokens deleted]
+        (reduce (fn [[tokens deleted] patch]
+                  (apply-symbolic tokens patch deleted))
+                [initial {}] patches)
+        n (cp-count base)
+        anchors (keep-indexed (fn [i token]
+                                (when (some? (:origin token)) [i token]))
+                              tokens)
+        steps (concat anchors [[(count tokens) {:origin n}]])
+        hunks
+        (loop [steps steps, final-cursor 0, original-cursor 0, out []]
+          (if-let [[final-index token] (first steps)]
+            (let [original-index (:origin token)
+                  replacement-tokens (subvec tokens final-cursor final-index)
+                  replacement (apply str (map :text replacement-tokens))
+                  sources (into #{}
+                                (concat (mapcat :sources replacement-tokens)
+                                        (mapcat #(get deleted % #{})
+                                                (range original-cursor original-index))))
+                  changed? (or (< original-cursor original-index)
+                               (seq replacement))
+                  out (cond-> out
+                        changed? (conj {:start original-cursor
+                                        :end original-index
+                                        :replacement replacement
+                                        :source-op-ids (vec (sort sources))}))]
+              (recur (rest steps) (long (inc final-index))
+                     (long (inc original-index)) out))
+            out))
+        first-patch (first patches)]
+    (->patch {:base (revision-digest base)
+              :author (:author first-patch)
+              :op-id (str/join "+" (map :op-id patches))
+              :hunks (vec hunks)})))
+
 ;;; ---------------------------------------------------------------------
 ;;; Rebase
 
