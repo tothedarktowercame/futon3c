@@ -1,0 +1,21 @@
+{:increment :F1a-read
+ :date "2026-11-08"
+ :commits
+ {:futon1b "3bb244c"
+  :futon3c-code "f1cf9b6390893669623e8e5695e0bb2e6a976579"}
+ :index {:layout :sidecar
+         :key [:subject-clusion-id :event-time :assessment-id]
+         :freshness :source-sequence-watermark
+         :scan-fallback? false}
+ :tests
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f1-test"
+   :result {:tests 3 :assertions 42 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c3a-test"
+   :result {:tests 1 :assertions 66 :failures 0 :errors 0}}
+  {:command "clojure -M test_formal_arxana_c2.clj" :result :pass}
+  {:command "clojure -M test_arxana_index.clj" :result :pass}]
+ :gates {:clj-kondo {:errors 0 :warnings 0}
+         :check-parens :pass}
+ :acceptance [:all-conflicts-returned :limit-truncation-and-total
+              :empty-complete :stale-index-refusal]
+ :live-services-touched? false}
