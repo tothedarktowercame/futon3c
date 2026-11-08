@@ -1,22 +1,27 @@
 {:warrant/id :formal-arxana/F6b
  :base/futon3c "c2f54a4a2"
- :implementation/futon3c "9591aecb4447a54dd81ed58496b061af26b58646"
- :implementation/futon4a "4a02f9ebaa85cbff82a27c8105527e16ddb5bd94"
+ :implementation/futon3c "8a15144cba08e391fb452e2465164985b6c1f7a8"
+ :implementation/futon4a "c773da359a61d5e37c2dd51a27d7b6ab75a6039f"
  :operation :formal-f6/page
  :evidence
  [{:command "clojure -M:test -n futon3c.arxana.formal-f6-page-test -n futon3c.arxana.formal-f6-test -n futon3c.arxana.formal-f5-render-test"
-   :result {:tests 5 :assertions 190 :failures 0 :errors 0}}
+   :result {:tests 6 :assertions 236 :failures 0 :errors 0}}
   {:command "clojure -M:test -n futon3c.arxana.formal-f6-page-test -n futon3c.arxana.formal-f6-test"
-   :result {:tests 4 :assertions 114 :failures 0 :errors 0}}
+   :result {:tests 4 :assertions 123 :failures 0 :errors 0}}
   {:command "clj-kondo --lint changed-clojure" :result {:errors 0 :warnings 0}}
   {:command "emacs warning-fatal byte compile lisp/futon4a-formal-f6.el" :result :ok}
-  {:command "emacs ERT futon4a-formal-f6-test" :result {:tests 1 :unexpected 0}}
+  {:command "FUTON3C_ROOT=<worktree> test/formal-f6-e2e.sh"
+   :result {:live-ephemeral-demo true :tests 1 :unexpected 0}}
   {:command "test/stop-f6-demo-test.sh" :result :passed}
   {:command "futon4/dev/check-parens.el changed Clojure and Elisp" :result :ok}]
- :acceptance {:public-argument-only true
+ :acceptance {:page-input-only-argument-id true
+              :geometry-via-public-render true
+              :f5-member-and-fibre-ids-embedded true
               :deterministic-order true
+              :exact-column-move true
               :current-support-only-marked true
               :superseded-support-attributed true
+              :emacs-no-record-id-prompts true
               :mobile-css true
               :pid-owned-demo true}
  :not-run [:full-arxana-suite :full-futon4a-ert :persistent-7090-demo]
