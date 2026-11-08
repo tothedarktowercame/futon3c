@@ -23,7 +23,8 @@
   (capabilities [store])
   (conditional-write! [store command]
     "Stub seam for the futon1b conditional command transaction
-    (expected-head compare + atomic commit). Not implemented here."))
+    (expected-head compare + atomic commit). Not implemented here.")
+  (bounded-query! [store query] "C3 bounded, watermarked graph read."))
 
 (def mock-capabilities
   "Honest capability report for the in-memory mock: mirrors D1's current
@@ -91,7 +92,11 @@
                        {:command/id (:message/id command)
                         :owner "futon1b conditional transaction route (increment 2)"
                         :capability :entity-compare-and-set}
-                       [:retry-after-route-available])}))
+                       [:retry-after-route-available])})
+
+  (bounded-query! [_ query]
+    {:error (env/error :unsupported :arxana.store/bounded-query-unavailable
+                       {:query query} nil)}))
 
 (defn mock-store []
   (->MockStore (atom {:entities {} :hyperedges {}})))

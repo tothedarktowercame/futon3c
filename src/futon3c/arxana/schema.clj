@@ -25,8 +25,10 @@
    :graph/query
    {:schema-version 1
     :required #{:query/type}
-    :allowed #{:query/type :query/args :query/limit}
-    :projection [:operation :query/type :result/records]}
+    :allowed #{:query/type :edge/type :endpoint/role :endpoint/id :time/order
+               :query/limit :start/id :max-depth :max-nodes}
+    :projection [:operation :query/type :result/status :result/edge-ids
+                 :result/nodes :result/truncation :result/watermark]}
 
    :scope/resolve
    {:schema-version 1

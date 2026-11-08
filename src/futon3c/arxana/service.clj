@@ -12,6 +12,7 @@
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.envelope :as env]
             [futon3c.arxana.journal :as journal]
+            [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
             [futon3c.arxana.resolve.promotion :as promotion]
             [futon3c.arxana.schema :as schema]
@@ -143,6 +144,36 @@
 
            (= op :capabilities/handshake)
            (env/response ok (handshake graph-store (some? subscriptions)))
+
+           (= op :graph/query)
+           (let [res (if (= :traverse (:query/type body))
+                       (graph-read/traverse graph-store
+                                            {:start/id (:start/id body)
+                                             :edge/type (:edge/type body)
+                                             :endpoint/role (:endpoint/role body)
+                                             :max-depth (:max-depth body)
+                                             :max-nodes (:max-nodes body)})
+                       (let [{qok :ok qerr :error}
+                             (store/bounded-query!
+                              graph-store {:query/type (:query/type body)
+                                           :edge-type (:edge/type body)
+                                           :endpoint-role (:endpoint/role body)
+                                           :endpoint-id (:endpoint/id body)
+                                           :order (:time/order body)
+                                           :limit (:query/limit body)})]
+                         (or qerr
+                             (if (= :stale-index (:status qok))
+                               (env/error :stale :arxana.graph/index-behind qok [:retry])
+                               {:result/status :complete
+                                :result/edge-ids (:edge-ids qok)
+                                :result/watermark (:watermark qok)}))))]
+             (env/response ok (with-semantic-digest op
+                                                    (if (:error/category res) res
+                                                        (cond-> res
+                                                          (:status res)
+                                                          (assoc :result/status (:status res)
+                                                                 :result/nodes (:nodes res)
+                                                                 :result/truncation (:truncation/reason res)))))))
 
            (= op :scope/resolve)
            (let [res (evaluator/evaluate

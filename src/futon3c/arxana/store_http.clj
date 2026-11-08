@@ -74,7 +74,26 @@
         (catch Exception e
           {:error (env/error :unavailable :arxana.store/http-unavailable
                              {:message (.getMessage e) :base-url base-url}
-                             [:retry])})))))
+                             [:retry])}))))
+  (bounded-query! [_ query]
+    (let [request (-> (HttpRequest/newBuilder
+                       (URI/create (str (str/replace base-url #"/$" "")
+                                        "/api/alpha/arxana/query")))
+                      (.header "Accept" "application/edn")
+                      (.header "Content-Type" "application/edn")
+                      (.header "x-arxana-principal" principal)
+                      (.POST (HttpRequest$BodyPublishers/ofString (pr-str query)))
+                      .build)]
+      (try
+        (let [response (.send client request (HttpResponse$BodyHandlers/ofString))
+              status (.statusCode response) body (edn/read-string (.body response))]
+          (if (<= 200 status 299) {:ok body}
+              {:error (env/error (category-for-status status body)
+                                 :arxana.store/query-http-error body nil)}))
+        (catch Exception e
+          {:error (env/error :unavailable :arxana.store/http-unavailable
+                             {:message (.getMessage e)} [:retry])}))))
+  )
 
 (defn http-store
   ([base-url principal]
