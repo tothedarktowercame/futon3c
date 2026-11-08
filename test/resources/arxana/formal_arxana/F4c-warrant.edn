@@ -1,0 +1,22 @@
+{:mission "M-formal-arxana" :increment :F4c
+ :recorded-at "2026-11-08T21:06:00.000Z"
+ :commits {:futon3c "1b76e8a4dd48bfae04f689ac8311774735c355c7"
+           :futon4a "abc7a3682c2e77f0e8e003447ab590fbbca4af5f"
+           :futon3c-base "c4d57d85b0dd5cf2ee6497c397cb147e34e9741a"
+           :futon4a-base "3d5e597c1ce99673ba64f616d847505e72eafb96"}
+ :checks
+ [{:command "clojure -M:test -n futon3c.arxana.formal-f4-test -n futon3c.arxana.formal-c1-test -n futon3c.arxana.compile-test"
+   :result "22 tests, 299 assertions, 0 failures, 0 errors"}
+  {:command "FUTON3C_ROOT=<worktree> futon4a/test/formal-f4-e2e.sh"
+   :result "1 ERT test, real ephemeral private stack, pass"}
+  {:command "futon4a/test/stop-f4-demo-test.sh"
+   :result "pass; same-name twin survives and foreign pid is refused"}
+  {:command "clj-kondo + check-parens + byte-compile-error-on-warn"
+   :result "pass; 0 lint warnings"}]
+ :acceptance {:stage-lines [:source-act :intent :candidate :decision :receipt]
+              :stage-local-criticism true :refused-and-success-receipts true
+              :record-at-point-via-entity-get true :predecessor-unchanged true
+              :confirmed-execution-and-rerender true :ready-file-has-both-composites true}
+ :runtime {:test-port "ephemeral loopback starting at 7199"
+           :owned-process-stopped true :shared-ports-touched false}
+ :not-run ["full Arxana suite" "lasting :7089 demo start (reviewer starts it)" "live stores"]}
