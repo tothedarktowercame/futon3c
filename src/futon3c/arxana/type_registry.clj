@@ -131,6 +131,12 @@
     :identity/content-fields [:dynamics :inputs :outcome :reason :actor :time]
     :identity/default [:type-revision :declared-asserted-content]
     :convergence/policy :append-only :recursion/cycle-policy :acyclic}
+   {:type/id :external-reference :type/revision 1 :record/kind :entity
+    :roles [] :arity 0 :endpoint/kinds #{}
+    :identity/content-fields [:ref/kind :store/id :store/endpoint :record/id
+                              :schema/authority :valid-time :revision/digest]
+    :identity/default [:type-revision :declared-asserted-content]
+    :convergence/policy :append-only :recursion/cycle-policy :acyclic}
    {:type/id :proposal/shown :type/revision 1 :record/kind :event
     :roles [] :arity 0 :endpoint/kinds #{}
     :identity/content-fields [:proposal-id :attestation-id :surface :actor :time]
@@ -149,3 +155,13 @@
       (throw (ex-info "unknown type revision"
                       {:error :arxana.type/unknown-revision
                        :type-revision type-revision}))))
+
+(def dynamics-v1
+  "Executable method revisions admitted by the C3b receipt boundary. New
+  implementations add a version; they never reinterpret an old receipt."
+  #{["馬/occurrence" 1]
+    ["xiang/read" 1]
+    ["embedding" "all-MiniLM-L6-v2"]})
+
+(defn known-dynamics? [{:keys [id version]}]
+  (contains? dynamics-v1 [(str id) version]))

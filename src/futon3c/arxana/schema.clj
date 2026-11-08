@@ -26,9 +26,10 @@
    {:schema-version 1
     :required #{:query/type}
     :allowed #{:query/type :edge/type :endpoint/role :endpoint/id :time/order
-               :query/limit :start/id :traversal/mode :max-depth :max-nodes}
+               :query/limit :start/id :traversal/mode :max-depth :max-nodes
+               :subject/id :interpreter/id}
     :projection [:operation :query/type :result/status :result/edge-ids
-                 :result/nodes :result/truncation :result/watermark]}
+                 :result/receipts :result/nodes :result/truncation :result/watermark]}
 
    :scope/resolve
    {:schema-version 1
@@ -63,6 +64,24 @@
    :assessment/append
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :subject-clusion-id :created?]}
+
+   :attempt/append
+   {:schema-version 1 :required #{:record} :allowed #{:record}
+    :projection [:operation :record/id :subject/id :outcome :created?]}
+
+   :external-reference/assert
+   {:schema-version 1 :required #{:record} :allowed #{:record}
+    :projection [:operation :record/id :created?]}
+
+   :external-reference/resolve
+   {:schema-version 1 :required #{:reference} :allowed #{:reference}
+    :projection [:operation :status :reference/id :revision/digest]}
+
+   :aggregate/query
+   {:schema-version 1 :required #{:pattern/id :window}
+    :allowed #{:pattern/id :window}
+    :projection [:operation :result/status :pattern/id :window :score
+                 :result/watermark]}
 
    :assertion/promote
    {:schema-version 1

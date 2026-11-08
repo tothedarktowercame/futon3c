@@ -11,6 +11,7 @@
             [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.envelope :as env]
+            [futon3c.arxana.external-ref :as external-ref]
             [futon3c.arxana.journal :as journal]
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
@@ -161,12 +162,15 @@
                                            :endpoint-role (:endpoint/role body)
                                            :endpoint-id (:endpoint/id body)
                                            :order (:time/order body)
-                                           :limit (:query/limit body)})]
+                                           :limit (:query/limit body)
+                                           :subject-id (:subject/id body)
+                                           :interpreter-id (:interpreter/id body)})]
                          (or qerr
                              (if (= :stale-index (:status qok))
                                (env/error :stale :arxana.graph/index-behind qok [:retry])
                                (cond-> {:result/status (if (:truncated? qok) :truncated :complete)
                                         :result/edge-ids (:edge-ids qok)
+                                        :result/receipts (:receipts qok)
                                         :result/watermark (:watermark qok)}
                                  (some? (:total qok)) (assoc :result/total (:total qok))
                                  (:truncated? qok) (assoc :result/truncation :limit))))))]
@@ -262,10 +266,33 @@
                                           :created? (:created? rok)}})
                  (env/response ok (with-semantic-digest op rok)))))
 
-           (#{:clusion/assert :evidence/append :assessment/append} op)
+           (#{:clusion/assert :evidence/append :assessment/append
+              :attempt/append :external-reference/assert} op)
            (let [{wok :ok werr :error}
                  (write/execute graph-store ok op (:record body))]
              (env/response ok (with-semantic-digest op (or werr wok))))
+
+           (= op :external-reference/resolve)
+           (env/response ok (with-semantic-digest
+                              op (external-ref/resolve-reference (:reference body))))
+
+           (= op :aggregate/query)
+           (let [{qok :ok qerr :error}
+                 (store/bounded-query! graph-store {:query/type :pattern-score
+                                                    :pattern-id (:pattern/id body)
+                                                    :window (:window body)})]
+             (env/response ok
+                           (with-semantic-digest
+                            op
+                            (or qerr
+                                (if (= :stale-index (:status qok))
+                                  (env/error :stale :arxana.aggregate/index-behind
+                                             qok [:retry])
+                                  {:result/status :complete
+                                   :pattern/id (:pattern/id body)
+                                   :window (:window body)
+                                   :score (:score qok)
+                                   :result/watermark (:watermark qok)})))))
 
            (= op :revision/ingest)
            (let [{rok :ok rerr :error} (ingest-revision graph-store artifact-provider body)]

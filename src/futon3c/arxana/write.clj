@@ -31,6 +31,20 @@
                        :supplied (:id record) :computed (:id computed)})))
     computed))
 
+(defn- checked-attempt [record]
+  (let [computed (records/make-attempt record)]
+    (when (and (:id record) (not= (:id record) (:id computed)))
+      (throw (ex-info "attempt id does not match digest"
+                      {:error :arxana.attempt/id-mismatch})))
+    computed))
+
+(defn- checked-external-reference [record]
+  (let [computed (records/make-external-reference record)]
+    (when (and (:id record) (not= (:id record) (:id computed)))
+      (throw (ex-info "external reference id does not match digest"
+                      {:error :arxana.external-reference/id-mismatch})))
+    computed))
+
 (defn execute
   "Validate at the JVM authority, then submit only the validated record to
   futon1b's reserved atomic route."
@@ -39,7 +53,9 @@
     (let [validated (case operation
                       :clusion/assert (checked-clusion record)
                       :evidence/append (checked-attestation record)
-                      :assessment/append (checked-assessment record))
+                      :assessment/append (checked-assessment record)
+                      :attempt/append (checked-attempt record)
+                      :external-reference/assert (checked-external-reference record))
           command {:protocol/version env/protocol-version
                    :message/id (:message/id envelope)
                    :operation operation

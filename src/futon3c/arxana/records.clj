@@ -69,6 +69,7 @@
     (assoc without-id :id (attestation-id without-id))))
 
 (def assessment-verdicts #{:candidate :accepted :rejected})
+(def attempt-outcomes #{:not-run :refused :failed :ran-no-output :ran-with-output})
 (declare record-id)
 
 (defn make-assessment [assessment]
@@ -82,6 +83,35 @@
   (let [without-id (dissoc assessment :id)]
     (assoc without-id :id
            (record-id [:assessment 1] without-id))))
+
+(defn make-attempt [attempt]
+  (when-not (attempt-outcomes (:outcome attempt))
+    (throw (ex-info "invalid attempt outcome" {:outcome (:outcome attempt)})))
+  (when-not (types/known-dynamics? (:dynamics attempt))
+    (throw (ex-info "unknown dynamics revision"
+                    {:error :arxana.dynamics/unknown-revision
+                     :dynamics (:dynamics attempt)})))
+  (when-not (and (:subject/id attempt) (map? (:inputs attempt))
+                 (:actor attempt) (:reason attempt) (:time attempt))
+    (throw (ex-info "attempt subject, inputs, actor, reason and time required"
+                    {:attempt attempt})))
+  (when (and (= :ran-no-output (:outcome attempt))
+             (nil? (get-in attempt [:inputs :envelope])))
+    (throw (ex-info "ran-no-output requires a declared search envelope"
+                    {:error :arxana.attempt/search-envelope-required})))
+  (let [without-id (dissoc attempt :id)]
+    (assoc without-id :id (record-id [:operation-attempt 1] without-id))))
+
+(defn make-external-reference [reference]
+  (let [required [:ref/kind :store/id :store/endpoint :record/id
+                  :schema/authority :valid-time :revision/digest]]
+    (when-not (every? #(some? (get reference %)) required)
+      (throw (ex-info "external reference is incomplete"
+                      {:error :arxana.external-reference/incomplete
+                       :required required})))
+    (let [without-id (dissoc reference :id)]
+      (assoc without-id :id
+             (record-id [:external-reference 1] without-id)))))
 
 (defn record-id
   "Digest a non-'clusion record against its declaration's identity fields."

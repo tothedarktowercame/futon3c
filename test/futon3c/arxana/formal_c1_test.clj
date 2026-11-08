@@ -63,7 +63,7 @@
              (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))))
 
 (deftest c1-declarations-are-resolved
-  (is (= 11 (count types/registry-v1)))
+  (is (= 12 (count types/registry-v1)))
   (doseq [[_ declaration] types/registry-v1]
     (is (string? (:type/digest declaration)))
     (is (types/convergence-policies (:convergence/policy declaration)))
