@@ -1,0 +1,28 @@
+{:warrant/id :formal-arxana/codedocs-4
+ :base/futon3c "2fac834da2e569c6dd92aefc56b22e076abc0927"
+ :implementation/futon3c "606ef79ddb6c83f3e1211dbc68ab620b890be5c4"
+ :operations [:revision/ingest :clusion/assert :evidence/append :graph/query :entity/get]
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.codedocs-test"
+   :result {:tests 5 :assertions 432 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 193 :failures 0 :errors 0}}
+  {:command "clj-kondo --lint changed-clojure"
+   :result {:errors 0 :warnings 0}}
+  {:command "futon4/dev/check-parens.el changed-clojure" :result :ok}]
+ :acceptance
+ {:pinned-lean-digest-checked true
+  :lean-declaration-identity-excludes-ranges true
+  :namespace-qualified-fqns true
+  :declaration-and-doc-comment-ranges-attested true
+  :exact-backticked-attached-doc-citations true
+  :parser-evidence-not-kernel true
+  :current-code-revision-only true
+  :bidirectional-bounded-read true
+  :independent-count {:method :column-zero-attached-comment-regex
+                      :declarations 9 :pairs 11
+                      :by-function {"route!" 8 "production-readiness" 3
+                                    "run-opportunity!" 0 "prepare-diagnosis" 0
+                                    "prepare-acceptance" 0}}}
+ :not-run [:full-arxana-suite]
+ :live-services-touched false}
