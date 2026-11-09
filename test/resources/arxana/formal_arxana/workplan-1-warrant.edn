@@ -1,0 +1,22 @@
+{:warrant/id :formal-arxana/workplan-1
+ :implementation/futon3c "a95245a3a"
+ :implementation/futon4a "d3c406a"
+ :source {:slice "/home/joe/notes/cascade-live-outline/arxana/t-pattern-search-slice.edn"
+          :records 29 :clusions 14 :attestations 15}
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.workplan-test"
+   :result {:tests 1 :assertions 40 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 214 :failures 0 :errors 0}}
+  {:command "FUTON3C_ROOT=<worktree> test/formal-workplan-e2e.sh"
+   :result {:tests 1 :failures 0 :errors 0 :real-private-stack true}}
+  {:command "test/stop-workplan-demo-test.sh" :result :pass}
+  {:command "clj-kondo --lint changed-clojure" :result {:errors 0 :warnings 0}}
+  {:command "check-parens changed Clojure and Lisp" :result :ok}
+  {:command "byte-compile futon4a-workplan.el with warnings fatal" :result :ok}]
+ :acceptance {:second-run-created 0 :mentions 5 :quoted-mentions 4 :names 3
+              :serves 1 :pending-level {:value 6 :basis :model :draft true}
+              :standing "no ruling by Joe" :local-ids-resolved true
+              :evidence-test-source :recorded-response :keymaps-local true}
+ :not-run [:full-arxana-suite]
+ :live-services-touched false}
