@@ -177,6 +177,12 @@
     :projection [:operation [:items] :result/status :result/truncation :result/total
                  :query/offset :query/limit [:record/ids]]}
 
+   :workplan/entity-backlinks
+   {:schema-version 1 :required #{}
+    :allowed #{:entity/slug :query/limit}
+    :projection [:operation :entity :rule [:backlinks] :dropped/metadata-only
+                 :index/as-of :result/status :result/truncation :result/total [:record/ids]]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}

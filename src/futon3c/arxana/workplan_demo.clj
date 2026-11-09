@@ -1,13 +1,15 @@
 (ns futon3c.arxana.workplan-demo
   (:require [futon3c.arxana.formal-f1-demo :as base]
             [futon3c.arxana.service :as service]
-            [futon3c.arxana.workplan :as workplan])
+            [futon3c.arxana.workplan :as workplan]
+            [futon3c.arxana.workplan-backlinks :as backlinks])
   (:import [java.lang ProcessHandle]))
 
 (def default-port 7201)
 (defn start! [port]
   (let [h (base/start! port)
         result (workplan/materialise! #(service/dispatch (:cfg h) %) (workplan/read-slice))
+        _ (backlinks/materialise-rules! #(service/dispatch (:cfg h) %) (backlinks/read-rules))
         items (mapv :item/id (get-in result [:catalog :asserted-content :items]))]
     (when (seq (:failures result))
       (base/stop! h) (throw (ex-info "workplan load failures" {:failures (:failures result)})))

@@ -30,7 +30,8 @@
             [futon3c.arxana.store :as store]
             [futon3c.arxana.subscribe :as subscribe]
             [futon3c.arxana.write :as write]
-            [futon3c.arxana.workplan :as workplan])
+            [futon3c.arxana.workplan :as workplan]
+            [futon3c.arxana.workplan-backlinks :as backlinks])
   (:import [java.nio ByteBuffer]
            [java.nio.charset CharacterCodingException CodingErrorAction
             StandardCharsets]))
@@ -393,6 +394,16 @@
                                         :operation read-op :principal/id "workplan/projector"
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op (workplan/items-view read! body))))
+
+           (= op :workplan/entity-backlinks)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":backlinks:" (hash [read-op read-body]))
+                                        :operation read-op :principal/id "workplan/backlink-projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op
+                                (backlinks/entity-view read! (or (:workplan/backlinks-index cfg)
+                                                                 backlinks/default-index) body))))
 
            (= op :formal-f6/page)
            (let [response (dispatch cfg {:protocol/version env/protocol-version

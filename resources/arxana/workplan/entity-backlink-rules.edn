@@ -1,0 +1,6 @@
+{:rules
+ [{:entity/slug "agency" :forms [{:form/text "Agency" :enabled? true}]}
+  {:entity/slug "giraffe" :forms [{:form/text "Giraffe" :enabled? true}]}
+  {:entity/slug "kangaroo-pouch"
+   :forms [{:form/text "kangaroo" :enabled? true}
+           {:form/text "Kangaroo" :enabled? true}]}]}
