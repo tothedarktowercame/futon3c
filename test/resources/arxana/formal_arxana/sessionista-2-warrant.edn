@@ -1,0 +1,22 @@
+{:warrant/id :sessionista-2
+ :recorded-at "2026-11-09T18:27:00.000Z"
+ :commits {:futon3c "f5a514fb5568bdf802549b7cc65cec4233bc4435"
+           :futon4a "7293b2d382c44006d89d07c1414f62b617a3ab50"}
+ :evidence
+ [{:gate :clj-kondo
+   :scope ["sessionista_introductions.clj" "workplan_backlinks.clj" "service.clj"
+           "schema.clj" "type_registry.clj" "workplan_backlinks_test.clj"]
+   :result {:errors 0 :warnings 0}}
+  {:gate :clojure-test
+   :command "clojure -M:test -n futon3c.arxana.workplan-backlinks-test"
+   :result {:tests 4 :assertions 37 :failures 0 :errors 0}}
+  {:gate :check-parens :result :pass}
+  {:gate :byte-compile :warnings-as-errors true :result :pass}
+  {:gate :ert
+   :command "FUTON3C_ROOT=<sessionista-2-worktree> test/sessionista-e2e.sh"
+   :result {:tests 4 :unexpected 0}}
+  {:gate :paint-timing
+   :result {:full-5000-lines-seconds 0.036422 :single-character-seconds 0.012108}}]
+ :fixture {:kind :recorded-live-response
+           :evidence/id "emacs-3bb1edfcff4bbe2932e8ab985faf6cfa"
+           :explicit-referent "No real [[X | r]] turn existed; the test changes only [[sessionista-mode]] to [[sessionista-mode | Agency]]."}}
