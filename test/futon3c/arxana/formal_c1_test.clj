@@ -63,10 +63,11 @@
              (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))))
 
 (deftest c1-declarations-are-resolved
-  ;; C1's declarations plus the versioned F3 and F5 relation types.
-    (is (= 48 (count types/registry-v1)))
+  ;; C1's declarations plus the later formal-Arxana relation types.
+  (is (= 54 (count types/registry-v1)))
   (is (every? #(contains? types/registry-v1 %)
-              [[:kernel-builds 1] [:declaration-location 1]
+              [[:code-definition 1]
+               [:kernel-builds 1] [:declaration-location 1]
                [:correspondence 1] [:generation-run 1]
                [:synthetic-mutation 1] [:formalization-coverage 1]
                [:geometry/entity 1] [:geometry/map 1]

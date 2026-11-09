@@ -86,7 +86,9 @@
    :recursion/cycle-policy cycle})
 
 (def declarations-v1
-  [(clusion-type :interpretation 1
+  [(clusion-type :code-definition 1 []
+                 [:artifact/revision-id :scope/kind :symbol/name :definition/form])
+   (clusion-type :interpretation 1
                  [{:role :source :endpoint/kinds #{:manifestation-scope}}
                   {:role :intent :endpoint/kinds #{:entity}}
                   {:role :target :endpoint/kinds #{:entity :external-ref}}]

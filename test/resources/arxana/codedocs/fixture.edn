@@ -1,0 +1,18 @@
+{:fixture/version 1
+ :historical {:repo/sha "16be6314845f95a2397b4b1aee19d2666bfa9162"
+              :reason "All five demo functions exist; their definition lines differ materially from current."
+              :files {"src/futon2/aif/full_loop_runtime.clj" "1a88d52894aedf5b00eb58898e1ebb36efb5e9121b8a1760933d2de8910cde4b"
+                      "src/futon2/aif/meta_self_heal_production.clj" "b51b8ddd77876f3af2042ecbb8ce53dd6dee0561dd3d56d0af5162b3459105dd"}}
+ :current {:repo/sha "07cea11a80c7b24ab467072100ffb2202ea70c83"
+           :files {"src/futon2/aif/full_loop_runtime.clj" "759367cef4f96f9562806b685b2c50cb565485e9f10444a7498c5e13440b5b05"
+                   "src/futon2/aif/meta_self_heal_production.clj" "3549b7b2849623224fc71b3f04eb1a797a802aaf9e642239ac80d660973733c4"}}
+ :docbook {:repo/sha "40330b3b45901c19cea4af9c77fd7c8317fbb201"
+           :files {"docs/docbook/futon2/futon2-14b33d6f0473.org" "e85f21aa364f6c19e0933986adfb2c5b5b1744b576d8a74d02f131113c2ec71c"
+                   "docs/docbook/futon2/futon2-cd090c67a861.org" "a7ffbecc2e0bbf3da503d55e7227a7ea053017010ab9101cfd73b53dc50fbe15"}
+           :mojibake false}
+ :lean {:repo/sha "2a7c270f3df442d90c17f6433b57c748778d5fa5"
+        :file "DarkTower/WarMachine/SelfHealRoute.lean"
+        :sha256 "cdab9abbd9912761d45e7cb6befa340c84c2b44c42b7987913533c3222e2203f"}
+ :symbols {"src/futon2/aif/full_loop_runtime.clj" ["run-opportunity!"]
+           "src/futon2/aif/meta_self_heal_production.clj"
+           ["prepare-diagnosis" "production-readiness" "route!" "prepare-acceptance"]}}
