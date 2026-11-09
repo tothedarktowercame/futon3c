@@ -250,6 +250,14 @@
                        cfg {:artifact-id "codedocs:wrong-path" :sha "synthetic"
                             :text wrong-text :symbols ["route!"]})]
             (is (empty? (codedocs/link-code-docs! cfg current-code [wrong])))
+            ;; same file name in another directory is a different source
+            (let [twin (codedocs/ingest-doc!
+                        cfg {:artifact-id "codedocs:same-basename" :sha "synthetic"
+                             :text (str ":PROPERTIES:\n:ENTRY_ID: twin::def-doc\n"
+                                        ":SOURCE_PATH: src/elsewhere/meta_self_heal_production.clj\n"
+                                        ":END:\n\n* Context\n- route!: same basename, other dir\n")
+                             :symbols ["route!"]})]
+              (is (empty? (codedocs/link-code-docs! cfg current-code [twin]))))
             (is (empty? (related cfg :target
                                  (get-in wrong [:scopes "route!" :scope :id]))))))
         (testing "a symbol mentioned in another bullet is not an entry"
