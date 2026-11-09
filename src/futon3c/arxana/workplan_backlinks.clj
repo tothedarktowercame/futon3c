@@ -28,8 +28,13 @@
             {:entity entity :rule rule :attestation att})) (:rules rules)))
 
 (defn materialise-rules! [dispatch! rules]
-  (mapv (fn [{:keys [rule attestation]}]
-          [(dispatch! {:protocol/version "arxana.v1" :message/id (str "backlink-rule:" (:id rule))
+  (mapv (fn [{:keys [entity rule attestation]}]
+          ;; The entity may be named by no workplan item (kangaroo-pouch is
+          ;; not), so the rule's endpoint target is asserted here too;
+          ;; assert is idempotent for entities the workplan load wrote.
+          [(dispatch! {:protocol/version "arxana.v1" :message/id (str "backlink-entity:" (:id entity))
+                       :operation :clusion/assert :principal/id "workplan/backlink-builder" :body {:record entity}})
+           (dispatch! {:protocol/version "arxana.v1" :message/id (str "backlink-rule:" (:id rule))
                        :operation :clusion/assert :principal/id "workplan/backlink-builder" :body {:record rule}})
            (dispatch! {:protocol/version "arxana.v1" :message/id (str "backlink-rule-att:" (:id attestation))
                        :operation :evidence/append :principal/id "workplan/backlink-builder" :body {:record attestation}})])

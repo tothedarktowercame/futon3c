@@ -38,14 +38,13 @@
 (deftest stored-rules-and-public-view
   (with-stack
     (fn [cfg]
-      (let [rows (sut/rule-records (sut/read-rules))
-            _ (doseq [{:keys [entity]} rows]
-                (is (get-in (call cfg (str "entity:" (:id entity)) :clusion/assert {:record entity}) [:ok :created?])))
-            first-run (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))
+      ;; No entity is pre-asserted: the rules materialiser must write the
+      ;; entities its rules point at (kangaroo-pouch is named by no item).
+      (let [first-run (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))
             second-run (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))]
         (is (every? #(true? (get-in % [0 :ok :created?])) first-run))
         ;; C2 message replay returns its first outcome; content ids prove the
-        ;; replay addressed exactly the same six immutable records.
+        ;; replay addressed exactly the same nine immutable records.
         (is (= (mapv #(mapv (fn [r] (get-in r [:ok :record/id])) %) first-run)
                (mapv #(mapv (fn [r] (get-in r [:ok :record/id])) %) second-run)))
         (doseq [slug ["agency" "giraffe" "kangaroo-pouch"]]
