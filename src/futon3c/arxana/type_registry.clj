@@ -92,6 +92,10 @@
                  [:artifact/revision-id :entry/id :symbol/name])
    (clusion-type :lean-declaration 1 []
                  [:artifact/revision-id :declaration/fqn])
+   (clusion-type :scope-in-revision 1
+                 [{:role :revision :endpoint/kinds #{:artifact-revision}}
+                  {:role :scope :endpoint/kinds #{:clusion}}]
+                 [:scope/kind])
    (clusion-type :interpretation 1
                  [{:role :source :endpoint/kinds #{:manifestation-scope}}
                   {:role :intent :endpoint/kinds #{:entity}}

@@ -8,6 +8,7 @@
   projection. The 3-arity dispatch (store provider msg) remains for pre-6
   callers and answers :unsupported for increment-6 operations."
   (:require [futon3c.arxana.artifact :as artifact]
+            [futon3c.arxana.codedocs-view :as codedocs-view]
             [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.envelope :as env]
@@ -359,6 +360,15 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
                                 (f6/argument-view read! (:argument/id body)))))
+
+           (= op :codedocs/view)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":codedocs:"
+                                                         (hash [read-op read-body]))
+                                        :operation read-op :principal/id "codedocs/projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op (codedocs-view/view read! body))))
 
            (= op :formal-f6/page)
            (let [response (dispatch cfg {:protocol/version env/protocol-version

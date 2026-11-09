@@ -159,6 +159,13 @@
     :projection [:operation :result/status :support/id :supersession/id
                  :created? :current/support-id]}
 
+   :codedocs/view
+   {:schema-version 1
+    :required #{:artifact/revision-id}
+    :allowed #{:artifact/revision-id}
+    :projection [:operation :artifact/revision-id :links/status :links/at-revision
+                 :result/status :result/truncation [:definitions] [:record/ids]]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}

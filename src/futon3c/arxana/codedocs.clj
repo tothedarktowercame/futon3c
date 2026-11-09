@@ -238,6 +238,14 @@
                        :scope/kind :code-definition
                        :symbol/name name :definition/form form}}))
 
+(defn scope-membership [revision-id scope kind]
+  (records/make-clusion
+   {:type-revision [:scope-in-revision 1]
+    :endpoints [{:role :revision :kind :artifact-revision
+                 :target {:artifact/revision-id revision-id}}
+                {:role :scope :kind :clusion :target {:clusion/id (:id scope)}}]
+    :asserted-content {:scope/kind kind}}))
+
 (defn range-attestation [scope revision-id range]
   (records/make-attestation
    {:subject-clusion-id (:id scope) :producer "futon3c.arxana.codedocs"
@@ -371,15 +379,18 @@
             scopes (into (sorted-map)
                          (for [[symbol d] parsed
                                :let [scope (scope-record revision-id d)
+                                     membership (scope-membership revision-id scope :code-definition)
                                      att (range-attestation scope revision-id (:codepoint-range d))]]
                            (do
                              (call cfg (str "codedocs:scope:" (:id scope))
                                    :clusion/assert {:record scope})
+                             (call cfg (str "codedocs:scope-membership:" (:id membership))
+                                   :clusion/assert {:record membership})
                              (call cfg (str "codedocs:range:" (:id att))
                                    :evidence/append {:record att})
                              (register-position! repo artifact-id revision-id scope
                                                  (:codepoint-range d))
-                             [symbol {:scope scope :attestation att
+                             [symbol {:scope scope :membership membership :attestation att
                                       :codepoint-range (:codepoint-range d)}])))]
         (when-not revision-id
           (throw (ex-info "code revision ingest failed" {:response ingest})))

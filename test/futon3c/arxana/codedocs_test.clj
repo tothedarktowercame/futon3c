@@ -396,3 +396,96 @@
                                  (codedocs/lean-declarations
                                   "/-! module `route!` -/\ndef m : Nat := 0\n" #{"route!"}))))
             (is (= ["route!"] (mapv :symbol/name (:citations (first cited)))))))))))
+
+(defn- materialize-view-fixture! [cfg repo reverse-order?]
+  (let [f (fixture)
+        old-sha (get-in f [:historical :repo/sha])
+        new-sha (get-in f [:current :repo/sha])
+        ordered (cond->> (:symbols f) reverse-order? reverse)
+        code-results
+        (into {}
+              (for [[path symbols] ordered
+                    :let [plan {:artifact-id (str "codedocs:futon2/" path)
+                                :symbols symbols
+                                :historical {:sha old-sha :text (text-at old-sha path)}
+                                :current {:sha new-sha :text (text-at new-sha path)}}]]
+                [path (codedocs/ingest-file! cfg repo plan)]))
+        current-by-path (into {} (for [[path versions] code-results]
+                                   [path (:scopes (second versions))]))
+        current-by-symbol (into {} (for [[_ scopes] current-by-path
+                                         [symbol info] scopes]
+                                     [symbol (:scope info)]))
+        doc-sha (get-in f [:docbook :repo/sha])
+        doc-files (cond->> (get-in f [:docbook :files]) reverse-order? reverse)
+        doc-results
+        (vec (for [[path _] doc-files
+                   :let [text (text-at-repo futon4-root doc-sha path)
+                         source-path (second (re-find #"(?m)^:SOURCE_PATH:\s*(.*?)\s*$" text))]]
+               (codedocs/ingest-doc!
+                cfg {:artifact-id (str "codedocs:futon4/" path) :sha doc-sha :text text
+                     :symbols (get-in f [:symbols source-path])})))
+        _ (codedocs/link-code-docs! cfg current-by-path doc-results)
+        lean-sha (get-in f [:lean :repo/sha])
+        lean-text (text-at-repo mathlib4-root lean-sha (get-in f [:lean :file]))
+        _ (codedocs/ingest-lean!
+           cfg {:artifact-id "codedocs:mathlib4/SelfHealRoute.lean"
+                :sha lean-sha :text lean-text :symbols (set (keys current-by-symbol))
+                :code-scopes current-by-symbol})
+        path "src/futon2/aif/meta_self_heal_production.clj"
+        versions (code-results path)]
+    {:historical (:revision-id (first versions)) :current (:revision-id (second versions))}))
+
+(deftest registered-codedocs-view-is-public-bounded-and-deterministic
+  (let [runs (atom [])]
+    (doseq [reverse-order? [false true]]
+      (with-stack
+        (fn [cfg repo]
+          (let [{:keys [historical current]} (materialize-view-fixture!
+                                               cfg repo reverse-order?)
+                current-view (call cfg (str "view-current:" reverse-order?) :codedocs/view
+                                   {:artifact/revision-id current})
+                historical-view (call cfg (str "view-old:" reverse-order?) :codedocs/view
+                                      {:artifact/revision-id historical})
+                missing-view (call cfg (str "view-missing:" reverse-order?) :codedocs/view
+                                   {:artifact/revision-id "sha256:not-a-revision"})
+                view (:ok current-view)
+                definitions (:definitions view)
+                by-symbol (into {} (map (juxt :symbol identity) definitions))]
+            (testing "current view has source-ordered definitions and exact linked text"
+              (is (= :complete (:result/status view)))
+              (is (= :materialized (:links/status view)))
+              (is (= current (:links/at-revision view)))
+              (is (= ["prepare-acceptance" "prepare-diagnosis"
+                      "production-readiness" "route!"]
+                     (mapv :symbol definitions)))
+              (doseq [{:keys [symbol docs lean]} definitions]
+                (is (= 1 (count docs)))
+                (is (str/starts-with? (:text (first docs)) (str "- " symbol ":")))
+                (is (every? #(not (str/includes? (or (:doc/first-sentence %) "") "`"))
+                            lean)))
+              (is (= ["RouteState"]
+                     (mapv #(last (str/split (:declaration/fqn %) #"\."))
+                           (get-in by-symbol ["prepare-diagnosis" :lean]))))
+              (is (= ["CoordinatorRefusal" "ReadinessTerm" "RouteState" "RouteTerm"
+                      "click11PredictedPath" "click4RecordedSuffix"
+                      "click4_runtimeOrderIsTabled" "coordination_66_reportedToday"
+                      "fallthrough_5_today" "transitions"]
+                     (mapv #(last (str/split (:declaration/fqn %) #"\."))
+                           (get-in by-symbol ["route!" :lean]))))
+              (doseq [id (:record/ids view)]
+                (is (= id (:id (record cfg id))))))
+            (testing "historical definitions explicitly report unmaterialized links"
+              (let [old (:ok historical-view)]
+                (is (= ["prepare-acceptance" "prepare-diagnosis"
+                        "production-readiness" "route!"]
+                       (mapv :symbol (:definitions old))))
+                (is (= :not-materialized-for-revision (:links/status old)))
+                (is (nil? (:links/at-revision old)))
+                (is (every? #(and (empty? (:docs %)) (empty? (:lean %)))
+                            (:definitions old)))))
+            (is (= :arxana.artifact/revision-not-found
+                   (get-in missing-view [:error :error/code])))
+            (swap! runs conj {:current (:ok current-view)
+                              :historical (:ok historical-view)})))))
+    (testing "record write order does not affect either projection"
+      (is (= (first @runs) (second @runs))))))
