@@ -1,0 +1,23 @@
+{:increment :backlinks-1
+ :recorded-at "2026-11-09T04:42:00Z"
+ :commits {:futon3c "4e39606ff" :futon4a "2e1bee1"}
+ :live-search {:endpoint "http://127.0.0.1:7073/api/alpha/evidence/text-search"
+               :requests 4 :limit 50 :index-as-of "2026-11-09T02:19:34.847613303Z"
+               :forms {"Agency" {:wall-seconds 20.74 :hits 50 :kept 4 :dropped 46 :occurrences 4}
+                       "Giraffe" {:wall-seconds 12.89 :hits 50 :kept 5 :dropped 45 :occurrences 15}
+                       "kangaroo" {:wall-seconds 19.80 :hits 50 :kept 5 :dropped 45 :occurrences 5}
+                       "Kangaroo" {:wall-seconds 21.16 :hits 50 :kept 0 :dropped 50 :occurrences 0}}}
+ :gates
+ [{:command "clojure -M:test -n futon3c.arxana.workplan-backlinks-test"
+   :result "2 tests, 27 assertions, 0 failures, 0 errors"}
+  {:command "FUTON3C_ROOT=<worktree> FUTON4A_WORKPLAN_TEST_PORT=7213 test/formal-workplan-e2e.sh"
+   :result "1 ERT, 1 passed; real private full-corpus stack"}
+  {:command "clj-kondo --lint <changed clojure>" :result "0 errors"}
+  {:command "check-parens <changed clojure/elisp>" :result "passed"}
+  {:command "byte-compile futon4a-workplan.el with byte-compile-error-on-warn" :result "passed"}]
+ :semantics {:word "Unicode letters, numbers, and underscore are word characters; hyphen is a boundary"
+             :case-sensitive true
+             :giraffes-does-not-match true
+             :giraffe-to-plane-matches true
+             :derived-index-byte-rebuild :identical
+             :lowercase-kangaroo-off {:before 24 :after 19 :other-backlinks-unchanged true}}}
