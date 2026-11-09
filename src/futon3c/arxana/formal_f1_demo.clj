@@ -11,11 +11,26 @@
             [futon3c.arxana.json :as ajson]
             [futon3c.arxana.service :as service]
             [futon3c.arxana.store-http :as store-http]
+            [xtdb.api :as xt]
             [xtdb.node :as xtn])
   (:import [java.io File]
            [java.lang ProcessHandle]))
 
 (def default-port 7085)
+
+(defn- await-log-replay!
+  "Wait until a durable XTDB node has processed every locally submitted log
+  message. This is required before rebuilding a derived sidecar."
+  [node]
+  (let [deadline (+ (System/nanoTime) (* 60 1000000000))]
+    (loop []
+      (let [status (xt/status node)]
+        (cond
+          (= (:latest-submitted-msg-ids status) (:latest-processed-msg-ids status)) status
+          (< (System/nanoTime) deadline) (do (Thread/sleep 25) (recur))
+          :else (throw (ex-info "Timed out waiting for durable XTDB log replay"
+                                {:submitted (:latest-submitted-msg-ids status)
+                                 :processed (:latest-processed-msg-ids status)})))))))
 
 (defn request [mid op body]
   {:protocol/version "arxana.v1" :message/id mid :operation op
@@ -58,12 +73,23 @@
   returned handle and must invoke `stop!`. Port occupancy is refused before
   any server is started."
   ([] (start! default-port))
-  ([port]
+  ([port] (start! port {}))
+  ([port {:keys [data-dir prepare?] :or {prepare? true}}]
    (http/preflight-ports! "127.0.0.1" [["formal-f1-arxana" port]])
    (gates/seed-mission-contract!)
-   (let [index-file (File/createTempFile "formal-f1-demo-index-" ".sqlite")
-         _ (.delete index-file)
-         node (xtn/start-node)
+   (let [durable? (some? data-dir)
+         root (when durable? (doto (File. ^String data-dir) .mkdirs))
+         index-file (if durable?
+                      (File. ^File root "arxana-index.sqlite")
+                      (File/createTempFile "formal-f1-demo-index-" ".sqlite"))
+         _ (when-not durable? (.delete index-file))
+         node (if durable?
+                (xtn/start-node {:log [:local {:path (.getPath (File. ^File root "log"))}]
+                                 :storage [:local {:path (.getPath (File. ^File root "storage"))}]})
+                (xtn/start-node))
+         ;; A durable node replays its local log asynchronously. The derived
+         ;; sidecar must not scan until that replay has reached quiescence.
+         _ (when durable? (await-log-replay! node))
          store-server* (atom nil)
          arxana-server* (atom nil)]
      (try
@@ -77,24 +103,25 @@
                                 (str "http://127.0.0.1:" store-port)
                                 f1/service-principal)
                   :artifact-provider provider}
-             prepared (prepare! cfg provider)
+             prepared (when prepare? (prepare! cfg provider))
              arxana-server (http/start! {:port port :service-cfg cfg})
              _ (reset! arxana-server* arxana-server)]
          {:port port :store/port store-port :node node :store-server store-server
-          :arxana-server arxana-server :index-file index-file :cfg cfg
+          :arxana-server arxana-server :index-file index-file :data-dir data-dir
+          :durable? durable? :cfg cfg
           :prepared prepared})
        (catch Throwable t
          (when-let [server @arxana-server*] (server))
          (when-let [server @store-server*] (f1-server/stop-server! server))
          (.close node)
-         (.delete index-file)
+         (when-not durable? (.delete index-file))
          (throw t))))))
 
-(defn stop! [{:keys [arxana-server store-server node index-file]}]
+(defn stop! [{:keys [arxana-server store-server node index-file durable?]}]
   (when arxana-server (arxana-server))
   (when store-server (f1-server/stop-server! store-server))
   (when node (.close node))
-  (when index-file (.delete ^File index-file))
+  (when (and index-file (not durable?)) (.delete ^File index-file))
   true)
 
 (defn recording
