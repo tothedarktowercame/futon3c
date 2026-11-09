@@ -1,0 +1,38 @@
+{:warrant/id :workplan-4
+ :recorded-at "2026-11-09T21:15:38.000Z"
+ :commits {:futon3c/implementation "dfbde7e9500ab046368cd21a9e2a13e23f0c607c"
+           :futon4/agency-survey "c9789e2"}
+ :inputs {:lexicon "/home/joe/notes/cascade-live-outline/lexicon/merge/all.json"
+          :lexicon-markdown "/home/joe/notes/cascade-live-outline/lexicon/*.md"
+          :agency-survey "/home/joe/code/futon4/holes/labs/M-jvm-arxana/AGENCY-survey.md"}
+ :counts {:lexicon/entities 254
+          :live/found 158
+          :tier/found 158
+          :relations/parsed 742
+          :relations/written 589
+          :relations/unresolved 153
+          :survey/entities 9
+          :survey/corrections 10
+          :records/planned 2471
+          :rerun-created 0}
+ :sessionista {:stored-disabled-forms 254
+                :exposed-pending-forms 0
+                :decision :not-exposed-without-joe-introduction}
+ :evidence
+ [{:gate :clj-kondo
+   :command "clj-kondo --lint src/futon3c/arxana/lexicon_loader.clj test/futon3c/arxana/lexicon_loader_test.clj"
+   :result {:errors 0 :warnings 0}}
+  {:gate :check-parens
+   :command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults src/futon3c/arxana/lexicon_loader.clj test/futon3c/arxana/lexicon_loader_test.clj"
+   :result :pass}
+  {:gate :focused-real-http-store-test
+   :command "clojure -M:test -n futon3c.arxana.lexicon-loader-test"
+   :result {:tests 2 :assertions 20 :failures 0 :errors 0}}
+  {:acceptance :idempotent-load
+   :first-load {:records/planned 2471 :created :all-new-in-empty-store}
+   :second-load {:created 0}}
+  {:acceptance :preservation
+   :existing-arxana-introduction :byte-identical
+   :unresolved-target :absent
+   :kangaroo-pouch [:part-of :in-namespace :extends]
+   :arxana [:uses-arxana-store :part-of-futon4-alias]}]}
