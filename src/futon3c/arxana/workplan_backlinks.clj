@@ -127,17 +127,26 @@
             referents (mapv (fn [rid] (let [x (entity! read! rid) aa (assessments read! rid)]
                                         {:record x :attestations (attestations read! rid) :assessments aa
                                          :effective/accepted? (or (= :explicit (get-in x [:asserted-content :referent/role]))
-                                                                  (some #(= :accepted (:verdict %)) aa))}))
+                                                                  ;; the latest ruling counts: accepted then rejected is rejected.
+                                                                  ;; The index returns assessments newest first (it ignores
+                                                                  ;; :time/order; futon1b_arxana_index.clj), so that is `first`.
+                                                                  (= :accepted (:verdict (first aa))))}))
                             (reverse-ids read! [:workplan/referent 1] :entity (:id entity)))
-            enabled? (or (some :effective/accepted? referents)
-                         (some #(some :enabled? (get-in % [:content :forms])) rule-atts))
-            stored-att (last rule-atts)
+            ;; An introduced entity is on only while it has an accepted
+            ;; referent.  A seeded rule keeps each form's own switch from its
+            ;; latest attestation, so switching one form off takes effect.
+            referent-ok? (boolean (some :effective/accepted? referents))
+            ;; Newest first, as above: the current forms are the first attestation.
+            stored-att (first rule-atts)
             index (edn/read-string (slurp index-path)) all (filterv #(= slug (:entity/slug %)) (:backlinks index))
             all (vec (sort-by :time #(compare %2 %1) all)) total (count all) limit (min 200 (max 1 (long (or limit 100))))
             shown (subvec all 0 (min limit total)) truncated? (< limit total)]
         (cond-> {:result/status (if truncated? :truncated :complete) :result/total total
                  :entity entity :rule rule :rule/attestation stored-att
-                 :forms/effective (mapv #(assoc % :enabled? (boolean enabled?)) (get-in stored-att [:content :forms]))
+                 :forms/effective (mapv #(assoc % :enabled? (if (seq introductions)
+                                                              referent-ok?
+                                                              (true? (:enabled? %))))
+                                        (get-in stored-att [:content :forms]))
                  :introductions introductions :referents referents
                  :backlinks shown :dropped/metadata-only (reduce + (for [[_ s] (:stats index) :when (= slug (:entity/slug s))] (:dropped/metadata-only s)))
                  :index/as-of (:index/as-of index) :record/ids (vec (concat [(:id entity) (:id rule)] (map :id rule-atts)

@@ -95,7 +95,21 @@
                              [:ok :forms/effective 0 :enabled?])))
           (is (:ok (call cfg "reject-candidate" :workplan/assess-referent
                          {:subject/id candidate-id :verdict :rejected :actor "joe"
-                          :reason "negative fixture" :time "2026-11-09T18:11:00.000Z"}))))
+                          :reason "negative fixture" :time "2026-11-09T18:11:00.000Z"})))
+          ;; The latest ruling counts: accepted then rejected is off again.
+          (is (false? (get-in (call cfg "session-off-again" :workplan/entity-backlinks
+                                    {:entity/slug "sessionista-mode"})
+                              [:ok :forms/effective 0 :enabled?]))))
+        ;; A seeded rule keeps per-form switches: a newer attestation turning
+        ;; "Kangaroo" off takes effect and leaves "kangaroo" on.
+        (let [switched (update-in (sut/read-rules) [:rules 2 :forms 1] assoc :enabled? false)
+              att (:attestation (nth (sut/rule-records switched) 2))]
+          (is (:ok (call cfg "kangaroo-off" :evidence/append {:record att})))
+          (is (= {"kangaroo" true "Kangaroo" false}
+                 (into {} (map (juxt :form/text :enabled?)
+                               (get-in (call cfg "kangaroo-view" :workplan/entity-backlinks
+                                             {:entity/slug "kangaroo-pouch"})
+                                       [:ok :forms/effective]))))))
         ;; A different introduced entity whose only candidate Joe rejects stays off.
         (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "test-registry"}))
               wid (get-in wv [:referents 0 :record :id])]
