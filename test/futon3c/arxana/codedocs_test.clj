@@ -133,12 +133,28 @@
                 (is (= scope stored-scope))
                 (is (= attestation stored-att))
                 (is (= symbol (get-in stored-scope [:asserted-content :symbol/name])))
-                (is (nil? (get-in stored-scope [:asserted-content :codepoint-range])))
+                ;; identity is exactly these fields: no range, offset or line
+                (is (= #{:artifact/revision-id :scope/kind :symbol/name :definition/form}
+                       (set (keys (:asserted-content stored-scope)))))
+                (is (empty? (:endpoints stored-scope)))
                 (is (= codepoint-range (get-in stored-att [:content :codepoint-range])))
                 (is (str/starts-with? (codepoint-subs source start (min end (+ start 12)))
                                       (str "(" (name (get-in stored-scope
                                                               [:asserted-content :definition/form])))))
-                (is (= (:id scope) (get-in inside [:ok :result/innermost :subject/id])))))))
+                (is (= (:id scope) (get-in inside [:ok :result/innermost :subject/id])))
+                (testing "the range is the whole top-level form, no more"
+                  (let [form-text (codepoint-subs source start end)
+                        parsed (read-string form-text)
+                        at (fn [pos] (get-in (call cfg (str "at:" (:id scope) ":" pos)
+                                                   :scope/at-position
+                                                   {:artifact/revision-id revision-id
+                                                    :position/codepoint pos})
+                                             [:ok :result/innermost :subject/id]))]
+                    (is (str/ends-with? form-text ")"))
+                    (is (= symbol (str (second parsed))))
+                    (is (= (:id scope) (at (quot (+ start end) 2))))
+                    (is (= (:id scope) (at (dec end))))
+                    (is (not= (:id scope) (at end)))))))))
         (doseq [[_ versions] results
                 {:keys [revision-id]} versions]
           (let [outside (call cfg (str "outside:" revision-id) :scope/at-position
