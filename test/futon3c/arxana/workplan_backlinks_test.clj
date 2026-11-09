@@ -77,7 +77,8 @@
             by-slug (into {} (map (juxt :entity/slug identity) (:introductions first-run)))
             session-view (:ok (call cfg "session-view" :workplan/entity-backlinks
                                     {:entity/slug "sessionista-mode" :query/limit 10}))]
-        (is (= #{"inbox-zero" "warrant" "sessionista-mode"} (set (keys by-slug))))
+        ;; The lexicon declares "warrant" as an alias of test-registry.
+        (is (= #{"inbox-zero" "test-registry" "sessionista-mode"} (set (keys by-slug))))
         (is (= (:record/ids first-run) (:record/ids second-run)))
         (let [intro (first (:introductions session-view)) att (first (:attestations intro))
               [a b] (get-in att [:content :codepoint-range])]
@@ -96,13 +97,13 @@
                          {:subject/id candidate-id :verdict :rejected :actor "joe"
                           :reason "negative fixture" :time "2026-11-09T18:11:00.000Z"}))))
         ;; A different introduced entity whose only candidate Joe rejects stays off.
-        (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "warrant"}))
+        (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "test-registry"}))
               wid (get-in wv [:referents 0 :record :id])]
           (is (:ok (call cfg "reject-warrant" :workplan/assess-referent
                          {:subject/id wid :verdict :rejected :actor "joe"
                           :reason "negative fixture" :time "2026-11-09T18:12:00.000Z"})))
           (is (false? (get-in (call cfg "warrant-off" :workplan/entity-backlinks
-                                    {:entity/slug "warrant"})
+                                    {:entity/slug "test-registry"})
                               [:ok :forms/effective 0 :enabled?]))))
         ;; The public view is now independent of the seed file.
         (with-redefs [sut/read-rules (fn [& _] (throw (ex-info "seed unavailable" {})))]

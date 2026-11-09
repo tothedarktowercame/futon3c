@@ -1,11 +1,28 @@
 (ns futon3c.arxana.sessionista-introductions
   "Materialise Joe's [[entity | referent]] introductions through public ports."
   (:require [clojure.string :as str]
+            [jsonista.core :as json]
             [futon3c.arxana.records :as records]))
+
+(def lexicon-path "/home/joe/notes/cascade-live-outline/lexicon/merge/all.json")
+(defonce ^:private lexicon
+  (delay (try (json/read-value (slurp lexicon-path) json/keyword-keys-object-mapper)
+              (catch Exception _ []))))
 
 (defn slugify [s]
   (-> s str/trim str/lower-case (str/replace #"[^\p{L}\p{N}]+" "-")
       (str/replace #"(^-|-$)" "")))
+
+(defn resolve-slug [s]
+  (let [needle (str/lower-case (str/trim s))]
+    (or (some (fn [row]
+                (let [aliases (->> (str/split (str (or (:aka row) "")) #",")
+                                   (map str/trim))
+                      names (concat [(:entity row) (:name row)] aliases)]
+                  (when (some #(= needle (some-> % str str/lower-case)) names)
+                    (:entity row))))
+              @lexicon)
+        (slugify s))))
 
 (defn parse-introductions [^String text]
   (let [m (re-matcher #"\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]" text)]
@@ -47,7 +64,7 @@
         results
         (mapv
          (fn [{:keys [as-written referents codepoint-range]}]
-           (let [slug (slugify as-written) e (entity slug) r (rule e)
+           (let [slug (resolve-slug as-written) e (entity slug) r (rule e)
                  source {:ref/store :evidence :ref/id id}
                  intro (records/make-clusion
                         {:type-revision [:workplan/introduction 1]
@@ -60,7 +77,7 @@
                              :standing :verified :coverage :complete
                              :content {:evidence/id id :actor actor :time time :as-written as-written
                                        :codepoint-range codepoint-range}})
-                 explicit (mapv (fn [x] [x (entity (slugify x))]) referents)
+                 explicit (mapv (fn [x] [x (entity (resolve-slug x))]) referents)
                  resolved (filterv #(exists? read! (second %)) explicit)
                  candidates (->> slugs (remove #{slug}) distinct (mapv (fn [s] [s (entity s)])))
                  refs (concat (map (fn [[x target]] [:explicit x target]) resolved)
