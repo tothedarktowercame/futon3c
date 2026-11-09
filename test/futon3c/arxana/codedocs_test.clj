@@ -391,4 +391,8 @@
                 declarations (codedocs/lean-declarations synthetic #{"route!"})
                 cited (filterv (comp seq :citations) declarations)]
             (is (= ["Demo.good" "Demo.Body"] (mapv :declaration/fqn cited)))
+            ;; a module docstring directly above a declaration is not its doc
+            (is (empty? (filterv (comp seq :citations)
+                                 (codedocs/lean-declarations
+                                  "/-! module `route!` -/\ndef m : Nat := 0\n" #{"route!"}))))
             (is (= ["route!"] (mapv :symbol/name (:citations (first cited)))))))))))
