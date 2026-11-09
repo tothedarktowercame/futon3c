@@ -183,6 +183,16 @@
     :projection [:operation :entity :rule [:backlinks] :dropped/metadata-only
                  :index/as-of :result/status :result/truncation :result/total [:record/ids]]}
 
+   :workplan/introduce
+   {:schema-version 1 :required #{:evidence/id :text :actor}
+    :allowed #{:evidence/id :text :actor :time :candidate/slugs}
+    :projection [:operation [:introductions] [:unresolved] [:record/ids]]}
+
+   :workplan/assess-referent
+   {:schema-version 1 :required #{:subject/id :verdict :actor :reason :time}
+    :allowed #{:subject/id :verdict :actor :reason :time}
+    :projection [:operation :record/id :subject-clusion-id :created?]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}

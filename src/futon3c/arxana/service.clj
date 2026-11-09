@@ -27,6 +27,7 @@
             [futon3c.arxana.resolve.promotion :as promotion]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.schema :as schema]
+            [futon3c.arxana.sessionista-introductions :as sessionista-introductions]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.subscribe :as subscribe]
             [futon3c.arxana.write :as write]
@@ -404,6 +405,27 @@
              (env/response ok (with-semantic-digest op
                                 (backlinks/entity-view read! (or (:workplan/backlinks-index cfg)
                                                                  backlinks/default-index) body))))
+
+           (= op :workplan/introduce)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":intro-read:" (hash [read-op read-body]))
+                                        :operation read-op :principal/id "sessionista/introduction"
+                                        :body read-body}))
+                 dispatch! #(dispatch cfg %)]
+             (env/response ok (with-semantic-digest op
+                                (sessionista-introductions/materialise! dispatch! read! body))))
+
+           (= op :workplan/assess-referent)
+           (let [assessment (records/make-assessment
+                             {:subject-clusion-id (:subject/id body) :verdict (:verdict body)
+                              :actor (:actor body) :policy "sessionista/referent-review"
+                              :reason (:reason body) :time (:time body)})
+                 response (dispatch cfg {:protocol/version env/protocol-version
+                                         :message/id (str (:message/id ok) ":assessment")
+                                         :operation :assessment/append :principal/id (:principal/id ok)
+                                         :body {:record assessment}})]
+             (env/response ok (with-semantic-digest op (or (:error response) (:ok response)))))
 
            (= op :formal-f6/page)
            (let [response (dispatch cfg {:protocol/version env/protocol-version

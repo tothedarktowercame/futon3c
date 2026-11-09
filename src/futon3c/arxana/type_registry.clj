@@ -92,6 +92,16 @@
    (clusion-type :workplan/entity-match-rule 1
                  [{:role :entity :endpoint/kinds #{:clusion}}]
                  [:rule/id])
+   (clusion-type :workplan/entity-rule-member 1
+                 [{:role :catalog :endpoint/kinds #{:clusion}}
+                  {:role :rule :endpoint/kinds #{:clusion}}] [])
+   (clusion-type :workplan/introduction 1
+                 [{:role :entity :endpoint/kinds #{:clusion}}
+                  {:role :source :endpoint/kinds #{:external-ref}}] [])
+   (clusion-type :workplan/referent 1
+                 [{:role :entity :endpoint/kinds #{:clusion}}
+                  {:role :target :endpoint/kinds #{:clusion :external-ref}}]
+                 [:referent/role])
    (clusion-type :workplan/catalog 1 [] [:catalog/id])
    (clusion-type :lexicon/entity 1 [] [:entity/slug])
    (clusion-type :benefit-line 1 [] [:benefit/line])

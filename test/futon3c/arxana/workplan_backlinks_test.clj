@@ -1,7 +1,10 @@
 (ns futon3c.arxana.workplan-backlinks-test
   (:require [clojure.test :refer [deftest is]]
+            [clojure.string :as str]
+            [jsonista.core :as json]
             [futon1b-arxana :as f1] [futon1b-gates :as gates] [futon1b-server :as f1-server]
             [futon3c.arxana.artifact :as artifact] [futon3c.arxana.service :as service]
+            [futon3c.arxana.records :as records]
             [futon3c.arxana.store-http :as store-http]
             [futon3c.arxana.workplan-backlinks :as sut]
             [xtdb.node :as xtn])
@@ -42,7 +45,7 @@
       ;; entities its rules point at (kangaroo-pouch is named by no item).
       (let [first-run (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))
             second-run (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))]
-        (is (every? #(true? (get-in % [0 :ok :created?])) first-run))
+        (is (every? #(true? (get-in % [1 :ok :created?])) first-run))
         ;; C2 message replay returns its first outcome; content ids prove the
         ;; replay addressed exactly the same nine immutable records.
         (is (= (mapv #(mapv (fn [r] (get-in r [:ok :record/id])) %) first-run)
@@ -55,3 +58,72 @@
               (is (= id (get-in (call cfg (str "get:" id) :entity/get {:entity/id id}) [:ok :record :id]))))))
         (is (= ["agency" "giraffe" "kangaroo-pouch"]
                (get-in (call cfg "list" :workplan/entity-backlinks {}) [:ok :entities])))))))
+
+(deftest joe-introductions-use-real-evidence-and-stored-rules
+  (with-stack
+    (fn [cfg]
+      (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))
+      (let [raw (json/read-value (slurp "test/resources/arxana/sessionista/joe-introduces.json") json/keyword-keys-object-mapper)
+            entry (:entry raw) text (get-in entry [:evidence/body :text]) eid (:evidence/id entry)
+            inbox (records/make-clusion {:type-revision [:lexicon/entity 1] :endpoints []
+                                         :asserted-content {:entity/slug "inbox-zero"}})
+            _ (call cfg "seed-inbox" :clusion/assert {:record inbox})
+            first-run (:ok (call cfg "intro-1" :workplan/introduce
+                             {:evidence/id eid :text text :actor "joe" :time (:evidence/at entry)
+                              :candidate/slugs ["inbox-zero"]}))
+            second-run (:ok (call cfg "intro-2" :workplan/introduce
+                              {:evidence/id eid :text text :actor "joe" :time (:evidence/at entry)
+                               :candidate/slugs ["inbox-zero"]}))
+            by-slug (into {} (map (juxt :entity/slug identity) (:introductions first-run)))
+            session-view (:ok (call cfg "session-view" :workplan/entity-backlinks
+                                    {:entity/slug "sessionista-mode" :query/limit 10}))]
+        (is (= #{"inbox-zero" "warrant" "sessionista-mode"} (set (keys by-slug))))
+        (is (= (:record/ids first-run) (:record/ids second-run)))
+        (let [intro (first (:introductions session-view)) att (first (:attestations intro))
+              [a b] (get-in att [:content :codepoint-range])]
+          (is (= eid (get-in att [:content :evidence/id])))
+          (is (= "[[sessionista-mode]]" (subs text a b))))
+        (is (false? (get-in session-view [:forms/effective 0 :enabled?])))
+        (let [candidate-id (get-in session-view [:referents 0 :record :id])]
+          (is (:ok (call cfg "accept-candidate" :workplan/assess-referent
+                         {:subject/id candidate-id :verdict :accepted :actor "joe"
+                          :reason "the turn says fast like the existing feature"
+                          :time "2026-11-09T18:10:00.000Z"})))
+          (is (true? (get-in (call cfg "session-on" :workplan/entity-backlinks
+                                   {:entity/slug "sessionista-mode"})
+                             [:ok :forms/effective 0 :enabled?])))
+          (is (:ok (call cfg "reject-candidate" :workplan/assess-referent
+                         {:subject/id candidate-id :verdict :rejected :actor "joe"
+                          :reason "negative fixture" :time "2026-11-09T18:11:00.000Z"}))))
+        ;; A different introduced entity whose only candidate Joe rejects stays off.
+        (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "warrant"}))
+              wid (get-in wv [:referents 0 :record :id])]
+          (is (:ok (call cfg "reject-warrant" :workplan/assess-referent
+                         {:subject/id wid :verdict :rejected :actor "joe"
+                          :reason "negative fixture" :time "2026-11-09T18:12:00.000Z"})))
+          (is (false? (get-in (call cfg "warrant-off" :workplan/entity-backlinks
+                                    {:entity/slug "warrant"})
+                              [:ok :forms/effective 0 :enabled?]))))
+        ;; The public view is now independent of the seed file.
+        (with-redefs [sut/read-rules (fn [& _] (throw (ex-info "seed unavailable" {})))]
+          (is (some #{"sessionista-mode"}
+                    (get-in (call cfg "stored-list" :workplan/entity-backlinks {}) [:ok :entities]))))))))
+
+(deftest explicit-referent-is-a-minimal-edit-of-the-real-turn
+  (with-stack
+    (fn [cfg]
+      (sut/materialise-rules! #(service/dispatch cfg %) (sut/read-rules))
+      (let [raw (json/read-value (slurp "test/resources/arxana/sessionista/joe-introduces.json") json/keyword-keys-object-mapper)
+            entry (:entry raw) original (get-in entry [:evidence/body :text])
+            ;; No real [[X | r]] turn existed.  Change only the one real token,
+            ;; retaining the recorded response shape and evidence id.
+            edited (str/replace original "[[sessionista-mode]]"
+                                           "[[sessionista-mode | Agency]]")
+            response (:ok (call cfg "explicit-intro" :workplan/introduce
+                                {:evidence/id (:evidence/id entry) :text edited :actor "joe"
+                                 :time (:evidence/at entry)}))]
+        (is (true? (:enabled? (first (filter #(= "sessionista-mode" (:entity/slug %))
+                                               (:introductions response))))))
+        (is (true? (get-in (call cfg "explicit-view" :workplan/entity-backlinks
+                                 {:entity/slug "sessionista-mode"})
+                           [:ok :forms/effective 0 :enabled?])))))))
