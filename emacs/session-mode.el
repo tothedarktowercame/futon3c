@@ -370,6 +370,8 @@ instead is robust both ways.)"
 (defvar session-mode--lexicon-forms nil)
 (defvar session-mode--lexicon-entities nil)
 (defvar session-mode--lexicon-levels nil)
+(defvar session-mode--lexicon-stages nil
+  "Stage display records (known / developing / pending / ...) from the vocabulary.")
 
 (defun session-mode--json-object-hash (object)
   "Return an equal-tested hash table populated from JSON alist OBJECT."
@@ -397,6 +399,9 @@ instead is robust both ways.)"
                 (session-mode--json-object-hash (alist-get 'entities data))
                 session-mode--lexicon-levels
                 (session-mode--json-object-hash (alist-get 'levels data))
+                session-mode--lexicon-stages
+                (and (alist-get 'stages data)
+                     (session-mode--json-object-hash (alist-get 'stages data)))
                 session-mode--lexicon-key key)))))
   session-mode--lexicon-regexp)
 
@@ -428,11 +433,30 @@ instead is robust both ways.)"
              (if (numberp level) (number-to-string level) "none"))
            session-mode--lexicon-levels))
 
+(defun session-mode--lexicon-stage (entity)
+  "Return the stage display record for ENTITY, or nil when it has none."
+  (let ((stage (alist-get 'stage entity)))
+    (and stage session-mode--lexicon-stages
+         (gethash stage session-mode--lexicon-stages))))
+
+(defun session-mode--lexicon-face (entity level common)
+  "Underline face for ENTITY: its stage when it has one, else its LEVEL colour.
+COMMON words get a dotted line unless the stage asks for a wave (pending)."
+  (let* ((stage (session-mode--lexicon-stage entity))
+         (colour (or (alist-get 'colour stage) (alist-get 'colour level) "#a0a0a0"))
+         (style (pcase (alist-get 'style stage)
+                  ("wave" 'wave) ("dots" 'dots) (_ (if common 'dots 'line)))))
+    `(:underline (:color ,colour :style ,style))))
+
 (defun session-mode--lexicon-help (entity level)
   "Build hover text for ENTITY and LEVEL."
   (string-join
    (delq nil
          (list (alist-get 'name entity)
+               (let ((stage (session-mode--lexicon-stage entity)))
+                 (and stage (format "stage: %s" (alist-get 'label stage))))
+               (and (alist-get 'pending entity)
+                    (format "pending: %s" (alist-get 'pending entity)))
                (and (alist-get 'status entity)
                     (format "status: %s" (alist-get 'status entity)))
                (format "liveness: %s" (or (alist-get 'label level) "unknown"))
@@ -484,10 +508,10 @@ instead is robust both ways.)"
                      (overlay (make-overlay match-beg match-end)))
                 (overlay-put overlay 'session-mode-lexicon t)
                 (overlay-put overlay 'session-mode-lexicon-url (alist-get 'url entity))
+                (ignore colour)
                 (overlay-put overlay 'face
-                             `(:underline (:color ,colour
-                                           :style ,(if (eq t (alist-get 'common form))
-                                                       'dots 'line))))
+                             (session-mode--lexicon-face
+                              entity level (eq t (alist-get 'common form))))
                 (overlay-put overlay 'help-echo
                              (session-mode--lexicon-help entity level))
                 (overlay-put overlay 'mouse-face 'highlight)

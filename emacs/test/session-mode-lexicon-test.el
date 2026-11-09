@@ -126,3 +126,41 @@
 
 (provide 'session-mode-lexicon-test)
 ;;; session-mode-lexicon-test.el ends here
+
+(ert-deftest session-mode-lexicon-stage-sets-colour-and-style ()
+  "A stage in the vocabulary overrides the level colour: pending is a wave."
+  (let* ((file (make-temp-file "session-lexicon-stage" nil ".json"))
+         (session-mode-lexicon-file file)
+         (session-mode-show-lexicon t)
+         (session-mode--lexicon-key nil))
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert (json-encode
+                     '((forms . [((form . "agency") (entity . "agency") (common . :json-false))
+                                 ((form . "repl circus") (entity . "repl-circus") (common . :json-false))
+                                 ((form . "park") (entity . "park") (common . t))])
+                       (entities . ((agency . ((name . "Agency") (level . 9) (stage . "known")))
+                                    (repl-circus . ((name . "The REPL Circus") (level . 8) (stage . "pending")
+                                                    (pending . "M-repl-circus: P5")))
+                                    (park . ((name . "Park") (level . 9)))))
+                       (levels . (("8" . ((label . "agents") (colour . "#addc30")))
+                                  ("9" . ((label . "daily") (colour . "#d4c400")))))
+                       (stages . ((known . ((label . "known") (colour . "#2e9d4f") (style . "line")))
+                                  (pending . ((label . "pending") (colour . "#8e44ad") (style . "wave")))))))))
+          (with-temp-buffer
+            (insert "Agency runs the REPL Circus; park it.")
+            (session-mode--mark-lexicon-region (point-min) (point-max))
+            (let* ((ovs (session-mode-lexicon-test--overlays))
+                   (ul (lambda (o) (plist-get (overlay-get o 'face) :underline))))
+              (should (= 3 (length ovs)))
+              ;; known: stage colour, line
+              (should (equal "#2e9d4f" (plist-get (funcall ul (nth 0 ovs)) :color)))
+              (should (eq 'line (plist-get (funcall ul (nth 0 ovs)) :style)))
+              ;; pending: wave, and the hover names the pending item
+              (should (eq 'wave (plist-get (funcall ul (nth 1 ovs)) :style)))
+              (should (string-match-p "pending: M-repl-circus" (overlay-get (nth 1 ovs) 'help-echo)))
+              ;; no stage: falls back to the level colour, dotted for a common word
+              (should (equal "#d4c400" (plist-get (funcall ul (nth 2 ovs)) :color)))
+              (should (eq 'dots (plist-get (funcall ul (nth 2 ovs)) :style))))))
+      (delete-file file))))
