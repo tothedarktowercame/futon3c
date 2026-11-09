@@ -1,0 +1,32 @@
+{:warrant/id :formal-arxana/codedocs-5
+ :base/futon3c "814194d86d2a6e39351b92ff730f4e0ac1f9b393"
+ :implementation/futon3c "558bb867ef1aca80226c7250f205f0e160976d26"
+ :operation :codedocs/view
+ :public-reads [:revision/get :entity/get :graph/query]
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.codedocs-test"
+   :result {:tests 6 :assertions 711 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 196 :failures 0 :errors 0}}
+  {:command "clj-kondo --lint changed-clojure"
+   :result {:errors 0 :warnings 0}}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- changed-clojure"
+   :result :ok}]
+ :acceptance
+ {:definition-discovery {:type-revision [:scope-in-revision 1]
+                         :ordered-by :codepoint-range
+                         :current-symbols ["prepare-acceptance" "prepare-diagnosis"
+                                           "production-readiness" "route!"]}
+  :doc-text-from-doc-revision true
+  :lean-first-sentence {:flattened true :backticks-removed true}
+  :legacy-citation-oracle {:prepare-diagnosis ["RouteState"]
+                           :route-count 10}
+  :all-projected-record-ids-resolve true
+  :historical-links {:status :not-materialized-for-revision
+                     :links-at-revision nil}
+  :deterministic-across-reversed-write-order true
+  :unknown-revision :missing
+  :bounded-query-limit 100
+  :typed-truncation :limit}
+ :not-run [:full-arxana-suite]
+ :live-services-touched false}
