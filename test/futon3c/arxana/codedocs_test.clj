@@ -531,7 +531,14 @@
                         (:artifact-provider cfg) source-text (:revision-id historical)
                         target-id (get-in old-info [:scope :id]) (:codepoint-range old-info))]
             (is (= :ambiguous (get-in result [:resolution :result/status])))
-            (is (= 2 (count (get-in result [:resolution :result/candidates]))))))))))
+            (is (= 2 (count (get-in result [:resolution :result/candidates]))))
+            ;; the stored attestation, read back, says the same (review, claude-13)
+            (let [{:keys [attestation response]} (codedocs-relocation/append-one! cfg result)
+                  stored (record cfg (:id attestation))]
+              (is (:ok response))
+              (is (= attestation stored))
+              (is (= :ambiguous (codedocs-relocation/outcome stored)))
+              (is (= 2 (count (get-in stored [:content :candidates])))))))))))
 
 (deftest registered-codedocs-view-is-public-bounded-and-deterministic
   (let [runs (atom [])]
