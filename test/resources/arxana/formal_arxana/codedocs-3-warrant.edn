@@ -1,0 +1,24 @@
+{:warrant/id :formal-arxana/codedocs-3
+ :base/futon3c "638b31aa9"
+ :implementation/futon3c "9245bad7ee4aa49873616ad7f787f69be64d6648"
+ :operations [:revision/ingest :clusion/assert :evidence/append :graph/query :entity/get]
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.codedocs-test"
+   :result {:tests 4 :assertions 243 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 190 :failures 0 :errors 0}}
+  {:command "clj-kondo --lint changed-clojure"
+   :result {:errors 0 :warnings 0}}
+  {:command "futon4/dev/check-parens.el changed-clojure"
+   :result :ok}]
+ :acceptance
+ {:pinned-docbook-digests-checked true
+  :doc-entry-identity-excludes-range true
+  :whole-wrapped-bullet-ranges true
+  :source-path-and-symbol-match-only true
+  :current-code-revision-only true
+  :bidirectional-bounded-read true
+  :wrong-source-path-unlinked true
+  :prose-mention-unlinked true}
+ :not-run [:full-arxana-suite]
+ :live-services-touched false}
