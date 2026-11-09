@@ -79,9 +79,9 @@
         blank! (fn [start end]
                  (doseq [i (range start end)]
                    (when-not (= \newline (aget masked i)) (aset masked i \space))))]
-    (loop [i 0 docs []]
+    (loop [i 0 docs [] lines []]
       (if (>= i (.length text))
-        {:text (String. masked) :doc-comments docs}
+        {:text (String. masked) :doc-comments docs :line-comments lines}
         (let [next? #(< (inc i) (.length text))
               a (.charAt text i)
               b (when (next?) (.charAt text (inc i)))]
@@ -95,19 +95,19 @@
                                 (= ch \\) (recur (inc j) true)
                                 (= ch \u0022) (inc j)
                                 :else (recur (inc j) false))))]
-              (blank! i end) (recur end docs))
+              (blank! i end) (recur end docs lines))
 
             (and (= a \-) (= b \-))
             (let [nl (.indexOf text "\n" (+ i 2)) end (if (neg? nl) (.length text) nl)]
-              (blank! i end) (recur end docs))
+              (blank! i end) (recur end docs (conj lines {:char-range [i end]})))
 
             (and (= a \/) (= b \-))
             (let [end (comment-end text i)
                   doc? (and (< (+ i 2) (.length text)) (= \- (.charAt text (+ i 2))))]
               (blank! i end)
-              (recur end (cond-> docs doc? (conj {:char-range [i end]}))))
+              (recur end (cond-> docs doc? (conj {:char-range [i end]})) lines))
 
-            :else (recur (inc i) docs)))))))
+            :else (recur (inc i) docs lines)))))))
 
 (def lean-declaration-pattern
   #"(?m)^(theorem|lemma|def|abbrev|structure|inductive|instance)\s+([^\s:(]+)")
@@ -115,7 +115,7 @@
 (defn lean-declarations
   "Return top-level, namespace-qualified Lean declarations with attached doc comments."
   [^String text cited-symbols]
-  (let [{masked :text docs :doc-comments} (lean-mask text)
+  (let [{masked :text docs :doc-comments line-comments :line-comments} (lean-mask text)
         namespace-pattern #"(?m)^(namespace)\s+([^\s]+)|^(end)(?:\s+[^\s]+)?\s*$"
         events (sort-by :start
                         (concat
@@ -131,8 +131,18 @@
                                (recur (conj xs {:kind :declaration :keyword (.group m 1)
                                                 :name (.group m 2) :start (.start m)}))
                                xs)))))
-        boundaries (sort (concat (map :start events)
-                                 (map (comp first :char-range) docs)))
+        attached-doc (fn [start]
+                       (last (filter (fn [{[_ end] :char-range}]
+                                       (and (<= end start)
+                                            (str/blank? (.substring text end start))))
+                                     docs)))
+        ;; A body ends at the next declaration, or at the doc comment attached
+        ;; to it; doc comments inside a body (on constructors) do not end it.
+        boundaries (sort (map (fn [{:keys [kind start]}]
+                                (if (= kind :declaration)
+                                  (or (some-> (attached-doc start) :char-range first) start)
+                                  start))
+                              events))
         next-boundary (fn [start]
                         (or (some #(when (> % start) %) boundaries) (.length text)))]
     (:declarations
@@ -143,28 +153,33 @@
           :end (assoc state :namespaces (vec (butlast namespaces)))
           :declaration
           (let [start (:start event)
-                attached (last (filter (fn [{[_ end] :char-range}]
-                                         (and (<= end start)
-                                              (str/blank? (.substring text end start))))
-                                       docs))
+                attached (attached-doc start)
                 raw-end (next-boundary start)
                 end (loop [i raw-end]
                       (if (and (> i start) (Character/isWhitespace (.charAt text (dec i))))
                         (recur (dec i)) i))
                 fqn (str/join "." (concat namespaces [(:name event)]))
+                ;; Citing text, as legacy `arxana-browser-code--lean-declarations`:
+                ;; the attached doc comment, then the `--` line comments in the
+                ;; body up to the next declaration or doc comment. Code, strings
+                ;; and `/- -/` blocks do not cite. One citation per symbol: its
+                ;; first token in that order.
+                regions (concat (when attached [(:char-range attached)])
+                                (keep (fn [{[a b] :char-range}]
+                                        (when (and (>= a start) (<= b raw-end)) [a b]))
+                                      line-comments))
                 citations
-                (if attached
-                  (let [[comment-start comment-end] (:char-range attached)
-                        comment (.substring text comment-start comment-end)]
-                    (vec
-                     (for [symbol cited-symbols
-                           :let [token (str "`" symbol "`")
-                                 local (.indexOf comment token)]
-                           :when (not (neg? local))]
-                       {:symbol/name symbol :token token
-                        :codepoint-range [(codepoint-offset text (+ comment-start local))
-                                          (codepoint-offset text (+ comment-start local (count token)))]})))
-                  [])]
+                (vec
+                 (for [symbol (sort cited-symbols)
+                       :let [token (str "`" symbol "`")
+                             hit (some (fn [[a b]]
+                                         (let [local (.indexOf (.substring text a b) token)]
+                                           (when-not (neg? local) (+ a local))))
+                                       regions)]
+                       :when hit]
+                   {:symbol/name symbol :token token
+                    :codepoint-range [(codepoint-offset text hit)
+                                      (codepoint-offset text (+ hit (count token)))]}))]
             (assoc state :declarations
                    (conj declarations
                          {:declaration/fqn fqn :declaration/name (:name event)

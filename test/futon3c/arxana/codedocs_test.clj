@@ -319,13 +319,22 @@
                              (frequencies (map :symbol (:citations result))))]
         (is (= (get-in f [:lean :sha256])
                (digest/sha256-hex (.getBytes lean-text StandardCharsets/UTF_8))))
-        ;; Independent regex over attached doc-comment/declaration pairs: one pair
-        ;; per declaration+function, regardless of repeated tokens in that comment.
+        ;; The doc-comment-only regex undercounts: the legacy rule also reads
+        ;; `--` comments in the declaration body (review, claude-13).
         (is (= {"run-opportunity!" 0 "prepare-diagnosis" 0
                 "production-readiness" 3 "route!" 8 "prepare-acceptance" 0}
                independent))
-        (is (= independent by-symbol))
-        (is (= 11 (count (:citations result))))
+        ;; Oracle: the legacy browser's own `arxana-browser-code--lean-declarations`
+        ;; + backtick rule run on this pinned file (futon4 dev/arxana-browser-code.el,
+        ;; 2026-11-09): pairs per function.
+        (is (= {"run-opportunity!" 0 "prepare-diagnosis" 1
+                "production-readiness" 4 "route!" 10 "prepare-acceptance" 1}
+               by-symbol))
+        (is (= 16 (count (:citations result))))
+        (is (some #(and (= "prepare-diagnosis" (:symbol %))
+                        (str/ends-with? (:fqn %) ".RouteState"))
+                  (:citations result))
+            "a `--` comment in RouteState's constructor list cites prepare-diagnosis")
         (doseq [[fqn {:keys [scope attestation declaration]}] (:scopes result)]
           (let [stored-scope (record cfg (:id scope))
                 stored-att (record cfg (:id attestation))
@@ -377,8 +386,9 @@
                                "def text : String := \"theorem Fake and `route!`\"\n"
                                "/- outer /- nested theorem Nope -/ comment -/\n"
                                "/-- exact `route!` -/\ntheorem good : True := by trivial\n"
+                               "inductive Body where\n  -- stage (`route!`)\n  | a\n"
                                "end Demo\n")
                 declarations (codedocs/lean-declarations synthetic #{"route!"})
                 cited (filterv (comp seq :citations) declarations)]
-            (is (= ["Demo.good"] (mapv :declaration/fqn cited)))
+            (is (= ["Demo.good" "Demo.Body"] (mapv :declaration/fqn cited)))
             (is (= ["route!"] (mapv :symbol/name (:citations (first cited)))))))))))
