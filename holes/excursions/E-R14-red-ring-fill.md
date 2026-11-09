@@ -1,5 +1,7 @@
 # E-R14-red-ring-fill — commitment temperature, and who bears its cost
 
+> **Closed 2026-11-09 (Joe).** Joe: R14 "was dealt with very near the start of the post-façade work and there have been many levels of validation of WM afterwards"; this document was not updated after 2026-08-26. Later record found by claude-6: commitment temperature formalised (`mathlib4/DarkTower/WarMachine/CommitmentTemperature.lean`, `MachineTemperature.lean`, last change b31e5db2e4 2026-09-05), the LF-temperature route-2 declaration (futon2 bcecae456, 2026-09-19, `holes/labs/wm-contract/DECLARATION-LF-temperature-route2-2026-09-19.md`), and R14 in the WM edge census (`edge-census.edn`: R6→R14, R14→TRACE). The status table below is the 2026-08-26 state, kept as history.
+
 **Opened:** 2026-08-26 · claude-13 at Joe's direction, as the successor to
 `E-R8-red-ring-fill`. Excursion from `futon2/holes/missions/M-formal-war-machine.md`.
 
