@@ -4,7 +4,7 @@
             [clojure.walk :as walk]
             [futon3c.arxana.records :as records]))
 
-(def default-slice "/home/joe/notes/cascade-live-outline/arxana/t-pattern-search-slice.edn")
+(def default-slice "/home/joe/notes/cascade-live-outline/arxana/all-items.edn")
 
 (defn read-slice ([] (read-slice default-slice)) ([path] (edn/read-string (slurp path))))
 
@@ -34,17 +34,70 @@
                                                                    :asserted-content (:identity r)})
                                    :attestation (records/make-attestation
                                                  (-> r (dissoc :record :subject)
-                                                     (assoc :subject-clusion-id (get-in resolved [(:subject r) :id]))))))) ready)
+                                                     (assoc :subject-clusion-id (get-in resolved [(:subject r) :id]))))
+                                   :assessment (records/make-assessment
+                                                (-> r (dissoc :record :subject)
+                                                    (assoc :subject-clusion-id (get-in resolved [(:subject r) :id]))))))) ready)
                   resolved' (reduce (fn [m [r made-r]] (if-let [lid (:local-id r)] (assoc m lid made-r) m)) resolved (map vector ready made))]
               (recur blocked resolved' (into out made))))))))
 
+(defn- kind [item-id] (some-> (re-find #"^[A-Za-z]+" item-id) str))
+(defn- attestation-rows [slice subject]
+  (filter #(and (= :attestation (:record %)) (= subject (:subject %))) (:records slice)))
+(defn catalog-record [slice p]
+  (let [rows (:records slice) by-local (:by-local-id p)
+        local-rows (into {} (keep #(when-let [id (:local-id %)] [id %]) rows))
+        item-rows (filter #(= [:workplan/item 1] (:type-revision %)) rows)
+        endpoint-local (fn [r role] (get-in (first (filter #(= role (:role %)) (:endpoints r))) [:target :local-id]))
+        summaries
+        (mapv (fn [item]
+                (let [lid (:local-id item) id (get-in item [:identity :item/id]) atts (attestation-rows slice lid)
+                      rels (filter #(= lid (endpoint-local % :item)) rows)
+                      serves (filter #(= [:workplan/serves 1] (:type-revision %)) rels)
+                      names (filter #(= [:workplan/names 1] (:type-revision %)) rels)
+                      mentions (filter #(= [:workplan/mention 1] (:type-revision %)) rels)
+                      assessments (filter #(and (= :assessment (:record %)) (= lid (:subject %))) rows)]
+                  {:item/id id :item/kind (kind id)
+                   :pending/level (some #(get-in % [:content :pending/level]) atts)
+                   :story (some #(when (get-in % [:content :story/evidence-kind])
+                                   {:content (:content %) :producer (:producer %) :basis (:basis %)}) atts)
+                   :benefits (vec (mapcat (fn [rel]
+                                            (let [blid (endpoint-local rel :benefit-line)
+                                                  benefit (local-rows blid)
+                                                  ba (first (attestation-rows slice blid))]
+                                              (for [a (attestation-rows slice (:local-id rel))]
+                                                {:benefit/line (get-in benefit [:identity :benefit/line])
+                                                 :benefit/name (get-in ba [:content :benefit/name])
+                                                 :producer (:producer a)}))) serves))
+                   :entities (mapv (fn [rel] (let [elid (endpoint-local rel :entity) e (local-rows elid) a (first (attestation-rows slice elid))]
+                                               {:entity/slug (get-in e [:identity :entity/slug]) :entity/name (get-in a [:content :entity/name])})) names)
+                   :mention/count (count mentions)
+                   :rulings (mapv #(select-keys % [:verdict :actor :policy :reason :time :source-refs]) assessments)
+                   :record/id (get-in by-local [lid :id])})) item-rows)]
+    (records/make-clusion {:type-revision [:workplan/catalog 1] :endpoints []
+                           :asserted-content {:catalog/id "workplan/all-items" :items summaries}})))
+
 (defn materialise! [dispatch! slice]
-  (let [p (plan slice) run-id (random-uuid)
-        results (mapv (fn [r]
-                        (dispatch! {:protocol/version "arxana.v1" :message/id (str "workplan:" run-id ":" (:id r))
-                                    :operation (if (:subject-clusion-id r) :evidence/append :clusion/assert)
-                                    :principal/id "workplan/materialiser" :body {:record r}})) (:records p))]
-    (assoc p :results results :created (count (filter #(true? (get-in % [:ok :created?])) results)))))
+  (let [p (plan slice) run-id (random-uuid) started (System/nanoTime)
+        batches (partition-all 100 (:records p))
+        results (vec (mapcat (fn [batch]
+                               (map (fn [r]
+                                      (let [op (cond (:verdict r) :assessment/append (:subject-clusion-id r) :evidence/append :else :clusion/assert)
+                                            response (dispatch! {:protocol/version "arxana.v1" :message/id (str "workplan:" run-id ":" (:id r))
+                                                                 :operation op :principal/id "workplan/materialiser" :body {:record r}})]
+                                        {:record/id (:id r) :operation op :response response})) batch)) batches))
+        catalog (catalog-record slice p)
+        catalog-response (dispatch! {:protocol/version "arxana.v1" :message/id (str "workplan:" run-id ":catalog")
+                                     :operation :clusion/assert :principal/id "workplan/materialiser" :body {:record catalog}})
+        failures (mapv (fn [{:keys [record/id operation response]}] {:record/id id :operation operation :error (:error response)})
+                       (filter #(get-in % [:response :error]) results))]
+    (assoc p :results results :catalog catalog :catalog/response catalog-response :failures failures
+           :created (count (filter #(true? (get-in % [:response :ok :created?])) results))
+           :counts {:records (count (:records p)) :clusions (count (filter :type-revision (:records p)))
+                    :attestations (count (filter #(and (:subject-clusion-id %) (nil? (:verdict %))) (:records p)))
+                    :assessments (count (filter :verdict (:records p)))
+                    :items (count (filter #(= [:workplan/item 1] (:type-revision %)) (:records p)))}
+           :elapsed-ms (/ (- (System/nanoTime) started) 1e6))))
 
 (defn- ok! [r] (or (:ok r) (throw (ex-info "public read failed" {:response r}))))
 (defn- entity [read! id] (:record (ok! (read! :entity/get {:entity/id id}))))
@@ -67,9 +120,11 @@
         names (mapv (fn [r] (let [e (entity read! (endpoint-id r :entity)) a (first (attestations read! (:id e)))]
                               {:record/id (:id r) :entity e :attestation a :draft? (#{:model :parser} (:basis a))
                                :record/ids [(:id r) (:id e) (:id a)]})) (edges [:workplan/names 1]))
-        serves (mapv (fn [r] (let [b (entity read! (endpoint-id r :benefit-line)) a (first (attestations read! (:id r)))]
-                               {:record/id (:id r) :benefit-line b :attestation a :draft? (#{:model :parser} (:basis a))
-                                :record/ids [(:id r) (:id b) (:id a)]})) (edges [:workplan/serves 1]))
+        serves (vec (mapcat (fn [r] (let [b (entity read! (endpoint-id r :benefit-line)) bas (attestations read! (:id b))]
+                                      (for [a (attestations read! (:id r))]
+                                        {:record/id (:id r) :benefit-line b :benefit/attestations bas :attestation a
+                                         :producer (:producer a) :draft? (#{:model :parser} (:basis a))
+                                         :record/ids (vec (concat [(:id r) (:id b) (:id a)] (map :id bas)))}))) (edges [:workplan/serves 1])))
         item-atts (attestations read! (:id item))
         assessments (:result/assessments (query read! {:query/type :assessments :subject/id (:id item) :time/order :asc}))]
     {:result/status :complete :item item
@@ -78,3 +133,19 @@
      :mentions (vec (sort-by :time mentions)) :names names :serves serves
      :assessments (vec assessments) :standing (if (seq assessments) :assessed "no ruling by Joe")
      :record/ids (vec (distinct (concat [(:id item)] (mapcat :record/ids mentions) (mapcat :record/ids names) (mapcat :record/ids serves))))}))
+
+(defn items-view [read! filters]
+  (let [catalog-id (:id (records/make-clusion {:type-revision [:workplan/catalog 1] :endpoints []
+                                                :asserted-content {:catalog/id "workplan/all-items"}}))
+        catalog (entity read! catalog-id) all (get-in catalog [:asserted-content :items])
+        selected (filterv (fn [row]
+                            (and (or (nil? (:pending/level filters)) (= (:pending/level filters) (:pending/level row)))
+                                 (or (nil? (:benefit/line filters)) (some #(= (:benefit/line filters) (:benefit/line %)) (:benefits row)))
+                                 (or (nil? (:entity/slug filters)) (some #(= (:entity/slug filters) (:entity/slug %)) (:entities row)))
+                                 (or (nil? (:item/kind filters)) (= (:item/kind filters) (:item/kind row))))) all)
+        total (count selected) limit (min 200 (max 1 (long (or (:query/limit filters) 100))))
+        offset (max 0 (long (or (:query/offset filters) 0))) items (vec (take limit (drop offset selected)))
+        truncated? (< (+ offset (count items)) total)]
+    (cond-> {:result/status (if truncated? :truncated :complete) :result/total total
+             :query/offset offset :query/limit limit :items items :record/ids [catalog-id]}
+      truncated? (assoc :result/truncation :limit))))

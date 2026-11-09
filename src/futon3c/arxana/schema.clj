@@ -171,6 +171,12 @@
     :projection [:operation :item :attestations [:mentions] [:names] [:serves]
                  [:assessments] :standing [:record/ids] :result/status]}
 
+   :workplan/items
+   {:schema-version 1 :required #{}
+    :allowed #{:pending/level :benefit/line :entity/slug :item/kind :query/limit :query/offset}
+    :projection [:operation [:items] :result/status :result/truncation :result/total
+                 :query/offset :query/limit [:record/ids]]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}

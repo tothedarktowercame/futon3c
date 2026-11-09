@@ -87,6 +87,7 @@
 
 (def declarations-v1
   [(clusion-type :workplan/item 1 [] [:item/id])
+   (clusion-type :workplan/catalog 1 [] [:catalog/id])
    (clusion-type :lexicon/entity 1 [] [:entity/slug])
    (clusion-type :benefit-line 1 [] [:benefit/line])
    (clusion-type :workplan/names 1

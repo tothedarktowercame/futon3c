@@ -386,6 +386,14 @@
              (env/response ok (with-semantic-digest op
                                 (workplan/item-view read! (:item/id body)))))
 
+           (= op :workplan/items)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":workplan-list:" (hash [read-op read-body]))
+                                        :operation read-op :principal/id "workplan/projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op (workplan/items-view read! body))))
+
            (= op :formal-f6/page)
            (let [response (dispatch cfg {:protocol/version env/protocol-version
                                          :message/id (str (:message/id ok) ":argument")

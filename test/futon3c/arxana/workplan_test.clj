@@ -21,7 +21,7 @@
 (deftest one-workplan-item-end-to-end
   (with-stack
     (fn [cfg]
-      (let [slice (workplan/read-slice) first-run (workplan/materialise! #(service/dispatch cfg %) slice)
+      (let [slice (workplan/read-slice "/home/joe/notes/cascade-live-outline/arxana/t-pattern-search-slice.edn") first-run (workplan/materialise! #(service/dispatch cfg %) slice)
             second-run (workplan/materialise! #(service/dispatch cfg %) slice)
             view (get-in (call cfg "view" :workplan/item-view {:item/id (:slice slice)}) [:ok])]
         (is (= 29 (count (:records first-run))))
@@ -42,3 +42,38 @@
                                                                            {:role :entity :kind :clusion :target {:local-id :item}}]})]
             (is (= :arxana.workplan/dangling-local-id
                    (:error (ex-data (try (workplan/plan bad) (catch clojure.lang.ExceptionInfo e e))))))))))))
+
+(deftest all-workplan-items-load-and-list
+  (with-stack
+    (fn [cfg]
+      (let [slice (workplan/read-slice) started (System/nanoTime)
+            loaded (workplan/materialise! #(service/dispatch cfg %) slice)
+            elapsed-ms (/ (- (System/nanoTime) started) 1e6)
+            replay (workplan/materialise! #(service/dispatch cfg %) slice)
+            list-started (System/nanoTime)
+            page1 (get-in (call cfg "list:1" :workplan/items {:query/limit 200}) [:ok])
+            page2 (get-in (call cfg "list:2" :workplan/items {:query/limit 200 :query/offset 200}) [:ok])
+            items (vec (concat (:items page1) (:items page2)))
+            closed (first (filter #(= "E-R14-red-ring-fill" (:item/id %)) items))
+            triple (first (filter #(>= (count (:benefits %)) 3) items))
+            ticket (get-in (call cfg "ticket" :workplan/item-view {:item/id "T-pattern-search-reads-stale-index"}) [:ok])
+            closed-view (get-in (call cfg "closed" :workplan/item-view {:item/id "E-R14-red-ring-fill"}) [:ok])]
+        (println "WORKPLAN2_TIMING" {:load-ms elapsed-ms :list-ms (/ (- (System/nanoTime) list-started) 1e6)})
+        (is (= {:records 3881 :clusions 1720 :attestations 2160 :assessments 1 :items 323} (:counts loaded)))
+        (is (empty? (:failures loaded)))
+        (is (= 3881 (:created loaded)))
+        (is (zero? (:created replay)))
+        (is (= 323 (count items)))
+        (is (= :truncated (:result/status page1)))
+        (is (= :complete (:result/status page2)))
+        (is closed)
+        (is (= "joe" (get-in closed [:rulings 0 :actor])))
+        (is (= "joe" (get-in closed-view [:assessments 0 :actor])))
+        (is (= "~/notes/cascade-live-outline/pending/closed-by-joe.tsv"
+               (get-in closed-view [:assessments 0 :source-refs 0 :path])))
+        (is (= 5 (count (:mentions ticket))))
+        (is triple)
+        (is (= 3 (count (take 3 (:benefits triple)))))
+        (is (= 323 (get-in page1 [:result/total])))
+        (doseq [record (:records loaded)]
+          (is (= record (get-in (call cfg (str "all:get:" (:id record)) :entity/get {:entity/id (:id record)}) [:ok :record]))))))))
