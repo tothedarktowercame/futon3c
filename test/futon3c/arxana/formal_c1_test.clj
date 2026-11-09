@@ -64,9 +64,9 @@
 
 (deftest c1-declarations-are-resolved
   ;; C1's declarations plus the later formal-Arxana relation types.
-  (is (= 55 (count types/registry-v1)))
+  (is (= 56 (count types/registry-v1)))
   (is (every? #(contains? types/registry-v1 %)
-              [[:code-definition 1] [:doc-entry 1]
+              [[:code-definition 1] [:doc-entry 1] [:lean-declaration 1]
                [:kernel-builds 1] [:declaration-location 1]
                [:correspondence 1] [:generation-run 1]
                [:synthetic-mutation 1] [:formalization-coverage 1]

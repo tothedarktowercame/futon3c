@@ -8,6 +8,8 @@
 (def finder-method {:id "codedocs/clojure-definition" :version 1})
 (def doc-finder-method {:id "codedocs/def-doc-bullet" :version 1})
 (def code-doc-match-method {:id "codedocs/source-path+symbol" :version 1})
+(def lean-finder-method {:id "codedocs/lean-declaration" :version 1})
+(def lean-citation-method {:id "codedocs/lean-backtick-citation" :version 1})
 
 (def definition-forms
   ["defn-" "defn" "def" "defmulti" "defmethod" "defprotocol" "defrecord" "deftype"])
@@ -56,6 +58,124 @@
             [name {:entry/id entry-id :source/path source-path :symbol/name name
                    :codepoint-range [(codepoint-offset text char-start)
                                      (codepoint-offset text char-end)]}]))))
+
+(defn- comment-end
+  "UTF-16 index after a nested Lean block comment beginning at START."
+  [^String text start]
+  (loop [i (+ start 2) depth 1]
+    (when (>= i (.length text))
+      (throw (ex-info "unterminated Lean block comment" {:start start})))
+    (cond
+      (and (< (inc i) (.length text)) (= \/ (.charAt text i)) (= \- (.charAt text (inc i))))
+      (recur (+ i 2) (inc depth))
+      (and (< (inc i) (.length text)) (= \- (.charAt text i)) (= \/ (.charAt text (inc i))))
+      (if (= depth 1) (+ i 2) (recur (+ i 2) (dec depth)))
+      :else (recur (inc i) depth))))
+
+(defn- lean-mask
+  "Mask strings and comments without changing UTF-16 positions; retain doc spans."
+  [^String text]
+  (let [masked (char-array text)
+        blank! (fn [start end]
+                 (doseq [i (range start end)]
+                   (when-not (= \newline (aget masked i)) (aset masked i \space))))]
+    (loop [i 0 docs []]
+      (if (>= i (.length text))
+        {:text (String. masked) :doc-comments docs}
+        (let [next? #(< (inc i) (.length text))
+              a (.charAt text i)
+              b (when (next?) (.charAt text (inc i)))]
+          (cond
+            (= a \u0022)
+            (let [end (loop [j (inc i) escaped? false]
+                        (when (>= j (.length text))
+                          (throw (ex-info "unterminated Lean string" {:start i})))
+                        (let [ch (.charAt text j)]
+                          (cond escaped? (recur (inc j) false)
+                                (= ch \\) (recur (inc j) true)
+                                (= ch \u0022) (inc j)
+                                :else (recur (inc j) false))))]
+              (blank! i end) (recur end docs))
+
+            (and (= a \-) (= b \-))
+            (let [nl (.indexOf text "\n" (+ i 2)) end (if (neg? nl) (.length text) nl)]
+              (blank! i end) (recur end docs))
+
+            (and (= a \/) (= b \-))
+            (let [end (comment-end text i)
+                  doc? (and (< (+ i 2) (.length text)) (= \- (.charAt text (+ i 2))))]
+              (blank! i end)
+              (recur end (cond-> docs doc? (conj {:char-range [i end]}))))
+
+            :else (recur (inc i) docs)))))))
+
+(def lean-declaration-pattern
+  #"(?m)^(theorem|lemma|def|abbrev|structure|inductive|instance)\s+([^\s:(]+)")
+
+(defn lean-declarations
+  "Return top-level, namespace-qualified Lean declarations with attached doc comments."
+  [^String text cited-symbols]
+  (let [{masked :text docs :doc-comments} (lean-mask text)
+        namespace-pattern #"(?m)^(namespace)\s+([^\s]+)|^(end)(?:\s+[^\s]+)?\s*$"
+        events (sort-by :start
+                        (concat
+                         (let [m (re-matcher namespace-pattern masked)]
+                           (loop [xs []]
+                             (if (.find m)
+                               (recur (conj xs {:kind (if (.group m 1) :namespace :end)
+                                                :name (.group m 2) :start (.start m)}))
+                               xs)))
+                         (let [m (re-matcher lean-declaration-pattern masked)]
+                           (loop [xs []]
+                             (if (.find m)
+                               (recur (conj xs {:kind :declaration :keyword (.group m 1)
+                                                :name (.group m 2) :start (.start m)}))
+                               xs)))))
+        boundaries (sort (concat (map :start events)
+                                 (map (comp first :char-range) docs)))
+        next-boundary (fn [start]
+                        (or (some #(when (> % start) %) boundaries) (.length text)))]
+    (:declarations
+     (reduce
+      (fn [{:keys [namespaces declarations] :as state} event]
+        (case (:kind event)
+          :namespace (assoc state :namespaces (conj namespaces (:name event)))
+          :end (assoc state :namespaces (vec (butlast namespaces)))
+          :declaration
+          (let [start (:start event)
+                attached (last (filter (fn [{[_ end] :char-range}]
+                                         (and (<= end start)
+                                              (str/blank? (.substring text end start))))
+                                       docs))
+                raw-end (next-boundary start)
+                end (loop [i raw-end]
+                      (if (and (> i start) (Character/isWhitespace (.charAt text (dec i))))
+                        (recur (dec i)) i))
+                fqn (str/join "." (concat namespaces [(:name event)]))
+                citations
+                (if attached
+                  (let [[comment-start comment-end] (:char-range attached)
+                        comment (.substring text comment-start comment-end)]
+                    (vec
+                     (for [symbol cited-symbols
+                           :let [token (str "`" symbol "`")
+                                 local (.indexOf comment token)]
+                           :when (not (neg? local))]
+                       {:symbol/name symbol :token token
+                        :codepoint-range [(codepoint-offset text (+ comment-start local))
+                                          (codepoint-offset text (+ comment-start local (count token)))]})))
+                  [])]
+            (assoc state :declarations
+                   (conj declarations
+                         {:declaration/fqn fqn :declaration/name (:name event)
+                          :declaration/keyword (keyword (:keyword event))
+                          :codepoint-range [(codepoint-offset text start)
+                                            (codepoint-offset text end)]
+                          :doc-comment-range (when attached
+                                               (mapv #(codepoint-offset text %)
+                                                     (:char-range attached)))
+                          :citations citations})))))
+      {:namespaces [] :declarations []} events))))
 
 (defn- form-end
   "Return the UTF-16 index just after the balanced top-level form at START."
@@ -146,6 +266,44 @@
               :symbol/name (get-in code-scope [:asserted-content :symbol/name])
               :source/scope-id (:id code-scope) :target/scope-id (:id doc-scope)}
     :source-refs [{:entity/id (:id code-scope)} {:entity/id (:id doc-scope)}]}))
+
+(defn lean-scope-record [revision-id {:keys [declaration/fqn]}]
+  (records/make-clusion
+   {:type-revision [:lean-declaration 1] :endpoints []
+    :asserted-content {:artifact/revision-id revision-id :declaration/fqn fqn}}))
+
+(defn lean-range-attestation [scope revision-id declaration]
+  (records/make-attestation
+   {:subject-clusion-id (:id scope) :producer "futon3c.arxana.codedocs"
+    :basis :parser :standing :unverified :coverage :complete
+    :method lean-finder-method
+    :content {:artifact/revision-id revision-id
+              :declaration/fqn (:declaration/fqn declaration)
+              :declaration/keyword (:declaration/keyword declaration)
+              :codepoint-range (:codepoint-range declaration)
+              :doc-comment-range (:doc-comment-range declaration)}
+    :source-refs [{:artifact/revision-id revision-id}]}))
+
+(defn lean-code-correspondence [lean-scope code-scope]
+  (records/make-clusion
+   {:type-revision [:correspondence 1]
+    :endpoints [{:role :source :kind :manifestation-scope
+                 :target {:entity/id (:id lean-scope)}}
+                {:role :target :kind :entity :target {:entity/id (:id code-scope)}}]
+    :asserted-content {:direction :source-to-target :relation/kind :cites-code}}))
+
+(defn lean-citation-attestation
+  [correspondence revision-id lean-scope code-scope citation]
+  (records/make-attestation
+   {:subject-clusion-id (:id correspondence) :producer "futon3c.arxana.codedocs"
+    :basis :parser :standing :unverified :coverage :complete
+    :method lean-citation-method
+    :content {:artifact/revision-id revision-id :token (:token citation)
+              :token/codepoint-range (:codepoint-range citation)
+              :symbol/name (:symbol/name citation)
+              :source/scope-id (:id lean-scope) :target/scope-id (:id code-scope)}
+    :source-refs [{:artifact/revision-id revision-id}
+                  {:entity/id (:id lean-scope)} {:entity/id (:id code-scope)}]}))
 
 (defn- request [mid operation body]
   {:protocol/version "arxana.v1" :message/id mid :operation operation
@@ -255,3 +413,47 @@
                :evidence/append {:record att})
          {:symbol symbol :code-scope code-scope :doc-scope scope
           :correspondence correspondence :attestation att}))))
+
+(defn ingest-lean!
+  "Ingest Lean bytes and store only declarations with exact backticked citations."
+  [cfg {:keys [artifact-id sha text symbols code-scopes]}]
+  (let [ingest (call cfg (str "codedocs:lean-ingest:" artifact-id ":" sha)
+                     :revision/ingest
+                     {:artifact/id artifact-id :bytes text
+                      :media-type "text/x-lean; charset=utf-8"
+                      :expected/revision-id :absent})
+        revision-id (get-in ingest [:ok :artifact/revision-id])]
+    (when-not revision-id
+      (throw (ex-info "Lean revision ingest failed" {:response ingest})))
+    (let [declarations (filterv (comp seq :citations)
+                                (lean-declarations text (set symbols)))
+          scopes
+          (into (sorted-map)
+                (for [declaration declarations
+                      :let [scope (lean-scope-record revision-id declaration)
+                            att (lean-range-attestation scope revision-id declaration)]]
+                  (do (call cfg (str "codedocs:lean-scope:" (:id scope))
+                            :clusion/assert {:record scope})
+                      (call cfg (str "codedocs:lean-range:" (:id att))
+                            :evidence/append {:record att})
+                      [(:declaration/fqn declaration)
+                       {:scope scope :attestation att :declaration declaration}])))
+          citations
+          (vec
+           (for [[_ {:keys [scope declaration]}] scopes
+                 citation (:citations declaration)
+                 :let [code-scope (get code-scopes (:symbol/name citation))
+                       correspondence (lean-code-correspondence scope code-scope)
+                       att (lean-citation-attestation correspondence revision-id scope
+                                                      code-scope citation)]]
+             (do
+               (when-not code-scope
+                 (throw (ex-info "citation has no current code scope" citation)))
+               (call cfg (str "codedocs:lean-citation:" (:id correspondence))
+                     :clusion/assert {:record correspondence})
+               (call cfg (str "codedocs:lean-citation-evidence:" (:id att))
+                     :evidence/append {:record att})
+               {:fqn (:declaration/fqn declaration) :symbol (:symbol/name citation)
+                :lean-scope scope :code-scope code-scope
+                :correspondence correspondence :attestation att})))]
+      {:sha sha :revision-id revision-id :scopes scopes :citations citations})))

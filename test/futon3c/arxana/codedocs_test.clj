@@ -274,3 +274,111 @@
                                     ["route!" :codepoint-range])]
             (is (= "- route!: first line\n  continuation naming prepare-diagnosis\n"
                    (codepoint-subs wrapped start end)))))))))
+
+(defn- independent-lean-citation-counts [text symbols]
+  ;; Deliberately independent of the lexer: only column-zero doc comments
+  ;; immediately followed by a column-zero top-level declaration are counted.
+  (let [attached #"(?ms)^(/--.*?-/)[ \t\r\n]*(?:theorem|lemma|def|abbrev|structure|inductive|instance)\s+[^\s:(]+"]
+    (reduce
+     (fn [counts [_ comment]]
+       (reduce (fn [m symbol]
+                 (if (str/includes? comment (str "`" symbol "`"))
+                   (update m symbol (fnil inc 0)) m))
+               counts symbols))
+     (zipmap symbols (repeat 0))
+     (re-seq attached text))))
+
+(deftest lean-declarations-and-exact-code-citations
+  (with-stack
+    (fn [cfg repo]
+      (let [f (fixture)
+            old-sha (get-in f [:historical :repo/sha])
+            new-sha (get-in f [:current :repo/sha])
+            code-results
+            (into {}
+                  (for [[path symbols] (:symbols f)
+                        :let [plan {:artifact-id (str "codedocs:futon2/" path)
+                                    :symbols symbols
+                                    :historical {:sha old-sha :text (text-at old-sha path)}
+                                    :current {:sha new-sha :text (text-at new-sha path)}}]]
+                    [path (codedocs/ingest-file! cfg repo plan)]))
+            current-code (into {}
+                               (for [[_ versions] code-results
+                                     [symbol scope-info] (:scopes (second versions))]
+                                 [symbol (:scope scope-info)]))
+            symbols (set (mapcat val (:symbols f)))
+            lean-sha (get-in f [:lean :repo/sha])
+            lean-path (get-in f [:lean :file])
+            lean-text (text-at-repo mathlib4-root lean-sha lean-path)
+            independent (independent-lean-citation-counts lean-text symbols)
+            result (codedocs/ingest-lean!
+                    cfg {:artifact-id "codedocs:mathlib4/SelfHealRoute.lean"
+                         :sha lean-sha :text lean-text :symbols symbols
+                         :code-scopes current-code})
+            by-symbol (merge (zipmap symbols (repeat 0))
+                             (frequencies (map :symbol (:citations result))))]
+        (is (= (get-in f [:lean :sha256])
+               (digest/sha256-hex (.getBytes lean-text StandardCharsets/UTF_8))))
+        ;; Independent regex over attached doc-comment/declaration pairs: one pair
+        ;; per declaration+function, regardless of repeated tokens in that comment.
+        (is (= {"run-opportunity!" 0 "prepare-diagnosis" 0
+                "production-readiness" 3 "route!" 8 "prepare-acceptance" 0}
+               independent))
+        (is (= independent by-symbol))
+        (is (= 11 (count (:citations result))))
+        (doseq [[fqn {:keys [scope attestation declaration]}] (:scopes result)]
+          (let [stored-scope (record cfg (:id scope))
+                stored-att (record cfg (:id attestation))
+                [start end] (:codepoint-range declaration)
+                [doc-start doc-end] (:doc-comment-range declaration)
+                declaration-text (codepoint-subs lean-text start end)
+                comment-text (codepoint-subs lean-text doc-start doc-end)]
+            (testing (str fqn " is an exact namespace-qualified Lean scope")
+              (is (= scope stored-scope))
+              (is (= attestation stored-att))
+              (is (= #{:artifact/revision-id :declaration/fqn}
+                     (set (keys (:asserted-content stored-scope)))))
+              (is (str/starts-with? fqn "DarkTower.WarMachine.SelfHealRoute."))
+              (is (str/starts-with? declaration-text
+                                    (str (name (:declaration/keyword declaration)) " "
+                                         (:declaration/name declaration))))
+              (is (and (str/starts-with? comment-text "/--")
+                       (str/ends-with? comment-text "-/")))
+              (is (= (:codepoint-range declaration)
+                     (get-in stored-att [:content :codepoint-range])))
+              (is (= (:doc-comment-range declaration)
+                     (get-in stored-att [:content :doc-comment-range]))))))
+        (doseq [{:keys [symbol lean-scope code-scope correspondence attestation]}
+                (:citations result)]
+          (let [stored-edge (record cfg (:id correspondence))
+                stored-att (record cfg (:id attestation))
+                [start end] (get-in stored-att [:content :token/codepoint-range])]
+            (testing (str "exact backticked citation " symbol)
+              (is (= correspondence stored-edge))
+              (is (= attestation stored-att))
+              (is (= :parser (:basis stored-att)))
+              (is (= :unverified (:standing stored-att)))
+              (is (not= :kernel (:basis stored-att)))
+              (is (= (str "`" symbol "`") (codepoint-subs lean-text start end)))
+              (is (= new-sha (get-in f [:current :repo/sha])))
+              (is (= (get-in current-code [symbol :asserted-content :artifact/revision-id])
+                     (get-in code-scope [:asserted-content :artifact/revision-id])))
+              (is (some #{(:id correspondence)}
+                        (map :id (filter #(= :cites-code
+                                             (get-in % [:asserted-content :relation/kind]))
+                                         (related cfg :source (:id lean-scope))))))
+              (is (some #{(:id correspondence)}
+                        (map :id (related cfg :target (:id code-scope))))))))
+        (testing "only attached exact backticks cite, and namespaces qualify FQNs"
+          (let [synthetic (str "/-! module `route!` -/\n"
+                               "namespace Demo\n"
+                               "/-- bare route! only -/\ndef bare : Nat := 0\n"
+                               "/- ordinary `route!` -/\ndef ordinary : Nat := 0\n"
+                               "def text : String := \"theorem Fake and `route!`\"\n"
+                               "/- outer /- nested theorem Nope -/ comment -/\n"
+                               "/-- exact `route!` -/\ntheorem good : True := by trivial\n"
+                               "end Demo\n")
+                declarations (codedocs/lean-declarations synthetic #{"route!"})
+                cited (filterv (comp seq :citations) declarations)]
+            (is (= ["Demo.good"] (mapv :declaration/fqn cited)))
+            (is (= ["route!"] (mapv :symbol/name (:citations (first cited)))))))))))
