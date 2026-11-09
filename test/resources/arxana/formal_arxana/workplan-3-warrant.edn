@@ -1,0 +1,31 @@
+{:warrant/id :workplan-3
+ :recorded-at "2026-11-09T20:56:00.000Z"
+ :commits {:futon3c "fa08b1181eb72e11fbec85f6c395e4510c3048ae"
+           :futon4a "d35821d72e9af4d225dc283c006d739d5b44e38f"}
+ :evidence
+ [{:gate :clj-kondo
+   :scope ["formal_f1_demo.clj" "workplan_demo.clj" "workplan_demo_test.clj"]
+   :result {:errors 0 :warnings 0}}
+  {:gate :check-parens :result :pass}
+  {:gate :shell-syntax
+   :scope ["launch-workplan-demo.sh" "stop-workplan-demo.sh"] :result :pass}
+  {:gate :focused-test
+   :command "clojure -M:test -n futon3c.arxana.workplan-demo-test"
+   :result {:tests 1 :assertions 8 :failures 0 :errors 0}}
+  {:gate :fresh-demo-regression
+   :command "clojure -M:test -n futon3c.arxana.formal-f1-demo-test"
+   :result {:tests 2 :assertions 7 :failures 0 :errors 0}}
+  {:gate :full-durable-acceptance
+   :root-kind :worktree-local
+   :port 7295
+   :cold {:records 3881 :created 3881 :seconds 323.275}
+   :warm {:records 3881 :created 0 :status :already-present :seconds 17.463}
+   :stop-seconds 0.005
+   :index-rebuild {:index-moved-aside true :created 0 :seconds 16.768
+                   :query-answer-equal true}
+   :survived {:evidence/id "emacs-3bb1edfcff4bbe2932e8ab985faf6cfa"
+              :assessment/verdict :accepted :rule/enabled? true}}]
+ :storage {:default "~/.local/share/futon4a/workplan-demo"
+           :override "FUTON4A_WORKPLAN_DATA_DIR"
+           :xtdb ["log" "storage"] :derived-index "arxana-index.sqlite"
+           :artifacts :not-used-by-workplan}}
