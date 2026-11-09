@@ -73,18 +73,6 @@
 (defn- entity [slug]
   (records/make-clusion {:type-revision [:lexicon/entity 1] :endpoints []
                          :asserted-content {:entity/slug slug}}))
-(defn- rule [e]
-  (records/make-clusion {:type-revision [:workplan/entity-match-rule 1]
-                         :endpoints [{:role :entity :kind :clusion :target {:clusion/id (:id e)}}]
-                         :asserted-content {:rule/id (str "entity-forms/" (get-in e [:asserted-content :entity/slug]))}}))
-(defn- catalog []
-  (records/make-clusion {:type-revision [:workplan/catalog 1] :endpoints []
-                         :asserted-content {:catalog/id "entity-match-rules"}}))
-(defn- member [r]
-  (records/make-clusion {:type-revision [:workplan/entity-rule-member 1]
-                         :endpoints [{:role :catalog :kind :clusion :target {:clusion/id (:id (catalog))}}
-                                     {:role :rule :kind :clusion :target {:clusion/id (:id r)}}]
-                         :asserted-content {}}))
 (defn- referent [source verb target]
   (records/make-clusion {:type-revision [:workplan/referent 1]
                          :endpoints [{:role :entity :kind :clusion :target {:clusion/id (:id (entity source))}}
@@ -99,17 +87,16 @@
 (defn- lexicon-records [rows live-tier]
   (mapcat
    (fn [row]
-     (let [e (entity (:entity row)) r (rule e) lt (get live-tier (:entity row))]
-       [{:kind :clusion :record (catalog)} {:kind :clusion :record e}
+     ;; No word rule, member or forms attestation for lexicon entities
+     ;; (claude-13 review): a newer forms attestation would supersede the
+     ;; trial rules' forms (newest wins), switching "Agency" off and replacing
+     ;; "kangaroo"; and 251 catalog members would make sessionista fetch every
+     ;; view on each refresh.  A word rule comes only from Joe's [[X]].
+     (let [e (entity (:entity row)) lt (get live-tier (:entity row))]
+       [{:kind :clusion :record e}
         {:kind :attestation :record
          (attestation e lexicon-producer "lexicon/entity-survey"
-                      (merge (select-keys row [:name :aka :status :what :where :evidence :since :src]) lt))}
-        {:kind :clusion :record r} {:kind :clusion :record (member r)}
-        {:kind :attestation :record
-         (attestation r lexicon-producer "lexicon/entity-form"
-                      {:entity/slug (:entity row)
-                       :forms [{:form/text (:name row) :enabled? false}]
-                       :rule/revision 1 :candidate? true})}]))
+                      (merge (select-keys row [:name :aka :status :what :where :evidence :since :src]) lt))}]))
    rows))
 
 (defn- relation-records [relations producer method source-ref]
@@ -223,7 +210,7 @@
               :survey/corrections (count survey-corrections)
               :records/planned (count records)
               :records/created created}
-     :sessionista {:stored-disabled-forms (count rows) :exposed-pending-forms 0
+     :sessionista {:stored-disabled-forms 0 :exposed-pending-forms 0
                    :decision :not-exposed-without-joe-introduction}
      :unresolved unresolved :failures failures}))
 

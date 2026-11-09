@@ -8,6 +8,7 @@
             [futon3c.arxana.records :as records]
             [futon3c.arxana.service :as service]
             [futon3c.arxana.store-http :as store-http]
+            [futon3c.arxana.workplan-backlinks :as backlinks]
             [xtdb.node :as xtn])
   (:import [java.io File]))
 
@@ -63,10 +64,22 @@
                                  :target {:ref/store :evidence :ref/id "emacs-existing-arxana"}}]
                     :asserted-content {}})]
         (is (:ok (call cfg "seed:introduction" :clusion/assert {:record intro})))
+        ;; The trial word rules are on the stack before the load.
+        (backlinks/materialise-rules! #(service/dispatch cfg %) (backlinks/read-rules))
         (let [before (get-record cfg (:id intro))
+              rule-atts (fn [] (into {} (for [{:keys [rule attestation]} (backlinks/rule-records (backlinks/read-rules))]
+                                          [(get-in attestation [:content :entity/slug])
+                                           (get-in (call cfg (str "atts:" (:id rule)) :graph/query
+                                                         {:query/type :attestations :subject/id (:id rule) :query/limit 50})
+                                                   [:ok :result/attestation-ids])])))
+              rules-before (rule-atts)
               first-run (sut/materialise! #(service/dispatch cfg %))
               second-run (sut/materialise! #(service/dispatch cfg %))]
           (is (empty? (:failures first-run)))
+          ;; The load adds no word-rule attestations: the newest forms
+          ;; attestation decides, so one would switch "Agency" off and replace
+          ;; "kangaroo" (claude-13 review).
+          (is (= rules-before (rule-atts)))
           (is (pos? (get-in first-run [:counts :records/created])))
           (is (zero? (get-in second-run [:counts :records/created])))
           (is (= before (get-record cfg (:id intro))))
