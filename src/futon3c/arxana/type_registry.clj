@@ -86,7 +86,20 @@
    :recursion/cycle-policy cycle})
 
 (def declarations-v1
-  [(clusion-type :code-definition 1 []
+  [(clusion-type :workplan/item 1 [] [:item/id])
+   (clusion-type :lexicon/entity 1 [] [:entity/slug])
+   (clusion-type :benefit-line 1 [] [:benefit/line])
+   (clusion-type :workplan/names 1
+                 [{:role :item :endpoint/kinds #{:clusion}}
+                  {:role :entity :endpoint/kinds #{:clusion}}] [])
+   (clusion-type :workplan/serves 1
+                 [{:role :item :endpoint/kinds #{:clusion}}
+                  {:role :benefit-line :endpoint/kinds #{:clusion}}] [])
+   (clusion-type :workplan/mention 1
+                 [{:role :item :endpoint/kinds #{:clusion}}
+                  {:role :evidence :endpoint/kinds #{:external-ref}}]
+                 [:mention/role])
+   (clusion-type :code-definition 1 []
                  [:artifact/revision-id :scope/kind :symbol/name :definition/form])
    (clusion-type :doc-entry 1 []
                  [:artifact/revision-id :entry/id :symbol/name])

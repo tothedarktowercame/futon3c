@@ -166,6 +166,11 @@
     :projection [:operation :artifact/revision-id :links/status :links/at-revision
                  :result/status :result/truncation [:definitions] [:record/ids]]}
 
+   :workplan/item-view
+   {:schema-version 1 :required #{:item/id} :allowed #{:item/id}
+    :projection [:operation :item :attestations [:mentions] [:names] [:serves]
+                 [:assessments] :standing [:record/ids] :result/status]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}
