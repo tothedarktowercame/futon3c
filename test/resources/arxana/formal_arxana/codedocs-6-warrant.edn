@@ -1,0 +1,27 @@
+{:warrant/id :formal-arxana/codedocs-6
+ :base/futon3c "290df69a3972c7f8882cafae6e34afd211a2193c"
+ :implementation/futon3c "431aa855477966708b8073961bb19d7eb206d024"
+ :fixture/report "test/resources/arxana/codedocs/survives-edits.edn"
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.codedocs-test"
+   :result {:tests 7 :assertions 725 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-f1-relocation-test"
+   :result {:tests 1 :assertions 25 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 196 :failures 0 :errors 0}}
+  {:command "clj-kondo --lint changed-clojure"
+   :result {:errors 0 :warnings 0}}
+  {:command "futon4/dev/check-parens.el changed-clojure" :result :ok}]
+ :acceptance
+ {:revisions {:historical "16be6314845f95a2397b4b1aee19d2666bfa9162"
+              :current "07cea11a80c7b24ab467072100ffb2202ea70c83"}
+  :counts {:historical 5 :current 1 :both 1}
+  :unique ["production-readiness"]
+  :missing ["run-opportunity!" "prepare-acceptance" "prepare-diagnosis" "route!"]
+  :missing-symbol-finder-recovery 4
+  :duplicate {:outcome :ambiguous :candidate-count 2}
+  :attestations-read-through-public-ports true
+  :immutable-scopes-and-correspondences true
+  :exact-anchor-not-loosened true}
+ :not-run [:full-arxana-suite]
+ :live-services-touched false}
