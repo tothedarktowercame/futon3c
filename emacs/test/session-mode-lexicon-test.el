@@ -12,6 +12,7 @@
   `(let* ((file (make-temp-file "session-lexicon" nil ".json"))
           (session-mode-lexicon-file file)
           (session-mode-show-lexicon t)
+          (session-mode-lexicon-display (quote graphic))
           (session-mode--lexicon-key nil)
           (session-mode--lexicon-regexp nil)
           (session-mode--lexicon-forms nil)
@@ -132,6 +133,7 @@
   (let* ((file (make-temp-file "session-lexicon-stage" nil ".json"))
          (session-mode-lexicon-file file)
          (session-mode-show-lexicon t)
+         (session-mode-lexicon-display 'graphic)
          (session-mode--lexicon-key nil))
     (unwind-protect
         (progn
@@ -164,3 +166,16 @@
               (should (equal "#d4c400" (plist-get (funcall ul (nth 2 ovs)) :color)))
               (should (eq 'dots (plist-get (funcall ul (nth 2 ovs)) :style))))))
       (delete-file file))))
+
+(ert-deftest session-mode-lexicon-tty-uses-text-colour ()
+  "In a terminal the stage colour goes on the text; pending is also underlined."
+  (let ((session-mode-lexicon-display 'tty)
+        (session-mode--lexicon-stages (make-hash-table :test 'equal)))
+    (puthash "known" '((colour . "#2e9d4f") (style . "line")) session-mode--lexicon-stages)
+    (puthash "pending" '((colour . "#8e44ad") (style . "wave")) session-mode--lexicon-stages)
+    (puthash "concept" '((colour . "#a0a0a0") (style . "dots")) session-mode--lexicon-stages)
+    (should (equal '(:foreground "#2e9d4f")
+                   (session-mode--lexicon-face '((stage . "known")) nil nil)))
+    (should (equal '(:foreground "#8e44ad" :underline t)
+                   (session-mode--lexicon-face '((stage . "pending")) nil nil)))
+    (should (null (session-mode--lexicon-face '((stage . "concept")) nil nil)))))

@@ -439,14 +439,34 @@ instead is robust both ways.)"
     (and stage session-mode--lexicon-stages
          (gethash stage session-mode--lexicon-stages))))
 
+(defcustom session-mode-lexicon-display 'auto
+  "How lexicon marks are drawn.
+`graphic': coloured underlines (dotted, wavy) — needs a graphical frame.
+`tty': coloured text, pending terms also underlined — a terminal draws an
+underline in the text's own colour and has no wave, so colour has to go on
+the text itself.  `auto': choose by `display-graphic-p'."
+  :type '(choice (const auto) (const graphic) (const tty)) :group 'session-mode)
+
+(defun session-mode--lexicon-graphic-p ()
+  (pcase session-mode-lexicon-display
+    ('graphic t) ('tty nil) (_ (display-graphic-p))))
+
 (defun session-mode--lexicon-face (entity level common)
-  "Underline face for ENTITY: its stage when it has one, else its LEVEL colour.
-COMMON words get a dotted line unless the stage asks for a wave (pending)."
+  "Face for ENTITY: its stage when it has one, else its LEVEL colour.
+Graphic frames: coloured underline; COMMON words dotted unless the stage asks
+for a wave (pending).  Terminals: coloured text; pending terms underlined;
+concepts and retired terms are left plain, so the colour stays meaningful."
   (let* ((stage (session-mode--lexicon-stage entity))
-         (colour (or (alist-get 'colour stage) (alist-get 'colour level) "#a0a0a0"))
-         (style (pcase (alist-get 'style stage)
-                  ("wave" 'wave) ("dots" 'dots) (_ (if common 'dots 'line)))))
-    `(:underline (:color ,colour :style ,style))))
+         (stage-style (alist-get 'style stage))
+         (colour (or (alist-get 'colour stage) (alist-get 'colour level) "#a0a0a0")))
+    (if (session-mode--lexicon-graphic-p)
+        (let ((style (pcase stage-style
+                       ("wave" 'wave) ("dots" 'dots) (_ (if common 'dots 'line)))))
+          `(:underline (:color ,colour :style ,style)))
+      (pcase stage-style
+        ("dots" nil)
+        ("wave" `(:foreground ,colour :underline t))
+        (_ `(:foreground ,colour))))))
 
 (defun session-mode--lexicon-help (entity level)
   "Build hover text for ENTITY and LEVEL."
