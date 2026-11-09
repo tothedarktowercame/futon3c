@@ -656,21 +656,24 @@ line that starts a speaker name, a \"Cooked for\" line or a rule line."
                               (format "%s — pattern (recognized)" (match-string-no-properties 1)))
             (tally 'pattern))))
       ;; cued: correction (+ optionally reach) — candidates, wavy
+      ;; Operator text only: the cues describe the operator's corrections and
+      ;; reaches; on agent replies they only add noise (Joe, 2026-11-09).
       (when session-mode-show-cues
-        (save-excursion
-          (goto-char (point-min))
-          (while (re-search-forward session-mode--correction-re nil t)
-            (session-mode--ov (match-beginning 1) (match-end 1) 'session-mode-correction-face
-                              "correction" (match-string-no-properties 1)
-                              "correction cue (candidate — needs override/model)")
-            (tally 'correction)))
-        (when session-mode-show-reach-cues
+        (pcase-dolist (`(,rbeg . ,rend) (session-mode--operator-regions))
           (save-excursion
-            (goto-char (point-min))
-            (while (re-search-forward session-mode--reach-re nil t)
-              (session-mode--ov (match-beginning 1) (match-end 1) 'session-mode-reach-face
-                                "reach" (match-string-no-properties 1) "reach cue (candidate)")
-              (tally 'reach)))))
+            (goto-char rbeg)
+            (while (re-search-forward session-mode--correction-re rend t)
+              (session-mode--ov (match-beginning 1) (match-end 1) 'session-mode-correction-face
+                                "correction" (match-string-no-properties 1)
+                                "correction cue (candidate — needs override/model)")
+              (tally 'correction)))
+          (when session-mode-show-reach-cues
+            (save-excursion
+              (goto-char rbeg)
+              (while (re-search-forward session-mode--reach-re rend t)
+                (session-mode--ov (match-beginning 1) (match-end 1) 'session-mode-reach-face
+                                  "reach" (match-string-no-properties 1) "reach cue (candidate)")
+                (tally 'reach))))))
       ;; explicit: operator commands (red) vs command keywords in prose (underline)
       (session-mode--mark-commands #'tally)
       ;; The per-turn SIGIL: append each just-cooked turn's PATTERN sigil after its
