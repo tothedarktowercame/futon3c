@@ -125,7 +125,21 @@
   [{:keys [subject-clusion-id source-revision-id target-revision-id
            application/id application/from-revision-id application/hunks
            strategy/revision-id resolution]}]
-  (let [status (:result/status resolution)]
+  (let [status (:result/status resolution)
+        content (cond-> {:resolution/status status
+                         :source/revision-id source-revision-id
+                         :target/revision-id target-revision-id
+                         :candidates (:result/candidates resolution)
+                         :evidence (:result/evidence resolution)}
+                  from-revision-id
+                  (assoc :application/from-revision-id from-revision-id)
+                  id (assoc :application/id id)
+                  hunks (assoc :application/hunks hunks))
+        source-refs (vec (concat [{:artifact/revision-id source-revision-id}]
+                                 (when from-revision-id
+                                   [{:artifact/revision-id from-revision-id}])
+                                 [{:artifact/revision-id target-revision-id}]
+                                 (when id [{:clusion/id id}])))]
     (records/make-attestation
      {:subject-clusion-id subject-clusion-id
       :producer "futon3c.arxana.resolve"
@@ -137,18 +151,8 @@
       :coverage (case status :resolved :complete :ambiguous :partial
                       :missing :none :partial)
       :method (assoc resolver-method :strategy/revision-id revision-id)
-      :content {:resolution/status status
-                :source/revision-id source-revision-id
-                :application/from-revision-id from-revision-id
-                :target/revision-id target-revision-id
-                :application/id id
-                :application/hunks hunks
-                :candidates (:result/candidates resolution)
-                :evidence (:result/evidence resolution)}
-      :source-refs [{:artifact/revision-id source-revision-id}
-                    {:artifact/revision-id from-revision-id}
-                    {:artifact/revision-id target-revision-id}
-                    {:clusion/id id}]})))
+      :content content
+      :source-refs source-refs})))
 
 (defn append-relocations! [cfg relocation]
   (mapv (fn [r]

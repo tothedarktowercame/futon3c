@@ -7,6 +7,7 @@
             [futon1b-server :as f1-server]
             [futon3c.arxana.artifact :as artifact]
             [futon3c.arxana.codedocs :as codedocs]
+            [futon3c.arxana.codedocs-relocation :as codedocs-relocation]
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.service :as service]
@@ -424,16 +425,113 @@
                (codedocs/ingest-doc!
                 cfg {:artifact-id (str "codedocs:futon4/" path) :sha doc-sha :text text
                      :symbols (get-in f [:symbols source-path])})))
-        _ (codedocs/link-code-docs! cfg current-by-path doc-results)
+        doc-links (codedocs/link-code-docs! cfg current-by-path doc-results)
         lean-sha (get-in f [:lean :repo/sha])
         lean-text (text-at-repo mathlib4-root lean-sha (get-in f [:lean :file]))
-        _ (codedocs/ingest-lean!
-           cfg {:artifact-id "codedocs:mathlib4/SelfHealRoute.lean"
-                :sha lean-sha :text lean-text :symbols (set (keys current-by-symbol))
-                :code-scopes current-by-symbol})
+        lean-result (codedocs/ingest-lean!
+                     cfg {:artifact-id "codedocs:mathlib4/SelfHealRoute.lean"
+                          :sha lean-sha :text lean-text :symbols (set (keys current-by-symbol))
+                          :code-scopes current-by-symbol})
         path "src/futon2/aif/meta_self_heal_production.clj"
         versions (code-results path)]
-    {:historical (:revision-id (first versions)) :current (:revision-id (second versions))}))
+    {:historical (:revision-id (first versions)) :current (:revision-id (second versions))
+     :code-results code-results :doc-links doc-links :lean-result lean-result}))
+
+(defn- attestation-ids-for [cfg subject-id]
+  (get-in (call cfg (str "attestations:" subject-id) :graph/query
+                {:query/type :attestations :subject/id subject-id :query/limit 100})
+          [:ok :result/attestation-ids]))
+
+(deftest historical-code-scopes-relocate-honestly-and-ambiguity-is-preserved
+  (with-stack
+    (fn [cfg repo]
+      (let [{:keys [code-results doc-links lean-result]}
+            (materialize-view-fixture! cfg repo false)
+            immutable-ids (vec (concat
+                                (for [[_ versions] code-results
+                                      version versions
+                                      [_ info] (:scopes version)]
+                                  (get-in info [:scope :id]))
+                                (map #(get-in % [:correspondence :id]) doc-links)
+                                (map #(get-in % [:correspondence :id])
+                                     (:citations lean-result))))
+            before (into {} (map (juxt identity #(record cfg %)) immutable-ids))
+            rows
+            (vec
+             (for [[path versions] (sort-by key code-results)
+                   :let [historical (first versions)
+                         current (second versions)
+                         source-text (get-in (call cfg (str "old-text:" path) :revision/get
+                                                  {:artifact/revision-id (:revision-id historical)})
+                                             [:ok :revision/text])]
+                   [symbol old-info] (sort-by key (:scopes historical))
+                   :let [current-info (get-in current [:scopes symbol])
+                         result (codedocs-relocation/relocate-one
+                                 (:artifact-provider cfg) source-text
+                                 (:revision-id historical) (:revision-id current)
+                                 (get-in old-info [:scope :id]) (:codepoint-range old-info))
+                         {:keys [attestation]} (codedocs-relocation/append-one! cfg result)
+                         stored (record cfg (:id attestation))
+                         candidates (get-in stored [:content :candidates])
+                         relocated-range (when (= 1 (count candidates))
+                                           (let [r (get-in candidates [0 :location :range])]
+                                             [(:start r) (:end r)]))
+                         current-scope-id (get-in current-info [:scope :id])
+                         doc-count (count (filter #(= current-scope-id
+                                                       (get-in % [:code-scope :id])) doc-links))
+                         lean-count (count (filter #(= current-scope-id
+                                                        (get-in % [:code-scope :id]))
+                                                  (:citations lean-result)))]]
+               (do
+                 (is (= attestation stored) (str symbol " relocation read back exactly"))
+                 (is (some #{(:id attestation)}
+                           (attestation-ids-for cfg (get-in old-info [:scope :id])))
+                     (str symbol " relocation is publicly queryable"))
+                 {:symbol symbol :path path
+                  :historical true
+                  :outcome (codedocs-relocation/outcome stored)
+                  :relocated/range relocated-range
+                  :current/range (:codepoint-range current-info)
+                  :range-equals-current? (= relocated-range (:codepoint-range current-info))
+                  :symbol-finder-would-recover? (boolean current-info)
+                  :current-scope/id current-scope-id
+                  :code-doc-links doc-count :lean-code-links lean-count
+                  :code-doc-links-target-current? (pos? doc-count)
+                  :lean-links-target-current? (pos? lean-count)
+                  :links-reach-relocation? (and (= relocated-range (:codepoint-range current-info))
+                                                (pos? doc-count))})))
+            stored-report {:fixture {:historical (get-in (fixture) [:historical :repo/sha])
+                                     :current (get-in (fixture) [:current :repo/sha])}
+                           :counts {:historical (count rows)
+                                    :current (count (filter :range-equals-current? rows))
+                                    :both (count (filter #(and (:historical %)
+                                                               (:range-equals-current? %)) rows))}
+                           :rows rows}
+            expected-report (edn/read-string
+                             (slurp "test/resources/arxana/codedocs/survives-edits.edn"))]
+        (is (= expected-report stored-report))
+        (is (= before (into {} (map (juxt identity #(record cfg %)) immutable-ids)))
+            "relocation appends evidence without changing scopes or correspondences")
+        (testing "duplicated exact content remains ambiguous with both candidates"
+          (let [row (first rows)
+                path (:path row)
+                historical (first (code-results path))
+                old-info (get-in historical [:scopes (:symbol row)])
+                source-text (get-in (call cfg "duplicate-source" :revision/get
+                                          {:artifact/revision-id (:revision-id historical)})
+                                    [:ok :revision/text])
+                [start end] (:codepoint-range old-info)
+                form (codepoint-subs source-text start end)
+                duplicate-text (str "prefix\n" form "\nseparator\n" form "\nsuffix\n")
+                ingested (artifact/ingest! (:artifact-provider cfg) "codedocs:duplicate"
+                                           (.getBytes duplicate-text StandardCharsets/UTF_8)
+                                           "text/x-clojure; charset=utf-8")
+                target-id (get-in ingested [:ok :artifact/revision-id])
+                result (codedocs-relocation/relocate-one
+                        (:artifact-provider cfg) source-text (:revision-id historical)
+                        target-id (get-in old-info [:scope :id]) (:codepoint-range old-info))]
+            (is (= :ambiguous (get-in result [:resolution :result/status])))
+            (is (= 2 (count (get-in result [:resolution :result/candidates]))))))))))
 
 (deftest registered-codedocs-view-is-public-bounded-and-deterministic
   (let [runs (atom [])]

@@ -1,0 +1,65 @@
+{:fixture
+ {:historical "16be6314845f95a2397b4b1aee19d2666bfa9162"
+  :current "07cea11a80c7b24ab467072100ffb2202ea70c83"}
+ :counts {:historical 5 :current 1 :both 1}
+ :rows
+ [{:path "src/futon2/aif/full_loop_runtime.clj"
+   :symbol "run-opportunity!"
+   :historical true
+   :outcome :missing
+   :relocated/range nil
+   :current/range [125240 126915]
+   :range-equals-current? false
+   :symbol-finder-would-recover? true
+   :current-scope/id "arxana:clusion:sha256:ee9b6c9ab355b8f3a31e4ccd3b95bba0ad4e856cdc8435bb4bffab509a9b5029"
+   :code-doc-links 1 :lean-code-links 0
+   :code-doc-links-target-current? true :lean-links-target-current? false
+   :links-reach-relocation? false}
+  {:path "src/futon2/aif/meta_self_heal_production.clj"
+   :symbol "prepare-acceptance"
+   :historical true
+   :outcome :missing
+   :relocated/range nil
+   :current/range [66714 69730]
+   :range-equals-current? false
+   :symbol-finder-would-recover? true
+   :current-scope/id "arxana:clusion:sha256:70f7fa2123b426c55233777066f1914952fe5d2380bc951dd8e80e6ee8b1e758"
+   :code-doc-links 1 :lean-code-links 1
+   :code-doc-links-target-current? true :lean-links-target-current? true
+   :links-reach-relocation? false}
+  {:path "src/futon2/aif/meta_self_heal_production.clj"
+   :symbol "prepare-diagnosis"
+   :historical true
+   :outcome :missing
+   :relocated/range nil
+   :current/range [112323 113860]
+   :range-equals-current? false
+   :symbol-finder-would-recover? true
+   :current-scope/id "arxana:clusion:sha256:84e76d9b9f58043be1b240ae4d413f2dc5809e4b2cb8258f85c398cd4a8882b2"
+   :code-doc-links 1 :lean-code-links 1
+   :code-doc-links-target-current? true :lean-links-target-current? true
+   :links-reach-relocation? false}
+  {:path "src/futon2/aif/meta_self_heal_production.clj"
+   :symbol "production-readiness"
+   :historical true
+   :outcome :unique
+   :relocated/range [113862 116528]
+   :current/range [113862 116528]
+   :range-equals-current? true
+   :symbol-finder-would-recover? true
+   :current-scope/id "arxana:clusion:sha256:b9d1a09f7d6f71da56876ca50efd0a654b054b9b66b8b34b86e8383dcd78c4b4"
+   :code-doc-links 1 :lean-code-links 4
+   :code-doc-links-target-current? true :lean-links-target-current? true
+   :links-reach-relocation? true}
+  {:path "src/futon2/aif/meta_self_heal_production.clj"
+   :symbol "route!"
+   :historical true
+   :outcome :missing
+   :relocated/range nil
+   :current/range [123414 144484]
+   :range-equals-current? false
+   :symbol-finder-would-recover? true
+   :current-scope/id "arxana:clusion:sha256:bdacf0e4bc19744d46a18817079d2efa6d8ae19dd57a61002efbac6882f6b1bc"
+   :code-doc-links 1 :lean-code-links 10
+   :code-doc-links-target-current? true :lean-links-target-current? true
+   :links-reach-relocation? false}]}
