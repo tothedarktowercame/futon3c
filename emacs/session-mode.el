@@ -295,6 +295,11 @@ query→sigil alist.  Session id is the buffer-local `agent-chat--session-id'."
                        (out nil))
                   (dolist (e (cdr (assoc "entries" data)))
                     (let* ((body (cdr (assoc "evidence/body" e)))
+                           ;; Newer context-retrieval entries carry the body as
+                           ;; an EDN string with no query text (only
+                           ;; query-sha256), so they cannot key a sigil; skip
+                           ;; them instead of failing the whole refresh.
+                           (body (and (listp body) body))
                            (query (cdr (assoc "query" body)))
                            (top (car (cdr (assoc "results" body))))
                            (pid (cdr (assoc "id" top)))
