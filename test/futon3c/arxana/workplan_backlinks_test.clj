@@ -84,7 +84,11 @@
               [a b] (get-in att [:content :codepoint-range])]
           (is (= eid (get-in att [:content :evidence/id])))
           (is (= "[[sessionista-mode]]" (subs text a b))))
-        (is (false? (get-in session-view [:forms/effective 0 :enabled?])))
+        ;; Prepopulate, Joe corrects: a proposed candidate counts until rejected,
+        ;; and the page can show what it points at and who proposed it.
+        (is (true? (get-in session-view [:forms/effective 0 :enabled?])))
+        (is (= "inbox-zero" (get-in session-view [:referents 0 :target/slug])))
+        (is (= :proposed (get-in session-view [:referents 0 :review/status])))
         (let [candidate-id (get-in session-view [:referents 0 :record :id])]
           (is (:ok (call cfg "accept-candidate" :workplan/assess-referent
                          {:subject/id candidate-id :verdict :accepted :actor "joe"

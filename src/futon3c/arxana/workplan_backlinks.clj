@@ -124,13 +124,25 @@
       (let [{:keys [entity rule] rule-atts :attestations} (first (filter #(= slug (get-in % [:entity :asserted-content :entity/slug])) rr))
             introductions (mapv #(let [x (entity! read! %)] {:record x :attestations (attestations read! (:id x))})
                                 (reverse-ids read! [:workplan/introduction 1] :entity (:id entity)))
-            referents (mapv (fn [rid] (let [x (entity! read! rid) aa (assessments read! rid)]
-                                        {:record x :attestations (attestations read! rid) :assessments aa
-                                         :effective/accepted? (or (= :explicit (get-in x [:asserted-content :referent/role]))
-                                                                  ;; the latest ruling counts: accepted then rejected is rejected.
-                                                                  ;; The index returns assessments newest first (it ignores
-                                                                  ;; :time/order; futon1b_arxana_index.clj), so that is `first`.
-                                                                  (= :accepted (:verdict (first aa))))}))
+            ;; Prepopulate, let Joe correct (Joe, 11-09: "it would be better if
+            ;; we could find a way to prepopulate the graph and let me
+            ;; correct it"): a proposed referent counts until Joe's latest
+            ;; ruling rejects it.  The index returns assessments newest first
+            ;; (it ignores :time/order; futon1b_arxana_index.clj), so the
+            ;; latest ruling is `first`.
+            referents (mapv (fn [rid] (let [x (entity! read! rid) aa (assessments read! rid)
+                                            as (attestations read! rid)
+                                            latest (:verdict (first aa))
+                                            target-ep (first (filter #(= :target (:role %)) (:endpoints x)))
+                                            target-id (get-in target-ep [:target :clusion/id])
+                                            target (when target-id (:asserted-content (entity! read! target-id)))]
+                                        {:record x :attestations as :assessments aa
+                                         :target/slug (or (:entity/slug target)
+                                                          (get-in target-ep [:target :ref/id]))
+                                         :proposed-by (:producer (last as))
+                                         :relation/raw (get-in (last as) [:content :relation/raw])
+                                         :review/status (case latest :accepted :accepted :rejected :rejected :proposed)
+                                         :effective/accepted? (not= :rejected latest)}))
                             (reverse-ids read! [:workplan/referent 1] :entity (:id entity)))
             ;; An introduced entity is on only while it has an accepted
             ;; referent.  A seeded rule keeps each form's own switch from its
