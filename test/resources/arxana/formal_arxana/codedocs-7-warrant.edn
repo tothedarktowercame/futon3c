@@ -1,0 +1,27 @@
+{:warrant/id :formal-arxana/codedocs-7
+ :base/futon3c "72d55ec5bca30b51f093a27a0940ed973982734f"
+ :implementation/futon3c "e58b95d5d"
+ :implementation/futon4a "73d09a6"
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.codedocs-test"
+   :result {:tests 7 :assertions 736 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.http-test"
+   :result {:tests 3 :assertions 19 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 196 :failures 0 :errors 0}}
+  {:command "FUTON3C_ROOT=<worktree> futon4a/test/formal-codedocs-e2e.sh"
+   :result {:tests 1 :failures 0 :errors 0}}
+  {:command "futon4a/test/stop-codedocs-demo-test.sh" :result :pass}
+  {:command "clj-kondo --lint changed-clojure" :result {:errors 0 :warnings 0}}
+  {:command "check-parens changed Clojure and Lisp" :result :ok}
+  {:command "byte-compile futon4a-codedocs.el with warnings fatal" :result :ok}]
+ :acceptance
+ {:terminal-only true :mouse-required false :images false
+  :cursor-echo true :mode-owned-keymaps true
+  :since {:unchanged ["production-readiness"]
+          :changed ["run-opportunity!" "prepare-acceptance" "prepare-diagnosis" "route!"]}
+  :route-lean-parser-citations 10
+  :real-private-stack true :pid-owned-stop true
+  :colon-leading-authored-text-round-trips true}
+ :not-run [:full-arxana-suite]
+ :live-services-touched false}
