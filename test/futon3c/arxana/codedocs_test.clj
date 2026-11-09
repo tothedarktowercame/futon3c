@@ -33,6 +33,8 @@
 
 (defn- text-at [sha path]
   (String. ^bytes (git-bytes futon2-root sha path) StandardCharsets/UTF_8))
+(defn- text-at-repo [repo sha path]
+  (String. ^bytes (git-bytes repo sha path) StandardCharsets/UTF_8))
 
 (defn- codepoint-subs [^String text start end]
   (let [a (.offsetByCodePoints text 0 start)
@@ -45,6 +47,12 @@
 (defn- call [cfg mid op body] (service/dispatch cfg (request mid op body)))
 (defn- record [cfg id]
   (get-in (call cfg (str "get:" id) :entity/get {:entity/id id}) [:ok :record]))
+(defn- related [cfg role id]
+  (let [response (call cfg (str "related:" (name role) ":" id) :graph/query
+                       {:query/type :role-reverse :edge/type [:correspondence 1]
+                        :endpoint/role role :endpoint/id id
+                        :time/order :desc :query/limit 20})]
+    (mapv #(record cfg %) (get-in response [:ok :result/edge-ids]))))
 
 (defn- with-stack [f]
   (gates/seed-mission-contract!)
@@ -161,3 +169,100 @@
                               {:artifact/revision-id revision-id :position/codepoint 0})]
             (is (= :arxana.scope/no-enclosing-scope
                    (get-in outside [:error :error/code])))))))))
+
+(deftest pinned-doc-entries-and-code-doc-correspondences
+  (with-stack
+    (fn [cfg repo]
+      (let [f (fixture)
+            old-sha (get-in f [:historical :repo/sha])
+            new-sha (get-in f [:current :repo/sha])
+            code-plans (for [[path symbols] (:symbols f)]
+                         {:artifact-id (str "codedocs:futon2/" path)
+                          :path path :symbols symbols
+                          :historical {:sha old-sha :text (text-at old-sha path)}
+                          :current {:sha new-sha :text (text-at new-sha path)}})
+            code-results (into {}
+                               (for [plan code-plans]
+                                 [(:path plan) (codedocs/ingest-file! cfg repo plan)]))
+            current-code (into {}
+                               (for [[path versions] code-results]
+                                 [path (:scopes (second versions))]))
+            doc-sha (get-in f [:docbook :repo/sha])
+            doc-results
+            (vec (for [[path expected-digest] (get-in f [:docbook :files])
+                       :let [text (text-at-repo futon4-root doc-sha path)
+                             source-path (second (re-find #"(?m)^:SOURCE_PATH:\s*(.*?)\s*$" text))
+                             symbols (get-in f [:symbols source-path])]]
+                   (do (is (= expected-digest (digest/sha256-hex (.getBytes text StandardCharsets/UTF_8))))
+                       (codedocs/ingest-doc!
+                        cfg {:artifact-id (str "codedocs:futon4/" path)
+                             :sha doc-sha :text text :symbols symbols}))))
+            links (codedocs/link-code-docs! cfg current-code doc-results)]
+        (is (= 5 (count links)))
+        (doseq [{:keys [revision-id source-path scopes]} doc-results
+                [symbol {:keys [scope attestation codepoint-range]}] scopes]
+          (let [stored-scope (record cfg (:id scope))
+                stored-att (record cfg (:id attestation))
+                text (get-in (call cfg (str "doc-revision:" revision-id) :revision/get
+                                  {:artifact/revision-id revision-id})
+                             [:ok :revision/text])
+                [start end] codepoint-range
+                span (codepoint-subs text start end)
+                next-text (codepoint-subs text end (min (.codePointCount text 0 (.length text))
+                                                        (+ end 2)))]
+            (testing (str symbol " is one exact whole def-doc bullet")
+              (is (= scope stored-scope))
+              (is (= attestation stored-att))
+              (is (= #{:artifact/revision-id :entry/id :symbol/name}
+                     (set (keys (:asserted-content stored-scope)))))
+              (is (empty? (:endpoints stored-scope)))
+              (is (= source-path (get-in stored-att [:content :source/path])))
+              (is (= codepoint-range (get-in stored-att [:content :codepoint-range])))
+              (is (str/starts-with? span (str "- " symbol ":")))
+              (is (or (= end (.codePointCount text 0 (.length text)))
+                      (str/starts-with? next-text "- ")
+                      (str/starts-with? next-text "* ")))
+              ;; There is no unconsumed next bullet or heading inside the span.
+              (is (nil? (re-find #"(?m)\n(?:- |\*+ )" span))))))
+        (doseq [{:keys [symbol code-scope doc-scope correspondence attestation]} links]
+          (let [stored (record cfg (:id correspondence))
+                stored-evidence (record cfg (:id attestation))]
+            (testing (str symbol " links the current code scope to its exact doc entry")
+              (is (= correspondence stored))
+              (is (= attestation stored-evidence))
+              (is (= symbol (get-in (record cfg (:id code-scope))
+                                    [:asserted-content :symbol/name])))
+              (is (= symbol (get-in (record cfg (:id doc-scope))
+                                    [:asserted-content :symbol/name])))
+              (is (= [(:id correspondence)]
+                     (mapv :id (related cfg :source (:id code-scope)))))
+              (is (= [(:id correspondence)]
+                     (mapv :id (related cfg :target (:id doc-scope)))))
+              (is (= (get-in f [:current :repo/sha]) new-sha))
+              (is (= (:revision-id (second (code-results
+                                             (get-in stored-evidence [:content :source/path]))))
+                     (get-in code-scope [:asserted-content :artifact/revision-id]))))))
+        (testing "SOURCE_PATH, not stub filename, controls matching"
+          (let [wrong-text (str ":PROPERTIES:\n:ENTRY_ID: wrong::def-doc\n"
+                                ":SOURCE_PATH: src/futon2/aif/not-this-file.clj\n:END:\n\n"
+                                "* Context\n- route!: wrong-path entry\n")
+                wrong (codedocs/ingest-doc!
+                       cfg {:artifact-id "codedocs:wrong-path" :sha "synthetic"
+                            :text wrong-text :symbols ["route!"]})]
+            (is (empty? (codedocs/link-code-docs! cfg current-code [wrong])))
+            (is (empty? (related cfg :target
+                                 (get-in wrong [:scopes "route!" :scope :id]))))))
+        (testing "a symbol mentioned in another bullet is not an entry"
+          (let [mentioned (str ":PROPERTIES:\n:ENTRY_ID: mention::def-doc\n"
+                               ":SOURCE_PATH: src/futon2/aif/meta_self_heal_production.clj\n"
+                               ":END:\n\n* Context\n- other: calls route! in prose\n")]
+            (is (empty? (codedocs/doc-entries mentioned #{"route!"})))))
+        (testing "a wrapped bullet remains one scope through the next boundary"
+          (let [wrapped (str ":PROPERTIES:\n:ENTRY_ID: wrap::def-doc\n"
+                             ":SOURCE_PATH: src/x.clj\n:END:\n\n* Context\n"
+                             "- route!: first line\n  continuation naming prepare-diagnosis\n"
+                             "- next: boundary\n")
+                [start end] (get-in (codedocs/doc-entries wrapped #{"route!"})
+                                    ["route!" :codepoint-range])]
+            (is (= "- route!: first line\n  continuation naming prepare-diagnosis\n"
+                   (codepoint-subs wrapped start end)))))))))

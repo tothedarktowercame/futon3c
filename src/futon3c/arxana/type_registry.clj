@@ -88,6 +88,8 @@
 (def declarations-v1
   [(clusion-type :code-definition 1 []
                  [:artifact/revision-id :scope/kind :symbol/name :definition/form])
+   (clusion-type :doc-entry 1 []
+                 [:artifact/revision-id :entry/id :symbol/name])
    (clusion-type :interpretation 1
                  [{:role :source :endpoint/kinds #{:manifestation-scope}}
                   {:role :intent :endpoint/kinds #{:entity}}

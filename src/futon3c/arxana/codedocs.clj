@@ -6,6 +6,8 @@
             [futon3c.arxana.service :as service]))
 
 (def finder-method {:id "codedocs/clojure-definition" :version 1})
+(def doc-finder-method {:id "codedocs/def-doc-bullet" :version 1})
+(def code-doc-match-method {:id "codedocs/source-path+symbol" :version 1})
 
 (def definition-forms
   ["defn-" "defn" "def" "defmulti" "defmethod" "defprotocol" "defrecord" "deftype"])
@@ -18,6 +20,42 @@
 
 (defn- codepoint-offset [^String s char-index]
   (.codePointCount s 0 char-index))
+
+(defn- property-value [text property]
+  (some-> (re-find (re-pattern (str "(?m)^:" (java.util.regex.Pattern/quote property)
+                                    ":\\s*(.*?)\\s*$")) text)
+          second))
+
+(defn doc-entries
+  "Parse selected def-doc bullets. Ranges end at the next bullet or heading."
+  [^String text wanted]
+  (let [entry-id (property-value text "ENTRY_ID")
+        source-path (property-value text "SOURCE_PATH")
+        boundary (re-pattern "(?m)^(?:- |\\*+ )")
+        starts (->> (re-seq #"(?m)^- ([^:\n]+):" text)
+                    (map (fn [[whole symbol]]
+                           (let [char-start (.indexOf text whole)]
+                             {:symbol/name symbol :char-start char-start})))
+                    ;; indexOf alone is ambiguous for duplicate identical headers.
+                    (reduce (fn [{:keys [from rows]} {:keys [symbol/name]}]
+                              (let [needle (str "- " name ":")
+                                    at (.indexOf text needle from)]
+                                {:from (+ at (count needle))
+                                 :rows (conj rows {:symbol/name name :char-start at})}))
+                            {:from 0 :rows []})
+                    :rows)]
+    (when-not (and entry-id source-path)
+      (throw (ex-info "def-doc drawer is incomplete"
+                      {:entry/id entry-id :source/path source-path})))
+    (into (sorted-map)
+          (for [{:keys [symbol/name char-start]} starts
+                :when (contains? wanted name)
+                :let [m (re-matcher boundary text)
+                      _ (.region m (inc char-start) (.length text))
+                      char-end (if (.find m) (.start m) (.length text))]]
+            [name {:entry/id entry-id :source/path source-path :symbol/name name
+                   :codepoint-range [(codepoint-offset text char-start)
+                                     (codepoint-offset text char-end)]}]))))
 
 (defn- form-end
   "Return the UTF-16 index just after the balanced top-level form at START."
@@ -72,6 +110,42 @@
     :method finder-method
     :content {:artifact/revision-id revision-id :codepoint-range range}
     :source-refs [{:artifact/revision-id revision-id}]}))
+
+(defn doc-scope-record [revision-id {:keys [entry/id symbol/name]}]
+  (records/make-clusion
+   {:type-revision [:doc-entry 1] :endpoints []
+    :asserted-content {:artifact/revision-id revision-id
+                       :entry/id id :symbol/name name}}))
+
+(defn doc-range-attestation
+  [scope revision-id {:keys [entry/id source/path symbol/name codepoint-range]}]
+  (records/make-attestation
+   {:subject-clusion-id (:id scope) :producer "futon3c.arxana.codedocs"
+    :basis :parser :standing :verified :coverage :complete
+    :method doc-finder-method
+    :content {:artifact/revision-id revision-id :codepoint-range codepoint-range
+              :entry/id id :source/path path :symbol/name name}
+    :source-refs [{:artifact/revision-id revision-id}]}))
+
+(defn code-doc-correspondence [code-scope doc-scope]
+  (records/make-clusion
+   {:type-revision [:correspondence 1]
+    :endpoints [{:role :source :kind :manifestation-scope
+                 :target {:entity/id (:id code-scope)}}
+                {:role :target :kind :entity
+                 :target {:entity/id (:id doc-scope)}}]
+    :asserted-content {:direction :source-to-target
+                       :relation/kind :code-documents}}))
+
+(defn code-doc-attestation [correspondence code-scope doc-scope source-path]
+  (records/make-attestation
+   {:subject-clusion-id (:id correspondence)
+    :producer "futon3c.arxana.codedocs" :basis :parser
+    :standing :verified :coverage :complete :method code-doc-match-method
+    :content {:source/path source-path
+              :symbol/name (get-in code-scope [:asserted-content :symbol/name])
+              :source/scope-id (:id code-scope) :target/scope-id (:id doc-scope)}
+    :source-refs [{:entity/id (:id code-scope)} {:entity/id (:id doc-scope)}]}))
 
 (defn- request [mid operation body]
   {:protocol/version "arxana.v1" :message/id mid :operation operation
@@ -139,3 +213,45 @@
         (recur (next versions) revision-id
                (conj results {:sha sha :revision-id revision-id :scopes scopes})))
       results)))
+
+(defn ingest-doc!
+  "Ingest one pinned def-doc stub and store its selected entry scopes."
+  [cfg {:keys [artifact-id sha text symbols]}]
+  (let [ingest (call cfg (str "codedocs:doc-ingest:" artifact-id ":" sha)
+                     :revision/ingest
+                     {:artifact/id artifact-id :bytes text
+                      :media-type "text/org; charset=utf-8"
+                      :expected/revision-id :absent})
+        revision-id (get-in ingest [:ok :artifact/revision-id])]
+    (when-not revision-id
+      (throw (ex-info "doc revision ingest failed" {:response ingest})))
+    {:sha sha :revision-id revision-id
+     :source-path (property-value text "SOURCE_PATH")
+     :scopes
+     (into (sorted-map)
+           (for [[symbol entry] (doc-entries text (set symbols))
+                 :let [scope (doc-scope-record revision-id entry)
+                       att (doc-range-attestation scope revision-id entry)]]
+             (do (call cfg (str "codedocs:doc-scope:" (:id scope))
+                       :clusion/assert {:record scope})
+                 (call cfg (str "codedocs:doc-range:" (:id att))
+                       :evidence/append {:record att})
+                 [symbol {:scope scope :attestation att
+                          :codepoint-range (:codepoint-range entry)}])))}))
+
+(defn link-code-docs!
+  "Link exact SOURCE_PATH + symbol matches. CODE-BY-PATH holds current scopes."
+  [cfg code-by-path doc-results]
+  (vec
+   (for [{:keys [source-path scopes]} doc-results
+         [symbol {:keys [scope]}] scopes
+         :let [code-scope (get-in code-by-path [source-path symbol :scope])]
+         :when code-scope
+         :let [correspondence (code-doc-correspondence code-scope scope)
+               att (code-doc-attestation correspondence code-scope scope source-path)]]
+     (do (call cfg (str "codedocs:correspondence:" (:id correspondence))
+               :clusion/assert {:record correspondence})
+         (call cfg (str "codedocs:correspondence-evidence:" (:id att))
+               :evidence/append {:record att})
+         {:symbol symbol :code-scope code-scope :doc-scope scope
+          :correspondence correspondence :attestation att}))))
