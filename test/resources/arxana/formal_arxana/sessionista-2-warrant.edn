@@ -1,6 +1,6 @@
 {:warrant/id :sessionista-2
  :recorded-at "2026-11-09T18:27:00.000Z"
- :commits {:futon3c "f5a514fb5568bdf802549b7cc65cec4233bc4435"
+ :commits {:futon3c "a3d8715728e467bcb2ffa8993b38a454e2603c4b"
            :futon4a "7293b2d382c44006d89d07c1414f62b617a3ab50"}
  :evidence
  [{:gate :clj-kondo
