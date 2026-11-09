@@ -115,6 +115,40 @@
     (.deleteOnExit f)
     (.getAbsolutePath f)))
 
+(defn- open-autonomous-turn-bin
+  "Open an autonomous turn, then detect whether stdin arrives before result.
+   Returns [executable order-file]. An early write recreates Claude Code's
+   queued_command absorption and deliberately emits no second turn."
+  []
+  (let [order-file (java.io.File/createTempFile "pouch-open-turn-order-" ".txt")
+        f (java.io.File/createTempFile "fake-claude-open-turn-" ".py")]
+    (spit f
+          (str "#!/usr/bin/env python3\n"
+               "import json, select, sys, time\n"
+               "order = " (pr-str (.getAbsolutePath order-file)) "\n"
+               "def emit(o): print(json.dumps(o), flush=True)\n"
+               "def note(s):\n"
+               "    with open(order, 'a') as out: out.write(s + '\\n')\n"
+               "emit({'type':'system','subtype':'task_notification'})\n"
+               "emit({'type':'system','subtype':'init','session_id':'open-auto'})\n"
+               "emit({'type':'assistant','message':{'content':[{'type':'text','text':'AUTONOMOUS-OPEN'}]}})\n"
+               "ready, _, _ = select.select([sys.stdin], [], [], 0.5)\n"
+               "early = sys.stdin.readline() if ready else None\n"
+               "note('INPUT-EARLY' if early else 'RESULT-ONE')\n"
+               "emit({'type':'result','session_id':'open-auto','is_error':False})\n"
+               "if not early:\n"
+               "    line = sys.stdin.readline()\n"
+               "    note('INPUT-AFTER')\n"
+               "    text = json.loads(line)['message']['content'][0]['text']\n"
+               "    emit({'type':'system','subtype':'init','session_id':'open-auto'})\n"
+               "    emit({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}})\n"
+               "    emit({'type':'result','session_id':'open-auto','is_error':False})\n"
+               "time.sleep(1)\n"))
+    (.setExecutable f true)
+    (.deleteOnExit f)
+    (.deleteOnExit order-file)
+    [(.getAbsolutePath f) order-file]))
+
 (defn- demux-on! [] (System/setProperty "FUTON3C_POUCH_DEMUX" "true"))
 
 (deftest demux-defaults-off
@@ -217,6 +251,56 @@
                                   (= "init" (:subtype %)))
                             @events)))
         "both init records stay attributed to the same solicited turn")))
+
+(deftest operator-write-waits-for-an-open-autonomous-turn
+  ;; 2026-11-09 claude-6 incident: :in-flight? was false because the open turn
+  ;; had no waiter, so Joe's user event became that turn's queued_command.
+  (demux-on!)
+  (let [[bin order-file] (open-autonomous-turn-bin)
+        sink-turns (atom [])
+        pouch* (#'pouch/ensure-pouch! "demux-open-autonomous" {:claude-bin bin})
+        _ (#'pouch/ensure-demux! pouch*)
+        open? (get-in pouch* [:demux :open?])
+        deadline (+ (System/currentTimeMillis) 5000)]
+    (pouch/set-unsolicited-sink!
+     (fn [_agent-id turn] (swap! sink-turns conj turn)))
+    (while (and (not @open?) (< (System/currentTimeMillis) deadline))
+      (Thread/sleep 10))
+    (is @open? "the autonomous protocol turn is open before Joe writes")
+    (let [result (pouch/feed-turn! "demux-open-autonomous" "joe-prompt"
+                                   {:claude-bin bin :timeout-ms 5000
+                                    :turn-id "joe-open-turn"})
+          sink-deadline (+ (System/currentTimeMillis) 5000)]
+      (while (and (empty? @sink-turns)
+                  (< (System/currentTimeMillis) sink-deadline))
+        (Thread/sleep 10))
+      (is (= ["RESULT-ONE" "INPUT-AFTER"]
+             (str/split-lines (slurp order-file)))
+          "stdin is written only after the autonomous result")
+      (is (= "reply:joe-prompt" (:result result)))
+      (is (= "joe-open-turn" (:turn-id result))
+          "the fresh init binds Joe's already-registered waiter")
+      (is (= "AUTONOMOUS-OPEN" (:result (first @sink-turns)))
+          "the first turn remains unsolicited"))))
+
+(deftest removing-the-open-turn-hold-recreates-the-stranded-reply
+  ;; Construct the named bad case against the real dependency. With the one
+  ;; guard removed, stdin arrives before result and the fake CLI absorbs it.
+  (demux-on!)
+  (let [[bin order-file] (open-autonomous-turn-bin)
+        pouch* (#'pouch/ensure-pouch! "demux-open-autonomous-bad" {:claude-bin bin})
+        _ (#'pouch/ensure-demux! pouch*)
+        open? (get-in pouch* [:demux :open?])
+        deadline (+ (System/currentTimeMillis) 5000)]
+    (while (and (not @open?) (< (System/currentTimeMillis) deadline))
+      (Thread/sleep 10))
+    (is @open?)
+    (with-redefs-fn {#'pouch/await-demux-idle! (fn [_demux _timeout] true)}
+      #(is (thrown? java.util.concurrent.TimeoutException
+                    (pouch/feed-turn! "demux-open-autonomous-bad" "joe-prompt"
+                                      {:claude-bin bin :timeout-ms 800}))))
+    (is (= "INPUT-EARLY" (str/trim (slurp order-file)))
+        "without the hold, the user event is consumed inside the open turn")))
 
 (deftest solicited-and-unsolicited-turn-identities-cannot-cross
   ;; Both directions are load-bearing: an autonomous result must not satisfy a

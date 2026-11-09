@@ -467,6 +467,9 @@
   (when demux
     (locking demux
       (reset! (:closed? demux) true)
+      (when-let [open? (:open? demux)]
+        (reset! open? false))
+      (.notifyAll ^Object demux)
       ;; The current turn is removed from :waiters at init time. It must stay
       ;; reachable here or eviction can kill the process while leaving the
       ;; invoke promise parked forever (claude-2, 2026-08-06).
@@ -638,6 +641,10 @@
                          ;; Unlike a local volatile in demux-loop!, this owner
                          ;; remains reachable by destroy-pouch!/eviction.
                          :owner (atom nil)
+                         ;; Protocol turn state, shared with the stdin writer.
+                         ;; `:in-flight?` tracks only a caller-owned turn and
+                         ;; therefore misses autonomous turns with no waiter.
+                         :open? (atom false)
                          :thread (atom nil)
                          :closed? (atom false)})}]
     (stderr-drainer proc stderr)
@@ -962,7 +969,7 @@
         tools (volatile! (java.util.ArrayList.))
         sid (volatile! (:session-id pouch))
         turn-id (volatile! nil)
-        open? (volatile! false)
+        open? (:open? demux)
         agent-initiated? (volatile! false)]
     (letfn [(start-turn! []
               (swap! turns inc)
@@ -988,7 +995,7 @@
               (vreset! agent-initiated? false)
               (vreset! text (StringBuilder.))
               (vreset! tools (java.util.ArrayList.))
-              (vreset! open? true))
+              (reset! open? true))
             (ensure-open! [] (when-not @open? (start-turn!)))
             (claim-compaction! [event]
               ;; A task_notification seen after the compact waiter registered
@@ -1021,7 +1028,11 @@
                   (deliver (:promise w) {:ok turn})
                   (report-unsolicited! aid turn)))
               (reset! owner nil)
-              (vreset! open? false))
+              (reset! open? false)
+              ;; A feed-line writer may be holding its already-registered
+              ;; waiter until this protocol turn closes. Wake it without doing
+              ;; any stdin work on the sole stdout reader thread.
+              (.notifyAll ^Object demux))
             (emit! [event]
               (when-let [w @owner]
                 (when-let [f (:on-event w)]
@@ -1101,7 +1112,7 @@
               (recur))
             ;; stdout closed: fail every outstanding waiter rather than
             ;; leaving them to time out one by one.
-            (do (vreset! open? false)
+            (do (reset! open? false)
                 (fail-demux-waiters!
                  (:demux pouch)
                  (ex-info "pouch process closed stdout" {:agent-id aid})))))
@@ -1116,6 +1127,38 @@
                 (.setDaemon true))]
         (when (compare-and-set! thread nil t)
           (.start t))))))
+
+(defn- await-demux-idle!
+  "Wait until DEMUX has no open protocol turn before writing stdin.
+
+   The waiter is registered before this call. `Object.wait` releases DEMUX's
+   monitor, so the sole reader can finish the autonomous turn and notify us.
+   Shutdown also clears `:open?`, marks `:closed?`, and notifies; a dead process
+   therefore cannot strand the writer."
+  [demux timeout-ms]
+  (let [deadline (when (and timeout-ms (pos? (long timeout-ms)))
+                   (+ (System/currentTimeMillis) (long timeout-ms)))]
+    (locking demux
+      (loop []
+        (cond
+          @(:closed? demux)
+          (throw (ex-info "pouch stdout closed while a turn awaited stdin"
+                          {}))
+
+          (not @(:open? demux))
+          true
+
+          (and deadline (<= deadline (System/currentTimeMillis)))
+          (throw (TimeoutException.
+                  (str "pouch feed timed out after " timeout-ms
+                       "ms waiting for the open turn to finish")))
+
+          :else
+          (do (.wait ^Object demux
+                     (long (if deadline
+                             (max 1 (- deadline (System/currentTimeMillis)))
+                             0)))
+              (recur)))))))
 
 (defn- feed-line-demux!
   "ON path: enqueue a waiter, write LINE, and await THIS turn's result.
@@ -1140,6 +1183,12 @@
                           {:agent-id (:agent-id pouch)})))
         (.add q w))
       (try
+        ;; Autonomous turns have no waiter and never set the pouch registry's
+        ;; :in-flight? flag. The protocol state is authoritative: do not let
+        ;; Claude consume this user event as a queued_command attachment to the
+        ;; open turn. Waiting here does not block the demux reader (`wait`
+        ;; releases the monitor), and the waiter remains visible to ownership.
+        (await-demux-idle! demux timeout-ms)
         (.write ^BufferedWriter (:writer pouch) (str line "\n"))
         (.flush ^BufferedWriter (:writer pouch))
         (catch Throwable t
