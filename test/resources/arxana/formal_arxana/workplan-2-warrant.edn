@@ -1,0 +1,24 @@
+{:warrant/id :formal-arxana/workplan-2
+ :implementation/futon3c "9abe433b5"
+ :implementation/futon4a "a55daeb"
+ :source {:path "/home/joe/notes/cascade-live-outline/arxana/all-items.edn"
+          :records 3881 :clusions 1720 :attestations 2160 :assessments 1
+          :items 323 :serves-clusions 416}
+ :evidence
+ [{:command "clojure -M:test -n futon3c.arxana.workplan-test"
+   :result {:tests 2 :assertions 3936 :failures 0 :errors 0}}
+  {:command "clojure -M:test -n futon3c.arxana.formal-c1-test"
+   :result {:tests 7 :assertions 217 :failures 0 :errors 0}}
+  {:command "FUTON3C_ROOT=<worktree> test/formal-workplan-e2e.sh"
+   :result {:tests 1 :failures 0 :errors 0 :real-full-private-stack true}}
+  {:command "test/stop-workplan-demo-test.sh" :result :pass}
+  {:command "clj-kondo --lint changed-clojure" :result {:errors 0 :warnings 0}}
+  {:command "check-parens changed Clojure and Lisp" :result :ok}
+  {:command "byte-compile futon4a-workplan.el with warnings fatal" :result :ok}]
+ :measurements {:cold-load-ms 271860.50059 :list-limit-200-seconds 0.07}
+ :acceptance {:failure-ledger [] :replay-created 0 :bounded-list-total 323
+              :closed-item "E-R14-red-ring-fill" :closed-actor "joe"
+              :ticket-mentions 5 :drafts-labelled true :separate-serves true
+              :recorded-evidence-fixture true :demo-port 7094 :demo-active true}
+ :not-run [:full-arxana-suite]
+ :live-store-writes false}
