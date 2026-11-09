@@ -64,9 +64,14 @@
 (defn resolved-relations [rows]
   (let [resolve (resolver rows)]
     (reduce (fn [acc rel]
-              (if-let [target (get resolve (str/lower-case (:target rel)))]
-                (update acc :resolved conj (assoc rel :target target))
-                (update acc :unresolved conj rel)))
+              (let [target (get resolve (str/lower-case (:target rel)))]
+                (cond
+                  (nil? target) (update acc :unresolved conj rel)
+                  ;; An alias can resolve a relation back to its own source
+                  ;; ("arxana part-of futon4", where futon4 is an alias of
+                  ;; arxana).  A self-referent says nothing; report it.
+                  (= target (:source rel)) (update acc :unresolved conj (assoc rel :reason :self-via-alias))
+                  :else (update acc :resolved conj (assoc rel :target target)))))
             {:resolved [] :unresolved []}
             (mapcat parse-relations rows))))
 

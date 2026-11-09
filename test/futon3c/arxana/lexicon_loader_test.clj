@@ -47,7 +47,11 @@
     ;; The current file parses to 742 targets (claude-6's earlier survey said
     ;; 744); keep this assertion tied to the bytes actually loaded.
     (is (= 742 (+ (count (:resolved p)) (count (:unresolved p)))))
-    (is (= 153 (count (:unresolved p))))
+    (is (= 155 (count (:unresolved p))))
+    ;; No relation resolves back to its own source through an alias.
+    (is (not-any? #(= (:source %) (:target %)) (:resolved p)))
+    (is (= #{"arxana" "holistic-argument"}
+           (set (map :source (filter #(= :self-via-alias (:reason %)) (:unresolved p))))))
     (is (= 9 (count (get-in p [:survey :new-rows]))))
     (is (= {:entity/slug "agency"} (:asserted-content entity-record)))))
 
@@ -86,11 +90,13 @@
           (doseq [[source verb target] [["kangaroo-pouch" "part-of" "agency"]
                                         ["kangaroo-pouch" "in-namespace" "agency"]
                                         ["kangaroo-pouch" "extends" "agency"]
-                                        ["arxana" "uses" "arxana-store"]
-                                        ;; futon4 is an alias of the Arxana entity in claude-6's data.
-                                        ["arxana" "part-of" "arxana"]]]
+                                        ["arxana" "uses" "arxana-store"]]]
             (let [r (ref-record source verb target)]
               (is (= r (get-record cfg (:id r))))))
+          ;; futon4 is an alias of the Arxana entity in claude-6's data, so
+          ;; "part-of futon4" would be arxana part-of arxana: not written.
+          (is (:error (call cfg "no-self" :entity/get
+                            {:entity/id (:id (ref-record "arxana" "part-of" "arxana"))})))
           (let [{:keys [source verb target]} (first (:unresolved (sut/plan)))
                 absent (ref-record source verb target)]
             (is (:error (call cfg "unresolved-missing" :entity/get {:entity/id (:id absent)})))))))))
