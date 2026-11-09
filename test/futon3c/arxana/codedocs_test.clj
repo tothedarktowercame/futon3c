@@ -10,6 +10,7 @@
             [futon3c.arxana.codedocs-relocation :as codedocs-relocation]
             [futon3c.arxana.correspond :as corr]
             [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.json :as ajson]
             [futon3c.arxana.service :as service]
             [futon3c.arxana.store-http :as store-http]
             [xtdb.node :as xtn])
@@ -510,6 +511,18 @@
             expected-report (edn/read-string
                              (slurp "test/resources/arxana/codedocs/survives-edits.edn"))]
         (is (= expected-report stored-report))
+        (doseq [[path versions] code-results
+                :let [old (first versions) cur (second versions)
+                      wire-response (call cfg (str "since-view:" path) :codedocs/view
+                                          {:artifact/revision-id (:revision-id cur)
+                                           :since/revision-id (:revision-id old)})
+                      _ (is (= wire-response (ajson/decode (ajson/encode wire-response))))
+                      projected (get-in wire-response [:ok :definitions])
+                      by-symbol (into {} (map (juxt #(get % :symbol) identity) projected))]]
+          (doseq [[symbol _] (:scopes cur)]
+            (is (= (if (= symbol "production-readiness") :unchanged :changed)
+                   (keyword (get-in by-symbol [symbol :since :status])))
+                (str symbol " since status comes from stored relocation evidence"))))
         (is (= before (into {} (map (juxt identity #(record cfg %)) immutable-ids)))
             "relocation appends evidence without changing scopes or correspondences")
         (testing "duplicated exact content remains ambiguous with both candidates"

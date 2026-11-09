@@ -16,8 +16,7 @@
   Unknown-field refusal stays in the envelope/schema layer, not the codec."
   (:require [cheshire.core :as cheshire]
             [clojure.string :as str])
-  (:import [java.util Base64]
-           [java.nio.charset StandardCharsets]))
+  (:import [java.util Base64]))
 
 (defn- encode-key [k]
   (cond
@@ -37,11 +36,7 @@
     (sequential? x) (mapv encode-value x)
     (set? x) (throw (ex-info "sets are not permitted in arxana JSON payloads"
                              {:value x}))
-    (string? x) (do
-                  (when (str/starts-with? x ":")
-                    (throw (ex-info "plain strings may not begin with ':' (reserved for keyword tagging)"
-                                    {:value x})))
-                  x)
+    (string? x) (if (str/starts-with? x ":") {"$string" x} x)
     (symbol? x) (str x)
     :else x))
 
@@ -60,9 +55,11 @@
   "Walk parsed JSON data back into arxana values."
   [x]
   (cond
-    (map? x) (if (and (= 1 (count x)) (contains? x "$base64"))
+    (map? x) (cond
+               (and (= 1 (count x)) (contains? x "$base64"))
                (.decode (Base64/getDecoder) ^String (get x "$base64"))
-               (into {} (map (fn [[k v]] [(decode-key k) (decode-value v)])) x))
+               (and (= 1 (count x)) (contains? x "$string")) (get x "$string")
+               :else (into {} (map (fn [[k v]] [(decode-key k) (decode-value v)])) x))
     (sequential? x) (mapv decode-value x)
     (string? x) (if (re-matches keyword-tag-re x)
                   (keyword (subs x 1))

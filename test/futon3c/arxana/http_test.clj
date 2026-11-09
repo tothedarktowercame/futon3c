@@ -54,8 +54,8 @@
              (= "hi" (String. ^bytes (:bytes rt) "UTF-8")))))
   (is (thrown? clojure.lang.ExceptionInfo
                (ajson/encode {:bad #{1 2}})))
-  (is (thrown? clojure.lang.ExceptionInfo
-               (ajson/encode {:s ":looks-like-keyword"}))))
+  (is (= {:s ":looks-like-keyword"}
+         (ajson/decode (ajson/encode {:s ":looks-like-keyword"})))))
 
 (deftest http-surface-test
   (let [server (http/start! {:port test-port :service-cfg (test-cfg)})]

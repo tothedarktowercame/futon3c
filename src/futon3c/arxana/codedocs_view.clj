@@ -103,7 +103,40 @@
      :standing {:basis (:basis link-att) :standing (:standing link-att)}
      :record/ids ids}))
 
-(defn- definition-entry [read! truncations membership scope]
+(defn- scopes-on-revision [read! truncations revision-id]
+  (->> (:result/edge-ids
+        (query! read! truncations
+                {:query/type :role-reverse :edge/type [:scope-in-revision 1]
+                 :endpoint/role :revision :endpoint/id revision-id :time/order :asc}))
+       (map #(read-record read! %))
+       (map #(read-record read! (endpoint-id % :scope)))
+       (remove nil?)))
+
+(defn- since-status [read! truncations scope historical-scopes historical-id]
+  (if-not historical-id
+    {:status :not-checked}
+    (if-let [old (first (filter #(= (get-in scope [:asserted-content :symbol/name])
+                                   (get-in % [:asserted-content :symbol/name]))
+                               historical-scopes))]
+      (let [att (->> (attestations read! truncations (:id old))
+                     (filter #(and (= "arxana.resolve/anchor" (get-in % [:method :id]))
+                                   (= (get-in scope [:asserted-content :artifact/revision-id])
+                                      (get-in % [:content :target/revision-id]))))
+                     first)
+            status (get-in att [:content :resolution/status])
+            candidate (first (get-in att [:content :candidates]))
+            actual [(get-in candidate [:location :range :start])
+                    (get-in candidate [:location :range :end])]
+            range-att (attestation-by-method read! truncations (:id scope)
+                                             "codedocs/clojure-definition")]
+        {:status (if (and (= :resolved status)
+                          (= actual (get-in range-att [:content :codepoint-range])))
+                   :unchanged :changed)
+         :from/revision-id historical-id
+         :attestation/id (:id att)})
+      {:status :not-checked :from/revision-id historical-id})))
+
+(defn- definition-entry [read! truncations membership scope historical-scopes historical-id]
   (let [scope-id (:id scope)
         range-att (attestation-by-method read! truncations scope-id
                                          "codedocs/clojure-definition")
@@ -112,12 +145,15 @@
         lean (->> (correspondences read! truncations :target scope-id :cites-code)
                   (map #(lean-entry read! truncations %))
                   (sort-by (juxt :declaration/fqn :correspondence/id)) vec)
-        ids (->> (concat [(:id membership) scope-id (:id range-att)]
+        since (since-status read! truncations scope historical-scopes historical-id)
+        ids (->> (concat [(:id membership) scope-id (:id range-att)
+                          (:attestation/id since)]
                          (mapcat :record/ids docs) (mapcat :record/ids lean))
                  (remove nil?) distinct sort vec)]
     {:scope/id scope-id :symbol (get-in scope [:asserted-content :symbol/name])
      :form (get-in scope [:asserted-content :definition/form])
      :codepoint/range (get-in range-att [:content :codepoint-range])
+     :since since
      :docs docs :lean lean :record/ids ids}))
 
 (defn view [read! body]
@@ -141,8 +177,12 @@
                               (attestation-by-method read! truncations (:id scope)
                                                      "codedocs/clojure-definition")]))
                       (sort-by #(get-in % [2 :content :codepoint-range 0])))
+            historical-id (:since/revision-id body)
+            historical-scopes (when historical-id
+                                (scopes-on-revision read! truncations historical-id))
             definitions (mapv (fn [[membership scope _]]
-                                (definition-entry read! truncations membership scope)) rows)
+                                (definition-entry read! truncations membership scope
+                                                  historical-scopes historical-id)) rows)
             linked? (boolean (some #(or (seq (:docs %)) (seq (:lean %))) definitions))
             record-ids (->> definitions (mapcat :record/ids) distinct sort vec)]
         (cond-> {:result/status (if (seq @truncations) :truncated :complete)

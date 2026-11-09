@@ -362,12 +362,18 @@
                                 (f6/argument-view read! (:argument/id body)))))
 
            (= op :codedocs/view)
-           (let [read! (fn [read-op read-body]
-                         (dispatch cfg {:protocol/version env/protocol-version
-                                        :message/id (str (:message/id ok) ":codedocs:"
-                                                         (hash [read-op read-body]))
-                                        :operation read-op :principal/id "codedocs/projector"
-                                        :body read-body}))]
+           (let [cache (atom {})
+                 read! (fn [read-op read-body]
+                         (if-let [hit (get @cache [read-op read-body])]
+                           hit
+                           (let [result
+                                 (dispatch cfg {:protocol/version env/protocol-version
+                                                :message/id (str (:message/id ok) ":codedocs:"
+                                                                 (hash [read-op read-body]))
+                                                :operation read-op :principal/id "codedocs/projector"
+                                                :body read-body})]
+                             (swap! cache assoc [read-op read-body] result)
+                             result)))]
              (env/response ok (with-semantic-digest op (codedocs-view/view read! body))))
 
            (= op :formal-f6/page)

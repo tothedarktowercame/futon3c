@@ -162,7 +162,7 @@
    :codedocs/view
    {:schema-version 1
     :required #{:artifact/revision-id}
-    :allowed #{:artifact/revision-id}
+    :allowed #{:artifact/revision-id :since/revision-id}
     :projection [:operation :artifact/revision-id :links/status :links/at-revision
                  :result/status :result/truncation [:definitions] [:record/ids]]}
 
