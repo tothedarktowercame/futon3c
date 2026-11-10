@@ -193,6 +193,15 @@
     :allowed #{:subject/id :verdict :actor :reason :time}
     :projection [:operation :record/id :subject-clusion-id :created?]}
 
+   :lexicon/entity-index
+   {:schema-version 1 :required #{} :allowed #{}
+    :projection [:operation [:entities] :result/status :result/total]}
+
+   :lexicon/entity-relations
+   {:schema-version 1 :required #{}
+    :allowed #{:entity/slug}
+    :projection [:operation :entity/slug :entity [:relations] [:record/ids] :result/status]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}

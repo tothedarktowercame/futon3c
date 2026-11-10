@@ -22,6 +22,7 @@
             [futon3c.arxana.formal-f6 :as f6]
             [futon3c.arxana.formal-f6-page :as f6-page]
             [futon3c.arxana.journal :as journal]
+            [futon3c.arxana.lexicon-views :as lexicon-views]
             [futon3c.arxana.graph-read :as graph-read]
             [futon3c.arxana.resolve.evaluator :as evaluator]
             [futon3c.arxana.resolve.promotion :as promotion]
@@ -405,6 +406,26 @@
              (env/response ok (with-semantic-digest op
                                 (backlinks/entity-view read! (or (:workplan/backlinks-index cfg)
                                                                  backlinks/default-index) body))))
+
+           (= op :lexicon/entity-index)
+           ;; Bounded and cacheable: seeds come from the loader's sources,
+           ;; content comes only from the store.  A 60 s cache keeps the
+           ;; stepper's painting path at one index fetch per minute at most.
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":lexicon:" (hash [read-op read-body]))
+                                        :operation read-op :principal/id "lexicon/projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op (lexicon-views/index-view-cached read!))))
+
+           (= op :lexicon/entity-relations)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":lexicon-rel:" (hash [read-op read-body]))
+                                        :operation read-op :principal/id "lexicon/projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op
+                                (lexicon-views/entity-relations-view read! (:entity/slug body)))))
 
            (= op :workplan/introduce)
            (let [read! (fn [read-op read-body]
