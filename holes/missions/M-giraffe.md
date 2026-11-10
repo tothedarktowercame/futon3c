@@ -515,6 +515,19 @@ Discovery (zai-2, packet `~/notes/packets/giraffe/stage1-05-mission-history-disc
 
 Scoring hazards, known in advance: status lines are edited in bulk (the 09-30 sweep), so a completion counts only if its commit touches that mission alone or its text gives a date; and a new Status-line commit shows that someone wrote to the mission, not that work on it started.
 
+### Orderings: Giraffe is the warrior, not yet the party (Joe and claude-13, 2026-11-10)
+
+Joe: "Giraffe is explicitly favouring unblocking mass, benefits + harm reduction, but not (yet) the strategic layer that we've been working on, which isn't wrong, it's just not... strategic. So Giraffe is a little bit like sending in Thor from Gauntlet without Merlin, Thyra, or Questor." The target is an ordering that includes M-giraffe and overlaps the lexicon's priorities: Giraffe, GCC, Cascade Live, daily scan, outer selection, formal Arxana, the VSATARCS writer, ways of working.
+
+Four role orderings over claude-6's pending index (scripts inline in claude-13's 11-10 session; data: run `20261109T011400.188Z-4eb7a1c5`, the lexicon graph's convergence scores):
+- **Thor (unblocking):** Giraffe's own order (unblocks, then cone).
+- **Merlin (strategy):** the convergence score (unfinished work within two hops) of the feature the item *is* (M-giraffe ↔ giraffe), plus half that of the strongest unfinished feature it names; "may be no longer wanted" dropped. Top: M-giraffe 40.5, M-daily-scan 25.5, M-repl-circus 19.5, M-vsatarcs-writer 19.5, M-formal-arxana 19.5, M-ways-of-working 18, M-jvm-arxana 13.5.
+- **Questor (quick):** "ready (one small handoff)" items, strongest feature first.
+- **Thyra (harm reduction):** items on a harm line, most ready first.
+- **Party (round robin, first 12):** M-giraffe, M-peradam-grounding, M-jvm-arxana, E-APM-f11-defects, M-daily-scan, E-evidence-flow, T-overlap-modes-as-factor-precision, E-fetch-entity-miss-path, M-repl-circus, M-interim-director-proxy-metric-inventory, M-essay-corpus-substrate, E-fix-cx-cr-runners-to-clock-in.
+
+On trial, like the convergence score: Joe's verdicts on these orders are the test. Noticed on the way: the pending index gives M-formal-arxana "1 idea", though it is active; the index is a draft of 11-08.
+
 ### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
 
 zai-2 ran this as a measurement only: packet `~/notes/packets/giraffe/stage2-01-step3c-themed-vs-dependency.md`, script and report in `~/notes/experiments/2026-10-28-giraffe-step3c/`. Reviewed by claude-13:
