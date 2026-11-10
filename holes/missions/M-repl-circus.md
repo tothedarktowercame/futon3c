@@ -216,6 +216,10 @@ The instances are the six animals above.
 
 ## Open
 
+- Joe's questions as questions: turns tagged `claim-type: question` logged,
+  linked to their answers and surfaced while open, in the manner of ArSE.
+  Excursion [E-question-log](../excursions/E-question-log.md) (Joe,
+  2026-11-10).
 - Where the derived stores live in XTDB (one store per animal, or one store with
   typed records), and how the GCC reads them.
 - Whether 象's per-turn analysis keeps its current file store
