@@ -592,6 +592,54 @@ Consequences for DERIVE (claude-13):
 - **Strategy cascades:** to be built from futon3/library/gauntlet (8),
   math-strategy (21) and war-room (31) patterns.
 
+### The strategy cascade at the level of wants (draft for Joe, claude-13, 2026-11-10)
+
+Joe: "our characters come with clear wants, e.g., unblock, reduce harm, finish
+quickly, and 'be strategic' are all totally good and totally valid wants,
+which *sometimes* might conflict with each other. But to work in the cascade
+system we need to match these to possible blends (good for ameliorating
+tensions) and tokens … we've already done the difficult data gathering
+(Giraffe) and data modelling (Gauntlet) parts, we just need to figure out how
+to fit that to the theory & tooling."
+
+How the War Machine already works, one target at a time (futon2
+`cascade_problems.clj`): a target has a **declared want**, a **fact universe**
+of tokens that checks can observe (each token has a locator: the observation
+contract's classes C3–C8), and **constructed cascades** of patterns, which are
+the policies. G scores those policies against the preferences C over the
+tokens, with a horizon and a β. A target with no declared want, no universe or
+no constructed cascade is refused, never defaulted.
+
+The same shape, one level up, where the "target" is the pool of work for this
+period:
+
+| character | want | token (what a check observes after a horizon) | where the facts come from |
+|---|---|---|---|
+| Thor | unblock | an item that had dependants became ready or closed, and its dependants moved | Giraffe run-to-run diff: readiness, unblocks |
+| Thyra | reduce harm | an item on a harm line closed, or its harm observation went away | pending index harm lines; repair records |
+| Questor | finish quickly | a "ready, one small handoff" item closed within the horizon | Giraffe readiness and the item's status |
+| Merlin | be strategic | a focus-band item closed, or a readability observable rose (open items in a cluster, lexicon relations reviewed, strategic missions with needs read) | the focus relation from the operator HEAD; the lexicon stack |
+
+**Policies:** the four orderings, and the party vote. **Tensions:** pairs whose
+picks pull against each other's tokens: Questor's quick closures against
+Merlin's multi-day strategic missions; Thor's top unblockers against the
+index's "may be no longer wanted" (#6, #14); Thyra's repairs against Thor's
+unblocking. **Blends** (Goguen 3/2: a new pattern whose occurrences satisfy
+both inputs in part), one per tension:
+- Merlin × Questor → *the smallest ready step inside a strategic mission*
+  (instances: M-jvm-arxana's one-small-handoff, T-overlap-modes on Giraffe).
+- Merlin × Thor → *unblock within the focus band* (unblocking counted only
+  among focus and associated items).
+- Thyra × Thor → *the repair that unblocks* (harm-line items whose closure
+  makes another item ready).
+
+A blend is preferred when a single item earns several characters' tokens. The
+party vote's round robin is the crudest blend, taking turns instead of finding
+items that serve two wants at once. G then chooses among the pure policies,
+the party and the blends by expected tokens, and the horizon lets the tokens
+be checked afterwards (Giraffe's next run). This is what turns the
+characters' wants into a strategy cascade the War Machine can run.
+
 ### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
 
 zai-2 ran this as a measurement only: packet `~/notes/packets/giraffe/stage2-01-step3c-themed-vs-dependency.md`, script and report in `~/notes/experiments/2026-10-28-giraffe-step3c/`. Reviewed by claude-13:
