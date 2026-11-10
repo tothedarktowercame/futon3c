@@ -60,7 +60,18 @@ def ack_delivery(args):
     ack_url = payload.get("ack-url")
     if not isinstance(ack_url, str) or not ack_url.startswith("/"):
         raise ValueError("payload has no usable ack-url")
-    body = json.dumps({"note": args.note} if args.note is not None else {}).encode("utf-8")
+    body = {}
+    if args.note is not None:
+        body["note"] = args.note
+    result = args.result
+    if args.result_file is not None:
+        with open(args.result_file, encoding="utf-8") as handle:
+            result = handle.read()
+    if result is not None:
+        # The ack's "result" becomes the job result, so the sender's completion
+        # bellback carries the seat's answer (http.clj ack handler).
+        body["result"] = result
+    body = json.dumps(body).encode("utf-8")
     request = urllib.request.Request(
         args.base_url.rstrip("/") + ack_url,
         data=body,
@@ -86,6 +97,8 @@ def parser():
     ack = commands.add_parser("ack")
     ack.add_argument("job_id")
     ack.add_argument("--note")
+    ack.add_argument("--result", help="answer text returned to the sender")
+    ack.add_argument("--result-file", help="file whose text is returned to the sender")
     ack.set_defaults(action=ack_delivery)
     return result
 
