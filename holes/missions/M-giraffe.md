@@ -6,6 +6,7 @@
 **Owner:** Joe + claude-11
 **Follows:** *(removed 2026-11-10. Joe: "Giraffe as far as I know has absolutely no relationship whatsoever to Kangaroo; that is a false friend to at the level of being a 'planted bug'." The line had read "M-kangaroo (warm pouches, i.e. agents that persist; this mission is about the work those agents are given)", and it was the source of the 11-04 reading `relates-to M-kangaroo`.)*
 **Serves:** our own War Machine first. Second, the consulting offer: "show me your agent logs and your ticket tracker, and I will show you how to make it work better" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞).
+**Needs:** E-outer-selection-landscape (artifact: selection reads readiness, cones and priority; futon2 `holes/labs/wm-contract/E-outer-selection-landscape.md`, and this mission's selection section); M-repl-circus (artifact: the GCC, for tuning). Recorded by claude-13, 2026-11-10, from Joe, 2026-11-10: "the better M-repl-circus works, the better M-giraffe works b/c Giraffe's tuning should be based on the GCC"; M-repl-circus ("The GCC is meant to be read from many places", line 29) lists Giraffe as a reader.
 
 ## HEAD
 
@@ -652,6 +653,25 @@ observables. Baseline, measured by claude-13 on 2026-11-10 from run
   (M-war-machine-vsatarcs-interop is not);
 - lexicon relations reviewed by Joe: **0 of 589**. Two were rejected by
   claude-13 as alias self-references.
+
+*Correction (claude-13, 2026-11-10):* the 100 of 482 above came from a page
+script whose item pattern skipped ids with CJK letters (M-象-2000 and six
+others). Counted correctly, the same run gives **102 of 489 (20.9%)**.
+
+**First readability change (2026-11-10).** codex-2 read the needs of the four
+strategic missions through the supported lane (reader self-check 0 problems;
+futon3c `10c68fb04` lets a reading keep its class). New run
+`20261110T035845.799Z-9626cf36`:
+- open items in a Giraffe cluster: **107 of 489 (21.9%)**, up from 102;
+- strategic missions clustered: **3 of 4**. M-repl-circus, M-formal-arxana and
+  M-jvm-arxana are in `work-cluster/64cc6fd4000e` (with M-象-2000,
+  M-ways-of-working, M-latex-wysiwyg and five others), by the five `:artifact`
+  needs M-formal-arxana states (lines 338–343). M-giraffe is still unclustered:
+  it stated no needs. The **Needs** line added to this header on the same day
+  should change that at the next reading;
+- no cycles, no anomalies;
+- lexicon relations reviewed by Joe: still 0 of 589 (the stepper review
+  section is with zai-1).
 
 ### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
 

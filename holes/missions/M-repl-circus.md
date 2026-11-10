@@ -1,6 +1,7 @@
 # M-repl-circus: the Circus as hooks around the shared REPL
 
 **Status:** OPEN — MAP (ungated 2026-11-07, Joe + codex-7).
+**Needs:** M-formal-arxana (artifact: record types); E-gcc-schema (artifact: the GCC definition, futon4 `holes/excursions/E-gcc-schema.md`). Recorded by claude-13, 2026-11-10, from Joe: "it also depends on M-formal-arxana working and a GCC being defined that they can write into"; futon4 `holes/labs/M-formal-arxana/DERIVE-repl-circus-needs.md`.
 
 The IDENTIFY → MAP gate, [E-evidence-cleanup](../excursions/E-evidence-cleanup.md),
 closed in futon3c `1ccde6689`.  Its prevention follow-ups are also live in
