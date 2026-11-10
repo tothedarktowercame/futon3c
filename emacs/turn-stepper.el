@@ -8,7 +8,8 @@
 ;;   SAID      — the operator turn (time + text)
 ;;   PARSE     — one line per fragment: combined intent (or "disagree: a / b")
 ;;   PATTERNS  — matched ids, proposals grouped under parent, rejected count
-;;   HAPPENED  — what happened between this turn and the next
+;;   HAPPENED  — what happened between this turn and the next (last: it is
+;;               long, an annex; ports and alignment come before it)
 ;;
 ;; Modelled on futon0/contrib/stack-hud.el's `*Stack Context*` side window.
 ;;
@@ -506,14 +507,16 @@ carries that information."
      (propertize "PATTERNS\n" 'face '(:weight bold))
      (turn-stepper--render-patterns patterns)
      "\n"
-     (propertize "HAPPENED\n" 'face '(:weight bold))
-     (if happened
-         (mapconcat #'turn-stepper--render-happened-row happened "\n")
-       "  (nothing between this turn and the next)")
      (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
                                  (turn-stepper--aget 'at turn))
      (turn-stepper--render-alignment (turn-stepper--aget 'alignment frame))
      (turn-stepper--render-pattern-verdicts (turn-stepper--aget 'pattern_verdicts frame))
+     ;; HAPPENED is long and comes last, as an annex (Joe, 2026-11-10).
+     "\n"
+     (propertize "HAPPENED\n" 'face '(:weight bold))
+     (if happened
+         (mapconcat #'turn-stepper--render-happened-row happened "\n")
+       "  (nothing between this turn and the next)")
      "\n")))
 
 ;;; ---------------------------------------------------------------- mode
