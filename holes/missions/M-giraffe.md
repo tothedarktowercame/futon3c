@@ -555,6 +555,43 @@ slot is then derived: **focus** = items that serve the deepest stated level,
 **associated** = items that serve only a shallower level, **useful elsewhere**
 = the rest. Each assignment cites the level it rests on.
 
+### Operator HEAD for the strategic layer (Joe, 2026-11-10)
+
+> "in order to create a strategic layer I think we need to join Giraffe to our
+> usual G-over-policies and pick the best one. We have already created some
+> variant of those with the Gauntlet-inspired ratings. But goals like 'prove
+> the apex thesis' or 'submit a strong Mozilla application' are not themselves
+> strategies, they are hopes. Luckily we already created these:
+> futon3/library/gauntlet/ and they might be very useful for creating
+> 'strategy' cascades. The only other thing that we have that are close are
+> futon3/library/math-strategy and of course futon3/library/war-room …
+> the strategy here is to build a representation layer for FUTON that is
+> readable enough that we can actually *see* how everything is related and not
+> just 'know' that everything is related. That *can be thought about* as a
+> mapping to AIF or VSM. In this regard we may have *as many as twenty*
+> strategic missions, but a few stand out: Giraffe, the REPL Circus, Arxana,
+> and the War Machine are all contributing to a strategic capability.
+> Meanwhile I am continuing to develop *mathematical* capabilities because,
+> apart from a self-referential futon-for-futon's-sake, that is one of the most
+> direct ways to develop a 'cui bono' argument."
+
+Consequences for DERIVE (claude-13):
+- **Policies:** the four role orderings (Thor, Merlin, Questor, Thyra) and the
+  party vote are task-selection policies. The War Machine's G scores them,
+  outer level only, with no inner plans before selection, and the best is
+  picked. Giraffe supplies their facts (readiness, cones, unblocks).
+- **Strategy, not hope:** the strategy is the readable representation layer.
+  Its preference needs an observable, or G cannot score against it.
+  Candidates: the share of open items in a cluster (M-giraffe itself is in
+  none), the share of lexicon relations reviewed by Joe, and strategic
+  missions with needs edges read.
+- **Focus from the HEAD:** focus = items in or feeding the four standout
+  missions (M-giraffe, M-repl-circus, M-formal-arxana and M-jvm-arxana, the
+  War Machine missions). The mathematics strand is a second strategic line
+  (cui bono), kept as its own band, not folded in.
+- **Strategy cascades:** to be built from futon3/library/gauntlet (8),
+  math-strategy (21) and war-room (31) patterns.
+
 ### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
 
 zai-2 ran this as a measurement only: packet `~/notes/packets/giraffe/stage2-01-step3c-themed-vs-dependency.md`, script and report in `~/notes/experiments/2026-10-28-giraffe-step3c/`. Reviewed by claude-13:
