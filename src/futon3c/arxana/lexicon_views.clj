@@ -17,6 +17,7 @@
             [futon3c.arxana.records :as records]))
 
 (def index-limit 400)
+(def ^:private read-parallelism 3)
 
 (defn- ok! [r] (or (:ok r) (throw (ex-info "public read failed" {:response r}))))
 (defn- entity! [read! id] (:record (ok! (read! :entity/get {:entity/id id}))))
@@ -75,20 +76,42 @@
                        (:aka c) (assoc :entity/aka (:aka c)))))]
      {:result/status :complete :result/total (count rows) :entities rows})))
 
-(def index-cache-ttl-ms 60000)
-(defonce ^:private index-cache (atom {:at 0 :read! nil :value nil}))
+;; The index costs about a thousand store reads (45 s on :7094, 2026-11-10),
+;; so it is cached for ten minutes, timed from when the build finished, and
+;; built once at a time: a stale value is served while one rebuild runs.
+;; Lexicon entities and their naming attestations come only from the loader,
+;; so a stale index can miss only entities loaded in the last ten minutes.
+(def index-cache-ttl-ms 600000)
+(defonce ^:private index-cache (atom {:at 0 :value nil :building nil}))
+
+(defn- start-index-build!
+  "The running build, starting one when none runs."
+  [read!]
+  (locking index-cache
+    (or (:building @index-cache)
+        (let [f (future
+                  ;; The lock orders this future's update after the
+                  ;; assignment of :building below.
+                  (let [v (try (entity-index-view read!) (catch Throwable _ nil))]
+                    (locking index-cache
+                      (swap! index-cache merge {:building nil}
+                             (when v {:value v :at (System/currentTimeMillis)})))
+                    v))]
+          (swap! index-cache assoc :building f)
+          f))))
 
 (defn index-view-cached
-  "entity-index-view with a 60 s cache.  The read! closure changes per
-  request, but reads are store-truthful and idempotent, so the first
-  closure may serve the whole window."
+  "entity-index-view, cached (see index-cache-ttl-ms).  The read! closure
+  changes per request, but reads are store-truthful and idempotent, so the
+  closure of the request that starts a build may serve it."
   [read!]
-  (let [now (System/currentTimeMillis)]
-    (if (and (:value @index-cache) (< (- now (:at @index-cache)) index-cache-ttl-ms))
-      (:value @index-cache)
-      (let [v (entity-index-view read!)]
-        (reset! index-cache {:at now :value v})
-        v))))
+  (let [{:keys [at value]} @index-cache
+        fresh? (< (- (System/currentTimeMillis) at) index-cache-ttl-ms)]
+    (cond
+      (and value fresh?) value
+      value (do (start-index-build! read!) value)
+      :else (let [b (start-index-build! read!)]
+              (or (and b @b) (entity-index-view read!))))))
 
 (defn- endpoint-id [record role]
   (get-in (first (filter #(= role (:role %)) (:endpoints record))) [:target :clusion/id]))
@@ -124,10 +147,19 @@
     (let [e (entity-by-slug read! slug)]
       (if-not e
         {:result/status :missing :error/detail {:entity/slug slug}}
-        (let [outgoing (mapv #(referent-row read! slug :outgoing (entity! read! %))
-                             (reverse-ids read! [:workplan/referent 1] :entity (:id e)))
-              incoming (mapv #(referent-row read! slug :incoming (entity! read! %))
-                             (reverse-ids read! [:workplan/referent 1] :target (:id e)))]
+        ;; Each row costs several store reads; rows are independent, so they
+        ;; are read a few at a time (agency: 36 rows, 8.9 s one at a time).
+        ;; futon1b admits 4 expensive reads at once and answers 503 beyond
+        ;; that, so at most read-parallelism run together.
+        (let [rows (fn [direction role]
+                     (->> (reverse-ids read! [:workplan/referent 1] role (:id e))
+                          (partition-all read-parallelism)
+                          (mapcat (fn [ids] (doall (pmap #(referent-row read! slug direction
+                                                                        (entity! read! %))
+                                                         ids))))
+                          vec))
+              outgoing (rows :outgoing :entity)
+              incoming (rows :incoming :target)]
           {:result/status :complete
            :entity/slug slug
            :entity e
