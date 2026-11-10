@@ -187,6 +187,7 @@
 ;;   holds the table asks "anything newer than V?" and gets a few bytes back.
 
 (def table-ttl-ms 600000)
+(def empty-table-ttl-ms 15000)
 (def ^:private first-build-parallelism 3)
 (def ^:private rebuild-parallelism 1)
 (def ^:private boot-id (str (System/currentTimeMillis)))
@@ -324,7 +325,11 @@
   than table-ttl-ms.  Never waits."
   [read!]
   (let [{:keys [at value] :as t} @table]
-    (when (or (nil? value) (>= (- (System/currentTimeMillis) at) table-ttl-ms))
+    ;; A table with no entities was built before the lexicon was loaded;
+    ;; it is cheap to rebuild and wrong to keep for ten minutes.
+    (when (or (nil? value)
+              (>= (- (System/currentTimeMillis) at)
+                  (if (seq (:entities value)) table-ttl-ms empty-table-ttl-ms)))
       (start-table-build! read!))
     (when value t)))
 
