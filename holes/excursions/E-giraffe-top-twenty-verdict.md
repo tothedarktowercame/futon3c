@@ -79,3 +79,9 @@ The report's own counts, read by claude-13 the same day from
 That is 461/480 = 96.0% of those with Lean material, or 461/491 = 93.9% of all
 problems.
 
+Joe's bar, same day: "It's 95%+ with Lean material, the other ones were deemed
+untranslatable (e.g. missing content)". So the T3.4 certificate checks
+solved-with-zero-sorry / problems-with-Lean-material >= 95%, with the 11
+problems without Lean excluded as untranslatable. At the reading above:
+461/480 = 96.0%, met.
+
