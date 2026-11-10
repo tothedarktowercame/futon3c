@@ -106,7 +106,18 @@
     (is (= [(:to forward) (:from forward)] [(:from backward) (:to backward)]))
     (is (= [:declared :inferred] [(:basis forward) (:basis backward)]))
     (is (= :closure (:class forward) (:class backward)))
-    (is (= (:evidence edge) (:evidence-pin forward)))))
+    (is (= (:evidence edge) (:evidence-pin forward)))
+    ;; The reader's stated class survives conversion (2026-11-10); an unknown
+    ;; or absent class stays :closure.
+    (is (= :artifact (:class (:edge (convert missions/default-repos ids (:id record)
+                                             (assoc edge :kind "depends-on" :basis "declared"
+                                                    :intended_class "artifact"))))))
+    (is (= :alternative (:class (:edge (convert missions/default-repos ids (:id record)
+                                                (assoc edge :kind "depends-on" :basis "declared"
+                                                       :intended_class "alternative"))))))
+    (is (= :closure (:class (:edge (convert missions/default-repos ids (:id record)
+                                            (assoc edge :kind "depends-on" :basis "declared"
+                                                   :intended_class "bogus"))))))))
 
 (deftest scope-defaults-to-missions-excursions-and-flows-into-graph-terms
   (let [result (readings/consume options)

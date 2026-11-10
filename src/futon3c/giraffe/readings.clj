@@ -38,6 +38,16 @@
          :passed? (and (zero? (:exit result)) (map? record))})
       (finally (.delete file)))))
 
+(def ^:private reading-classes #{"closure" "artifact" "alternative"})
+
+(defn- edge-class
+  "The class the reader stated (intended_class), else :closure.  Before
+  2026-11-10 every reading became :closure, so M-formal-arxana's five
+  :artifact needs (codex-2's strategic-needs reading) could not land."
+  [edge]
+  (let [c (some-> (or (:intended_class edge) (:intended-class edge)) name)]
+    (if (contains? reading-classes c) (keyword c) :closure)))
+
 (defn- convert-edge [repos ids owner edge]
   (let [reverse? (= "unblocks" (:kind edge))
         prerequisite? (contains? #{"depends-on" "unblocks"} (:kind edge))
@@ -57,7 +67,7 @@
       (let [file (str (.getFileName root) "/" (.relativize root path))
             converted (missions/edge->pass-edge
                        (into {} (map #(vector (.getName (io/file %)) %) repos)) ids
-                       {:from from :to to :kind "needs" :class :closure
+                       {:from from :to to :kind "needs" :class (edge-class edge)
                         :file file :line (:line evidence) :quote (:quote evidence)
                         :note (:note edge)})]
         (if-let [pass-edge (:edge converted)]
