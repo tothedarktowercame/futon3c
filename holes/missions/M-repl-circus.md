@@ -149,6 +149,38 @@ evidence and the library, including the 驴 and 狗 metadata. It can be rebuilt
 from scratch, which is also what makes incremental upkeep checkable. This is the
 store the Circus feeds, not the Evidence Landscape.
 
+**GCC schema: 1.0 done, 1.1 TBD (Joe, 2026-11-10).** Schema 1.0 is futon4
+`holes/excursions/E-gcc-schema.md` (Parts A–C, claude-1, futon4 `23a44da`). It
+names the record types written by 驴, 象, 馬 and Giraffe. The types for 狗 and 猴
+are left open on purpose (Joe: "I'd vote that we explicitly *don't* close that
+in E-gcc-schema in order to prove that the schema is extensible"). Adding them
+here is schema 1.1, and it should need no change to what 1.0 defines.
+
+### The control layer (discussed, not yet written up)
+
+Joe, 2026-11-10: the Circus should refer to the control layer, which has been
+discussed in claude-13's REPL (2026-11-09) and recorded only in parts, in
+E-gcc-schema §12 ("Links as witnesses; 'eventually' as control"). Its
+elements, in the words used then:
+- **CTRL items.** A small fixed set of moves an agent can always make on the
+  shared graph, each with a defined effect and receipt: name (propose
+  `[[X]]`), cite, ask (bell or whistle), wait (park), hand back (a warrant),
+  mark (a reply mark). Joe: "maybe CTRL maps to what I was talking about with
+  XTQL; so the query language gets mapped to a simple control language."
+- **Query becomes control.** A link `[a ? c]` is a query ("is a linked to
+  c?"), and a link record is the witness that answers it. Joe: "If we think
+  across time, this becomes a kind of 'control problem', i.e., a links to c
+  'eventually'." An unanswered query with a horizon is a want. The War
+  Machine is the controller that picks the action expected to produce a
+  witness, and park is the bounded "eventually" for one job.
+- **Instances already running:** War Machine tokens (locator = query,
+  observation = witness, bounded by T), `[[X]]` awaiting a referent, parks,
+  typed holes and Giraffe `needs` edges with `met` computed.
+
+For the Circus this means the animals' writes are witnesses or open queries
+in the GCC, and the agents' interface to the graph is the CTRL set. A
+write-up (where it lives, which verbs, which receipts) is owed.
+
 ### Written-never-read is feedback that reaches no one (Joe, 2026-11-05)
 
 `written-never-read` (R0, `diagramprover/wiring.clj`) is the opposite of M-formal-agency's
