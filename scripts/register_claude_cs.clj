@@ -26,7 +26,7 @@
               (when (seq s) s))
         sid-atom (atom sid)
         make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)
-        invoke-fn (@make-fn
+        warm-invoke-fn (@make-fn
                    {:claude-bin (or (System/getenv "CLAUDE_BIN") "claude")
                     :permission-mode "bypassPermissions"
                     :agent-id agent-id
@@ -34,7 +34,18 @@
                     :session-id-atom sid-atom
                     :model "opus"
                     :cwd "/home/joe/code"})
+        ;; Cold seat (Joe, 2026-11-10: "Let's just make the seat cold by default
+        ;; so that we can use it with the usual Agency mental model"): Joe also
+        ;; uses this conversation in the code-server panel, and a warm process
+        ;; left resuming it between bells made the panel report it "still open
+        ;; somewhere else".  After every turn the seat's warm pouch is evicted,
+        ;; so nothing holds the conversation between bells.
+        evict! (requiring-resolve 'futon3c.agency.agent-pouch/evict!)
+        invoke-fn (fn [& args]
+                    (try (apply warm-invoke-fn args)
+                         (finally (evict! agent-id))))
         metadata {:auto-registered? false
+                  :pouch "cold: evicted after every turn"
                   :role "code-server seat (Mojira dev)"
                   :surface "code-server :8090, Claude Code extension"
                   :registered-by "claude-13"
