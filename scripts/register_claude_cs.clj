@@ -49,4 +49,7 @@
     ;; register-agent! keeps an existing invoke-fn; update so a re-run takes effect.
     (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
     (reg/update-agent! agent-id :agent/metadata metadata)
+    ;; The roster shows the registry's session id; without this a re-pointed
+    ;; seat kept showing the old one until its next bell ran (2026-11-10).
+    (when sid (reg/update-agent! agent-id :agent/session-id sid))
     {:registered agent-id :session sid :ok (reg/agent-registered? agent-id)}))
