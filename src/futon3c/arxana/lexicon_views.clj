@@ -165,3 +165,209 @@
            :entity e
            :relations (vec (concat outgoing incoming))
            :record/ids (vec (concat [(:id e)] (map :record/id (concat outgoing incoming))))})))))
+
+;; ---------------------------------------------------------------------------
+;; The review table: every lexicon entity and every referent, in memory.
+;;
+;; The 象 stepper paints a REVIEW section on every frame.  Reading it from the
+;; store costs about five reads per relation (a 16-entity frame: 14 s on
+;; :7094, 2026-11-10).  The whole lexicon is small (260 entities, 589
+;; relations), so the service keeps one table of it:
+;;
+;; - built in the background, once at a time; a stale table is served while a
+;;   rebuild runs;
+;; - each referent is read once (it is outgoing for one entity and incoming
+;;   for another);
+;; - a ruling through :workplan/assess-referent in this JVM re-reads that one
+;;   row's assessments from the store (`note-ruling!`), so the store's own
+;;   newest-first order still decides and the table never guesses;
+;; - a ruling written past this service is picked up by the next rebuild, at
+;;   most `table-ttl-ms` after the last one finished, plus the build time;
+;; - `:table/version` changes whenever the content does, so a client that
+;;   holds the table asks "anything newer than V?" and gets a few bytes back.
+
+(def table-ttl-ms 600000)
+(def ^:private first-build-parallelism 3)
+(def ^:private rebuild-parallelism 1)
+(def ^:private boot-id (str (System/currentTimeMillis)))
+
+(defonce ^:private table
+  (atom {:n 0 :at 0 :value nil :building nil :dirty #{}}))
+(def ^:private ruling-lock (Object.))
+
+(defn reset-table!
+  "Forget the table.  For tests, which start a fresh store per test."
+  []
+  (reset! table {:n 0 :at 0 :value nil :building nil :dirty #{}}))
+
+(defn- retrying
+  "READ! that tries again when the store is busy.  futon1b answers 503 beyond
+  four expensive reads at once, and the store client turns that into a thrown
+  AssertionError (envelope/error rejects :unavailable), so both a throw and a
+  non-missing error response are retried before the build gives up."
+  [read!]
+  (fn [op body]
+    (loop [n 0]
+      (let [r (try (read! op body)
+                   (catch Throwable t (if (< n 5) ::again (throw t))))
+            category (get-in r [:error :error/category])]
+        (if (and (< n 5)
+                 (or (= ::again r)
+                     (and category (not (#{:missing :invalid :unsupported :forbidden} category)))))
+          (do (Thread/sleep (long (* 200 (inc n)))) (recur (inc n)))
+          r)))))
+
+(defn- chunked-pmap [par f xs]
+  (->> xs (partition-all par) (mapcat #(doall (pmap f %))) vec))
+
+(defn- ruling-of
+  "Status and actor from a subject's assessments, NEWEST first as the store
+  returns them (see referent-row)."
+  [aa]
+  (let [latest (newest aa)]
+    {:review/status (case (:verdict latest) :accepted :accepted :rejected :rejected :proposed)
+     :review/actor (:actor latest)}))
+
+(defn- table-row [read! id->slug record]
+  (let [as (attestations read! (:id record))
+        proposal (oldest as)
+        end (fn [role]
+              (let [id (endpoint-id record role)]
+                (or (id->slug id)
+                    (when id (get-in (try (entity! read! id) (catch Exception _ nil))
+                                     [:asserted-content :entity/slug]))
+                    (str id))))]
+    (merge {:record/id (:id record)
+            :entity/slug (end :entity)
+            :target/slug (end :target)
+            :referent/role (get-in record [:asserted-content :referent/role])
+            :proposed-by (:producer proposal)
+            :relation/raw (get-in proposal [:content :relation/raw])}
+           (ruling-of (assessments read! (:id record))))))
+
+(defn build-table
+  "Read every lexicon entity named by SLUGS and every [:workplan/referent 1]
+  touching one, PAR store reads at a time.  Content comes only from the
+  store; a slug the store does not hold is skipped."
+  ([read!] (build-table read! (lexicon-slugs) first-build-parallelism))
+  ([read! slugs par]
+   (let [entities (->> (chunked-pmap
+                        par
+                        (fn [slug]
+                          (when-let [e (entity-by-slug read! slug)]
+                            (let [c (:content (named-attestation (attestations read! (:id e))))]
+                              (cond-> {:entity/slug slug :entity/record e}
+                                (:name c) (assoc :entity/name (:name c))
+                                (:aka c) (assoc :entity/aka (:aka c))))))
+                        (take index-limit (distinct slugs)))
+                       (remove nil?) vec)
+         id->slug (into {} (map (juxt (comp :id :entity/record) :entity/slug)) entities)
+         edge-ids (->> (chunked-pmap
+                        par
+                        (fn [{e :entity/record}]
+                          (concat (reverse-ids read! [:workplan/referent 1] :entity (:id e))
+                                  (reverse-ids read! [:workplan/referent 1] :target (:id e))))
+                        entities)
+                       (mapcat identity) distinct vec)
+         rows (chunked-pmap par #(table-row read! id->slug (entity! read! %)) edge-ids)]
+     {:entities entities
+      :order (mapv :record/id rows)
+      :rows (into {} (map (juxt :record/id identity)) rows)})))
+
+(defn- refresh-row!
+  "Re-read one row's assessments from the store and put the result in the
+  table.  Serialised, so two rulings on one row land in store order."
+  [read! id]
+  (locking ruling-lock
+    (when (get-in @table [:value :rows id])
+      (let [ruling (ruling-of (assessments read! id))]
+        (swap! table (fn [t]
+                       (if (and (get-in t [:value :rows id])
+                                (not= ruling (select-keys (get-in t [:value :rows id])
+                                                          [:review/status :review/actor])))
+                         (-> t (update-in [:value :rows id] merge ruling) (update :n inc))
+                         t)))))))
+
+(defn note-ruling!
+  "Tell the table that referent ID has a new assessment.  A row read by a
+  build that is still running may predate the ruling, so the id is also kept
+  for that build to re-read when it finishes."
+  [read! id]
+  (locking table
+    (when (:building @table) (swap! table update :dirty conj id)))
+  (refresh-row! read! id)
+  nil)
+
+(defn start-table-build!
+  "The running build, starting one when none runs."
+  [read!]
+  (locking table
+    (or (:building @table)
+        (let [par (if (:value @table) rebuild-parallelism first-build-parallelism)
+              read! (retrying read!)
+              f (future
+                  (let [v (try (build-table read! (lexicon-slugs) par) (catch Throwable _ nil))
+                        dirty (locking table
+                                (let [d (:dirty @table)]
+                                  (swap! table (fn [t]
+                                                 (cond-> (assoc t :building nil :dirty #{})
+                                                   v (assoc :value v :at (System/currentTimeMillis))
+                                                   (and v (not= v (:value t))) (update :n inc))))
+                                  d))]
+                    (when v (doseq [id dirty] (refresh-row! read! id)))
+                    (boolean v)))]
+          (swap! table assoc :building f)
+          f))))
+
+(defn- current-table
+  "The table when one has been built, starting a rebuild when it is older
+  than table-ttl-ms.  Never waits."
+  [read!]
+  (let [{:keys [at value] :as t} @table]
+    (when (or (nil? value) (>= (- (System/currentTimeMillis) at) table-ttl-ms))
+      (start-table-build! read!))
+    (when value t)))
+
+(defn- version [t] (str boot-id "-" (:n t)))
+
+(defn review-table-view
+  "Public view: the whole table, or :unchanged when the caller already holds
+  KNOWN-VERSION, or :building before the first build has finished."
+  [read! known-version]
+  (if-let [{:keys [value at] :as t} (current-table read!)]
+    (if (= known-version (version t))
+      {:result/status :unchanged :table/version (version t)}
+      {:result/status :complete
+       :table/version (version t)
+       :table/built-at at
+       :result/total (count (:order value))
+       :entities (mapv #(dissoc % :entity/record) (:entities value))
+       :relations (mapv (:rows value) (:order value))})
+    {:result/status :building}))
+
+(defn table-index-view
+  "entity-index-view's answer from the table, or nil before the first build."
+  []
+  (when-let [value (:value @table)]
+    (let [rows (mapv #(dissoc % :entity/record) (:entities value))]
+      {:result/status :complete :result/total (count rows) :entities rows})))
+
+(defn table-relations-view
+  "entity-relations-view's answer from the table, or nil when the table is
+  not built or does not hold SLUG (the caller then asks the store)."
+  [slug]
+  (when-let [value (:value @table)]
+    (when-let [e (some #(when (= slug (:entity/slug %)) (:entity/record %)) (:entities value))]
+      (let [rows (map (:rows value) (:order value))
+            row (fn [direction other r]
+                  {:record/id (:record/id r) :entity/slug slug :direction direction
+                   :referent/role (:referent/role r) :other/slug (other r)
+                   :proposed-by (:proposed-by r) :relation/raw (:relation/raw r)
+                   :review/status (:review/status r) :review/actor (:review/actor r)})
+            outgoing (mapv #(row :outgoing :target/slug %) (filter #(= slug (:entity/slug %)) rows))
+            incoming (mapv #(row :incoming :entity/slug %) (filter #(= slug (:target/slug %)) rows))]
+        {:result/status :complete
+         :entity/slug slug
+         :entity e
+         :relations (vec (concat outgoing incoming))
+         :record/ids (vec (concat [(:id e)] (map :record/id (concat outgoing incoming))))}))))

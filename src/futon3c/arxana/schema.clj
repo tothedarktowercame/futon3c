@@ -202,6 +202,12 @@
     :allowed #{:entity/slug}
     :projection [:operation :entity/slug :entity [:relations] [:record/ids] :result/status]}
 
+   :lexicon/review-table
+   {:schema-version 1 :required #{}
+    :allowed #{:table/version}
+    :projection [:operation :result/status :table/version :result/total
+                 [:entities] [:relations]]}
+
    :clusion/assert
    {:schema-version 1 :required #{:record} :allowed #{:record}
     :projection [:operation :record/id :created?]}

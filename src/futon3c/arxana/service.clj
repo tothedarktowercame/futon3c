@@ -416,7 +416,19 @@
                                         :message/id (str (:message/id ok) ":lexicon:" (hash [read-op read-body]))
                                         :operation read-op :principal/id "lexicon/projector"
                                         :body read-body}))]
-             (env/response ok (with-semantic-digest op (lexicon-views/index-view-cached read!))))
+             (env/response ok (with-semantic-digest op (or (lexicon-views/table-index-view)
+                                                           (lexicon-views/index-view-cached read!)))))
+
+           (= op :lexicon/review-table)
+           ;; The whole lexicon review table from memory; never waits on the
+           ;; store (lexicon-views, "The review table").
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":lexicon-table:" (hash [read-op read-body]))
+                                        :operation read-op :principal/id "lexicon/projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest
+                                op (lexicon-views/review-table-view read! (:table/version body)))))
 
            (= op :lexicon/entity-relations)
            (let [read! (fn [read-op read-body]
@@ -425,7 +437,8 @@
                                         :operation read-op :principal/id "lexicon/projector"
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
-                                (lexicon-views/entity-relations-view read! (:entity/slug body)))))
+                                (or (lexicon-views/table-relations-view (:entity/slug body))
+                                    (lexicon-views/entity-relations-view read! (:entity/slug body))))))
 
            (= op :workplan/introduce)
            (let [read! (fn [read-op read-body]
@@ -446,6 +459,17 @@
                                          :message/id (str (:message/id ok) ":assessment")
                                          :operation :assessment/append :principal/id (:principal/id ok)
                                          :body {:record assessment}})]
+             ;; The lexicon review table re-reads this row from the store, so
+             ;; the ruling shows in the next table a client fetches.
+             (when (:ok response)
+               (try (lexicon-views/note-ruling!
+                     (fn [read-op read-body]
+                       (dispatch cfg {:protocol/version env/protocol-version
+                                      :message/id (str (:message/id ok) ":lexicon-ruling:" (hash [read-op read-body]))
+                                      :operation read-op :principal/id "lexicon/projector"
+                                      :body read-body}))
+                     (:subject/id body))
+                    (catch Throwable _ nil)))
              (env/response ok (with-semantic-digest op (or (:error response) (:ok response)))))
 
            (= op :formal-f6/page)

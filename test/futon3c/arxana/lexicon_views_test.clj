@@ -13,6 +13,8 @@
 
 (defn- with-stack [f]
   (gates/seed-mission-contract!)
+  ;; The review table is one per JVM; each test has its own store.
+  (sut/reset-table!)
   (let [db (File/createTempFile "lexicon-views-" ".db")] (.delete db)
     (try (with-open [node (xtn/start-node)]
            (let [server (f1-server/start-server! {:node node :port 0 :bind-host "127.0.0.1"
@@ -148,3 +150,113 @@
         (is (= :complete (:result/status view)))
         (is (= "agency" (:entity/slug view)))
         (is (= 2 (count (:relations view))))))))
+
+(defn- reader [cfg tag]
+  (fn [op body]
+    (service/dispatch cfg {:protocol/version "arxana.v1"
+                           :message/id (str tag ":" (hash [op body]))
+                           :operation op :principal/id "lexicon-test" :body body})))
+
+(def ^:private seeded-slugs ["agency" "kangaroo-pouch" "not-in-store" "evidence-landscape"])
+
+(defn- build! [cfg]
+  (with-redefs [sut/lexicon-slugs (constantly seeded-slugs)]
+    (is (true? @(sut/start-table-build! (reader cfg "build"))))))
+
+(defn- table [cfg known]
+  (:ok (call cfg (str "table:" known) :lexicon/review-table
+             (if known {:table/version known} {}))))
+
+(deftest review-table-holds-every-entity-and-each-relation-once
+  (with-stack
+    (fn [cfg]
+      (let [[r1 r2] (seed! cfg)]
+        ;; Before any build the op answers at once and says so.
+        (with-redefs [sut/lexicon-slugs (constantly seeded-slugs)
+                      sut/start-table-build! (fn [_] nil)]
+          (is (= :building (:result/status (table cfg nil)))))
+        (build! cfg)
+        (let [t (table cfg nil)]
+          (is (= :complete (:result/status t)))
+          (is (= [{:entity/slug "agency" :entity/name "Agency" :entity/aka "the Agency,Agency JVM"}
+                  {:entity/slug "kangaroo-pouch" :entity/name "kangaroo pouch" :entity/aka "pouch"}
+                  {:entity/slug "evidence-landscape" :entity/name "evidence landscape"}]
+                 (:entities t)))
+          ;; r1 is outgoing for the pouch and incoming for agency: one row.
+          (is (= #{{:record/id r1 :entity/slug "kangaroo-pouch" :target/slug "agency"
+                    :referent/role "extends" :proposed-by "claude-6 lexicon 2026-11-08"
+                    :relation/raw "extends agency" :review/status :proposed :review/actor nil}
+                   {:record/id r2 :entity/slug "agency" :target/slug "evidence-landscape"
+                    :referent/role "uses" :proposed-by "claude-6 lexicon 2026-11-08"
+                    :relation/raw "agency uses evidence-landscape"
+                    :review/status :proposed :review/actor nil}}
+                 (set (:relations t))))
+          (is (= 2 (count (:relations t))))
+          ;; A caller that holds this version is told so, with no table.
+          (is (= {:result/status :unchanged :table/version (:table/version t)}
+                 (select-keys (table cfg (:table/version t))
+                              [:result/status :table/version :entities :relations])))
+          ;; The per-entity op now answers from the table, with the rows the
+          ;; store-reading view gives.
+          (is (= (:relations (sut/entity-relations-view (reader cfg "direct") "agency"))
+                 (:relations (:ok (call cfg "svc-agency" :lexicon/entity-relations
+                                        {:entity/slug "agency"}))))))))))
+
+(deftest ruling-updates-the-table-and-newest-ruling-decides
+  (with-stack
+    (fn [cfg]
+      (let [[r1 _] (seed! cfg)
+            row (fn [t] (first (filter #(= r1 (:record/id %)) (:relations t))))]
+        (build! cfg)
+        (let [v0 (:table/version (table cfg nil))]
+          (is (:ok (call cfg "acc" :workplan/assess-referent
+                         {:subject/id r1 :verdict :accepted :actor "joe"
+                          :reason "reviewed in 象 stepper" :time "2026-11-10T10:00:00.000Z"})))
+          (let [t1 (table cfg v0)]
+            ;; No rebuild ran: the ruling alone changed the version and the row.
+            (is (= :complete (:result/status t1)))
+            (is (not= v0 (:table/version t1)))
+            (is (= [:accepted "joe"] ((juxt :review/status :review/actor) (row t1))))
+            ;; Accepted, then rejected: the store returns assessments newest
+            ;; first, and the newest decides.  A table that kept the oldest
+            ;; ruling (or the first one it saw) reads :accepted here.
+            (is (:ok (call cfg "rej" :workplan/assess-referent
+                           {:subject/id r1 :verdict :rejected :actor "joe"
+                            :reason "reviewed in 象 stepper" :time "2026-11-10T10:01:00.000Z"})))
+            (let [t2 (table cfg (:table/version t1))]
+              (is (not= (:table/version t1) (:table/version t2)))
+              (is (= [:rejected "joe"] ((juxt :review/status :review/actor) (row t2))))
+              (is (= :rejected
+                     (:review/status
+                      (first (:relations (:ok (call cfg "svc-pouch" :lexicon/entity-relations
+                                                    {:entity/slug "kangaroo-pouch"})))))))
+              ;; A rebuild from the store agrees with the updated table, and
+              ;; so leaves the version alone.
+              (build! cfg)
+              (is (= :unchanged (:result/status (table cfg (:table/version t2))))))))))))
+
+(deftest ruling-during-a-build-is-not-lost
+  (with-stack
+    (fn [cfg]
+      (let [[r1 _] (seed! cfg)
+            ruled? (atom false)
+            base (reader cfg "slow-build")
+            ;; The build reads r1's assessments (none yet); before it gets
+            ;; the answer back, Joe rejects r1.  The build then holds a stale
+            ;; row, which it must re-read when it finishes.
+            read! (fn [op body]
+                    (let [r (base op body)]
+                      (when (and (= :graph/query op) (= :assessments (:query/type body))
+                                 (= r1 (:subject/id body))
+                                 (compare-and-set! ruled? false true))
+                        (is (:ok (call cfg "rej-mid-build" :workplan/assess-referent
+                                       {:subject/id r1 :verdict :rejected :actor "joe"
+                                        :reason "ruled during a build"
+                                        :time "2026-11-10T10:02:00.000Z"}))))
+                      r))]
+        (with-redefs [sut/lexicon-slugs (constantly seeded-slugs)]
+          (is (true? @(sut/start-table-build! read!))))
+        (is @ruled?)
+        (is (= :rejected
+               (:review/status (first (filter #(= r1 (:record/id %))
+                                              (:relations (table cfg nil)))))))))))

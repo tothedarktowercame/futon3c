@@ -1,5 +1,6 @@
 (ns futon3c.arxana.workplan-demo
   (:require [futon3c.arxana.formal-f1-demo :as base]
+            [futon3c.arxana.lexicon-views :as lexicon-views]
             [futon3c.arxana.service :as service]
             [futon3c.arxana.workplan :as workplan]
             [futon3c.arxana.workplan-backlinks :as backlinks])
@@ -50,4 +51,11 @@
                :load/elapsed-ms (get-in h [:workplan/result :elapsed-ms])}]
     (.addShutdownHook (Runtime/getRuntime) (Thread. stop "workplan-demo-shutdown"))
     (when ready-path (spit ready-path (pr-str ready)))
+    ;; Build the lexicon review table in the background, so the first
+    ;; stepper frame after a restart finds it ready or nearly so.
+    (lexicon-views/start-table-build!
+     (fn [op body]
+       (service/dispatch (:cfg h) {:protocol/version "arxana.v1"
+                                   :message/id (str "workplan-demo:lexicon-table:" (hash [op body]))
+                                   :operation op :principal/id "lexicon/projector" :body body})))
     (println (pr-str ready)) (flush) @(promise)))
