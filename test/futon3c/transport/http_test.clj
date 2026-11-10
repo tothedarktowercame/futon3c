@@ -1389,7 +1389,12 @@
                                  (post handler
                                        "/api/alpha/agents/claude-compact-live-shape/compact" "{}"))]
             (is (true? (:queued first-response)))
-            (is (= 2 (:ahead first-response)))
+            (is (= 1 (:ahead first-response)) "waiting turns only")
+            (is (true? (:draining first-response)) "the running turn is reported apart")
+            (is (= "queued" (:state (parse-body
+                                     (get-req handler
+                                              (str "/api/alpha/agents/claude-compact-live-shape/compact/"
+                                                   (:turn-id first-response)))))))
             (is (true? (:deduped second-response)))
             (is (= (:turn-id first-response) (:turn-id second-response)))
             (is (= depth-before-second
@@ -1407,6 +1412,16 @@
                                (> (System/currentTimeMillis) deadline))
                          status
                          (do (Thread/sleep 10) (recur deadline)))))))
+            (let [status (parse-body
+                          (get-req handler
+                                   (str "/api/alpha/agents/claude-compact-live-shape/compact/"
+                                        (:turn-id first-response))))]
+              (is (= "done" (:state status)))
+              (is (= {:ok true :compact-result "success" :path "cold"}
+                     (select-keys (:outcome status) [:ok :compact-result :path]))))
+            (is (= "unknown" (:state (parse-body
+                                      (get-req handler
+                                               "/api/alpha/agents/claude-compact-live-shape/compact/compact-nope")))))
             @(:waiter first-turn)))))))
 
 (deftest agent-compact-dedupes-running-compact-and-returns-clean-outcome

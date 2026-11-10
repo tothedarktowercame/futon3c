@@ -1423,15 +1423,22 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
    ((= status 409)
     "[compact] busy — seat is mid-turn, try again after it finishes")
    ((and (= status 202) (plist-get payload :queued))
-    (let ((turn-id (plist-get payload :turn-id))
-          (ahead (plist-get payload :ahead)))
-      (format "[compact] %s%s — runs when the seat's earlier turns finish"
-              (if (plist-get payload :deduped) "already queued" "queued")
-              (cond
-               ((and turn-id (numberp ahead))
-                (format " (turn %s, %d ahead)" turn-id ahead))
-               (turn-id (format " (turn %s)" turn-id))
-               (t "")))))
+    ;; Say only what the server knows: :ahead counts turns still waiting, and
+    ;; :draining means a turn is running or closing.  "1 ahead — runs when the
+    ;; seat's earlier turns finish" was printed for a turn whose reply was
+    ;; already on screen, and the compaction then ran at once (2026-11-10).
+    (let* ((turn-id (plist-get payload :turn-id))
+           (ahead (plist-get payload :ahead))
+           (tag (if turn-id (format " (turn %s)" turn-id) "")))
+      (cond
+       ((plist-get payload :deduped)
+        (format "[compact] already requested%s" tag))
+       ((and (numberp ahead) (> ahead 0))
+        (format "[compact] queued%s behind %d waiting turn%s"
+                tag ahead (if (= ahead 1) "" "s")))
+       ((plist-get payload :draining)
+        (format "[compact] queued%s — starts when the current turn closes" tag))
+       (t (format "[compact] queued%s" tag)))))
    ((= status 202)
     (format "[compact] pending%s — check the next Cooked line"
             (if-let* ((turn-id (plist-get payload :turn-id)))
@@ -1473,14 +1480,157 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
                            :object-type 'plist :null-object nil :false-object nil)
                         (error nil)))))
             (with-current-buffer chat-buffer
-              (agent-chat-turnline-finish)
-              (agent-chat-insert-message
-               "system" (claude-repl--compact-outcome-line http-status payload))
-              (when (and (= http-status 200) (eq t (plist-get payload :ok)))
-                (agent-chat-refresh-cost-basis! agent-chat--cost-vendor
-                                                agent-chat--session-id)))))
+              (let ((turn-id (plist-get payload :turn-id)))
+                (if (and (= http-status 202) (plist-get payload :queued) turn-id)
+                    ;; Queued: the outcome arrives later, so keep the turnline
+                    ;; and follow the turn until the server reports it done.
+                    (progn
+                      (when (claude-repl--compact-turnline-p)
+                        (agent-chat-turnline-update 'queued "compaction"))
+                      (agent-chat-insert-message
+                       "system" (claude-repl--compact-outcome-line http-status payload))
+                      (claude-repl--compact-follow-start chat-buffer turn-id))
+                  (agent-chat-turnline-finish)
+                  (agent-chat-insert-message
+                   "system" (claude-repl--compact-outcome-line http-status payload))
+                  (when (and (= http-status 200) (eq t (plist-get payload :ok)))
+                    (agent-chat-refresh-cost-basis! agent-chat--cost-vendor
+                                                    agent-chat--session-id)))))))
       (when (buffer-live-p response-buffer)
         (kill-buffer response-buffer)))))
+
+;;; Following a queued compaction
+
+(defcustom claude-repl-compact-follow-interval 3
+  "Seconds between status polls for a queued compaction."
+  :type 'number
+  :group 'claude-repl)
+
+(defcustom claude-repl-compact-follow-limit 1200
+  "Seconds after which a followed compaction is given up on."
+  :type 'number
+  :group 'claude-repl)
+
+(defvar-local claude-repl--compact-follow nil
+  "Plist for the compaction this buffer follows, or nil.
+Keys: :turn-id :timer :started-at :announced :unknown :in-flight.")
+
+(defun claude-repl--compact-turnline-p ()
+  "Non-nil when the live turnline belongs to a compaction, not a REPL turn."
+  (and (memq agent-chat--turnline-phase '(queued compacting))
+       (member agent-chat--turnline-detail '("context" "compaction"))))
+
+(defun claude-repl--compact-follow-stop ()
+  "Stop following a compaction in this buffer."
+  (when-let* ((timer (plist-get claude-repl--compact-follow :timer)))
+    (cancel-timer timer))
+  (setq claude-repl--compact-follow nil))
+
+(defun claude-repl--compact-follow-start (chat-buffer turn-id)
+  "Poll the server for compact TURN-ID and report its outcome in CHAT-BUFFER."
+  (with-current-buffer chat-buffer
+    (claude-repl--compact-follow-stop)
+    (setq claude-repl--compact-follow
+          (list :turn-id turn-id :started-at (float-time) :unknown 0
+                :timer (run-at-time claude-repl-compact-follow-interval
+                                    claude-repl-compact-follow-interval
+                                    #'claude-repl--compact-follow-tick
+                                    chat-buffer)))))
+
+(defun claude-repl--compact-follow-tick (chat-buffer)
+  "Ask the server where CHAT-BUFFER's followed compaction stands."
+  (if (not (buffer-live-p chat-buffer))
+      nil
+    (with-current-buffer chat-buffer
+      (let ((follow claude-repl--compact-follow))
+        (cond
+         ((null follow) nil)
+         ((plist-get follow :in-flight) nil)
+         ((> (- (float-time) (plist-get follow :started-at))
+             claude-repl-compact-follow-limit)
+          (claude-repl--compact-follow-stop)
+          (when (claude-repl--compact-turnline-p) (agent-chat-turnline-finish))
+          (agent-chat-insert-message
+           "system" (format "[compact] no outcome after %ds (turn %s) — check the next Cooked line"
+                            claude-repl-compact-follow-limit
+                            (plist-get follow :turn-id))))
+         (t
+          (setq claude-repl--compact-follow (plist-put follow :in-flight t))
+          (let ((url (format "%s/api/alpha/agents/%s/compact/%s"
+                             (string-remove-suffix "/" claude-repl-api-url)
+                             (url-hexify-string claude-repl-agent-id)
+                             (url-hexify-string (plist-get follow :turn-id))))
+                (url-request-method "GET"))
+            (condition-case nil
+                (url-retrieve url #'claude-repl--compact-follow-response
+                              (list chat-buffer (plist-get follow :turn-id)) t t)
+              (error
+               (setq claude-repl--compact-follow
+                     (plist-put claude-repl--compact-follow :in-flight nil)))))))))))
+
+(defun claude-repl--compact-follow-response (transport-status chat-buffer turn-id)
+  "Handle a status poll for TURN-ID in CHAT-BUFFER."
+  (let ((response-buffer (current-buffer))
+        payload)
+    (unwind-protect
+        (progn
+          (unless (plist-get transport-status :error)
+            (goto-char (point-min))
+            (when (and (boundp 'url-http-response-status)
+                       (eql url-http-response-status 200)
+                       (re-search-forward "\r?\n\r?\n" nil t))
+              (setq payload
+                    (condition-case nil
+                        (json-parse-string
+                         (buffer-substring-no-properties (point) (point-max))
+                         :object-type 'plist :null-object nil :false-object nil)
+                      (error nil)))))
+          (when (buffer-live-p chat-buffer)
+            (with-current-buffer chat-buffer
+              (when (equal turn-id (plist-get claude-repl--compact-follow :turn-id))
+                (setq claude-repl--compact-follow
+                      (plist-put claude-repl--compact-follow :in-flight nil))
+                (claude-repl--compact-follow-apply
+                 (plist-get payload :state) (plist-get payload :outcome))))))
+      (when (buffer-live-p response-buffer)
+        (kill-buffer response-buffer)))))
+
+(defun claude-repl--compact-follow-apply (state outcome)
+  "Report compaction STATE (with OUTCOME when done) in the current buffer."
+  (let ((turn-id (plist-get claude-repl--compact-follow :turn-id))
+        (streaming (and (boundp 'agent-chat--streaming-started)
+                        agent-chat--streaming-started)))
+    (cond
+     ;; A REPL turn is streaming into the buffer: hold the line until it ends.
+     (streaming nil)
+     ((equal state "running")
+      (unless (plist-get claude-repl--compact-follow :announced)
+        (setq claude-repl--compact-follow
+              (plist-put claude-repl--compact-follow :announced t))
+        (when (claude-repl--compact-turnline-p)
+          (agent-chat-turnline-update 'compacting "context"))
+        (agent-chat-insert-message
+         "system" (format "[compact] running (turn %s)" turn-id))))
+     ((equal state "done")
+      (claude-repl--compact-follow-stop)
+      (when (claude-repl--compact-turnline-p) (agent-chat-turnline-finish))
+      (agent-chat-insert-message
+       "system" (claude-repl--compact-outcome-line 200 outcome))
+      (when (eq t (plist-get outcome :ok))
+        (agent-chat-refresh-cost-basis! agent-chat--cost-vendor
+                                        agent-chat--session-id)))
+     ((equal state "queued") nil)
+     (t
+      ;; Unknown (server restarted, or an older server without the route).
+      (let ((n (1+ (or (plist-get claude-repl--compact-follow :unknown) 0))))
+        (if (< n 3)
+            (setq claude-repl--compact-follow
+                  (plist-put claude-repl--compact-follow :unknown n))
+          (claude-repl--compact-follow-stop)
+          (when (claude-repl--compact-turnline-p) (agent-chat-turnline-finish))
+          (agent-chat-insert-message
+           "system" (format "[compact] lost track of turn %s — check the next Cooked line"
+                            turn-id))))))))
 
 (defun claude-repl-compact ()
   "Request context compaction for this Claude seat asynchronously.

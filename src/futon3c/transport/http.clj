@@ -8085,18 +8085,25 @@
                      (assoc :turns-without-operator turns
                             :autorunner (agent-pouch/unwatched-run? agent-id session-id))))))
 
+(declare handle-agent-compact-status)
+
 (defn- handle-agent-get
   "GET /api/alpha/agents/:id — return a single agent's details.
-   Also serves GET /api/alpha/agents/:id/pouch: make-handler's agents/(.+) clause
+   Also serves GET /api/alpha/agents/:id/pouch and :id/compact/:turn-id: make-handler's agents/(.+) clause
    captures that path in the closure built at startup, and this var is the
    reload-safe point behind it."
   ;; The 2-arity is what make-handler closures built before 2026-11-03 call
   ;; (a :reload does not rebuild them): it serves /pouch without ?session=.
   ([config agent-id] (handle-agent-get config agent-id nil))
   ([_config agent-id request]
-   (if (str/ends-with? agent-id "/pouch")
-     (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))) request)
-     (handle-agent-get* agent-id))))
+   (if-let [[_ aid turn-id] (re-matches #"([^/]+)/compact/([^/]+)" agent-id)]
+     ;; GET /api/alpha/agents/:id/compact/:turn-id — routed here for the same
+     ;; reason as /pouch.
+     (handle-agent-compact-status (enc/decode-uri-component aid)
+                                  (enc/decode-uri-component turn-id))
+     (if (str/ends-with? agent-id "/pouch")
+       (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))) request)
+       (handle-agent-get* agent-id)))))
 
 (defn- handle-agent-get*
   [agent-id]
@@ -8224,6 +8231,14 @@
   ;; and a POST during one would queue a redundant second compaction.
   (atom {}))
 
+(defonce ^:private !compact-outcomes
+  ;; agent-id -> {:turn-id .. :outcome ..} for the agent's latest finished
+  ;; compact. A queued compact answers its POST with 202 before it runs, so
+  ;; the REPL polls GET .../compact/<turn-id> for the outcome; without this the
+  ;; buffer's last word was "[compact] queued" for the whole run and after it
+  ;; (claude-13, 2026-11-10).
+  (atom {}))
+
 (defn- pending-compact-entry [agent-id]
   (let [state (turn-queue/snapshot)
         aid (str agent-id)]
@@ -8311,26 +8326,53 @@
                       (loop []
                         (when (= ::beat (deref done compact-heartbeat-ms ::beat))
                           (stamp-compacting! aid)
-                          (recur))))]
-      (try
-        (binding [turn-queue/*drained-by-outer* true
-                  turn-queue/*turn-id* (:id entry)]
-          (let [warm-result (agent-pouch/compact-pouch! aid {:wait? true})]
-            (if (not= "no warm pouch" (:error warm-result))
-              (assoc warm-result :path "warm")
-              (let [agent (reg/get-agent aid)
-                    invoke-fn (:agent/invoke-fn agent)]
-                (if (fn? invoke-fn)
-                  (let [start-ms (System/currentTimeMillis)]
-                    (cold-compact-result
-                     (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
-                  {:ok false :error "no local agent" :path "cold"})))))
-        (finally
-          ;; Stop the heartbeat before going idle, so no stamp lands after.
-          (deliver done true)
-          (try @heartbeat (catch Throwable _ nil))
-          (try (reg/mark-agent-idle! aid) (catch Throwable _ nil))
-          (swap! !running-compacts dissoc aid))))))
+                          (recur))))
+          outcome (volatile! {:ok false :error "compaction threw"})]
+        (try
+          (binding [turn-queue/*drained-by-outer* true
+                    turn-queue/*turn-id* (:id entry)]
+            (let [warm-result (agent-pouch/compact-pouch! aid {:wait? true})]
+              (vreset! outcome
+                       (if (not= "no warm pouch" (:error warm-result))
+                         (assoc warm-result :path "warm")
+                         (let [agent (reg/get-agent aid)
+                               invoke-fn (:agent/invoke-fn agent)]
+                           (if (fn? invoke-fn)
+                             (let [start-ms (System/currentTimeMillis)]
+                               (cold-compact-result
+                                (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
+                             {:ok false :error "no local agent" :path "cold"}))))))
+          (finally
+            ;; Stop the heartbeat before going idle, so no stamp lands after.
+            (deliver done true)
+            (try @heartbeat (catch Throwable _ nil))
+            (try (reg/mark-agent-idle! aid) (catch Throwable _ nil))
+            ;; Record the outcome before clearing the running mark, so a status
+            ;; poll never sees the compact as neither running nor done.
+            (swap! !compact-outcomes assoc aid
+                   {:turn-id (:id entry)
+                    :outcome (select-keys @outcome
+                                          [:ok :error :path :compact-result
+                                           :compact-error :total-cost-usd])})
+            (swap! !running-compacts dissoc aid))))))
+
+(defn- compact-turn-state
+  "Where compact turn TURN-ID for AGENT-ID stands: queued, running, done, unknown."
+  [agent-id turn-id]
+  (let [aid (str agent-id)
+        done (get @!compact-outcomes aid)]
+    (cond
+      (= turn-id (:turn-id done)) {:state "done" :turn-id turn-id
+                                   :outcome (:outcome done)}
+      (= turn-id (get @!running-compacts aid)) {:state "running" :turn-id turn-id}
+      (some #{turn-id} (get-in (turn-queue/snapshot) [:queues aid]))
+      {:state "queued" :turn-id turn-id}
+      :else {:state "unknown" :turn-id turn-id})))
+
+(defn- handle-agent-compact-status
+  "GET /api/alpha/agents/:id/compact/:turn-id — state of a queued compact."
+  [agent-id turn-id]
+  (json-response 200 (assoc (compact-turn-state agent-id turn-id) :ok true)))
 
 (defn- enqueue-compact! [agent-id]
   (let [turn-id (str "compact-" (UUID/randomUUID))]
@@ -8371,13 +8413,17 @@
       :else
       (let [busy? (or (:in-flight? warm) (compact-agent-busy? agent aid))
             state-before (turn-queue/snapshot)
-            ahead (+ (count (get-in state-before [:queues aid] []))
-                     (if (contains? (:draining state-before) aid) 1 0))
+            ;; :ahead counts turns waiting in the queue; the turn being drained
+            ;; now is reported apart, since it is often only closing (its reply
+            ;; already shown) and "1 ahead" then read as a wait (2026-11-10).
+            ahead (count (get-in state-before [:queues aid] []))
+            draining? (contains? (set (:draining state-before)) aid)
             {:keys [waiter entry]} (enqueue-compact! aid)
             turn-id (:id entry)]
         (if busy?
           (json-response 202 {:ok true :queued true :turn-id turn-id
-                              :ahead ahead :path "queued"})
+                              :ahead ahead :draining draining?
+                              :path "queued"})
           (let [result (deref waiter compact-cold-timeout-ms ::compact-timeout)]
             (if (= ::compact-timeout result)
               (json-response 202 {:ok false :error "compaction pending"

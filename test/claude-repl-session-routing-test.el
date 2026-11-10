@@ -54,11 +54,15 @@
                   202 '(:ok nil :turn-id "compact-123"))
                  "[compact] pending (turn compact-123) — check the next Cooked line"))
   (should (equal (claude-repl--compact-outcome-line
-                  202 '(:ok t :queued t :turn-id "compact-7" :ahead 2 :path "queued"))
-                 "[compact] queued (turn compact-7, 2 ahead) — runs when the seat's earlier turns finish"))
+                  202 '(:ok t :queued t :turn-id "compact-7" :ahead 2 :draining t :path "queued"))
+                 "[compact] queued (turn compact-7) behind 2 waiting turns"))
+  ;; The 2026-11-10 case: nothing waiting, the previous turn still closing.
+  (should (equal (claude-repl--compact-outcome-line
+                  202 '(:ok t :queued t :turn-id "compact-8" :ahead 0 :draining t :path "queued"))
+                 "[compact] queued (turn compact-8) — starts when the current turn closes"))
   (should (equal (claude-repl--compact-outcome-line
                   202 '(:ok t :queued t :deduped t :turn-id "compact-7" :path "queued"))
-                 "[compact] already queued (turn compact-7) — runs when the seat's earlier turns finish"))
+                 "[compact] already requested (turn compact-7)"))
   (should (equal (claude-repl--compact-outcome-line
                   404 '(:ok nil :error "no local agent"))
                  "[compact] unavailable: no local agent")))
@@ -240,3 +244,54 @@
           (should (equal "user" (alist-get 'role (alist-get 'body user-turn))))
           (should (equal "hello from first turn"
                          (alist-get 'text (alist-get 'body user-turn)))))))))
+
+(ert-deftest claude-repl-compact-follow-reports-running-then-outcome ()
+  ;; A queued compaction used to leave "[compact] queued" as the buffer's last
+  ;; word for its whole run and after it (claude-13, 2026-11-10).
+  (with-temp-buffer
+    (let (inserted refreshed)
+      (cl-letf (((symbol-function 'agent-chat-insert-message)
+                 (lambda (_name text) (push text inserted)))
+                ((symbol-function 'agent-chat-refresh-cost-basis!)
+                 (lambda (&rest args) (push args refreshed))))
+        (setq claude-repl--compact-follow
+              (list :turn-id "compact-9" :started-at (float-time) :unknown 0))
+        (claude-repl--compact-follow-apply "queued" nil)
+        (should-not inserted)
+        (claude-repl--compact-follow-apply "running" nil)
+        (claude-repl--compact-follow-apply "running" nil)
+        (should (equal inserted '("[compact] running (turn compact-9)")))
+        (claude-repl--compact-follow-apply
+         "done" '(:ok t :path "warm" :total-cost-usd 0.38))
+        (should (equal (car inserted)
+                       "[compact] ok (warm, $0.38) — ctx will refresh on the next turn"))
+        (should refreshed)
+        (should-not claude-repl--compact-follow)))))
+
+(ert-deftest claude-repl-compact-follow-gives-up-after-repeated-unknown ()
+  (with-temp-buffer
+    (let (inserted)
+      (cl-letf (((symbol-function 'agent-chat-insert-message)
+                 (lambda (_name text) (push text inserted))))
+        (setq claude-repl--compact-follow
+              (list :turn-id "compact-10" :started-at (float-time) :unknown 0))
+        (claude-repl--compact-follow-apply "unknown" nil)
+        (claude-repl--compact-follow-apply nil nil)
+        (should-not inserted)
+        (should claude-repl--compact-follow)
+        (claude-repl--compact-follow-apply "unknown" nil)
+        (should (equal inserted
+                       '("[compact] lost track of turn compact-10 — check the next Cooked line")))
+        (should-not claude-repl--compact-follow)))))
+
+(ert-deftest claude-repl-compact-follow-holds-outcome-while-a-turn-streams ()
+  (with-temp-buffer
+    (let (inserted)
+      (cl-letf (((symbol-function 'agent-chat-insert-message)
+                 (lambda (_name text) (push text inserted))))
+        (setq claude-repl--compact-follow
+              (list :turn-id "compact-11" :started-at (float-time) :unknown 0))
+        (setq-local agent-chat--streaming-started t)
+        (claude-repl--compact-follow-apply "done" '(:ok t :path "warm"))
+        (should-not inserted)
+        (should claude-repl--compact-follow)))))
