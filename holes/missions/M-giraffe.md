@@ -528,6 +528,33 @@ Four role orderings over claude-6's pending index (scripts inline in claude-13's
 
 On trial, like the convergence score: Joe's verdicts on these orders are the test. Noticed on the way: the pending index gives M-formal-arxana "1 idea", though it is active; the index is a draft of 11-08.
 
+### Focus needs a strategic reading, not only a computed centre (Joe, 2026-11-10)
+
+On the empty focus slot (`futon3c.giraffe.priority`, never supplied a focus
+relation): "focus is a preference not for some abstract reason but because of
+strategic reasons. If we don't have those, then essentially we don't have a
+'focus' in a defined sense. We're witnessing what has historically been real
+gap not an unpassed argument. … we've found various ways to compute 'a focus'
+e.g. from clocked in turns, operator centroid, and other data sources. What's
+*missing* still is the strategic interpretation of that. Consider the
+difference between 'I am in Santa Fe'; 'I am in Santa Fe for a two month
+writing retreat'; '… in which I am to finish up most of the outstanding
+features of FUTON'; '… in order to prepare for my next major career move.'
+Obviously if I add more and more details it becomes a biography, if I add less
+and less it becomes a geolocation."
+
+Reading for DERIVE (claude-13): a focus is a short chain of purposes, each
+level joined to the next by "in order to": situation (computable: clock,
+operator centroid), activity, goal for the period, aim. Each level above the
+situation is stated by Joe, dated, and kept as a record with its source turn.
+The chain needs only as many levels as it takes to separate the candidate
+items. A level that ranks no item differently from the level below adds
+biography, and a chain that leaves the candidates tied is still a geolocation
+("ties mean insufficient sagacity"). The focus relation handed to the priority
+slot is then derived: **focus** = items that serve the deepest stated level,
+**associated** = items that serve only a shallower level, **useful elsewhere**
+= the rest. Each assignment cites the level it rests on.
+
 ### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
 
 zai-2 ran this as a measurement only: packet `~/notes/packets/giraffe/stage2-01-step3c-themed-vs-dependency.md`, script and report in `~/notes/experiments/2026-10-28-giraffe-step3c/`. Reviewed by claude-13:
