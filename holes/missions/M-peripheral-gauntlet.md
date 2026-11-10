@@ -928,3 +928,35 @@ one run across all of them, keep a lab notebook per run, and see where its
 time and tokens went phase by phase. That is gauntlet pattern
 `co-presence-over-co-location` (make presence visible) applied to WM.
 Sketch and data sources: `holes/excursions/E-war-machine-viewer.md`.
+
+## Checkpoint 2 — 2026-11-10: the party vote (Giraffe ordering)
+
+Marked at Joe's request ("We should mark this as an M-guantlet checkpoint. I
+think the 'party' vote is very good"). As with the 11-07 postscript, the
+mission stays closed. This records where the gauntlet's party idea turned up
+in task selection.
+
+Joe, reading Giraffe's local view (`wip/formal-arxana/giraffe-local.html`):
+"Giraffe is explicitly favouring unblocking mass, benefits + harm reduction,
+but not (yet) the strategic layer … So Giraffe is a little bit like sending in
+Thor from Gauntlet without Merlin, Thyra, or Questor."
+
+The response was to give each party member its own ordering over the pending
+work and let them vote in turn:
+- **Thor (unblocking):** Giraffe's own order: what finishing an item unblocks,
+  then its cone.
+- **Merlin (strategy):** the lexicon's convergence score of the feature the
+  item *is*, plus half that of the strongest unfinished feature it names.
+- **Questor (quick):** "ready, one small handoff" items, strategic first.
+- **Thyra (harm reduction):** items on a harm line, the most ready first.
+- **Party vote:** round robin. The first twelve: M-giraffe, M-peradam-grounding,
+  M-jvm-arxana, E-APM-f11-defects, M-daily-scan, E-evidence-flow,
+  T-overlap-modes-as-factor-precision, E-fetch-entity-miss-path, M-repl-circus,
+  M-interim-director-proxy-metric-inventory, M-essay-corpus-substrate,
+  E-fix-cx-cr-runners-to-clock-in.
+
+Full record, with data sources and the trial caveat: futon3c
+`holes/missions/M-giraffe.md` §"Orderings: Giraffe is the warrior, not yet
+the party" (`a8c054018`). Gauntlet pattern in play: one character type cannot
+clear a level alone. Selection needs complementary roles, each strong where
+the others are weak.
