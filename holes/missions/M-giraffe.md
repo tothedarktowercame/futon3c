@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-25
 **Status:** OPEN — INSTANTIATE: stage 1 tickets source built 2026-10-27 (§INSTANTIATE; two questions for Joe; mission-docs source and the cone-against-history test still open); stage 2 next. VERIFY pilots 1 and 2 run and scored; DERIVE and ARGUE updated with their results (claude-13, 2026-10-27), plain-language paragraph under discussion with Joe; ARGUE approved provisionally pending the mock-up (2026-10-27; ARGUE open items listed in §Still open in ARGUE; DERIVE open from 2026-10-26, items still unchecked; HEAD, IDENTIFY and MAP exits recorded in §MAP close-out)
+**Since 10-28 (recorded by claude-13, 2026-11-10):** the whole pool was re-read on 11-04..11-06 (`~/notes/wm-next/giraffe-reads-2026-11-04/`; futon3c `39933b51d` "an item's own completion criteria are not dependencies", plus the second-reading repair lane), and runs on 11-08..11-09 cover 660 items: 482 open, 406 ready, 92 needs edges, **37 work clusters** (`work-clusters.json`), so stage 2 exists in practice. The 10-28 prediction holds so far: P1 and P3 unbroken; P2's first trigger, M-reachable-from-boot CLOSED on 10-29, gives M-state-snapshot-witness until 11-28. M-giraffe itself is in no cluster: its only reading is "relates-to M-kangaroo" from its Follows: line, which is not a needs edge.
 **Owner:** Joe + claude-11
 **Follows:** M-kangaroo (warm pouches, i.e. agents that persist; this mission is about the work those agents are given).
 **Serves:** our own War Machine first. Second, the consulting offer: "show me your agent logs and your ticket tracker, and I will show you how to make it work better" (pudding-prover T2.4/T2.5, `warm-customer-pays`; T∞).
@@ -352,7 +353,7 @@ Joe, 2026-10-27: approves the argument provisionally and will rule on it only af
 
 VERIFY has now run (two pilots), so these can be settled (claude-13, 2026-10-27):
 
-- [ ] Joe's correction of the plain-language paragraph (revised with the VERIFY result; to discuss with Joe).
+- [x] Joe's correction of the plain-language paragraph. **Approved by Joe, 2026-11-10**, with the earlier "provisional" lifted now that more than a mock-up exists: "The argument itself looks good, but I question whether we're actually yet able to choose 'among whole packages of work by the outcomes we want', despite various efforts to date that would aim to make that possible. But ARGUE itself is good, it's just a question of implementation details to figure out what would make that possible. So I approve the plain language argument." Carried as an implementation question to stage 3 (§Order of build): choosing among packages by outcomes.
 - [ ] Whether `give-the-dependent-piece-its-hypothesis` becomes the suggested breakdown on a `:needs-breakdown` record (DERIVE revision). Neither pilot had a cycle, so VERIFY says nothing for or against it. Note: an `:alternative` edge is close to what the pattern produces (a need met another way), which may be the form the suggestion should take.
 - [ ] The DERIVE items still unchecked (listed under §DERIVE status after VERIFY).
 - [x] Joe's addition (below): named, nested clusters of pending work, with needs between clusters. Settled 2026-10-27: part of the argument as stage 2 of §Order of build; its design detail stays open in DERIVE.
@@ -474,7 +475,7 @@ Tests: `futon3c.giraffe.{pass,tickets,run}-test`, 24 tests, 157 assertions, all 
 
 **Open, for Joe.**
 - [ ] `T-car3-phase2-impl` and `T-mq7-unaddressable-caller` are closed but still need the superseded `T-car3-queue-routing`. The pass reports both as `:anomaly/done-with-open-needs`. Re-point or drop the two edges (a ticket-text edit).
-- [ ] VERIFY's third criterion, now on the all-35 run: is Giraffe's order defensible as "what to do next"?
+- [ ] VERIFY's third criterion, now on the all-35 run: is Giraffe's order defensible as "what to do next"? **Joe's reading, 2026-11-10**, from the local view (`wip/formal-arxana/giraffe-local.html`, run `20261109T011400.188Z-4eb7a1c5`, 37 work clusters): within a cluster the order is sensible, as a cascade worked from the bottom (the right of each diagram), closing whatever is ready. But nothing on the page orders the clusters themselves: "Maybe that priority comes from something else?" Open: priority among clusters. One candidate is the lexicon's convergence score of the features a cluster's items name, combined with the outcomes (benefit lines) its items serve (futon4 `holes/excursions/E-gcc-schema.md` §14).
 
 **Not done in stage 1.** The mission-docs source, where the Missing-column invariant applies; this mission said "tickets first". DERIVE's cone-against-history test (§First test), which is stage 1's own check per §Order of build: it needs a later state of the tickets to compare against, so it can run once tickets have moved.
 
