@@ -131,7 +131,11 @@
     ("u" "continue" "🈰" act)
     ("v" "verify" "㊬" act)
     ("g" "gist" "㊥" annotator)
-    ("." "unresolved" "🈳" annotator))
+    ("." "unresolved" "🈳" annotator)
+    ;; Operator-only (Joe, 2026-11-10): "compose".  A ㊡ paragraph is a
+    ;; subprompt: the main agent never sees it; futon4a-subprompt relays it,
+    ;; with the rest of the turn as quoted context, to claude-cs (@mojira).
+    ("," "subprompt" "㊡" annotator))
   "Key, intent, mark and PBASE stage for `xiaoxiang-insert-mark'.")
 
 (defconst xiaoxiang-mark-stage-order
