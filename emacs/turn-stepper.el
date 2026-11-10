@@ -8,8 +8,9 @@
 ;;   SAID      — the operator turn (time + text)
 ;;   PARSE     — one line per fragment: combined intent (or "disagree: a / b")
 ;;   PATTERNS  — matched ids, proposals grouped under parent, rejected count
-;;   HAPPENED  — what happened between this turn and the next (last: it is
-;;               long, an annex; ports and alignment come before it)
+;;   HAPPENED  — what happened between this turn and the next, then the
+;;               acts closed and still open (last: it is long, an annex;
+;;               馬's ALIGNMENT and PATTERNS come before it)
 ;;
 ;; Modelled on futon0/contrib/stack-hud.el's `*Stack Context*` side window.
 ;;
@@ -506,17 +507,28 @@ carries that information."
      "\n\n"
      (propertize "PATTERNS\n" 'face '(:weight bold))
      (turn-stepper--render-patterns patterns)
-     "\n"
-     (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
-                                 (turn-stepper--aget 'at turn))
-     (turn-stepper--render-alignment (turn-stepper--aget 'alignment frame))
-     (turn-stepper--render-pattern-verdicts (turn-stepper--aget 'pattern_verdicts frame))
-     ;; HAPPENED is long and comes last, as an annex (Joe, 2026-11-10).
+     ;; 馬's sections, each after a blank line.  They used to follow
+     ;; HAPPENED; HAPPENED is long and now comes last, as an annex (Joe,
+     ;; 2026-11-10).
+     (mapconcat (lambda (section) (concat "\n" section "\n"))
+                (delq nil
+                      (mapcar (lambda (s)
+                                (let ((x (string-trim s)))
+                                  (unless (string-empty-p x) x)))
+                              (list (turn-stepper--render-alignment
+                                     (turn-stepper--aget 'alignment frame))
+                                    (turn-stepper--render-pattern-verdicts
+                                     (turn-stepper--aget 'pattern_verdicts frame)))))
+                "")
      "\n"
      (propertize "HAPPENED\n" 'face '(:weight bold))
      (if happened
          (mapconcat #'turn-stepper--render-happened-row happened "\n")
        "  (nothing between this turn and the next)")
+     ;; Ports are HAPPENED's other half (closed this turn / still open), so
+     ;; they stay under it.
+     (turn-stepper--render-ports (turn-stepper--aget 'ports frame)
+                                 (turn-stepper--aget 'at turn))
      "\n")))
 
 ;;; ---------------------------------------------------------------- mode
