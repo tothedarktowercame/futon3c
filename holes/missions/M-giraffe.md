@@ -640,6 +640,19 @@ the party and the blends by expected tokens, and the horizon lets the tokens
 be checked afterwards (Giraffe's next run). This is what turns the
 characters' wants into a strategy cascade the War Machine can run.
 
+**Joe's reading of the table (2026-11-10):** "your reading is perfect. I'd say
+that 'be strategic' and 'make FUTON readable' are effectively *the same* even
+though they sound different." Merlin's token is therefore the readability
+observables. Baseline, measured by claude-13 on 2026-11-10 from run
+`20261109T011400.188Z-4eb7a1c5` and the :7094 lexicon stack:
+- open items in a Giraffe cluster: **100 of 482 (20.7%)**;
+- the four standout strategic missions outside the War Machine (M-giraffe,
+  M-repl-circus, M-formal-arxana, M-jvm-arxana): **0 of 4 in a cluster**, no
+  needs edges read. War Machine missions: 5 of 6 clustered
+  (M-war-machine-vsatarcs-interop is not);
+- lexicon relations reviewed by Joe: **0 of 589**. Two were rejected by
+  claude-13 as alias self-references.
+
 ### Stage 2, step 3c: themed groups against dependency groups (2026-10-28)
 
 zai-2 ran this as a measurement only: packet `~/notes/packets/giraffe/stage2-01-step3c-themed-vs-dependency.md`, script and report in `~/notes/experiments/2026-10-28-giraffe-step3c/`. Reviewed by claude-13:
