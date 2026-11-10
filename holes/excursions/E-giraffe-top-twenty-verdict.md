@@ -32,7 +32,7 @@ reason, which goes back to the role that picked it).
 | # | item | picked by | index readiness | verdict |
 |---|---|---|---|---|
 | 1 | M-giraffe | Merlin | specified, multi-day | **validated** (Joe, 2026-11-10) |
-| 2 | M-peradam-grounding | Thor | specified, multi-day | **validated** (Joe, 2026-11-10; see below) |
+| 2 | M-peradam-grounding | Thor | specified, multi-day | **validated** (Joe, 2026-11-10); **closed** the same day, box 2 carried to M-pudding-peradams |
 | 3 | M-jvm-arxana | Questor | ready (one small handoff) | |
 | 4 | E-APM-f11-defects | Thyra | ready (one small handoff) | |
 | 5 | M-daily-scan | Merlin | waiting on a short answer | |
@@ -84,4 +84,10 @@ untranslatable (e.g. missing content)". So the T3.4 certificate checks
 solved-with-zero-sorry / problems-with-Lean-material >= 95%, with the 11
 problems without Lean excluded as untranslatable. At the reading above:
 461/480 = 96.0%, met.
+
+Outcome, same day: T3.4 certified by Joe's dokusan (futon7 ledger, signed
+`joe`); the prover gained a checked `amend` path; M-peradam-grounding CLOSED
+(futon7), its box 2 (a producer-side consumer of the certificate) carried to
+M-pudding-peradams. Joe named M-mojira and a T-inf breakdown per the Mozilla
+LOI as likely consumers.
 
