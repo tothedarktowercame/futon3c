@@ -1,6 +1,6 @@
 # E-giraffe-top-twenty-verdict — validate the party vote by working through its top twenty
 
-**Status:** OPEN — verdicts 1/20 (M-giraffe: validated, Joe 2026-11-10)
+**Status:** OPEN — verdicts 2/20 (M-giraffe, M-peradam-grounding: validated, Joe 2026-11-10)
 **Parent:** M-giraffe (closing check). Gauntlet: `M-peripheral-gauntlet.md`
 Checkpoint 2.
 **Owner:** Joe + claude-13
@@ -32,7 +32,7 @@ reason, which goes back to the role that picked it).
 | # | item | picked by | index readiness | verdict |
 |---|---|---|---|---|
 | 1 | M-giraffe | Merlin | specified, multi-day | **validated** (Joe, 2026-11-10) |
-| 2 | M-peradam-grounding | Thor | specified, multi-day | |
+| 2 | M-peradam-grounding | Thor | specified, multi-day | **validated** (Joe, 2026-11-10; see below) |
 | 3 | M-jvm-arxana | Questor | ready (one small handoff) | |
 | 4 | E-APM-f11-defects | Thyra | ready (one small handoff) | |
 | 5 | M-daily-scan | Merlin | waiting on a short answer | |
@@ -59,3 +59,23 @@ reason, which goes back to the role that picked it).
   the two is wrong.
 - Most picks by Merlin, Questor and Thyra are in no Giraffe cluster: no needs
   edge has been read for them, so Giraffe alone cannot see them.
+
+## Verdict notes
+
+**#2 M-peradam-grounding (Joe, 2026-11-10).** The mission (futon7) had 3 of 5
+boxes done; the two live boxes were stuck because its one-entry curated map
+mapped 0 of 35 live events and no dokusan verdict had been given. Joe:
+
+> "we're in a good position b/c we can mint T3.4 as a new peradam (95%
+> confidence) and watch it flow through the system. The certificate could
+> come from reading the apm-lead repo, e.g., via my stack-hud-apm-report and
+> observing that 95% of the prelims problems are solved in Lean. Personally I
+> think that would be good enough to earn a pass, and it was the confidence
+> level I was waiting for to publish the repo."
+
+The report's own counts, read by claude-13 the same day from
+`stack-hud--apm-scan` in Joe's Emacs: 491 problems, 480 with Lean material,
+**461 solved in Lean with zero sorry**, 19 open, 29 executable sorries left.
+That is 461/480 = 96.0% of those with Lean material, or 461/491 = 93.9% of all
+problems.
+
