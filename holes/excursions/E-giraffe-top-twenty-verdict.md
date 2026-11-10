@@ -1,6 +1,6 @@
 # E-giraffe-top-twenty-verdict — validate the party vote by working through its top twenty
 
-**Status:** OPEN — verdicts 3/20 (M-giraffe, M-peradam-grounding, M-jvm-arxana: validated, Joe 2026-11-10)
+**Status:** OPEN — verdicts 4/20 (Joe 2026-11-10: #1–#3 validated; #4 closed as irrelevant)
 **Parent:** M-giraffe (closing check). Gauntlet: `M-peripheral-gauntlet.md`
 Checkpoint 2.
 **Owner:** Joe + claude-13
@@ -34,7 +34,7 @@ reason, which goes back to the role that picked it).
 | 1 | M-giraffe | Merlin | specified, multi-day | **validated** (Joe, 2026-11-10) |
 | 2 | M-peradam-grounding | Thor | specified, multi-day | **validated** (Joe, 2026-11-10); **closed** the same day, box 2 carried to M-pudding-peradams |
 | 3 | M-jvm-arxana | Questor | ready (one small handoff) | **validated** and **closed** (Joe, 2026-11-10): 5 of 7 met; 1 carried to M-formal-arxana, 3 to M-mojira |
-| 4 | E-APM-f11-defects | Thyra | ready (one small handoff) | |
+| 4 | E-APM-f11-defects | Thyra | ready (one small handoff) | **closed as no longer relevant** (Joe, 2026-11-10: "all of these fXX things are totally irrelevant now"). Thyra's pick was right that it was closable in one pass; it was not a priority |
 | 5 | M-daily-scan | Merlin | waiting on a short answer | |
 | 6 | E-evidence-flow | Thor | may be no longer wanted | |
 | 7 | T-overlap-modes-as-factor-precision | Questor | ready (one small handoff) | |

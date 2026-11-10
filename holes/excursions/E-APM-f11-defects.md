@@ -1,6 +1,6 @@
 # E-APM-f11-defects — defect inventory for the APM demonstration, frame 11 onward
 
-**VERDICT (2026-10-09, provisional):** OPEN — Open-ended defect inventory for frame 11 onward with no stated close; latest entries folded into pinned solver cards but nothing marks the inventory complete. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
+**VERDICT:** CLOSED 2026-11-10 (Joe: "all of these fXX things are totally irrelevant now and can close on that basis, no need to look into any details"). The frame/conductor machinery these defects describe was replaced by plain loops (Joe, 2026-09-28). Underlying problems kept elsewhere: acceptance computed by the plain loop itself; independent review by test-registry warrants; stale running code by the "committed is not loaded" rule. Fixes that did land are on master (D30 `cfc275a0`, D31 `0bb6dc67`, D39a `b57b29f0`, D33/D37 partly `585a980e`); t01A05's statement was repaired in apm-lean `34f96ec0d1`. (Was: OPEN — Open-ended defect inventory for frame 11 onward with no stated close; latest entries folded into pinned solver cards but nothing marks the inventory complete. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_)
 
 **Opened 2026-08-18 by claude-2 (ground control, M-apm-demonstration) at Joe's
 direction**, while frame-11 was running: *"Lets save the defects in
@@ -1236,5 +1236,5 @@ all day.
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-1, medium confidence); not yet confirmed by the author._
 
-- [ ] Every D27-D39 entry has a disposition: fixed-and-gated, verified, or explicitly parked
-- [ ] The residual gap in D25/D28 (:write-use reachable only in a closed phase window) is fixed or ruled open
+- [x] Every D27-D39 entry has a disposition: fixed-and-gated, verified, or explicitly parked *(2026-11-10: the fixed ones above; the rest parked with the machinery, Joe's ruling)*
+- [x] The residual gap in D25/D28 (:write-use reachable only in a closed phase window) is fixed or ruled open *(2026-11-10: ruled retired with the machinery)*
