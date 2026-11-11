@@ -74,18 +74,21 @@ def flexiarg(pid, versions, today):
     records = sorted({r for r, _, _ in versions})
     thens = {(p.get("then") or "").strip() for _, _, p in versions}
     varies = "; THEN worded %d ways across its proposals" % len(thens) if len(thens) >= 4 else ""
+    # Only directives in futon3's flexiarg-directives.edn: 象's "parent" is
+    # the general pattern a proposal rests on, i.e. @why; the turn it was
+    # first proposed for goes into @provenance (there is no @context).
+    context = re.sub(r"\s+", " ", source.get("context") or "").strip()
     lines = [
         "@flexiarg %s" % pid,
         "@title %s" % (text["title"] or pid.split("/")[1].replace("-", " ")),
         "@status accepted %s: proposed by 象 for %d turns (Joe %s: recurrence suffices); "
         "attested once used in a mission or a War Machine cascade%s" % (today, len(records), today, varies),
         "@provenance 象 proposals, ~/.emacs-graph/session-turn-analysis/<record>[.json].candidates.json; "
-        "records: %s" % " ".join(records),
+        "records: %s%s" % (" ".join(records),
+                           "; first proposed for: %s" % context if context else ""),
     ]
     if source.get("parent"):
-        lines.append("@parent %s" % source["parent"])
-    if source.get("context"):
-        lines.append("@context %s" % re.sub(r"\s+", " ", source["context"]).strip())
+        lines.append("@why [%s]" % source["parent"])
     lines += ["", "! conclusion: %s" % text["then"], ""]
     for part, key in (("IF", "if"), ("HOWEVER", "however"), ("THEN", "then"), ("BECAUSE", "because")):
         lines += ["  + %s:" % part, "    %s" % re.sub(r"\s+", " ", text[key]).strip(), ""]
