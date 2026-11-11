@@ -44,7 +44,7 @@ ECHO_MIN_SHARED = 2          # dog_provider.clj echo-min-shared
 TARGETS = {"D1": 630, "D2": 1030, "D4": 2300}
 # The arm's go-live time is recorded in E-dog-helps.md when packet B loads;
 # until then every armed record is newer than this sentinel.
-ARM_LIVE = None
+ARM_LIVE = "2026-11-11T23:56:03Z"  # packet B loaded (E-dog-helps §Schedule)
 
 STOPWORDS = set(
     "the a an and or of to in is it for on with that this are was be as at by "
