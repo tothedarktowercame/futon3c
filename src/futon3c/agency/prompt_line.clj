@@ -195,6 +195,31 @@
       (println (str "[prompt-line] proposed_patterns write failed for "
                     (str turn-record-id) ": " (.getMessage t))))))
 
+(defn- write-dog-recall!
+  "Write the 狗 pre-hook recall of THIS render onto turn-record ID as
+   :dog_recall — the :segment/dog-recall payload of the first :memory
+   segment: {:at :items [{:memory :score :why}] :query-ms} on a hit, or a
+   typed absence {:status \"not-ready\"|\"failed\"|\"none\"}. The post-hook
+   packet reads this field, so a render with a :memory segment always
+   records it, absence included; a render with no :memory segment at all
+   (analysis seat, off-switch, no turn record) writes nothing. Failures
+   here never fail or delay the render."
+  [turn-record-id result]
+  (try
+    (let [id (some-> turn-record-id str)
+          dog (some #(when (and (= :memory (:segment/id %))
+                                (contains? % :segment/dog-recall))
+                       (:segment/dog-recall %))
+                    (:segments result))]
+      (when (and dog (turn-store/record-id? id))
+        (let [store (or *turn-record-store* (turn-store/store))]
+          (locking write-lock
+            (when (turn-store/read-record store id)
+              (turn-store/update-record! store id #(assoc % :dog_recall dog)))))))
+    (catch Throwable t
+      (println (str "[prompt-line] dog_recall write failed for "
+                    turn-record-id ": " (.getMessage t))))))
+
 (defn render!
   [ctx]
   (let [agent (some-> (:agent-id ctx) str)
@@ -205,7 +230,8 @@
     (let [result (render (assoc ctx :agent-id agent :session-id session) @!providers)]
       (swap! !last-renders assoc [agent session] result)
       (when (contains? ctx :turn-record-id)
-        (write-proposed-patterns! (:turn-record-id ctx) (:job-id ctx) result))
+        (write-proposed-patterns! (:turn-record-id ctx) (:job-id ctx) result)
+        (write-dog-recall! (:turn-record-id ctx) result))
       result)))
 
 (defn last-render [agent-id session-id]

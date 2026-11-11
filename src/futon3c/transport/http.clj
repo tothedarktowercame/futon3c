@@ -5382,6 +5382,18 @@
     (str "pattern " value " (retrieved, score " score tail ")")
     (str "pattern " value (when-not (str/blank? header) (str " (" header ")")))))
 
+(defn- memory-prompt-fact
+  "狗 pre-hook segment → Prompt-line fact. Items render as
+   `memory ~<project>/<slug> (<why>); also ...` from the segment header;
+   a not-ready cache reads `memory: not ready`; the typed absences
+   \"none\" and \"failed\" stay off the line (they are still recorded as
+   :dog_recall on the 象 turn record)."
+  [{:segment/keys [header dog-recall]}]
+  (cond
+    (not (str/blank? header)) (str "memory " header)
+    (= "not-ready" (:status dog-recall)) "memory: not ready"
+    :else nil))
+
 (defn- payload-turn-record-id
   "The optional 象 turn-record id on an invoke body (form turn-XXXXXX, from
    POST /api/alpha/xiang/turns). Not turn-id: that is the job id."
@@ -5402,11 +5414,12 @@
                                           :surface surface}
                                    turn-record-id (assoc :turn-record-id (str turn-record-id)
                                                          :job-id (some-> job-id str)))))
-            facts (mapv (fn [{:segment/keys [id header] :as segment}]
-                          (if (= :pattern id)
-                            (pattern-prompt-fact segment)
-                            (str (name id)
-                                 (when-not (str/blank? header) (str " " header)))))
+            facts (into [] (keep (fn [{:segment/keys [id header] :as segment}]
+                                    (cond
+                                      (= :pattern id) (pattern-prompt-fact segment)
+                                      (= :memory id) (memory-prompt-fact segment)
+                                      :else (str (name id)
+                                                 (when-not (str/blank? header) (str " " header))))))
                         segments)]
          (when (seq facts)
            (str "Prompt: " (str/join "; " facts) "\n")))
