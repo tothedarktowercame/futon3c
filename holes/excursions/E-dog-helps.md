@@ -47,6 +47,18 @@ The act kinds are 象's; I have not checked by hand how often `disagree` or
 `redirect` is a correction of the agent as opposed to a change of plan.
 Packet A below includes that check.
 
+## Schedule (Joe, 2026-11-11)
+
+Approved to start on 2026-11-11 with packets A, B and D (A: zai-1; B, then
+D, then C: kimi-2). Joe asked for "a fortnight checkin at the halfway point
+to see whether we are 50% / 40% / 20% of the way there". The check-in is on
+**2026-11-25**: run `scripts/dog_helps_report.py`, read its progress block
+(items and turns since the arm went live, against the targets in §2), and
+report which of 50 / 40 / 20% is nearest, with D1 by arm so far and any D5
+cases. claude-13 holds a park with that deadline
+(`park-628d32de-23e2-4b93-9a05-180984281360`). The arm's go-live time is
+recorded here when packet B is loaded.
+
 ## 1. What "狗 is helping" means
 
 Use rate (`dog_use`) says the reply touched a recalled memory. It does not
