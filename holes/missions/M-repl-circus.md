@@ -214,6 +214,40 @@ The instances are the six animals above.
 - [ ] CLAUDE.md's minus40 section is rewritten to treat 驴/狗 items as entry
   points. Do this only once 狗 lines actually arrive.
 
+## Two invariants for the Circus (Joe, 2026-11-11)
+
+Raised when the 象 stepper sat at frame 126 of claude-13's session
+(ed69fb38) for eight hours. The stepper was current with its records; the
+records had stopped. agent-chat's large-buffer bound (`3b6c9bc6a`, 11-04)
+switched `session-mode-turn-tags-mode` off past 1 MB, and the capture,
+an Emacs advice on `agent-chat--start-turn`, is gated on that mode, so 34 of
+Joe's turns to claude-13 (and claude-9's) went unrecorded with no warning.
+Fixed in `1e786e2dd` (painting dropped, capture kept); the invariants below
+are what would have caught it.
+
+1. **Attachment (Emacs side, Reazon).** Joe: "there's the *象 stepper*
+   buffer which should be attached exactly to one REPL at a time, otherwise
+   I guess if we're modelling the steps for two or more buffers they should
+   be *象 stepper:claude-13* or some such indexed referent. But that's a
+   layout and attachment invariant (which could be enforced with reazon, as I
+   have similar sidebuffer setups in other experiments)." Precedent:
+   `emacs/agent-chat-invariants.el` (reazon group); the stepper's buffer name
+   is `turn-stepper-buffer-name` in `emacs/turn-stepper.el`, one buffer today.
+   Its companion check: the attached stepper shows that REPL's newest record.
+
+2. **Coverage (JVM / Agency side, core.logic).** Joe: "The invariant that
+   the REPL circus runs on all turns whether or not there is a stepper
+   attached is a JVM / Agency side invariant that should be, correspondingly,
+   enforced with core.logic". Stated over the evidence store: every operator
+   chat turn (author joe, event chat-turn, futon1b :7073) has a 象 turn record
+   within a stated interval; the violations are listed, never silently
+   dropped. Capture lives in Emacs today, which is why an Emacs display
+   change could stop it; `scripts/operator_turn_capture.py` already
+   reconciles turns typed outside the recording Emacs from the evidence
+   store, so the remedy for a violation exists. Home: `futon3c.logic`
+   beside `xiang.clj` (a flat fact base of acts, valid and system time).
+   Witness case: the 34 turns of 2026-11-10 17:39 → 11-11 02:00.
+
 ## Open
 
 - Joe's questions as questions: turns tagged `claim-type: question` logged,
