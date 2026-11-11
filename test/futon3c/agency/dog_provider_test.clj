@@ -394,6 +394,126 @@
     (is (not (and (string? fact) (re-find #"^memory\s*$" fact)))
         "no rendering is ever a bare `memory`")))
 
+;; -------------------------------------------- post-hook part 1: the use
+;; check (M-repl-circus, claude-13 11-11). Fixtures turn-*.record.json are
+;; real operator records of session ed69fb38 captured 2026-11-11: the
+;; record's dog_recall and reply_text verbatim, plus a snapshot of the
+;; recalled memories' bodies from ~/.claude/projects/<project>/memory/.
+
+(def fixture-vsC2tD-record (delay (fixture "turn-vsC2tD.record.json")))
+(def fixture-63aK24-record (delay (fixture "turn-63aK24.record.json")))
+
+(defn- bodies-map
+  "The fixture's :bodies with string handle keys (cheshire keywordizes
+   JSON object keys; use-check's MEMORY-BODIES is keyed by the :memory
+   handle string)."
+  [fix]
+  (into {} (map (fn [[k v]] [(if (namespace k)
+                               (str (namespace k) "/" (name k))
+                               (name k))
+                             v]))
+        (:bodies fix)))
+
+(deftest use-check-on-the-first-live-turn
+  ;; turn-vsC2tD ("OK please send pattern-index packet 3"): the reply
+  ;; names all three recalled memories verbatim and says "I did put a
+  ;; requisition line on the packet".
+  (let [fix @fixture-vsC2tD-record
+        result (dog/use-check fix (bodies-map fix))]
+    (is (= "ok" (:status result)))
+    (is (= ["-home-joe-code-voxterm/kimi-unique-requisition"
+            "-home-joe-code/batch-packets-invite-corner-cutting"
+            "-home-joe-code/kimi-bells-need-requisition"]
+           (:surfaced-memory-ids result))
+        "surfaced ids, in recall order — memory_contract/use-receipt names")
+    (is (= (:surfaced-memory-ids result) (:used-memory-ids result))
+        "all three named ⇒ used; used ⊆ surfaced")
+    (doseq [{:keys [used kind evidence]} (:items result)]
+      (is (true? used))
+      (is (= "named" kind))
+      (is (re-find #"reply names" evidence)))))
+
+(deftest use-check-unused-item
+  ;; turn-63aK24: plop-2026-tracker-upkeep was recalled but the reply
+  ;; (resolving two outstanding items, checkpoint refresh) neither names
+  ;; it nor shares a single distinctive bigram with its body.
+  (let [fix @fixture-63aK24-record
+        result (dog/use-check fix (bodies-map fix))]
+    (is (= "ok" (:status result)))
+    (is (= 1 (count (:items result))))
+    (is (= {:memory "-home-joe-code-voxterm/plop-2026-tracker-upkeep"
+            :used false :kind "unused"
+            :evidence "no shared distinctive bigrams; not named"}
+           (first (:items result))))
+    (is (empty? (:used-memory-ids result)))))
+
+(deftest use-check-echoed-without-naming
+  ;; A reply fragment from the REAL turn-vsC2tD reply that names no slug
+  ;; but shares the distinctive bigram "kimi seat" with the
+  ;; kimi-unique-requisition body: echoed, not named.
+  (let [fix @fixture-vsC2tD-record
+        record {:dog_recall (:dog_recall fix)
+                :reply_text "Your turn asked me to send a packet to a Kimi seat, so those were on point."}
+        result (dog/use-check record (bodies-map fix))
+        by-memory (into {} (map (juxt :memory identity)) (:items result))]
+    (is (= "echoed" (get-in by-memory ["-home-joe-code-voxterm/kimi-unique-requisition" :kind])))
+    (is (re-find #"shared bigrams: \"kimi seat\""
+                 (get-in by-memory ["-home-joe-code-voxterm/kimi-unique-requisition" :evidence])))
+    (is (= "unused" (get-in by-memory ["-home-joe-code/batch-packets-invite-corner-cutting" :kind]))
+        "a memory sharing no bigram with this fragment stays unused")))
+
+(deftest use-check-typed-absences
+  (is (= "no-recall" (:status (dog/use-check {:reply_text "some reply"} {})))
+      "no dog_recall items")
+  (is (= "no-recall" (:status (dog/use-check {:dog_recall {:status "none" :items []}
+                                             :reply_text "some reply"} {})))
+      "a dog_recall typed absence is still no recall to check")
+  (is (= "no-reply" (:status (dog/use-check {:dog_recall {:items [{:memory "a/b"}]}} {})))
+      "no reply_text yet")
+  (let [fix @fixture-vsC2tD-record
+        result (dog/use-check (assoc fix :reply_text nil) (bodies-map fix))]
+    (is (= "no-reply" (:status result)))
+    (is (= 3 (count (:surfaced-memory-ids result)))
+        "surfaced ids ride the no-reply absence")))
+
+(deftest use-check-body-unavailable
+  (let [result (dog/use-check {:dog_recall {:items [{:memory "proj/missing-slug"}]}
+                               :reply_text "a real reply with distinctive words"}
+                              {})]
+    (is (= "unused" (:kind (first (:items result)))))
+    (is (= "memory body unavailable; not named in reply"
+           (:evidence (first (:items result)))))))
+
+(deftest settled-event-writes-dog-use-on-the-record
+  ;; The :settled turn event (which follows attach-happened!'s
+  ;; :reply_text write) drives the post-hook: dog_use lands on the
+  ;; operator record.
+  (let [store (tmp-store)
+        record-id "turn-useTEST1"
+        fix @fixture-vsC2tD-record]
+    (write-operator-record! store record-id "OK please send pattern-index packet 3")
+    (turn-store/update-record! store record-id
+                               #(assoc % :dog_recall (:dog_recall fix)
+                                       :reply_text (:reply_text fix)))
+    (with-redefs [dog/memory-body (fn ([handle] (get (bodies-map fix) handle))
+                                    ([_dir handle] (get (bodies-map fix) handle)))]
+      (dog/handle-event {:store store} {:event :settled :id record-id})
+      (is (loop [n 0]
+            (cond (:dog_use (turn-store/read-record store record-id)) true
+                  (< 100 n) false
+                  :else (do (Thread/sleep 50) (recur (inc n)))))
+          "dog_use written off-path")
+      (let [dog-use (:dog_use (turn-store/read-record store record-id))]
+        (is (= "ok" (:status dog-use)))
+        (is (= 3 (count (:used-memory-ids dog-use))))))
+    ;; a record with no dog_recall is skipped entirely
+    (let [record-id2 "turn-useTEST2"]
+      (write-operator-record! store record-id2 "an ordinary turn")
+      (dog/handle-event {:store store} {:event :settled :id record-id2})
+      (Thread/sleep 300)
+      (is (not (contains? (turn-store/read-record store record-id2) :dog_use))
+          "no dog_recall → no dog_use"))))
+
 (deftest lu-terms-from-a-real-patterns-file
   (let [store (tmp-store)
         record-id "turn-luTEST1"]

@@ -1,0 +1,18 @@
+{
+ "id": "turn-63aK24",
+ "reply_text": "\u32a5 [\u201cWere the other outstanding items items OK?\u201d] Yes. I rechecked both against the currently running Lucy checkpoint; both are resolved.\n\n\u32ac [\u201cMissing verified Giraffe run\u201d] Run `20261111T195837.113Z-cc4ffa45` passes the WM\u2019s actual `verified-giraffe-run?` predicate. It contains exactly the isolated ladder-01 item, with complete manifest hashes and no reading drift.\n\n\u32ac [\u201cMissing sandbox outer-loop makeup\u201d] The serving JVM\u2019s actual `load-makeup` call succeeds with schema `:wm/outer-makeup-v1`, resolving to `/home/joe/wm-sandbox/code/futon2/data/wm-learning/outer-makeup.edn`, SHA-256 `db05f30c\u2026ba13`.\n\n\u32a2 [runtime evidence] The third attempted click had already passed both checks and stopped only at the then-empty mission registry. That registry is now repaired too, and all three repairs are preserved in the refreshed `checkpoint-00`.\n\n\ud83c\ude16 [reproducibility] The makeup repair also removed its former `/home/joe/code/futon2/...` assumption: it now resolves through the configured Futon data root, matching Rob\u2019s portability concern.",
+ "dog_recall": {
+  "at": "2026-11-11T20:45:14.572948882Z",
+  "items": [
+   {
+    "memory": "-home-joe-code-voxterm/plop-2026-tracker-upkeep",
+    "score": -13.316692431419963,
+    "why": "When wm-contract items close, update the plop-2026 paper's"
+   }
+  ],
+  "query-ms": 686
+ },
+ "bodies": {
+  "-home-joe-code-voxterm/plop-2026-tracker-upkeep": "---\nname: plop-2026-tracker-upkeep\ndescription: \"When wm-contract items close, update the plop-2026 paper's margin worknotes in p4ng so the tracker doesn't drift\"\nmetadata: \n  node_type: memory\n  type: feedback\n  originSessionId: 9593f811-f96b-4582-a8f0-c462af80f0de\n  modified: 2026-09-14T17:35:34.711Z\n---\n\nJoe's instruction (2026-09-14): when things close in the wm-contract\ncampaign, update the plop-2026 tracker so it doesn't drift. The tracker\nIS the paper: `p4ng/tracker-notes.tex` renders `\\worknote{...}` margin\ncards; open-work statuses are red `\\wkflag{OUTSTANDING}` flags (Joe's\n2026-09-13 convention), closed work becomes plain \"IMPROVED (date):\"\ntext with evidence citations resolving in futon2\nholes/labs/wm-contract/. Find candidates with\n`grep -n OUTSTANDING p4ng/sec-*.tex`.\n\n**Why:** the paper doubles as the punch list; a closure that isn't\nreflected there silently overstates the open work and understates the\nrecord.\n\n**How to apply:** at each wm-contract acceptance that discharges a\npaper-visible obligation (R-numbered pattern credit, estimator builds,\ncallers/witnesses), edit the matching worknote in the same sitting as\nthe STATUS.edn ledger update; verify with a stage build\n(`./build-p4ng.sh plop-2026 --stage`). Generated tables (e.g.\n`sec-q-interface-generated.tex`) are fixed in their generators under\n`empirics-futon/`, never in the .tex. See also\n[[validate-edn-ledgers-after-edit]] for the ledger side of the same\ndiscipline.\n"
+ }
+}

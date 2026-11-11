@@ -37,6 +37,7 @@
    test touches a real store."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.xiang.turn-service :as turn-service]
@@ -375,11 +376,18 @@
                      (swap! !in-flight disj record-id)))))))
   nil)
 
+(declare prepare-use-check!)
+
 (defn handle-event
-  "One turn-service event: on :recorded, prepare the recall for the new
-   record's source text on this namespace's own daemon thread. Skips
-   non-operator records and everything when the off-switch exists.
-   Never throws."
+  "One turn-service event. On :recorded, prepare the recall for the new
+   record's source text on this namespace's own daemon thread. On
+   :settled — the event that follows attach-happened!'s :reply_text
+   write (settle-evidence! writes its packet once reading AND happened
+   summary both exist, in either arrival order; the bounded no-reply
+   path fires it after :settle-evidence-delay, where the use check
+   records \"no-reply\") — run the post-hook use check for the settled
+   record. Skips non-operator records and everything when the
+   off-switch exists. Never throws."
   [opts {:keys [event id]}]
   (when (and (= :recorded event) id (not (off? opts)))
     (try
@@ -390,6 +398,12 @@
           (when (and (= "operator" (or (:origin record) "operator"))
                      (not (str/blank? (str (:source_text record)))))
             (prepare-async! opts (str id)))))
+      (catch Throwable _ nil)))
+  (when (and (= :settled event) id (not (off? opts)))
+    (try
+      (when (and (let [s (:store opts)] (if (fn? s) (s) s))
+                 (turn-store/record-id? (str id)))
+        (prepare-use-check! opts (str id)))
       (catch Throwable _ nil))))
 
 (defn start!
@@ -413,6 +427,153 @@
   (start! {:store (fn [] (some-> (live-service) :config :store))}))
 
 ;; ---------------------------------------------------------------- provider
+
+;; ------------------------------------------------------- post-hook: use check
+
+(def memory-projects-dir
+  "Where a memory handle (\"project/slug\") lives on disk:
+   <dir>/<project>/memory/<slug>.md. The file is the canonical source
+   the minus40 store ingests, so reading it is an exact address (no FTS
+   ambiguity) and puts no load on :7093 — the recall's :memory handles
+   are exactly these project/slug pairs (verified against the live
+   11-11 recalls: -home-joe*, zai-*, 象-* projects all resolve here)."
+  "/home/joe/.claude/projects")
+
+(defn memory-body
+  "The body of memory HANDLE (\"project/slug\") from its file under
+   MEMORY-PROJECTS-DIR. Nil when the handle is malformed or the file is
+   missing (the echo half of the use check then has nothing to measure;
+   the named half still works)."
+  ([handle] (memory-body memory-projects-dir handle))
+  ([dir handle]
+   (let [[project slug] (str/split (str handle) #"/" 2)]
+     (when (and (seq project) (seq slug))
+       (let [f (io/file (str dir) project "memory" (str slug ".md"))]
+         (when (.isFile f) (slurp f)))))))
+
+(defn- content-bigrams
+  "The set of adjacent distinctive-content-word pairs of S: the same
+   normalisation as content-terms (stopwords and ≤3-letter words
+   dropped, FTS-significant characters stripped, lowercased) but keeping
+   order and duplicates, then adjacent pairs."
+  [s]
+  (let [ws (->> (str/split (str/replace (str s) #"[^0-9A-Za-z\-]+" " ") #"\s+")
+                (map str/lower-case)
+                (filter #(and (> (count %) 3)
+                              (not (contains? stopwords %)))))]
+    (set (partition 2 1 ws))))
+
+(defn use-check
+  "狗 post-hook, part 1 (Joe 2026-11-11: \"see whether any of these
+   memories were actually used/useful\", reading the operator record).
+   Pure: RECORD is the operator turn record (uses its :dog_recall items
+   and :reply_text); MEMORY-BODIES maps each recalled :memory handle to
+   its body text (see memory-body). Returns {:at :status \"ok\"
+   :surfaced-memory-ids :used-memory-ids :items [{:memory :used :kind
+   :evidence}]} — the id vectors deliberately carry the
+   memory_contract/use-receipt field names (surfaced ⊇ used), so a
+   later receipt writer can adopt the result without strain.
+
+   :kind per item:
+   - \"named\"   — the reply names the memory: its slug or full
+                 project/slug handle appears verbatim in the reply text;
+   - \"echoed\"  — the reply restates the memory's content, defined as
+                 ≥1 shared DISTINCTIVE CONTENT BIGRAM (see
+                 content-bigrams) between the reply and the memory
+                 body. Threshold justified from the live turns, not by
+                 feel: over the 12 operator turns of 2026-11-11 with
+                 dog_recall items and a reply (22 items), the 18 items
+                 judged unused (read by hand) share 0 content bigrams
+                 with their reply, while the 3 judged-used items
+                 (turn-vsC2tD, whose reply says \"I did put a
+                 requisition line on the packet\") share 1–3. One shared
+                 distinctive bigram never occurred by chance, so the
+                 threshold is 1. (Raw shared-TERM counts do not
+                 separate: judged-unused items reach 28 shared terms on
+                 generic vocabulary.)
+   - \"unused\"  — neither.
+   An item whose body is unavailable can only be named or unused; its
+   :evidence says so.
+
+   Typed absences instead of :status \"ok\": \"no-recall\" (the record
+   has no dog_recall items), \"no-reply\" (no :reply_text yet)."
+  [record memory-bodies]
+  (let [items (get-in record [:dog_recall :items])
+        reply (str (:reply_text record))]
+    (cond
+      (not (seq items))
+      {:at (str (Instant/now)) :status "no-recall" :items []}
+
+      (str/blank? reply)
+      {:at (str (Instant/now)) :status "no-reply"
+       :surfaced-memory-ids (mapv :memory items) :items []}
+
+      :else
+      (let [reply-bigrams (content-bigrams reply)
+            checked
+            (mapv (fn [{:keys [memory]}]
+                    (let [handle (str memory)
+                          slug (peek (str/split handle #"/"))
+                          body (get memory-bodies handle)]
+                      (cond
+                        (and (seq slug)
+                             (or (str/includes? reply handle)
+                                 (str/includes? reply slug)))
+                        {:memory handle :used true :kind "named"
+                         :evidence (str "reply names \"" slug "\"")}
+
+                        (str/blank? (str body))
+                        {:memory handle :used false :kind "unused"
+                         :evidence "memory body unavailable; not named in reply"}
+
+                        :else
+                        (let [shared (seq (set/intersection
+                                           reply-bigrams (content-bigrams body)))]
+                          (if shared
+                            {:memory handle :used true :kind "echoed"
+                             :evidence (str "shared bigrams: "
+                                            (str/join ", "
+                                                      (take 4 (map #(str "\"" (str/join " " %) "\"")
+                                                                   shared))))}
+                            {:memory handle :used false :kind "unused"
+                             :evidence "no shared distinctive bigrams; not named"})))))
+                  items)]
+        {:at (str (Instant/now)) :status "ok"
+         :surfaced-memory-ids (mapv :memory checked)
+         :used-memory-ids (vec (map :memory (filter :used checked)))
+         :items checked}))))
+
+(defn- prepare-use-check!
+  "The post-hook for RECORD-ID, run on this namespace's executor: read
+   the settled record, run use-check over its :dog_recall items and
+   :reply_text, and write the result onto the record as :dog_use (as
+   dog_recall is written by prompt-line). Records with no :dog_recall —
+   most turns — are skipped; a dog_recall typed absence yields the
+   \"no-recall\" dog_use. Never throws."
+  [opts record-id]
+  (.submit executor
+           ^Runnable
+           (bound-fn []
+             (try
+               (let [store (let [s (:store opts)] (if (fn? s) (s) s))
+                     record (when store (turn-store/read-record store record-id))]
+                 (when (and (map? record) (contains? record :dog_recall))
+                   (let [items (get-in record [:dog_recall :items])
+                         bodies (into {} (keep (fn [{:keys [memory]}]
+                                                 (when-let [b (memory-body memory)]
+                                                   [(str memory) b])))
+                                      items)
+                         result (try (use-check record bodies)
+                                     (catch Throwable t
+                                       {:at (str (Instant/now)) :status "failed"
+                                        :reason (str "use-check-error: " (.getMessage t))
+                                        :items []}))]
+                     (turn-store/update-record! store record-id
+                                                #(assoc % :dog_use result)))))
+               (catch Throwable t
+                 (println (str "[dog] use-check failed for " record-id ": "
+                               (.getMessage t)))))))
+  nil)
 
 (defn prompt-fact
   "The Prompt-line fact for one 狗 :memory segment: `memory <header>` on
