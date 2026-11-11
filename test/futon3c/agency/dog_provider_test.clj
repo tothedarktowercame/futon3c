@@ -514,6 +514,72 @@
       (is (not (contains? (turn-store/read-record store record-id2) :dog_use))
           "no dog_recall → no dog_use"))))
 
+;; -------------------------------------------- post-hook part 2a: bury
+;; selection (M-repl-circus, claude-13 11-11). Fixtures turn-*.bury.json
+;; are real operator records of session ed69fb38 captured 2026-11-11
+;; (turn_id, created_at, source_text, reply_text, acts verbatim).
+
+(def fixture-UkLbCu-bury (delay (fixture "turn-UkLbCu.bury.json")))
+(def fixture-vDBr4L-bury (delay (fixture "turn-vDBr4L.bury.json")))
+(def fixture-6MMa3B-bury (delay (fixture "turn-6MMa3B.bury.json")))
+(def fixture-PeSYc2-bury (delay (fixture "turn-PeSYc2.bury.json")))
+
+(deftest bury-selects-rulings-not-status
+  ;; turn-UkLbCu: Joe's :approve authorises chained/parallel dispatches
+  ;; (a direction worth burying); his :report ("I minted codex-7 as a
+  ;; helper") is a status note, not buried; the agent's own acts never
+  ;; qualify.
+  (let [candidates (dog/bury-candidates @fixture-UkLbCu-bury)]
+    (is (= 1 (count candidates)))
+    (let [{:keys [slug description body basis]} (first candidates)]
+      (is (re-find #"(?i)chained" body) "the authorisation, verbatim")
+      (is (re-find #"status: buried, not yet used" body))
+      (is (re-find #"^joe-2026-11-11-" slug) "who + date slug")
+      (is (>= 79 (count description)) "description fits a memory hook")
+      (is (= {:record "turn-UkLbCu" :act-index 0
+              :act-id "claude-13-turn-323-f-s1-0" :kind "approve"}
+             basis)
+          "basis cites the record id and the act index"))
+    (is (not-any? #(re-find #"(?i)minted codex-7" (str (:body %))) candidates)
+        "status reports are not buried")))
+
+(deftest bury-skips-questions
+  ;; turn-6MMa3B: the :ask-action act "Isn't this a little bit like beam
+  ;; search?" is a question, not a direction; the :propose ("maybe
+  ;; there's a pager-like mechanism") is a suggestion, not a ruling.
+  (is (= [] (dog/bury-candidates @fixture-6MMa3B-bury))))
+
+(deftest bury-catches-the-example-ruling
+  ;; turn-PeSYc2 (cited in claude-13's requisition): "proposal recurs is
+  ;; enough for me to accept it" is an :accept ruling; the same turn's
+  ;; :constrain keeps the GCC entries *proposed*.
+  (let [candidates (dog/bury-candidates @fixture-PeSYc2-bury)
+        bodies (map :body candidates)]
+    (is (some #(re-find #"proposal recurs" %) bodies) "the accept ruling")
+    (is (some #(re-find #"retain those as \*proposed\*" %) bodies) "the constrain ruling")
+    (is (some #(re-find #"go ahead" %) bodies) "the 🈸 go-ahead (:accept)")))
+
+(deftest bury-retraction-after-joes-disagree
+  ;; turn-vDBr4L: Joe's 🈚 disagree ("done for now but not done-done")
+  ;; and the reply's 🈹 self-correction — both buried.
+  (let [candidates (dog/bury-candidates @fixture-vDBr4L-bury)
+        by-kind (group-by #(get-in % [:basis :kind]) candidates)]
+    (is (= 1 (count (get by-kind "disagree"))) "Joe's disagree ruling")
+    (is (= 1 (count (get by-kind "retract"))) "the reply's 🈹 retraction")
+    (let [retraction (first (get by-kind "retract"))]
+      (is (re-find #"🈹" (:body retraction)) "verbatim 🈹 paragraph")
+      (is (= "turn-vDBr4L" (get-in retraction [:basis :record]))))))
+
+(deftest bury-suppresses-what-minus40-already-returns
+  ;; :known-fn is the same text-search the recall uses: a candidate
+  ;; minus40 already covers is not buried again.
+  (let [candidates (dog/bury-candidates @fixture-UkLbCu-bury
+                                        {:known-fn (fn [_] ["-home-joe-code/existing-memory"])})]
+    (is (= [] candidates) "already-known ruling suppressed"))
+  (let [candidates (dog/bury-candidates @fixture-UkLbCu-bury
+                                        {:known-fn (fn [_] nil)})]
+    (is (= 1 (count candidates)) "unknown ruling still buried")))
+
 (deftest lu-terms-from-a-real-patterns-file
   (let [store (tmp-store)
         record-id "turn-luTEST1"]

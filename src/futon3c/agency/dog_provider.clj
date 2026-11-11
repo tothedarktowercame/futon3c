@@ -575,6 +575,104 @@
                                (.getMessage t)))))))
   nil)
 
+;; ------------------------------------------- post-hook part 2a: bury selection
+;; Which memories a settled turn would bury, and (in the commit message /
+;; review bell) where they would go. NO WRITES in this packet.
+
+(def ^:private bury-act-kinds
+  "Joe's rulings and directions, by 象 act kind (turn_record's vocabulary):
+   :constrain, :disagree (his correction of the seat), :approve and
+   :accept (approve-of-a-proposal — the vocabulary splits them:
+   \"you're right\" vs \"go ahead\"), :redirect and :prioritize (added to
+   claude-13's proposed four — in this vocabulary Joe's directions
+   arrive as redirect, \"rather than / what we should do is\": the
+   E-futon-questions ruling on turn-RgkbTi is a :redirect act, and
+   6iW6zf's \"one breakout example would be better than diluting\" is
+   :prioritize), and :ask-action EXCEPT questions (a request is a
+   direction; \"Isn't this a little bit like beam search?\" is not).
+   Not buried: status reports (:report), restatements, proposals
+   (:propose is a suggestion, not a ruling), clarifying questions."
+  #{:constrain :disagree :approve :accept :redirect :prioritize :ask-action})
+
+(defn- bury-slug
+  "A kebab slug for a buried memory: who, the ruling's date, then up to
+   six distinctive content words of the quoted text."
+  [who date text]
+  (let [words (->> (content-terms text) (take 6) (map str/lower-case))]
+    (str who "-" date (when (seq words) (str "-" (str/join "-" words))))))
+
+(defn- ruling-candidate
+  "One bury candidate from operator ACT (index I) of RECORD: Joe's act
+   text, quoted verbatim with its date."
+  [record i act]
+  (let [text (str/trim (str (:text act)))
+        date (subs (str (:created_at record)) 0 (min 10 (count (str (:created_at record)))))
+        kind (name (:kind act))
+        ;; the record id rides each act as :record; :turn_id is the
+        ;; session's turn counter, not the record id
+        record-id (str (or (:record act) (:turn_id record)))]
+    {:slug (bury-slug "joe" date text)
+     :description (let [d (str "Joe " date " (" kind ", " record-id "): " text)]
+                    (if (> (count d) 79) (str (subs d 0 76) "...") d))
+     :body (str "Joe " date ", " record-id " (" kind " act " (:id act) "), verbatim:\n\n\""
+                text "\"\n\nBuried by 狗 when the turn settled; status: buried, not yet used.")
+     :basis {:record record-id :act-index i :act-id (str (:id act)) :kind kind}}))
+
+(defn- retraction-candidate
+  "The reply's correction of itself after Joe said it was wrong: RECORD
+   has an operator :disagree act and the reply carries a 🈹 (retract)
+   mark. The candidate is the 🈹 paragraph — referent quote plus the
+   correction — verbatim."
+  [record]
+  (let [reply (str (:reply_text record))
+        disagree? (some #(and (= "operator" (:author %))
+                              (= "disagree" (name (:kind %))))
+                        (:acts record))
+        idx (str/index-of reply "🈹")]
+    (when (and disagree? idx)
+      (let [end (or (str/index-of reply "\n\n" idx) (count reply))
+            paragraph (str/trim (subs reply idx end))
+            date (subs (str (:created_at record)) 0 (min 10 (count (str (:created_at record)))))
+            record-id (str (or (some #(and (= "operator" (:author %)) (:record %))
+                                   (:acts record))
+                               (:turn_id record)))]
+        {:slug (bury-slug "dog-retraction" date paragraph)
+         :description (let [d (str "Retracted " date " (" record-id "): "
+                                   (str/replace paragraph #"\s+" " "))]
+                        (if (> (count d) 79) (str (subs d 0 76) "...") d))
+         :body (str "The seat's reply on " record-id " retracted and corrected itself after Joe's "
+                    "disagree, " date ", verbatim:\n\n\"" paragraph "\"\n\n"
+                    "Buried by 狗 when the turn settled; status: buried, not yet used.")
+         :basis {:record record-id :kind "retract"}}))))
+
+(defn bury-candidates
+  "狗 post-hook, part 2a (SELECTION ONLY — no writes): the memories one
+   settled operator RECORD would bury. Buries Joe's own rulings and
+   directions — his acts of the bury-act-kinds, quoted verbatim with
+   their date — plus the reply's 🈹 self-correction when Joe disagreed
+   (retraction-candidate). Anything minus40 already returns for the
+   same text is suppressed: OPTS :known-fn (fn [candidate-text] → seq
+   of existing memory handles) is queried with the candidate's text —
+   the same text-search the recall uses; nil (the pure default) checks
+   nothing. Returns [{:slug :description :body :basis}] where :basis
+   cites the record id and the act index."
+  ([record] (bury-candidates record {}))
+  ([record {:keys [known-fn]}]
+   (let [acts (vec (:acts record))
+         rulings (keep-indexed
+                  (fn [i act]
+                    (when (and (= "operator" (:author act))
+                               (contains? bury-act-kinds (some-> (:kind act) name keyword))
+                               ;; a question is not a ruling
+                               (not (str/ends-with? (str/trim (str (:text act))) "?")))
+                      (ruling-candidate record i act)))
+                  acts)
+         retraction (retraction-candidate record)
+         candidates (cond-> (vec rulings) retraction (conj retraction))]
+     (if known-fn
+       (vec (remove #(seq (known-fn (str (:description %) "\n" (:body %)))) candidates))
+       candidates))))
+
 (defn prompt-fact
   "The Prompt-line fact for one 狗 :memory segment: `memory <header>` on
    a hit, `memory: not ready` while the background recall is pending,

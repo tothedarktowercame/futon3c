@@ -1,0 +1,59 @@
+{
+ "turn_id": "claude-13-turn-326",
+ "created_at": "2026-11-11T20:40:26Z",
+ "source_text": "\ud83c\ude1a: I think question mode may be \"done for now\" but I certainly don't think it is done-done.",
+ "reply_text": "\ud83c\ude1a is fair. Checking what zai-1's \"parked\" work actually is before saying more.\ud83c\ude39 (\"I certainly don't think it is done-done\") You're right, and \"I finished question mode\" overstated it. The search mode itself exists and is tested (futon7 `aacf83e`), and its first real briefs came back with your verdicts. That is the \"done for now\" part. What a question brief is for is still open, and recorded in futon7:\n- **The question-question** (`INDEX-questions-and-breakdowns.md`, \"Open\"). A brief doesn't carry the id of the apex question it serves; you only knew Q-mozilla-9 from its title. Mojira doesn't show the question or its \u2ff1 row above the items. A \"worth\" verdict isn't written back to the question as a candidate citation. Until those exist, triage doesn't feed the argument graph.\n- **The burn-in** (`E-daily-loop-burn-in.md`):\n  - twenty weekdays of briefs with your triage;\n  - the day-20 evaluation: did it lead to a consulting conversation, and do the predictions beat the base rate;\n  - a warning when briefs stop for more than two weekdays.\n- **Coverage.** Question briefs are generated only for the library-kind questions. The experiment, trial and ruling kinds have no brief form yet.\n\n\u329f (zai-1's \"parked\" work) futon7 has no modified files and no worktree. The only trace is the uncommitted `retrieval-results.json` (11-10), which is the output of `questions_retrieve.py` and is listed in the index as \"not committed\". zai-1's unfinished changes either never reached the shared checkout or were lost with an earlier job, so there is nothing to resume as it stands.\n\n\u32ad (next, when you want it) The question-question is the natural next step, one small packet:\n1. A question brief carries `:brief/question-id`.\n2. Mojira shows the question and its \u2ff1 row above the items.\n3. A \"worth\" verdict is written back as a candidate citation on that question.\n\nzai-1 asked to continue question-mode work, so it could take this. Shall I send it now, or hold it until the pattern-index and \u72d7 packets have landed?",
+ "acts": [
+  {
+   "port?": false,
+   "start": 0,
+   "author": "operator",
+   "turn": "claude-13-turn-326",
+   "id": "claude-13-turn-326-f-s1-0",
+   "kind": "disagree",
+   "at": "2026-11-11T20:40:26Z",
+   "record": "turn-vDBr4L",
+   "end": 91,
+   "standing?": false,
+   "about": "claim that question mode is done",
+   "text": "\ud83c\ude1a: I think question mode may be \"done for now\" but I certainly don't think it is done-done.",
+   "to": "claude-13"
+  },
+  {
+   "port?": false,
+   "author": "claude-13",
+   "turn": "claude-13-turn-326",
+   "id": "claude-13-turn-326-r-0",
+   "kind": "disagree",
+   "at": "2026-11-11T20:40:51Z",
+   "record": "turn-vDBr4L",
+   "standing?": false,
+   "text": "is fair. Checking what zai-1's \"parked\" work actually is before saying more.\ud83c\ude39 (\"I certainly don't think it is done-don\u2026",
+   "to": "operator"
+  },
+  {
+   "port?": false,
+   "author": "claude-13",
+   "turn": "claude-13-turn-326",
+   "id": "claude-13-turn-326-r-1",
+   "kind": "qualify",
+   "at": "2026-11-11T20:40:51Z",
+   "record": "turn-vDBr4L",
+   "standing?": false,
+   "text": "(zai-1's \"parked\" work) futon7 has no modified files and no worktree. The only trace is the uncommitted `retrieval-resu\u2026",
+   "to": "operator"
+  },
+  {
+   "port?": true,
+   "author": "claude-13",
+   "turn": "claude-13-turn-326",
+   "id": "claude-13-turn-326-r-2",
+   "kind": "propose",
+   "at": "2026-11-11T20:40:51Z",
+   "record": "turn-vDBr4L",
+   "standing?": true,
+   "text": "(next, when you want it) The question-question is the natural next step, one small packet:\n1. A question brief carries \u2026",
+   "to": "operator"
+  }
+ ]
+}

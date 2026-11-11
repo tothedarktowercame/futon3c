@@ -1,0 +1,62 @@
+{
+ "turn_id": "claude-13-turn-323",
+ "created_at": "2026-11-11T20:32:59Z",
+ "source_text": "\u32ad: I'm happy for you to continue the remaining packets with chained or parallel dispatches; I minted codex-7 as a helper",
+ "reply_text": "First the live burst test from the 81-file commit, then the dispatches.Both dispatched and running, each with a park. Now the retry. Reading the current watcher.Adding a bounded retry: after a failed build, try again after 1, 2 and 3 minutes. A success resets the count, and a new library change still takes precedence through the usual debounce.\u32a5 (\"continue the remaining packets with chained or parallel dispatches\") Both remaining packets are running in parallel. The third piece, retrying a failed build, I did myself, and it's already live.\n\n\u32af (dispatched, each with its own park)\n- **Packet 4, the readers**, to codex-7. Job `invoke-1794429230866-17549-75b1374b`, packet `~/notes/claude-13/pattern-index-05-readers.md`.\n  - **Readers to move:**\n    - `http.clj`'s `.tsv` cache, which today refreshes only on a JVM restart;\n    - `real_backend`;\n    - futon3a's `notions.clj`;\n    - `pattern_hints`;\n    - `artifact_activation`'s index hash.\n  - **Proof per reader:** a test that it sees a newly added pattern without a restart, a plant that breaks the re-read, and parity with today's output.\n  - **Then:** the `.tsv` export stops, but only if no reader is left anywhere under `~/code`.\n- **Packet 5, stop writing unread files**, to kimi-2. Job `invoke-1794429232333-17550-84785dcf`, packet `~/notes/claude-13/pattern-index-06-retire-unread.md`.\n  - **What stops:** the BGE, fasttext and glove pattern files that nobody reads.\n  - **Before stopping:** a recheck across every repo that each really has no reader.\n  - **The offline 2-D projector** gets a decision: keep its inputs behind a flag, or move it onto the sidecar.\n  - **One home** for the index files.\n  - **Mission embeddings** are left alone.\n  - **Old files** are listed for me to delete after review, not deleted by kimi-2.\n\n\u32a2 (done myself: the bounded retry) A failed build is now retried after 1, 2 and 3 minutes. A success or a new library change resets the count. Two new tests cover it (fail twice then succeed, and stop after three); a planted \"no retries\" fails the first. The watcher tests are at 7/7. It's live: futon3c `04f2087cd`, loaded from master. The sidecar can't now sit a step behind because of one transient failure like the 19:21 tokenizer error.\n\n\ud83c\ude33 (still waiting)\n- The watcher hasn't yet built from the 81-file directive commit. Its cycles take minutes, and I'll confirm that build when the next result arrives.\n- zai-1's \u72d7 and minus40 review is still running.",
+ "acts": [
+  {
+   "port?": false,
+   "start": 0,
+   "author": "operator",
+   "turn": "claude-13-turn-323",
+   "id": "claude-13-turn-323-f-s1-0",
+   "kind": "approve",
+   "at": "2026-11-11T20:32:59Z",
+   "record": "turn-UkLbCu",
+   "end": 91,
+   "standing?": false,
+   "about": "remaining packets",
+   "text": "\u32ad: I'm happy for you to continue the remaining packets with chained or parallel dispatches;",
+   "to": "claude-13"
+  },
+  {
+   "port?": false,
+   "start": 92,
+   "author": "operator",
+   "turn": "claude-13-turn-323",
+   "id": "claude-13-turn-323-f-s1-1",
+   "kind": "report",
+   "at": "2026-11-11T20:32:59Z",
+   "record": "turn-UkLbCu",
+   "end": 120,
+   "standing?": false,
+   "about": "codex-7",
+   "text": "I minted codex-7 as a helper",
+   "to": "claude-13"
+  },
+  {
+   "port?": true,
+   "author": "claude-13",
+   "turn": "claude-13-turn-323",
+   "id": "claude-13-turn-323-r-0",
+   "kind": "delegate",
+   "at": "2026-11-11T20:36:09Z",
+   "record": "turn-UkLbCu",
+   "standing?": true,
+   "text": "(dispatched, each with its own park)\n- **Packet 4, the readers**, to codex-7. Job `invoke-1794429230866-17549-75b1374b`\u2026",
+   "to": "operator"
+  },
+  {
+   "port?": false,
+   "author": "claude-13",
+   "turn": "claude-13-turn-323",
+   "id": "claude-13-turn-323-r-1",
+   "kind": "report",
+   "at": "2026-11-11T20:36:09Z",
+   "record": "turn-UkLbCu",
+   "standing?": false,
+   "text": "(done myself: the bounded retry) A failed build is now retried after 1, 2 and 3 minutes. A success or a new library cha\u2026",
+   "to": "operator"
+  }
+ ]
+}
