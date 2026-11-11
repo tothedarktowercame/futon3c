@@ -188,6 +188,16 @@ observation, as in E-gcc-schema §16 items 11–13, so retrieval can learn
 from it. Relevance first from the operator's text (fast), then 驴's
 patterns, later 猴's operator focus.
 
+The post-hook has a second half (Joe, 11-11): "'post-' was not only going
+to judge whether they were used (which is interesting) but also "bury" new
+memories that are useful (i.e. in the sense of a dog's bone)". So after a
+turn 狗 both marks each recalled memory used or not, and buries what the
+turn established that a later turn would want, checked against minus40's
+near-duplicates first so a bone already buried is added to rather than
+buried twice. Open: whether a buried memory is written at once or held as
+a candidate until it is recalled and used (the ladder of E-gcc-schema §16
+item 14: proposed → accepted → attested).
+
 ### The giant connected component
 
 The GCC of patterns, missions, turns, sessions and memories is a derived graph in
