@@ -89,6 +89,41 @@
      (Thread/sleep 800)
      (is (= 2 (calls)) "no third build"))))
 
+(deftest a-failed-build-is-retried-a-bounded-number-of-times
+  (let [dir (temp-dir)
+        log (str dir "/calls.log")
+        script (str dir "/fail.sh")]
+    ;; fails on its first two calls, then succeeds
+    (spit script (str "#!/bin/sh\necho call >> " log "\n"
+                      "n=$(wc -l < " log ")\n"
+                      "if [ \"$n\" -le 2 ]; then exit 1; fi\n"
+                      "echo '{\"scanned\":3,\"changed\":0,\"deleted\":0,\"embedded\":0}'\n"))
+    (.setExecutable (io/file script) true)
+    (let [calls #(let [f (io/file log)] (if (.exists f) (count (str/split-lines (slurp f))) 0))]
+      (binding [w/*build-command* ["sh" script]
+                w/*debounce-ms* 50
+                w/*retry-base-ms* 100]
+        (w/schedule!)
+        (is (true? (wait-for-it #(= 3 (calls)))) "two failures, then one success")
+        (is (= 0 (:exit @w/last-result)))
+        (Thread/sleep 700)
+        (is (= 3 (calls)) "no retry after the success")))))
+
+(deftest retries-stop-after-three
+  (let [dir (temp-dir)
+        log (str dir "/calls.log")
+        script (str dir "/fail.sh")]
+    (spit script (str "#!/bin/sh\necho call >> " log "\nexit 1\n"))
+    (.setExecutable (io/file script) true)
+    (let [calls #(let [f (io/file log)] (if (.exists f) (count (str/split-lines (slurp f))) 0))]
+      (binding [w/*build-command* ["sh" script]
+                w/*debounce-ms* 50
+                w/*retry-base-ms* 50]
+        (w/schedule!)
+        (is (true? (wait-for-it #(= 4 (calls)))) "the build and three retries")
+        (Thread/sleep 800)
+        (is (= 4 (calls)) "then nothing until the next change")))))
+
 (deftest off-switch-stops-builds
   (let [off (io/file w/off-switch-path)]
     (.mkdirs (.getParentFile off))

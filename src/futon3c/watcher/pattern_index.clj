@@ -37,6 +37,14 @@
 
 (def ^:dynamic *debounce-ms* 4000)
 
+(def ^:dynamic *retry-base-ms*
+  "A failed build is retried after 1x, 2x, 3x this (claude-13, 2026-11-11: a
+   build failed once at 19:21 with a tokenizer error that a rerun did not
+   reproduce, and nothing retried it until the next library change)."
+  60000)
+
+(def ^:private max-retries 3)
+
 (def ^:private build-timeout-minutes
   "A full build takes ~31 s (2026-11-11); past this the build is stopped, so a
    hung builder cannot hold building? forever."
@@ -57,6 +65,7 @@
 (defonce ^:private pending (atom nil))     ;; ScheduledFuture or nil
 (defonce ^:private building? (atom false))
 (defonce ^:private lock (Object.))
+(defonce ^:private retries (atom 0))
 
 ;; The most recent build: {:stats {} :exit n :stderr-tail "..." :finished-at
 ;; epoch-ms}. Read by agency.pattern-index/usable? wiring.
@@ -105,8 +114,25 @@
           (println "[pattern-index] build FAILED:" (.getMessage t))
           result)))))
 
-(defn schedule!
-  "Debounced async sidecar rebuild.  Returns immediately.
+(declare schedule-in!)
+
+(defn- after-build!
+  "A successful build clears the retry count; a failed one (not a skip) is
+   tried again after 1x, 2x, 3x *retry-base-ms*, then left for the next change
+   (usable? reports the sidecar as behind meanwhile)."
+  [result]
+  (cond
+    (= :skipped (:status result)) nil
+    (= 0 (:exit result)) (reset! retries 0)
+    (< @retries max-retries)
+    (let [n (swap! retries inc)]
+      (println (format "[pattern-index] build failed (exit %s); retry %d of %d in %d s"
+                       (:exit result) n max-retries (quot (* n *retry-base-ms*) 1000)))
+      (schedule-in! (* n *retry-base-ms*)))
+    :else (println "[pattern-index] build failed; retries exhausted until the next change")))
+
+(defn- schedule-in!
+  "Schedule one build DELAY-MS from now, replacing any pending one.
 
   The debounce task and the build share one thread (`executor` is single
   threaded), so a change that lands during a build is scheduled behind it
@@ -116,7 +142,7 @@
   an again?/building? handshake here could never take its mid-build branch,
   because the task that would set it cannot run while the build holds the
   thread)."
-  []
+  [delay-ms]
   (if (off?)
     :off
     (locking lock
@@ -125,13 +151,21 @@
       (let [run-task (bound-fn []
                        (locking lock (reset! pending nil))
                        (reset! building? true)
-                       (try (run-build!)
-                            (finally (reset! building? false))))
+                       (after-build!
+                        (try (run-build!)
+                             (finally (reset! building? false)))))
             task (reify Runnable (run [_] (run-task)))
-            fut (.schedule executor task (long *debounce-ms*)
+            fut (.schedule executor task (long delay-ms)
                            TimeUnit/MILLISECONDS)]
         (reset! pending fut)
         :scheduled))))
+
+(defn schedule!
+  "Debounced async sidecar rebuild for a library change.  Returns
+   immediately.  A change starts a fresh retry budget."
+  []
+  (reset! retries 0)
+  (schedule-in! *debounce-ms*))
 
 (defn library-pattern-path?
   "True when PATH is a .flexiarg/.multiarg/.arg under futon3 library/ or
