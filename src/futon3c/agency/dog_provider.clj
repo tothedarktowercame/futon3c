@@ -3,12 +3,16 @@
    checked after it\"): recall relevant minus40 memories for an agent turn
    that answers an operator turn, before the turn runs.
 
-   Relevance is the operator turn's own text (the fast path; 11-11: \"it
-   could either read the operator text patterns or wait for the 驴
-   patterns\"). The read is the same one m40_find makes:
+   Relevance is seeded from 驴's patterns for the turn (the top patterns'
+   ids and titles, read from the record's .patterns.json at arrival time;
+   11-11: \"it could either read the operator text patterns or wait for
+   the 驴 patterns\"); the operator turn's own text supplies the keyword
+   fallback. The read is the same one m40_find makes:
    GET <minus40-store :7093>/api/alpha/evidence/text-search?q=... (the
    store's FTS5 sidecar; hits whose body is a claude-code memory are
-   grouped by project/name, one item per memory).
+   grouped by project/name, one item per memory). Dated directives
+   (\"stop dispatches on 2026-10-23\") are dropped — a lapsed order is
+   not a current fact.
 
    Measured 2026-11-11 over 10 real operator turns of session ed69fb38:
    p50 75 ms, max 101 ms — the max does not fit the default provider
@@ -55,6 +59,8 @@
 (def ^:private keyword-count 6)
 (def ^:private search-limit 50)
 (def ^:private query-timeout-ms 5000)
+(def ^:private lu-pattern-count 5)
+(def ^:private lu-term-count 8)
 
 (def ^:private stopwords
   #{"the" "a" "an" "and" "or" "of" "to" "in" "is" "it" "for" "on" "with"
@@ -115,6 +121,16 @@
 (defn- effective-request-fn [opts]
   (or (:request-fn opts) *request-fn* default-request-fn))
 
+(defn- content-terms
+  "FTS5-safe content terms of S, in order: stopwords dropped, words of 3
+   letters or fewer dropped, duplicates dropped. Hyphens are kept (the
+   store's FTS5 index tokenises them as the operator text did)."
+  [s]
+  (->> (str/split (str/replace (str s) #"[^0-9A-Za-z\-]+" " ") #"\s+")
+       (filter #(and (> (count %) 3)
+                     (not (contains? stopwords (str/lower-case %)))))
+       distinct))
+
 (defn keywords
   "The fast relevance query from the operator turn's text: the store's
    FTS5 sidecar treats a space-separated query as AND, so a whole turn
@@ -122,22 +138,71 @@
    KEYWORD-COUNT distinctive content words (longest first, stopwords
    dropped, FTS5-significant characters stripped) and OR them."
   [text]
-  (let [tokens (-> (str text)
-                   (str/replace #"[^0-9A-Za-z\-]+" " ")
-                   (str/split #"\s+"))
-        tokens (->> tokens
-                    (filter #(and (> (count %) 3)
-                                  (not (contains? stopwords (str/lower-case %)))))
-                    distinct
-                    (sort-by count >)
-                    (take keyword-count))]
-    (str/join " OR " tokens)))
+  (->> (content-terms text)
+       (sort-by count >)
+       (take keyword-count)
+       (str/join " OR ")))
+
+(defn lu-terms
+  "驴's terms for RECORD-ID, the better-aimed seed: the top
+   LU-PATTERN-COUNT patterns (by score) of the record's .patterns.json,
+   their id name-parts and titles mined for content terms, up to
+   LU-TERM-COUNT. When no patterns file exists, falls back to the
+   record's own :lu_ranked :ranked ids. Nil when neither exists — the
+   caller then falls back to the operator text's keywords."
+  [store record-id]
+  (let [record-id (str record-id)]
+    (when (turn-store/record-id? record-id)
+      (let [f (io/file (turn-store/pattern-candidates-path store record-id))]
+        (if (.isFile f)
+          (some->> (try (json/parse-string (slurp f) true)
+                        (catch Throwable _ nil))
+                   vals (apply concat)
+                   (sort-by #(or (:score %) 0) >)
+                   (take lu-pattern-count)
+                   (mapcat (fn [p] (content-terms
+                                    (str/lower-case
+                                     ;; the id's name-part, not its family
+                                     ;; ("operator" drags junk), plus title
+                                     (str (peek (str/split (str (:id p)) #"/"))
+                                          " " (:title p))))))
+                   distinct (take lu-term-count) seq)
+          (some->> (when store (turn-store/read-record store record-id))
+                   :lu_ranked :ranked
+                   (map :id)
+                   (mapcat #(content-terms (str/lower-case (peek (str/split (str %) #"/")))))
+                   distinct (take lu-term-count) seq))))))
+
+(defn readable-project
+  "A path-mangled project slug as a readable name: `-home-joe-code-voxterm`
+   becomes `voxterm`. A plain project stays itself. The raw :memory
+   handle is unchanged, so the item stays resolvable through m40_find in
+   one call."
+  [project]
+  (let [p (str project)]
+    (if (str/starts-with? p "-")
+      (or (last (remove str/blank? (str/split p #"-"))) p)
+      p)))
+
+(defn- dated-directive?
+  "A dated instruction is not a current fact: S (a memory's slug plus
+   hook) names a directive verb bound to an ISO date ('stop dispatches
+   on 2026-10-23', 'hold until <date>'). Such memories are DROPPED rather
+   than tagged: offered at all, the prompt line presents them as current
+   context, which is exactly the observed failure (a lapsed order
+   recalled as a standing fact on a dispatch turn). An agent that needs
+   the history can still find it through m40."
+  [s]
+  (let [s (str s)]
+    (boolean (and (re-find #"\d{4}-\d{2}-\d{2}" s)
+                  (re-find #"(?i)\b(stop|hold|until|pause|freeze|resume|defer|cancel)\b" s)))))
 
 (defn- memory-item
   "One text-search hit whose body is a claude-code memory, as
-   {:memory \"<project>/<slug>\" :score :why}. The why is the memory's
-   hook trimmed to 8 words. Nil for non-memory hits (turn records and
-   lu situations share the index)."
+   {:memory \"<project>/<slug>\" :display \"<readable>/<slug>\" :score :why}.
+   The why is the memory's hook trimmed to 8 words. Nil for non-memory
+   hits (turn records and lu situations share the index) and for dated
+   directives (see dated-directive?)."
   [hit]
   (let [body (get-in hit [:entry :evidence/body])
         body (cond
@@ -148,12 +213,15 @@
     (when (and (map? body) (= "claude-code" (:source body)))
       (let [project (some-> (:project body) str)
             slug (some-> (:name body) str)
-            why (let [words (->> (str/split (str/trim (str (or (:hook body) ""))) #"\s+")
+            hook (str (or (:hook body) ""))
+            why (let [words (->> (str/split (str/trim hook) #"\s+")
                                  (remove str/blank?)
                                  (take 8))]
                   (if (seq words) (str/join " " words) "keyword match"))]
-        (when-not (or (str/blank? project) (str/blank? slug))
+        (when-not (or (str/blank? project) (str/blank? slug)
+                      (dated-directive? (str slug " " hook)))
           {:memory (str project "/" slug)
+           :display (str (readable-project project) "/" slug)
            :score (:score hit)
            :why why})))))
 
@@ -168,35 +236,68 @@
        (take max-items)
        vec))
 
+(defn- search-memories
+  "One text-search for QUERY, memory-grouped items."
+  [request-fn base query]
+  (let [url (str base
+                 "/api/alpha/evidence/text-search?q="
+                 (URLEncoder/encode query "UTF-8")
+                 "&limit=" search-limit)]
+    (recall-from-response (or (request-fn url) {}))))
+
 (defn recall
-  "One 狗 recall for the operator turn TEXT. Returns
-   {:at :items [{:memory :score :why}...] :query-ms :query}, with :status
-   \"none\" when no memory matched and \"failed\" on any error. Never
-   throws. OPTS as per defaults; :request-fn receives the query URL and
-   returns the parsed JSON response."
+  "One 狗 recall for the operator turn TEXT. The query is seeded from
+   驴's terms (OPTS :lu-terms, see lu-terms) when they exist; the
+   operator text's keywords are the fallback — and fill any items the
+   驴-seeded query did not find, so a weak patterns file degrades to the
+   old behaviour rather than to nothing. Each item records which source
+   produced it (:source \"lu\" or \"keywords\"). Returns
+   {:at :items [{:memory :display :score :why :source}...] :query-ms
+   :query :query-source}, with :status \"none\" when no memory matched
+   and \"failed\" on any error. Never throws. OPTS as per defaults;
+   :request-fn receives the query URL and returns the parsed JSON
+   response."
   ([text] (recall text {}))
   ([text opts]
    (let [opts (merge defaults opts)
          t0 (System/nanoTime)
          elapsed #(quot (- (System/nanoTime) t0) 1000000)
          request-fn (effective-request-fn opts)
-         query (keywords text)]
+         base (or (:base opts) minus40-base)
+         lu-query (some->> (seq (:lu-terms opts)) (str/join " OR "))
+         kw-query (keywords text)]
      (try
-       (if (str/blank? query)
-         {:status "none" :at (str (Instant/now)) :query-ms (elapsed) :query "" :items []}
-         (let [url (str (or (:base opts) minus40-base)
-                        "/api/alpha/evidence/text-search?q="
-                        (URLEncoder/encode query "UTF-8")
-                        "&limit=" search-limit)
-               response (request-fn url)
-               items (recall-from-response (or response {}))]
+       (if (and (str/blank? (or lu-query "")) (str/blank? kw-query))
+         {:status "none" :at (str (Instant/now)) :query-ms (elapsed) :query ""
+          :query-source "none" :items []}
+         (let [;; 驴 first, keywords as fallback/fill (in that order).
+               lu-items (when-not (str/blank? (or lu-query ""))
+                          (mapv #(assoc % :source "lu")
+                                (search-memories request-fn base lu-query)))
+               need (- max-items (count lu-items))
+               kw-items (when (and (pos? need) (not (str/blank? kw-query)))
+                          (let [seen (set (map :memory lu-items))]
+                            (->> (search-memories request-fn base kw-query)
+                                 (map #(assoc % :source "keywords"))
+                                 (remove #(contains? seen (:memory %)))
+                                 (take need)
+                                 vec)))
+               items (vec (take max-items (concat lu-items kw-items)))]
            (if (seq items)
-             {:at (str (Instant/now)) :query-ms (elapsed) :query query :items items}
-             {:status "none" :at (str (Instant/now)) :query-ms (elapsed) :query query
+             {:at (str (Instant/now)) :query-ms (elapsed)
+              :query (str/join " || " (remove str/blank? [lu-query kw-query]))
+              :query-source (cond (and (seq lu-items) (seq kw-items)) "mixed"
+                                  (seq lu-items) "lu"
+                                  :else "keywords")
+              :items items}
+             {:status "none" :at (str (Instant/now)) :query-ms (elapsed)
+              :query (str (or lu-query kw-query))
+              :query-source (if lu-query "lu" "keywords")
               :items []})))
        (catch Throwable t
          {:status "failed" :reason (str "recall-error: " (.getMessage t))
-          :at (str (Instant/now)) :query-ms (elapsed) :query query :items []})))))
+          :at (str (Instant/now)) :query-ms (elapsed)
+          :query (str (or lu-query kw-query)) :items []})))))
 
 ;; ------------------------------------------------- arrival-time compute
 
@@ -234,7 +335,11 @@
                          record (when store (turn-store/read-record store record-id))]
                      (if (and (map? record)
                               (not (str/blank? (str (:source_text record)))))
-                       (publish! record-id (recall (:source_text record) opts))
+                       (publish! record-id
+                                 (recall (:source_text record)
+                                         (assoc opts :lu-terms
+                                                (try (lu-terms store record-id)
+                                                     (catch Throwable _ nil)))))
                        ;; No record or no operator text: a typed absence, so
                        ;; the render records it instead of re-kicking forever.
                        (publish! record-id
@@ -298,7 +403,7 @@
   (let [items (:items recall)
         status (:status recall)
         header (when (seq items)
-                 (let [shown (mapv #(str "~" (:memory %) " (" (:why %) ")") items)]
+                 (let [shown (mapv #(str "~" (or (:display %) (:memory %)) " (" (:why %) ")") items)]
                    (str (first shown)
                         (when (< 1 (count shown))
                           (str "; also " (str/join ", " (rest shown)))))))]
@@ -309,7 +414,7 @@
                                      :session-id (str session-id)
                                      :turn-record-id (str record-id)
                                      :basis-status (if (seq items) :dog-recall :dog-absence)}}
-             :segment/dog-recall (select-keys recall [:at :items :query-ms :status :reason])}
+             :segment/dog-recall (select-keys recall [:at :items :query-ms :query-source :status :reason])}
       (seq header) (assoc :segment/header header)
       (= "not-ready" status) (assoc :segment/not-ready true))))
 

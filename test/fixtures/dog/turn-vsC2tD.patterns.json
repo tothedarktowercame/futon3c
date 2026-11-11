@@ -1,0 +1,30 @@
+{
+  "🈳: OK please send pattern-index packet 3" : [ {
+    "id" : "operator/bare-continue-signal",
+    "score" : 19.68,
+    "title" : "Bare Continue Signal — \"OK, Please Continue\"",
+    "conclusion" : "Record it as a trajectory-approval-and-handback: approve the current course unchanged and let the agent proceed; do not mine it for new requirements."
+  }, {
+    "id" : "operator/grant-the-go-ahead",
+    "score" : 9.84,
+    "title" : "Grant the Go-Ahead (existing proposal, 9 prior occurrences — RIPE, no draft written)",
+    "conclusion" : "Grant continuation in its minimal form ('OK, please continue') — acknowledge the state, hand the momentum back, add nothing."
+  }, {
+    "id" : "workday/external-project-index",
+    "score" : 9.81,
+    "title" : "External Project Index as System of Record",
+    "context" : "The ChatGPT web sidebar is a slow, weak global navigator, and you are aiming to reduce dependence on the web UI. An external index can treat projects as contexts you can enter via stable pointers, while your own system becomes the canonical registry.",
+    "conclusion" : "External Project Index as System of Record"
+  }, {
+    "id" : "devmap-coherence/prototype-alignment-embedding",
+    "score" : 9.36,
+    "title" : "Prototype Alignment — Semantic Embedding Discipline",
+    "context" : "Maintain an up-to-date patterns-index and compression log to ensure reproducible and reliable semantic embeddings."
+  }, {
+    "id" : "equity/protected-interaction-as-published",
+    "score" : 8.65,
+    "title" : "Protected Interaction (as published in paper v2.3)",
+    "context" : "This is NPT Collective Action — specifically 3.3 Skill Set Workability and 3.4 Contextual Integration.  It is an intervention-tier pattern with medium coordination, requiring two formal actors: the Training Project and the Institutional Lead (or other local representative).  Where weak coordination ",
+    "conclusion" : "The breadth of open-research topics exceeds what any single trainer can confidently cover.  The resolution is to let each trainer declare a delivery profile — the modules they will own — and for the programme to treat institutional coverage as a network property across its trainers rather than a req"
+  } ]
+}

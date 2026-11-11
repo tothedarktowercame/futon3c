@@ -5,7 +5,7 @@
    ed69fb38, captured 2026-11-11."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.string]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.dog-provider :as dog]
             [futon3c.agency.prompt-line :as prompt-line]
@@ -196,3 +196,104 @@
         (is (nil? (dog/provider {:agent-id "kimi-1" :session-id "sess-test"
                                  :turn-record-id record-id}))
             "provider silent while the off-switch file exists")))))
+
+
+;; -------------------------------------------- second pass (M-repl-circus):
+;; 驴-seeded queries, dated directives, de-duplication, readable projects.
+;; Fixtures turn-vsC2tD.* are real minus40 answers captured 2026-11-11
+;; (read-only) for the queries the new recall builds for that turn, and
+;; the turn's real .patterns.json.
+
+(def fixture-vsC2tD-kw (delay (fixture "turn-vsC2tD.kw.json")))
+(def fixture-vsC2tD-lu (delay (fixture "turn-vsC2tD.lu.json")))
+
+(defn- routing-request
+  "A :request-fn that answers the 驴-seeded query from LU-FIX and any
+   other query from KW-FIX, recording the URLs it saw in order."
+  [lu-fix kw-fix]
+  (let [seen (atom [])]
+    [seen
+     (fn [url]
+       (swap! seen conj url)
+       (if (re-find #"bare-continue-signal" url)
+         (:response lu-fix)
+         (:response kw-fix)))]))
+
+(deftest lu-seeded-query-runs-first-and-tags-sources
+  (let [[seen request-fn] (routing-request @fixture-vsC2tD-lu @fixture-vsC2tD-kw)
+        result (dog/recall "OK please send pattern-index packet 3"
+                           {:request-fn request-fn
+                            :lu-terms (seq (#'dog/content-terms
+                                            "bare-continue-signal Bare Continue Signal"))})]
+    (is (re-find #"bare-continue-signal" (first @seen))
+        "the first (and seeding) query is built from 驴's terms")
+    (is (nil? (:status result)))
+    (is (seq (:items result)))
+    (let [sources (mapv :source (:items result))]
+      (is (= "lu" (first sources)) "驴-seeded items lead")
+      (is (some #{"keywords"} sources)
+          "keywords fill the items the 驴 query did not find"))
+    (is (= "mixed" (:query-source result)))
+    (is (= (count (:items result)) (count (distinct (map :memory (:items result)))))
+        "de-duplicated by memory")))
+
+(deftest keywords-are-the-fallback-when-no-patterns
+  (let [[seen request-fn] (routing-request @fixture-vsC2tD-lu @fixture-vsC2tD-kw)
+        result (dog/recall "OK please send pattern-index packet 3"
+                           {:request-fn request-fn})]
+    (is (nil? (:status result)))
+    (is (seq (:items result)))
+    (is (= #{"keywords"} (set (map :source (:items result)))))
+    (is (= "keywords" (:query-source result)))
+    (is (not (re-find #"bare-continue-signal" (first @seen))))))
+
+(deftest dated-directives-are-dropped
+  ;; The kw fixture really contains -home-joe-code-voxterm/stop-dispatches-2026-10-23,
+  ;; the lapsed order the first pass recalled as a current fact. It ranks
+  ;; 6th of 6 memories in the fixture, so widen max-items: the filter, not
+  ;; the cut, must be what keeps it out.
+  (is (re-find #"stop-dispatches-2026-10-23"
+               (slurp (io/resource "fixtures/dog/turn-vsC2tD.kw.json")))
+      "the fixture really contains a dated directive")
+  (with-redefs [dog/max-items 10]
+    (let [[_ request-fn] (routing-request @fixture-vsC2tD-lu @fixture-vsC2tD-kw)
+          result (dog/recall "OK please send pattern-index packet 3"
+                             {:request-fn request-fn})]
+      (is (<= 4 (count (:items result))) "enough items that the dated one would show")
+      (is (not-any? #(re-find #"stop-dispatches" (str (:memory %))) (:items result))
+          "a dated directive is dropped, not offered as a current fact"))))
+
+(deftest dedupe-across-the-two-queries
+  ;; One memory, found by BOTH queries: it appears once, from 驴.
+  (let [request-fn (fn [_url] (:response @fixture-05cXMM))
+        result (dog/recall "benefits have a time-limited nature"
+                           {:request-fn request-fn
+                            :lu-terms ["benefits" "time-limited"]})]
+    (is (= 1 (count (:items result))))
+    (is (= "lu" (:source (first (:items result)))))))
+
+(deftest readable-project-names
+  (is (= "voxterm" (dog/readable-project "-home-joe-code-voxterm")))
+  (is (= "zai-6" (dog/readable-project "zai-6")) "a plain project stays itself")
+  (let [[_ request-fn] (routing-request @fixture-vsC2tD-lu @fixture-vsC2tD-kw)
+        result (dog/recall "OK please send pattern-index packet 3"
+                           {:request-fn request-fn})
+        item (first (:items result))]
+    (is (re-matches #"[^/]+/[^/]+" (:display item)) "display is readable/slug")
+    (is (not (str/starts-with? (:display item) "-")))
+    (is (re-matches #"[^/]+/[^/]+" (:memory item))
+        "the raw handle stays, resolvable through m40_find in one call")))
+
+(deftest lu-terms-from-a-real-patterns-file
+  (let [store (tmp-store)
+        record-id "turn-luTEST1"]
+    (write-operator-record! store record-id "OK please send pattern-index packet 3")
+    (spit (turn-store/pattern-candidates-path store record-id)
+          (slurp (io/resource "fixtures/dog/turn-vsC2tD.patterns.json")))
+    (let [terms (dog/lu-terms store record-id)]
+      (is (seq terms))
+      (is (some #{"bare-continue-signal"} terms))
+      (is (not-any? #{"operator"} terms) "the family prefix is not a term")))
+  (let [store (tmp-store)]
+    (is (nil? (dog/lu-terms store "turn-luTEST2"))
+        "no patterns file and no record: nil, so the caller falls back to keywords")))

@@ -203,7 +203,13 @@
    packet reads this field, so a render with a :memory segment always
    records it, absence included; a render with no :memory segment at all
    (analysis seat, off-switch, no turn record) writes nothing. Failures
-   here never fail or delay the render."
+   here never fail or delay the render.
+
+   Returns nil on a write (or when there is nothing to write), else a
+   typed absence map {:error/code :dog-recall-not-recorded :reason ...}
+   that render! surfaces on the render result (readable via
+   prompt-line/last-render) and logs — a recall that reached no record
+   must never vanish silently."
   [turn-record-id result]
   (try
     (let [id (some-> turn-record-id str)
@@ -211,14 +217,37 @@
                                 (contains? % :segment/dog-recall))
                        (:segment/dog-recall %))
                     (:segments result))]
-      (when (and dog (turn-store/record-id? id))
+      (cond
+        (nil? dog) nil
+        (not (turn-store/record-id? id))
+        (let [absence {:error/code :dog-recall-not-recorded
+                       :reason "invalid-turn-record-id" :record-id id}]
+          (println (str "[prompt-line] dog_recall not recorded: " absence))
+          absence)
+        :else
         (let [store (or *turn-record-store* (turn-store/store))]
           (locking write-lock
-            (when (turn-store/read-record store id)
-              (turn-store/update-record! store id #(assoc % :dog_recall dog)))))))
+            (if (turn-store/read-record store id)
+              (do (turn-store/update-record! store id #(assoc % :dog_recall dog))
+                  nil)
+              (let [absence {:error/code :dog-recall-not-recorded
+                             :reason "record-missing" :record-id id}]
+                (println (str "[prompt-line] dog_recall not recorded: " absence))
+                absence))))))
     (catch Throwable t
       (println (str "[prompt-line] dog_recall write failed for "
-                    turn-record-id ": " (.getMessage t))))))
+                    turn-record-id ": " (.getMessage t)))
+      {:error/code :dog-recall-not-recorded
+       :reason (str "write-error: " (.getMessage t))})))
+
+(defn- dog-recall-segment?
+  "True when a render's result carries a :memory segment with a
+   :segment/dog-recall payload — i.e. a 狗 recall (or typed absence) that
+   render! must land somewhere a reader can see."
+  [result]
+  (boolean (some #(and (= :memory (:segment/id %))
+                       (contains? % :segment/dog-recall))
+                 (:segments result))))
 
 (defn render!
   [ctx]
@@ -227,11 +256,22 @@
     (when (or (str/blank? agent) (str/blank? session))
       (throw (ex-info "Prompt-line render needs exact agent and session"
                       {:error/code :missing-identity})))
-    (let [result (render (assoc ctx :agent-id agent :session-id session) @!providers)]
-      (swap! !last-renders assoc [agent session] result)
+    (let [result (render (assoc ctx :agent-id agent :session-id session) @!providers)
+          ;; A dog recall that cannot reach its turn record is a typed
+          ;; absence on the render result (readable via last-render) plus
+          ;; a log line — never a silent skip. The two gaps: the render's
+          ;; ctx lacks :turn-record-id, or the store lacks the record.
+          dog-absence (when (dog-recall-segment? result)
+                        (if (contains? ctx :turn-record-id)
+                          (write-dog-recall! (:turn-record-id ctx) result)
+                          (let [absence {:error/code :dog-recall-not-recorded
+                                         :reason "no-turn-record-id"}]
+                            (println (str "[prompt-line] dog_recall not recorded: " absence))
+                            absence)))
+          result (cond-> result dog-absence (assoc :dog-recall-not-recorded dog-absence))]
       (when (contains? ctx :turn-record-id)
-        (write-proposed-patterns! (:turn-record-id ctx) (:job-id ctx) result)
-        (write-dog-recall! (:turn-record-id ctx) result))
+        (write-proposed-patterns! (:turn-record-id ctx) (:job-id ctx) result))
+      (swap! !last-renders assoc [agent session] result)
       result)))
 
 (defn last-render [agent-id session-id]

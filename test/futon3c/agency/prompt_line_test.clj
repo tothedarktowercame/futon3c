@@ -184,3 +184,39 @@
         (is (= (:prompt plain) (:prompt unknown) (:prompt malformed))
             "the render result itself is unchanged by a bad target")
         (is (= (:segments plain) (:segments unknown)))))))
+
+
+;; -------------------- 狗 typed absences (M-repl-circus second pass):
+;; a recall that reaches no turn record must leave a typed absence a
+;; reader can see — on the render result (prompt-line/last-render) and
+;; in the log — never a silent skip.
+
+(defn- memory-segment-with-dog
+  "A :memory segment carrying a dog recall payload (as dog-provider's
+   provider emits)."
+  []
+  {:segment/id :memory
+   :segment/provider "futon3c.agency.dog-provider/provider"
+   :segment/observed-at now
+   :segment/basis {:scope {}}
+   :segment/dog-recall {:at now :items [] :query-ms 1 :status "none"}})
+
+(deftest dog-recall-without-turn-record-id-is-a-typed-absence
+  (prompt-line/register-provider!
+   (registration :memory "futon3c.agency.dog-provider/provider"
+                 (fn [_] (memory-segment-with-dog))))
+  (let [result (prompt-line/render! {:agent-id "kimi-1" :session-id "sess-test"})]
+    (is (= "no-turn-record-id"
+           (:reason (:dog-recall-not-recorded result)))
+        "the render result carries the typed absence")
+    (is (= (:dog-recall-not-recorded result)
+           (:dog-recall-not-recorded (prompt-line/last-render "kimi-1" "sess-test")))
+        "readable via last-render")))
+
+(deftest dog-recall-to-a-missing-record-is-a-typed-absence
+  (prompt-line/register-provider!
+   (registration :memory "futon3c.agency.dog-provider/provider"
+                 (fn [_] (memory-segment-with-dog))))
+  (let [result (prompt-line/render! {:agent-id "kimi-1" :session-id "sess-test"
+                                     :turn-record-id "turn-noSUCHrecord"})]
+    (is (= "record-missing" (:reason (:dog-recall-not-recorded result))))))
