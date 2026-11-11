@@ -259,6 +259,32 @@ to other nodes; the references attach to the act as metadata, or go to a derived
 store keyed by the act's evidence-id; the hook writes no evidence of its own.*
 The instances are the six animals above.
 
+## Closure: the full lifecycle (Joe, 2026-11-11)
+
+Joe: "we should go through the full mission lifecycle. It makes sense that
+the components are built, what's needed for DERIVE etc. is to understand how
+they fit together." Most animals already run (驴 with sidecar reindexing,
+象's turn records, the per-turn cascade, 狗's recall, use check and burying);
+the remaining work is understanding their composition, then verifying it.
+
+- **MAP.** Each animal's trigger, input, output, store and readers confirmed
+  against the code, with the dispatch boundary (claude-13's packet
+  circus-05 to kimi-1, `holes/labs/M-repl-circus/MAP-animals-2026-11-11.md`).
+  GCC record types for 狗 and 猴 as schema 1.1.
+- **DERIVE.** How the animals fit together: the data flow from operator turn
+  to War Machine, what each animal reads of another's output (through the GCC,
+  not by parsing evidence bodies), and the control layer (CTRL moves, query as
+  control), which is owed as a write-up.
+- **ARGUE / VERIFY.** The two invariants below as checks: coverage (core.logic,
+  every operator turn has its records) and stepper attachment (reazon).
+  Coverage comes first, because the other animals' results rest on it.
+- **INSTANTIATE.** 猴 takes pattern occurrence from 馬 (packet circus-04, on
+  hold); CLAUDE.md's minus40 section rewritten for 狗 lines.
+- **Outside closure, as excursions:** whether 狗 helps (claude-6, 2026-11-11,
+  at Joe's request: "some analytics that we could use to say whether 狗 is
+  helping after a while"), overlap modes, E-question-log, futon7
+  E-futon-questions, the XTDB home of derived stores, prompt durability.
+
 ## Acceptance checklist (IDENTIFY)
 
 - [ ] For each animal: which GCC node and edge types it writes, and which XTQL queries it reads
