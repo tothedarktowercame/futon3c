@@ -36,7 +36,7 @@ reason, which goes back to the role that picked it).
 | 3 | M-jvm-arxana | Questor | ready (one small handoff) | **validated** and **closed** (Joe, 2026-11-10): 5 of 7 met; 1 carried to M-formal-arxana, 3 to M-mojira |
 | 4 | E-APM-f11-defects | Thyra | ready (one small handoff) | **closed as no longer relevant** (Joe, 2026-11-10: "all of these fXX things are totally irrelevant now"). Thyra's pick was right that it was closable in one pass; it was not a priority |
 | 5 | M-daily-scan | Merlin | waiting on a short answer | **validated, needs rework** (Joe, 2026-11-10: "definitely interesting, it hasn't been run daily and it may need a complete rework, but the core idea seemed sound"); **reworked and CLOSED 2026-11-11** (futon7 `1d09438`; learning loop, question mode, Mojira triage, weekday timer; run carried to futon7 E-daily-loop-burn-in) |
-| 6 | E-evidence-flow | Thor | may be no longer wanted | |
+| 6 | E-evidence-flow | Thor | may be no longer wanted | **CLOSED 2026-11-11** (Joe: "Yes we can close"): one store on zone, the July split is gone; kept as a feature turned off, for federated agency (`holes/FEATURE-evidence-flow.md`); backup warnings to M-ways-of-working |
 | 7 | T-overlap-modes-as-factor-precision | Questor | ready (one small handoff) | |
 | 8 | E-fetch-entity-miss-path | Thyra | ready (one small handoff) | |
 | 9 | M-repl-circus | Merlin | specified, multi-day | |
