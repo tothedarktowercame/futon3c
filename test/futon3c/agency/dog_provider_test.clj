@@ -79,15 +79,10 @@
     (#'dog/publish! record-id (dog/recall (:source_text record) opts))))
 
 (defn- memory-fact
-  "The http.clj Prompt-line fact for a :memory segment (kept in step with
-   transport.http/memory-prompt-fact)."
+  "The Prompt-line fact for a :memory segment — the same pure function
+   transport.http/memory-prompt-fact delegates to."
   [segment]
-  (let [header (:segment/header segment)
-        status (get-in segment [:segment/dog-recall :status])]
-    (cond
-      (not (clojure.string/blank? header)) (str "memory " header)
-      (= "not-ready" status) "memory: not ready"
-      :else nil)))
+  (dog/prompt-fact segment))
 
 (defn- render-with-dog
   "Render with only the dog provider registered (the each-fixture cleared
@@ -283,6 +278,121 @@
     (is (not (str/starts-with? (:display item) "-")))
     (is (re-matches #"[^/]+/[^/]+" (:memory item))
         "the raw handle stays, resolvable through m40_find in one call")))
+
+;; -------------------------------------------- merge pass (M-repl-circus,
+;; claude-13 11-11): both queries always run; slots alternate 驴, keyword,
+;; 驴, skipping duplicates; one source empty → the other fills.
+
+(defn- fake-hit
+  "A minimal text-search hit whose body is a claude-code memory."
+  [project slug hook score]
+  {:score score
+   :entry {:evidence/body {:source "claude-code" :project project
+                           :name slug :hook hook}}})
+
+(defn- fake-response [hits]
+  {:results (vec hits)})
+
+(defn- split-request
+  "Answer the 驴 query (contains LU-MARK) from lu hits, anything else
+   from kw hits."
+  [lu-mark lu-hits kw-hits]
+  (fn [url]
+    (if (and lu-mark (re-find (re-pattern lu-mark) url))
+      (fake-response lu-hits)
+      (fake-response kw-hits))))
+
+(deftest merge-alternates-lu-and-keyword-slots
+  ;; 驴 has two unseen hits, keywords two: the slots must interleave
+  ;; 驴, keyword, 驴 — the regression this guards is 驴 filling every
+  ;; slot first (UkLbCu) or a 驴 item displacing a keyword hit (vsC2tD).
+  (let [request-fn (split-request "luterm"
+                                  [(fake-hit "proj-a" "lu-one" "first lu memory hook" -1.0)
+                                   (fake-hit "proj-a" "lu-two" "second lu memory hook" -2.0)]
+                                  [(fake-hit "proj-b" "kw-one" "first kw memory hook" -1.5)
+                                   (fake-hit "proj-b" "kw-two" "second kw memory hook" -2.5)])
+        result (dog/recall "operator text with keywords"
+                           {:request-fn request-fn :lu-terms ["luterm"]})]
+    (is (nil? (:status result)))
+    (is (= ["lu" "keywords" "lu"] (mapv :source (:items result)))
+        "slots alternate 驴, keyword, 驴")
+    (is (= ["proj-a/lu-one" "proj-b/kw-one" "proj-a/lu-two"]
+           (mapv :memory (:items result))))
+    (is (= "mixed" (:query-source result)))))
+
+(deftest merge-fills-when-one-source-is-empty
+  (let [request-fn (split-request "luterm"
+                                  []
+                                  [(fake-hit "proj-b" "kw-one" "first kw memory hook" -1.0)
+                                   (fake-hit "proj-b" "kw-two" "second kw memory hook" -2.0)
+                                   (fake-hit "proj-b" "kw-three" "third kw memory hook" -3.0)])
+        result (dog/recall "operator text with keywords"
+                           {:request-fn request-fn :lu-terms ["luterm"]})]
+    (is (= ["keywords" "keywords" "keywords"] (mapv :source (:items result)))
+        "驴 empty → keywords fill all slots")
+    (is (= "keywords" (:query-source result))))
+  (let [request-fn (split-request "luterm"
+                                  [(fake-hit "proj-a" "lu-one" "first lu memory hook" -1.0)
+                                   (fake-hit "proj-a" "lu-two" "second lu memory hook" -2.0)
+                                   (fake-hit "proj-a" "lu-three" "third lu memory hook" -3.0)]
+                                  [])
+        result (dog/recall "operator text with keywords"
+                           {:request-fn request-fn :lu-terms ["luterm"]})]
+    (is (= ["lu" "lu" "lu"] (mapv :source (:items result)))
+        "keywords empty → 驴 fills all slots")
+    (is (= "lu" (:query-source result)))))
+
+(deftest merge-skips-duplicates-across-sources
+  ;; The same memory in both queries: 驴's copy takes the first slot, the
+  ;; keyword copy is skipped, the next keyword item fills the second slot.
+  (let [shared (fake-hit "proj-x" "shared" "found by both queries" -1.0)
+        request-fn (split-request "luterm"
+                                  [shared
+                                   (fake-hit "proj-a" "lu-two" "second lu memory hook" -2.0)]
+                                  [(fake-hit "proj-x" "shared" "found by both queries" -0.5)
+                                   (fake-hit "proj-b" "kw-one" "first kw memory hook" -1.5)])
+        result (dog/recall "operator text with keywords"
+                           {:request-fn request-fn :lu-terms ["luterm"]})]
+    (is (= ["proj-x/shared" "proj-b/kw-one" "proj-a/lu-two"]
+           (mapv :memory (:items result)))
+        "a duplicate never takes a second slot")
+    (is (= "lu" (:source (first (:items result)))))))
+
+(deftest prompt-fact-omits-the-empty-label
+  ;; Joe's E-futon-questions turn (turn-RgkbTi, 2026-11-11) ended its
+  ;; Prompt line in a bare `memory`. The rule: a turn with no memory
+  ;; items leaves NO fact on the line (the absence is still recorded as
+  ;; :dog_recall on the turn record), and a segment with items but no
+  ;; header rebuilds the label from the items — never a bare `memory`.
+  (is (nil? (dog/prompt-fact {:segment/id :memory
+                              :segment/dog-recall {:status "none" :items []}}))
+      "status none: omitted")
+  (is (nil? (dog/prompt-fact {:segment/id :memory
+                              :segment/dog-recall {:status "failed" :items []}}))
+      "status failed: omitted")
+  (is (nil? (dog/prompt-fact {:segment/id :memory
+                              :segment/dog-recall {:items []}}))
+      "no items and no status: omitted")
+  (is (nil? (dog/prompt-fact {:segment/id :memory}))
+      "no payload at all: omitted — the bare `memory` case")
+  (is (= "memory: not ready"
+         (dog/prompt-fact {:segment/id :memory
+                           :segment/dog-recall {:status "not-ready" :items []}})))
+  (is (= "memory ~voxterm/some-memory (the hook)"
+         (dog/prompt-fact {:segment/id :memory
+                           :segment/header "~voxterm/some-memory (the hook)"
+                           :segment/dog-recall {:items [{:memory "x/y"}]}}))
+      "a hit renders its header")
+  (is (= "memory ~voxterm/some-memory"
+         (dog/prompt-fact {:segment/id :memory
+                           :segment/dog-recall
+                           {:items [{:memory "-home-joe-code-voxterm/some-memory"
+                                     :display "voxterm/some-memory"}]}}))
+      "items without a header rebuild the label, never bare")
+  (let [fact (dog/prompt-fact {:segment/id :memory
+                               :segment/dog-recall {:status "none" :items []}})]
+    (is (not (and (string? fact) (re-find #"^memory\s*$" fact)))
+        "no rendering is ever a bare `memory`")))
 
 (deftest lu-terms-from-a-real-patterns-file
   (let [store (tmp-store)

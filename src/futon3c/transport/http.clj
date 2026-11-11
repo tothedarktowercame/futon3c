@@ -117,6 +117,7 @@
             [futon3c.agency.atomic-file :as agency-atomic-file]
             [futon3c.agency.roles :as roles]
             [futon3c.agency.warrant :as warrant]
+            [futon3c.agency.dog-provider :as dog-provider]
             [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.work-orders :as work-orders]
             [futon3c.agency.work-order-check :as work-order-check]
@@ -5371,14 +5372,15 @@
 (defn- memory-prompt-fact
   "狗 pre-hook segment → Prompt-line fact. Items render as
    `memory ~<project>/<slug> (<why>); also ...` from the segment header;
-   a not-ready cache reads `memory: not ready`; the typed absences
-   \"none\" and \"failed\" stay off the line (they are still recorded as
-   :dog_recall on the 象 turn record)."
-  [{:segment/keys [header dog-recall]}]
-  (cond
-    (not (str/blank? header)) (str "memory " header)
-    (= "not-ready" (:status dog-recall)) "memory: not ready"
-    :else nil))
+   a not-ready cache reads `memory: not ready`; a turn with no memory
+   items is OMITTED from the line (the typed absence is still recorded
+   as :dog_recall on the 象 turn record). The rule lives in
+   dog-provider/prompt-fact so it is unit-tested without loading this
+   namespace; a segment whose items exist but whose header is missing
+   gets its label rebuilt from the items — never a bare `memory`
+   (Joe's E-futon-questions turn, 2026-11-11)."
+  [segment]
+  (dog-provider/prompt-fact segment))
 
 (defn- payload-turn-record-id
   "The optional 象 turn-record id on an invoke body (form turn-XXXXXX, from

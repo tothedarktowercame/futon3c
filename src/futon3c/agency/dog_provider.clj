@@ -6,8 +6,9 @@
    Relevance is seeded from 驴's patterns for the turn (the top patterns'
    ids and titles, read from the record's .patterns.json at arrival time;
    11-11: \"it could either read the operator text patterns or wait for
-   the 驴 patterns\"); the operator turn's own text supplies the keyword
-   fallback. The read is the same one m40_find makes:
+   the 驴 patterns\") AND from the operator turn's own text keywords —
+   both queries run and their items take the slots alternately (驴,
+   keyword, 驴; see merge-items). The read is the same one m40_find makes:
    GET <minus40-store :7093>/api/alpha/evidence/text-search?q=... (the
    store's FTS5 sidecar; hits whose body is a claude-code memory are
    grouped by project/name, one item per memory). Dated directives
@@ -245,18 +246,41 @@
                  "&limit=" search-limit)]
     (recall-from-response (or (request-fn url) {}))))
 
+(defn- merge-items
+  "Merge 驴-seeded and keyword items into the MAX-ITEMS slots, ALTERNATING
+   with 驴 first (驴, keyword, 驴, ...). An item whose :memory already has
+   a slot is skipped, so a duplicate never takes two slots; when one
+   source has no unseen items left the other fills the rest. 11-11 merge
+   pass: 驴-fills-every-slot-first was the one regression cause (UkLbCu:
+   three weak 驴 hits took all slots and the keyword query never ran;
+   vsC2tD: a 驴 item displaced a relevant keyword hit), while ni2vBM
+   showed the 驴 seed itself is worth a slot."
+  [lu-items kw-items]
+  (let [first-unseen (fn [items seen] (first (remove #(contains? seen (:memory %)) items)))]
+    (loop [seen #{} out [] prefer-lu? true]
+      (let [lu-item (first-unseen lu-items seen)
+            kw-item (first-unseen kw-items seen)
+            pick (cond (and prefer-lu? lu-item) lu-item
+                       (and (not prefer-lu?) kw-item) kw-item
+                       ;; one side exhausted (or all duplicates): the
+                       ;; other fills the remaining slots
+                       lu-item lu-item
+                       :else kw-item)]
+        (if (or (nil? pick) (= max-items (count out)))
+          (vec out)
+          (recur (conj seen (:memory pick)) (conj out pick) (not prefer-lu?)))))))
+
 (defn recall
-  "One 狗 recall for the operator turn TEXT. The query is seeded from
-   驴's terms (OPTS :lu-terms, see lu-terms) when they exist; the
-   operator text's keywords are the fallback — and fill any items the
-   驴-seeded query did not find, so a weak patterns file degrades to the
-   old behaviour rather than to nothing. Each item records which source
-   produced it (:source \"lu\" or \"keywords\"). Returns
-   {:at :items [{:memory :display :score :why :source}...] :query-ms
-   :query :query-source}, with :status \"none\" when no memory matched
-   and \"failed\" on any error. Never throws. OPTS as per defaults;
-   :request-fn receives the query URL and returns the parsed JSON
-   response."
+  "One 狗 recall for the operator turn TEXT. BOTH queries run: the
+   驴-seeded one (OPTS :lu-terms, see lu-terms) and the operator text's
+   keyword query; their items are merged into the slots alternately
+   (驴, keyword, 驴 — see merge-items), so neither source can starve
+   the other. Each item records which source produced it (:source
+   \"lu\" or \"keywords\"). Returns {:at :items [{:memory :display :score
+   :why :source}...] :query-ms :query :query-source}, with :status
+   \"none\" when no memory matched and \"failed\" on any error. Never
+   throws. OPTS as per defaults; :request-fn receives the query URL and
+   returns the parsed JSON response."
   ([text] (recall text {}))
   ([text opts]
    (let [opts (merge defaults opts)
@@ -270,29 +294,27 @@
        (if (and (str/blank? (or lu-query "")) (str/blank? kw-query))
          {:status "none" :at (str (Instant/now)) :query-ms (elapsed) :query ""
           :query-source "none" :items []}
-         (let [;; 驴 first, keywords as fallback/fill (in that order).
+         (let [;; Always run both queries; merge alternates the slots.
                lu-items (when-not (str/blank? (or lu-query ""))
                           (mapv #(assoc % :source "lu")
                                 (search-memories request-fn base lu-query)))
-               need (- max-items (count lu-items))
-               kw-items (when (and (pos? need) (not (str/blank? kw-query)))
-                          (let [seen (set (map :memory lu-items))]
-                            (->> (search-memories request-fn base kw-query)
-                                 (map #(assoc % :source "keywords"))
-                                 (remove #(contains? seen (:memory %)))
-                                 (take need)
-                                 vec)))
-               items (vec (take max-items (concat lu-items kw-items)))]
+               kw-items (when-not (str/blank? kw-query)
+                          (mapv #(assoc % :source "keywords")
+                                (search-memories request-fn base kw-query)))
+               items (merge-items lu-items kw-items)]
            (if (seq items)
              {:at (str (Instant/now)) :query-ms (elapsed)
               :query (str/join " || " (remove str/blank? [lu-query kw-query]))
-              :query-source (cond (and (seq lu-items) (seq kw-items)) "mixed"
-                                  (seq lu-items) "lu"
-                                  :else "keywords")
+              :query-source (let [sources (set (map :source items))]
+                              (cond (= sources #{"lu"}) "lu"
+                                    (= sources #{"keywords"}) "keywords"
+                                    :else "mixed"))
               :items items}
              {:status "none" :at (str (Instant/now)) :query-ms (elapsed)
-              :query (str (or lu-query kw-query))
-              :query-source (if lu-query "lu" "keywords")
+              :query (str/join " || " (remove str/blank? [lu-query kw-query]))
+              :query-source (cond (and lu-query (not (str/blank? kw-query))) "mixed"
+                                  lu-query "lu"
+                                  :else "keywords")
               :items []})))
        (catch Throwable t
          {:status "failed" :reason (str "recall-error: " (.getMessage t))
@@ -391,6 +413,28 @@
   (start! {:store (fn [] (some-> (live-service) :config :store))}))
 
 ;; ---------------------------------------------------------------- provider
+
+(defn prompt-fact
+  "The Prompt-line fact for one 狗 :memory segment: `memory <header>` on
+   a hit, `memory: not ready` while the background recall is pending,
+   and NIL — the segment is omitted from the line — when the turn has
+   no memory items (status \"none\"/\"failed\", or a payload-less
+   segment). Omitting is the deliberate choice (claude-13's 11-11 merge
+   requisition offered omit or `memory: none`): the typed absence still
+   lands on the 象 turn record as :dog_recall, so the line stays clean
+   and nothing is lost. When items exist but the header is missing —
+   the shape that printed a bare `memory` on Joe's E-futon-questions
+   turn (turn-RgkbTi, 2026-11-11: the live-loaded draft segment carried
+   items yet the line ended in a bare label) — the label is rebuilt
+   from the items rather than printed bare."
+  [{:segment/keys [header dog-recall]}]
+  (let [items (:items dog-recall)]
+    (cond
+      (not (str/blank? header)) (str "memory " header)
+      (seq items) (str "memory "
+                       (str/join ", " (map #(str "~" (or (:display %) (:memory %))) items)))
+      (= "not-ready" (:status dog-recall)) "memory: not ready"
+      :else nil)))
 
 (defn- dog-segment
   "The :memory segment for one cached recall. Items (up to MAX-ITEMS)
