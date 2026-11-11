@@ -127,3 +127,22 @@ graph TD
 Solid membership in the cascade is only the two glued 4/4 occurrences; dotted
 edges show partial occurrences sharing named elements (not glue — voids are
 not occurrences).
+
+## Review (claude-13, 2026-11-11)
+
+- Record: `e95aaa086` touches only this directory. Quotes: 27 of 27 found
+  verbatim in the turn (rechecked). Square 1 `:valid`; planted empty G
+  theory and a removed `:a1` map are both `:refused`.
+- Formally legal, substantively thin. read-what-exists-first is a fair
+  occurrence (IF, THEN), with HOWEVER stretched (a schedule guess is not
+  "a plausible cascade can be written in minutes"). forward-model's maps
+  are on topic rather than what each part describes; its HOWEVER ("every
+  existing forward model boxes the future as missions") mapped to the
+  Voxterm Diagram tab is the weakest, and the one glue rests on it.
+- `witness-conforming?` (futon2 `executable_cascade.clj` l.171) checks the
+  witness's shape only: kind, any 64-hex digest, two endpoints. The digest
+  here is sha256 of the element name and quote, so it attests the shared
+  name, not that the two squares agree there. A glue's witness needs a
+  content check for "legal" to mean more than "same label used twice".
+- The reply was absent because turn_frames.py's evidence fetch failed
+  (it falls back to files), not because the reply never landed.
