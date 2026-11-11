@@ -36,6 +36,7 @@
             [futon3c.watcher.commit-ingest :as commit-ingest]
             [futon3c.watcher.file-ingest :as file-ingest]
             [futon3c.watcher.freshness :as freshness]
+            [futon3c.watcher.pattern-index :as pattern-index]
             [futon3c.watcher.roots :as roots]
             [futon3.inbox-zero.watcher :as inbox-zero])
   (:import [java.time Instant]
@@ -1572,6 +1573,13 @@
                   (ingest-event! {:path p :root root :label label
                                   :run-id run-id :event-n ev-n
                                   :source source})))))
+          ;; Keep the pattern-index sidecar current.  Library patterns carry a
+          ;; declaration manifest, so they go to reconcile-pattern-change!
+          ;; above and never reach file-ingest/dispatch!; this is the one
+          ;; place that sees every change, delete and rename.  Path-guarded
+          ;; and debounced: a burst of 81 files is one build.
+          (doseq [p (concat dispatch-paths deleted (mapcat (juxt :from :to) renamed))]
+            (pattern-index/on-file-event! p))
           (doseq [p deleted]
             (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]

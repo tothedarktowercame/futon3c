@@ -1,6 +1,7 @@
 (ns futon3c.watcher.multi-test
   (:require [clojure.java.io :as io]
             [clojure.walk :as walk]
+            [futon3c.watcher.pattern-index]
             [clojure.test :refer [deftest is testing]]
             [babashka.http-client :as http]
             [futon3.inbox-zero.watcher :as inbox-zero]
@@ -483,6 +484,47 @@
           (finally
             (reset! sut/!state nil)))
         (is (false? @commit-called?))))))
+
+(deftest run-cycle-notifies-the-pattern-index-of-changes-deletes-and-renames
+  (testing "every changed, deleted and renamed path reaches the pattern-index
+            watcher, including library patterns, which are reconciled rather
+            than dispatched to file-ingest"
+    (let [seen (atom [])
+          lib "/home/joe/code/futon3/library/demo"
+          cache (atom {})]
+      (with-redefs [sut/build-plan (fn [_ _]
+                                     {:root "/tmp/repo"
+                                      :label "demo"
+                                      :snapshot {(str lib "/changed.flexiarg")
+                                                 {:declaration-manifest [:x]}}
+                                      :cache {}
+                                      :moves {:renamed [{:from (str lib "/old.flexiarg")
+                                                         :to (str lib "/new.flexiarg")}]
+                                              :deleted [(str lib "/gone.flexiarg")]
+                                              :added []}
+                                      :ingest-paths [(str lib "/changed.flexiarg")]
+                                      :first-cycle? false})
+                    sut/detect-cross-root-moves (constantly [])
+                    sut/heartbeat! (fn [& _] nil)
+                    sut/reconcile-pattern-change! (fn [& _] {:status :ok})
+                    sut/ingest-event! (fn [& _] {:status :ok})
+                    sut/handle-deletion! (fn [& _] nil)
+                    sut/handle-rename! (fn [& _] nil)
+                    futon3c.watcher.pattern-index/on-file-event! (fn [p] (swap! seen conj p))]
+        (reset! sut/!state {:stopping? false})
+        (try
+          (sut/run-cycle! {:roots [{:path "/tmp/repo" :label "demo"}]
+                           :per-root-cache cache
+                           :run-id 1
+                           :event-n (atom 0)
+                           :cycle-n (atom 0)
+                           :cold-scan? false
+                           :commit-ingest? false})
+          (finally
+            (reset! sut/!state nil)))
+        (is (= #{(str lib "/changed.flexiarg") (str lib "/gone.flexiarg")
+                 (str lib "/old.flexiarg") (str lib "/new.flexiarg")}
+               (set @seen)))))))
 
 (deftest heartbeat-failure-settles-successful-file-snapshot
   (testing "a post-ingest heartbeat failure does not replay unchanged files"
