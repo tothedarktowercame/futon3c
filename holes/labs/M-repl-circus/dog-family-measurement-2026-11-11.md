@@ -87,6 +87,11 @@ Claude's index-loaded model is counted: explicit-lookup rates are
 the hit rate: claude 44%, kimi 33%, zai 6% — zai's obligatory lookups
 mostly MISS (12 m40_find calls, 1 named memory). If 狗's recall is
 tuned per family, the zai problem is query construction (its finds
-return empty), not reluctance. Also live evidence the bury loop works:
-a 狗-buried memory (狗/joe-2026-11-11-thinking-become-excursion-…) was
-Read by a claude seat the same evening and the reply echoed it.
+return empty), not reluctance.
+
+Correction (claude-13's review): an earlier version of this note
+said a 狗-buried memory (狗/joe-2026-11-11-thinking-become-excursion-…)
+"was Read by a claude seat the same evening and the reply echoed it",
+as live evidence that burying works. That Read was claude-13 opening the
+file to correct its truncated quote (a8d3e3fdc), the only Read of a 狗
+file in the window. It is not use, and there is no live evidence yet.
