@@ -350,6 +350,9 @@ are what would have caught it.
   linked to their answers and surfaced while open, in the manner of ArSE.
   Excursion [E-question-log](../excursions/E-question-log.md) (Joe,
   2026-11-10).
+- Whether 狗 is helping: outcomes, a recalled-but-withheld arm, and the
+  metrics with their source fields. Excursion
+  [E-dog-helps](../excursions/E-dog-helps.md) (Joe, 2026-11-11).
 - Where the derived stores live in XTDB (one store per animal, or one store with
   typed records), and how the GCC reads them.
 - Whether 象's per-turn analysis keeps its current file store
