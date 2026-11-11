@@ -701,11 +701,28 @@
   (let [words (->> (content-terms text) (take 6) (map str/lower-case))]
     (str who "-" date (when (seq words) (str "-" (str/join "-" words))))))
 
+(defn- act-text
+  "Joe's full words for ACT: the span [:start :end) of the record's
+   :source_text (offsets are Unicode code points, zero-based, end
+   exclusive; the record's :offset_unit), falling back to the act's
+   :text. The act's :text is cut at 120 characters with an ellipsis
+   (claude-13's review of 4fc17816f: RgkbTi's excursion ruling was buried
+   ending \"b/c it onl…\"), so it is not the verbatim quote."
+  [record act]
+  (let [src (str (:source_text record))
+        {:keys [start end]} act
+        n (.codePointCount src 0 (count src))]
+    (str/trim
+     (if (and (integer? start) (integer? end) (<= 0 start end n))
+       (subs src (.offsetByCodePoints src 0 (int start))
+             (.offsetByCodePoints src 0 (int end)))
+       (str (:text act))))))
+
 (defn- ruling-candidate
   "One bury candidate from operator ACT (index I) of RECORD: Joe's act
    text, quoted verbatim with its date."
   [record i act]
-  (let [text (str/trim (str (:text act)))
+  (let [text (act-text record act)
         date (subs (str (:created_at record)) 0 (min 10 (count (str (:created_at record)))))
         kind (name (:kind act))
         ;; the record id rides each act as :record; :turn_id is the
@@ -763,7 +780,7 @@
          rulings (keep-indexed
                   (fn [i act]
                     (let [kind (some-> (:kind act) name keyword)
-                          text (str/trim (str (:text act)))]
+                          text (act-text record act)]
                       (when (and (= "operator" (:author act))
                                  (contains? bury-act-kinds kind)
                                  ;; a question is not a ruling

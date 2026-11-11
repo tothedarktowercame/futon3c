@@ -769,3 +769,13 @@
   (let [store (tmp-store)]
     (is (nil? (dog/lu-terms store "turn-luTEST2"))
         "no patterns file and no record: nil, so the caller falls back to keywords")))
+
+(deftest bury-quotes-the-full-act-not-its-truncated-text
+  ;; turn-RgkbTi: the act's :text is cut at 120 chars ("... b/c it
+  ;; onl…"); the buried quote is the act's full span of :source_text.
+  (let [rec @fixture-RgkbTi-bury
+        c (some #(when (= "redirect" (get-in % [:basis :kind])) %)
+                (dog/bury-candidates rec))]
+    (is (some? c))
+    (is (str/includes? (:body c) "b/c it only came up in passing just now.\""))
+    (is (not (str/includes? (:body c) "onl…")))))
