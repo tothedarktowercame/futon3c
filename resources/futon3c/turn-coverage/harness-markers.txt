@@ -1,0 +1,13 @@
+# Text markers of turns the harness posts in Joe's name (author joe) that are
+# NOT operator turns, so the REPL-circus turn-coverage invariant must not
+# expect a 象 record for them. One marker per line; '#' lines are comments.
+# Shared by scripts/operator_turn_capture.py (capture skip rule) and
+# src/futon3c/logic/turn_coverage.clj (fact classification).
+# M-repl-circus, "Two invariants for the Circus" (Joe, 2026-11-11), invariant 2.
+#
+# A park wake carries this in its text.
+--- resumed:
+# The clock reminder (futon3c followups) arrives as an operator turn;
+# interpreting it would teach the corpus a move Joe never made (kimi-1
+# declined candidates for it, 2026-09-25).
+so your clock says what you are doing

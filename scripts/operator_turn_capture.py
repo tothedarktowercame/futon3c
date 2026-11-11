@@ -11,8 +11,9 @@ interpretation by the same code, then sets the record's created_at to the
 turn's own time.
 
 A turn is skipped when a record with its turn_id already exists, and when it
-is the harness talking in Joe's name rather than Joe: a park wake (its text
-carries "--- resumed:") or a clock reminder (HARNESS_MARKERS).
+is the harness talking in Joe's name rather than Joe (any marker in
+resources/futon3c/turn-coverage/harness-markers.txt: a park wake carries
+"--- resumed:", plus the clock reminders).
 
   operator_turn_capture.py --agents claude-12 [--since 2026-09-25T19:00:00Z] [--loop 30]
 """
@@ -52,10 +53,25 @@ def turns(limit):
                "at": field(entry, "evidence/at")}
 
 
-# Text the harness posts in Joe's name. The clock reminder (futon3c
-# followups) arrives as an operator turn; interpreting it would teach the
-# corpus a move Joe never made (kimi-1 declined candidates for it, 09-25).
-HARNESS_MARKERS = ("so your clock says what you are doing",)
+# Text the harness posts in Joe's name. The list lives in one shared place,
+# resources/futon3c/turn-coverage/harness-markers.txt, so the JVM-side
+# turn-coverage rule (futon3c.logic.turn-coverage) and this capture skip rule
+# classify the same turns. Includes the park wake ("--- resumed:") and the
+# clock reminder (futon3c followups arrives as an operator turn; interpreting
+# it would teach the corpus a move Joe never made -- kimi-1 declined
+# candidates for it, 09-25).
+MARKERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir,
+                            "resources", "futon3c", "turn-coverage",
+                            "harness-markers.txt")
+
+
+def harness_markers():
+    with open(MARKERS_FILE) as f:
+        return [line.rstrip("\n") for line in f
+                if line.strip() and not line.startswith("#")]
+
+
+HARNESS_MARKERS = tuple(harness_markers())
 
 
 def is_harness_text(text):
@@ -88,7 +104,7 @@ def capture(agents, since, limit):
         agent = tid.rsplit("-turn-", 1)[0]
         if agent not in agents or tid in known or (since and t["at"] < since):
             continue
-        if "--- resumed:" in text or is_harness_text(text):
+        if is_harness_text(text):
             continue
         new.append((t, agent))
     for t, agent in sorted(new, key=lambda x: x[0]["at"]):

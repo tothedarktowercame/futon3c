@@ -13,6 +13,12 @@
   futon3c.logic.xiang
   {:linters {:unresolved-symbol {:level :off}}}
 
+  ;; same core.logic/pldb pattern as xiang
+  futon3c.logic.turn-coverage
+  {:linters {:unresolved-symbol {:level :off}}}
+  futon3c.logic.turn-coverage-test
+  {:linters {:unresolved-symbol {:level :off}}}
+
   futon3c.agency.federation
   {:linters {:unresolved-var {:exclude [org.httpkit.client/get
                                         org.httpkit.client/post]}}}

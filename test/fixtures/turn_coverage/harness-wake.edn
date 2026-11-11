@@ -1,0 +1,16 @@
+{:name "recorded park wake: the harness speaking in Joe's name"
+ ;; RECORDED fixture: one real turn from futon1b evidence (author joe, event
+ ;; chat-turn, role user; storage/operator-turns harvest), whose text carries
+ ;; "--- resumed:" (a park wake, from harness-markers.txt). The 2026-11-10/11
+ ;; claude-13 window contains no harness turns, so the harness exclusion is
+ ;; exercised on this recorded wake instead. No 象 record exists for it and
+ ;; none must be expected.
+ :as-of "2026-10-02T00:00:00Z"
+ :agents [:claude-17]
+ :turns [{:id "emacs-7748583594cf6d1944966516f4126834"
+          :turn-id "claude-17-turn-411"
+          :session "564c8e50-c240-46fc-81ad-55afafbc63ee"
+          :agent :claude-17
+          :at "2026-10-01T20:40:09.004847243Z"}]
+ :harness #{"emacs-7748583594cf6d1944966516f4126834"}
+ :records []}

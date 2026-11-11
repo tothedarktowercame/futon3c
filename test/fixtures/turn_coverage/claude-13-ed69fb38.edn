@@ -1,0 +1,98 @@
+{:name "claude-13 session ed69fb38, 2026-11-10 16:00Z to 2026-11-11 02:30Z"
+ ;; RECORDED fixture: turns fetched 2026-11-11 from futon1b evidence :7073
+ ;; (GET /api/alpha/evidence, author joe, event chat-turn, role user), records
+ ;; from ~/.emacs-graph/session-turn-analysis/. Only fields the rule uses.
+ ;; M-repl-circus invariant 2: Joe's turns went unrecorded 17:39 -> 02:00 when
+ ;; an Emacs display change switched capture off (fixed in futon4 1e786e2dd).
+ :as-of "2026-11-11T02:30:00Z"
+ :agents [:claude-13]
+ :turns [
+         {:id "emacs-10032f6eb4603116666d81c42035232d" :turn-id "claude-13-turn-208" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T16:08:34.332060158Z"}
+         {:id "emacs-fd8297bf4e634a1197187ec698f597ad" :turn-id "claude-13-turn-209" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T16:16:42.350369219Z"}
+         {:id "emacs-f92ecae4c2556acb9300bdfc4a6f6fec" :turn-id "claude-13-turn-210" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T16:41:48.202994881Z"}
+         {:id "emacs-d0ab429a4171acbc9817a8ba2db3df47" :turn-id "claude-13-turn-211" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T16:54:41.722513063Z"}
+         {:id "emacs-5903a19182c5de0c3de6bce7d3af0b42" :turn-id "claude-13-turn-213" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T16:58:41.943770922Z"}
+         {:id "emacs-934233769cb5e0689eeb74dac83a6cd9" :turn-id "claude-13-turn-214" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:06:08.831322916Z"}
+         {:id "emacs-27d6085d0ba6f7cf938cbfad55e8a6f9" :turn-id "claude-13-turn-215" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:09:59.960856109Z"}
+         {:id "emacs-d6983846fe5a0b562b6ed4e70fbdf011" :turn-id "claude-13-turn-216" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:13:24.126870476Z"}
+         {:id "emacs-d99603a71706d478ef0a791f04d80f75" :turn-id "claude-13-turn-217" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:15:15.669255074Z"}
+         {:id "emacs-430f8b666c3daf98aca5e9f933cd7501" :turn-id "claude-13-turn-219" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:19:36.240821750Z"}
+         {:id "emacs-e6e1d7c96124fa1bc94941f7fef4c3a4" :turn-id "claude-13-turn-220" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:20:53.479954834Z"}
+         {:id "emacs-b05cf1286c7268e3d37e51b6c5fbadfe" :turn-id "claude-13-turn-221" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:22:03.266962446Z"}
+         {:id "emacs-ba87a976ad014e0140d4186d0ebdae90" :turn-id "claude-13-turn-222" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:25:56.647659297Z"}
+         {:id "emacs-44fb040b02b6569528298a7cadec0d9e" :turn-id "claude-13-turn-223" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:28:51.710727956Z"}
+         {:id "emacs-0b39021c7ecf36352f7541131960bdc0" :turn-id "claude-13-turn-224" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:32:55.202770396Z"}
+         {:id "emacs-784fda04bb9f8aec6b82e43700c0c13b" :turn-id "claude-13-turn-225" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:36:47.970304985Z"}
+         {:id "emacs-6a101420ce07982ab5d90d8be4f4c961" :turn-id "claude-13-turn-226" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:38:41.351722748Z"}
+         {:id "emacs-59d2758708c9e8815610193082bc8a2c" :turn-id "claude-13-turn-228" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T17:54:58.611725937Z"}
+         {:id "emacs-0bb51616b944926321ddc6d74903ed75" :turn-id "claude-13-turn-229" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:01:34.945614965Z"}
+         {:id "emacs-8675c715f050802f48d8856237f3ddff" :turn-id "claude-13-turn-230" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:03:37.309822595Z"}
+         {:id "emacs-e31cc08585486054659f27f942b72105" :turn-id "claude-13-turn-231" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:14:36.788374727Z"}
+         {:id "emacs-ab72ae93d09fbd5f45adb2c9113c9972" :turn-id "claude-13-turn-232" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:19:34.386555455Z"}
+         {:id "emacs-1def19fe42158395f23b269f77565f52" :turn-id "claude-13-turn-233" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:23:54.200981554Z"}
+         {:id "emacs-5f92d1acd02d9de3a1db77303c8664d9" :turn-id "claude-13-turn-234" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:29:02.130160198Z"}
+         {:id "emacs-370255b53f942fa0e81673414f80f5ed" :turn-id "claude-13-turn-235" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:30:36.100429274Z"}
+         {:id "emacs-c1609ba33d795c9e6ab11d88e09e035c" :turn-id "claude-13-turn-236" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:31:44.505716717Z"}
+         {:id "emacs-dde891276025f97bca501f739309d0b3" :turn-id "claude-13-turn-239" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:36:52.738263307Z"}
+         {:id "emacs-3d251fc87560daaf1408271585569251" :turn-id "claude-13-turn-240" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:37:30.801269877Z"}
+         {:id "emacs-f258f8c07bb75b8b57037d9af042638e" :turn-id "claude-13-turn-241" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:38:43.534421266Z"}
+         {:id "emacs-5099b0e8c6ba66af8fa631969fdb85bf" :turn-id "claude-13-turn-242" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:42:40.741866786Z"}
+         {:id "emacs-1107fea8bb9ec7b8c1a5e2dd26dc774b" :turn-id "claude-13-turn-243" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:45:07.544095830Z"}
+         {:id "emacs-b34b1d16bd690b487de2bca4ff277d13" :turn-id "claude-13-turn-245" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:49:39.236175250Z"}
+         {:id "emacs-c171165d27358183e555d9ac1d6e4353" :turn-id "claude-13-turn-246" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T18:55:03.355951022Z"}
+         {:id "emacs-cf253426049efd9351ec56e608950ca1" :turn-id "claude-13-turn-248" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T19:13:50.525656482Z"}
+         {:id "emacs-4c1daa1af4e1a41ccbd424d7d498439d" :turn-id "claude-13-turn-249" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T19:18:07.560574057Z"}
+         {:id "emacs-95435b5871930ac3835237cf76567dc7" :turn-id "claude-13-turn-250" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T19:23:28.929978701Z"}
+         {:id "emacs-6f5cc289ca1b00ab7f62c14a67f7bc11" :turn-id "claude-13-turn-251" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T19:26:30.832713336Z"}
+         {:id "emacs-791360b47226db9fd9b2ebbbf20ce1e9" :turn-id "claude-13-turn-252" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T19:27:59.274262811Z"}
+         {:id "emacs-145e0887b655a881f7a6d2353f6a555e" :turn-id "claude-13-turn-253" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T19:39:02.217752566Z"}
+         {:id "emacs-ad0067ba9ebd2f6ad20c823e68321599" :turn-id "claude-13-turn-256" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T21:46:55.720888617Z"}
+         {:id "emacs-26744ef4463e6fcdbd804f466d23c11d" :turn-id "claude-13-turn-257" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:07:50.475857212Z"}
+         {:id "emacs-efe7208cc07b9cfd7e39cafeb19404a4" :turn-id "claude-13-turn-258" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:13:27.496662774Z"}
+         {:id "emacs-79ed10411ccc295ed95a11a451da92ae" :turn-id "claude-13-turn-259" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:16:37.438434723Z"}
+         {:id "emacs-0d1930461879703997c4c57001ff2346" :turn-id "claude-13-turn-260" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:20:04.165221263Z"}
+         {:id "emacs-a3c12efe8b467663f9dc010100e6d292" :turn-id "claude-13-turn-261" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:25:40.944917428Z"}
+         {:id "emacs-80dd7c03ac1066881d616780535f2093" :turn-id "claude-13-turn-262" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:28:37.261106869Z"}
+         {:id "emacs-f1b709f3e50ee4bce680630e00a76723" :turn-id "claude-13-turn-263" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T22:37:57.240448792Z"}
+         {:id "emacs-5347cb1e1cb982a12dcd73cf8c4ac296" :turn-id "claude-13-turn-266" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T23:17:12.985475216Z"}
+         {:id "emacs-b003c8caaa8edc1c177e717de9b2525e" :turn-id "claude-13-turn-268" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T23:24:14.454621438Z"}
+         {:id "emacs-9b06e4c5c75ce86f56003af3993b94cb" :turn-id "claude-13-turn-271" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-10T23:53:23.252554439Z"}
+         {:id "emacs-defe597d055611ce7f3df8a2839ac76c" :turn-id "claude-13-turn-273" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T00:06:37.541807272Z"}
+         {:id "emacs-6a490a3c32223a31e847b5b68afee428" :turn-id "claude-13-turn-274" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:20:31.901678408Z"}
+         {:id "emacs-81541c27b0a701db7396f47e86671c3a" :turn-id "claude-13-turn-275" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:29:37.414643029Z"}
+         {:id "emacs-616624f5839a5ea27d90b40c7428aa93" :turn-id "claude-13-turn-276" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:31:44.067519336Z"}
+         {:id "emacs-d174a9f53f15900da1d1e4f38b58ed54" :turn-id "claude-13-turn-277" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:34:04.564616056Z"}
+         {:id "emacs-a124507f01faf695138063a2715fdc93" :turn-id "claude-13-turn-278" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:40:04.808823064Z"}
+         {:id "emacs-47537e31f5c8c82dd00ac4453369ac9e" :turn-id "claude-13-turn-279" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:42:39.379280697Z"}
+         {:id "emacs-bfadb8004a746027ec65e529da2303dc" :turn-id "claude-13-turn-280" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:45:18.963927811Z"}
+         {:id "emacs-2e82e002000899514d96bae8152d1bbe" :turn-id "claude-13-turn-282" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T01:53:22.643253485Z"}
+         {:id "emacs-3fb478d359c220540e5639c5ff8ae843" :turn-id "claude-13-turn-284" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T02:01:39.020441759Z"}
+         {:id "emacs-ad9ad332b28c231522ba9c8d99e19b55" :turn-id "claude-13-turn-285" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T02:08:25.974582925Z"}
+         {:id "emacs-2e24acf1277b765a703a7985dda91708" :turn-id "claude-13-turn-286" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T02:12:55.741644468Z"}
+         {:id "emacs-57f8bb5995cabefd95819171f17ead54" :turn-id "claude-13-turn-287" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T02:17:51.509602260Z"}
+         {:id "emacs-49256e6af3c6f50513cf8e21f650aba9" :turn-id "claude-13-turn-288" :session "ed69fb38-e76d-4009-8bc7-880ea8a99bf8" :agent :claude-13 :at "2026-11-11T02:22:54.748221119Z"}
+         ]
+ :harness #{}
+ :records [
+           {:evidence-id "emacs-10032f6eb4603116666d81c42035232d" :turn-id "claude-13-turn-208"}
+           {:evidence-id "emacs-fd8297bf4e634a1197187ec698f597ad" :turn-id "claude-13-turn-209"}
+           {:evidence-id "emacs-f92ecae4c2556acb9300bdfc4a6f6fec" :turn-id "claude-13-turn-210"}
+           {:evidence-id "emacs-d0ab429a4171acbc9817a8ba2db3df47" :turn-id "claude-13-turn-211"}
+           {:evidence-id "emacs-5903a19182c5de0c3de6bce7d3af0b42" :turn-id "claude-13-turn-213"}
+           {:evidence-id "emacs-934233769cb5e0689eeb74dac83a6cd9" :turn-id "claude-13-turn-214"}
+           {:evidence-id "emacs-27d6085d0ba6f7cf938cbfad55e8a6f9" :turn-id "claude-13-turn-215"}
+           {:evidence-id "emacs-d6983846fe5a0b562b6ed4e70fbdf011" :turn-id "claude-13-turn-216"}
+           {:evidence-id "emacs-d99603a71706d478ef0a791f04d80f75" :turn-id "claude-13-turn-217"}
+           {:evidence-id "emacs-430f8b666c3daf98aca5e9f933cd7501" :turn-id "claude-13-turn-219"}
+           {:evidence-id "emacs-e6e1d7c96124fa1bc94941f7fef4c3a4" :turn-id "claude-13-turn-220"}
+           {:evidence-id "emacs-b05cf1286c7268e3d37e51b6c5fbadfe" :turn-id "claude-13-turn-221"}
+           {:evidence-id "emacs-ba87a976ad014e0140d4186d0ebdae90" :turn-id "claude-13-turn-222"}
+           {:evidence-id "emacs-44fb040b02b6569528298a7cadec0d9e" :turn-id "claude-13-turn-223"}
+           {:evidence-id "emacs-0b39021c7ecf36352f7541131960bdc0" :turn-id "claude-13-turn-224"}
+           {:evidence-id "emacs-784fda04bb9f8aec6b82e43700c0c13b" :turn-id "claude-13-turn-225"}
+           {:evidence-id "emacs-6a101420ce07982ab5d90d8be4f4c961" :turn-id "claude-13-turn-226"}
+           {:evidence-id "emacs-ad9ad332b28c231522ba9c8d99e19b55" :turn-id "claude-13-turn-285"}
+           {:evidence-id "emacs-2e24acf1277b765a703a7985dda91708" :turn-id "claude-13-turn-286"}
+           {:evidence-id "emacs-57f8bb5995cabefd95819171f17ead54" :turn-id "claude-13-turn-287"}
+           {:evidence-id "emacs-49256e6af3c6f50513cf8e21f650aba9" :turn-id "claude-13-turn-288"}
+           ]}
