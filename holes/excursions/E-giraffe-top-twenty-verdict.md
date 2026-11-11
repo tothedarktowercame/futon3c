@@ -39,7 +39,7 @@ reason, which goes back to the role that picked it).
 | 6 | E-evidence-flow | Thor | may be no longer wanted | **CLOSED 2026-11-11** (Joe: "Yes we can close"): one store on zone, the July split is gone; kept as a feature turned off, for federated agency (`holes/FEATURE-evidence-flow.md`); backup warnings to M-ways-of-working |
 | 7 | T-overlap-modes-as-factor-precision | Questor | ready (one small handoff) | **investigated, left open** 2026-11-11: does not match (absent, not contradicted; futon2 `49cfb6b3c`); moved under M-repl-circus as an excursion, to be read on live turns once turn coverage is enforced |
 | 8 | E-fetch-entity-miss-path | Thyra | ready (one small handoff) | **CLOSED 2026-11-11**: it had regressed (20 s misses, table 10.6× larger); fixed via indexed sidecar columns (futon1b `2b1a1cfb`), live after Joe's restart: miss 3 ms |
-| 9 | M-repl-circus | Merlin | specified, multi-day | |
+| 9 | M-repl-circus | Merlin | specified, multi-day | **in progress** 2026-11-11: capture fix (`1e786e2dd`), turn-coverage invariant in core.logic (`307e918f4`), indexed steppers + Reazon attachment invariant (`f5526ed01`, Joe sees the per-REPL stepper); next: coverage warning wired, backfill of 53 turns (Joe: later), #7 on live turns |
 | 10 | M-interim-director-proxy-metric-inventory | Thor | specified, multi-day | |
 | 11 | M-essay-corpus-substrate | Questor | ready (one small handoff) | |
 | 12 | E-fix-cx-cr-runners-to-clock-in | Thyra | ready (one small handoff) | |
