@@ -6,7 +6,9 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [futon.pattern-index :as notions-index]
             [futon3c.agency.pattern-index :as pidx]
+            [futon3c.transport.http :as http]
             [futon3c.watcher.pattern-index :as w]))
 
 (def ^:private fixture-files
@@ -170,6 +172,18 @@
           (is (= 3 (.getLong rs 1)))
           (is (= (.getLong rs 2) (.getLong rs 3))))
         (is (.exists (io/file lib "resources/sigils/patterns-index.tsv"))))
+      (binding [notions-index/*db-path* db
+                notions-index/*checkpoint-ttl-ms* 0]
+        (is (= 3 (count (#'http/load-patterns-sidecar))))
+        (let [src (io/file w/futon3-root
+                           "library/process/built-but-not-wired-invisibility.flexiarg")
+              dst (io/file lib
+                           "library/process/built-but-not-wired-invisibility.flexiarg")]
+          (.mkdirs (.getParentFile dst))
+          (io/copy src dst))
+        (real-build! lib db)
+        (is (= 4 (count (#'http/load-patterns-sidecar)))
+            "HTTP sees the checkpoint move without a namespace reload"))
       (testing "a planted stale embedding row: not usable"
         (let [conn (java.sql.DriverManager/getConnection (str "jdbc:sqlite:" db))]
           (with-open [st (.createStatement conn)]

@@ -2,6 +2,7 @@
   "Weak semantic activations recorded beside durable work artifacts."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon.pattern-index :as pattern-index]
             [futon3c.agency.pattern-search :as pattern-search]
             [futon3c.substrate.client :as substrate])
   (:import [java.nio.charset StandardCharsets]
@@ -17,9 +18,6 @@
       (str (System/getProperty "user.home") "/code/futon3a")))
 
 (defn- script-file [] (io/file (futon3a-root) "scripts/notions_search.py"))
-(defn- index-file []
-  (io/file (futon3a-root) "resources/notions/minilm_pattern_embeddings.json"))
-
 (defonce ^:private !digest-cache (atom {}))
 
 (defn- hex [^bytes bytes]
@@ -121,7 +119,7 @@
   {:name :futon3a/notions-search
    :model model-name
    :script-sha256 (file-sha256 (script-file))
-   :index-sha256 (file-sha256 (index-file))})
+   :index-sha256 (sha256-text (pr-str (pattern-index/checkpoint)))})
 
 (defn cited-ids
   "Return canonical KNOWN-IDS cited exactly in TEXT. A leading `~`, backticks,

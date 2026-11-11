@@ -527,20 +527,16 @@
     (+ (* 2.0 overlap) (* 0.5 rationale-overlap))))
 
 (defn- default-notions-index-path
-  [cwd]
-  (let [candidates [(str (io/file cwd "../futon3a/resources/notions/patterns-index.tsv"))
-                    (str (io/file cwd "futon3a/resources/notions/patterns-index.tsv"))
-                    (str (io/file (System/getProperty "user.home")
-                                  "code/futon3a/resources/notions/patterns-index.tsv"))]]
-    (some (fn [p]
-            (let [f (io/file p)]
-              (when (.exists f) (.getPath f))))
-          candidates)))
+  [_cwd]
+  (let [path (or (System/getenv "FUTON3A_PATTERN_INDEX_DB")
+                 (str (io/file (System/getProperty "user.home")
+                               "code/storage/futon3a/pattern-index.sqlite")))]
+    (when (.exists (io/file path)) path)))
 
 (defn- notions-index-path
   [cwd config]
   (let [configured (or (:notions-index-path config)
-                       (System/getenv "FUTON3A_NOTIONS_INDEX"))]
+                       (System/getenv "FUTON3A_PATTERN_INDEX_DB"))]
     (or (when (and configured (.exists (io/file configured)))
           configured)
         (default-notions-index-path cwd))))
@@ -620,7 +616,7 @@
       {:ok false :error "psr-search requires a non-blank query"}
 
       (nil? idx-path)
-      {:ok false :error "Could not locate futon3a notions index (set FUTON3A_NOTIONS_INDEX)"}
+      {:ok false :error "Could not locate pattern-index sidecar (set FUTON3A_PATTERN_INDEX_DB)"}
 
       :else
       (try

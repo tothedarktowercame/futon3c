@@ -1,5 +1,6 @@
 (ns futon3c.agency.artifact-activation-test
   (:require [clojure.test :refer [deftest is]]
+            [futon.pattern-index :as pattern-index]
             [futon3c.agency.artifact-activation :as activation]
             [futon3c.social.shapes :as shapes])
   (:import [java.nio.charset StandardCharsets]
@@ -165,19 +166,21 @@
     (is (= [(:evidence/id entry)] (:derived/source-act-ids row)))
     (is (= (:evidence/body entry) (:derived/body row)))))
 
-(deftest real-descriptor-hashes-files-and-caches
-  ;; Every other test fakes *descriptor-fn*; this one runs the real hashing.
+(deftest real-descriptor-hashes-script-and-checkpoints
   (let [script (java.io.File/createTempFile "notions" ".py")
-        index (java.io.File/createTempFile "index" ".json")]
+        checkpoint (atom {:embedding {:seq 1 :library_head "a"}
+                          :sigil {:seq 1 :embedding_seq 1 :library_head "a"}})]
     (spit script "print(1)")
-    (spit index "[]")
     (with-redefs [activation/script-file (constantly script)
-                  activation/index-file (constantly index)]
+                  pattern-index/checkpoint #(deref checkpoint)]
       (let [d1 (activation/retrieval-descriptor)
             d2 (activation/retrieval-descriptor)]
         (is (re-matches #"[0-9a-f]{64}" (:index-sha256 d1)))
         (is (not= (:script-sha256 d1) (:index-sha256 d1)))
-        (is (= d1 d2))))))
+        (is (= d1 d2))
+        (swap! checkpoint assoc-in [:sigil :seq] 2)
+        (is (not= (:index-sha256 d1)
+                  (:index-sha256 (activation/retrieval-descriptor))))))))
 
 (deftest markdown-sections-own-text-until-any-next-heading
   (let [text (str "preamble\n"

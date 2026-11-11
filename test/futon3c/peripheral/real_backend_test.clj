@@ -8,6 +8,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon.pattern-index :as pidx]
             [futon3b.query.relations :as relations]
             [futon3c.peripheral.real-backend :as rb]
             [futon3c.peripheral.tools :as tools]
@@ -19,6 +20,7 @@
             [futon3c.peripheral.common :as common]
             [futon3c.evidence.store :as estore])
   (:import [java.io File]
+           [java.sql DriverManager]
            [java.util UUID]))
 
 ;; =============================================================================
@@ -44,6 +46,22 @@
   `(let [~sym (temp-dir!)]
      (try ~@body
        (finally (cleanup! ~sym)))))
+
+(defn- rebuild-pattern-sidecar! [path seq rows]
+  (with-open [conn (DriverManager/getConnection (str "jdbc:sqlite:" path))
+              st (.createStatement conn)]
+    (.execute st "CREATE TABLE IF NOT EXISTS pattern_sigil (ordinal INTEGER PRIMARY KEY,id TEXT,tokipona TEXT,truth TEXT,rationale TEXT,hotwords TEXT,kind TEXT,source_path TEXT)")
+    (.execute st "CREATE TABLE IF NOT EXISTS sigil_checkpoint (seq INTEGER PRIMARY KEY,library_head TEXT,embedding_seq INTEGER,rows_indexed INTEGER,finished_at TEXT)")
+    (.execute st "CREATE TABLE IF NOT EXISTS checkpoint (model TEXT,library_head TEXT,patterns_indexed INTEGER,library_ids TEXT,drift TEXT,finished_at TEXT,seq INTEGER)")
+    (.executeUpdate st "DELETE FROM pattern_sigil")
+    (doseq [[ordinal id word] (map vector (range) rows (repeat "mandatory"))]
+      (.executeUpdate st (format (str "INSERT INTO pattern_sigil VALUES "
+                                      "(%d,'%s','','','%s','[\"%s\"]','library','fixture')")
+                                 ordinal id word word)))
+    (.executeUpdate st (format "INSERT INTO sigil_checkpoint VALUES (%d,'head',%d,%d,'now')"
+                               seq seq (count rows)))
+    (.executeUpdate st (format "INSERT INTO checkpoint VALUES ('mini','head',%d,'[]','{}','now',%d)"
+                               (count rows) seq))))
 
 (deftest bash-detached-returns-without-waiting-for-process
   (testing ":bash detached owns process detachment instead of relying on shell &"
@@ -275,16 +293,26 @@
 
 (deftest discipline-psr-search-queries-futon3a-index
   (testing ":psr-search returns scored candidates from futon3a notions index"
-    (let [idx "../futon3a/resources/notions/patterns-index.tsv"
-          backend (rb/make-real-backend {:cwd "/home/joe/code/futon3c"
-                                         :notions-index-path idx})
-          result (tools/execute-tool backend :psr-search
-                                     ["mandatory psr" {:top-k 5}])]
-      (is (true? (:ok result)))
-      (is (seq (get-in result [:result :candidates])))
-      (is (every? #(= :futon3a/notions-index (:source %))
-                  (get-in result [:result :candidates])))
-      (is (every? string? (map :pattern-id (get-in result [:result :candidates])))))))
+    (with-temp-dir dir
+      (let [idx (str (io/file dir "pattern-index.sqlite"))
+            backend (rb/make-real-backend {:cwd "/home/joe/code/futon3c"
+                                           :notions-index-path idx})]
+        (binding [pidx/*checkpoint-ttl-ms* 0]
+          (rebuild-pattern-sidecar! idx 1 ["coordination/mandatory-psr"])
+          (let [result (tools/execute-tool backend :psr-search
+                                           ["mandatory psr" {:top-k 5}])]
+            (is (true? (:ok result)) (pr-str result))
+            (is (= ["coordination/mandatory-psr"]
+                   (mapv :pattern-id (get-in result [:result :candidates])))))
+          (rebuild-pattern-sidecar! idx 2 ["coordination/mandatory-psr"
+                                           "coordination/mandatory-psr-new"])
+          (let [result (tools/execute-tool backend :psr-search
+                                           ["mandatory psr" {:top-k 5}])]
+            (is (= #{"coordination/mandatory-psr"
+                     "coordination/mandatory-psr-new"}
+                   (set (map :pattern-id (get-in result [:result :candidates])))))
+            (is (every? #(= :futon3a/notions-index (:source %))
+                        (get-in result [:result :candidates])))))))))
 
 (deftest discipline-psr-select-and-pur-update-persist-proof-path
   (testing ":psr-select followed by :pur-update emits typed futon3b records and persists proof-path"

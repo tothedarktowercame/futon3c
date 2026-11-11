@@ -73,6 +73,7 @@
             [futon3c.test-registry.local-port :as registry-local-port]
             [futon3c.test-registry.local-store :as registry-store]
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
+            [futon.pattern-index :as pattern-index]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.agent-context :as agent-context]
             [futon3c.agency.artifact-activation :as artifact-activation]
@@ -4176,36 +4177,21 @@
 ;; Pattern search — futon3x tool surface
 ;; =============================================================================
 
-(def ^:private patterns-tsv-path
-  (str (System/getProperty "user.home") "/code/futon3/resources/sigils/patterns-index.tsv"))
-
-(defonce ^:private !patterns-cache
-  (atom nil))
-
-(defn- load-patterns-tsv
-  "Load and cache patterns from TSV. Returns vector of maps."
+(defn- load-patterns-sidecar
+  "Load TSV-shaped patterns, checkpoint-cached by futon.pattern-index."
   []
-  (or @!patterns-cache
-      (let [f (io/file patterns-tsv-path)]
-        (when (.exists f)
-          (let [lines (->> (str/split-lines (slurp f))
-                           (remove #(str/starts-with? % "#"))
-                           (remove str/blank?))
-                parsed (mapv (fn [line]
-                               (let [cols (str/split line #"\t" -1)]
-                                 {:pattern (nth cols 0 "")
-                                  :tokipona (nth cols 1 "")
-                                  :sigil (nth cols 2 "")
-                                  :rationale (nth cols 3 "")
-                                  :hotwords (nth cols 4 "")}))
-                             lines)]
-            (reset! !patterns-cache parsed)
-            parsed)))))
+  (mapv (fn [{:keys [id tokipona sigil rationale hotwords]}]
+          {:pattern id
+           :tokipona (or tokipona "")
+           :sigil (or sigil "")
+           :rationale rationale
+           :hotwords (str/join ", " hotwords)})
+        (pattern-index/load-patterns)))
 
 (defn- search-patterns
   "Search patterns by keyword matching against pattern ID, rationale, and hotwords."
   [query limit]
-  (let [patterns (or (load-patterns-tsv) [])
+  (let [patterns (or (load-patterns-sidecar) [])
         terms (str/split (str/lower-case (str query)) #"\s+")
         scored (keep (fn [p]
                        (let [text (str/lower-case
