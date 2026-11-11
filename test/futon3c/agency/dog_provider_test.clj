@@ -72,6 +72,9 @@
   (is (= "failed" (:status (dog/recall "some operator text about giraffes"
                                        {:request-fn (fn [_] (throw (ex-info "store down" {})))})))))
 
+;; The synthetic record ids below ending in "-s" hash to arm "shown"
+;; (packet B); the arm itself is tested at the end of this file.
+
 (defn- prepare!
   "Synchronously prepare the cache for RECORD-ID from STORE's record."
   [opts store record-id]
@@ -93,7 +96,7 @@
 
 (deftest provider-renders-recalled-memories
   (let [store (tmp-store)
-        record-id "turn-dogTEST1"]
+        record-id "turn-dogTEST1-s"]
     (write-operator-record! store record-id "benefits have a time-limited nature")
     (prepare! {:request-fn (stub-request [@fixture-05cXMM])} store record-id)
     (let [result (render-with-dog {:agent-id "kimi-1" :session-id "sess-test"
@@ -119,7 +122,7 @@
 
 (deftest slow-m40-yields-not-ready-inside-the-render-budget
   (let [store (tmp-store)
-        record-id "turn-dogTEST3"
+        record-id "turn-dogTEST3-s"
         _ (write-operator-record! store record-id "benefits have a time-limited nature")
         ;; a slow m40: the stub sleeps well past the provider budget
         slow (fn [_] (Thread/sleep 2000) (:response @fixture-05cXMM))]
@@ -153,7 +156,7 @@
 
 (deftest render-records-dog-recall-on-the-turn-record
   (let [store (tmp-store)
-        record-id "turn-dogTEST4"]
+        record-id "turn-dogTEST4-s"]
     (write-operator-record! store record-id "benefits have a time-limited nature")
     (prepare! {:request-fn (stub-request [@fixture-05cXMM])} store record-id)
     (dog/register!)
@@ -779,3 +782,66 @@
     (is (some? c))
     (is (str/includes? (:body c) "b/c it only came up in passing just now.\""))
     (is (not (str/includes? (:body c) "onl…")))))
+
+;; -------------------------------------------- E-dog-helps packet B: the arm
+;; §2 "Design: recalled but withheld": the arm is a pure function of the
+;; record id; a withheld turn's recall is recorded with items and :arm
+;; "withheld" but the Prompt line carries no memory fact; use and bury run
+;; as on a shown turn.
+
+(deftest arm-known-ids
+  ;; Arms computed 2026-11-11 over 20,358 real record ids under
+  ;; ~/.emacs-graph/session-turn-analysis: 6,096 withheld = 29.9% (the 30%
+  ;; design rate is a property report, not a test).
+  (is (= "shown" (dog/arm "turn-05cXMM")))
+  (is (= "withheld" (dog/arm "turn-1jgPTg")))
+  (is (= "shown" (dog/arm "turn-RgkbTi")))
+  (is (= (dog/arm "turn-05cXMM") (dog/arm "turn-05cXMM")) "reproducible"))
+
+(deftest arm-off-switch-shows-everything
+  (let [off (io/file (.toFile (Files/createTempDirectory "dog-arm-off"
+                                                          (into-array FileAttribute [])))
+                     "dog-arm-off")]
+    (.createNewFile off)
+    (binding [dog/*arm-off-switch-path* (str off)]
+      (is (= "shown-arm-off" (dog/arm-for-turn "turn-1jgPTg"))
+          "a hash-withheld id is shown, marked so the analysis can drop it"))))
+
+(deftest withheld-turn-records-items-and-renders-nothing
+  (let [store (tmp-store)
+        record-id "turn-1jgPTg"] ; hash-withheld (see arm-known-ids)
+    (write-operator-record! store record-id "benefits have a time-limited nature")
+    (prepare! {:request-fn (stub-request [@fixture-05cXMM])} store record-id)
+    (let [result (render-with-dog {:agent-id "kimi-1" :session-id "sess-test"
+                                   :turn-record-id record-id
+                                   :render-at "2026-11-11T18:30:00Z"})
+          segment (first (:segments result))
+          recall (:segment/dog-recall segment)]
+      (is (seq (:items recall)) "the recall has items as on a shown turn")
+      (is (= "withheld" (:arm recall)) "dog_recall says the arm")
+      (is (nil? (:segment/header segment)) "no header, so nothing renders")
+      (is (nil? (memory-fact segment))
+          "no memory fact on the Prompt line — the seat is not told")))
+  ;; and the recorded dog_recall on the 象 turn record carries the arm
+  (let [store (tmp-store)
+        record-id "turn-1jgPTg"]
+    (write-operator-record! store record-id "benefits have a time-limited nature")
+    (prepare! {:request-fn (stub-request [@fixture-05cXMM])} store record-id)
+    (dog/register!)
+    (binding [prompt-line/*turn-record-store* store]
+      (prompt-line/render! {:agent-id "kimi-1" :session-id "sess-test"
+                            :turn-record-id record-id}))
+    (let [dog-recall (:dog_recall (turn-store/read-record store record-id))]
+      (is (map? dog-recall))
+      (is (seq (:items dog-recall)))
+      (is (= "withheld" (:arm dog-recall))))))
+
+(deftest use-check-runs-on-a-withheld-turn
+  ;; The real turn-vsC2tD fixture with its dog_recall marked withheld:
+  ;; the use check is arm-independent by construction.
+  (let [fix @fixture-vsC2tD-record
+        record (assoc-in fix [:dog_recall :arm] "withheld")
+        result (dog/use-check record (bodies-map fix))]
+    (is (= "ok" (:status result)))
+    (is (= 3 (count (:used-memory-ids result)))
+        "same use verdict as the shown fixture")))

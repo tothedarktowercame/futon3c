@@ -54,6 +54,7 @@
             [futon3c.xiang.turn-store :as turn-store])
   (:import [java.net URI URLEncoder]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers]
+           [java.security MessageDigest]
            [java.time Duration Instant]
            [java.util.concurrent ExecutorService Executors ThreadFactory]))
 
@@ -108,6 +109,37 @@
 (defn- off? [opts]
   (try (.isFile (io/file (str (or (:off-switch opts) *off-switch-path* off-switch-path))))
        (catch Throwable _ false)))
+
+;; ------------------------------------------------------------- the arm
+;; E-dog-helps §2 "Design: recalled but withheld" (packet B): on each
+;; operator turn the recall is computed as now; a pure function of the
+;; record id decides whether the recalled items reach the Prompt line.
+;; Reproducible; nobody chooses it.
+
+(def arm-off-switch-path
+  "The arm off-switch, next to dog-off: when this file exists every turn
+   is shown and the recall carries :arm \"shown-arm-off\", so the analysis
+   can drop those turns."
+  "/home/joe/code/data/minus40/dog-arm-off")
+
+(def ^:dynamic *arm-off-switch-path* arm-off-switch-path)
+
+(defn arm
+  "Pure: \"withheld\" when the first byte of SHA-256(record-id as UTF-8) is
+   below 77 (≈30%), else \"shown\". The off-switch is applied by
+   arm-for-turn, not here."
+  [record-id]
+  (let [digest (.digest (MessageDigest/getInstance "SHA-256")
+                        (.getBytes (str record-id) "UTF-8"))]
+    (if (< (bit-and (aget digest 0) 0xff) 77) "withheld" "shown")))
+
+(defn arm-for-turn
+  "The turn's arm: \"shown-arm-off\" when the off-switch file exists, else
+   (arm record-id)."
+  [record-id]
+  (if (try (.isFile (io/file *arm-off-switch-path*)) (catch Throwable _ false))
+    "shown-arm-off"
+    (arm record-id)))
 
 ;; ------------------------------------------------------------- the m40 read
 
@@ -976,10 +1008,16 @@
    the shape that printed a bare `memory` on Joe's E-futon-questions
    turn (turn-RgkbTi, 2026-11-11: the live-loaded draft segment carried
    items yet the line ended in a bare label) — the label is rebuilt
-   from the items rather than printed bare."
+   from the items rather than printed bare.
+
+   A WITHHELD turn (E-dog-helps §2) renders NIL even with items: the
+   seat must not be told anything was held back, so there is no memory
+   fact at all, not even a marker. The recall still lands as
+   :dog_recall with :arm \"withheld\"."
   [{:segment/keys [header dog-recall]}]
   (let [items (:items dog-recall)]
     (cond
+      (= "withheld" (:arm dog-recall)) nil
       (not (str/blank? header)) (str "memory " header)
       (seq items) (str "memory "
                        (str/join ", " (map #(str "~" (or (:display %) (:memory %))) items)))
@@ -992,11 +1030,16 @@
    whole recall rides :segment/dog-recall so prompt-line can record it
    as :dog_recall on the 象 turn record. A typed absence carries no
    header: \"not-ready\" renders as `memory: not ready`, \"none\" and
-   \"failed\" stay off the line."
+   \"failed\" stay off the line.
+
+   The arm (E-dog-helps §2) rides every recall — items or typed absence
+   — as :arm in the dog-recall payload. A \"withheld\" turn carries NO
+   header, so prompt-fact renders nil and the line shows nothing."
   [{:keys [agent-id session-id]} record-id recall]
   (let [items (:items recall)
         status (:status recall)
-        header (when (seq items)
+        turn-arm (arm-for-turn record-id)
+        header (when (and (seq items) (not= "withheld" turn-arm))
                  (let [shown (mapv #(str "~" (or (:display %) (:memory %)) " (" (:why %) ")") items)]
                    (str (first shown)
                         (when (< 1 (count shown))
@@ -1008,7 +1051,8 @@
                                      :session-id (str session-id)
                                      :turn-record-id (str record-id)
                                      :basis-status (if (seq items) :dog-recall :dog-absence)}}
-             :segment/dog-recall (select-keys recall [:at :items :query-ms :query-source :status :reason])}
+             :segment/dog-recall (assoc (select-keys recall [:at :items :query-ms :query-source :status :reason])
+                                        :arm turn-arm)}
       (seq header) (assoc :segment/header header)
       (= "not-ready" status) (assoc :segment/not-ready true))))
 
