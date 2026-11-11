@@ -122,6 +122,19 @@ recomputed.
 | Giraffe | 馬's tensions + pattern cascade (second derivative) | proposed tickets, relationship reviews | derived store |
 | 猴 monkey | timer (the operator-focus reader; seat `猴-1`, renamed from `zai-1` 2026-11-05) | operator focus | derived store |
 
+**Pattern occurrence moves from 馬 to 猴 (Joe, 2026-11-11).** "猴's primary
+job is ascertaining the operator focus: so finalising the cascade *and
+locating it within the GCC* would achieve that." Why it moves: the per-turn
+馬-sonnet whistle reads a chain window that often exceeds its per-call
+budget (of the last 71 jobs on 11-11: 58 done, 10 "exceeds per-call
+budget", 3 "no text"), and a failed read is stored as "no reader", which the
+stepper drew as void (frame 179). 馬 read 40 of claude-13's 179 turns. 猴,
+on a timer, reads a frame once its reply has landed, can split a large
+window, retries failures, and writes the same `pattern_verdicts` shape. 馬
+keeps the tensions on the agent reply. Open: whether locating a turn's
+cascade in the GCC needs graph embeddings (Joe: "I suspect the answer is
+yes").
+
 狗 is to the agent as 驴 is to the operator (Joe, 2026-11-05). The code calls 狗
 "act" (M-giraffe loop line; "驴 works while 狗 does", `xiang/lu_rerank.clj:303`).
 This mission makes 狗 the agent's memory hook.
