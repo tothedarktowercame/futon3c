@@ -250,6 +250,14 @@ are what would have caught it.
 
 ## Open
 
+- Overlap modes as factor precision: futon2
+  `holes/tickets/T-overlap-modes-as-factor-precision.md`, taken on as an
+  excursion of this mission (Joe, 2026-11-11: "#7 could be tagged onto
+  M-repl-circus as an Excursion there, even if that's an anachronism").
+  Finding so far: the reading is absent from the cascade code, not
+  contradicted (futon2 `49cfb6b3c`). Next: live Circus turns whose record is
+  trusted (invariant 2 above), read as mini-cascades, with houseboat, coop
+  and submarine ("I really feel cooped up in here") as the first tests.
 - Joe's questions as questions: turns tagged `claim-type: question` logged,
   linked to their answers and surfaced while open, in the manner of ArSE.
   Excursion [E-question-log](../excursions/E-question-log.md) (Joe,
