@@ -158,6 +158,18 @@
       (real-build! lib db)
       (testing "after a build: usable"
         (is (:usable? (gate)) (pr-str (gate))))
+      (testing "the same automatic build writes the canonical sigil snapshot"
+        (with-open [conn (java.sql.DriverManager/getConnection (str "jdbc:sqlite:" db))
+                    st (.createStatement conn)
+                    rs (.executeQuery st (str "SELECT count(*), "
+                                              "(SELECT embedding_seq FROM sigil_checkpoint "
+                                              "ORDER BY seq DESC LIMIT 1), "
+                                              "(SELECT max(seq) FROM checkpoint) "
+                                              "FROM pattern_sigil"))]
+          (is (.next rs))
+          (is (= 3 (.getLong rs 1)))
+          (is (= (.getLong rs 2) (.getLong rs 3))))
+        (is (.exists (io/file lib "resources/sigils/patterns-index.tsv"))))
       (testing "a planted stale embedding row: not usable"
         (let [conn (java.sql.DriverManager/getConnection (str "jdbc:sqlite:" db))]
           (with-open [st (.createStatement conn)]
