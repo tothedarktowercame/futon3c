@@ -1,0 +1,237 @@
+[
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169 (reply not yet landed; turn-only situation)",
+  "pattern": "cascade-construction/read-what-exists-first",
+  "cited-by": "kimi-2 mapping (M-repl-circus cascade job)",
+  "maps": {
+   "I1": {"element": "legal-cascade-per-turn-criterion",
+          "source": "The first criterion that I think we need to look at is producing an actual \"legal\" cascade for each turn."},
+   "I2": {"element": "scoped-multiday-guess-less-than-one-day",
+          "source": "this is scoped as \"multi-day\" though my guess is it will probably take us less than one day."},
+   "G":  {"element": "voxterm-diagram-tab-start-incomplete",
+          "source": "We had some start on something like this in the Voxterm \"Diagram\" tab but it wasn't complete yet."},
+   "B":  {"element": "moran-paper-reread-figure-1",
+          "source": "./futon5a/essays/moran-1971-agent-cascades/reading-moran-1971.md is worth rereading and figure-1-cascade-of-64-patterns.png is, I think an example from the Moran paper that I found stylistically nice."}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "problems/llm-over-corpus-mining-lessons",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match: the turn is not data-mining-section work"},
+   "I2": {"element": null, "reason": "no match"},
+   "G":  {"element": null, "reason": "no match"},
+   "B":  {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "pattern-interpretation/declare-the-universe",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "turn-potentially-cascade-null-if-none",
+          "source": "each turn can be thought of as \"potentially\" a cascade (a null cascade if no patterns are found)"},
+   "I2": {"element": null, "reason": "no second element: the safe-looking-default tension is voiced on the same element as I1"},
+   "G":  {"element": null, "reason": "no match: no shared-fact-vocabulary argument in the turn"},
+   "B":  {"element": null, "reason": "no match: no admission-rule application in the turn"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "social/ARGUMENT",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "pattern has no IF/HOWEVER/BECAUSE/THEN parts (argument document)"},
+   "I2": {"element": null, "reason": "pattern-part-missing"},
+   "G":  {"element": null, "reason": "pattern-part-missing"},
+   "B":  {"element": null, "reason": "pattern-part-missing"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "devmap-coherence/ifr-f1-dhammavicaya",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match: no graph-memory snapshot maintenance in the turn"},
+   "I2": {"element": null, "reason": "no match"},
+   "G":  {"element": null, "reason": "no match"},
+   "B":  {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "data-mining/gates-as-code",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "acceptance-condition-graphical-stepper",
+          "source": "the acceptance condition for this criterion is to develop a *graphical* stepper."},
+   "I2": {"element": null, "reason": "no match: no prose-criteria rubber-stamping tension voiced"},
+   "G":  {"element": null, "reason": "no match"},
+   "B":  {"element": null, "reason": "no match: no checker is written or demanded"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "data-mining/saturate-the-accelerator-with-concurrency",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match"}, "I2": {"element": null, "reason": "no match"},
+   "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "problems/devmap-self-consistency-standards",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match"}, "I2": {"element": null, "reason": "no match"},
+   "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "futon-theory/single-source-of-truth",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "parts are meta-placeholders (\"see substructure\"); nothing concrete to map"},
+   "I2": {"element": null, "reason": "same"}, "G": {"element": null, "reason": "same"}, "B": {"element": null, "reason": "same"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "peeragogy/creating-a-guide",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match: no capture-now vs stabilise-first axis in the turn"},
+   "I2": {"element": null, "reason": "no match"}, "G": {"element": null, "reason": "pattern-part-missing (BECAUSE is —)"},
+   "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "system-coherence/correct-effect-claims-with-relevant-denominators",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match"}, "I2": {"element": null, "reason": "no match"},
+   "G": {"element": null, "reason": "pattern-part-missing"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "war-room/wr-18-war-machine-is-demonstrated-not-hypothesised",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match: no full mission lifecycle under own ranking in the turn"},
+   "I2": {"element": null, "reason": "no match"}, "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "agent/handoff-preserves-context",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "aim-work-through-mreplcircus-completely",
+          "source": "OK, so our aim is to work through M-repl-circus completely, and this is scoped as \"multi-day\""},
+   "I2": {"element": null, "reason": "no match: no cold-start/successor tension voiced"},
+   "G":  {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match: no handoff record defined"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "process/built-but-not-wired-invisibility",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "voxterm-diagram-tab-start-incomplete",
+          "source": "We had some start on something like this in the Voxterm \"Diagram\" tab but it wasn't complete yet."},
+   "I2": {"element": null, "reason": "no match"}, "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "proof-search/typed-hole-as-frontier",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "voxterm-diagram-tab-start-incomplete",
+          "source": "We had some start on something like this in the Voxterm \"Diagram\" tab but it wasn't complete yet."},
+   "I2": {"element": null, "reason": "no match: the incompleteness is named, not complained-of as unqueryable"},
+   "G":  {"element": null, "reason": "no match"},
+   "B":  {"element": "acceptance-condition-graphical-stepper",
+          "source": "the acceptance condition for this criterion is to develop a *graphical* stepper."}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "peeragogy/use-or-make",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "mosaic-referent-display-pictures",
+          "source": "I want to lean into the \"Mosaic\" referent over there so that we can display pictures, even though Mojira is  largely a text-based browser."},
+   "I2": {"element": "forty-years-clickable-graphics-conkeror",
+          "source": "we have nearly 40 years or improvements in what \"graphics\" means so we can make graphics that are clickable or whatever we want (including navigable/interactable via Conkeror style text hints!)"},
+   "G":  {"element": null, "reason": "pattern-part-missing (BECAUSE is —)"},
+   "B":  {"element": "moran-paper-reread-figure-1",
+          "source": "reading-moran-1971.md is worth rereading and figure-1-cascade-of-64-patterns.png is, I think an example from the Moran paper that I found stylistically nice"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "forward-model/the-forward-model-is-a-pattern-cascade",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "local-cascades-local-regions-inside-gcc",
+          "source": "The relevance to the GCC is is that the local cascades would all be local regions inside the GCC."},
+   "I2": {"element": "voxterm-diagram-tab-start-incomplete",
+          "source": "We had some start on something like this in the Voxterm \"Diagram\" tab but it wasn't complete yet."},
+   "G":  {"element": "turn-potentially-cascade-null-if-none",
+          "source": "each turn can be thought of as \"potentially\" a cascade (a null cascade if no patterns are found)"},
+   "B":  {"element": "wiring-diagram-session-cascades-hook-up",
+          "source": "some kind of wiring diagram that would run through a session, probably showing how the individual turn cascades hook up into a bigger diagram"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "cascade-construction/add-a-pattern-when-an-item-fits-no-class",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "turn-potentially-cascade-null-if-none",
+          "source": "a null cascade if no patterns are found"},
+   "I2": {"element": null, "reason": "no match"}, "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "cascade-construction/borrow-a-sibling-cascade",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "moran-paper-reread-figure-1",
+          "source": "figure-1-cascade-of-64-patterns.png is, I think an example from the Moran paper that I found stylistically nice"},
+   "I2": {"element": null, "reason": "no match: no analogy-misleads tension voiced"},
+   "G":  {"element": null, "reason": "no match"},
+   "B":  {"element": "voxterm-diagram-tab-start-incomplete",
+          "source": "We had some start on something like this in the Voxterm \"Diagram\" tab but it wasn't complete yet."}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "cascade-construction/run-it-on-a-real-case",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "moran-paper-reread-figure-1",
+          "source": "reading-moran-1971.md is worth rereading and figure-1-cascade-of-64-patterns.png is, I think an example from the Moran paper"},
+   "I2": {"element": null, "reason": "no match"}, "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "cycle-machine/step-machine",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match"}, "I2": {"element": null, "reason": "no match"},
+   "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "translation/bind-to-the-source",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "category-theory-model-underneath",
+          "source": "Of course, underneath that we'll have our category theory model."},
+   "I2": {"element": null, "reason": "no match: no names-look-like-bindings tension voiced"},
+   "G":  {"element": "graphical-representation-for-cascade-needed",
+          "source": "Anyway, I think we need to work out a graphical representation for a cascade."},
+   "B":  {"element": null, "reason": "no match: no content-hash binding demanded"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "math-strategy/construction-before-estimates",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "category-theory-model-underneath",
+          "source": "Of course, underneath that we'll have our category theory model."},
+   "I2": {"element": "mosaic-referent-display-pictures",
+          "source": "I want to lean into the \"Mosaic\" referent over there so that we can display pictures"},
+   "G":  {"element": "graphical-representation-for-cascade-needed",
+          "source": "Anyway, I think we need to work out a graphical representation for a cascade."},
+   "B":  {"element": null, "reason": "no match: the turn does not state the construction-first order, it only enacts it"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "workshop/records-carry-warrant",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match"}, "I2": {"element": null, "reason": "no match"},
+   "G": {"element": null, "reason": "no match"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "memory/verify-in-the-serving-process",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": null, "reason": "no match"}, "I2": {"element": null, "reason": "no match"},
+   "G": {"element": null, "reason": "pattern-part-missing"}, "B": {"element": null, "reason": "no match"}}},
+
+ {"turn": "session ed69fb38, 2026-11-11T16:15:24.046120661Z, evidence emacs-d1ceee43f003a912322bce0c0f951169",
+  "pattern": "writing-coherence/hedged-lift",
+  "cited-by": "kimi-2 mapping",
+  "maps": {
+   "I1": {"element": "scoped-multiday-guess-less-than-one-day",
+          "source": "this is scoped as \"multi-day\" though my guess is it will probably take us less than one day."},
+   "I2": {"element": null, "reason": "no match"}, "G": {"element": null, "reason": "pattern-part-missing (BECAUSE is —)"},
+   "B": {"element": null, "reason": "no match"}}}
+]
