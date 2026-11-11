@@ -549,7 +549,8 @@
     (is (= 1 (count candidates)))
     (let [{:keys [slug description body basis]} (first candidates)]
       (is (re-find #"(?i)chained" body) "the authorisation, verbatim")
-      (is (re-find #"status: buried, not yet used" body))
+      (is (re-find #"^status: buried by 狗 2026-11-11 from turn-UkLbCu, not yet used" body)
+          "the body opens with the status line")
       (is (re-find #"^joe-2026-11-11-" slug) "who + date slug")
       (is (>= 79 (count description)) "description fits a memory hook")
       (is (= {:record "turn-UkLbCu" :act-index 0
@@ -573,7 +574,8 @@
         bodies (map :body candidates)]
     (is (some #(re-find #"proposal recurs" %) bodies) "the accept ruling")
     (is (some #(re-find #"retain those as \*proposed\*" %) bodies) "the constrain ruling")
-    (is (some #(re-find #"go ahead" %) bodies) "the 🈸 go-ahead (:accept)")))
+    (is (not-any? #(re-find #"go ahead" %) bodies)
+        "the bare 🈸 go-ahead is assent, not content (2b: 2 stripped terms < 5)")))
 
 (deftest bury-retraction-after-joes-disagree
   ;; turn-vDBr4L: Joe's 🈚 disagree ("done for now but not done-done")
@@ -595,6 +597,164 @@
   (let [candidates (dog/bury-candidates @fixture-UkLbCu-bury
                                         {:known-fn (fn [_] nil)})]
     (is (= 1 (count candidates)) "unknown ruling still buried")))
+
+;; -------------------------------------------- post-hook part 2b: the bury
+;; write (M-repl-circus, claude-13 11-11). Rule changes from review:
+;; content-tested approvals, 2-bigram dedup, real writes to a temp dir.
+
+(def fixture-vsC2tD-bury (delay (fixture "turn-vsC2tD.bury.json")))
+(def fixture-63aK24-bury (delay (fixture "turn-63aK24.bury.json")))
+(def fixture-RgkbTi-bury (delay (fixture "turn-RgkbTi.bury.json")))
+
+(deftest approvals-need-content-beyond-assent
+  ;; The 14-row table's praise / bare go-aheads are no longer buried:
+  ;; vsC2tD "OK please send pattern-index packet 3" (3 stripped terms),
+  ;; 63aK24's praise (3), RgkbTi's praise (7 terms but no directive
+  ;; marker) — while RgkbTi's :redirect ruling still is.
+  (is (= [] (dog/bury-candidates @fixture-vsC2tD-bury))
+      "bare go-ahead: not buried")
+  (is (= [] (dog/bury-candidates @fixture-63aK24-bury))
+      "praise and a question: nothing buried")
+  (let [candidates (dog/bury-candidates @fixture-RgkbTi-bury)]
+    (is (= 1 (count candidates)))
+    (is (= "redirect" (get-in (first candidates) [:basis :kind]))
+        "the excursion ruling (redirect) is buried; the praise (approve) is not")
+    (is (re-find #"E-futon-questions" (:body (first candidates)))))
+  ;; and the two must-bury approvals from the table still pass
+  (is (= 1 (count (dog/bury-candidates @fixture-UkLbCu-bury)))
+      "UkLbCu's dispatch authorisation survives (6 terms, marker continue)")
+  (is (some #(re-find #"proposal recurs" (:body %))
+            (dog/bury-candidates @fixture-PeSYc2-bury))
+      "PeSYc2's acceptance ruling survives (7 terms, markers enough/accept/should)"))
+
+(deftest known-memories-needs-two-shared-bigrams
+  ;; 2b dedup: one shared distinctive bigram is not enough (the 2a
+  ;; probe suppressed the vDBr4L retraction on the generic "question
+  ;; mode"); echo-min-shared is 2.
+  (let [hit {:score -1.0
+             :entry {:evidence/body {:source "claude-code" :project "proj"
+                                     :name "existing" :hook "an existing memory hook"}}}
+        request-fn (fn [_url] {:results [hit]})
+        one-shared "progressive widening differs entirely from alpha-beta pruning folklore"
+        two-shared "progressive widening keeps the search informed"]
+    (with-redefs [dog/memory-body
+                  (fn ([_] "progressive widening keeps every move reachable eventually and stays narrow")
+                    ([_ _] "progressive widening keeps every move reachable eventually and stays narrow"))]
+      (is (= [] (dog/known-memories request-fn "http://127.0.0.1:7093" one-shared))
+          "a one-bigram overlap does not suppress")
+      (is (= ["proj/existing"]
+             (dog/known-memories request-fn "http://127.0.0.1:7093" two-shared))
+          "two shared bigrams suppress"))))
+
+(deftest bury-store-docs-shape-matches-a-real-stored-document
+  ;; Pin against a REAL stored document: fixture
+  ;; store-evidence-kimi-unique-requisition.json is the :7093 entry for
+  ;; cc:-home-joe-code-voxterm/kimi-unique-requisition, fetched by GET
+  ;; text-search 2026-11-11. bury-store-docs re-implements
+  ;; ingest_hook.py's evidence_doc/version_doc (the entry points that
+  ;; write them also write hook state under ~/code/data/minus40, which
+  ;; this packet may not touch).
+  (let [real (fixture "store-evidence-kimi-unique-requisition.json")
+        candidate {:slug "joe-2026-11-11-test-slug" :description "a test candidate"
+                   :body "status: buried by 狗 2026-11-11 from turn-TEST, not yet used\n\nquoted"}
+        text (dog/bury-file-text candidate)
+        [evidence version] (dog/bury-store-docs candidate text 1794430000000)]
+    (is (= (set (keys real)) (set (keys evidence))) "document-level keys")
+    (is (= :memory (:evidence/type evidence)))
+    (is (= :assert (:evidence/claim-type evidence)))
+    (is (= "minus40-import" (:evidence/author evidence)) "ingest_hook's author")
+    (is (= {:ref/type :memory :ref/id "cc:狗/joe-2026-11-11-test-slug"}
+           (:evidence/subject evidence)))
+    (is (= [:memory :memory/assert :source/claude-code :memory/version]
+           (:evidence/tags evidence)))
+    (let [real-body-keys (set (keys (:evidence/body real)))
+          my-body (:evidence/body evidence)]
+      (is (every? #(contains? my-body %) real-body-keys)
+          "every body key of the real stored document is present"))
+    (is (= "claude-code" (get-in evidence [:evidence/body :source]))
+        "what the recall's memory-item filter matches")
+    (is (= "buried" (get-in evidence [:evidence/body :kind]))
+        "distinguishable as buried by 狗, not yet used")
+    ;; the version hyperedge (ingest_hook's version_doc)
+    (is (= :memory/version (:hx/type version)))
+    (is (= ["cc:狗/joe-2026-11-11-test-slug" (:evidence/id evidence)]
+           (:hx/endpoints version)))
+    (is (re-find #"^2026-11-11T" (:hx/valid-time version)))))
+
+(deftest bury-one-writes-file-and-ingests-never-overwrites
+  (let [dir (io/file (.toFile (Files/createTempDirectory "dog-bury" (into-array FileAttribute [])))
+                     "狗" "memory")
+        ingested (atom [])
+        candidate {:slug "joe-2026-11-11-happy-continue-remaining-packets-chained-parallel"
+                   :description "Joe 2026-11-11 (approve, turn-UkLbCu): chained or parallel"
+                   :body "status: buried by 狗 2026-11-11 from turn-UkLbCu, not yet used\n\n\"…chained or parallel dispatches\""}
+        opts {:bury-dir (str dir)
+              :ingest-fn (fn [cand text ms] (swap! ingested conj [cand text ms]) [200 200])}
+        first-result (dog/bury-one! opts candidate)]
+    (is (= "buried" (:status first-result)))
+    (is (= 1 (count @ingested)) "the store docs post at once, with the file")
+    (let [text (slurp (io/file dir (str (:slug candidate) ".md")))]
+      (is (re-find #"(?m)^  type: buried$" text) "frontmatter type: buried")
+      (is (re-find #"(?m)^status: buried by 狗 2026-11-11 from turn-UkLbCu, not yet used$" text))
+      (is (not (re-find #"MEMORY" text))))
+    (is (not (.exists (io/file dir "MEMORY.md"))) "no MEMORY.md in the 狗 directory")
+    ;; never overwrite
+    (spit (io/file dir (str (:slug candidate) ".md")) "sentinel")
+    (let [second-result (dog/bury-one! opts candidate)]
+      (is (= "exists" (:status second-result)))
+      (is (= "sentinel" (slurp (io/file dir (str (:slug candidate) ".md"))))
+          "an existing slug is skipped, file untouched")
+      (is (= 1 (count @ingested)) "no second ingest"))))
+
+(deftest settled-event-writes-dog-buried
+  ;; End to end at :settled (temp bury dir, recorded ingest, no real
+  ;; store): UkLbCu's authorisation is buried and recorded as
+  ;; :dog_buried on the record.
+  (let [store (tmp-store)
+        record-id "turn-buryTEST1"
+        dir (str (Files/createTempDirectory "dog-bury" (into-array FileAttribute [])))
+        ingested (atom [])
+        fix @fixture-UkLbCu-bury]
+    (write-operator-record! store record-id (:source_text fix))
+    (turn-store/update-record! store record-id
+                               #(assoc % :acts (vec (:acts fix))
+                                       :reply_text (:reply_text fix)
+                                       :dog_recall {:status "none" :items []}))
+    (dog/handle-event {:store store
+                       :bury-dir dir
+                       :ingest-fn (fn [_cand _text _ms] (swap! ingested conj true) [200 200])
+                       :request-fn (fn [_url] {:results []})}
+                      {:event :settled :id record-id})
+    (is (loop [n 0]
+          (cond (:dog_buried (turn-store/read-record store record-id)) true
+                (< 100 n) false
+                :else (do (Thread/sleep 50) (recur (inc n)))))
+        "dog_buried written off-path")
+    (let [buried (:dog_buried (turn-store/read-record store record-id))]
+      (is (= "ok" (:status buried)))
+      (is (= 1 (count (:items buried))))
+      (is (= "buried" (:status (first (:items buried)))))
+      (is (.isFile (io/file (get-in buried [:items 0 :path])))))
+    (is (= 1 (count @ingested)))))
+
+(deftest bury-off-switch-stops-only-burying
+  (let [off (io/file (.toFile (Files/createTempDirectory "dog-bury-off" (into-array FileAttribute [])))
+                     "dog-bury-off")]
+    (.createNewFile off)
+    (binding [dog/*bury-off-switch-path* (str off)]
+      (let [store (tmp-store)
+            record-id "turn-buryTEST2"
+            fix @fixture-UkLbCu-bury]
+        (write-operator-record! store record-id (:source_text fix))
+        (turn-store/update-record! store record-id #(assoc % :acts (vec (:acts fix))))
+        (dog/handle-event {:store store :request-fn (fn [_url] {:results []})}
+                          {:event :settled :id record-id})
+        (is (loop [n 0]
+              (cond (:dog_buried (turn-store/read-record store record-id)) true
+                    (< 100 n) false
+                    :else (do (Thread/sleep 50) (recur (inc n))))))
+        (is (= "off" (:status (:dog_buried (turn-store/read-record store record-id))))
+            "burying stops; the record says so")))))
 
 (deftest lu-terms-from-a-real-patterns-file
   (let [store (tmp-store)

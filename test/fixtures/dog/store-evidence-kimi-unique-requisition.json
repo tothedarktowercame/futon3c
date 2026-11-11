@@ -1,0 +1,26 @@
+{
+ "evidence/body": {
+  "name": "kimi-unique-requisition",
+  "hook": "Joe 2026-09-25 \u2014 every Kimi dispatch gets a unique requisition via futon3c/scripts/kimi-task.sh (E-kimi-task-N); README-kimi doesn't document it; the script doesn't park",
+  "kind": "feedback",
+  "body": "\nJoe (2026-09-25) asked that each Kimi dispatch use a unique requisition ID. The mechanism is `futon3c/scripts/kimi-task.sh --from <me> --to <kimi-N> --purpose \"<line>\" packet.md`. It creates and commits `futon2/holes/excursions/E-kimi-task-N.md`, then bells with `Requisition: E-kimi-task-N \u2014 purpose`. README-kimi.md (as of 2026-09-25) says nothing about requisitions, so read the script and `zai_api.clj` parse-requisition rather than the README.\n\n**Why:** a Kimi seat keeps its conversation per requisition target and clears it only when the target changes. Reusing one M-* target across dispatches carries old context into new work. Because the file records who created it and for which seat (caller-minted-task?), the caller's own clock stays on its mission.\n\nSince futon3c 25228c0f the script writes `**Requisition:** in-progress \u2014 \u2026` at dispatch; after the job ends run `kimi-task.sh --complete <E-id> <job-id>` (Joe 2026-09-25, futon2 a461b124: a requisition is never pending work, so it must never be redispatched or flown).\n\n**How to apply:** use kimi-task.sh for every Kimi packet, not `agency_send.py --requisition \"M-...\"`. The script neither parks nor passes --mission, so take the job id from its output, confirm the job is running, then park in a second call. See [[kimi-seat-creation]].\n",
+  "source": "claude-code",
+  "project": "-home-joe-code-voxterm",
+  "file": "kimi-unique-requisition.md",
+  "frontmatter": "name: kimi-unique-requisition\ndescription: Joe 2026-09-25 \u2014 every Kimi dispatch gets a unique requisition via futon3c/scripts/kimi-task.sh (E-kimi-task-N); README-kimi doesn't document it; the script doesn't park\nmetadata:\n  type: feedback"
+ },
+ "evidence/tags": [
+  "memory",
+  "memory/assert",
+  "source/claude-code"
+ ],
+ "evidence/at": "2026-10-10T23:48:54.340162649Z",
+ "evidence/type": "memory",
+ "evidence/subject": {
+  "ref/type": "memory",
+  "ref/id": "cc:-home-joe-code-voxterm/kimi-unique-requisition"
+ },
+ "evidence/author": "minus40-import",
+ "evidence/claim-type": "assert",
+ "evidence/id": "e-m40-8584d0b769df462fa72f"
+}

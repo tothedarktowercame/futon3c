@@ -28,10 +28,20 @@
    (the post-hook packet reads that field). Absence is always typed:
    {:status \"not-ready\"|\"failed\"|\"none\"}.
 
+   The post-hook (use-check, bury-candidates, bury-one!) runs at
+   :settled: it writes the use check as :dog_use on the operator
+   record, then buries Joe's rulings as new memories at once —
+   ~/.claude/projects/狗/memory/<slug>.md plus the two store documents
+   in ingest_hook's exact shape, POSTed to the minus40 store at :7093
+   (paths /api/alpha/evidence and /api/alpha/hyperedge only). That is
+   the ONE exception, made 2026-11-11 by the 2b packet, to this
+   namespace's former \"never writes to the store\" rule: buried
+   memories go to the store; every other minus40 access stays a GET.
+   Nothing else under ~/.claude or ~/code/data/minus40 is written.
+
    Analysis seats get nothing (as for 驴). The off-switch file
    ~/code/data/minus40/dog-off (style of lu-off) disables the whole
-   hook. minus40 is read-only from here: this namespace never writes
-   to the store.
+   hook; dog-bury-off next to it disables only the bury write.
 
    Tests inject :request-fn (fn [url-string] -> parsed JSON map) so no
    test touches a real store."
@@ -376,7 +386,7 @@
                      (swap! !in-flight disj record-id)))))))
   nil)
 
-(declare prepare-use-check!)
+(declare prepare-use-check! prepare-bury!)
 
 (defn handle-event
   "One turn-service event. On :recorded, prepare the recall for the new
@@ -438,6 +448,28 @@
    are exactly these project/slug pairs (verified against the live
    11-11 recalls: -home-joe*, zai-*, 象-* projects all resolve here)."
   "/home/joe/.claude/projects")
+
+(def bury-project
+  "The dedicated minus40 project for memories 狗 buries: their files
+   live under <memory-projects-dir>/狗/memory/, so no seat's own project
+   or hand-maintained MEMORY.md index is touched (ingest_hook excludes
+   MEMORY.md and memory_assert refuses it as a name)."
+  "狗")
+
+(def bury-off-switch-path
+  "The bury off-switch, next to dog-off: when this file exists the bury
+   write (file + store doc) does nothing. The recall and the use check
+   are unaffected (dog-off still disables the whole hook)."
+  "/home/joe/code/data/minus40/dog-bury-off")
+
+(def ^:dynamic *bury-off-switch-path*
+  "Seam over the bury off-switch path so tests never touch the real one."
+  nil)
+
+(defn- bury-off? [opts]
+  (try (.isFile (io/file (str (or (:bury-off-switch opts) *bury-off-switch-path*
+                                  bury-off-switch-path))))
+       (catch Throwable _ false)))
 
 (defn memory-body
   "The body of memory HANDLE (\"project/slug\") from its file under
@@ -582,7 +614,19 @@
                                                 #(assoc % :dog_use result)))))
                (catch Throwable t
                  (println (str "[dog] use-check failed for " record-id ": "
-                               (.getMessage t)))))))
+                               (.getMessage t)))))
+           ;; Bury after dog_use: Joe's rulings on the settled turn
+           ;; become memories at once (prepare-bury! skips non-operator
+           ;; records and records its own typed absences as :dog_buried).
+           (try
+             (let [store (let [s (:store opts)] (if (fn? s) (s) s))
+                   record (when store (turn-store/read-record store record-id))]
+               (when (and (map? record)
+                          (= "operator" (or (:origin record) "operator")))
+                 (prepare-bury! opts record-id record)))
+             (catch Throwable t
+               (println (str "[dog] bury failed for " record-id ": "
+                             (.getMessage t)))))))
   nil)
 
 ;; ------------------------------------------- post-hook part 2a: bury selection
@@ -604,6 +648,52 @@
    (:propose is a suggestion, not a ruling), clarifying questions."
   #{:constrain :disagree :approve :accept :redirect :prioritize :ask-action})
 
+(def ^:private assent-phrases
+  "Assent and praise phrases stripped before an approval's content is
+   measured (2b review): bare go-aheads and praise are not buried."
+  ["ok" "okay" "yes" "please" "i'm happy for you to" "i'm happy" "i agree"
+   "i approve" "that's great" "that's a good fit" "sounds good" "looks good"
+   "good news" "you're right" "well done" "go ahead" "i'd say" "i think"
+   "anyway" "good" "great" "nice" "so,"])
+
+(def ^:private directive-markers
+  "A word that makes an approval a DIRECTION (about future action), not
+   assent about work already done."
+  #{"continue" "should" "must" "need" "keep" "use" "rather" "instead"
+    "enough" "accept" "move" "retain" "want" "prefer" "hold" "onboard"})
+
+(def ^:private approval-min-content-terms 5)
+
+(defn- approval-with-content?
+  "2b rule: an :approve/:accept act is buried only when it carries
+   content beyond assent — at least APPROVAL-MIN-CONTENT-TERMS
+   distinctive content words after the assent-phrases are stripped, AND
+   at least one directive-marker word. Justified from the 14-row 11-11
+   table: the two must-bury approvals strip to 6–7 content terms with a
+   marker (UkLbCu \"…continue the remaining packets with chained or
+   parallel dispatches\" → 6 terms, marker continue; PeSYc2 \"proposal
+   recurs is enough … we should onboard the 84\" → 7 terms, markers
+   enough/accept/should); the five praise/go-ahead approvals strip to
+   ≤3 terms (vsC2tD \"OK please send pattern-index packet 3\" → 3;
+   63aK24's praise → 3; 6iW6zf's two → 2–3) or carry no marker
+   (RgkbTi's praise → 7 terms but no directive word). Threshold 5 sits
+   between 3 and 6.
+   Deictic approvals (\"your 3-step plan is good\") never pass this test
+   in the table, and the record's :reply_to is mark-based — it does not
+   reach the earlier reply's text (checked turn-6iW6zf/63aK24/RgkbTi:
+   :replies empty) — so the approved paragraph cannot be quoted from
+   this record: deictic approvals are SKIPPED, not expanded."
+  [text]
+  (let [stripped (reduce (fn [s phrase]
+                           (str/replace s (re-pattern (str "(?iu)\\b"
+                                                           (java.util.regex.Pattern/quote phrase)
+                                                           "\\b")) " "))
+                         (str text) assent-phrases)
+        terms (content-terms stripped)
+        lowered (set (map str/lower-case terms))]
+    (and (<= approval-min-content-terms (count terms))
+         (boolean (seq (set/intersection lowered directive-markers))))))
+
 (defn- bury-slug
   "A kebab slug for a buried memory: who, the ruling's date, then up to
    six distinctive content words of the quoted text."
@@ -624,8 +714,9 @@
     {:slug (bury-slug "joe" date text)
      :description (let [d (str "Joe " date " (" kind ", " record-id "): " text)]
                     (if (> (count d) 79) (str (subs d 0 76) "...") d))
-     :body (str "Joe " date ", " record-id " (" kind " act " (:id act) "), verbatim:\n\n\""
-                text "\"\n\nBuried by 狗 when the turn settled; status: buried, not yet used.")
+     :body (str "status: buried by 狗 " date " from " record-id ", not yet used\n\n"
+                "Joe " date ", " record-id " (" kind " act " (:id act) "), verbatim:\n\n\""
+                text "\"")
      :basis {:record record-id :act-index i :act-id (str (:id act)) :kind kind}}))
 
 (defn- retraction-candidate
@@ -650,9 +741,9 @@
          :description (let [d (str "Retracted " date " (" record-id "): "
                                    (str/replace paragraph #"\s+" " "))]
                         (if (> (count d) 79) (str (subs d 0 76) "...") d))
-         :body (str "The seat's reply on " record-id " retracted and corrected itself after Joe's "
-                    "disagree, " date ", verbatim:\n\n\"" paragraph "\"\n\n"
-                    "Buried by 狗 when the turn settled; status: buried, not yet used.")
+         :body (str "status: buried by 狗 " date " from " record-id ", not yet used\n\n"
+                    "The seat's reply on " record-id " retracted and corrected itself after Joe's "
+                    "disagree, " date ", verbatim:\n\n\"" paragraph "\"")
          :basis {:record record-id :kind "retract"}}))))
 
 (defn bury-candidates
@@ -671,17 +762,190 @@
    (let [acts (vec (:acts record))
          rulings (keep-indexed
                   (fn [i act]
-                    (when (and (= "operator" (:author act))
-                               (contains? bury-act-kinds (some-> (:kind act) name keyword))
-                               ;; a question is not a ruling
-                               (not (str/ends-with? (str/trim (str (:text act))) "?")))
-                      (ruling-candidate record i act)))
+                    (let [kind (some-> (:kind act) name keyword)
+                          text (str/trim (str (:text act)))]
+                      (when (and (= "operator" (:author act))
+                                 (contains? bury-act-kinds kind)
+                                 ;; a question is not a ruling
+                                 (not (str/ends-with? text "?"))
+                                 ;; bare assent and praise are not rulings
+                                 (or (not (contains? #{:approve :accept} kind))
+                                     (approval-with-content? text)))
+                        (ruling-candidate record i act))))
                   acts)
          retraction (retraction-candidate record)
          candidates (cond-> (vec rulings) retraction (conj retraction))]
      (if known-fn
        (vec (remove #(seq (known-fn (str (:description %) "\n" (:body %)))) candidates))
        candidates))))
+
+(defn known-memories
+  "The production :known-fn for bury-candidates: memories minus40 already
+   returns for TEXT, run through the recall's own text-search (GET
+   only), then confirmed by content — at least ECHO-MIN-SHARED (2)
+   shared distinctive bigrams between TEXT and the existing memory's
+   body. The 2a evaluation's probe used 1 bigram and suppressed the
+   vDBr4L retraction on the generic pair \"question mode\"; 2 is the
+   use check's echo threshold (turn-WHNTlI's single-bigram false
+   positive is why that threshold exists)."
+  [request-fn base text]
+  (let [query (keywords text)
+        text-bigrams (content-bigrams text)]
+    (when-not (str/blank? query)
+      (->> (search-memories request-fn base query)
+           (filter (fn [{:keys [memory]}]
+                     (let [body (memory-body memory)]
+                       (and (not (str/blank? (str body)))
+                            (<= echo-min-shared
+                                (count (set/intersection text-bigrams
+                                                         (content-bigrams body))))))))
+           (mapv :memory)))))
+
+;; ---------------------------------------------------------------- bury write
+
+(def ^:private minus40-author "minus40-import")
+
+(defn- sha20 [^String s]
+  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256")
+                        (.getBytes s "UTF-8"))]
+    (subs (apply str (map #(format "%02x" %) digest)) 0 20)))
+
+(defn- iso-millis
+  "Instant MS as ingest_hook's iso(): yyyy-MM-ddTHH:mm:ss.SSSZ."
+  [ms]
+  (.format (.withZone (java.time.format.DateTimeFormatter/ofPattern
+                       "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+                      java.time.ZoneOffset/UTC)
+           (java.time.Instant/ofEpochMilli ms)))
+
+(defn bury-file-text
+  "The exact file text for one buried memory CANDIDATE: frontmatter
+   (name, description, metadata.type buried — the store indexes the
+   type as the memory's :kind, which is what distinguishes a buried
+   memory) then the candidate body (its first line is the status line)."
+  [{:keys [slug description body]}]
+  (str "---\nname: " slug "\ndescription: " description "\nmetadata:\n  type: buried\n---\n"
+       body "\n"))
+
+(defn bury-store-docs
+  "The two store documents for one buried memory file, in the EXACT
+   shape minus40's ingest_hook.py writes (its evidence_doc l.~160–175,
+   version_doc l.~178–187; pinned by test against a real stored
+   document fetched by GET): an :evidence entry whose body carries
+   :source \"claude-code\" (what the recall's memory-item filter
+   matches) plus a :memory/version hyperedge. The existing minus40
+   entry points (ingest_hook.py run, m40_mcp.py memory_assert) all
+   also write hook state/log under ~/code/data/minus40, which this
+   packet's rules forbid — so the shape is re-implemented, author and
+   sources included, and crystallise treats a buried memory exactly
+   like a hook-ingested one."
+  [{:keys [slug description]} text modified-ms]
+  (let [project bury-project
+        file (str slug ".md")
+        mid (str "cc:" project "/" slug)
+        at (iso-millis modified-ms)
+        fm (str "name: " slug "\ndescription: " description "\nmetadata:\n  type: buried")
+        body-text (let [i (str/index-of text "\n---\n")]
+                    (subs text (+ i 5)))
+        eid (str "e-m40-" (sha20 (str mid "\n" text)))
+        evidence {:evidence/id eid
+                  :evidence/type :memory
+                  :evidence/claim-type :assert
+                  :evidence/author minus40-author
+                  :evidence/subject {:ref/type :memory :ref/id mid}
+                  :evidence/at at
+                  :evidence/body {:name slug
+                                  :hook description
+                                  :kind "buried"
+                                  :body body-text
+                                  :source "claude-code"
+                                  :project project
+                                  :file file
+                                  :frontmatter fm
+                                  :exact true
+                                  :sources ["hook"]}
+                  :evidence/tags [:memory :memory/assert :source/claude-code :memory/version]}
+        version {:hx/id (str "hx-m40-version-" (sha20 mid))
+                 :hx/type :memory/version
+                 :hx/endpoints [mid eid]
+                 :hx/props {:roles {:memory mid :version eid} :exact true :at at}
+                 :hx/valid-time at}]
+    [evidence version]))
+
+(defn- post-edn!
+  "One EDN POST to the minus40 store, as ingest_hook's post() does
+   (content-type application/edn, x-penholder joe; 409 duplicate is a
+   quiet reuse). Returns the HTTP status."
+  [base path doc]
+  (let [req (-> (HttpRequest/newBuilder (URI/create (str base path)))
+                (.timeout (Duration/ofMillis query-timeout-ms))
+                (.header "content-type" "application/edn")
+                (.header "accept" "application/edn")
+                (.header "x-penholder" "joe")
+                (.method "POST" (HttpRequest$BodyPublishers/ofString (pr-str doc)))
+                .build)
+        resp (.send (HttpClient/newHttpClient) req (HttpResponse$BodyHandlers/ofString))]
+    (.statusCode resp)))
+
+(defn bury-one!
+  "Write one bury CANDIDATE: the memory file under
+   <bury-dir>/<slug>.md (NEVER overwriting — an existing slug is
+   skipped and recorded) and then, at once, the store documents (so the
+   next turn's recall finds the memory without waiting for some Claude
+   seat's PostToolUse ingest_hook run). OPTS :bury-dir (default
+   <memory-projects-dir>/狗/memory), :ingest-fn (fn [candidate text
+   modified-ms] → HTTP statuses; default posts bury-store-docs to
+   :7093). Returns {:slug :path :status \"buried\"|\"exists\"|\"failed\"}."
+  [opts {:keys [slug] :as candidate}]
+  (let [dir (io/file (str (or (:bury-dir opts)
+                              (str memory-projects-dir "/" bury-project "/memory"))))
+        path (io/file dir (str slug ".md"))]
+    (if (.exists path)
+      {:slug slug :path (str path) :status "exists"}
+      (try
+        (let [text (bury-file-text candidate)]
+          (.mkdirs dir)
+          (spit path text)
+          (let [modified-ms (.lastModified path)
+                ingest (or (:ingest-fn opts)
+                           (fn [cand t ms]
+                             (mapv (fn [[path doc]] (post-edn! (or (:base opts) minus40-base) path doc))
+                                   [[ "/api/alpha/evidence" (first (bury-store-docs cand t ms))]
+                                    ["/api/alpha/hyperedge" (second (bury-store-docs cand t ms))]])))]
+            (ingest candidate text modified-ms))
+          {:slug slug :path (str path) :status "buried"})
+        (catch Throwable t
+          {:slug slug :path (str path) :status "failed"
+           :reason (str "bury-error: " (.getMessage t))})))))
+
+(defn- prepare-bury!
+  "The bury half of the post-hook, run after dog_use is written: bury
+   each candidate (suppress what minus40 already knows) and record
+   :dog_buried on the record — {:status \"ok\" :items [...]} or a typed
+   absence: \"off\" (bury off-switch), \"none\" (no candidates),
+   \"failed\". Never throws."
+  [opts record-id record]
+  (try
+    (let [record-id (str record-id)
+          store (let [s (:store opts)] (if (fn? s) (s) s))]
+      (when (and store (turn-store/record-id? record-id))
+        (let [result
+              (cond
+                (bury-off? opts) {:at (str (Instant/now)) :status "off" :items []}
+                :else
+                (let [request-fn (effective-request-fn opts)
+                      base (or (:base opts) minus40-base)
+                      candidates (bury-candidates
+                                  record {:known-fn (fn [text]
+                                                      (known-memories request-fn base text))})]
+                  (if (seq candidates)
+                    {:at (str (Instant/now)) :status "ok"
+                     :items (mapv #(bury-one! opts %) candidates)}
+                    {:at (str (Instant/now)) :status "none" :items []})))]
+          (turn-store/update-record! store record-id #(assoc % :dog_buried result)))))
+    (catch Throwable t
+      (println (str "[dog] bury failed: " (.getMessage t)))))
+  nil)
 
 (defn prompt-fact
   "The Prompt-line fact for one 狗 :memory segment: `memory <header>` on

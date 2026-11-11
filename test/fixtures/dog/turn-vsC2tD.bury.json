@@ -1,0 +1,48 @@
+{
+ "turn_id": "claude-13-turn-320",
+ "created_at": "2026-11-11T20:16:31Z",
+ "source_text": "\ud83c\ude33: OK please send pattern-index packet 3",
+ "reply_text": "This turn's Prompt line is the first live \u72d7 recall, and it arrived in time. Before sending: two files I worked on have changed on disk since. Checking who changed them.Both are clean and match my own commits; the change notices came from my edits. Sending packet 3.Sent. Checking whether this turn's record holds the recall the Prompt line showed.The Prompt line showed three memories, but this turn's record has no `dog_recall`. The field the post-hook will read is missing on the first live turn. Looking for why.The provider keys its cache on the invoke's `turn-record-id`. Checking which record id this turn's invoke actually carried.\u32a5 (\"please send pattern-index packet 3\") Sent to kimi-2:\n- job `invoke-1794428254743-17532-e74c4c7d` (running), park `park-23987c55\u2026`;\n- packet: `~/notes/claude-13/pattern-index-04-resident.md`.\n\nThe resident search will answer from the sidecar and reload by itself whenever a build moves the checkpoint. It falls back to the JSON file only if the sidecar is missing. Once it's in, a pattern added to the library reaches \u9a74 and the Prompt line with no one restarting anything, which is the \"automatically\" you asked for. Every other reader stays as it is until packet 4.\n\n\u32a2 (\u72d7's first live turn, this one) The recall arrived in time, so \"not ready\" didn't win the race. It recalled three memories about Kimi bells (`kimi-unique-requisition`, `kimi-bells-need-requisition`, `batch-packets-invite-corner-cutting`). Your turn asked me to send a packet to a Kimi seat, so those were on point, and I did put a requisition line on the packet. The keyword query happened to work here.\n\n\u32a9 (one fault on that same turn) Your record for this turn (`turn-x024sM`) has no `dog_recall`, and the cache has nothing under that record id either. So the items on the Prompt line were computed under some other record id, and the write to your record never happened. This is the field the post-hook will read, and its absence went unreported, which is what the typed absences were meant to prevent. The likely cause is that this REPL turn's Prompt line is rendered with a different record id from the one Emacs writes. I haven't confirmed that yet. It goes first into the \u72d7 fix packet, together with the relevance work.\n\n\ud83c\ude33 (noticed, not mine) Between 20:14 and 20:17 something edited `dog_provider.clj` and created a `dog_debug_test.clj` in futon3c. The watcher logged both. The checkout is clean now: the provider matches kimi-1's commit, and the debug test is gone. No Agency job I can see accounts for it, so possibly another seat was debugging \u72d7. If it was you or a seat you started, nothing needs doing.",
+ "acts": [
+  {
+   "port?": false,
+   "start": 0,
+   "author": "operator",
+   "turn": "claude-13-turn-320",
+   "id": "claude-13-turn-320-f-s1-0",
+   "kind": "accept",
+   "at": "2026-11-11T20:16:31Z",
+   "record": "turn-vsC2tD",
+   "target": "claude-13-turn-317-r-3",
+   "end": 40,
+   "standing?": true,
+   "about": "pattern-index packet 3 offered by agent for kimi-2",
+   "text": "\ud83c\ude33: OK please send pattern-index packet 3",
+   "to": "claude-13"
+  },
+  {
+   "port?": false,
+   "author": "claude-13",
+   "turn": "claude-13-turn-320",
+   "id": "claude-13-turn-320-r-0",
+   "kind": "report",
+   "at": "2026-11-11T20:18:31Z",
+   "record": "turn-vsC2tD",
+   "standing?": false,
+   "text": "(\u72d7's first live turn, this one) The recall arrived in time, so \"not ready\" didn't win the race. It recalled three memor\u2026",
+   "to": "operator"
+  },
+  {
+   "port?": true,
+   "author": "claude-13",
+   "turn": "claude-13-turn-320",
+   "id": "claude-13-turn-320-r-1",
+   "kind": "report-problem",
+   "at": "2026-11-11T20:18:31Z",
+   "record": "turn-vsC2tD",
+   "standing?": false,
+   "text": "(one fault on that same turn) Your record for this turn (`turn-x024sM`) has no `dog_recall`, and the cache has nothing \u2026",
+   "to": "operator"
+  }
+ ]
+}

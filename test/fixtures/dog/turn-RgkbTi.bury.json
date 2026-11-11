@@ -1,0 +1,62 @@
+{
+ "turn_id": "claude-13-turn-328",
+ "created_at": "2026-11-11T20:47:32Z",
+ "source_text": "\u32ae I think you've prepared a good summary of the outstanding work in the \"question-question\" area.  I'm thinking this should become an excursion E-futon-questions rather than just a dispatch packet right now, b/c it only came up in passing just now.",
+ "reply_text": "futon7 is where the question work lives, and it is private, so the excursion goes there. Checking its layout and the excursion format used.\u32a5 (\"this should become an excursion E-futon-questions\") It's opened, in futon7 where the question work lives: `holes/E-futon-questions.md` (`b9cfa48`). The index's \"Open: the question-question\" heading now points to it. Nothing has been dispatched.\n\n\ud83c\ude16 (what it holds)\n- **What exists:**\n  - the 62 apex questions in `questions.edn`, with their kinds, tags and \u2ff1 columns;\n  - question mode and its two real briefs, the second with your 12 verdicts;\n  - the retrieval over your turns;\n  - the burn-in excursion.\n- **What's missing, five items:**\n  1. A brief names its question (`:brief/question-id`), with the question's kind, place in the breakdowns, and \u2ff1 row.\n  2. Mojira shows the question above the items, and what a verdict will do to it.\n  3. Verdicts flow back: a \"worth\" verdict becomes a candidate citation on the question, counted until you reject it. The \u2ff1 column then grows from triage.\n  4. The other question kinds (experiment, trial, ruling) either get a brief form, or are declared outside the daily loop.\n  5. Questions become GCC records. Turns, \u7334's operator focus, and your `claim-type: question` turns from E-question-log can then link to them.\n- **Bearing.** It serves the Mozilla LOI (briefs as its literature review) and M-repl-circus (a question with a \u2ff1 column is a want whose observations are citations, \u00a716 items 11\u201313).\n- **IDENTIFY checklist.** It ends with a first round: one question brief shown in Mojira with its question, which you triage, after which the verdicts appear on the question.\n\n\ud83c\ude16 (this turn's Prompt line) It ended in a bare `memory`, with nothing after it. \u72d7 found nothing for this turn, and the line printed the label anyway rather than leaving it out or saying \"none\". That's a small rendering fault, and I'll add it to kimi-1's \u72d7 pass when I review it.",
+ "acts": [
+  {
+   "port?": false,
+   "start": 0,
+   "author": "operator",
+   "turn": "claude-13-turn-328",
+   "id": "claude-13-turn-328-f-s1-0",
+   "kind": "approve",
+   "at": "2026-11-11T20:47:32Z",
+   "record": "turn-RgkbTi",
+   "end": 97,
+   "standing?": false,
+   "about": "agent's summary of question-question work",
+   "text": "\u32ae I think you've prepared a good summary of the outstanding work in the \"question-question\" area.",
+   "to": "claude-13"
+  },
+  {
+   "port?": false,
+   "start": 99,
+   "author": "operator",
+   "turn": "claude-13-turn-328",
+   "id": "claude-13-turn-328-f-s2-0",
+   "kind": "redirect",
+   "at": "2026-11-11T20:47:32Z",
+   "record": "turn-RgkbTi",
+   "end": 248,
+   "standing?": false,
+   "about": "form of the question-question work: excursion E-futon-questions instead of dispatch packet",
+   "text": "I'm thinking this should become an excursion E-futon-questions rather than just a dispatch packet right now, b/c it onl\u2026",
+   "to": "claude-13"
+  },
+  {
+   "port?": false,
+   "author": "claude-13",
+   "turn": "claude-13-turn-328",
+   "id": "claude-13-turn-328-r-0",
+   "kind": "explain",
+   "at": "2026-11-11T20:48:18Z",
+   "record": "turn-RgkbTi",
+   "standing?": false,
+   "text": "(what it holds)\n- **What exists:**\n  - the 62 apex questions in `questions.edn`, with their kinds, tags and \u2ff1 columns;\n\u2026",
+   "to": "operator"
+  },
+  {
+   "port?": false,
+   "author": "claude-13",
+   "turn": "claude-13-turn-328",
+   "id": "claude-13-turn-328-r-1",
+   "kind": "explain",
+   "at": "2026-11-11T20:48:18Z",
+   "record": "turn-RgkbTi",
+   "standing?": false,
+   "text": "(this turn's Prompt line) It ended in a bare `memory`, with nothing after it. \u72d7 found nothing for this turn, and the li\u2026",
+   "to": "operator"
+  }
+ ]
+}
