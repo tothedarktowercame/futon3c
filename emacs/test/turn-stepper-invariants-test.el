@@ -86,6 +86,24 @@ next open; an unidentified source keeps the bare name."
             (should (equal "*象 stepper:claude-13*" (buffer-name buf))))
         (when (buffer-live-p buf) (kill-buffer buf))))))
 
+(ert-deftest turn-stepper-indexed-global-default-is-not-an-agent-id ()
+  "A codex REPL is named by its own local id, not by claude-repl's global
+default (codex-6's stepper came up as *象 stepper:claude-1*, 2026-11-11)."
+  (defvar claude-repl-agent-id)
+  (defvar codex-repl-agency-agent-id)
+  (let ((claude-repl-agent-id "claude-1")
+        (repl (get-buffer-create " *ts-inv-codex*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer repl
+            (setq-local agent-chat--session-id "s-C")
+            (setq-local codex-repl-agency-agent-id "codex-6"))
+          (should (equal "codex-6" (turn-stepper--agent-id-in-buffer repl)))
+          (with-current-buffer repl
+            (kill-local-variable 'codex-repl-agency-agent-id))
+          (should-not (turn-stepper--agent-id-in-buffer repl)))
+      (kill-buffer repl))))
+
 ;;; ------------------------------------------------------------ the invariant
 
 (ert-deftest turn-stepper-invariants-good-case-is-quiet ()

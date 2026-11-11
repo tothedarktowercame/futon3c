@@ -127,18 +127,19 @@ REPL buffers keep it in the buffer-local variable
 ;; REPL is renamed to the indexed name the next time it is opened.
 
 (defun turn-stepper--agent-id-in-buffer (buffer)
-  "Agent id of the REPL in BUFFER, from its mode's local, or nil."
+  "Agent id of the REPL in BUFFER, from its mode's local, or nil.
+Only a buffer-local value counts: each of these variables is a defcustom
+with a global default (claude-repl's is \"claude-1\"), so `boundp' alone
+named a codex-6 REPL's stepper *象 stepper:claude-1* (2026-11-11)."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (or (and (boundp 'claude-repl-agent-id)
-               (stringp claude-repl-agent-id)
-               claude-repl-agent-id)
-          (and (boundp 'codex-repl-agency-agent-id)
-               (stringp codex-repl-agency-agent-id)
-               codex-repl-agency-agent-id)
-          (and (boundp 'kimi-repl-agent-id)
-               (stringp kimi-repl-agent-id)
-               kimi-repl-agent-id)))))
+      (seq-some (lambda (var)
+                  (and (local-variable-p var)
+                       (stringp (symbol-value var))
+                       (symbol-value var)))
+                '(claude-repl-agent-id
+                  codex-repl-agency-agent-id
+                  kimi-repl-agent-id)))))
 
 (defun turn-stepper--buffer-name-for (source)
   "Stepper buffer name for an open from SOURCE.
