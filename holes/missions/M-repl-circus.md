@@ -194,9 +194,14 @@ memories that are useful (i.e. in the sense of a dog's bone)". So after a
 turn 狗 both marks each recalled memory used or not, and buries what the
 turn established that a later turn would want, checked against minus40's
 near-duplicates first so a bone already buried is added to rather than
-buried twice. Open: whether a buried memory is written at once or held as
-a candidate until it is recalled and used (the ladder of E-gcc-schema §16
-item 14: proposed → accepted → attested).
+buried twice. Decided (Joe, 11-11): a buried memory is written at once, its status
+saying it was buried by 狗 and not yet used; the use check promotes it
+(the ladder of E-gcc-schema §16 item 14: proposed → accepted → attested).
+Empirical question (Joe, 11-11): how each model family uses the memory
+store today. "Zai is "obliged" to look and doesn't actually find the memory
+store that useful … claude uses its memory routinely and seems to find it
+very useful. Codex … has its own memory system which I think is
+provider-side".
 
 ### The giant connected component
 
