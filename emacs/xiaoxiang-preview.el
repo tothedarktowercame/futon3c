@@ -228,11 +228,53 @@ Type a colon after it to answer the agent's paragraph with that mark: 🈸:yes."
            (pick (completing-read "Mark: " choices nil t)))
       (insert (cdr (assoc pick choices))))))
 
+;;; Typing the animals: C-c l opens a menu of the REPL Circus animals.
+;; Joe (2026-11-11): "set up C-c l as a Hydra similar to C-c ; but just
+;; allowing me to quickly input 象 (x=xiang), 馬 (m=ma) and so on for the
+;; other animals".  Keys are the pinyin initials; Giraffe has no character
+;; in use, so it is typed as its name.
+
+(defconst xiaoxiang-animal-keys
+  '(("l" "驴" "lü, donkey: patterns for operator turns")
+    ("x" "象" "xiang, elephant: reading of operator turns")
+    ("g" "狗" "gou, dog: memories for agent turns")
+    ("m" "馬" "ma, horse: tensions on agent replies")
+    ("h" "猴" "hou, monkey: operator focus")
+    ("j" "Giraffe" "changjinglu, giraffe: tickets and reviews"))
+  "Key, text and gloss for `xiaoxiang-insert-animal' (the M-repl-circus table).")
+
+(defun xiaoxiang--animal-hydra-hint ()
+  "The animal menu, one animal per line."
+  (concat "\nREPL Circus animals\n\n"
+          (mapconcat (lambda (k) (format "_%s_ %s  %s" (nth 0 k) (nth 1 k) (nth 2 k)))
+                     xiaoxiang-animal-keys "\n")
+          "\n\n_q_ quit\n"))
+
+(declare-function xiaoxiang-animal-hydra/body "xiaoxiang-preview")
+
+(defun xiaoxiang-insert-animal ()
+  "Insert a REPL Circus animal at point, chosen from a menu."
+  (interactive)
+  (if (or (fboundp 'defhydra) (require 'hydra nil t))
+      (progn
+        (eval
+         `(defhydra xiaoxiang-animal-hydra (:hint nil :color blue)
+            ,(xiaoxiang--animal-hydra-hint)
+            ,@(mapcar (lambda (k) (list (nth 0 k) `(xiaoxiang--insert ,(nth 1 k))))
+                      xiaoxiang-animal-keys)
+            ("q" nil)))
+        (xiaoxiang-animal-hydra/body))
+    (let* ((choices (mapcar (lambda (k) (cons (format "%s %s" (nth 1 k) (nth 2 k)) (nth 1 k)))
+                            xiaoxiang-animal-keys))
+           (pick (completing-read "Animal: " choices nil t)))
+      (insert (cdr (assoc pick choices))))))
+
 (dolist (feature-map '((claude-repl . claude-repl-mode-map) (codex-repl . codex-repl-mode-map)
                        (kimi-repl . kimi-repl-mode-map) (zai-repl . zai-repl-mode-map)))
   (with-eval-after-load (car feature-map)
     (when (boundp (cdr feature-map))
-      (define-key (symbol-value (cdr feature-map)) (kbd "C-c ;") #'xiaoxiang-insert-mark))))
+      (define-key (symbol-value (cdr feature-map)) (kbd "C-c ;") #'xiaoxiang-insert-mark)
+      (define-key (symbol-value (cdr feature-map)) (kbd "C-c l") #'xiaoxiang-insert-animal))))
 
 ;; Some REPL buffers run on their own copy of the mode map (*claude-repl:claude-17*
 ;; did on 2026-10-01: its map lacked even C-a), so binding the mode map misses them.
@@ -245,6 +287,15 @@ Type a colon after it to answer the agent's paragraph with that mark: 🈸:yes."
       (define-key (current-local-map) (kbd "C-c x p") #'xiaoxiang-preview)
       (define-key (current-local-map) (kbd "C-c x c") #'xiaoxiang-preview-correct)
       (define-key (current-local-map) (kbd "C-c x k") #'xiaoxiang-preview-clear))))
+
+;; The same for C-c l, separately: buffers that already have C-c ; are
+;; skipped by the loop above.
+(dolist (buf (buffer-list))
+  (with-current-buffer buf
+    (when (and (memq major-mode '(claude-repl-mode codex-repl-mode kimi-repl-mode zai-repl-mode))
+               (current-local-map)
+               (not (eq (lookup-key (current-local-map) (kbd "C-c l")) #'xiaoxiang-insert-animal)))
+      (define-key (current-local-map) (kbd "C-c l") #'xiaoxiang-insert-animal))))
 
 (with-eval-after-load 'claude-repl
   (when (boundp 'claude-repl-mode-map)
