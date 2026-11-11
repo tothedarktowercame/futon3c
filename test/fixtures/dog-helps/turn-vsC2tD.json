@@ -1,0 +1,953 @@
+{
+  "evidence_delivery" : "queued",
+  "quote_count" : 0,
+  "ports_status" : {
+    "state" : "computed",
+    "reason" : null,
+    "computed_at" : "2026-11-11T20:19:39Z",
+    "rules_version" : "2026-10-11.3"
+  },
+  "evidence_id" : "emacs-5b19c42071ce4d8ed014cdb600a379b1",
+  "interpretation_version" : 3,
+  "dog_buried" : {
+    "at" : "2026-11-11T22:22:59.081858105Z",
+    "status" : "none",
+    "items" : [ ]
+  },
+  "dog_recall" : {
+    "at" : "2026-11-11T20:16:32.420753281Z",
+    "items" : [ {
+      "memory" : "-home-joe-code-voxterm/kimi-unique-requisition",
+      "score" : -8.781605114021275,
+      "why" : "Joe 2026-09-25 — every Kimi dispatch gets a"
+    }, {
+      "memory" : "-home-joe-code/batch-packets-invite-corner-cutting",
+      "score" : -9.418214277673012,
+      "why" : "A 97-record packet in one job made a"
+    }, {
+      "memory" : "-home-joe-code/kimi-bells-need-requisition",
+      "score" : -9.421021957887284,
+      "why" : "A bell to a kimi-N seat without a"
+    } ],
+    "query-ms" : 773
+  },
+  "source_text" : "🈳: OK please send pattern-index packet 3",
+  "secrets_redacted" : [ ],
+  "obligations" : [ ],
+  "reply_at" : "2026-11-11T20:18:31Z",
+  "tagging_failed" : false,
+  "reply_text" : "This turn's Prompt line is the first live 狗 recall, and it arrived in time. Before sending: two files I worked on have changed on disk since. Checking who changed them.Both are clean and match my own commits; the change notices came from my edits. Sending packet 3.Sent. Checking whether this turn's record holds the recall the Prompt line showed.The Prompt line showed three memories, but this turn's record has no `dog_recall`. The field the post-hook will read is missing on the first live turn. Looking for why.The provider keys its cache on the invoke's `turn-record-id`. Checking which record id this turn's invoke actually carried.㊥ (\"please send pattern-index packet 3\") Sent to kimi-2:\n- job `invoke-1794428254743-17532-e74c4c7d` (running), park `park-23987c55…`;\n- packet: `~/notes/claude-13/pattern-index-04-resident.md`.\n\nThe resident search will answer from the sidecar and reload by itself whenever a build moves the checkpoint. It falls back to the JSON file only if the sidecar is missing. Once it's in, a pattern added to the library reaches 驴 and the Prompt line with no one restarting anything, which is the \"automatically\" you asked for. Every other reader stays as it is until packet 4.\n\n㊢ (狗's first live turn, this one) The recall arrived in time, so \"not ready\" didn't win the race. It recalled three memories about Kimi bells (`kimi-unique-requisition`, `kimi-bells-need-requisition`, `batch-packets-invite-corner-cutting`). Your turn asked me to send a packet to a Kimi seat, so those were on point, and I did put a requisition line on the packet. The keyword query happened to work here.\n\n㊩ (one fault on that same turn) Your record for this turn (`turn-x024sM`) has no `dog_recall`, and the cache has nothing under that record id either. So the items on the Prompt line were computed under some other record id, and the write to your record never happened. This is the field the post-hook will read, and its absence went unreported, which is what the typed absences were meant to prevent. The likely cause is that this REPL turn's Prompt line is rendered with a different record id from the one Emacs writes. I haven't confirmed that yet. It goes first into the 狗 fix packet, together with the relevance work.\n\n🈳 (noticed, not mine) Between 20:14 and 20:17 something edited `dog_provider.clj` and created a `dog_debug_test.clj` in futon3c. The watcher logged both. The checkout is clean now: the provider matches kimi-1's commit, and the debug test is gone. No Agency job I can see accounts for it, so possibly another seat was debugging 狗. If it was you or a seat you started, nothing needs doing.",
+  "alignment" : {
+    "version" : 1,
+    "at" : "2026-11-11T20:19:39.411236584Z",
+    "seat" : "馬-sonnet",
+    "acts" : [ {
+      "act" : "claude-13-turn-320-f-s1-0",
+      "kind" : "accept",
+      "text" : "🈳: OK please send pattern-index packet 3",
+      "verdict" : "answered",
+      "by" : "claude-13-turn-320-r-0",
+      "mark" : "㊢",
+      "quote" : "Your turn asked me to send a packet to a Kimi seat, so those were on point, and I did put a requisition line on the packet.",
+      "method" : "model"
+    } ],
+    "unread" : 0
+  },
+  "session_id" : "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+  "mission_id" : "M-repl-circus",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 40,
+    "text" : "🈳: OK please send pattern-index packet 3"
+  } ],
+  "standings" : {
+    "in_force" : [ "claude-13-turn-202-f-s2-1", "claude-13-turn-207-f-s4-0", "claude-13-turn-210-f-s4-0", "claude-13-turn-210-f-s7-0", "claude-13-turn-211-f-s1-0", "claude-13-turn-214-f-s2-1", "claude-13-turn-226-r-2", "claude-13-turn-285-f-s1-0", "claude-13-turn-286-r-0", "claude-13-turn-287-f-s2-1", "claude-13-turn-288-f-s1-0", "claude-13-turn-288-r-0", "claude-13-turn-298-f-s9-0", "claude-13-turn-299-f-s1-0", "claude-13-turn-301-f-s1-0", "claude-13-turn-301-f-s2-1", "claude-13-turn-303-f-s2-0", "claude-13-turn-304-f-s1-0", "claude-13-turn-305-f-s5-0", "claude-13-turn-305-r-1", "claude-13-turn-307-f-s4-0", "claude-13-turn-309-f-s1-0", "claude-13-turn-309-f-s4-1", "claude-13-turn-309-f-s5-0", "claude-13-turn-310-f-s1-0", "claude-13-turn-310-r-2", "claude-13-turn-312-f-s2-1", "claude-13-turn-312-r-2", "claude-13-turn-315-r-0", "claude-13-turn-320-f-s1-0" ],
+    "adopted_not_applied" : [ "claude-13-turn-201-r-3", "claude-13-turn-202-f-s2-0", "claude-13-turn-205-f-s1-0", "claude-13-turn-207-f-s1-0", "claude-13-turn-207-f-s1-1", "claude-13-turn-208-f-s2-0", "claude-13-turn-210-f-s12-0", "claude-13-turn-210-f-s3-0", "claude-13-turn-210-f-s3-2", "claude-13-turn-210-f-s5-0", "claude-13-turn-210-f-s9-0", "claude-13-turn-210-r-1", "claude-13-turn-211-f-s3-0", "claude-13-turn-211-f-s3-1", "claude-13-turn-211-r-2", "claude-13-turn-214-f-s3-0", "claude-13-turn-216-f-s2-0", "claude-13-turn-221-f-s1-0", "claude-13-turn-223-f-s1-0", "claude-13-turn-225-f-s1-0", "claude-13-turn-225-f-s2-0", "claude-13-turn-285-f-s2-0", "claude-13-turn-285-f-s3-0", "claude-13-turn-287-f-s1-0", "claude-13-turn-287-r-2", "claude-13-turn-290-f-s1-0", "claude-13-turn-294-f-s2-0", "claude-13-turn-296-r-1", "claude-13-turn-298-f-s1-0", "claude-13-turn-298-f-s10-1", "claude-13-turn-298-f-s4-0", "claude-13-turn-298-f-s6-0", "claude-13-turn-299-r-3", "claude-13-turn-300-f-s1-0", "claude-13-turn-300-r-3", "claude-13-turn-301-f-s3-0", "claude-13-turn-301-r-2", "claude-13-turn-303-f-s1-0", "claude-13-turn-304-f-s3-0", "claude-13-turn-305-f-s6-0", "claude-13-turn-305-r-2", "claude-13-turn-306-f-s4-0", "claude-13-turn-306-r-3", "claude-13-turn-307-f-s2-0", "claude-13-turn-307-f-s3-0", "claude-13-turn-308-f-s4-0", "claude-13-turn-308-f-s8-0", "claude-13-turn-308-r-3", "claude-13-turn-309-f-s2-0", "claude-13-turn-309-f-s3-0", "claude-13-turn-313-r-3", "claude-13-turn-315-f-s1-0", "claude-13-turn-317-r-2" ]
+  },
+  "analysis_dispatch" : {
+    "scheduled_at" : 1794428191825,
+    "job_id" : "invoke-1794428191930-17529-08a7b1db"
+  },
+  "draft_status" : "drafted",
+  "pattern_verdicts" : {
+    "version" : 1,
+    "at" : "2026-11-11T20:18:47.664650902Z",
+    "window" : [ "turn-PeSYc2", "turn-cpFLjK", "turn-SbJ0iS", "turn-FUJVC9", "turn-5AdxZx", "turn-wu8Uwr", "turn-jLoseG", "turn-vsC2tD" ],
+    "reader" : "none",
+    "patterns" : [ {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "驴" ],
+      "shown" : false,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "no reader"
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "no reader"
+        },
+        "G" : {
+          "element" : null,
+          "why" : "no reader"
+        },
+        "B" : {
+          "element" : null,
+          "why" : "no reader"
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "no reader"
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "no reader"
+        },
+        "G" : {
+          "element" : null,
+          "why" : "no reader"
+        },
+        "B" : {
+          "element" : null,
+          "why" : "no reader"
+        }
+      },
+      "sha256" : "151bdb1dba3b0b6f5c0d08d7c0f3b17b4a8a4cb0461c1ce37f6ebfad8a2319d0",
+      "pattern" : "agency/delivery-receipt"
+    } ]
+  },
+  "ports" : {
+    "closed_this_turn" : [ {
+      "act" : "claude-13-turn-317-r-3",
+      "kind" : "ask-action",
+      "text" : "(one decision) Shall I queue that measurement for kimi-1 after the pre-hook, or leave it until 狗's post-hook exists, so…"
+    } ],
+    "still_open" : [ {
+      "act" : "claude-13-turn-201-r-3",
+      "kind" : "propose",
+      "text" : "(pass it on?) claude-1 is already working, so a second bell would only queue behind the job. I'd rather check its desig…",
+      "since" : "2026-11-10T04:49:37Z"
+    }, {
+      "act" : "claude-13-turn-205-f-s1-0",
+      "kind" : "propose",
+      "text" : "Let's make HAPPENED last",
+      "since" : "2026-11-10T05:24:50Z"
+    }, {
+      "act" : "claude-13-turn-206-r-0",
+      "kind" : "report-problem",
+      "text" : "(\"a sub-category still open on line 18\") My last change caused this one. \"still open\" is the second half of HAPPENED: w…",
+      "since" : "2026-11-10T06:06:12Z"
+    }, {
+      "act" : "claude-13-turn-206-r-1",
+      "kind" : "report-problem",
+      "text" : "(\"PATTERNS on 65 without a linebreak\") turn-stepper always ran these two together, but it only showed once they moved u…",
+      "since" : "2026-11-10T06:06:12Z"
+    }, {
+      "act" : "claude-13-turn-206-r-2",
+      "kind" : "report-problem",
+      "text" : "(\"no REVIEW at all\") That frame names no lexicon entity, and the section used to hide itself when nothing matched. It's…",
+      "since" : "2026-11-10T06:06:12Z"
+    }, {
+      "act" : "claude-13-turn-206-r-3",
+      "kind" : "report-problem",
+      "text" : "(why the tests didn't catch it) My order test read the recorded frame in a format the stepper doesn't use, so the stepp…",
+      "since" : "2026-11-10T06:06:12Z"
+    }, {
+      "act" : "claude-13-turn-207-f-s1-0",
+      "kind" : "propose",
+      "text" : "OK; it would be good if the review process was fast,",
+      "since" : "2026-11-10T15:59:19Z"
+    }, {
+      "act" : "claude-13-turn-207-f-s1-1",
+      "kind" : "propose",
+      "text" : "e.g., using a xiaoxiang-insert-mark style hydra or something so that I could do that quickly without leaving the repl i…",
+      "since" : "2026-11-10T15:59:19Z"
+    }, {
+      "act" : "claude-13-turn-207-r-5",
+      "kind" : "clarify",
+      "text" : "(try it) This reply names several lexicon entities, such as the stepper and Agency-related ones. When it has landed, pr…",
+      "since" : "2026-11-10T16:05:42Z"
+    }, {
+      "act" : "claude-13-turn-209-r-2",
+      "kind" : "clarify",
+      "text" : "(one question) When it happened, was the player playing or paused, so that `<next>` asked for a note? Or did it scroll?…",
+      "since" : "2026-11-10T16:17:57Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s1-0",
+      "kind" : "report-problem",
+      "text" : "Player is playing.",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s11-0",
+      "kind" : "clarify",
+      "text" : "That's pretty much what I was thinking would be going on with code-server.",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s12-0",
+      "kind" : "propose",
+      "text" : "How about this idea: Let's do a minimal amount to set up code-server route into Agency so that I can work with an agent…",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s3-0",
+      "kind" : "propose",
+      "text" : "I think we need to figure out to get back to the GCC / the datascript/datalog layer, possibly thinking about reworking …",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s3-2",
+      "kind" : "propose",
+      "text" : "but what about finding my old nero.el browser and rethinking the browsing behaviour so that Emacs itself becomes browsa…",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s4-1",
+      "kind" : "clarify",
+      "text" : "the goal would be to be able to browse the strategy layer.",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s5-0",
+      "kind" : "propose",
+      "text" : "Another thing we might make use of is the ejira package, which we could adapt to Platform",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-f-s9-0",
+      "kind" : "propose",
+      "text" : "One idea: what about developing Mojira as a code-server-native browser rather than an Emacs browser?",
+      "since" : "2026-11-10T16:41:48Z"
+    }, {
+      "act" : "claude-13-turn-210-r-1",
+      "kind" : "propose",
+      "text" : "(minimal route, two options)\n1. **Claude Code panel in code-server.** I install Claude Code's VS Code extension into yo…",
+      "since" : "2026-11-10T16:43:03Z"
+    }, {
+      "act" : "claude-13-turn-211-f-s3-0",
+      "kind" : "propose",
+      "text" : "Then we could add a little sub-prompt relay thing so that I could type things like \"@mojira I'd like to visualise this …",
+      "since" : "2026-11-10T16:54:30Z"
+    }, {
+      "act" : "claude-13-turn-211-f-s3-1",
+      "kind" : "propose",
+      "text" : "maybe we could even extend xiaoxiang-insert-mark with another sigil that stands for \"send relay this turn to the Mojira…",
+      "since" : "2026-11-10T16:54:30Z"
+    }, {
+      "act" : "claude-13-turn-211-r-2",
+      "kind" : "propose",
+      "text" : "(the relay, next) Here's how `@mojira` could work:\n1. **A new mark in `xiaoxiang-insert-mark`**, meaning \"relay this to…",
+      "since" : "2026-11-10T16:56:23Z"
+    }, {
+      "act" : "claude-13-turn-213-r-2",
+      "kind" : "ask-action",
+      "text" : "(one action) `systemctl --user restart code-server` would make the server rescan its extensions. Your browser tab recon…",
+      "since" : "2026-11-10T16:59:35Z"
+    }, {
+      "act" : "claude-13-turn-214-f-s1-0",
+      "kind" : "ask-action",
+      "text" : "Let's add ㊡ under OTHER in xiaoxiang-insert-mark, you could bind it to <comma> —",
+      "since" : "2026-11-10T17:06:08Z"
+    }, {
+      "act" : "claude-13-turn-214-f-s3-0",
+      "kind" : "propose",
+      "text" : "The refactoring might be MOJIRA ASK: <subprompt contents> QUOTED BACKGROUND CONTEXT: <other prompt details>",
+      "since" : "2026-11-10T17:06:08Z"
+    }, {
+      "act" : "claude-13-turn-215-r-2",
+      "kind" : "ask-action",
+      "text" : "(try this) In the code-server tab, look for **Restricted Mode** at the left end of the status bar, or a banner at the t…",
+      "since" : "2026-11-10T17:10:38Z"
+    }, {
+      "act" : "claude-13-turn-216-f-s1-0",
+      "kind" : "report-problem",
+      "text" : "OK it is loaded and I opened a dialogue with an opus agent there but that agent is not claude-cs —",
+      "since" : "2026-11-10T17:13:23Z"
+    }, {
+      "act" : "claude-13-turn-216-f-s1-1",
+      "kind" : "ask-action",
+      "text" : "can we get claude-cs into the VS Code UI and have it connect to Agency?",
+      "since" : "2026-11-10T17:13:23Z"
+    }, {
+      "act" : "claude-13-turn-217-r-2",
+      "kind" : "report-problem",
+      "text" : "(why it looked wrong) Re-registering changed which conversation bells resume, but not the session id the roster display…",
+      "since" : "2026-11-10T17:16:01Z"
+    }, {
+      "act" : "claude-13-turn-220-f-s2-1",
+      "kind" : "report-problem",
+      "text" : "but claude-cs doesn't have the equivalent of agent-follow-mode turned on so the agent has seen it but it isn't showing …",
+      "since" : "2026-11-10T17:20:51Z"
+    }, {
+      "act" : "claude-13-turn-221-f-s1-0",
+      "kind" : "propose",
+      "text" : "No, I have a better idea: let's make a little Javascript hack that relays the code directly and copy-pastes it into the…",
+      "since" : "2026-11-10T17:22:02Z"
+    }, {
+      "act" : "claude-13-turn-223-f-s1-0",
+      "kind" : "propose",
+      "text" : "Let's just make the seat cold by default so that we can use it with the usual Agency mental model.",
+      "since" : "2026-11-10T17:28:52Z"
+    }, {
+      "act" : "claude-13-turn-224-r-3",
+      "kind" : "clarify",
+      "text" : "(your verdict) So it's blocked on two things: a bigger curated map, which is agent work, and a dokusan verdict from you…",
+      "since" : "2026-11-10T17:33:24Z"
+    }, {
+      "act" : "claude-13-turn-225-f-s1-0",
+      "kind" : "propose",
+      "text" : "OK, so in terms of the bigger curated map, actually we're in a good position b/c we can mint T3.4 as a new peradam (95%…",
+      "since" : "2026-11-10T17:36:48Z"
+    }, {
+      "act" : "claude-13-turn-225-f-s2-0",
+      "kind" : "propose",
+      "text" : "The certificate could come from reading the apm-lead repo,",
+      "since" : "2026-11-10T17:36:48Z"
+    }, {
+      "act" : "claude-13-turn-225-r-1",
+      "kind" : "clarify",
+      "text" : "(which 95%?) Is your bar \"95% of the problems with Lean material\", which is met at 96.0%? Or \"95% of all 491\", which is…",
+      "since" : "2026-11-10T17:38:06Z"
+    }, {
+      "act" : "claude-13-turn-225-r-3",
+      "kind" : "ask-action",
+      "text" : "(go?) Shall I send that packet once you've said which 95% you mean? Publishing the apm-lean repo afterwards stays your …",
+      "since" : "2026-11-10T17:38:06Z"
+    }, {
+      "act" : "claude-13-turn-285-f-s2-0",
+      "kind" : "propose",
+      "text" : "But that's a layout and attachment invariant (which could be enforced with reazon, as I have similar sidebuffer setups …",
+      "since" : "2026-11-11T02:08:25Z"
+    }, {
+      "act" : "claude-13-turn-285-f-s3-0",
+      "kind" : "propose",
+      "text" : "The invariant that the REPL circus runs on all turns whether or not there is a stepper attached is a JVM / Agency side …",
+      "since" : "2026-11-11T02:08:25Z"
+    }, {
+      "act" : "claude-13-turn-285-r-3",
+      "kind" : "ask-action",
+      "text" : "(next) I'd build the coverage invariant first, because it guards the record and the stepper invariant only guards the v…",
+      "since" : "2026-11-11T02:09:05Z"
+    }, {
+      "act" : "claude-13-turn-286-r-0",
+      "kind" : "delegate",
+      "text" : "(coverage invariant) Job `invoke-1794363224287-17077-44c3c3ae`, park `park-819185ff-…`. The packet is `~/notes/claude-1…",
+      "since" : "2026-11-11T02:14:15Z"
+    }, {
+      "act" : "claude-13-turn-287-f-s1-0",
+      "kind" : "propose",
+      "text" : "What it is looking like to me is that #7 could be tagged onto M-repl-circus as an Excursion there, even if that's an an…",
+      "since" : "2026-11-11T02:17:33Z"
+    }, {
+      "act" : "claude-13-turn-287-r-2",
+      "kind" : "propose",
+      "text" : "(how I'd take it, in two packets)\n1. **Discovery:** confirm where the 22 s goes (the scan, the hydrate, or the `[*]` re…",
+      "since" : "2026-11-11T02:19:35Z"
+    }, {
+      "act" : "claude-13-turn-287-r-3",
+      "kind" : "ask-action",
+      "text" : "(go?) Shall I send the discovery packet for #8? Meanwhile kimi-2 is still on the turn-coverage invariant.",
+      "since" : "2026-11-11T02:19:35Z"
+    }, {
+      "act" : "claude-13-turn-288-f-s1-0",
+      "kind" : "delegate",
+      "text" : "You can send that to codex-4",
+      "since" : "2026-11-11T02:22:46Z"
+    }, {
+      "act" : "claude-13-turn-288-r-0",
+      "kind" : "delegate",
+      "text" : "(#8, sent to codex-4) Job `invoke-1794363805168-17093-d38fa012`, park `park-f33bd50e-…`, 90-minute deadline. The packet…",
+      "since" : "2026-11-11T02:23:49Z"
+    }, {
+      "act" : "claude-13-turn-290-f-s1-0",
+      "kind" : "propose",
+      "text" : "I can restart futon1b when that is needed/warranted, finding a relatively quiet moment",
+      "since" : "2026-11-11T02:32:06Z"
+    }, {
+      "act" : "claude-13-turn-294-f-s2-0",
+      "kind" : "propose",
+      "text" : "Let's do the Reazon attachment invariant and come back to the backfill  possibility later",
+      "since" : "2026-11-11T03:03:30Z"
+    }, {
+      "act" : "claude-13-turn-296-r-1",
+      "kind" : "propose",
+      "text" : "(what's left on #9, smallest first)\n1. **Wire the coverage rule into a warning.** It's a report today, so nothing alert…",
+      "since" : "2026-11-11T04:04:28Z"
+    }, {
+      "act" : "claude-13-turn-296-r-3",
+      "kind" : "ask-action",
+      "text" : "(next) Shall I send the warning job (1), or go on to #10, M-interim-director-proxy-metric-inventory (\"specified, multi-…",
+      "since" : "2026-11-11T04:04:28Z"
+    }, {
+      "act" : "claude-13-turn-297-f-s2-0",
+      "kind" : "report-problem",
+      "text" : "I'm noticing a potential error: your turn above mentions Inbox Zero but the REVIEW in the stepper (frame 177) says \"no …",
+      "since" : "2026-11-11T15:55:53Z"
+    }, {
+      "act" : "claude-13-turn-298-f-s1-0",
+      "kind" : "propose",
+      "text" : "OK, so our aim is to work through M-repl-circus completely, and this is scoped as \"multi-day\" though my guess is it wil…",
+      "since" : "2026-11-11T16:15:24Z"
+    }, {
+      "act" : "claude-13-turn-298-f-s10-1",
+      "kind" : "propose",
+      "text" : "which could run vertically, a bit like the famous git merge diagrams,",
+      "since" : "2026-11-11T16:15:24Z"
+    }, {
+      "act" : "claude-13-turn-298-f-s11-0",
+      "kind" : "report-problem",
+      "text" : "We had some start on something like this in the Voxterm \"Diagram\" tab but it wasn't complete yet.",
+      "since" : "2026-11-11T16:15:24Z"
+    }, {
+      "act" : "claude-13-turn-298-f-s4-0",
+      "kind" : "propose",
+      "text" : "On that note I want to lean into the \"Mosaic\" referent over there so that we can display pictures, even though Mojira i…",
+      "since" : "2026-11-11T16:15:24Z"
+    }, {
+      "act" : "claude-13-turn-298-f-s6-0",
+      "kind" : "propose",
+      "text" : "Anyway, I think we need to work out a graphical representation for a cascade.",
+      "since" : "2026-11-11T16:15:24Z"
+    }, {
+      "act" : "claude-13-turn-298-r-1",
+      "kind" : "report-problem",
+      "text" : "(why the stepper can't show one yet) Across all 178 frames of this session, the PATTERNS readings total 683. 682 are vo…",
+      "since" : "2026-11-11T16:18:19Z"
+    }, {
+      "act" : "claude-13-turn-299-r-3",
+      "kind" : "propose",
+      "text" : "(order) 1. Let kimi-2's job finish. It is doing by hand what 猴 would do for one turn (pick candidates, map the four par…",
+      "since" : "2026-11-11T16:26:15Z"
+    }, {
+      "act" : "claude-13-turn-299-r-4",
+      "kind" : "ask-action",
+      "text" : "(one decision) Is moving the occurrence reading from 馬 to 猴 the plan, so that I write it into M-repl-circus's animals t…",
+      "since" : "2026-11-11T16:26:15Z"
+    }, {
+      "act" : "claude-13-turn-300-f-s1-0",
+      "kind" : "propose",
+      "text" : "Also, 猴's primary job is ascertaining the operator focus: so finalising the cascade *and locating it within the GCC* wo…",
+      "since" : "2026-11-11T16:27:36Z"
+    }, {
+      "act" : "claude-13-turn-300-f-s2-0",
+      "kind" : "ask-action",
+      "text" : "The question, and I suspect the answer is yes, is whether we need graph embeddings for that.",
+      "since" : "2026-11-11T16:27:36Z"
+    }, {
+      "act" : "claude-13-turn-300-r-3",
+      "kind" : "propose",
+      "text" : "(how to decide on evidence, after kimi-2's turn lands) Compare candidate sources by how often their candidates turn out…",
+      "since" : "2026-11-11T16:28:22Z"
+    }, {
+      "act" : "claude-13-turn-301-f-s2-0",
+      "kind" : "report-problem",
+      "text" : "Although I belive we finished E-gcc-schema, we intentionally left it as \"extensible\" and",
+      "since" : "2026-11-11T16:32:09Z"
+    }, {
+      "act" : "claude-13-turn-301-f-s3-0",
+      "kind" : "propose",
+      "text" : "I'd be willing to \"compose\" an instruction to claude-cs to display an example,",
+      "since" : "2026-11-11T16:32:09Z"
+    }, {
+      "act" : "claude-13-turn-301-r-2",
+      "kind" : "propose",
+      "text" : "(a sketch of that schema, for you to correct)\n- `[:cascade 1]` has a source: a turn's evidence id, or a War Machine tas…",
+      "since" : "2026-11-11T16:38:55Z"
+    }, {
+      "act" : "claude-13-turn-301-r-4",
+      "kind" : "ask-action",
+      "text" : "(one decision) Shall I write the schema sketch up as an E-gcc-schema 1.1 section for you to review now, or wait for kim…",
+      "since" : "2026-11-11T16:38:55Z"
+    }, {
+      "act" : "claude-13-turn-305-f-s4-0",
+      "kind" : "report-problem",
+      "text" : "The same basic problem of too much detail applies to the sexp.",
+      "since" : "2026-11-11T17:16:17Z"
+    }, {
+      "act" : "claude-13-turn-305-r-1",
+      "kind" : "delegate",
+      "text" : "(\"retained in a \"minimal view\"\") The same change went to claude-cs for Mojira:\n- job `invoke-1794417433078-17419-e30987…",
+      "since" : "2026-11-11T17:17:25Z"
+    }, {
+      "act" : "claude-13-turn-305-r-2",
+      "kind" : "propose",
+      "text" : "(\"a tab-cycle ability\") In Emacs, the simplest version is a small command in the file's buffer that swaps between `casc…",
+      "since" : "2026-11-11T17:17:25Z"
+    }, {
+      "act" : "claude-13-turn-306-f-s2-0",
+      "kind" : "report-problem",
+      "text" : "Now, I guess I'd add that structurally there's a lot for me to wrap my mind around, i.e., again if we look at a War Mac…",
+      "since" : "2026-11-11T17:23:00Z"
+    }, {
+      "act" : "claude-13-turn-306-f-s4-0",
+      "kind" : "propose",
+      "text" : "So, more specifically, 馬 notices when/where an operator intent matches the agent's reply and similarly the War Machine …",
+      "since" : "2026-11-11T17:23:00Z"
+    }, {
+      "act" : "claude-13-turn-306-f-s5-1",
+      "kind" : "ask-action",
+      "text" : "but from the point of view of a clear schema, I'm not sure this is formalised yet.",
+      "since" : "2026-11-11T17:23:00Z"
+    }, {
+      "act" : "claude-13-turn-307-f-s2-0",
+      "kind" : "propose",
+      "text" : "Again, we could refer to McCarthy's Elephant-2000 examples for examples that are basically akin to what we do with 馬, I…",
+      "since" : "2026-11-11T17:26:38Z"
+    }, {
+      "act" : "claude-13-turn-307-f-s3-0",
+      "kind" : "propose",
+      "text" : "Now that we're developing a graphical language for talking about these things, we could write up a zone.hyperreal.enter…",
+      "since" : "2026-11-11T17:26:38Z"
+    }, {
+      "act" : "claude-13-turn-308-f-s4-0",
+      "kind" : "propose",
+      "text" : "We have a possibly interesting parallel example in Frame 187, where no patterns were matched but two were proposed by 象.",
+      "since" : "2026-11-11T17:40:11Z"
+    }, {
+      "act" : "claude-13-turn-308-f-s6-0",
+      "kind" : "clarify",
+      "text" : "Do you see what I mean by the parallel?",
+      "since" : "2026-11-11T17:40:11Z"
+    }, {
+      "act" : "claude-13-turn-308-f-s8-0",
+      "kind" : "propose",
+      "text" : "🈕 So it seems to me that the proposed patterns are *creating* scopes that can recognise/assimilate tokens, even though…",
+      "since" : "2026-11-11T17:40:11Z"
+    }, {
+      "act" : "claude-13-turn-308-r-3",
+      "kind" : "propose",
+      "text" : "(for §16, item 14) A proposed pattern enters the GCC as a candidate pattern. Its occurrences, and the observations of i…",
+      "since" : "2026-11-11T17:42:25Z"
+    }, {
+      "act" : "claude-13-turn-309-f-s2-0",
+      "kind" : "propose",
+      "text" : "That said, their status should probably move from \"proposed\" (which until now was a throw-away status) to \"accepted\" to…",
+      "since" : "2026-11-11T17:47:29Z"
+    }, {
+      "act" : "claude-13-turn-309-f-s3-0",
+      "kind" : "propose",
+      "text" : "From the Mojira point of view, we could see the \"proposed\" as dashed edges (like in the old Diagram drawing) or I guess…",
+      "since" : "2026-11-11T17:47:29Z"
+    }, {
+      "act" : "claude-13-turn-309-r-1",
+      "kind" : "report-problem",
+      "text" : "(caught on the way) The first dry run would have written 18 files, not 81. 象's candidate files come under two names (`t…",
+      "since" : "2026-11-11T17:49:27Z"
+    }, {
+      "act" : "claude-13-turn-310-r-1",
+      "kind" : "report-problem",
+      "text" : "(worse than the 81) No timer has ever existed. Before today, the last MiniLM re-embed was on 29 September, so 197 libra…",
+      "since" : "2026-11-11T17:57:07Z"
+    }, {
+      "act" : "claude-13-turn-310-r-2",
+      "kind" : "delegate",
+      "text" : "(the sidecar) Discovery first, per the split-the-packet rule:\n- kimi-2, job `invoke-1794419810881-17453-14de248b`, park…",
+      "since" : "2026-11-11T17:57:07Z"
+    }, {
+      "act" : "claude-13-turn-312-r-2",
+      "kind" : "delegate",
+      "text" : "(\"(b) yes\") Packet 1 is with kimi-2:\n- job `invoke-1794420571563-17466-ed8eff95`, park `park-1b728921…`;\n- packet: `~/n…",
+      "since" : "2026-11-11T18:11:22Z"
+    }, {
+      "act" : "claude-13-turn-313-r-3",
+      "kind" : "propose",
+      "text" : "(if you want 狗 built next, two packets)\n1. **Pre-hook.** On each agent turn, run an `m40_find` over the operator's turn…",
+      "since" : "2026-11-11T18:16:02Z"
+    }, {
+      "act" : "claude-13-turn-313-r-4",
+      "kind" : "ask-action",
+      "text" : "(one decision) Shall I write a 狗 section into M-repl-circus from these quotes and send packet 1?",
+      "since" : "2026-11-11T18:16:02Z"
+    }, {
+      "act" : "claude-13-turn-315-f-s1-0",
+      "kind" : "propose",
+      "text" : "🈳: So, I think it needs both pre-hook to retrieve any relevant memories (it could either read the operator text patter…",
+      "since" : "2026-11-11T18:26:13Z"
+    }, {
+      "act" : "claude-13-turn-315-r-0",
+      "kind" : "delegate",
+      "text" : "(pre-hook, sent) kimi-1:\n- job `invoke-1794421630729-17479-f4b948cb`, park `park-fc8a6fe8…`;\n- packet: `~/notes/claude-…",
+      "since" : "2026-11-11T18:27:27Z"
+    }, {
+      "act" : "claude-13-turn-317-r-2",
+      "kind" : "propose",
+      "text" : "(a discovery packet, if you want the numbers now) For each family, take the last two weeks of turns and measure:\n- **lo…",
+      "since" : "2026-11-11T18:46:47Z"
+    }, {
+      "act" : "claude-13-turn-320-r-1",
+      "kind" : "report-problem",
+      "text" : "(one fault on that same turn) Your record for this turn (`turn-x024sM`) has no `dog_recall`, and the cache has nothing …",
+      "since" : "2026-11-11T20:18:31Z"
+    } ],
+    "inferred" : [ {
+      "answer" : "claude-13-turn-202-r-2",
+      "opener" : "claude-13-turn-202-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-205-r-0",
+      "opener" : "claude-13-turn-205-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-205-r-1",
+      "opener" : "claude-13-turn-205-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-209-r-1",
+      "opener" : "claude-13-turn-209-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-209-r-2",
+      "opener" : "claude-13-turn-209-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-209-r-3",
+      "opener" : "claude-13-turn-209-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-213-r-1",
+      "opener" : "claude-13-turn-213-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-213-r-2",
+      "opener" : "claude-13-turn-213-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-213-r-3",
+      "opener" : "claude-13-turn-213-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-215-r-1",
+      "opener" : "claude-13-turn-215-f-s1-1",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-215-r-2",
+      "opener" : "claude-13-turn-215-f-s1-1",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-215-r-3",
+      "opener" : "claude-13-turn-215-f-s1-1",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-217-r-1",
+      "opener" : "claude-13-turn-217-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-217-r-2",
+      "opener" : "claude-13-turn-217-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-217-r-3",
+      "opener" : "claude-13-turn-217-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-221-r-0",
+      "opener" : "claude-13-turn-221-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-221-r-2",
+      "opener" : "claude-13-turn-221-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-223-r-1",
+      "opener" : "claude-13-turn-223-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-287-r-0",
+      "opener" : "claude-13-turn-287-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-287-r-1",
+      "opener" : "claude-13-turn-287-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-287-r-2",
+      "opener" : "claude-13-turn-287-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-287-r-3",
+      "opener" : "claude-13-turn-287-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-288-r-0",
+      "opener" : "claude-13-turn-288-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-288-r-1",
+      "opener" : "claude-13-turn-288-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-288-r-2",
+      "opener" : "claude-13-turn-288-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-290-r-1",
+      "opener" : "claude-13-turn-290-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-290-r-2",
+      "opener" : "claude-13-turn-290-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-294-r-1",
+      "opener" : "claude-13-turn-294-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-294-r-2",
+      "opener" : "claude-13-turn-294-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-297-r-0",
+      "opener" : "claude-13-turn-297-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-297-r-1",
+      "opener" : "claude-13-turn-297-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-299-r-0",
+      "opener" : "claude-13-turn-299-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-299-r-1",
+      "opener" : "claude-13-turn-299-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-299-r-3",
+      "opener" : "claude-13-turn-299-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-299-r-4",
+      "opener" : "claude-13-turn-299-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-303-r-0",
+      "opener" : "claude-13-turn-303-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-303-r-2",
+      "opener" : "claude-13-turn-303-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-304-r-1",
+      "opener" : "claude-13-turn-304-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-304-r-3",
+      "opener" : "claude-13-turn-304-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-310-r-0",
+      "opener" : "claude-13-turn-310-f-s1-1",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-310-r-1",
+      "opener" : "claude-13-turn-310-f-s1-1",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-310-r-2",
+      "opener" : "claude-13-turn-310-f-s1-1",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-312-r-0",
+      "opener" : "claude-13-turn-312-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-312-r-2",
+      "opener" : "claude-13-turn-312-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-313-r-0",
+      "opener" : "claude-13-turn-313-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-313-r-1",
+      "opener" : "claude-13-turn-313-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-313-r-3",
+      "opener" : "claude-13-turn-313-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-313-r-4",
+      "opener" : "claude-13-turn-313-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-315-r-0",
+      "opener" : "claude-13-turn-315-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-315-r-1",
+      "opener" : "claude-13-turn-315-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-315-r-2",
+      "opener" : "claude-13-turn-315-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-316-r-1",
+      "opener" : "claude-13-turn-316-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-316-r-3",
+      "opener" : "claude-13-turn-316-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-317-r-0",
+      "opener" : "claude-13-turn-317-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-13-turn-317-r-1",
+      "opener" : "claude-13-turn-317-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-317-r-2",
+      "opener" : "claude-13-turn-317-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-13-turn-317-r-3",
+      "opener" : "claude-13-turn-317-f-s3-0",
+      "rule" : "sole-port",
+      "effect" : null
+    } ]
+  },
+  "withdrawal_processing_error" : null,
+  "reply_to" : {
+    "replies" : [ {
+      "turn-id" : "repl-claude-13-e05af464d59fdd477674f261",
+      "index" : 0,
+      "offset" : 0,
+      "mark" : "🈳",
+      "rule" : "mark-match",
+      "origin" : "parked-resume",
+      "paragraph-mark" : "🈳",
+      "paragraph" : "(still open) Pattern-index packet 3, the resident search reading the sidecar, is ready to send to kimi-2 when you say.",
+      "span" : [ 0, 40 ]
+    } ],
+    "declared_intents" : [ ]
+  },
+  "original_text" : "🈳: OK please send pattern-index packet 3",
+  "happened_summary" : "What the agent did (machine-added context for reading the turn):\nReply begins:\nThis turn's Prompt line is the first live 狗 recall, and it arrived in time. Before sending: two files I worked on have changed on disk since. Checking who changed them.Both are clean and match my own commits; the change notices came from my edits. Sending packet 3.Sent. Checking whether this turn's record holds the recall the Prompt line showed.The Prompt line showed three memories, but this turn's record has no `dog_recall`. The field the post-hook will read is missing on the first live turn. Looking for why.The provider keys its cache on the invoke's `turn-record-id`. Checking which record id this turn's invoke actually carried.㊥ (\"please send pattern-index packet 3\") Sent to kimi-2:\n- job `invoke-1794428254743-17532-e74c4c7d` (running), park `park-23987c55…`;\n- packet: `~/notes/claude-13/pattern-index-04-resident.md`.\n\nThe resident search will answer from the sidecar and reload by itself whenever a build moves the checkpoint. It falls back to the JSON file only if the sidecar is missing. Once it's in, a pattern added to the library reaches 驴 and the Prompt line with no one restarting anything, which is the \"automatically\" you asked for. Every other reader stays as it is until packet 4.\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+  "proposed_patterns" : [ {
+    "patterns" : [ ],
+    "at" : "2026-11-11T20:16:33.093835980Z",
+    "job_id" : "repl-claude-13-339bbc68dcfbc9af55ef0670"
+  } ],
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-vsC2tD.json.draft.json",
+  "turn_id" : "claude-13-turn-320",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "lu_ranked" : {
+    "version" : 1,
+    "at" : "2026-11-11T20:17:00.804221982Z",
+    "ms" : 28763,
+    "source" : "驴",
+    "reason" : null,
+    "ranked" : [ {
+      "id" : "agency/delivery-receipt",
+      "rank" : 1,
+      "quote" : "please send pattern-index packet 3"
+    } ]
+  },
+  "version" : 1,
+  "acts" : [ {
+    "port?" : false,
+    "start" : 0,
+    "author" : "operator",
+    "turn" : "claude-13-turn-320",
+    "id" : "claude-13-turn-320-f-s1-0",
+    "kind" : "accept",
+    "at" : "2026-11-11T20:16:31Z",
+    "record" : "turn-vsC2tD",
+    "target" : "claude-13-turn-317-r-3",
+    "end" : 40,
+    "standing?" : true,
+    "about" : "pattern-index packet 3 offered by agent for kimi-2",
+    "text" : "🈳: OK please send pattern-index packet 3",
+    "to" : "claude-13"
+  }, {
+    "port?" : false,
+    "author" : "claude-13",
+    "turn" : "claude-13-turn-320",
+    "id" : "claude-13-turn-320-r-0",
+    "kind" : "report",
+    "at" : "2026-11-11T20:18:31Z",
+    "record" : "turn-vsC2tD",
+    "standing?" : false,
+    "text" : "(狗's first live turn, this one) The recall arrived in time, so \"not ready\" didn't win the race. It recalled three memor…",
+    "to" : "operator"
+  }, {
+    "port?" : true,
+    "author" : "claude-13",
+    "turn" : "claude-13-turn-320",
+    "id" : "claude-13-turn-320-r-1",
+    "kind" : "report-problem",
+    "at" : "2026-11-11T20:18:31Z",
+    "record" : "turn-vsC2tD",
+    "standing?" : false,
+    "text" : "(one fault on that same turn) Your record for this turn (`turn-x024sM`) has no `dog_recall`, and the cache has nothing …",
+    "to" : "operator"
+  } ],
+  "agent_id" : "claude-13",
+  "unmatched" : [ "s1" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-11-11T20:16:31Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}

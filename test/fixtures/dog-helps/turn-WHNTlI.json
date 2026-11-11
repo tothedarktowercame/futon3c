@@ -1,0 +1,572 @@
+{
+  "evidence_delivery" : "queued",
+  "quote_count" : 0,
+  "ports_status" : {
+    "state" : "computed",
+    "reason" : null,
+    "computed_at" : "2026-11-11T21:55:18Z",
+    "rules_version" : "2026-10-11.3"
+  },
+  "evidence_id" : "emacs-45e42bc87532ee0d414b0134cce6db48",
+  "interpretation_version" : 3,
+  "dog_recall" : {
+    "at" : "2026-11-11T21:52:16.983340374Z",
+    "items" : [ {
+      "memory" : "-home-joe/kinesis-vdrive-editing",
+      "display" : "joe/kinesis-vdrive-editing",
+      "score" : -10.124000450425838,
+      "why" : "How to edit the Kinesis Advantage2 layout files",
+      "source" : "keywords"
+    }, {
+      "memory" : "-home-joe/server-remote-access-setup",
+      "display" : "joe/server-remote-access-setup",
+      "score" : -12.174123366134157,
+      "why" : "How Joe reaches this Ubuntu server remotely —",
+      "source" : "keywords"
+    } ],
+    "query-ms" : 513,
+    "query-source" : "keywords"
+  },
+  "source_text" : "Oh yeah, I have brought up the tunnel.  It'll be interesting to see if Emacs autoconnects",
+  "secrets_redacted" : [ ],
+  "obligations" : [ ],
+  "reply_at" : "2026-11-11T21:52:31Z",
+  "tagging_failed" : false,
+  "reply_text" : "㊥ (\"see if Emacs autoconnects\") It did. Emacs reconnected by itself, and your mode line is showing ` ♪07 1/14 Jan 29 2026, 6:16 PM `, which is Anders Amala 07, track 1 of 14, playing.\n\n㊬ (connection state) I checked this turn. `anders-np-mode` is on, its ssh/curl process on the stream (pid 3433318) is in state `run`, and the retry wait is back at its 5 s minimum. So it kept retrying while the tunnel was down and connected once you brought the tunnel up. PgDn will take a note against this track. There's no `EP07` heading in `listening-notes.org` yet, and your first note will create it.",
+  "alignment" : {
+    "version" : 1,
+    "at" : "2026-11-11T21:55:18.861637364Z",
+    "seat" : "馬-sonnet",
+    "acts" : [ {
+      "act" : "claude-5-turn-2-f-s1-0",
+      "kind" : "report",
+      "text" : "Oh yeah, I have brought up the tunnel.",
+      "verdict" : "noted",
+      "by" : "claude-5-turn-2-r-1",
+      "mark" : "㊬",
+      "quote" : "connected once you brought the tunnel up",
+      "method" : "model"
+    }, {
+      "act" : "claude-5-turn-2-f-s2-0",
+      "kind" : "verify",
+      "text" : "It'll be interesting to see if Emacs autoconnects",
+      "verdict" : "answered",
+      "by" : "claude-5-turn-2-r-0",
+      "mark" : "㊥",
+      "quote" : "It did. Emacs reconnected by itself",
+      "method" : "model"
+    } ],
+    "unread" : 0
+  },
+  "session_id" : "377963ff-27c5-4c0b-990f-227a7f22e91c",
+  "sentences" : [ {
+    "id" : "s1",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 0,
+    "end" : 38,
+    "text" : "Oh yeah, I have brought up the tunnel."
+  }, {
+    "id" : "s2",
+    "status" : "unresolved",
+    "cues" : [ ],
+    "start" : 40,
+    "end" : 89,
+    "text" : "It'll be interesting to see if Emacs autoconnects"
+  } ],
+  "standings" : {
+    "in_force" : [ ],
+    "adopted_not_applied" : [ ]
+  },
+  "analysis_dispatch" : {
+    "scheduled_at" : 1794433936590,
+    "job_id" : "invoke-1794433936668-17612-7c4042be"
+  },
+  "draft_status" : "drafted",
+  "pattern_verdicts" : {
+    "version" : 1,
+    "at" : "2026-11-11T21:53:06.586144067Z",
+    "window" : [ "turn-JrUTT2", "turn-WHNTlI" ],
+    "reader" : "馬-sonnet",
+    "patterns" : [ {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "embedding" ],
+      "shown" : true,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "sha256" : "12451842a52d4cec95e0fc504d210a47d1b68c546aa0d9b402966642865c3e21",
+      "pattern" : "xed-roads/live-recording-bridge"
+    }, {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "embedding" ],
+      "shown" : true,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "sha256" : "26400c1bdb93d2c4da4c5e9344930eee3b67013e8dde995d60469aa466263013",
+      "pattern" : "operator/port-the-self-hosted-part-the-same-way-as-the-earlier-case"
+    }, {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "embedding" ],
+      "shown" : true,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "sha256" : "f03be8adde274812aae05c19a426a172797b47d11f290c8cdcb381d696f5af18",
+      "pattern" : "futon-theory/coordination-protocol"
+    }, {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "驴" ],
+      "shown" : false,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "sha256" : "88f3f7253d5767009f0af4084e3b3b0055e45cb55a4dbfbe46b2edc8efe9364f",
+      "pattern" : "realtime/transport-pivot"
+    }, {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "驴" ],
+      "shown" : false,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "sha256" : "2f5479e8ed9b92991ee8eb79153edbb7ece0c79f6e218fe26daae378fe5330f5",
+      "pattern" : "peripherals/split-transport-from-embodiment"
+    }, {
+      "turn_mapped" : 0,
+      "chain_mapped" : 0,
+      "sources" : [ "驴" ],
+      "shown" : false,
+      "turn" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "status" : "void",
+      "chain" : {
+        "I1" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "I2" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "G" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        },
+        "B" : {
+          "element" : null,
+          "why" : "map-missing",
+          "attempt" : null
+        }
+      },
+      "sha256" : "e3220d4d4f3d32402cede9c348c930c2f41745e0e3f634158c87ad13bad84392",
+      "pattern" : "peripherals/read-existing-seam-before-implementing"
+    } ]
+  },
+  "ports" : {
+    "closed_this_turn" : [ ],
+    "still_open" : [ {
+      "act" : "claude-5-turn-1-r-2",
+      "kind" : "report-problem",
+      "text" : "(tunnel) Just now, ssh to port 2223 got \"Connection refused\", so phone2's reverse tunnel isn't up. The mode line will s…",
+      "since" : "2026-11-11T21:50:16Z"
+    }, {
+      "act" : "claude-5-turn-2-f-s2-0",
+      "kind" : "verify",
+      "text" : "It'll be interesting to see if Emacs autoconnects",
+      "since" : "2026-11-11T21:52:16Z"
+    } ],
+    "inferred" : [ {
+      "answer" : "claude-5-turn-1-r-1",
+      "opener" : "claude-5-turn-1-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : "closes"
+    }, {
+      "answer" : "claude-5-turn-1-r-2",
+      "opener" : "claude-5-turn-1-f-s1-0",
+      "rule" : "sole-port",
+      "effect" : null
+    }, {
+      "answer" : "claude-5-turn-2-r-1",
+      "opener" : "claude-5-turn-2-f-s2-0",
+      "rule" : "sole-port",
+      "effect" : null
+    } ]
+  },
+  "withdrawal_processing_error" : null,
+  "original_text" : "Oh yeah, I have brought up the tunnel.  It'll be interesting to see if Emacs autoconnects",
+  "happened_summary" : "What the agent did (machine-added context for reading the turn):\nReply begins:\n㊥ (\"see if Emacs autoconnects\") It did. Emacs reconnected by itself, and your mode line is showing ` ♪07 1/14 Jan 29 2026, 6:16 PM `, which is Anders Amala 07, track 1 of 14, playing.\n\n㊬ (connection state) I checked this turn. `anders-np-mode` is on, its ssh/curl process on the stream (pid 3433318) is in state `run`, and the retry wait is back at its 5 s minimum. So it kept retrying while the tunnel was down and connected once you brought the tunnel up. PgDn will take a note against this track. There's no `EP07` heading in `listening-notes.org` yet, and your first note will create it.\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+  "proposed_patterns" : [ {
+    "patterns" : [ "~xed-roads/live-recording-bridge" ],
+    "at" : "2026-11-11T21:50:14.111395167Z",
+    "job_id" : "repl-claude-5-4f8966c443b557cc25b9f0b1",
+    "ranked" : [ {
+      "id" : "xed-roads/live-recording-bridge",
+      "score" : 0.1877,
+      "rank" : 1,
+      "source" : "embedding"
+    }, {
+      "id" : "operator/port-the-self-hosted-part-the-same-way-as-the-earlier-case",
+      "score" : 0.1871,
+      "rank" : 2,
+      "source" : "embedding"
+    }, {
+      "id" : "futon-theory/coordination-protocol",
+      "score" : 0.1821,
+      "rank" : 3,
+      "source" : "embedding"
+    } ],
+    "m40_ranked" : {
+      "ranked" : [ ],
+      "neighbours" : 10,
+      "ms" : 20,
+      "source" : null,
+      "reason" : "no-positive-pattern",
+      "at" : "2026-11-11T21:52:17.628099184Z"
+    },
+    "embedding_ranked" : [ {
+      "id" : "xed-roads/live-recording-bridge",
+      "score" : 0.1877,
+      "rank" : 1,
+      "source" : "embedding"
+    }, {
+      "id" : "operator/port-the-self-hosted-part-the-same-way-as-the-earlier-case",
+      "score" : 0.1871,
+      "rank" : 2,
+      "source" : "embedding"
+    }, {
+      "id" : "futon-theory/coordination-protocol",
+      "score" : 0.1821,
+      "rank" : 3,
+      "source" : "embedding"
+    } ],
+    "shown_source" : "embedding"
+  } ],
+  "draft_file" : "/home/joe/.emacs-graph/session-turn-analysis/turn-WHNTlI.json.draft.json",
+  "turn_id" : "claude-5-turn-2",
+  "vocabulary_version" : 3,
+  "origin" : "operator",
+  "dog_use" : {
+    "at" : "2026-11-11T21:52:38.111659043Z",
+    "status" : "ok",
+    "surfaced-memory-ids" : [ "-home-joe/kinesis-vdrive-editing", "-home-joe/server-remote-access-setup" ],
+    "used-memory-ids" : [ "-home-joe/kinesis-vdrive-editing" ],
+    "items" : [ {
+      "memory" : "-home-joe/kinesis-vdrive-editing",
+      "used" : true,
+      "kind" : "echoed",
+      "evidence" : "shared bigrams: \"mode line\""
+    }, {
+      "memory" : "-home-joe/server-remote-access-setup",
+      "used" : false,
+      "kind" : "unused",
+      "evidence" : "no shared distinctive bigrams; not named"
+    } ]
+  },
+  "lu_ranked" : {
+    "version" : 1,
+    "at" : "2026-11-11T21:52:28.596288277Z",
+    "ms" : 11815,
+    "source" : "驴",
+    "reason" : null,
+    "ranked" : [ {
+      "id" : "realtime/transport-pivot",
+      "rank" : 1,
+      "quote" : "I have brought up the tunnel"
+    }, {
+      "id" : "peripherals/split-transport-from-embodiment",
+      "rank" : 2,
+      "quote" : "It'll be interesting to see if Emacs autoconnects"
+    }, {
+      "id" : "peripherals/read-existing-seam-before-implementing",
+      "rank" : 3,
+      "quote" : "I have brought up the tunnel"
+    } ]
+  },
+  "version" : 1,
+  "acts" : [ {
+    "port?" : false,
+    "start" : 0,
+    "author" : "operator",
+    "turn" : "claude-5-turn-2",
+    "id" : "claude-5-turn-2-f-s1-0",
+    "kind" : "report",
+    "at" : "2026-11-11T21:52:16Z",
+    "record" : "turn-WHNTlI",
+    "end" : 38,
+    "standing?" : false,
+    "about" : "tunnel",
+    "text" : "Oh yeah, I have brought up the tunnel.",
+    "to" : "claude-5"
+  }, {
+    "port?" : true,
+    "start" : 40,
+    "author" : "operator",
+    "turn" : "claude-5-turn-2",
+    "id" : "claude-5-turn-2-f-s2-0",
+    "kind" : "verify",
+    "at" : "2026-11-11T21:52:16Z",
+    "record" : "turn-WHNTlI",
+    "end" : 89,
+    "standing?" : false,
+    "about" : "Emacs autoconnect over tunnel",
+    "text" : "It'll be interesting to see if Emacs autoconnects",
+    "to" : "claude-5"
+  }, {
+    "port?" : false,
+    "author" : "claude-5",
+    "turn" : "claude-5-turn-2",
+    "id" : "claude-5-turn-2-r-1",
+    "kind" : "verify",
+    "at" : "2026-11-11T21:52:31Z",
+    "record" : "turn-WHNTlI",
+    "standing?" : false,
+    "text" : "(connection state) I checked this turn. `anders-np-mode` is on, its ssh/curl process on the stream (pid 3433318) is in …",
+    "to" : "operator"
+  } ],
+  "agent_id" : "claude-5",
+  "unmatched" : [ "s1", "s2" ],
+  "offset_unit" : "unicode-codepoints-zero-based-end-exclusive",
+  "created_at" : "2026-11-11T21:52:16Z",
+  "surface" : "typed",
+  "analysis_status" : "analyzed"
+}

@@ -1,0 +1,301 @@
+{
+ "evidence_delivery": "queued",
+ "quote_count": 0,
+ "ports_status": {
+  "state": "computed",
+  "reason": null,
+  "computed_at": "2026-11-11T21:52:55Z",
+  "rules_version": "2026-10-11.3"
+ },
+ "evidence_id": "emacs-b1bf07b252ebcfe367148034a46f6fc5",
+ "interpretation_version": 3,
+ "dog_recall": {
+  "at": "2026-11-11T21:49:52.481589296Z",
+  "items": [
+   {
+    "memory": "-home-joe-code/futon3c-slice-memory-high-throttle",
+    "display": "code/futon3c-slice-memory-high-throttle",
+    "score": -8.411784737273862,
+    "why": "Agency \"crawling\" with no OOM is usually the",
+    "source": "keywords"
+   }
+  ],
+  "query-ms": 465,
+  "query-source": "keywords",
+  "arm": "withheld"
+ },
+ "source_text": "Hi, I was going to go listen to some of my Anders EP recordings but I forgot how that works",
+ "secrets_redacted": [],
+ "obligations": [],
+ "reply_at": "2026-11-11T21:50:16Z",
+ "tagging_failed": false,
+ "reply_text": "\u32a5 (how it works) The EPs play on phone2. In Termux there, run `sh a.sh`. It starts the little web server on port 8000 if it isn't already up, then opens `http://127.0.0.1:8000/index.html` in the phone's browser, where you pick an EP and play it in `player.html`. To take notes from Emacs, turn on `M-x anders-np-mode`.\n\n\ud83c\ude16 (the pieces) Everything is in `~/notes/anders-eps/`:\n- `a.sh` (the copy on the phone) needs `~/anders-eps` on phone2 to exist, and runs `~/anders/serve.py 8000`. Its log goes to `~/anders/http.log`.\n- Each time you play, pause or change track, `player.html` sends that to the server, and the server streams it on `/nowplaying/stream`.\n- `anders-np.el` follows that stream over the reverse tunnel (`ssh -p 2223 u0_a318@localhost`). Your mode line then shows something like `\u266a07 3/14 Isaiah 28, rough`, with \u2016 when paused.\n- With the mode on, `<next>` (PgDn) during playback asks for a note and adds it, timestamped, under that track in `listening-notes.org`. You last added notes there on Nov 9 and 10, for EP03.\n\n\u32a9 (tunnel) Just now, ssh to port 2223 got \"Connection refused\", so phone2's reverse tunnel isn't up. The mode line will stay blank until it is. Playback itself only needs the phone. If the tunnel didn't come up when Termux started, run `phone-tunnel.sh` on phone2 to bring it back.",
+ "alignment": {
+  "version": 1,
+  "at": "2026-11-11T21:52:55.456122331Z",
+  "seat": "\u99ac-sonnet",
+  "acts": [
+   {
+    "act": "claude-5-turn-1-f-s1-0",
+    "kind": "ask-action",
+    "text": "Hi, I was going to go listen to some of my Anders EP recordings but I forgot how that works",
+    "verdict": "answered",
+    "by": "claude-5-turn-1-r-0",
+    "mark": "\u32a5",
+    "quote": "The EPs play on phone2. In Termux there, run `sh a.sh`. It starts the little web server on port 8000 if it isn't already up, then opens `http://127.0.0.1:8000/index.html` in the phone's browser, where you pick an EP and play it in `player.html`.",
+    "method": "model"
+   }
+  ],
+  "unread": 0
+ },
+ "session_id": "synthetic-session",
+ "sentences": [
+  {
+   "id": "s1",
+   "status": "unresolved",
+   "cues": [],
+   "start": 0,
+   "end": 91,
+   "text": "Hi, I was going to go listen to some of my Anders EP recordings but I forgot how that works"
+  }
+ ],
+ "standings": {
+  "in_force": [],
+  "adopted_not_applied": []
+ },
+ "analysis_dispatch": {
+  "scheduled_at": 1794433791996,
+  "job_id": "invoke-1794433792077-17608-ff325a7f"
+ },
+ "draft_status": "drafted",
+ "pattern_verdicts": {
+  "version": 1,
+  "at": "2026-11-11T21:50:47.022218723Z",
+  "window": [
+   "turn-JrUTT2"
+  ],
+  "reader": "\u99ac-sonnet",
+  "patterns": [
+   {
+    "turn_mapped": 0,
+    "chain_mapped": 0,
+    "sources": [
+     "\u9a74"
+    ],
+    "shown": false,
+    "turn": {
+     "I1": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The turn has no machine recording decisions in structured fields with a delivery flag. It only describes how the EP player, server and Emacs mode work.",
+       "turn": ""
+      }
+     },
+     "I2": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "No quiet flag leaves an honest record undelivered. The only failure is a refused tunnel connection, which is a different thing.",
+       "turn": ""
+      }
+     },
+     "G": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The turn has no account of lost campaign work or of a gap between what the books know and what a person knows.",
+       "turn": ""
+      }
+     },
+     "B": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The turn does not make surfacing a lifecycle rung or have a record refuse to close until a discharge channel carries it.",
+       "turn": ""
+      }
+     }
+    },
+    "status": "void",
+    "chain": {
+     "I1": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The window contains only the proposal turn, which has no structured decision records with a delivery flag.",
+       "turn": ""
+      }
+     },
+     "I2": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The window contains only the proposal turn, which has no quiet flag that stops a record reaching anyone.",
+       "turn": ""
+      }
+     },
+     "G": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The window contains only the proposal turn, which has no account of work lost while the audit trail stays clean.",
+       "turn": ""
+      }
+     },
+     "B": {
+      "element": null,
+      "why": "void",
+      "attempt": {
+       "element": null,
+       "why": "The window contains only the proposal turn, which has no surfacing rung or closure-refusing channel.",
+       "turn": ""
+      }
+     }
+    },
+    "sha256": "1361fc98b70b235afead85a07057eb66a6446014f0879048ea80c7c458a05f54",
+    "pattern": "process/recorded-but-not-surfaced"
+   }
+  ]
+ },
+ "ports": {
+  "closed_this_turn": [
+   {
+    "act": "claude-5-turn-1-f-s1-0",
+    "kind": "ask-action",
+    "text": "Hi, I was going to go listen to some of my Anders EP recordings but I forgot how that works"
+   }
+  ],
+  "still_open": [
+   {
+    "act": "claude-5-turn-1-r-2",
+    "kind": "report-problem",
+    "text": "(tunnel) Just now, ssh to port 2223 got \"Connection refused\", so phone2's reverse tunnel isn't up. The mode line will s\u2026",
+    "since": "2026-11-11T21:50:16Z"
+   }
+  ],
+  "inferred": [
+   {
+    "answer": "claude-5-turn-1-r-1",
+    "opener": "claude-5-turn-1-f-s1-0",
+    "rule": "sole-port",
+    "effect": "closes"
+   },
+   {
+    "answer": "claude-5-turn-1-r-2",
+    "opener": "claude-5-turn-1-f-s1-0",
+    "rule": "sole-port",
+    "effect": null
+   },
+   {
+    "answer": "claude-5-turn-2-r-1",
+    "opener": "claude-5-turn-2-f-s2-0",
+    "rule": "sole-port",
+    "effect": null
+   }
+  ]
+ },
+ "withdrawal_processing_error": null,
+ "original_text": "Hi, I was going to go listen to some of my Anders EP recordings but I forgot how that works",
+ "happened_summary": "What the agent did (machine-added context for reading the turn):\nReply begins:\n\u32a5 (how it works) The EPs play on phone2. In Termux there, run `sh a.sh`. It starts the little web server on port 8000 if it isn't already up, then opens `http://127.0.0.1:8000/index.html` in the phone's browser, where you pick an EP and play it in `player.html`. To take notes from Emacs, turn on `M-x anders-np-mode`.\n\n\ud83c\ude16 (the pieces) Everything is in `~/notes/anders-eps/`:\n- `a.sh` (the copy on the phone) needs `~/anders-eps` on phone2 to exist, and runs `~/anders/serve.py 8000`. Its log goes to `~/anders/http.log`.\n- Each time you play, pause or change track, `player.html` sends that to the server, and the server streams it on `/nowplaying/stream`.\nCommits during the turn (any repo; not necessarily the agent's own):\n(none)",
+ "proposed_patterns": [
+  {
+   "patterns": [],
+   "at": "2026-11-11T21:49:52.923149025Z",
+   "job_id": "repl-claude-5-28f7c3c5e9b2e1734b821306"
+  }
+ ],
+ "draft_file": "/home/joe/.emacs-graph/session-turn-analysis/turn-JrUTT2.json.draft.json",
+ "turn_id": "claude-5-turn-1",
+ "vocabulary_version": 3,
+ "origin": "operator",
+ "dog_use": {
+  "at": "2026-11-11T21:50:33.081631825Z",
+  "status": "ok",
+  "surfaced-memory-ids": [
+   "-home-joe-code/futon3c-slice-memory-high-throttle"
+  ],
+  "used-memory-ids": [],
+  "items": [
+   {
+    "memory": "-home-joe-code/futon3c-slice-memory-high-throttle",
+    "used": false,
+    "kind": "unused",
+    "evidence": "no shared distinctive bigrams; not named"
+   }
+  ]
+ },
+ "lu_ranked": {
+  "version": 1,
+  "at": "2026-11-11T21:50:02.783981797Z",
+  "ms": 10508,
+  "source": "\u9a74",
+  "reason": null,
+  "ranked": [
+   {
+    "id": "process/recorded-but-not-surfaced",
+    "rank": 1,
+    "quote": "I forgot how that works"
+   }
+  ]
+ },
+ "version": 1,
+ "acts": [
+  {
+   "port?": true,
+   "start": 0,
+   "author": "operator",
+   "turn": "claude-5-turn-1",
+   "id": "claude-5-turn-1-f-s1-0",
+   "kind": "ask-action",
+   "at": "2026-11-11T21:49:51Z",
+   "record": "turn-JrUTT2",
+   "end": 91,
+   "standing?": false,
+   "about": "how to play the Anders EP recordings",
+   "text": "Hi, I was going to go listen to some of my Anders EP recordings but I forgot how that works",
+   "to": "claude-5"
+  },
+  {
+   "port?": false,
+   "author": "claude-5",
+   "turn": "claude-5-turn-1",
+   "id": "claude-5-turn-1-r-1",
+   "kind": "explain",
+   "at": "2026-11-11T21:50:16Z",
+   "record": "turn-JrUTT2",
+   "standing?": false,
+   "text": "(the pieces) Everything is in `~/notes/anders-eps/`:\n- `a.sh` (the copy on the phone) needs `~/anders-eps` on phone2 to\u2026",
+   "to": "operator"
+  },
+  {
+   "port?": true,
+   "author": "claude-5",
+   "turn": "claude-5-turn-1",
+   "id": "claude-5-turn-1-r-2",
+   "kind": "report-problem",
+   "at": "2026-11-11T21:50:16Z",
+   "record": "turn-JrUTT2",
+   "standing?": false,
+   "text": "(tunnel) Just now, ssh to port 2223 got \"Connection refused\", so phone2's reverse tunnel isn't up. The mode line will s\u2026",
+   "to": "operator"
+  }
+ ],
+ "agent_id": "claude-5",
+ "unmatched": [
+  "s1"
+ ],
+ "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+ "created_at": "2026-11-12T00:00:00Z",
+ "surface": "typed",
+ "analysis_status": "analyzed",
+ "synthetic": "SYNTHETIC withheld-arm record for test_dog_helps_report (copied from turn-JrUTT2, 2026-11-11); no real withheld records exist yet (packet B not landed).",
+ "_id": "turn-SYNTH-withheld"
+}
