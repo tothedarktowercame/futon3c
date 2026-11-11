@@ -42,8 +42,11 @@
   (let [dir (temp-dir)
         log (str dir "/calls.log")
         script (str dir "/stub.sh")]
-    (spit script (str "#!/bin/sh\nsleep " (/ sleep-ms 1000.0)
-                      "\necho call >> " log "\n"
+    ;; The call is logged when the build STARTS, so a test can act while
+    ;; it is still running (logging after the sleep let the "change during
+    ;; a build" test pass with the one-more rule removed).
+    (spit script (str "#!/bin/sh\necho call >> " log "\n"
+                      "sleep " (/ sleep-ms 1000.0) "\n"
                       "echo '{\"scanned\":3,\"changed\":1,\"deleted\":0,\"embedded\":1}'\n"))
     (.setExecutable (io/file script) true)
     (binding [w/*build-command* ["sh" script]

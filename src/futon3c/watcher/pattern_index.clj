@@ -37,6 +37,11 @@
 
 (def ^:dynamic *debounce-ms* 4000)
 
+(def ^:private build-timeout-minutes
+  "A full build takes ~31 s (2026-11-11); past this the build is stopped, so a
+   hung builder cannot hold building? forever."
+  10)
+
 (def ^:dynamic *build-command*
   "The builder invocation; rebound in tests."
   [(str futon3a-root "/.venv/bin/python3")
@@ -51,7 +56,6 @@
 
 (defonce ^:private pending (atom nil))     ;; ScheduledFuture or nil
 (defonce ^:private building? (atom false))
-(defonce ^:private again? (atom false))
 (defonce ^:private lock (Object.))
 
 ;; The most recent build: {:stats {} :exit n :stderr-tail "..." :finished-at
@@ -75,9 +79,16 @@
       (let [pb (doto (ProcessBuilder. ^java.util.List (vec *build-command*))
                  (.directory (io/file futon3a-root)))
             proc (.start pb)
+            ;; stderr is drained on its own thread: the model loader writes
+            ;; progress bars there, and a full stderr pipe would block the
+            ;; child while this thread waits on stdout.
+            err-f (future (slurp (.getErrorStream proc)))
             out (slurp (.getInputStream proc))
-            err (slurp (.getErrorStream proc))
-            exit (.waitFor proc)
+            exit (if (.waitFor proc build-timeout-minutes TimeUnit/MINUTES)
+                   (.exitValue proc)
+                   ;; only the build process this watcher started
+                   (do (.destroyForcibly proc) -2))
+            err (deref err-f 10000 "")
             result {:exit exit
                     :stats (try (json/parse-string out true)
                                 (catch Exception _ nil))
@@ -94,22 +105,17 @@
           (println "[pattern-index] build FAILED:" (.getMessage t))
           result)))))
 
-(defn- run-build-loop!
-  "One build; if a change landed during it, exactly one more.  The again?/
-   building? handshake runs under the lock so a schedule! arriving between
-   the last again? check and building? going false cannot lose a build."
-  []
-  (loop []
-    (run-build!)
-    (let [more (locking lock
-                 (if @again?
-                   (do (reset! again? false) true)
-                   (do (reset! building? false) false)))]
-      (when more (recur)))))
-
 (defn schedule!
-  "Debounced async sidecar rebuild.  Coalesces bursts into one build; a call
-   during a running build schedules exactly one more.  Returns immediately."
+  "Debounced async sidecar rebuild.  Returns immediately.
+
+  The debounce task and the build share one thread (`executor` is single
+  threaded), so a change that lands during a build is scheduled behind it
+  and runs once the build ends; further changes in the meantime replace the
+  pending task.  That is what gives \"a burst is one build\" and \"a change
+  during a build is exactly one more\" (claude-13's review, 2026-11-11:
+  an again?/building? handshake here could never take its mid-build branch,
+  because the task that would set it cannot run while the build holds the
+  thread)."
   []
   (if (off?)
     :off
@@ -117,13 +123,10 @@
       (when-let [^ScheduledFuture old @pending]
         (.cancel old false))
       (let [run-task (bound-fn []
-                      (reset! pending nil)
-                      (locking lock
-                        (if @building?
-                          (reset! again? true)
-                          (do (reset! building? true)
-                              (.execute executor
-                                        ^Runnable (bound-fn [] (run-build-loop!)))))))
+                       (locking lock (reset! pending nil))
+                       (reset! building? true)
+                       (try (run-build!)
+                            (finally (reset! building? false))))
             task (reify Runnable (run [_] (run-task)))
             fut (.schedule executor task (long *debounce-ms*)
                            TimeUnit/MILLISECONDS)]
