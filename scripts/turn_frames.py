@@ -1078,8 +1078,13 @@ def build_frames(rows, analyses, session_id=None, limit=None, operator_rules=Non
             reply = {"at": reply_row.get("evidence/at"),
                      "evidence_id": reply_row.get("evidence/id"),
                      "turn_id": rb.get("turn-id")}
-            reply.update(align_reply(fragments_out,
-                                     rb.get("unified-text") or rb.get("text") or ""))
+            reply_text = rb.get("unified-text") or rb.get("text") or ""
+            reply.update(align_reply(fragments_out, reply_text))
+            # whole, as for a harness seat: the paragraph bodies are cut at
+            # 160 chars, and the stepper's REVIEW looks for lexicon names in
+            # the full reply (an "Inbox Zero" past the cut went unseen,
+            # Joe 2026-11-11)
+            reply["text"] = reply_text
             frames[-1]["reply"] = reply
         elif is_harness_turn_start(turn):
             # a harness seat's answer is its last round's text: no chat-turn

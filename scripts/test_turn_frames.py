@@ -175,6 +175,8 @@ class TurnFramesTest(unittest.TestCase):
         ])
         self.assertEqual(reply["unanswered"], [])
         self.assertEqual(reply["unanchored"], [0, 2])
+        # the whole reply, uncut, for the stepper's REVIEW name search
+        self.assertTrue(reply["text"].endswith("Two files changed."))
         # turn 2 has no reply in the record: the field is absent, not empty
         self.assertNotIn("reply", frames[1])
 
