@@ -109,18 +109,21 @@ agent tool-step traces, and scheduler state such as promise lifecycles.
 
 ## The Circus
 
+Corrected against the code on 2026-11-11 (MAP:
+`holes/labs/M-repl-circus/MAP-animals-2026-11-11.md`, kimi-1, `3108d2c26`).
+
 The trigger does not decide whether an animal's output is evidence. Its role
 does: the animals observe or assist acts, and what they produce could be
 recomputed.
 
 | Animal | Hooks onto | Gives | Output should live |
 |---|---|---|---|
-| 驴 donkey | operator turn (post-hook) | relevant patterns | metadata on the operator turn (pattern ids, scores) |
+| 驴 donkey | operator turn, at `:recorded` (before the reply; `xiang/lu_rerank.clj:300`) | relevant patterns | metadata on the operator turn (`:lu_ranked`, `.patterns.json`) |
 | 象 elephant | operator turn | proforma reading, intent marks | derived store keyed by turn evidence-id |
-| 狗 dog | agent turn: pre-hook recall, post-hook save | relevant memories, proposed memories | metadata on the agent reply (memory ids, scores) |
-| 馬 horse | agent reply | 無門関: tension resolved / re-raised / dropped | derived store |
-| Giraffe | 馬's tensions + pattern cascade (second derivative) | proposed tickets, relationship reviews | derived store |
-| 猴 monkey | timer (the operator-focus reader; seat `猴-1`, renamed from `zai-1` 2026-11-05) | operator focus | derived store |
+| 狗 dog | operator turn: recall at `:recorded`, use check and bury at `:settled` (`agency/dog_provider.clj`) | relevant memories on the agent's Prompt line; buried rulings | metadata on the operator record (`:dog_recall`, `:dog_use`, `:dog_buried`); buried memories under `~/.claude/projects/狗/memory` and minus40 :7093 |
+| 馬 horse | agent reply: reading at `:ported`, occurrence at `:aligned`, observer opt-in (`ma-enabled.txt`) | 無門関 tensions; per-act alignment; pattern verdicts | `:alignment`, `:pattern_verdicts` on the record; observation rows at :7073 |
+| Giraffe | two things: relationship-review candidates at `:settled`; a batch reread/priority pipeline (`giraffe/run.clj`, `reread_worker.clj`, no scheduler found) | proposed tickets, relationship reviews | review entries at :7073; run directories |
+| 猴 monkey | intended: timer (seat `猴-1`). **Not in the code** (MAP, 2026-11-11: no reference in src/scripts/dev; last evidence a 429 on 11-07) | operator focus | none yet |
 
 **Pattern occurrence moves from 馬 to 猴 (Joe, 2026-11-11).** "猴's primary
 job is ascertaining the operator focus: so finalising the cascade *and
@@ -285,6 +288,53 @@ the remaining work is understanding their composition, then verifying it.
   helping after a while"), overlap modes, E-question-log, futon7
   E-futon-questions, the XTDB home of derived stores, prompt durability.
 
+## DERIVE (draft, claude-13, 2026-11-11, from the MAP note)
+
+**How the animals fit together today.** They do not read each other through
+the GCC. They hang off one chain of turn-service events on the operator's
+象 turn record (`~/.emacs-graph/session-turn-analysis/turn-X.json`), and each
+reads what earlier animals left on that record:
+
+1. `:recorded` (record written): 驴 reranks patterns (`:lu_ranked`); 狗 starts
+   its recall, seeded from 驴's patterns (`:dog_recall`); the 小象 draft; 象's
+   analysis seat is dispatched.
+2. `:reading` (象's reading published: `:acts`, `:sentences`, analysis.json).
+3. `:ported` (ports computed from the reading): 馬 reads the reply against
+   the acts (`:alignment`).
+4. `:aligned`: 馬-occurrence matches patterns against the turn
+   (`:pattern_verdicts`); the per-turn cascade is drawn from these.
+5. `:settled` (reading and reply both present): the evidence packet to :7073;
+   Giraffe's relationship-review candidates; 狗's use check and bury
+   (`:dog_use`, `:dog_buried`).
+
+So the shared store in practice is the turn record, ordered by these events,
+plus :7073 for what must be evidence. Three things follow:
+
+- **The GCC has no production writer.** 驴's `[:pattern/proposal 1]`, 象's
+  `[:interpretation 1]`, 馬's `[:pattern/occurrence 1]` and Giraffe's
+  `[:needs 1]` are decided or built on fixtures; none is written live. Since
+  every animal's output is already on the record, the smallest composition is
+  one projector that rebuilds GCC records from the turn records (the GCC
+  "can be rebuilt from scratch"), rather than six writers. The animals keep
+  writing the record; the GCC is a projection of it, and the readers move to
+  the GCC one at a time.
+- **猴 is the missing stage after `:settled`.** It is meant to read a settled
+  frame, finish its cascade and place it in the GCC. With a projector, 猴
+  reads the GCC rather than parsing records, and its output (operator focus)
+  is a GCC record (schema 1.1). This is where circus-04 fits.
+- **Outputs without a reader.** 狗's three fields reach the Prompt line and
+  the E-dog-helps report but not the stepper. Giraffe's priority projection
+  has no reader found. Each needs a named reader or should stop.
+
+**What VERIFY checks.** Coverage: every operator chat turn at :7073 has a
+record that reached `:settled` within a stated interval, with each animal's
+field present or typed absent (core.logic over the records). Attachment: one
+stepper per REPL (reazon). The order of events above is what coverage checks.
+
+**Open for DERIVE.** Whether the projector runs at `:settled` or in batch;
+the GCC record types for 狗 (recall, use, buried) and 猴 (focus); where
+Giraffe's batch pipeline is scheduled, if anywhere; the CTRL write-up.
+
 ## Acceptance checklist (IDENTIFY)
 
 - [ ] For each animal: which GCC node and edge types it writes, and which XTQL queries it reads
@@ -292,12 +342,17 @@ the remaining work is understanding their composition, then verifying it.
 
 - [x] E-evidence-cleanup has closed (gate to MAP).  Closure: `1ccde6689`;
   live admission defences: futon1b `4f43c51`, `fd4efb2`.
-- [ ] Each animal's trigger, input, output and output store are confirmed against
-  the code, not only against this table. 狗's current code role and 猴's seat are
+- [x] Each animal's trigger, input, output and output store are confirmed against
+  the code, not only against this table. Done 2026-11-11: MAP note `3108d2c26`;
+  the table above is corrected from it (five mismatches). 狗's current code role and 猴's seat are
   the least certain.
-- [ ] The dispatch boundary is written down: which invocations are dispatches
+- [x] The dispatch boundary is written down (MAP note §7: dispatches are invoke
+  jobs; machinery is turn-service listeners plus the 象-N, 驴-haiku and
+  馬-sonnet calls they make; told apart by the record's `:origin`,
+  `:analysis_dispatch` and the evidence writer): which invocations are dispatches
   (part 3 of the model) and which are Circus machinery.
-- [ ] A per-turn 狗 recall exists in prototype, showing the 1–2 line form, with
+- [x] A per-turn 狗 recall exists in prototype (live 2026-11-11, `74e644f33`;
+  handles are project/slug, one file each), showing the 1–2 line form, with
   handles that resolve in one call.
 - [ ] CLAUDE.md's minus40 section is rewritten to treat 驴/狗 items as entry
   points. Do this only once 狗 lines actually arrive.
