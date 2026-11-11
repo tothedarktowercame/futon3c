@@ -154,6 +154,40 @@ This mission makes 狗 the agent's memory hook.
   short reason it fired. The next ring out is the GCC neighbourhood: a memory's
   `[[links]]`, a pattern's cascade.
 
+### 狗: recall before the agent's turn, use checked after it
+
+Joe's words, gathered 2026-11-11 from the evidence store:
+- 10-24: "We might want to designate the actual worker as 狗 … 狗, the
+  actual operative agent, should have some requirements placed upon it,
+  related to the use and storage of memories"; "rather than just using
+  standard Claude memories, you would try to use the m40 memories instead".
+- 11-05: "狗 is to agent as 驴 is to operator. So, 驴 could retrieve relevant
+  patterns derived from the operator turn as a post-hook, whereas 狗 would
+  retrieve relevant memories for the agent as a pre-hook"; shown as "a brief
+  1-2 line memory recall similar to "continuation:" or "system:" lines",
+  "pushed to the agent", stored "as metadata … on yours".
+- 11-11: "it needs both pre-hook to retrieve any relevant memories (it could
+  either read the operator text patterns or wait for the 驴 patterns) and
+  also a post-hook to see whether any of these memories were actually
+  used/useful … When 猴 is ready a pre-computed operator focus could help
+  guide "relevant"."
+
+What exists (11-11): minus40's SessionStart brief injects memories per
+session, not per turn (24 of claude-13's 188 frames carry an `injected`
+list); its PostToolUse hook checks memory writes for near-duplicates; the
+frames record explicit m40 calls (`memory.calls`). `xiang/lu_memory.clj`
+is 驴 writing its verdicts into minus40, not 狗 reading.
+
+Shape: the **pre-hook** is a prompt-line provider (`agency/prompt_line.clj`,
+beside 驴's `pattern ~…` facts) that adds `memory ~<slug> (<why>)` items,
+each a handle resolvable in one call; the recalled slugs are kept as
+metadata on the agent's reply. The **post-hook** reads each recalled
+memory against what the turn did (cited, opened, applied) and records
+used / not used: a prediction ("this memory is relevant") and its
+observation, as in E-gcc-schema §16 items 11–13, so retrieval can learn
+from it. Relevance first from the operator's text (fast), then 驴's
+patterns, later 猴's operator focus.
+
 ### The giant connected component
 
 The GCC of patterns, missions, turns, sessions and memories is a derived graph in
