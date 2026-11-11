@@ -28,7 +28,8 @@
             [futon3c.watcher.projections.python :as python]
             [futon3c.watcher.projections.flexiarg :as flexiarg]
             [futon3c.watcher.projections.essay :as essay]
-            [futon3c.watcher.scope-reingest :as scope-reingest]))
+            [futon3c.watcher.scope-reingest :as scope-reingest]
+            [futon3c.watcher.pattern-index :as pattern-index]))
 
 
 ;; Every watcher HTTP call has a deadline. babashka's http-client waits
@@ -1524,6 +1525,9 @@
       (let [t-start (System/currentTimeMillis)
             stats (ingest-flexiarg! {:path path})
             dur (- (System/currentTimeMillis) t-start)]
+        ;; keep the pattern-index sidecar current too (debounced + async —
+        ;; never blocks here; M-repl-circus packet 2)
+        (pattern-index/on-file-event! path)
         (assoc stats :status :pattern :duration-ms dur :path path))
 
       :else
