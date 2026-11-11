@@ -1006,9 +1006,15 @@ appending to the old session's frames.  If a frames fetch is already
 running, no switch is made now; it happens on the next recorded turn.
 Failures are reported once and never escape the process sentinel."
   (let* ((source (current-buffer))
-         (session (and (file-readable-p path)
-                       (ignore-errors
-                         (alist-get 'session_id (json-read-file path)))))
+         ;; "pending" is the placeholder a REPL records before its session
+         ;; id arrives; hundreds of records from every seat share it, so it
+         ;; names no session (codex-6's stepper followed it to codex-16's
+         ;; turn of 10-29, 2026-11-11).
+         (session (let ((s (and (file-readable-p path)
+                                (ignore-errors
+                                  (alist-get 'session_id (json-read-file path))))))
+                    (and (stringp s) (not (string-empty-p s))
+                         (not (equal s "pending")) s)))
          ;; Steppers bearing on this turn: the one reading this session, the
          ;; one attached to this REPL, and the one a follow-switch moves (the
          ;; stepper attached here, else a visible stepper on another session —

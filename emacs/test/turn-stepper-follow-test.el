@@ -56,6 +56,26 @@ turn-stepper in Y would do)."
               (should (equal (list (list "sess-B" Y)) fetches)))))
       (dolist (b (list X Y)) (when (buffer-live-p b) (kill-buffer b))))))
 
+(ert-deftest turn-stepper-follow-ignores-pending-session ()
+  "A turn recorded before its REPL has a session id (session_id
+\"pending\") moves no stepper: \"pending\" is shared by every seat's
+early turns, so following it shows other agents' old turns."
+  (let* ((dir (make-temp-file "turn-stepper-follow" t))
+         (record-p (turn-stepper-follow-test--record dir "pending"))
+         (fetches nil)
+         (X (get-buffer-create " *ts-follow-X*"))
+         (Y (get-buffer-create " *ts-follow-Y*")))
+    (unwind-protect
+        (turn-stepper-follow-test--with-stepper X "sess-A"
+          (lambda ()
+            (cl-letf (((symbol-function 'turn-stepper--start-fetch)
+                       (lambda (session source &optional _quiet _tries)
+                         (push (list session source) fetches))))
+              (with-current-buffer Y
+                (turn-stepper--turn-recorded record-p))
+              (should (null fetches)))))
+      (dolist (b (list X Y)) (when (buffer-live-p b) (kill-buffer b))))))
+
 (ert-deftest turn-stepper-follow-active-repl-nil-stays-on-session ()
   "With `turn-stepper-follow-active-repl' nil, a turn recorded from
 another REPL leaves the stepper on its session and source buffer."
