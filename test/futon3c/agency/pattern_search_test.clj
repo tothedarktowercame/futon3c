@@ -159,3 +159,15 @@
     (binding [search/*sidecar-path* (str lib "/missing.sqlite")
               search/*resident-command* nil]
       (is (some #{"--embeddings"} (#'search/resident-command))))))
+
+(deftest choose-source-survives-a-stats-map-from-before-the-reload
+  ;; !stats is a defonce: a live reload keeps the old map, which has no
+  ;; :sidecar/:json-path keys.  claude-13, 2026-11-11: (update s :sidecar inc)
+  ;; threw on nil there, so the live resident never started after the reload.
+  (let [stats @#'futon3c.agency.pattern-search/!stats
+        before @stats]
+    (try
+      (reset! stats {:resident-hits 0 :fallbacks 0 :restarts 0 :last-latency-ms nil})
+      (is (#{:sidecar :json} (:mode (futon3c.agency.pattern-search/choose-source))))
+      (finally (reset! stats before)))))
+

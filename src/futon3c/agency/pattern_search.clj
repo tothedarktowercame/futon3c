@@ -46,17 +46,17 @@
                (catch Throwable _ {:usable? false :why :unreadable}))]
     (cond
       (:usable? u)
-      (do (swap! !stats (fn [s] (-> (update s :sidecar inc)
+      (do (swap! !stats (fn [s] (-> (update s :sidecar (fnil inc 0))
                                     (assoc :source :sidecar))))
           {:mode :sidecar :why (:why u)})
 
       (= :drift (:why u))
-      (do (swap! !stats (fn [s] (-> (update s :sidecar-stale inc)
+      (do (swap! !stats (fn [s] (-> (update s :sidecar-stale (fnil inc 0))
                                     (assoc :source :sidecar-stale))))
           {:mode :sidecar :stale? true :why :drift})
 
       :else
-      (do (swap! !stats (fn [s] (-> (update s :json-path inc)
+      (do (swap! !stats (fn [s] (-> (update s :json-path (fnil inc 0))
                                     (assoc :source :json))))
           {:mode :json :why (:why u)}))))
 
