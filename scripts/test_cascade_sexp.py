@@ -67,6 +67,15 @@ class CascadeSexpTest(unittest.TestCase):
         self.assertEqual(text.count("=(element %s" % GLUE), 1)   # named once
         self.assertRegex(text, r"\(#\d+# \(%s BECAUSE\) \(%s HOWEVER\)\)" % (RWEF, FMC))
 
+    def test_minimal_form_is_the_patterns_and_their_glue(self):
+        # Joe, 2026-11-11: "a 2 or 3 line form showing the two patterns and
+        # their glue".
+        occ, frame = load()
+        self.assertEqual(cascade_sexp.render_minimal(occ, frame).splitlines()[1:], [
+            '(cascade "emacs-d1ceee43f003a912322bce0c0f951169" "2026-11-11T16:15:24.046120661Z"',
+            "  (%s BECAUSE #1=%s)" % (RWEF, GLUE),
+            "  (%s HOWEVER #1#))" % FMC])
+
     def test_unshared_element_has_no_label(self):
         occ, frame = load()
         text = cascade_sexp.render(occ, frame)

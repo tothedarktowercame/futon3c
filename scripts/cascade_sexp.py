@@ -10,7 +10,10 @@ A situation element used by more than one part is written once as
 sharing: `read' returns one object for every #N#, so a glue is two parts
 that hold the same (eq) element.  An element used once gets no label.
 
-  cascade_sexp.py <lab-dir> [--out FILE]
+  cascade_sexp.py <lab-dir> [--detail] [--out FILE]
+
+The default is the minimal form: one line per complete occurrence, with only
+the parts that glue.  --detail adds every part, element and quote.
 
 <lab-dir> holds occurrences.json (kimi-2's mapping format: pattern, maps
 I1/I2/G/B each {element, source} or {element: null, reason}) and frame.json
@@ -115,17 +118,48 @@ def render(occurrences, frame, part_text=None):
     return "\n".join(out) + "\n"
 
 
+def render_minimal(occurrences, frame):
+    """The cascade structure only (Joe, 2026-11-11: "a 2 or 3 line form
+    showing the two patterns and their glue"): one line per complete
+    occurrence, naming only the parts whose element another complete
+    occurrence also holds.  A null cascade is the head line alone."""
+    complete = [o for o in occurrences if len(mapped(o)) == 4]
+    holders = {}
+    for o in complete:
+        for p, r in PARTS:
+            holders.setdefault(o["maps"][r]["element"], set()).add(o["pattern"])
+    labels = {}
+    turn = frame.get("turn") or {}
+    lines = [";;; -*- mode: lisp-data -*-",
+             "(cascade %s %s" % (q(turn.get("evidence_id")), q(turn.get("at")))]
+    for o in complete:
+        glued = []
+        for p, r in PARTS:
+            e = o["maps"][r]["element"]
+            if len(holders[e]) > 1:
+                if e in labels:
+                    glued.append("%s #%d#" % (p, labels[e]))
+                else:
+                    labels[e] = len(labels) + 1
+                    glued.append("%s #%d=%s" % (p, labels[e], sym(e)))
+        lines.append("  (%s)" % " ".join([sym(o["pattern"])] + glued))
+    lines[-1] += ")"
+    return "\n".join(lines) + "\n"
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("lab_dir")
     ap.add_argument("--out")
+    ap.add_argument("--detail", action="store_true",
+                    help="every part, element and quote, partials and voids")
     a = ap.parse_args(argv)
     with open(os.path.join(a.lab_dir, "occurrences.json"), encoding="utf-8") as f:
         occurrences = json.load(f)
     with open(os.path.join(a.lab_dir, "frame.json"), encoding="utf-8") as f:
         frame = json.load(f)
     frame = frame[0] if isinstance(frame, list) else frame
-    text = render(occurrences, frame)
+    text = (render if a.detail else render_minimal)(occurrences, frame)
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:
             f.write(text)
