@@ -82,3 +82,28 @@
 
 (provide 'agent-chat-large-buffer-test)
 ;;; agent-chat-large-buffer-test.el ends here
+
+(ert-deftest agent-chat-large-buffer-keeps-turns-on-the-record ()
+  ;; 2026-11-10: degrading a large REPL switched its turn tags off, and the
+  ;; 象 capture (gated on them) stopped with it for claude-13 and claude-9.
+  ;; The painting goes; the capture stays.  A hand toggle still decides.
+  (require 'session-mode)
+  (require 'session-turn-analysis)
+  (let ((global-session-mode-turn-tags-mode t))
+    (with-temp-buffer
+      (insert (make-string 200 ?x))
+      (cl-letf (((symbol-function 'session-mode--load-live-vocabulary) #'ignore)
+                ((symbol-function 'session-mode-turn-tags-refresh) #'ignore)
+                ((symbol-function 'session-mode--paint-rnode-tags) #'ignore))
+        (session-mode-turn-tags-mode 1)
+        (should (session-mode--on-record-p))
+        (let ((agent-chat-large-buffer-threshold 100)
+              (agent-chat-large-buffer-decorated-tail 50))
+          (agent-chat-maybe-degrade-large-buffer))
+        (should agent-chat--large-buffer-degraded-p)
+        (should-not session-mode-turn-tags-mode)
+        (should (session-mode--on-record-p))
+        ;; Joe turns the tags on and off by hand: off the record.
+        (session-mode-turn-tags-mode 1)
+        (session-mode-turn-tags-mode -1)
+        (should-not (session-mode--on-record-p))))))

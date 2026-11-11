@@ -2034,6 +2034,8 @@ Kept separate from full session markup so typing never triggers retrieval."
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c s i") #'session-mode-describe-turn-intent)
             map)
+  ;; A hand toggle decides the record from now on, even in a large buffer.
+  (setq-local agent-chat--turn-tags-suspended-by-size nil)
   (if session-mode-turn-tags-mode
       (progn
         (session-mode--load-live-vocabulary)

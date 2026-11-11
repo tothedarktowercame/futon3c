@@ -1906,9 +1906,18 @@ building or storing the summary warns once and still dispatches the turn."
 (defvar agent-chat--agent-id)
 (defvar agent-chat--turn-git-heads)
 
+(defun session-mode--on-record-p ()
+  "Are this buffer's operator turns captured?  Yes when the turn tags are
+on, and also when they were switched off only to keep a large buffer fast
+\(agent-chat drops the painting there, not the capture).  Switching the
+tags off by hand still takes a buffer off the record."
+  (or session-mode-turn-tags-mode
+      (and (bound-and-true-p agent-chat--turn-tags-suspended-by-size)
+           (bound-and-true-p global-session-mode-turn-tags-mode))))
+
 (defun session-mode--analyze-start-turn (original call agent-name hooks text speaker origin)
   "Wrap only ordinary operator CALLs; keep visible text and hooks unchanged."
-  (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
+  (if (not (and (session-mode--on-record-p) (eq origin 'operator)
                 (equal speaker agent-chat-user-speaker)
                 (not (agent-chat--walkie-command-p (string-trim text)))))
       (funcall original call agent-name hooks text speaker origin)

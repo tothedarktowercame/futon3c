@@ -110,6 +110,11 @@ Changing these labels does not change the underlying phase vocabulary."
   :type 'string
   :group 'agent-chat)
 
+(defvar-local agent-chat--turn-tags-suspended-by-size nil
+  "Non-nil when this buffer's turn tags were switched off only because the
+buffer passed `agent-chat-large-buffer-threshold'.  Its turns are still
+captured; switching the tags mode by hand clears this.")
+
 (defvar-local agent-chat--large-buffer-degraded-p nil)
 (defvar-local agent-chat--large-buffer-stripped-through 1)
 (defvar-local agent-chat-pager-mode nil)
@@ -2450,7 +2455,12 @@ decoration; older history is progressively stripped after completed turns."
         (font-lock-mode -1))
       (when (and (bound-and-true-p session-mode-turn-tags-mode)
                  (fboundp 'session-mode-turn-tags-mode))
-        (session-mode-turn-tags-mode -1))
+        (session-mode-turn-tags-mode -1)
+        ;; Only the painting is dropped: the buffer's operator turns stay on
+        ;; the record (`session-mode--on-record-p').  Without this the 象
+        ;; capture stopped silently once a REPL passed the threshold
+        ;; (claude-13 and claude-9, 2026-11-10).
+        (setq-local agent-chat--turn-tags-suspended-by-size t))
       ;; Even the retained tail must not carry thousands of native-code or
       ;; tool-detail overlays.  Its baked speaker/body faces remain readable.
       (agent-chat--delete-renderer-overlays (point-min) (point-max)))
