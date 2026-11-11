@@ -1,6 +1,7 @@
 # E-fetch-entity miss path: 27 s per 404, stringified ends, orphan UUID ends
 
-**VERDICT (2026-10-09, provisional):** DONE — Discovery plus P1-P3 fixes executed and logged with live numbers and a corrected post-check; commits record completion on 2026-08-23. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
+**Status:** CLOSED (2026-11-11). Fixed 2026-08-23, regressed by growth (entities 5,900 → 62,799 rows; cold miss ~20 s again), fixed again by serving alias and id lookups from indexed entities-sidecar columns (futon1b `2b1a1cfb`; diagnosis `TN-entity-miss-regression-2026-11-11.md`, `85c8b663`; codex-4, reviewed by claude-13). Live after Joe's futon1b restart (02:58Z): cold miss 404 in 3 ms, hit 2 ms, name lookup of a UUID-keyed entity 0.94 s and correct. Giraffe top twenty #8.
+Earlier: **VERDICT (2026-10-09, provisional):** DONE — Discovery plus P1-P3 fixes executed and logged with live numbers and a corrected post-check; commits record completion on 2026-08-23. _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
 
 Measured 2026-08-23 by ams-claude (Fable) against the live futon1b JVM
 (`:7073`, `/home/joe/code/futon1b` master). Discovery only — no source or
