@@ -1,7 +1,19 @@
 (ns futon3c.agency.pattern-search
-  "Single-owner resident futon3a pattern search with fail-safe one-shot fallback."
+  "Single-owner resident futon3a pattern search with fail-safe one-shot fallback.
+
+   Source choice (M-repl-circus packet 3): the resident answers from the
+   pattern-index sidecar (notions_search.py --resident --sidecar) when
+   agency.pattern-index/usable? says the sidecar is usable — or when it is
+   merely behind (why :drift: at most one build back; serve it, counted as
+   :sidecar-stale in stats).  Today's JSON path (minilm_pattern_embeddings.json)
+   is the fallback when the sidecar is missing or unreadable, counted as
+   :json-path.  stats reports which :source answered; the choice is re-made
+   whenever the resident (re)starts, and in sidecar mode the resident itself
+   reloads when the checkpoint seq moves — a new build reaches queries with
+   nobody acting."
   (:require [cheshire.core :as json]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.agency.pattern-index :as pidx])
   (:import [java.io BufferedReader BufferedWriter InputStreamReader OutputStreamWriter]
            [java.lang ProcessBuilder$Redirect]
            [java.util.concurrent TimeUnit]))
@@ -10,23 +22,55 @@
 (def ^:dynamic *startup-timeout-ms* 15000)
 (def ^:dynamic *resident-command* nil)
 (def ^:dynamic *fallback-search* nil)
+(def ^:dynamic *sidecar-path* pidx/default-db-path)
+(def ^:dynamic *library-root* pidx/futon3-root)
 
 (defonce ^:private owner-lock (Object.))
 (defonce ^:private !resident (atom nil))
 (defonce ^:private !started-before? (atom false))
 (defonce ^:private !stats
-  (atom {:resident-hits 0 :fallbacks 0 :restarts 0 :last-latency-ms nil}))
+  (atom {:resident-hits 0 :fallbacks 0 :restarts 0 :last-latency-ms nil
+         :sidecar 0 :sidecar-stale 0 :json-path 0 :source nil}))
 
 (defn- futon3a-root []
   (or (System/getenv "FUTON3A_ROOT")
       (str (System/getProperty "user.home") "/code/futon3a")))
 
+(defn choose-source
+  "Which embeddings source the resident should answer from.
+   {:mode :sidecar} when the sidecar is usable; {:mode :sidecar :stale? true}
+   when it is only behind (drift — at most one build back); {:mode :json}
+   when it is missing or unreadable.  Counts the choice in stats."
+  []
+  (let [u (try (pidx/usable? *sidecar-path* {:library-root *library-root*})
+               (catch Throwable _ {:usable? false :why :unreadable}))]
+    (cond
+      (:usable? u)
+      (do (swap! !stats (fn [s] (-> (update s :sidecar inc)
+                                    (assoc :source :sidecar))))
+          {:mode :sidecar :why (:why u)})
+
+      (= :drift (:why u))
+      (do (swap! !stats (fn [s] (-> (update s :sidecar-stale inc)
+                                    (assoc :source :sidecar-stale))))
+          {:mode :sidecar :stale? true :why :drift})
+
+      :else
+      (do (swap! !stats (fn [s] (-> (update s :json-path inc)
+                                    (assoc :source :json))))
+          {:mode :json :why (:why u)}))))
+
 (defn- resident-command []
   (or *resident-command*
-      (let [root (futon3a-root)]
-        [(str root "/.venv/bin/python3") "-u"
-         (str root "/scripts/notions_search.py") "--resident"
-         "--embeddings" (str root "/resources/notions/minilm_pattern_embeddings.json")])))
+      (let [root (futon3a-root)
+            source (choose-source)]
+        (if (= :sidecar (:mode source))
+          [(str root "/.venv/bin/python3") "-u"
+           (str root "/scripts/notions_search.py") "--resident"
+           "--sidecar" (str *sidecar-path*)]
+          [(str root "/.venv/bin/python3") "-u"
+           (str root "/scripts/notions_search.py") "--resident"
+           "--embeddings" (str root "/resources/notions/minilm_pattern_embeddings.json")]))))
 
 (defn- destroy! [{:keys [^Process process ^BufferedReader reader ^BufferedWriter writer]}]
   (when writer (try (.close writer) (catch Throwable _)))
@@ -47,7 +91,8 @@
 (defn reset-state! []
   (stop!)
   (reset! !started-before? false)
-  (reset! !stats {:resident-hits 0 :fallbacks 0 :restarts 0 :last-latency-ms nil}))
+  (reset! !stats {:resident-hits 0 :fallbacks 0 :restarts 0 :last-latency-ms nil
+                  :sidecar 0 :sidecar-stale 0 :json-path 0 :source nil}))
 
 (defn stats [] @!stats)
 
