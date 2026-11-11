@@ -463,6 +463,10 @@
                               (not (contains? stopwords %)))))]
     (set (partition 2 1 ws))))
 
+(def echo-min-shared
+  "Shared distinctive content bigrams needed for \"echoed\" (see use-check)."
+  2)
+
 (defn use-check
   "狗 post-hook, part 1 (Joe 2026-11-11: \"see whether any of these
    memories were actually used/useful\", reading the operator record).
@@ -478,19 +482,22 @@
    - \"named\"   — the reply names the memory: its slug or full
                  project/slug handle appears verbatim in the reply text;
    - \"echoed\"  — the reply restates the memory's content, defined as
-                 ≥1 shared DISTINCTIVE CONTENT BIGRAM (see
-                 content-bigrams) between the reply and the memory
-                 body. Threshold justified from the live turns, not by
-                 feel: over the 12 operator turns of 2026-11-11 with
-                 dog_recall items and a reply (22 items), the 18 items
-                 judged unused (read by hand) share 0 content bigrams
-                 with their reply, while the 3 judged-used items
-                 (turn-vsC2tD, whose reply says \"I did put a
-                 requisition line on the packet\") share 1–3. One shared
-                 distinctive bigram never occurred by chance, so the
-                 threshold is 1. (Raw shared-TERM counts do not
-                 separate: judged-unused items reach 28 shared terms on
-                 generic vocabulary.)
+                 at least echo-min-shared (2) shared DISTINCTIVE
+                 CONTENT BIGRAMS (see content-bigrams) between the reply
+                 and the memory body. kimi-1's first cut (d415a2093) set
+                 the threshold at 1: over the 12 operator turns of
+                 2026-11-11 with dog_recall items and a reply (22
+                 items), the 18 judged unused share 0 bigrams with their
+                 reply. But the 3 judged used were all caught by name,
+                 so no real item tested the echo half, and the first
+                 live turn after loading (turn-WHNTlI, claude-13's
+                 review) counted kinesis-vdrive-editing as echoed on the
+                 one bigram \"mode line\" in a reply about a music
+                 player's mode line. With its slug mentions removed, the
+                 vsC2tD reply still shares 3 bigrams with
+                 kimi-unique-requisition, so 2 keeps that case. (Raw
+                 shared-TERM counts do not separate: judged-unused
+                 items reach 28 shared terms on generic vocabulary.)
    - \"unused\"  — neither.
    An item whose body is unavailable can only be named or unused; its
    :evidence says so.
@@ -529,14 +536,17 @@
                         :else
                         (let [shared (seq (set/intersection
                                            reply-bigrams (content-bigrams body)))]
-                          (if shared
+                          (if (<= echo-min-shared (count shared))
                             {:memory handle :used true :kind "echoed"
                              :evidence (str "shared bigrams: "
                                             (str/join ", "
                                                       (take 4 (map #(str "\"" (str/join " " %) "\"")
                                                                    shared))))}
                             {:memory handle :used false :kind "unused"
-                             :evidence "no shared distinctive bigrams; not named"})))))
+                             :evidence (if shared
+                                         (str "one shared bigram (below " echo-min-shared "): "
+                                              (str/join " " (first shared)) "; not named")
+                                         "no shared distinctive bigrams; not named")})))))
                   items)]
         {:at (str (Instant/now)) :status "ok"
          :surfaced-memory-ids (mapv :memory checked)

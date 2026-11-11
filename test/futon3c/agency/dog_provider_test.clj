@@ -447,20 +447,36 @@
            (first (:items result))))
     (is (empty? (:used-memory-ids result)))))
 
+(def fixture-WHNTlI-record (delay (fixture "turn-WHNTlI.record.json")))
+
 (deftest use-check-echoed-without-naming
-  ;; A reply fragment from the REAL turn-vsC2tD reply that names no slug
-  ;; but shares the distinctive bigram "kimi seat" with the
-  ;; kimi-unique-requisition body: echoed, not named.
+  ;; The REAL turn-vsC2tD reply with every mention of the recalled
+  ;; slugs removed: it still restates kimi-unique-requisition (3 shared
+  ;; bigrams, among them "kimi seat"), so the echo half catches it.
   (let [fix @fixture-vsC2tD-record
-        record {:dog_recall (:dog_recall fix)
-                :reply_text "Your turn asked me to send a packet to a Kimi seat, so those were on point."}
+        handles (map :memory (get-in fix [:dog_recall :items]))
+        stripped (reduce (fn [t h] (-> t (str/replace h "")
+                                       (str/replace (peek (str/split h #"/")) "")))
+                         (:reply_text fix) handles)
+        record {:dog_recall (:dog_recall fix) :reply_text stripped}
         result (dog/use-check record (bodies-map fix))
         by-memory (into {} (map (juxt :memory identity)) (:items result))]
     (is (= "echoed" (get-in by-memory ["-home-joe-code-voxterm/kimi-unique-requisition" :kind])))
-    (is (re-find #"shared bigrams: \"kimi seat\""
-                 (get-in by-memory ["-home-joe-code-voxterm/kimi-unique-requisition" :evidence])))
-    (is (= "unused" (get-in by-memory ["-home-joe-code/batch-packets-invite-corner-cutting" :kind]))
-        "a memory sharing no bigram with this fragment stays unused")))
+    (is (re-find #"\"kimi seat\""
+                 (get-in by-memory ["-home-joe-code-voxterm/kimi-unique-requisition" :evidence])))))
+
+(deftest use-check-one-generic-bigram-is-not-an-echo
+  ;; turn-WHNTlI (claude-5, 2026-11-11 21:52), the first live turn after
+  ;; d415a2093 loaded: the reply is about a music player in Joe's mode
+  ;; line and shares only "mode line" with kinesis-vdrive-editing. At
+  ;; threshold 1 it was recorded as echoed (used); it was not used.
+  (let [fix @fixture-WHNTlI-record
+        result (dog/use-check {:dog_recall (:dog_recall fix) :reply_text (:reply_text fix)}
+                              (bodies-map fix))
+        item (some #(when (= "-home-joe/kinesis-vdrive-editing" (:memory %)) %) (:items result))]
+    (is (= "unused" (:kind item)))
+    (is (re-find #"one shared bigram .*mode line" (:evidence item)))
+    (is (empty? (:used-memory-ids result)))))
 
 (deftest use-check-typed-absences
   (is (= "no-recall" (:status (dog/use-check {:reply_text "some reply"} {})))
