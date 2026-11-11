@@ -1,7 +1,9 @@
 # E-evidence-flow — where evidence is written, where it is read, and whether streams ever merge
 
-**Status: IDENTIFY (2026-07-05). Chartered by Joe (emacs-repl), probes + write-up by
-claude-18. Owner: TBD (single-agent, per E-prefix convention).**
+**Status: CLOSED (2026-11-11, Joe: "Yes we can close"). The split it chartered no
+longer exists: one store on zone. The feature is documented as turned off in
+[FEATURE-evidence-flow.md](../FEATURE-evidence-flow.md), for federated agency.
+Chartered 2026-07-05 by Joe (emacs-repl), probes + write-up by claude-18.**
 
 A bounded excursion: establish the *actual* topology of evidence flow across the futon
 mesh (laptop/Dionysus, lucy/linode1, metameso/linode2), then decide what it *should* be.
@@ -97,5 +99,28 @@ a timescale). Each has different failure modes for the attestation/WM consumers 
 
 _Drafted from this document's own stated goals during the War Machine status classification (zai-2, medium confidence); not yet confirmed by the author._
 
-- [ ] The actual evidence-flow topology is written up: where evidence is written, where read, and whether streams merge, with probe results
-- [ ] Either base-URL fixes land for consumers needing pinned bases, or the clean-kill finding (intentionally disjoint streams) is recorded as closure
+- [x] The actual evidence-flow topology is written up: see "Closure (2026-11-11)" below.
+- [x] Clean kill recorded: base-URL fixes landed 2026-07-18 for reads; the second stream is gone.
+
+## Closure (2026-11-11, claude-13; read-only probes)
+
+- **zone:** the serving futon3c JVM has `FUTON_SUBSTRATE_URL=http://127.0.0.1:7073`
+  and no `FUTON3C_EVIDENCE_BASE`, so every zone agent writes and reads the one
+  futon1b store.
+- **lucy:** nothing listens on :7070 and no Java runs; its :7073 is nginx. The
+  store measured in July is gone. lucy holds the nightly restic copy.
+- **metameso (chi):** Agency up 43 days, evidence store empty (`count 0`); a
+  peer for cross-site bells and the other nightly copy.
+- **Readers:** reads default to the local store since 2026-07-18
+  (`scripts/dev-laptop-env`); futon0 reports and the REPLs honour
+  `FUTON3C_EVIDENCE_BASE` only when set, and on zone it is not.
+- **Q1–Q5:** Q2, Q3, Q5 lapse with the second stream; Q1 referred to the two
+  July stores, both gone; Q4's "replicated entries" design was never built and
+  the nightly backup took its place.
+- **Leftover:** `dev-laptop-env` defaults `FUTON2_WM_EMIT_BASE` to lucy's dead
+  :7070 (laptop JVM only); noted in the feature page, not changed.
+- **Carried:** the feature, for federated agency (Joe: "in principle Murch or
+  Rob or some other collaborator could work with their own Agency"), to
+  [FEATURE-evidence-flow.md](../FEATURE-evidence-flow.md); the question "do
+  others work this way?" to futon7 `holes/argument-graph/questions.edn`
+  (Q-joe-5); backup warnings to M-ways-of-working (stays-alive-and-paid).

@@ -7,6 +7,8 @@ Sibling: `M-agency-hardening.md` (CLOSED 2026-06-12 — the local/IRC layer; nam
 `M-kangaroo` warm-pouch as a deferred successor). This mission is the **federation**
 layer: making Agency correct across boxes.
 
+See also [FEATURE-evidence-flow.md](../FEATURE-evidence-flow.md) (2026-11-11): how evidence would meet across boxes, turned off while there is one working Agency; Joe sees federated agency as a route for collaborators to run their own Agency.
+
 ## Acceptance checklist (2026-09-30)
 
 - [x] A laptop agent is invoked over the WS uplink while the reverse SSH tunnel is absent. (evidence: Checkpoint CP-F-verify, job `invoke-1783960316834-17-01c56302`)

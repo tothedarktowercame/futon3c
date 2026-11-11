@@ -153,6 +153,19 @@ walk itself (futon1b cold pages) is still open.
 
 ## Open findings, each to become its own item
 
+- **Backup warnings, like Inbox Zero's (Joe, 2026-11-11).** "I know Cascade
+  Live shows when the latest backup was made, but it would be good, once we
+  have ways of working, to get *warnings* (like I do for Inbox Zero) if that
+  ever *isn't* happening on schedule for whatever reason." The checks exist:
+  `zone-health` `evidence-backup` (off-box evidence copy on both hubs, under 7
+  days), `site-backup` and `git-backup`; on 2026-11-11 evidence-backup and
+  site-backup PASS (21–22 h). What is missing is the warning: Inbox Zero's
+  reaches Joe through futon3c `emacs/inbox-zero-reazon-reminder.el` (an
+  agent-chat invariant that reads receipts and systemd state). A backup
+  reminder would be the same shape, reading the zone-health backup verdicts,
+  under stays-alive-and-paid. Not built; context:
+  [FEATURE-evidence-flow.md](../FEATURE-evidence-flow.md).
+
 1. ~~The consent-gate sweeper sends without `--from`~~ Resolved
    (`d7ea790eb`): its bells are brief-mode notifications, which need no return
    path, and the probe now exempts them. Live: 0 of 202 work bells without a
