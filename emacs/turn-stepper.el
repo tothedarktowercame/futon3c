@@ -83,8 +83,8 @@ the next recorded turn instead.  A closed stepper is never reopened."
 
 (defvar agent-chat--pending-process)
 
-(defvar turn-stepper--hidden-anchor nil
-  "The REPL window whose buffer switch hid the stepper, or nil.")
+(defvar-local turn-stepper--hidden-anchor nil
+  "The REPL window whose buffer switch hid this stepper, or nil.")
 
 (defvar turn-stepper--reload-failed nil
   "Non-nil while the stepper reopens its old frames after a failed reload.")
@@ -117,6 +117,76 @@ REPL buffers keep it in the buffer-local variable
            (not (string-empty-p agent-chat--session-id))
            (not (equal agent-chat--session-id "pending"))
            agent-chat--session-id))))
+
+;;; ---------------------------------------------------------------- naming
+;; M-repl-circus invariant 1 (Joe, 2026-11-11): a stepper is attached to
+;; exactly one REPL, and when two REPLs are stepped at once each stepper's
+;; name carries its REPL's agent id: *象 stepper:claude-13*.  The bare
+;; `turn-stepper-buffer-name' stays the name of a stepper opened from a
+;; buffer with no known agent id; a bare stepper attached to an identified
+;; REPL is renamed to the indexed name the next time it is opened.
+
+(defun turn-stepper--agent-id-in-buffer (buffer)
+  "Agent id of the REPL in BUFFER, from its mode's local, or nil."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (or (and (boundp 'claude-repl-agent-id)
+               (stringp claude-repl-agent-id)
+               claude-repl-agent-id)
+          (and (boundp 'codex-repl-agency-agent-id)
+               (stringp codex-repl-agency-agent-id)
+               codex-repl-agency-agent-id)
+          (and (boundp 'kimi-repl-agent-id)
+               (stringp kimi-repl-agent-id)
+               kimi-repl-agent-id)))))
+
+(defun turn-stepper--buffer-name-for (source)
+  "Stepper buffer name for an open from SOURCE.
+`*象 stepper:<agent-id>*' when SOURCE's REPL has a known agent id;
+`turn-stepper-buffer-name' (the bare prefix) otherwise."
+  (let ((agent (turn-stepper--agent-id-in-buffer source)))
+    (if agent
+        (format "%s:%s*" (string-remove-suffix "*" turn-stepper-buffer-name)
+                agent)
+      turn-stepper-buffer-name)))
+
+(defun turn-stepper--buffers ()
+  "Live stepper buffers: in `turn-stepper-mode', or named with the stepper
+prefix (the bare `*象 stepper*' or an indexed `*象 stepper:<agent>*')."
+  (let ((prefix (string-remove-suffix "*" turn-stepper-buffer-name)))
+    (seq-filter (lambda (b)
+                  (or (eq 'turn-stepper-mode
+                          (buffer-local-value 'major-mode b))
+                      (string-prefix-p prefix (buffer-name b))))
+                (buffer-list))))
+
+(defun turn-stepper--find-buffer (session-id &optional source)
+  "Live stepper buffer reading SESSION-ID, attached to SOURCE when given.
+A nil SESSION-ID matches any session."
+  (seq-find (lambda (b)
+              (and (or (null session-id)
+                       (equal session-id
+                              (buffer-local-value 'turn-stepper--session-id b)))
+                   (or (null source)
+                       (eq source
+                           (buffer-local-value 'turn-stepper--source-buffer b)))))
+            (turn-stepper--buffers)))
+
+(defun turn-stepper--get-buffer-create (session-id source)
+  "The stepper buffer for SESSION-ID opened from SOURCE, creating it.
+Reuses the buffer already attached to SOURCE for SESSION-ID, renaming it
+to the indexed name when SOURCE's agent id is known (this is how a bare
+*象 stepper* migrates on its next open from an identified REPL)."
+  (let* ((wanted (turn-stepper--buffer-name-for source))
+         (existing (turn-stepper--find-buffer session-id source)))
+    (if existing
+        (progn
+          (unless (or (equal (buffer-name existing) wanted)
+                      (get-buffer wanted))
+            (with-current-buffer existing
+              (rename-buffer wanted)))
+          existing)
+      (get-buffer-create wanted))))
 
 (defun turn-stepper--parse-frames (json-string)
   "Parse JSON-STRING (output of turn_frames.py) into a list of frame alists.
@@ -640,7 +710,7 @@ If the turn text is not found in the REPL buffer, say so and do not move."
 
 (defun turn-stepper--loading-buffer (session-id source)
   "Display a stepper buffer showing a loading message for SESSION-ID."
-  (let ((buf (get-buffer-create turn-stepper-buffer-name)))
+  (let ((buf (turn-stepper--get-buffer-create session-id source)))
     (with-current-buffer buf
       (turn-stepper-mode)
       (setq turn-stepper--session-id session-id
@@ -696,7 +766,8 @@ showing it anywhere else (another frame, a frame side window) is closed."
                         nil))))
       (when w
         (set-window-parameter w 'turn-stepper-anchor anchor)
-        (setq turn-stepper--hidden-anchor nil))
+        (with-current-buffer buffer
+          (setq turn-stepper--hidden-anchor nil)))
       w)))
 
 ;; The stepper belongs to its REPL (Joe, 2026-09-30): when the REPL's window
@@ -704,23 +775,26 @@ showing it anywhere else (another frame, a frame side window) is closed."
 ;; shows the REPL again, it comes back.
 
 (defun turn-stepper--follow-source (&optional _frame)
-  "Hide or re-show the stepper as its REPL leaves or returns to its window."
-  (let* ((buf (get-buffer turn-stepper-buffer-name))
-         (source (and buf (buffer-local-value 'turn-stepper--source-buffer buf))))
-    (when (buffer-live-p source)
-      (dolist (w (get-buffer-window-list buf nil t))
-        (let ((anchor (window-parameter w 'turn-stepper-anchor)))
-          (when (and anchor
-                     (not (and (window-live-p anchor) (eq (window-buffer anchor) source))))
-            (when (window-live-p anchor) (setq turn-stepper--hidden-anchor anchor))
-            (ignore-errors (delete-window w)))))
-      (when (and (window-live-p turn-stepper--hidden-anchor)
-                 (eq (window-buffer turn-stepper--hidden-anchor) source)
-                 (not (get-buffer-window buf t)))
-        (let ((anchor turn-stepper--hidden-anchor))
-          (setq turn-stepper--hidden-anchor nil)
-          (with-selected-window anchor
-            (turn-stepper--show-window buf source)))))))
+  "Hide or re-show each stepper as its REPL leaves or returns to its window."
+  (dolist (buf (turn-stepper--buffers))
+    (let ((source (buffer-local-value 'turn-stepper--source-buffer buf)))
+      (when (buffer-live-p source)
+        (dolist (w (get-buffer-window-list buf nil t))
+          (let ((anchor (window-parameter w 'turn-stepper-anchor)))
+            (when (and anchor
+                       (not (and (window-live-p anchor) (eq (window-buffer anchor) source))))
+              (when (window-live-p anchor)
+                (with-current-buffer buf
+                  (setq turn-stepper--hidden-anchor anchor)))
+              (ignore-errors (delete-window w)))))
+        (let ((anchor (buffer-local-value 'turn-stepper--hidden-anchor buf)))
+          (when (and (window-live-p anchor)
+                     (eq (window-buffer anchor) source)
+                     (not (get-buffer-window buf t)))
+            (with-current-buffer buf
+              (setq turn-stepper--hidden-anchor nil))
+            (with-selected-window anchor
+              (turn-stepper--show-window buf source))))))))
 
 (defun turn-stepper--follow-source-soon (frame)
   ;; Deferred: changing windows from inside the redisplay hook is unsafe.
@@ -738,9 +812,8 @@ showing it anywhere else (another frame, a frame side window) is closed."
 
 (defun turn-stepper--retry-fetch (session-id source tries)
   "Retry a failed reload of SESSION-ID if its stepper is still on screen."
-  (let ((buf (get-buffer turn-stepper-buffer-name)))
+  (let ((buf (turn-stepper--find-buffer session-id source)))
     (when (and buf (get-buffer-window buf t)
-               (equal session-id (buffer-local-value 'turn-stepper--session-id buf))
                (not (get-process "turn-stepper-frames")))
       (turn-stepper--start-fetch session-id source t tries))))
 
@@ -773,14 +846,15 @@ more times a failure is retried (default `turn-stepper-reload-retries')."
                                 (turn-stepper--ready-frames
                                  (turn-stepper--parse-frames (buffer-string))))))
                          (puthash session-id frames turn-stepper--cache)
-                         (setq turn-stepper--fetched-at started)
-                         (turn-stepper--open session-id source
-                                             (turn-stepper--index-after-reload
-                                              session-id (length frames))
-                                             quiet)
-                         ;; An update skipped while this fetch ran: catch up now.
-                         (when turn-stepper--dirty
-                           (run-at-time 0 nil #'turn-stepper--reconcile)))
+                         (let ((sbuf (turn-stepper--open session-id source
+                                                         (turn-stepper--index-after-reload
+                                                          session-id (length frames))
+                                                         quiet)))
+                           (with-current-buffer sbuf
+                             (setq turn-stepper--fetched-at started)
+                             ;; An update skipped while this fetch ran: catch up now.
+                             (when turn-stepper--dirty
+                               (run-at-time 0 nil #'turn-stepper--reconcile)))))
                      (progn
                        (let ((left (if tries tries turn-stepper-reload-retries)))
                          (message "turn-stepper: reload failed (%s); frames kept%s"
@@ -805,12 +879,13 @@ more times a failure is retried (default `turn-stepper-reload-retries')."
                    (kill-buffer output))))))))
     proc))
 
-(defvar turn-stepper--dirty nil
+(defvar-local turn-stepper--dirty nil
   "Non-nil when a turn was recorded or a reading landed while a fetch was
-running, so its update was skipped: the next fetch's end fetches again.")
+running, so its update was skipped: the next fetch's end fetches again.
+Buffer-local on the stepper it concerns.")
 
-(defvar turn-stepper--fetched-at nil
-  "When the last successful frames fetch started (a Lisp time value).")
+(defvar-local turn-stepper--fetched-at nil
+  "When this stepper's last successful frames fetch started (a Lisp time).")
 
 (defcustom turn-stepper-reconcile-interval 20
   "Seconds between checks that a visible stepper matches the turn records.
@@ -831,18 +906,24 @@ record by atomic rename, so the directory's own mtime moves on every write."
           (and m (time-less-p time m))))))
 
 (defun turn-stepper--reconcile ()
-  "Refetch a visible, idle stepper whose frames may be stale."
-  (let ((buf (get-buffer turn-stepper-buffer-name)))
-    (when (and buf (get-buffer-window buf t)
-               (not (get-process "turn-stepper-frames"))
-               (not (get-process "turn-stepper-one-record")))
-      (with-current-buffer buf
-        (when (and turn-stepper--session-id
-                   (or turn-stepper--dirty
-                       (turn-stepper--store-changed-since turn-stepper--fetched-at)))
-          (setq turn-stepper--dirty nil)
-          (turn-stepper--start-fetch turn-stepper--session-id
-                                     turn-stepper--source-buffer t))))))
+  "Refetch visible, idle steppers whose frames may be stale.
+One fetch runs at a time (the shared \"turn-stepper-frames\" process), so a
+cycle refetches the first stale visible stepper; the next cycle (every
+`turn-stepper-reconcile-interval' seconds) takes the next."
+  (when (and (not (get-process "turn-stepper-frames"))
+             (not (get-process "turn-stepper-one-record")))
+    (catch 'refetched
+      (dolist (buf (turn-stepper--buffers))
+        (when (get-buffer-window buf t)
+          (with-current-buffer buf
+            (when (and turn-stepper--session-id
+                       (or turn-stepper--dirty
+                           (turn-stepper--store-changed-since
+                            turn-stepper--fetched-at)))
+              (setq turn-stepper--dirty nil)
+              (turn-stepper--start-fetch turn-stepper--session-id
+                                         turn-stepper--source-buffer t)
+              (throw 'refetched t))))))))
 
 (defvar turn-stepper--reconcile-timer nil)
 (when (timerp turn-stepper--reconcile-timer)
@@ -856,7 +937,7 @@ record by atomic rename, so the directory's own mtime moves on every write."
   "Frame to show after a reload giving COUNT frames for SESSION-ID.
 The newest frame, unless the stepper is on an older frame of the same
 session: someone reading back stays where they are."
-  (let ((buf (get-buffer turn-stepper-buffer-name)))
+  (let ((buf (turn-stepper--find-buffer session-id)))
     (or (and buf
              (with-current-buffer buf
                (and (equal turn-stepper--session-id session-id)
@@ -869,16 +950,18 @@ session: someone reading back stays where they are."
   "A 象 reading for the record at PATH has arrived: reload a stepper on it.
 Only a stepper that is on screen and reads PATH's session is reloaded;
 a closed stepper stays closed."
-  (let ((buf (get-buffer turn-stepper-buffer-name)))
-    (when (and buf (get-buffer-window buf t))
-      (let ((session (ignore-errors
-                       (alist-get 'session_id
-                                  (json-read-file path)))))
-        (with-current-buffer buf
-          (when (and session (equal session turn-stepper--session-id))
-            (if (get-process "turn-stepper-frames")
-                (setq turn-stepper--dirty t)
-              (turn-stepper--start-fetch session turn-stepper--source-buffer t))))))))
+  (let ((session (ignore-errors
+                   (alist-get 'session_id
+                              (json-read-file path)))))
+    (when session
+      (dolist (buf (turn-stepper--buffers))
+        (when (get-buffer-window buf t)
+          (with-current-buffer buf
+            (when (equal session turn-stepper--session-id)
+              (if (get-process "turn-stepper-frames")
+                  (setq turn-stepper--dirty t)
+                (turn-stepper--start-fetch session
+                                           turn-stepper--source-buffer t)))))))))
 
 (add-hook 'session-mode-analysis-landed-functions #'turn-stepper--reading-landed)
 
@@ -887,11 +970,13 @@ a closed stepper stays closed."
   (or (turn-stepper--aget 'record_path frame)
       (turn-stepper--aget 'evidence_id (turn-stepper--aget 'turn frame))))
 
-(defun turn-stepper--merge-record-frame (frame path)
-  "Append or replace FRAME for PATH in the visible matching stepper.
+(defun turn-stepper--merge-record-frame (frame path &optional buf)
+  "Append or replace FRAME for PATH in the stepper buffer BUF.
+BUF defaults to the first visible stepper (the legacy single-stepper case).
 Move to a newly appended frame only when the reader was on the last frame."
-  (let ((buf (get-buffer turn-stepper-buffer-name)))
-    (when (and buf (get-buffer-window buf t))
+  (let ((buf (or buf (seq-find (lambda (b) (get-buffer-window b t))
+                               (turn-stepper--buffers)))))
+    (when (and (buffer-live-p buf) (get-buffer-window buf t))
       (with-current-buffer buf
         (let* ((old-count (length turn-stepper--frames))
                (was-last (or (zerop old-count)
@@ -920,34 +1005,45 @@ appending to the old session's frames.  If a frames fetch is already
 running, no switch is made now; it happens on the next recorded turn.
 Failures are reported once and never escape the process sentinel."
   (let* ((source (current-buffer))
-         (buf (get-buffer turn-stepper-buffer-name))
          (session (and (file-readable-p path)
                        (ignore-errors
                          (alist-get 'session_id (json-read-file path)))))
+         ;; Steppers bearing on this turn: the one reading this session, the
+         ;; one attached to this REPL, and the one a follow-switch moves (the
+         ;; stepper attached here, else a visible stepper on another session —
+         ;; the legacy single-stepper follow).
+         (buf-sess (turn-stepper--find-buffer session))
+         (buf-src (turn-stepper--find-buffer nil source))
+         (buf-follow (or buf-src
+                         (seq-find
+                          (lambda (b)
+                            (and (get-buffer-window b t)
+                                 (not (equal session
+                                             (buffer-local-value
+                                              'turn-stepper--session-id b)))))
+                          (turn-stepper--buffers))))
          (fetch-running (or (get-process "turn-stepper-frames")
                             (get-process "turn-stepper-one-record"))))
     (cond
      ;; A fetch is running: this turn's update would be lost, so note it;
      ;; the running fetch's end (or the next reconcile) catches up.
-     ((and fetch-running session buf (get-buffer-window buf t))
-      (setq turn-stepper--dirty t))
+     ((and fetch-running session buf-sess (get-buffer-window buf-sess t))
+      (with-current-buffer buf-sess (setq turn-stepper--dirty t)))
      ;; Follow the operator: a different REPL just recorded a turn, so
      ;; move the visible stepper onto that REPL's session.
      ((and turn-stepper-follow-active-repl
-           session buf (get-buffer-window buf t)
+           session buf-follow (get-buffer-window buf-follow t)
            (buffer-live-p source)
            (not fetch-running)
-           (with-current-buffer buf
-             (not (and (equal session turn-stepper--session-id)
-                       (eq source turn-stepper--source-buffer)))))
+           (with-current-buffer buf-follow
+             (not (equal session turn-stepper--session-id))))
       (turn-stepper--start-fetch session source))
      ;; Existing behaviour: append the frame to the visible stepper that
      ;; reads this session from this very source buffer.
-     ((and session buf (get-buffer-window buf t)
+     ((and session buf-sess (get-buffer-window buf-sess t)
            (not fetch-running)
-           (with-current-buffer buf
-             (and (equal session turn-stepper--session-id)
-                  (eq source turn-stepper--source-buffer))))
+           (with-current-buffer buf-sess
+             (eq source turn-stepper--source-buffer)))
       (let ((output (generate-new-buffer " *turn-stepper-one-record-output*"))
             (stderr (get-buffer-create " *turn-stepper-one-record-stderr*")))
         (make-process
@@ -968,7 +1064,7 @@ Failures are reported once and never escape the process sentinel."
                                 ;; bracket it to reuse the full-run parser.
                                 (frame (car (turn-stepper--parse-frames
                                              (concat "[" json "]")))))
-                           (turn-stepper--merge-record-frame frame path))
+                           (turn-stepper--merge-record-frame frame path buf-sess))
                        (message "turn-stepper: new-turn frame failed: %s"
                                 (turn-stepper--last-error-line)))
                    (error
@@ -992,7 +1088,7 @@ Failures are reported once and never escape the process sentinel."
   "Open (or reuse) the stepper buffer on frame INDEX for SESSION-ID.
 QUIET re-renders without touching windows (a reload of a visible stepper)."
   (let ((frames (gethash session-id turn-stepper--cache))
-        (buf (get-buffer-create turn-stepper-buffer-name)))
+        (buf (turn-stepper--get-buffer-create session-id source)))
     (with-current-buffer buf
       (turn-stepper-mode)
       (setq turn-stepper--session-id session-id
