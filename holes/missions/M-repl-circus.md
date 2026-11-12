@@ -384,6 +384,23 @@ as readers of the priorities.
   process, then measure size, full-rebuild time, one turn's incremental
   write, and three queries the readers need (猴: locate a turn's cascade;
   Giraffe: readiness over `needs`; the coverage check).
+  **Use-case survey** (Joe: "maybe the main issue here is how it'd be
+  *used*"; kimi-1, `holes/labs/M-repl-circus/GCC-use-cases-2026-11-12.md`,
+  `c93c00d84`, 16 uses). Most uses are point lookups and one- or two-step
+  neighbourhoods from known ids (Mojira and stepper views, 狗's recall inside
+  its 100 ms Prompt-line budget, CTRL's "is a linked to c"). Next come
+  reachability queries over small subgraphs, answered within a turn
+  (猴 locating a cascade by shared elements and its connected component,
+  Giraffe's readiness over `needs`, turn → question). Whole-graph checks and
+  as-of queries are rare and offline. Writes are small per-turn appends by
+  one writer; the graph is at most a few hundred thousand edges.
+  Recommendation: a SQLite sidecar, with Giraffe's readiness staying in
+  Clojure and reading edges from it; graphqlite (colliery-io, a SQLite
+  extension adding Cypher and graph algorithms; MIT; v1.0.0 on 2026-11-10;
+  JVM loading unconfirmed) if the gluing and reachability queries are painful
+  as recursive SQL; XTDB as a later durable mirror if as-of becomes a real
+  reader. XTQL as the CTRL language is a separate question from the store:
+  CTRL queries are rare enough that a slower language on top could serve.
 - The record types for 狗 (recall, use, buried) and 猴 (focus): schema 1.1.
 - How the pass's work pool and `needs` edges become GCC records (today:
   Giraffe run files from holes/tickets edges).
