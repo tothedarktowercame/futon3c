@@ -166,6 +166,48 @@ def own_project(memory_handle, agent_id):
             and project == "-home-joe-code")
 
 
+def own_stratum(item, agent_id):
+    """§2 stratum 2 for one recalled item. Packet C stamps :in-seat-index at
+    recall time (true / false / "no-index" / "n/a" / "unknown"); use it when
+    present. Items recalled before the stamp fall back to own_project's
+    inferred rule. Returns True, False, or None (not applicable/unknown)."""
+    v = item.get("in-seat-index", "absent")
+    if v is True or v is False:
+        return v
+    if v == "no-index":
+        return False
+    if v in ("n/a", "unknown"):
+        return None
+    return own_project(item.get("memory"), agent_id)
+
+
+def prev_operator_turn(record, idx):
+    """The operator record before RECORD in its session, or None."""
+    seq = idx.get(record.get("session_id"), [])
+    at = record.get("created_at") or ""
+    earlier = [r for r in seq if (r.get("created_at") or "") < at]
+    return earlier[-1] if earlier else None
+
+
+def said_again_rows(records, idx):
+    """D3: each dog_buried.said-again event, split by what 狗 did with the
+    matching memory on the previous operator turn of the session: "shown",
+    "withheld", "pre-arm" (recalled before the arm), or "not-recalled"."""
+    rows = []
+    for r in records:
+        for ev in (r.get("dog_buried") or {}).get("said-again") or []:
+            prev = prev_operator_turn(r, idx)
+            mids = set(ev.get("memory-ids") or [])
+            what = "not-recalled"
+            if prev is not None:
+                recalled = {i.get("memory") for i in (prev.get("dog_recall") or {}).get("items") or []}
+                if mids & recalled:
+                    what = arm_of(prev)
+            rows.append({"record": r["_id"], "act": ev.get("act"), "what": what,
+                         "shared": len(ev.get("shared") or [])})
+    return rows
+
+
 # --------------------------------------------------------------------------
 # Intervals (Wilson score interval on a proportion)
 # --------------------------------------------------------------------------
@@ -211,7 +253,7 @@ def collect(records):
         for it in recalled:
             handle = it.get("memory")
             body = memory_body(handle)
-            row = {"arm": arm, "own": own_project(handle, r.get("agent_id")),
+            row = {"arm": arm, "own": own_stratum(it, r.get("agent_id")),
                    "memory": handle, "record": r["_id"]}
             ui = use_by_mem.get(handle)
             if ui is not None:
@@ -273,8 +315,9 @@ def render(items, turns, records, arm_live=None):
     used = by_arm(items, "used")
     for a in arms:
         L.append("- %-9s %s" % (a + ":", prop_line(used[a][0], used[a][1])))
-    own = {"own": [r for r in items if r["own"]],
-           "other": [r for r in items if not r["own"]]}
+    own = {"own": [r for r in items if r["own"] is True],
+           "other": [r for r in items if r["own"] is False],
+           "n/a": [r for r in items if r["own"] is None]}
     for name, rows in own.items():
         if not rows:
             continue
@@ -293,13 +336,16 @@ def render(items, turns, records, arm_live=None):
     buried = [r for r in records if (r.get("dog_buried") or {}).get("items")]
     if not buried:
         L.append("- typed absence: no dog_buried items recorded yet.")
-    elif not any((r.get("dog_buried") or {}).get("said-again") for r in records):
+    elif not any("said-again" in (r.get("dog_buried") or {}) for r in records):
         L.append("- typed absence: dog_buried exists (%d records with items) but "
-                 "dog_buried.said-again does not (packet D not landed)." % len(buried))
+                 "no record carries dog_buried.said-again yet (packet D)." % len(buried))
     else:
-        n = sum(len((r.get("dog_buried") or {}).get("said-again") or [])
-                for r in records)
-        L.append("- said-again events recorded: %d" % n)
+        rows = said_again_rows(records, session_index(records))
+        L.append("- said-again events recorded: %d (with ≥3 shared bigrams: %d)"
+                 % (len(rows), sum(1 for x in rows if x["shared"] >= 3)))
+        for what in ("shown", "withheld", "pre-arm", "not-recalled"):
+            k = sum(1 for x in rows if x["what"] == what)
+            L.append("  - memory %s on the previous turn: %d" % (what, k))
     L.append("")
     L.append("## D4 — next-turn correction (trend only, §2)")
     for a in arms:

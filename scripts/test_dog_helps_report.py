@@ -171,3 +171,25 @@ class HandCheckTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStrataAndSaidAgain(unittest.TestCase):
+    def test_own_stratum_prefers_the_stamp(self):
+        self.assertIs(dhr.own_stratum({"memory": "-home-joe-code/x", "in-seat-index": False}, "claude-13"), False)
+        self.assertIs(dhr.own_stratum({"memory": "zai-1/x", "in-seat-index": True}, "claude-13"), True)
+        self.assertIs(dhr.own_stratum({"memory": "a/x", "in-seat-index": "no-index"}, "claude-13"), False)
+        self.assertIsNone(dhr.own_stratum({"memory": "a/x", "in-seat-index": "n/a"}, "kimi-2"))
+        # unstamped items fall back to the inferred rule
+        self.assertIs(dhr.own_stratum({"memory": "-home-joe-code/x"}, "claude-13"), True)
+
+    def test_said_again_split_by_previous_turn(self):
+        # SYNTHETIC records (no real said-again events existed when written)
+        prev = {"_id": "p", "session_id": "s", "created_at": "2026-11-12T01:00:00Z",
+                "dog_recall": {"arm": "withheld", "items": [{"memory": "proj/m1"}]}}
+        cur = {"_id": "c", "session_id": "s", "created_at": "2026-11-12T01:05:00Z",
+               "dog_buried": {"said-again": [
+                   {"act": "a1", "memory-ids": ["proj/m1"], "shared": [1, 2, 3]},
+                   {"act": "a2", "memory-ids": ["proj/m9"], "shared": [1, 2]}]}}
+        recs = [prev, cur]
+        rows = dhr.said_again_rows(recs, dhr.session_index(recs))
+        self.assertEqual([r["what"] for r in rows], ["withheld", "not-recalled"])
