@@ -1,0 +1,29 @@
+{
+ "stem": "T-ladder-07-wire-control",
+ "kind": "relate",
+ "seat": "kimi-1",
+ "job": "invoke-1794526237711-18734-6e480b2d",
+ "at": "2026-11-12T23:35:01+00:00",
+ "row": {
+  "stem": "T-ladder-07-wire-control",
+  "kind": "relate",
+  "what": {
+   "value": "On the ruled engine, test a rule-90 channel with rule-77 and rule-178 controls (the M3 wire experiment).",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-07-wire-control.md:13",
+   "quote": "On the ruled engine, test a rule-90 channel and controls replacing it with rule 77 and routing through rule 178."
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-07-wire-control.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

@@ -1,0 +1,29 @@
+{
+ "stem": "T-ladder-10-von-neumann-stop",
+ "kind": "relate",
+ "seat": "kimi-1",
+ "job": "invoke-1794526237711-18734-6e480b2d",
+ "at": "2026-11-12T23:35:01+00:00",
+ "row": {
+  "stem": "T-ladder-10-von-neumann-stop",
+  "kind": "relate",
+  "what": {
+   "value": "Assess whether implementing von Neumann's complete 29-state constructor can be decomposed into gradable sub-tickets, without implementing.",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-10-von-neumann-stop.md:7",
+   "quote": "Assess the request to implement the complete 29-state constructor as one ticket. Do not begin implementation."
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-10-von-neumann-stop.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}

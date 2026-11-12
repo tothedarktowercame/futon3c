@@ -1,0 +1,35 @@
+{
+ "stem": "T-ladder-09-the-mirror",
+ "kind": "relate",
+ "seat": "kimi-1",
+ "job": "invoke-1794526237711-18734-6e480b2d",
+ "at": "2026-11-12T23:35:01+00:00",
+ "row": {
+  "stem": "T-ladder-09-the-mirror",
+  "kind": "relate",
+  "what": {
+   "value": "Map the War Machine onto von Neumann's description/tape, constructor, copier, and controller architecture in a short document.",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-09-the-mirror.md:7",
+   "quote": "Map the War Machine onto von Neumann's description/tape, constructor, copier, and controller architecture."
+  },
+  "area": {
+   "value": "WM",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-09-the-mirror.md:11",
+   "quote": "A short document identifies resolving WM files for tickets/backlog, author seats, click loop, and contract; distinguishes evidence from interpretation;"
+  },
+  "also": {
+   "value": "futonzero",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-09-the-mirror.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok",
+  "ok",
+  "ok"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": []
+}

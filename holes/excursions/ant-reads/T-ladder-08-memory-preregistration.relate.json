@@ -1,0 +1,29 @@
+{
+ "stem": "T-ladder-08-memory-preregistration",
+ "kind": "relate",
+ "seat": "kimi-1",
+ "job": "invoke-1794526237711-18734-6e480b2d",
+ "at": "2026-11-12T23:35:01+00:00",
+ "row": {
+  "stem": "T-ladder-08-memory-preregistration",
+  "kind": "relate",
+  "what": {
+   "value": "Write (not run) a deterministic preregistration EDN for the M1 memory-under-fire CA experiment, for Joe's sign-off.",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-08-memory-preregistration.md:9",
+   "quote": "Write, but do not run, a deterministic preregistration EDN for memory-under-fire: guard width, horizon, penetration limit, and the approximately six-step erosion baseline."
+  },
+  "area": {
+   "value": "futonzero",
+   "cite": "/home/joe/notes/wm-ladder/relate-6-10/T-ladder-08-memory-preregistration.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok",
+  "ok"
+ ],
+ "ok": 2,
+ "unsure": 0,
+ "failed": []
+}
