@@ -175,45 +175,72 @@
       (System/getenv "EMACS_SOCKET_NAME")
       ::default))
 
-;; Target sockets with an accepted async emacsclient still alive.
-;;
-;; Blackboard projections are idempotent snapshots. If Emacs is slow, spawning
-;; a new emacsclient every ticker pass creates a FIFO backlog that can starve
-;; interactive requests such as `cr new'. Keep one outstanding snapshot per
-;; target; the next ticker will refresh after that client exits.
-(defonce ^:private !async-emacsclient-inflight (atom #{}))
+;; One serialized, latest-value mailbox per Emacs socket.  Blackboard panels
+;; are idempotent snapshots: while one emacsclient is waiting for a busy Emacs,
+;; retain only the newest pending value for each panel.  Running several panel
+;; lanes concurrently and killing them after a short timeout manufactured dead
+;; clients: Emacs would eventually execute their accepted requests and try to
+;; reply to pipes we had destroyed.  Serialization gives interactive clients a
+;; chance between projections and makes slow Emacs apply backpressure here.
+(defonce ^:private !async-emacsclient-queues (atom {}))
 
-(def ^:private async-emacsclient-reap-grace-ms
-  "Additional grace after the caller's one-second wait. An async projection
-  must never retain a target's in-flight claim indefinitely: one wedged
-  emacsclient otherwise freezes every later *agents* snapshot for that socket."
-  1000)
+(declare reap-emacsclient! drain-async-emacsclient!)
 
-(declare reap-emacsclient!)
+(defn- enqueue-async-emacsclient!
+  [socket-key lane request]
+  (let [start? (atom false)]
+    (swap! !async-emacsclient-queues
+           (fn [queues]
+             (if-let [queue (get queues socket-key)]
+               (assoc queues socket-key
+                      (-> queue
+                          (update :order (fn [order]
+                                           (if (some #{lane} order)
+                                             order
+                                             (conj order lane))))
+                          (assoc-in [:pending lane] request)))
+               (do
+                 (reset! start? true)
+                 (assoc queues socket-key
+                        {:order [] :pending {} :running request})))))
+    (when @start?
+      (future (drain-async-emacsclient! socket-key request)))
+    {:ok true :output (when-not @start? "queued")}))
 
-(defn- claim-async-emacsclient! [target-key]
-  (loop []
-    (let [current @!async-emacsclient-inflight]
-      (cond
-        (contains? current target-key) false
-        (compare-and-set! !async-emacsclient-inflight
-                          current
-                          (conj current target-key)) true
-        :else (recur)))))
+(defn- next-async-emacsclient!
+  [socket-key]
+  (let [next-request (atom nil)]
+    (swap! !async-emacsclient-queues
+           (fn [queues]
+             (if-let [{:keys [order pending] :as queue} (get queues socket-key)]
+               (if-let [lane (first order)]
+                 (let [request (get pending lane)]
+                   (reset! next-request request)
+                   (assoc queues socket-key
+                          (-> queue
+                              (assoc :running request :order (vec (rest order)))
+                              (update :pending dissoc lane))))
+                 (dissoc queues socket-key))
+               queues)))
+    @next-request))
 
-(defn- clear-async-emacsclient-inflight! [target-key proc]
-  (future
+(defn- drain-async-emacsclient!
+  [socket-key first-request]
+  (loop [{:keys [elisp socket-override]} first-request]
     (try
-      (when-not (.waitFor proc async-emacsclient-reap-grace-ms
-                          java.util.concurrent.TimeUnit/MILLISECONDS)
-        (println (str "[bb] async emacsclient pid="
-                      (try (.pid proc) (catch Throwable _ "?"))
-                      " exceeded bounded grace; reaping target=" target-key))
-        (flush)
-        (reap-emacsclient! proc))
-      (catch Throwable _ nil)
-      (finally
-        (swap! !async-emacsclient-inflight disj target-key)))))
+      (let [pb (doto (ProcessBuilder. ^java.util.List
+                                      (build-emacsclient-cmd elisp socket-override ["-n"]))
+                 (.redirectErrorStream true))
+            proc (.start pb)]
+        ;; Do not kill an accepted fire-and-forget client.  Its continued life
+        ;; is the backpressure signal which keeps later snapshots in the mailbox.
+        (.waitFor proc))
+      (catch Throwable t
+        (println (str "[bb] async emacsclient failed: "
+                      (or (.getMessage t) (.. t getClass getSimpleName))))
+        (flush)))
+    (when-let [request (next-async-emacsclient! socket-key)]
+      (recur request))))
 
 (defn- reap-emacsclient!
   "Finally-guard for emacsclient processes: force-kill if still alive,
@@ -257,38 +284,16 @@
    immediately without waiting for a reply. Returns {:ok bool :output nil|str}.
    The next poll will redo the projection if this one is dropped.
 
-   A timed-out child receives a short additional grace period, then is reaped
-   and its per-target in-flight claim is cleared. With -n the client normally
-   exits in milliseconds; bounding the exceptional path prevents one wedged
-   handshake from freezing all later snapshots for that Emacs socket."
+   Calls are serialized per Emacs socket.  While Emacs is busy, each panel has
+   at most one pending snapshot and a newer snapshot replaces it.  Accepted
+   clients are allowed to finish rather than being killed before Emacs replies."
   ([elisp] (run-emacsclient-async! elisp nil nil))
   ([elisp socket-override] (run-emacsclient-async! elisp socket-override nil))
   ([elisp socket-override coalesce-key]
-   (try
-     (let [socket-key (emacsclient-target-key socket-override)
-           target-key (if coalesce-key
-                        [socket-key coalesce-key]
-                        socket-key)]
-       (if-not (claim-async-emacsclient! target-key)
-         {:ok false :output "inflight"}
-         (try
-           (let [pb (doto (ProcessBuilder. ^java.util.List
-                                           (build-emacsclient-cmd elisp socket-override ["-n"]))
-                      (.redirectErrorStream true))
-                 proc (.start pb)
-                 finished? (.waitFor proc 1 java.util.concurrent.TimeUnit/SECONDS)]
-             (if finished?
-               (do
-                 (swap! !async-emacsclient-inflight disj target-key)
-                 {:ok (zero? (.exitValue proc)) :output nil})
-               (do
-                 (clear-async-emacsclient-inflight! target-key proc)
-                 {:ok false :output "timeout"})))
-           (catch Throwable t
-             (swap! !async-emacsclient-inflight disj target-key)
-             (throw t)))))
-     (catch Exception e
-       {:ok false :output (or (.getMessage e) (.. e getClass getSimpleName))}))))
+   (let [socket-key (emacsclient-target-key socket-override)
+         lane (or coalesce-key ::default)]
+     (enqueue-async-emacsclient!
+      socket-key lane {:elisp elisp :socket-override socket-override}))))
 
 (defn blackboard!
   "Project content to a named Emacs buffer.

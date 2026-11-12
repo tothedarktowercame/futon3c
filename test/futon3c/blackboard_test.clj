@@ -410,52 +410,61 @@
       (is (= "say \\\"hi\\\"" (escape "say \"hi\"")))
       (is (= "back\\\\slash" (escape "back\\slash"))))))
 
-(deftest async-emacsclient-coalesces-per-target-while-inflight
-  (testing "slow async snapshots coalesce, then a wedged client is reaped"
+(deftest async-emacsclient-keeps-slow-client-and-coalesces-latest-snapshot
+  (testing "the exact slow-client case stays alive and retains only the latest panel value"
     (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
                    (.deleteOnExit))
+          release (doto (java.io.File/createTempFile "fake-emacsclient-release-" ".flag")
+                    .delete)
+          output (doto (java.io.File/createTempFile "fake-emacsclient-output-" ".txt")
+                   (.deleteOnExit))
           run-async #'futon3c.blackboard/run-emacsclient-async!
-          inflight #'futon3c.blackboard/!async-emacsclient-inflight]
-      (spit script "#!/usr/bin/env bash\nsleep 30\n")
+          queues #'futon3c.blackboard/!async-emacsclient-queues]
+      (spit script (str "#!/usr/bin/env bash\n"
+                        "printf '%s\\n' \"${@: -1}\" >> \"" (.getAbsolutePath output) "\"\n"
+                        "while [[ ! -e \"" (.getAbsolutePath release) "\" ]]; do sleep 0.05; done\n"))
       (.setExecutable script true)
       (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
         (try
-          (reset! @inflight #{})
-          (let [first-result (run-async "(message \"one\")" "test-socket")
-                second-result (run-async "(message \"two\")" "test-socket")]
-            (is (= {:ok false :output "timeout"} first-result))
-            (is (= {:ok false :output "inflight"} second-result))
-            (is (contains? @@inflight "test-socket"))
-            (let [deadline (+ (System/currentTimeMillis) 4000)]
-              (while (and (contains? @@inflight "test-socket")
-                          (< (System/currentTimeMillis) deadline))
-                (Thread/sleep 25))
-              (is (not (contains? @@inflight "test-socket"))
-                  "bounded reap releases the target for a later snapshot")))
+          (reset! @queues {})
+          (is (= {:ok true :output nil}
+                 (run-async "one" "test-socket" :agents)))
+          (Thread/sleep 2200)
+          (is (contains? @@queues "test-socket")
+              "a slow accepted client survives the former two-second kill point")
+          (is (= "queued" (:output (run-async "two" "test-socket" :agents))))
+          (is (= "queued" (:output (run-async "three" "test-socket" :agents))))
+          (is (= "three" (get-in @@queues ["test-socket" :pending :agents :elisp])))
+          (spit release "go")
+          (let [deadline (+ (System/currentTimeMillis) 3000)]
+            (while (and (contains? @@queues "test-socket")
+                        (< (System/currentTimeMillis) deadline))
+              (Thread/sleep 25)))
+          (is (= ["one" "three"] (str/split-lines (slurp output))))
           (finally
-            (reset! @inflight #{})))))))
+            (spit release "go")
+            (reset! @queues {})))))))
 
 (deftest async-emacsclient-keeps-independent-panel-lanes
-  (testing "one slow live panel does not suppress another on the same socket"
+  (testing "one slow panel queues, rather than concurrently launching, another lane"
     (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
                    (.deleteOnExit))
           run-async #'futon3c.blackboard/run-emacsclient-async!
-          inflight #'futon3c.blackboard/!async-emacsclient-inflight]
-      (spit script "#!/usr/bin/env bash\nsleep 30\n")
+          queues #'futon3c.blackboard/!async-emacsclient-queues]
+      (spit script "#!/usr/bin/env bash\nsleep 0.2\n")
       (.setExecutable script true)
       (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
         (try
-          (reset! @inflight #{})
-          (is (= "timeout" (:output (run-async "one" "test-socket" :agents))))
-          (is (= "inflight" (:output (run-async "two" "test-socket" :agents))))
-          (is (= "timeout" (:output (run-async "tree" "test-socket" :job-tree))))
-          (is (contains? @@inflight ["test-socket" :agents]))
-          (is (contains? @@inflight ["test-socket" :job-tree]))
+          (reset! @queues {})
+          (is (nil? (:output (run-async "one" "test-socket" :agents))))
+          (is (= "queued" (:output (run-async "two" "test-socket" :agents))))
+          (is (= "queued" (:output (run-async "tree" "test-socket" :job-tree))))
+          (is (= #{:agents :job-tree}
+                 (set (get-in @@queues ["test-socket" :order]))))
+          (is (= "two" (get-in @@queues ["test-socket" :pending :agents :elisp])))
           (finally
-            (doseq [_ (range 120)
-                    :while (seq @@inflight)]
-              (Thread/sleep 25))
-            (reset! @inflight #{})))))))
+            (Thread/sleep 750)
+            (reset! @queues {})))))))
 
 ;; =============================================================================
 ;; project! — integration of render + blackboard!

@@ -17,12 +17,15 @@ Process server <PID> no longer connected to pipe; closed it
 an in-flight `emacsclient` while it is still mid-handshake with the Emacs
 server. SIGKILL drops the socket abnormally, Emacs's process.c logs the line.
 
-### Fix in place (2026-04-27)
+### Fix in place (2026-11-12)
 
-`run-emacsclient-async!` no longer calls `reap-emacsclient!`. With `-n` the
-client should exit in milliseconds; a >1 s wait means Emacs is briefly
-wedged, and killing the client only manufactures broken-pipe noise. The
-abandoned client exits naturally once Emacs unwedges.
+`run-emacsclient-async!` uses a serialized, latest-value mailbox per Emacs
+socket.  At most one blackboard emacsclient runs at once.  While it waits,
+each panel retains one pending snapshot and newer snapshots replace it.  The
+running client is not killed: it exits naturally when Emacs accepts it, then
+the mailbox sends the next panel.  This prevents parallel panel updates from
+forming a server queue and prevents the producer from manufacturing dead
+clients by timing them out.
 
 ### Sync path still reaps
 
@@ -39,16 +42,16 @@ Reload the namespace through Drawbridge:
 ./scripts/proof-eval.sh '(require (quote [futon3c.blackboard]) :reload)'
 ```
 
-Verify the reaper is gone from the async path:
+Verify the async path uses the mailbox:
 
 ```bash
 ./scripts/proof-eval.sh '(require (quote [clojure.repl]))
-(re-find #"reap-emacsclient!"
+(re-find #"enqueue-async-emacsclient!"
   (with-out-str
     (clojure.repl/source futon3c.blackboard/run-emacsclient-async!)))'
 ```
 
-Should return `nil`.
+Should return a match.
 
 ## Related
 
