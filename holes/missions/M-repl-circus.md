@@ -498,8 +498,27 @@ the same cut-over (Joe's 11-12 statement supersedes it).
     holding the graph in memory, can come from XTDB's own caches given heap.
   - **Order (Joe, 11-12): "memory migration is the priority."** Discovery:
     kimi-2, `holes/labs/M-repl-circus/MEM-migration-discovery-2026-11-12.md`.
-  Real XTQL per use case: kimi-1, `holes/labs/M-repl-circus/GCC-xtql-2026-11-12.md`
-  (in progress).
+  **Real XTQL per use case** (kimi-1, `holes/labs/M-repl-circus/GCC-xtql-2026-11-12.md`,
+  `dd04fa305`; two queries rerun by claude-13). What today's futon1b answers:
+  point lookups and one-step neighbourhoods, fast (a CTRL "is a linked to c"
+  triple lookup in tens of ms; a node's relations in under 200 ms). What it
+  does not: reachability (components, cones, gluing stay in Clojure, as
+  Giraffe's pass already is), nested-map predicates (post-filter), and
+  whole-table aggregates (past a 10 s deadline). What is missing, which is
+  the GCC's content:
+  - new derived records: occurrences, elements and cascade readings (§16);
+    `needs` edges (none in `:relations`); 猴's focus; wants with locator,
+    horizon and observation; each turn's lifecycle and per-animal fields
+    (turn records are disk files, not in XTDB, which blocks both the coverage
+    check and the projector); memory nodes and links (the migration);
+    question ↔ turn and citation links;
+  - joins that need only an id recorded: live turn evidence ids ↔ the older
+    `:operator-turn` entities; hyperedge endpoint strings ↔ entity ids;
+    valid time from `evidence/at` at ingest (as-of today means insert time,
+    which the memory migration must preserve, see its review).
+  So the GCC is mostly a projector writing those derived records into
+  futon1b, with reachability computed in Clojure over what XTQL fetches, and
+  counts kept as derived records rather than aggregated per query.
 - The record types for 狗 (recall, use, buried) and 猴 (focus): schema 1.1.
 - How the pass's work pool and `needs` edges become GCC records (today:
   Giraffe run files from holes/tickets edges).
