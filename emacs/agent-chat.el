@@ -3371,7 +3371,38 @@ the recreated REPL buffer before a restored turn is drained."
     (unless (functionp (plist-get entry :call-async-fn))
       (plist-put entry :call-async-fn call-async-fn)
       (plist-put entry :agent-name (or (plist-get entry :agent-name) agent-name))
-      (plist-put entry :hooks hooks))))
+      (plist-put entry :hooks hooks))
+    (unless (and (markerp (plist-get entry :display-start))
+                 (marker-position (plist-get entry :display-start))
+                 (markerp (plist-get entry :display-end))
+                 (marker-position (plist-get entry :display-end)))
+      (agent-chat--insert-queued-display entry))))
+
+(defun agent-chat--insert-queued-display (entry)
+  "Show accepted queued ENTRY above the prompt and remember its exact region.
+The queued row is presentation only: the ordinary `agent-chat--start-turn'
+insertion remains the sole turn/evidence insertion when ENTRY is promoted."
+  (when (and (markerp agent-chat--prompt-marker)
+             (marker-position agent-chat--prompt-marker))
+    (let ((start (copy-marker (marker-position agent-chat--prompt-marker) nil))
+          (speaker (or (plist-get entry :speaker) "joe")))
+      (agent-chat-insert-message (format "%s (queued)" speaker)
+                                 (plist-get entry :text))
+      (plist-put entry :display-start start)
+      (plist-put entry :display-end
+                 (copy-marker (marker-position agent-chat--prompt-marker) nil)))))
+
+(defun agent-chat--remove-queued-display (entry)
+  "Remove ENTRY's queued presentation row before promoting the turn."
+  (let ((start (plist-get entry :display-start))
+        (end (plist-get entry :display-end)))
+    (when (and (markerp start) (marker-position start)
+               (markerp end) (marker-position end)
+               (<= (marker-position start) (marker-position end)))
+      (let ((inhibit-read-only t))
+        (delete-region (marker-position start) (marker-position end))))
+    (when (markerp start) (set-marker start nil))
+    (when (markerp end) (set-marker end nil))))
 
 (defun agent-chat--operator-speaker-p (speaker)
   "Non-nil when SPEAKER should be treated as the human operator."
@@ -3379,17 +3410,18 @@ the recreated REPL buffer before a restored turn is drained."
 
 (defun agent-chat--queue-turn (call-async-fn agent-name hooks text speaker origin)
   "Queue TEXT as a SPEAKER/ORIGIN turn behind the in-flight turn."
-  (setq agent-chat--queued-operator-turns
-        (append agent-chat--queued-operator-turns
-                (list (list :text text
-                            :call-async-fn call-async-fn
-                            :agent-name agent-name
-                            :hooks hooks
-                            :speaker speaker
-                            :origin origin
-                            :provenance (copy-tree (or agent-turn-origin-input
-                                                       (agent-turn-origin-decide origin speaker)))))))
-  (agent-chat--persist-queued-turns))
+  (let ((entry (list :text text
+                     :call-async-fn call-async-fn
+                     :agent-name agent-name
+                     :hooks hooks
+                     :speaker speaker
+                     :origin origin
+                     :provenance (copy-tree (or agent-turn-origin-input
+                                                (agent-turn-origin-decide origin speaker))))))
+    (setq agent-chat--queued-operator-turns
+          (append agent-chat--queued-operator-turns (list entry)))
+    (agent-chat--persist-queued-turns)
+    (agent-chat--insert-queued-display entry)))
 
 (defun agent-chat--queue-operator-turn (call-async-fn agent-name hooks)
   "Queue current input as an operator turn behind an in-flight turn."
@@ -3418,6 +3450,7 @@ the recreated REPL buffer before a restored turn is drained."
       (setq agent-chat--queued-operator-turns
             (cdr agent-chat--queued-operator-turns))
       (agent-chat--persist-queued-turns)
+      (agent-chat--remove-queued-display entry)
       (agent-chat--start-turn call-async-fn agent-name hooks text speaker origin))))
 
 (defun agent-chat--finish-pending-turn ()
