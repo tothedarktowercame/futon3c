@@ -1,0 +1,128 @@
+;; gcc-shapes.edn — M-repl-circus demo 1a record shapes (kimi-1, 2026-11-12).
+;;
+;; Read by futon3c/scripts/gcc_preview.py.  Joe can tweak a shape — rename a
+;; field's output name, change a type key — and rerun the projector; the
+;; output follows this file.  Each type names:
+;;   :status  :built    (already an E-gcc-schema B1/B3/B4 type)
+;;            :proposed (one of the proposed schema lines in
+;;                       holes/missions/M-repl-circus.md §"GCC load design",
+;;                       bb25b6247 — Joe has not ruled on it)
+;;   :fields  map of internal-key (keyword) -> output field name (string).
+;;            Fields not listed pass through under their internal name.
+;;
+;; No question text, reading text or turn text appears in this file
+;; (futon3c is PUBLIC); only field and type names.
+{:meta {:demo "M-repl-circus demo 1a (GCC preview projector)"
+        :as-of "2026-11-12"
+        :contract "~/notes/claude-13/demo-01-contract.md"}
+
+ :record-types
+ {"[:workplan/item 1]"
+  {:status :built
+   :doc "B3 pending item; one node per item id, shared by the workplan and Giraffe id spaces."
+   :fields {:item-id "item_id"
+            :title "title"
+            :path "path"
+            :repo "repo"
+            :doc-sha256 "doc_sha256"}}
+
+  "[:giraffe/state-group 1]"
+  {:status :proposed
+   :doc "Proposed line (i): state group as attestation content on the item, basis parser. One of five values: backlog|unstarted|started|completed|cancelled."
+   :fields {:item-id "item_id"
+            :state-group "state_group"
+            :declared-status "declared_status"
+            :source-sha256 "source_sha256"
+            :basis "basis"}}
+
+  "[:giraffe/reading 1]"
+  {:status :proposed
+   :doc "Proposed line (ii): a reading keyed by item + document digest, with supersession. Data of record."
+   :fields {:item-id "item_id"
+            :source-path "source_path"
+            :source-sha256 "source_sha256"
+            :status-as-read "status_as_read"
+            :purpose "purpose"
+            :edge-count "edge_count"
+            :record-pin-sha256 "record_pin_sha256"
+            :queue-state "queue_state"
+            :requested-at-ms "requested_at_ms"}}
+
+  "[:workplan/names 1]"
+  {:status :built
+   :doc "B4(a): item names a lexicon entity (parser, markup.py)."
+   :fields {:item-id "item_id"
+            :entity-slug "entity_slug"
+            :draft "draft"}}
+
+  "[:workplan/serves 1]"
+  {:status :built
+   :doc "B4(a): item serves a benefit line; model attestation, draft until Joe rules."
+   :fields {:item-id "item_id"
+            :benefit-line "benefit_line"
+            :producer "producer"
+            :draft "draft"}}
+
+  "[:workplan/mention 1]"
+  {:status :built
+   :doc "B4(a) mention; proposed line 2 declares the role vocabulary (filed, context, first-statement, operator-request, cause-found) in the type."
+   :fields {:item-id "item_id"
+            :role "role"
+            :time "time"
+            :ref "ref"
+            :author "author"}}
+
+  "[:workplan/introduction 1]"
+  {:status :built
+   :doc "B4(a)/B6: Joe's introduction of an entity at a turn; proposed line 5 adds mark range and honest timing basis."
+   :fields {:entity-slug "entity_slug"
+            :turn-ref "turn_ref"
+            :codepoint-range "codepoint_range"
+            :time "time"
+            :timing-basis "timing_basis"}}
+
+  "[:workplan/pending-level 1]"
+  {:status :proposed
+   :doc "Proposed line 3: pending/level as an item readiness attestation (draft P0-P6 scale); Joe's re-grading is a new attestation, not a new item."
+   :fields {:item-id "item_id"
+            :level "level"
+            :method "method"
+            :basis "basis"
+            :note "note"}}
+
+  "[:question/raised-by 1]"
+  {:status :proposed
+   :doc "Item to argument-graph question link (futon7 holes/argument-graph/questions.edn). Its typed absence is reported when no question names the item."
+   :fields {:item-id "item_id"
+            :question-id "question_id"
+            :kind "kind"
+            :matched-in "matched_in"}}}
+
+ :link-types
+ {"[:needs 1]"
+  {:status :built
+   :doc "B4(a) needs edge from an accepted Giraffe reading; met is computed, never stored (pass.clj)."
+   :fields {:from "from"
+            :to "to"
+            :class "class"
+            :source "source"
+            :basis "basis"
+            :quote "quote"
+            :file "file"
+            :line "line"
+            :reading-member "reading_member"}}
+
+  "[:part-of 1]"
+  {:status :built
+   :doc "B4(b) reduced-vocabulary link carried by readings; not a need, never enters readiness."
+   :fields {:from "from" :to "to" :quote "quote" :file "file" :line "line"}}
+
+  "[:relates-to 1]"
+  {:status :built
+   :doc "B4(b) reduced-vocabulary link carried by readings; not a need."
+   :fields {:from "from" :to "to" :quote "quote" :file "file" :line "line"}}
+
+  "[:supersedes 1]"
+  {:status :proposed
+   :doc "Proposed line (ii): links a reading of an item's newer revision to the reading of the same item's earlier revision; the audit trail for why a needs edge existed."
+   :fields {:from "from" :to "to"}}}}
