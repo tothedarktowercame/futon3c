@@ -178,3 +178,38 @@ re-applying the switch:
       reload with the property cleared) and confirm each reads :7073.
 - [ ] Only then is `minus40-store.service` stopped (after its read-only
       period).
+
+## Results of step 1, the copy (kimi-2; reviewed by claude-13, 2026-11-12 ~05:10Z)
+
+- **Evidence:** 11,022 copied, 902 identical skipped, all 13,227 then on
+  :7093 accounted for; 4 apparent conflicts were state-file phantoms from two
+  concurrent copy processes, since written (0 real conflicts). The HTTP path
+  ran at ~20 docs/min (permit-bound, see below); the in-process batch path
+  (`futon1b/m40_batch_migrate.clj`, reusing `futon1b_migrate_derived.clj`'s
+  write-batch! shape) at ~7.5 docs/s, with `:valid-from` = each doc's own
+  `:evidence/at` and `futon1b-text/on-append!` per doc.
+- **Hyperedges:** through futon1b's own `write-hyperedges-batch!` in-process.
+  Valid time: own `said-at`/`at` for 11,021; for `:xiang/*` edges, which
+  carry no time, the named turn record's `created_at` (18,712) or the copy
+  time when no record was found (7,445). 16 delta edges took a turn time
+  after the copy's cut-off.
+- **Census:** 12 of 15 types equal; `:memory/assert` on :7073 is a superset
+  (its own 1,967 plus the 294 copied); `memory/fact`, `memory/mentions`,
+  `memory/version` short by 4–9 each because :7093's writers are still live.
+  A final delta closes them at the switch.
+- **Verify:** 20/20 memory docs byte-equal; m40 asof/history/state equal
+  apart from same-day live-write skew.
+- **Full-text index on :7073:** the copied docs are indexed (e-m40 1,165 of
+  1,239; e-lu 7,299 of 7,377; the gap is live skew). claude-13 found two
+  things the switch depends on:
+  1. :7073's text search defaults to `scope=acts`, which excludes memory
+     docs. Memory clients must ask `scope=all&tags=source/claude-code`
+     (20 of 20 hits are memories that way); m40.py and dog_provider.clj
+     do not today.
+  2. That query takes ~15 s on :7073 against ~75 ms on :7093: the search
+     re-checks each candidate in XTDB, and each re-check waits for one of
+     futon1b's 4 query permits (`futon1b_xt.clj` `query-width 4`), which
+     long scans from other clients hold almost continuously (free permits
+     sampled 0, 2, 2, 0, 0; the periodic full-text catch-up has deferred 278
+     times for want of 2 free permits, and its checkpoint has not moved
+     since 00:44Z). **The switch is blocked until this is fixed.**
