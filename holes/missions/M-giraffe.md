@@ -38,6 +38,71 @@ What should one work item be, as data, so that a War Machine (ours, or one readi
 - Where the structure lives (substrate, files, or both), and whether it replaces or projects the existing M/E/T documents.
 - What "the machine is runnable" requires of it first (Joe's invariant, 2026-10-25): no large redesign before a run is demonstrated.
 
+## Requirements from Giraffe's two readers (draft, claude-13 with Joe, 2026-11-12)
+
+Joe, 2026-11-12, building up the requirements perspective. Each requirement
+names where it comes from; all are for Joe to correct.
+
+### The War Machine
+
+Joe: "I realised that the War Machine requires a better-processed backlog to
+work well, so created Giraffe to rank items." What the War Machine needs from
+the backlog, from the HEAD measurements of 2026-10-25/26:
+
+- **WM-1, every eligible item has been read.** 101 of 109 eligible items had
+  never been read, and the read set had not grown in 15 clicks. Giraffe's
+  invariant "always up to date" (M-repl-circus §DERIVE): every open item's
+  current document has a reading, or a request younger than a stated bound.
+- **WM-2, readiness before selection.** G has no dependency input and nothing
+  before G excludes a dependency-blocked item. Giraffe's `needs` edges, with
+  `met` computed, give the Definition of Ready (the Jira lens).
+- **WM-3, tickets can be selected.** All 171 tickets were excluded before
+  scoring; a ticket's wants found on the fly have no locator. Each item
+  carries its wants with a locator, or a typed reason why it cannot be
+  checked yet.
+- **WM-4, the choice can say why.** A selection cites Giraffe's pass and
+  priority (a recorded pass, not a recomputation the reader cannot see).
+  Today nothing reads Giraffe's priorities, and none are current.
+- **WM-5, dropped items leave the field with their reason** (Jira's "won't
+  do"; 馬's "dropped"). None of the 109 status lines said dropped.
+
+### The Mozilla LOI
+
+Joe: "understanding what questions we're actually addressing is not only
+practically useful for FUTON but a key question for any org, whether it uses
+AI or not, but especially if it uses AI b/c things get complex." The LOI's
+method (futon7 `holes/mozilla/LOI-draft-1.md`, summary): join the agents'
+logs to the tracker, test each claim against what happened, and "show the
+team what is finished, what is stuck, and what an agent may safely take
+next"; its traction line counts "509 backlog items read and sorted". That is
+Giraffe's job seen from outside:
+
+- **L-1, each item says which question it serves.** Jira shows whether a
+  ticket can be done, not whether it is worth doing (§The Jira lens). Worth
+  comes from the question: an item links to the question it bears on (futon7
+  `holes/argument-graph/questions.edn`, 62 apex questions; E-futon-questions
+  item 5: questions as records linked to turns and citations). An item that
+  serves no stated question is itself a finding.
+- **L-2, finished / stuck / safe-next are computed and shown with their
+  evidence.** Finished: a closure with support (the audit found closures
+  recorded without it). Stuck: unmet `needs`. Safe next: ready, with a want
+  that can be checked. Every finding links to evidence the team can check.
+- **L-3, tracker-neutral.** One source adapter per tracker (§Approach): our
+  holes/ documents now, a Jira or GitHub export for an outside team.
+- **L-4, the team's rules are plain files.** What counts as done or ready is
+  configuration the team edits, not code.
+- **L-5, runs on the team's own machine,** with no data leaving it, and an
+  open record format so one team's audit can be read by another.
+- **L-6, measured by** findings the team confirmed and hours from first run
+  to first finding (the LOI's traction measures).
+
+### What both need from the GCC
+
+WM-1, WM-2, L-1 and L-2 all need the same thing: items, readings, `needs`,
+questions and closures as connected records, kept current as turns settle and
+documents change. That is M-repl-circus's "gap at the heart of the mission"
+(nothing a settled turn produces reaches Giraffe) seen from Giraffe's side.
+
 ## Giraffe in futonic logic (Joe, 2026-10-26)
 
 Source: `futon3/library/futon-theory/futonic-logic.flexiarg` §4.9–4.11. The essay port in `futon7a/essays/futonic-logic/futonic-logic.md` is identical in these sections.
