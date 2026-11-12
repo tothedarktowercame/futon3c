@@ -511,40 +511,63 @@ artifact provider, since the only one is in memory); workplan; F2–F6 and
 code↔docs; :7084. The futon4a README's "never a live store" rule changes at
 the same cut-over (Joe's 11-12 statement supersedes it).
 
-### GCC load design (draft for Joe, claude-13, 2026-11-12)
+### GCC load design (revised on the substrate, claude-13, 2026-11-12)
 
 Joe: "rather than just dump-and-load I think we should use the material to
 help us finish our design and make sure we load it in ways that are
-meaningful." From two reviews of the prototypes against E-gcc-schema:
-`holes/labs/M-repl-circus/GCC-workplan-review-2026-11-12.md` (kimi-2,
-`cf1ed5481`; the :7094 workplan and lexicon stack) and
-`GCC-giraffe-review-2026-11-12.md` (kimi-1, `7c404309b`; the Giraffe store).
-Nearly everything fits a B1 record shape. What differs is where each kind's
-truth comes from, and that decides how it enters the GCC:
+meaningful", and then: "we should be a bit careful here because documents in
+holes are already part of substrate". Sources: the prototype reviews
+(`holes/labs/M-repl-circus/GCC-workplan-review-2026-11-12.md`, kimi-2,
+`cf1ed5481`; `GCC-giraffe-review-2026-11-12.md`, kimi-1, `7c404309b`) and the
+substrate inventory (`GCC-substrate-inventory-2026-11-12.md`, kimi-1,
+`9c6a94af6`).
 
-| How it enters | What | Why |
-|---|---|---|
-| **Loaded once, kept with provenance** (data of record) | Joe's acts: introductions (3 on :7094), word rules, assessments (his acceptances and rejections); reviewers' verdicts (41 hand-reviewed `needs` edges); agents' readings (645 current Giraffe readings with their supersession) and model attestations (the `serves` links) | Judgements that cannot be recomputed from anything else |
-| **Derived continuously** by a writer, never copied | items from holes/ documents (document watcher); git attestations (created-by commit); `names` from the parser; mentions from turns (the turn projector at `:settled`); `needs` from accepted readings | Their truth is a document, git or a turn; a copy goes stale |
-| **Recomputed on read or on change; only a receipt stored** | Giraffe's pass, priorities, clusters; `met`; the lexicon's 14-verb reduction; the ranking | E-gcc-schema rules 3 and 4 |
-| **Operational, outside the GCC** | the re-read queue; the shadow demand ledger | Work in progress, not knowledge |
-| **Dropped once the above verifies** (nothing deleted yet) | 188 Giraffe run directories, 441 corpus copies (~1.9 GB); the :7094 store after its records of record are in futon1b | Recomputable, or superseded by the load |
+**The item is the substrate entity.** Missions are `mission/doc` entities
+(`<repo-label>/mission/<slug>`, external id `M-…`) and excursions
+`excursion/doc` entities (external id `E-…`), written and kept current by
+futon3c's document watcher (`file_ingest.clj`) and the mission-scope
+ingester. E-gcc-schema B1: the outside store stays the authority, "indexed,
+never mirrored". So the GCC writes no item records; every GCC record about an
+item points at that entity's id, found by external id. Coverage today: 474 of
+Giraffe's 662 items (72%) and 280 of the workplan's 323 (87%) resolve.
 
-One item node: the workplan's 323 items and Giraffe's 826 share an id space,
-so each is one `[:workplan/item 1]` node that Giraffe and the lexicon both
-point at. Two findings on the prototypes: the evidence mentions in the slice
-were written by hand (`make_all.py` `MENTIONS`), a hand-made version of what
-the turn projector must produce; and several truths (serves, pending levels,
-user stories) live in `~/notes` TSV files outside any repository.
+**Substrate fixes that come first** (each is a watcher fix, not GCC work):
+- one item, two half-entities: the watcher and the scope ingester label repos
+  differently (`futon4-elisp-d` vs `futon4-d`, `futon6-py-d` vs `futon6-d`), so
+  89 missions exist twice, one entity with the status, the other with the
+  path (checked: M-formal-arxana);
+- excursions have UUID ids rather than `<label>/excursion/<slug>`, and the
+  scope lane adds stray `mission/doc` stubs for them;
+- tickets (155 of Giraffe's unresolved items), campaigns, labs, problems and
+  A- algorithms have no entities and no writer;
+- futon7's missions have no entities although futon7 is watched (cause not
+  yet found); futon1b is not a watch root;
+- state disagrees in places (M-apm-demonstration is cancelled for Giraffe and
+  in progress on its entity): the entity's status should be the one source,
+  with Giraffe's five state groups computed from it.
 
-**Proposed schema lines, for Joe's ruling** (wording in the two reviews):
-from Giraffe, a reading type keyed by item and document digest with
-supersession; the re-read request as its own record or as the first B7 want
-with a horizon (after splitting failed from withdrawn, rule 7); the five
-state-group values. From the workplan, a home for word-rule members; the
-mention-role vocabulary; `pending/level` as an item readiness attestation;
-benefit-line levels in B8; introductions carrying their mark range and an
-honest timing basis.
+**Then the GCC records, each attached to the entity id:**
+
+| How it enters | What |
+|---|---|
+| Loaded once, with provenance (judgements that cannot be recomputed) | Joe's acts (introductions, word rules, acceptances, rejections); reviewers' verdicts on `needs` edges; agents' readings (Giraffe's current readings with their supersession) and the model-made `serves` links |
+| Derived continuously by a writer | `needs` from accepted readings; `names` from the parser; mentions from turns (the turn projector at `:settled`); creation commits from git |
+| Recomputed; only a receipt stored | Giraffe's pass, priorities, clusters; `met`; the lexicon's verb reduction; the ranking |
+| Outside the GCC | the re-read queue; the demand ledger |
+| Dropped once the above verifies (nothing deleted yet) | Giraffe's run directories and corpus copies (~1.9 GB); the :7094 store |
+
+Storage: Arxana records in futon1b with flat columns (futon1b `5ea3be93f`)
+so XTQL can ask anything, and the Arxana index sidecar materialising what a
+page must answer fast ("cached views", Joe).
+
+**Proposed schema lines** (wording in the two reviews; to be judged on a
+working demo, Joe: "rather than "ruling" on them we should bring up a working
+demo"): a reading type keyed by item and document digest, with supersession;
+the re-read request as a record or as the first B7 want; word-rule members;
+the mention-role vocabulary; `pending/level` as a readiness attestation;
+benefit-line levels; introductions with their mark range and timing basis.
+The workplan prototype's `[:workplan/item 1]` records are replaced by the
+entity reference.
 
 ### What VERIFY checks
 
