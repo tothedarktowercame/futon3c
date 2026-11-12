@@ -242,3 +242,22 @@ final delta copy and the must-do list above.
 Still holding permits for long periods, not blocking: the hx index catch-up
 (repairs by `_id IN` in chunks of 500, a scan each; last full run 2.6 h)
 and entity-write presence checks.
+
+## minus40's store stopped (2026-11-12 ~06:00Z)
+
+Joe: "Can't we just make a temporary port forwarder for minus40 and remove it
+right away?" The delta copy finished first (documents written since the
+first run: ~100, copied; hyperedges re-run in full, 60,324 upserted, 0
+failed). Then `minus40-store.service` was stopped and disabled (its store
+dir `~/code/data/minus40/scratch-store` kept), and the transient unit
+`m40-forward` (minus40 `scripts/m40_forward.py`, `1ba2d7f`) took its ports:
+:7093 → :7073 and :7092 → :7072. Sessions started before the switch still
+have MINUS40_BASE=:7093 in their MCP server; through the forwarder their
+writes reach futon1b, so there is no split and no final top-up. Their memory
+*search* runs the pre-switch code without `scope=all`, so it returns acts
+rather than memories until those sessions restart.
+
+**Remove the forwarder** (`systemctl --user stop m40-forward`) once no
+running session was started before ~05:37Z on 2026-11-12. As a transient
+unit it does not survive a reboot. The read-only period for :7093 is
+replaced by this; the store dir stays as the rollback.
