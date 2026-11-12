@@ -376,6 +376,25 @@ still leaves Zone with more free memory than now. "If it *happens* that some
 aspect of this needs to be "hydrated" into datascript, that route remains
 open."
 
+Inventory (claude-6, `holes/labs/M-repl-circus/JVM-inventory-2026-11-12.md`,
+`a976ee9c6`): the nine Arxana processes all run the canonical futon3c code and
+serve the same `/arxana/v1` routes, differing only in store and fixture; eight
+start a private embedded futon1b (about 9 GB together); live futon1b already
+registers `/api/alpha/arxana/command` and `/query`.
+
+| JVM | Data | In use | Fold | Effort |
+|---|---|---|---|---|
+| giraffe-reread | SQLite queue + EDN, no XTDB | every 5 min | scheduled task on its own executor | small |
+| Arxana demo :7084 | mock, in memory | unknown | mount in-process, or retire | small |
+| F1–F6 :7085–:7090 | in-memory XTDB from pinned inputs | idle since 11-09 | one `/arxana/v1` mount on :7070 over futon1b, `prepare!` as loaders | medium (F1), small each after |
+| code↔docs :7091 | same | idle since 11-09 | same mount | small |
+| workplan :7094 | own durable XTDB store, 130 MB, 24 post-load commands held nowhere else | daily | same mount, reload into futon1b, replay post-load writes | medium to large |
+
+Order: giraffe-reread; the `/arxana/v1` mount proved on F1 (with a durable
+artifact provider, since the only one is in memory); workplan; F2–F6 and
+code↔docs; :7084. The futon4a README's "never a live store" rule changes at
+the same cut-over (Joe's 11-12 statement supersedes it).
+
 ### What VERIFY checks
 
 - **Coverage** (core.logic): every operator chat turn at :7073 has a record
