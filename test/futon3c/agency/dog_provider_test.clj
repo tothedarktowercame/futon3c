@@ -6,7 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is use-fixtures]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.dog-provider :as dog]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.xiang.turn-store :as turn-store])
@@ -76,10 +76,15 @@
 ;; (packet B); the arm itself is tested at the end of this file.
 
 (defn- prepare!
-  "Synchronously prepare the cache for RECORD-ID from STORE's record."
+  "Synchronously prepare the cache for RECORD-ID from STORE's record.
+   Stamps the recall as prepare-async! does (packet C strata)."
   [opts store record-id]
   (let [record (turn-store/read-record store record-id)]
-    (#'dog/publish! record-id (dog/recall (:source_text record) opts))))
+    (#'dog/publish! record-id
+                    (dog/stamp-recall (or (:memory-projects-dir opts)
+                                          @#'dog/memory-projects-dir)
+                                      (dog/recall (:source_text record) opts)
+                                      record))))
 
 (defn- memory-fact
   "The Prompt-line fact for a :memory segment — the same pure function
@@ -961,3 +966,79 @@
     (let [buried (:dog_buried (turn-store/read-record store record-id))]
       (is (= "ok" (:status buried)))
       (is (= [] (:said-again buried))))))
+
+;; -------------------------------------------- E-dog-helps packet C: strata
+;; Each recalled item is stamped at recall time with :project, :type,
+;; :in-seat-index, :age-days.  Fixtures here are INVENTED frontmatter-only
+;; stubs written into a temp dir (public-repo rule: no memory file body is
+;; ever copied); the turn records are the real dog fixtures.
+
+(defn- tmp-projects-with-memory
+  "A temp projects root: proj/memory/stubbed.md (frontmatter-only stub)
+   and proj-seat/<session>.jsonl + MEMORY.md mentioning stubbed.md when
+   LISTED? — returns the root path."
+  [session listed?]
+  (let [root (.toFile (Files/createTempDirectory "dog-projects" (into-array FileAttribute [])))
+        memdir (io/file root "proj" "memory")
+        seatdir (io/file root "proj-seat")]
+    (.mkdirs memdir)
+    (.mkdirs seatdir)
+    (spit (io/file memdir "stubbed.md")
+          (str "---\nname: stubbed\ndescription: \"an invented stub memory for packet C tests\"\n"
+               "metadata:\n  node_type: memory\n  type: feedback\n  modified: 2026-10-04T14:46:35.701Z\n---\n\nstub body.\n"))
+    (spit (io/file seatdir (str session ".jsonl")) "{}")
+    (spit (io/file seatdir "MEMORY.md")
+          (if listed? "- [an invented stub](memory/stubbed.md)\n" "- [something else](memory/other.md)\n"))
+    (str root)))
+
+(deftest stamp-item-strata
+  (let [root (tmp-projects-with-memory "sess-claude" true)
+        item {:memory "proj/stubbed" :display "proj/stubbed" :score 1.0 :why "w"}
+        record {:agent_id "claude-13" :session_id "sess-claude"}
+        stamped (dog/stamp-item root item record)]
+    (is (= "proj" (:project stamped)))
+    (is (= "feedback" (:type stamped)) "frontmatter metadata.type")
+    (is (true? (:in-seat-index stamped)) "the seat's MEMORY.md lists the slug")
+    (is (number? (:age-days stamped)))
+    (let [expected (quot (- (System/currentTimeMillis)
+                            (.toEpochMilli (java.time.Instant/parse "2026-10-04T14:46:35.701Z")))
+                         86400000)]
+      (is (= expected (:age-days stamped))
+          "frontmatter modified, not file mtime, drives the age"))))
+
+(deftest stamp-item-in-seat-index-variants
+  (let [item {:memory "proj/stubbed"}]
+    (testing "MEMORY.md without the slug → false"
+      (let [root (tmp-projects-with-memory "sess-a" false)]
+        (is (false? (:in-seat-index (dog/stamp-item root item {:agent_id "claude-13" :session_id "sess-a"}))))))
+    (testing "no transcript for the session → \"unknown\""
+      (let [root (tmp-projects-with-memory "sess-a" true)]
+        (is (= "unknown" (:in-seat-index (dog/stamp-item root item {:agent_id "claude-13" :session_id "sess-nope"}))))))
+    (testing "non-Claude seat → \"n/a\""
+      (let [root (tmp-projects-with-memory "sess-a" true)]
+        (is (= "n/a" (:in-seat-index (dog/stamp-item root item {:agent_id "kimi-2" :session_id "sess-a"}))))))))
+
+(deftest stamp-item-no-file
+  (let [root (tmp-projects-with-memory "sess-a" true)
+        stamped (dog/stamp-item root {:memory "proj/missing"} {:agent_id "claude-13" :session_id "sess-a"})]
+    (is (= "unknown" (:type stamped)) "no file → unknown type")
+    (is (nil? (:age-days stamped)))))
+
+(deftest recall-items-carry-strata
+  ;; The real recall path (fixture turn-05cXMM's recorded m40 answer):
+  ;; every item in the cached recall is stamped.
+  (let [store (tmp-store)
+        record-id "turn-dogTEST1-s"
+        root (tmp-projects-with-memory "sess-test" false)]
+    (write-operator-record! store record-id "benefits have a time-limited nature")
+    (prepare! {:request-fn (stub-request [@fixture-05cXMM])
+               :memory-projects-dir root} store record-id)
+    (let [items (:items (dog/cached-recall record-id))]
+      (is (seq items))
+      (doseq [item items]
+        (is (contains? item :project))
+        (is (contains? item :type))
+        (is (contains? item :in-seat-index))
+        (is (contains? item :age-days))
+        ;; none of the fixture's real handles exist under the temp root
+        (is (= "unknown" (:type item)))))))

@@ -366,6 +366,8 @@
 
 ;; ------------------------------------------------- arrival-time compute
 
+(declare stamp-recall memory-projects-dir)
+
 (defonce ^:private ^ExecutorService executor
   (Executors/newSingleThreadExecutor
    (reify ThreadFactory
@@ -401,10 +403,13 @@
                      (if (and (map? record)
                               (not (str/blank? (str (:source_text record)))))
                        (publish! record-id
-                                 (recall (:source_text record)
-                                         (assoc opts :lu-terms
-                                                (try (lu-terms store record-id)
-                                                     (catch Throwable _ nil)))))
+                                 (stamp-recall
+                                  (or (:memory-projects-dir opts) memory-projects-dir)
+                                  (recall (:source_text record)
+                                          (assoc opts :lu-terms
+                                                 (try (lu-terms store record-id)
+                                                      (catch Throwable _ nil))))
+                                  record))
                        ;; No record or no operator text: a typed absence, so
                        ;; the render records it instead of re-kicking forever.
                        (publish! record-id
@@ -526,6 +531,91 @@
                 (filter #(and (> (count %) 3)
                               (not (contains? stopwords %)))))]
     (set (partition 2 1 ws))))
+
+;; ------------------------------------------------------- packet C: strata
+;; E-dog-helps §2 "Whether the seat could already see the memory": stamp
+;; each recalled item at recall time with its stratum (project, frontmatter
+;; type, seat-index membership, age). These cannot be rebuilt later —
+;; memories are edited and seats move.
+
+(defn- frontmatter-field
+  "FIELD (e.g. \"type\", \"modified\") from a memory file's YAML-ish
+   frontmatter, or nil."
+  [text field]
+  (some->> (re-find (re-pattern (str "(?m)^  " field ": (.+)$")) (str text))
+           second str/trim))
+
+(defn- memory-file [dir handle]
+  (let [[project slug] (str/split (str handle) #"/" 2)]
+    (when (and (seq project) (seq slug))
+      (let [f (io/file (str dir) project "memory" (str slug ".md"))]
+        (when (.isFile f) f)))))
+
+(defn- age-days
+  "Whole days since the memory was last modified: the frontmatter
+   `modified` when present (it is the author's own claim), else the
+   file's mtime. Nil with no file."
+  ^Long [^java.io.File f text]
+  (when f
+    (let [modified (frontmatter-field text "modified")
+          epoch (if (seq modified)
+                  (try (.toEpochMilli (Instant/parse (str modified)))
+                       (catch Throwable _ (.lastModified f)))
+                  (.lastModified f))]
+      (quot (- (System/currentTimeMillis) epoch) 86400000))))
+
+(defn- seat-project-dir
+  "The ~/.claude/projects/<dir> a Claude seat's session ran in, found by
+   its transcript (<dir>/<session-id>.jsonl — the futon session id IS the
+   Claude session uuid; verified 2026-11-12: ed69fb38 → -home-joe-code).
+   Nil when no transcript matches."
+  [projects-root session-id]
+  (when (seq (str session-id))
+    (some (fn [^java.io.File d]
+            (let [f (io/file d (str session-id ".jsonl"))]
+              (when (.isFile f) d)))
+          (.listFiles (io/file projects-root)))))
+
+(defn- in-seat-index
+  "Whether the answering seat's own memory index (the MEMORY.md of the
+   project directory its session ran in) lists this memory's slug.
+   \"n/a\" for non-Claude seats, \"unknown\" when the session→project
+   mapping fails, true/false otherwise. Typed, never guessed."
+  [projects-root record item]
+  (let [agent (str (:agent_id record))]
+    (if-not (str/starts-with? agent "claude")
+      "n/a"
+      (let [dir (seat-project-dir projects-root (:session_id record))]
+        (if-not dir
+          "unknown"
+          (let [idx (io/file dir "MEMORY.md")
+                slug (second (str/split (str (:memory item)) #"/" 2))]
+            (boolean (and (.isFile idx)
+                          (str/includes? (slurp idx) (str slug ".md"))))))))))
+
+(defn stamp-item
+  "Packet C: one recalled ITEM gains :project, :type (frontmatter
+   metadata.type, \"unknown\" with no file), :in-seat-index, and
+   :age-days (frontmatter `modified` when present, else file mtime).
+   File reads only; no store queries."
+  ([item record] (stamp-item memory-projects-dir item record))
+  ([dir item record]
+   (let [handle (:memory item)
+         project (first (str/split (str handle) #"/" 2))
+         f (memory-file dir handle)
+         text (when f (slurp f))]
+     (assoc item
+            :project project
+            :type (or (and f (frontmatter-field text "type")) "unknown")
+            :in-seat-index (in-seat-index dir record item)
+            :age-days (age-days f text)))))
+
+(defn stamp-recall
+  "Stamp every item of RECALL (packet C). Typed absences have no items."
+  [dir recall record]
+  (if (seq (:items recall))
+    (update recall :items (fn [items] (mapv #(stamp-item dir % record) items)))
+    recall))
 
 (def echo-min-shared
   "Shared distinctive content bigrams needed for \"echoed\" (see use-check)."
