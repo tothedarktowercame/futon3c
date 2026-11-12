@@ -349,6 +349,23 @@ closes: operator turn → 驴, 象, 狗, 馬 on the record → `:settled` → GC
 projector → 猴 focus → Giraffe pass and priorities → the War Machine (and Joe)
 as readers of the priorities.
 
+### Two JVMs (Joe, 2026-11-12)
+
+Joe: "13 JVMs is 11 more than are needed, in my opinion. It is starting to
+sound like "GCC" mostly means decluttering our JVM multiverse and putting them
+into 1x futon3c and 1x futon1b." On 11-12 Zone ran 13 (about 39 GB):
+futon3c (:7070), futon1b (:7073), minus40's store (:7093, a second futon1b),
+the formal Arxana demos F1–F6 (:7085–:7090), the code↔docs demo (:7091), the
+workplan demo (:7094), the Arxana demo (:7084, a child of the futon3c JVM),
+and giraffe-reread (a fresh JVM every 5 minutes from a timer enabled on
+11-06, though its unit files say "NOT INSTALLED OR STARTED"). The GCC is one
+graph, so its consolidation is also a consolidation of processes: every
+service as routes and scheduled tasks in the futon3c JVM (I-0), every store's
+data in futon1b. Order: minus40's store first (Joe: "memory migration is the
+priority"); giraffe-reread as an in-JVM scheduled task like the watchers; the
+Arxana demos as routes in futon3c with their data in futon1b, with their
+owners.
+
 ### What VERIFY checks
 
 - **Coverage** (core.logic): every operator chat turn at :7073 has a record
