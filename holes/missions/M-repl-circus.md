@@ -420,7 +420,15 @@ as readers of the priorities.
     from 4g on 10-28) and by design runs near its limit; samples on 11-12
     show 3.0–5.5 GB used and no full GCs. Joe offered to double it ("we could
     2x its heap and still have plenty of RAM left"); Zone had 163 GB available
-    on 11-12. A restart is Joe's to schedule.
+    on 11-12. Joe, 11-12: "If we're already at 8GB on futon1b and not
+    pushing the limit there after all then we don't need to 2x it right
+    away. But this does raise the interesting point that if we give XTDB a
+    lot of memory, Datascript is probably less relevant b/c we'd presumably
+    be able to have whatever parts of the database we need to query in
+    memory after all." So the Datascript option's one advantage, speed from
+    holding the graph in memory, can come from XTDB's own caches given heap.
+  - **Order (Joe, 11-12): "memory migration is the priority."** Discovery:
+    kimi-2, `holes/labs/M-repl-circus/MEM-migration-discovery-2026-11-12.md`.
   Real XTQL per use case: kimi-1, `holes/labs/M-repl-circus/GCC-xtql-2026-11-12.md`
   (in progress).
 - The record types for 狗 (recall, use, buried) and 猴 (focus): schema 1.1.
