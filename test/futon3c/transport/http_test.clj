@@ -949,6 +949,21 @@
             (when (.exists session-file)
               (.delete session-file))))))))
 
+(deftest repeated-sessionless-auto-register-mints-distinct-zai-seats
+  (testing "a fresh invoke-ready seat is not mistaken for a reclaimable ghost"
+    (let [handler (make-handler {:evidence-store (atom {:entries {} :order []})})
+          body (json/generate-string {"type" "zai"})
+          first-response (post handler "/api/alpha/agents/auto" body)
+          second-response (post handler "/api/alpha/agents/auto" body)
+          first-body (parse-body first-response)
+          second-body (parse-body second-response)]
+      (is (= 201 (:status first-response)))
+      (is (= 201 (:status second-response)))
+      (is (= "zai-1" (:agent-id first-body)))
+      (is (= "zai-2" (:agent-id second-body)))
+      (is (fn? (:agent/invoke-fn (reg/get-agent "zai-1"))))
+      (is (fn? (:agent/invoke-fn (reg/get-agent "zai-2")))))))
+
 (deftest codex-auto-register-seeds-session-id
   (testing "POST /api/alpha/agents/auto creates a fresh codex lane with its own session file"
     (let [handler (make-handler)

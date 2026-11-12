@@ -2013,7 +2013,8 @@
                          meta (:agent/metadata agent)
                          local-auto-ghost? (and (not (:remote? meta))
                                                 (not (:proxy? meta))
-                                                (:auto-registered? meta))
+                                                (:auto-registered? meta)
+                                                (nil? (:agent/invoke-fn agent)))
                          unreachable-remote-placeholder?
                          (and (:remote? meta)
                               (not (:proxy? meta))
