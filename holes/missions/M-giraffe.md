@@ -70,12 +70,9 @@ the backlog, from the HEAD measurements of 2026-10-25/26:
 
 Joe: "understanding what questions we're actually addressing is not only
 practically useful for FUTON but a key question for any org, whether it uses
-AI or not, but especially if it uses AI b/c things get complex." The LOI's
-method (futon7 `holes/mozilla/LOI-draft-1.md`, summary): join the agents'
-logs to the tracker, test each claim against what happened, and "show the
-team what is finished, what is stuck, and what an agent may safely take
-next"; its traction line counts "509 backlog items read and sorted". That is
-Giraffe's job seen from outside:
+AI or not, but especially if it uses AI b/c things get complex." The
+application's method and wording live in futon7 (private); what Giraffe
+must supply for it, stated here without quoting it:
 
 - **L-1, each item says which question it serves.** Jira shows whether a
   ticket can be done, not whether it is worth doing (§The Jira lens). Worth
@@ -93,8 +90,7 @@ Giraffe's job seen from outside:
   configuration the team edits, not code.
 - **L-5, runs on the team's own machine,** with no data leaving it, and an
   open record format so one team's audit can be read by another.
-- **L-6, measured by** findings the team confirmed and hours from first run
-  to first finding (the LOI's traction measures).
+- **L-6, measured** by the application's own traction measures (futon7).
 
 ### What both need from the GCC
 
