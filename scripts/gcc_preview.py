@@ -262,15 +262,62 @@ def load_queue(queue_path):
     db = sqlite3.connect("file:%s?mode=ro" % queue_path, uri=True)
     try:
         rows = db.execute(
-            "SELECT target_id, source_sha, state, requested_at_ms "
+            "SELECT target_id, source_sha, state, requested_at_ms, "
+            "claimed_by, updated_at_ms "
             "FROM reread_requests ORDER BY target_id, requested_at_ms").fetchall()
     finally:
         db.close()
     by_target = {}
-    for target, sha, state, at in rows:
+    for target, sha, state, at, claimed, updated in rows:
         by_target.setdefault(target, []).append(
-            {"source_sha": sha, "state": state, "requested_at_ms": at})
+            {"source_sha": sha, "state": state, "requested_at_ms": at,
+             "claimed_by": claimed, "updated_at_ms": updated})
     return by_target
+
+def find_historical_readings(generations_dir, needed):
+    """{(item, sha): reading record} from earlier corpus generations, for
+    readings the current generation no longer carries.  Only lines naming a
+    needed item are parsed."""
+    found = {}
+    if not needed or not os.path.isdir(generations_dir):
+        return found
+    wanted = {}
+    for item, shas in needed.items():
+        for sha in shas:
+            wanted.setdefault(item.encode("utf-8"), set()).add(sha)
+    for gen in sorted(os.listdir(generations_dir)):
+        gdir = os.path.join(generations_dir, gen)
+        if not os.path.isdir(gdir):
+            continue
+        for name in sorted(os.listdir(gdir)):
+            if not re.match(r"batch-.*\.jsonl$", name):
+                continue
+            try:
+                with open(os.path.join(gdir, name), "rb") as f:
+                    blob = f.read()
+            except OSError:
+                continue
+            hits = [i for i in wanted if i in blob]
+            if not hits:
+                continue
+            for line in blob.decode("utf-8", "replace").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(rec, dict):
+                    continue
+                iid = rec.get("id")
+                sha = (rec.get("source") or {}).get("sha256")
+                if iid and sha and (iid, sha) not in found \
+                        and sha in wanted.get(iid.encode("utf-8"), set()):
+                    found[(iid, sha)] = rec
+        if len(found) == sum(len(s) for s in needed.values()):
+            break
+    return found
 
 # ---------------------------------------------------------------- arxana ---
 
@@ -370,7 +417,8 @@ def question_links(questions_path, item_ids):
             if hits:
                 out[item].append({"question_id": qid,
                                   "kind": str(qkind) if qkind else None,
-                                  "matched_in": hits})
+                                  "matched_in": hits,
+                                  "text": q.get(Keyword("q/text"))})
     return out, None
 
 # ------------------------------------------------------------- turn mentions
@@ -437,10 +485,18 @@ def edge_met(edge_class, kind, target_group, marked_met):
         return target_group in ("started", "completed")
     return target_group == "completed"
 
+def _date_of_ms(ms):
+    if not ms:
+        return None
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).date().isoformat()
+
 def build_item(item_id, ctx):
     """One items/<id>.json payload. ctx carries all sources."""
     records, links, absences = [], [], []
     shapes = ctx["shapes"]
+    disp_mentions, disp_waiting, disp_related = [], [], []
+    disp_benefits, disp_names = [], []
+    live_sha = None
 
     def emit_record(type_key, ident, fields, provenance, supersedes=None):
         body, status = apply_shape(type_key, fields, shapes)
@@ -494,6 +550,8 @@ def build_item(item_id, ctx):
     current_sha = (corpus_rec.get("source") or {}).get("sha256") if corpus_rec else None
     reading_ids = {}
     seen = []
+    disp_earlier = []
+    disp_reading = None
     for row in queue_rows:
         sha = row["source_sha"]
         if sha in reading_ids:
@@ -518,9 +576,34 @@ def build_item(item_id, ctx):
                       "record-pin-sha256": None,
                       "queue-state": row["state"],
                       "requested-at-ms": row["requested_at_ms"]}
-            prov = {"source": "agent", "ref": "giraffe-reread-queue", "basis": "exact"}
+            prov = {"source": "agent", "ref": "giraffe-reread-queue", "basis": "model"}
         reading_ids[sha] = emit_record("[:giraffe/reading 1]",
                                        "reading/%s/%s" % (item_id, sha), fields, prov)
+        # ---- display: join the queue row to its reading text -------------
+        hist = ctx["historical"].get((item_id, sha))
+        source_rec = corpus_rec if (corpus_rec and sha == current_sha) else hist
+        reader = row.get("claimed_by") or "unknown"
+        entry = {"read_at": _date_of_ms(row.get("updated_at_ms")),
+                 "of_version": sha[:8],
+                 "summary": (source_rec or {}).get("purpose"),
+                 "reader": reader}
+        if corpus_rec and sha == current_sha:
+            warnings = ["self-check: %s" % w
+                        for w in (corpus_rec.get("self_check") or [])]
+            summary = corpus_rec.get("purpose")
+            if ctx["plant_display_raw_sha"]:
+                summary = sha  # PLANT: raw hash where words belong
+            disp_reading = {
+                "summary": summary,
+                "status_as_read": corpus_rec.get("status_as_read"),
+                "link_count": len(corpus_rec.get("edges") or []),
+                "of_current_version": (live_sha == sha) if live_sha else None,
+                "read_at": _date_of_ms(row.get("updated_at_ms")),
+                "reader": reader,
+                "warnings": warnings,
+                "earlier_count": 0, "earlier": disp_earlier}
+        else:
+            disp_earlier.append(entry)
     if not ctx["plant_drop_supersedes"]:
         for prev, nxt in zip(seen, seen[1:]):
             emit_link("[:supersedes 1]", reading_ids[nxt], reading_ids[prev],
@@ -541,21 +624,32 @@ def build_item(item_id, ctx):
                 "line": ev.get("line")}
         if kind in ("depends-on", "unblocks"):
             eclass = edge.get("intended_class") or edge.get("intended-class") or "closure"
-            tgt = ctx["groups"].get(to)
-            if tgt is None:
+            tinfo = ctx["docinfo"].get(to)
+            if tinfo is None:
                 met = edge_met(eclass, "external", None, edge.get("met"))
                 kind_of = "external"
             else:
-                met = edge_met(eclass, "item", tgt, edge.get("met"))
+                met = edge_met(eclass, "item", tinfo["group"], edge.get("met"))
                 kind_of = "item"
             fields = dict(base, **{"from": frm, "to": to, "class": eclass,
                                    "source": kind_of, "basis": basis_of(edge),
                                    "reading-member": item_id})
             emit_link("[:needs 1]", frm, to, fields, met=met)
+            disp_waiting.append({"id": to,
+                                 "title": (tinfo or {}).get("title"),
+                                 "state_group": (tinfo or {}).get("group"),
+                                 "declared_status": (tinfo or {}).get("declared"),
+                                 "met": met,
+                                 "quote": ev.get("quote"), "line": ev.get("line")})
         else:
             tkey = {"part-of": "[:part-of 1]", "relates-to": "[:relates-to 1]"}.get(
                 kind, "[:relates-to 1]")
             emit_link(tkey, frm, to, dict(base, **{"from": frm, "to": to}), met=None)
+            tinfo = ctx["docinfo"].get(to)
+            disp_related.append({"id": to,
+                                 "title": (tinfo or {}).get("title"),
+                                 "resolved": tinfo is not None,
+                                 "kind": kind})
 
     # ---- :7094 workplan stack ---------------------------------------------
     view = ctx["arxana"].item_view(item_id) if ctx["arxana"] else None
@@ -590,6 +684,7 @@ def build_item(item_id, ctx):
                          "draft": bool(n.get("draft?"))},
                         {"source": "agent", "ref": ":7094 workplan/item-view",
                          "basis": "parser"})
+            disp_names.append({"slug": slug, "label": slug})
         for s in view.get("serves") or []:
             bl = s.get("benefit-line") or {}
             line = (bl.get("asserted-content") or {}).get("benefit/line", bl.get("id"))
@@ -599,6 +694,15 @@ def build_item(item_id, ctx):
                          "draft": bool(s.get("draft?"))},
                         {"source": "agent", "ref": ":7094 workplan/item-view",
                          "basis": "model"})
+            bname = next(((a.get("content") or {}).get("benefit/name")
+                          for a in s.get("benefit/attestations") or []
+                          if (a.get("content") or {}).get("benefit/name")), None)
+            disp_benefits.append({
+                "code": line,
+                "text": bname if bname else
+                        {"absent": "no benefit/name attestation on the "
+                                   "benefit-line 'clusion for %s" % line},
+                "producer": s.get("producer"), "draft": bool(s.get("draft?"))})
         if not (view.get("names") or []):
             absences.append({"what": "names links",
                              "reason": "item names no lexicon entity on :7094"})
@@ -606,15 +710,21 @@ def build_item(item_id, ctx):
             absences.append({"what": "serves links",
                              "reason": "item serves no benefit line on :7094"})
         for m in view.get("mentions") or []:
+            att = m.get("attestation") or {}
             emit_record("[:workplan/mention 1]",
                         "mention/%s/%s" % (item_id, m.get("record/id")),
                         {"item-id": item_id,
                          "role": str(m.get("role", "")).lstrip(":"),
                          "time": m.get("time"),
-                         "ref": (m.get("attestation") or {}).get("id"),
+                         "ref": att.get("id"),
                          "author": m.get("author")},
                         {"source": "git", "ref": ":7094 workplan/mention",
                          "basis": "exact"})
+            disp_mentions.append({
+                "date": (m.get("time") or "")[:10] or None,
+                "role": str(m.get("role", "")).lstrip(":"),
+                "who": m.get("author") or att.get("producer") or "unknown",
+                "turn": m.get("evidence/id") or att.get("id")})
         intro_count = 0
         intro_err = False
         for eid in named_entity_ids:
@@ -654,6 +764,10 @@ def build_item(item_id, ctx):
                      "ref": tm.get("evidence_id"), "author": tm.get("labeller")},
                     {"source": "turn", "ref": "session-turn-analysis/%s" % tm["turn"],
                      "basis": "model"})
+        disp_mentions.append({"date": (tm.get("created_at") or "")[:10] or None,
+                              "role": "context",
+                              "who": tm.get("labeller") or "unknown",
+                              "turn": tm.get("evidence_id") or tm["turn"]})
     if not ctx["turns"].get(item_id):
         absences.append({"what": "turn mentions",
                          "reason": "no analyzed operator turn text names %s" % item_id})
@@ -683,26 +797,66 @@ def build_item(item_id, ctx):
                  "repo": ctx["repos"].get(item_id),
                  "state_group": group if group is not None
                  else {"absent": "item document not found or status unmapped"}}
-    return ({"item": item_node, "records": records, "links": links,
-             "absences": absences},
+
+    # ---- display block (contract v2): words and dates, never a bare hash --
+    repo = ctx["repos"].get(item_id)
+    rel_path = None
+    if doc_path and repo and ("/%s/" % repo) in doc_path:
+        rel_path = doc_path.split("/%s/" % repo, 1)[1]
+        rel_path = "%s/%s" % (repo, rel_path)
+    if disp_reading is not None:
+        disp_reading["earlier_count"] = len(disp_earlier)
+        reading_disp = disp_reading
+    elif queue_rows:
+        reading_disp = {"absent": "queue has %d reading row(s) but none matches "
+                                  "the current corpus reading" % len(queue_rows)}
+    else:
+        reading_disp = {"absent": "no accepted reading of %s in the corpus "
+                                  "or the reread queue" % item_id}
+    qlinks = ctx["questions"].get(item_id) or []
+    if qlinks:
+        q0 = qlinks[0]
+        question_disp = {"id": q0["question_id"], "text": q0.get("text")}
+    else:
+        question_disp = {"absent": "no question in the argument graph names %s" % item_id}
+    disp_mentions.sort(key=lambda m: (m["date"] or "", m["turn"] or ""))
+    mentions_disp = {"count": len(disp_mentions),
+                     "first": disp_mentions[0] if disp_mentions else None,
+                     "latest": disp_mentions[-1] if disp_mentions else None,
+                     "list": disp_mentions}
+    display = {"header": {"id": item_id, "title": title,
+                          "state_group": group, "declared_status": declared,
+                          "path": rel_path},
+               "reading": reading_disp,
+               "waiting_on": disp_waiting,
+               "related": disp_related,
+               "why": {"benefit_lines": disp_benefits, "question": question_disp},
+               "names": disp_names,
+               "mentions": mentions_disp}
+    return ({"item": item_node, "display": display, "records": records,
+             "links": links, "absences": absences},
             {"id": item_id, "title": title, "kind": kind, "counts": counts})
 
 # ------------------------------------------------------------------ main ---
 
 def compute_groups(members):
-    """State groups for every corpus member, for met computation."""
-    groups, repos = {}, {}
+    """Per-member display facts for every corpus member (state group, title,
+    declared status) — used for met computation and waiting_on/related."""
+    info, repos = {}, {}
     for m in members:
         iid, path = m.get("id"), m.get("path")
         repo = None
         if path and "/holes/" in path:
             repo = path.split("/holes/")[0].rstrip("/").rsplit("/", 1)[-1]
         repos[iid] = repo
+        entry = {"group": None, "title": None, "declared": None}
         if path and os.path.isfile(path):
             lines = read_lines(path)
             sl, sc, _ = doc_status(lines)
-            groups[iid] = state_group(sl, sc)
-    return groups, repos
+            entry = {"group": state_group(sl, sc),
+                     "title": doc_title(lines, iid), "declared": sl}
+        info[iid] = entry
+    return info, repos
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -727,8 +881,18 @@ def main(argv=None):
     item_ids = [s.strip() for s in args.items.split(",") if s.strip()]
 
     members, corpus_records, corpus_real = load_corpus(args.corpus)
-    groups, repos = compute_groups(members)
+    docinfo, repos = compute_groups(members)
     queue = load_queue(args.queue) if os.path.isfile(args.queue) else {}
+    # Historical readings: shas the queue names that the current generation
+    # no longer carries, looked up in earlier generations for their summaries.
+    needed = {}
+    for iid in item_ids:
+        cur = (corpus_records.get(iid, {}).get("source") or {}).get("sha256")
+        shas = {r["source_sha"] for r in queue.get(iid, [])
+                if r["state"] in ("landed", "superseded") and r["source_sha"] != cur}
+        if shas:
+            needed[iid] = shas
+    historical = find_historical_readings(args.corpus + ".generations", needed)
     if args.no_arxana:
         arxana = None
     elif args.arxana_fixture:
@@ -740,10 +904,12 @@ def main(argv=None):
 
     ctx = {"shapes": shapes, "members": {m["id"]: m for m in members},
            "corpus": corpus_records, "corpus_real": corpus_real,
-           "groups": groups, "repos": repos, "queue": queue,
+           "docinfo": docinfo, "repos": repos, "queue": queue,
+           "historical": historical,
            "arxana": arxana, "questions": questions,
            "questions_path": args.questions, "turns": turns,
-           "plant_drop_supersedes": os.environ.get("GCC_PREVIEW_PLANT_DROP_SUPERSEDES") == "1"}
+           "plant_drop_supersedes": os.environ.get("GCC_PREVIEW_PLANT_DROP_SUPERSEDES") == "1",
+           "plant_display_raw_sha": os.environ.get("GCC_PREVIEW_PLANT_DISPLAY_RAW_SHA") == "1"}
 
     items_dir = os.path.join(args.out, "items")
     os.makedirs(items_dir, exist_ok=True)
