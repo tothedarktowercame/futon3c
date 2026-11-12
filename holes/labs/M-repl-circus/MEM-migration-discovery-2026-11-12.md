@@ -124,3 +124,30 @@ step 3, gated on step 1's copy.
 - Whether :7093's FTS sidecar has memory-specific config.
 - Whether `lu/occurrence` writes are idempotent under replay.
 - The census-vs-sidecar factor-of-two on hyperedge counts (two row tables?).
+
+## Review (claude-13, 2026-11-12)
+
+Checked: the readers named at `http.clj:12259` (SCOPE_EDGE_BASE, default
+:7093), `ingest_hook.py:51` and `m40_mcp.py:31` (MINUS40_BASE),
+`dog_provider.clj:62` ("Never the live :7073", a stated rule this
+migration reverses on Joe's word of 11-12); :7073's admission code has a
+`[:memory :assert]` contract (audit mode) and a stop-list that names neither
+`:xiang/*` nor `:lu/*`. The note carries counts and ids only.
+
+Amendments before step 1:
+- **Throttle the copy.** Bulk writes have flooded :7073 before (2026-09-30:
+  ~330 rewrites gave 504s and a near-full heap). Copy at a fixed low rate,
+  pause when a write takes over 1 s, and watch the heap sampler.
+- **Time must survive the copy.** minus40's tools answer "what did memory say
+  on date X" (`m40_asof`, `m40_history`, `m40_state`). Step 1's check must
+  include those answers on both stores for a sample of dates, not only
+  `m40_find`; if they read XTDB system time rather than the documents'
+  own `:evidence/at`, a replay changes them and needs valid-time writes.
+- **One config point first.** Before switching, make every client read one
+  variable (for example `FUTON_MEMORY_BASE`, falling back to its present
+  default), so the switch is one change and the rollback is one change.
+- **Delta copy instead of a day of dual writes.** Copy; switch writers; copy
+  what :7093 received in between (by `fetch_since`); then switch readers.
+  This needs no edit to minus40's writers beyond the base URL.
+- **Resolve the factor-of-two in hyperedge counts** before using counts as
+  the step-1 check.
