@@ -360,8 +360,30 @@ as readers of the priorities.
 
 ### Open for DERIVE
 
-- Where the GCC lives (an XTDB store or a sidecar, see the mission's Open
-  list), and the projector's incremental write.
+- **Where the GCC lives: a research question** (Joe, 2026-11-12: "I think
+  *maybe* a sidecar makes the most sense, but this remains a kind of research
+  question or dilemma. We could go back to the old Datascript idea from
+  futon1 for example, so that it "lives" in XTDB but is fast to access and
+  use"). The candidates:
+  - *SQLite sidecar*, as for the pattern index, the warrant index and the
+    entity sidecar columns: a file, fast, rebuildable; graph queries
+    (connectivity, gluing, readiness over `needs`) are recursive SQL.
+  - *Datascript in the JVM, mirrored to XTDB*, as futon1's `app.store` did
+    (futon1 `apps/graph-memory/src/app/store.clj`: Datascript working copy,
+    append-only journal and snapshots, `sync-to-xtdb!`,
+    `hydrate-from-xtdb!`): Datalog over the graph in memory, durable in XTDB.
+    Costs: heap in the shared futon3c JVM, and reload hazards for in-memory
+    state.
+  - *XTDB alone* (futon1b :7073): durable, but slow per query and that heap is
+    already near full.
+  One fact narrows it: the GCC is a projection that can be rebuilt from the
+  turn records, so its store needs speed more than durability. A durable copy
+  saves rebuild time; it does not hold anything that would otherwise be lost.
+  What would settle it: build the same GCC (all settled turn records, the
+  pattern library, missions) in SQLite and in Datascript in a separate
+  process, then measure size, full-rebuild time, one turn's incremental
+  write, and three queries the readers need (猴: locate a turn's cascade;
+  Giraffe: readiness over `needs`; the coverage check).
 - The record types for 狗 (recall, use, buried) and 猴 (focus): schema 1.1.
 - How the pass's work pool and `needs` edges become GCC records (today:
   Giraffe run files from holes/tickets edges).
