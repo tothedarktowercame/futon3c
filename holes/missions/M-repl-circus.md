@@ -71,6 +71,33 @@ design is in §DERIVE ("The Giraffe store today", "Real-time design").
 **Held** (Joe, 11-12) until the other unneeded JVMs are retired and the
 migrations are finished: "so that we're able to focus clearly on this task".
 
+**What the gap costs: no local view of global priority** (IDENTIFY note,
+Joe, 2026-11-12). Seen from Giraffe's side (M-giraffe §"Requirements from
+Giraffe's two readers"), the gap means that nothing done in a turn is
+related to any global priority. Joe: "accordingly we have no local view of
+how what we're doing relates to any kind of global priority." Even this
+mission's own work is a stopgap: "we are forming a relationship to a
+"bigger" local priority (the mission) but still have been grasping to
+understand the global priority (e.g., who cares if Giraffe feeds the War
+Machine, we haven't stated why the War Machine matters... but *that*
+matters b/c that will likely impose requirements on how we design
+Giraffe)." And: "It's not that we need a massive Cyc-like "upper ontology"
+either."
+
+So the requirement is a short, stated chain of why: turn → mission →
+the reader the mission serves (Giraffe → the War Machine) → the question
+that reader answers. The top of the chain already has a candidate home:
+futon7's argument graph (`holes/argument-graph/questions.edn`, 62 apex
+questions grouped under wings A–D), where Q-apex-23 asks, in effect,
+whether the War Machine's kind of next-move choice gives an accountable
+next action for wing D. If that is the War Machine's "why", its
+requirements on Giraffe follow from that question (accountable: the choice
+cites its evidence; next action: ready, checkable items), and each turn's
+cascade could aim at an item that aims at a question (E-gcc-schema §16,
+`[:cascade/aims-at 1]`; E-futon-questions item 5). Open: Joe to confirm or
+correct the anchor, and whether every item must reach a question or some
+may stand as local work.
+
 ## Decided: where derived output goes (claude-8, 2026-11-05, on Joe's go for step 2)
 
 - **Output that relates things goes in the GCC as typed hyperedges** through futon1b's
