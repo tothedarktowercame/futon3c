@@ -48,7 +48,7 @@ DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 # default. Nothing changes until FUTON_MEMORY_BASE is set.
 BASE = (os.environ.get("FUTON_MEMORY_BASE")
         or os.environ.get("MINUS40_BASE")
-        or "http://127.0.0.1:7093")
+        or "http://127.0.0.1:7073")
 AUTHOR = "lu-memory"
 
 _write_lock = threading.Lock()

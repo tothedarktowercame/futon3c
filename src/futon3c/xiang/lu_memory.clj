@@ -43,7 +43,7 @@
    decision (M-repl-circus MEM) switches this by setting the variable, not by
    editing this file. Pure so the precedence is testable."
   [env]
-  (or (get env "FUTON_MEMORY_BASE") "http://127.0.0.1:7093"))
+  (or (get env "FUTON_MEMORY_BASE") "http://127.0.0.1:7073"))
 
 (def defaults
   "The write half's knobs. :base is the memory store (minus40 store on :7093

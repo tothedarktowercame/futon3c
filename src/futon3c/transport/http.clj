@@ -12259,7 +12259,7 @@
   [env]
   (or (get env "FUTON3C_SCOPE_EDGE_BASE")
       (get env "FUTON_MEMORY_BASE")
-      "http://127.0.0.1:7093"))
+      "http://127.0.0.1:7073"))
 
 (def ^:private xiang-scope-edge-base
   "Where the classical scope edges are written. Every `xiang/scope` edge so

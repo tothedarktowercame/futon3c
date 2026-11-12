@@ -66,7 +66,7 @@
    set for the switch, so nothing changes until then. Pure (env-map in) so
    the precedence is testable."
   [env]
-  (or (get env "FUTON_MEMORY_BASE") "http://127.0.0.1:7093"))
+  (or (get env "FUTON_MEMORY_BASE") "http://127.0.0.1:7073"))
 
 (def minus40-base
   "The memory store this provider reads and (bury only) writes. Resolution:
@@ -307,7 +307,10 @@
   (let [url (str base
                  "/api/alpha/evidence/text-search?q="
                  (URLEncoder/encode query "UTF-8")
-                 "&limit=" search-limit)]
+                 "&limit=" search-limit
+                 ;; memories only: the live futon1b's text search defaults to
+                 ;; scope=acts, which excludes them (2026-11-12 migration)
+                 "&scope=all&tags=source%2Fclaude-code")]
     (recall-from-response (or (request-fn url) {}))))
 
 (defn- merge-items
@@ -1001,7 +1004,10 @@
   (let [url (str base
                  "/api/alpha/evidence/text-search?q="
                  (URLEncoder/encode query "UTF-8")
-                 "&limit=" search-limit)]
+                 "&limit=" search-limit
+                 ;; memories only: the live futon1b's text search defaults to
+                 ;; scope=acts, which excludes them (2026-11-12 migration)
+                 "&scope=all&tags=source%2Fclaude-code")]
     (->> (:results (or (request-fn url) {}))
          (keep memory-item)
          vec)))
