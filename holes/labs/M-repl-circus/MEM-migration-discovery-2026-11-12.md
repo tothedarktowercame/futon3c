@@ -161,16 +161,20 @@ variable elsewhere) lives only as long as the processes that hold it. Before
 :7093 is stopped, every one of these must hold :7073 without anyone
 re-applying the switch:
 
-- [ ] **The code defaults change to :7073** in every client (futon3c
+- [x] **The code defaults change to :7073** in every client (done 2026-11-12:
+      futon3c `6754d75bb`, minus40 `3aaf95b`; search asks
+      `scope=all&tags=source/claude-code`) (futon3c
       `dog_provider.clj`, `xiang/lu_memory.clj`, `transport/http.clj`,
       `scripts/lu_situations.py`; minus40's scripts), so a restart with no
       setting lands on the migrated data. `FUTON_MEMORY_BASE` then remains
       only as the rollback.
-- [ ] **futon3c's unit** (`futon3c-zone.service`): a drop-in setting
-      `FUTON_MEMORY_BASE`, until the code defaults have been loaded.
-- [ ] **`~/.claude.json`**: the minus40 MCP server entry's `MINUS40_BASE`
-      pin (:7093) is changed or removed; otherwise it overrides every default.
-- [ ] **The environment Claude Code starts in** (the hooks in
+- [x] **futon3c's unit**: not needed, since the code defaults are :7073
+      and were reloaded live 2026-11-12 ~05:30Z.
+- [x] **`~/.claude.json`**: the minus40 MCP server entry's `MINUS40_BASE`
+      pin changed to :7073 (Joe's OK, 2026-11-12 ~05:37Z; backup in
+      ~/notes/claude-13/backups/). Sessions take it at their next start.
+- [x] **The environment Claude Code starts in** (checked 2026-11-12: no
+      MINUS40_BASE or FUTON_MEMORY_BASE set) (the hooks in
       `~/.claude/settings.json` inherit it): no stale `MINUS40_BASE` or
       `FUTON_MEMORY_BASE` pointing at :7093.
 - [ ] **A restart test**: after the above, restart a client of each kind
