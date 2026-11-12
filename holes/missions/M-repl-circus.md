@@ -390,7 +390,23 @@ registers `/api/alpha/arxana/command` and `/query`.
 | code↔docs :7091 | same | idle since 11-09 | same mount | small |
 | workplan :7094 | own durable XTDB store, 130 MB, 24 post-load commands held nowhere else | daily | same mount, reload into futon1b, replay post-load writes | medium to large |
 
-Order: giraffe-reread; the `/arxana/v1` mount proved on F1 (with a durable
+**giraffe-reread is not folded as a schedule** (Joe, 11-12: "if the GCC is
+continuously up to date, then we don't need a scheduled reread, and we can
+have an invariant that says "Giraffe is always up to date""). Each 5-minute
+cycle today polls for drift: a mission or excursion document whose digest
+differs from the one its landed reading was made from gets a re-read request,
+dispatched to a reader seat; the landed reading updates Giraffe's `needs`
+edges (`giraffe/reread_cli.clj`, `reread_queue.clj`, `reread_worker.clj`).
+Event-driven instead: the multi-watcher already sees every change to holes/
+documents, so a change mints the re-read request (debounced, as the pattern
+index does); a landed reading, like a settled turn, updates the GCC, and each
+GCC update recomputes Giraffe's pass and priorities. The invariant, checked
+with the others in VERIFY: every mission and excursion document's current
+digest has a landed reading or a pending request younger than a stated bound,
+and Giraffe's priorities were computed after the newest reading and the newest
+GCC change. (A scheduled-task packet to codex-7 was cancelled for this.)
+
+Order: giraffe-reread (event-driven, as above); the `/arxana/v1` mount proved on F1 (with a durable
 artifact provider, since the only one is in memory); workplan; F2–F6 and
 code↔docs; :7084. The futon4a README's "never a live store" rule changes at
 the same cut-over (Joe's 11-12 statement supersedes it).
