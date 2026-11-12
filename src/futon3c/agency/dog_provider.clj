@@ -580,7 +580,8 @@
   "Whether the answering seat's own memory index (the MEMORY.md of the
    project directory its session ran in) lists this memory's slug.
    \"n/a\" for non-Claude seats, \"unknown\" when the session→project
-   mapping fails, true/false otherwise. Typed, never guessed."
+   mapping fails, \"no-index\" when that project has no memory/MEMORY.md,
+   true/false otherwise. Typed, never guessed."
   [projects-root record item]
   (let [agent (str (:agent_id record))]
     (if-not (str/starts-with? agent "claude")
@@ -588,10 +589,14 @@
       (let [dir (seat-project-dir projects-root (:session_id record))]
         (if-not dir
           "unknown"
-          (let [idx (io/file dir "MEMORY.md")
+          ;; The index is <project>/memory/MEMORY.md (claude-13's review
+          ;; of 31ca6884e: the first cut read <project>/MEMORY.md, which
+          ;; never exists, and reported every item false).
+          (let [idx (io/file dir "memory" "MEMORY.md")
                 slug (second (str/split (str (:memory item)) #"/" 2))]
-            (boolean (and (.isFile idx)
-                          (str/includes? (slurp idx) (str slug ".md"))))))))))
+            (if-not (.isFile idx)
+              "no-index"
+              (str/includes? (slurp idx) (str slug ".md")))))))))
 
 (defn stamp-item
   "Packet C: one recalled ITEM gains :project, :type (frontmatter

@@ -987,8 +987,10 @@
           (str "---\nname: stubbed\ndescription: \"an invented stub memory for packet C tests\"\n"
                "metadata:\n  node_type: memory\n  type: feedback\n  modified: 2026-10-04T14:46:35.701Z\n---\n\nstub body.\n"))
     (spit (io/file seatdir (str session ".jsonl")) "{}")
-    (spit (io/file seatdir "MEMORY.md")
-          (if listed? "- [an invented stub](memory/stubbed.md)\n" "- [something else](memory/other.md)\n"))
+    ;; the real layout: <project>/memory/MEMORY.md, entries "- [Title](slug.md) — hook"
+    (.mkdirs (io/file seatdir "memory"))
+    (spit (io/file seatdir "memory" "MEMORY.md")
+          (if listed? "- [An invented stub](stubbed.md) — hook\n" "- [Something else](other.md) — hook\n"))
     (str root)))
 
 (deftest stamp-item-strata
@@ -1014,6 +1016,15 @@
     (testing "no transcript for the session → \"unknown\""
       (let [root (tmp-projects-with-memory "sess-a" true)]
         (is (= "unknown" (:in-seat-index (dog/stamp-item root item {:agent_id "claude-13" :session_id "sess-nope"}))))))
+    (testing "the seat's project has no memory/MEMORY.md → \"no-index\""
+      (let [root (tmp-projects-with-memory "sess-a" true)]
+        (io/delete-file (io/file root "proj-seat" "memory" "MEMORY.md"))
+        (is (= "no-index" (:in-seat-index (dog/stamp-item root item {:agent_id "claude-13" :session_id "sess-a"}))))))
+    (testing "an index at <project>/MEMORY.md (the wrong place) is not read"
+      (let [root (tmp-projects-with-memory "sess-a" true)]
+        (io/delete-file (io/file root "proj-seat" "memory" "MEMORY.md"))
+        (spit (io/file root "proj-seat" "MEMORY.md") "- [An invented stub](stubbed.md)\n")
+        (is (= "no-index" (:in-seat-index (dog/stamp-item root item {:agent_id "claude-13" :session_id "sess-a"}))))))
     (testing "non-Claude seat → \"n/a\""
       (let [root (tmp-projects-with-memory "sess-a" true)]
         (is (= "n/a" (:in-seat-index (dog/stamp-item root item {:agent_id "kimi-2" :session_id "sess-a"}))))))))
