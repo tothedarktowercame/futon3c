@@ -401,6 +401,28 @@ as readers of the priorities.
   as recursive SQL; XTDB as a later durable mirror if as-of becomes a real
   reader. XTQL as the CTRL language is a separate question from the store:
   CTRL queries are rare enough that a slower language on top could serve.
+  **Direction (Joe, 2026-11-12), superseding the sidecar recommendation
+  unless the XTQL measurements argue otherwise.** "Before we build or spike
+  anything we should get more clear on the use cases, write some real XTQL
+  that works against the current system ... We already have patterns,
+  missions, turns, memories, etc., available via XTDB. So whatever "else" is
+  needed from a GCC pretty much needs to work with that." And: "The
+  "Connected" part of GCC is important b/c we need to be able to do inference
+  about the various different aspects." So the GCC's added records live with
+  the records they connect, in futon1b, and inference runs over one graph.
+  Two consequences:
+  - **Memories move into futon1b.** Joe: memories "should probably be
+    migrated into the same store so that we don't have multiple unneeded
+    JVMs". minus40's store (`minus40-store.service`, :7093) is a second
+    futon1b instance; its readers and writers (minus40's ingest hook and MCP
+    tools, the SessionStart brief, 狗's recall and bury) would point at :7073.
+  - **futon1b's heap.** It runs with `-Xmx8g` (drop-in `heap.conf`, raised
+    from 4g on 10-28) and by design runs near its limit; samples on 11-12
+    show 3.0–5.5 GB used and no full GCs. Joe offered to double it ("we could
+    2x its heap and still have plenty of RAM left"); Zone had 163 GB available
+    on 11-12. A restart is Joe's to schedule.
+  Real XTQL per use case: kimi-1, `holes/labs/M-repl-circus/GCC-xtql-2026-11-12.md`
+  (in progress).
 - The record types for 狗 (recall, use, buried) and 猴 (focus): schema 1.1.
 - How the pass's work pool and `needs` edges become GCC records (today:
   Giraffe run files from holes/tickets edges).
