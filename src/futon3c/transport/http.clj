@@ -12268,7 +12268,14 @@
    there; the live store has none. So the default is :7093, not :7073 — the
    switch to :7073 rides FUTON_MEMORY_BASE (set by the MEM migration, gated
    on the lab batch being copied), never an edit here."
-  (resolve-scope-edge-base (System/getenv)))
+  (resolve-scope-edge-base
+   (let [env (into {} (System/getenv))
+        prop (System/getProperty "FUTON_MEMORY_BASE")]
+    ;; A JVM's environment is fixed at start, so a running futon3c cannot be
+    ;; switched by exporting FUTON_MEMORY_BASE. The JVM system property of the
+    ;; same name wins over the environment: (System/setProperty
+    ;; "FUTON_MEMORY_BASE" url) and reload this namespace (claude-13, 11-12).
+    (cond-> env prop (assoc "FUTON_MEMORY_BASE" prop)))))
 
 (defn- xiang-post-hyperedge!
   "POST one hyperedge map to the scope-edge store. Returns {:status n :body s};

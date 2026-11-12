@@ -31,3 +31,18 @@
            (@#'http/resolve-scope-edge-base
              {"FUTON3C_SCOPE_EDGE_BASE" "http://example.invalid"
               "FUTON_MEMORY_BASE" live})))))
+
+(deftest system-property-switches-a-running-jvm
+  ;; A running JVM's environment cannot change, so the switch is the JVM
+  ;; system property FUTON_MEMORY_BASE plus a reload of the three namespaces.
+  (let [reload! #(require 'futon3c.agency.dog-provider 'futon3c.xiang.lu-memory :reload)]
+    (try
+      (System/setProperty "FUTON_MEMORY_BASE" live)
+      (reload!)
+      (is (= live @(resolve 'futon3c.agency.dog-provider/minus40-base)))
+      (is (= live (:base @(resolve 'futon3c.xiang.lu-memory/defaults))))
+      (finally
+        (System/clearProperty "FUTON_MEMORY_BASE")
+        (reload!)))
+    (is (= legacy @(resolve 'futon3c.agency.dog-provider/minus40-base))
+        "clearing the property and reloading rolls back")))

@@ -75,7 +75,14 @@
    is superseded by Joe's 2026-11-12 migration decision (M-repl-circus MEM,
    MEM-migration-discovery-2026-11-12.md) — the switch to :7073 is made by
    setting FUTON_MEMORY_BASE, not by editing this file."
-  (resolve-minus40-base (System/getenv)))
+  (resolve-minus40-base
+   (let [env (into {} (System/getenv))
+        prop (System/getProperty "FUTON_MEMORY_BASE")]
+    ;; A JVM's environment is fixed at start, so a running futon3c cannot be
+    ;; switched by exporting FUTON_MEMORY_BASE. The JVM system property of the
+    ;; same name wins over the environment: (System/setProperty
+    ;; "FUTON_MEMORY_BASE" url) and reload this namespace (claude-13, 11-12).
+    (cond-> env prop (assoc "FUTON_MEMORY_BASE" prop)))))
 
 (def off-switch-path
   "The 狗 off-switch, in the style of 驴's lu-off: when this file exists

@@ -49,7 +49,14 @@
   "The write half's knobs. :base is the memory store (minus40 store on :7093
   by default; FUTON_MEMORY_BASE overrides — see resolve-base); :request is
   the EDN transport, injectable for tests."
-  {:base (resolve-base (System/getenv))
+  {:base (resolve-base
+   (let [env (into {} (System/getenv))
+        prop (System/getProperty "FUTON_MEMORY_BASE")]
+    ;; A JVM's environment is fixed at start, so a running futon3c cannot be
+    ;; switched by exporting FUTON_MEMORY_BASE. The JVM system property of the
+    ;; same name wins over the environment: (System/setProperty
+    ;; "FUTON_MEMORY_BASE" url) and reload this namespace (claude-13, 11-12).
+    (cond-> env prop (assoc "FUTON_MEMORY_BASE" prop))))
    :request nil})
 
 (def author "lu-memory")
