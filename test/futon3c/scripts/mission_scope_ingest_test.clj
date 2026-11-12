@@ -1,5 +1,5 @@
 (ns futon3c.scripts.mission-scope-ingest-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.scripts.mission-scope-ingest :as ingest]))
 
 (deftest removal-prefers-live-batch-contract
@@ -140,3 +140,52 @@
            (select-keys (:props hyperedge)
                         [:operator-gate/kind :operator-gate/text
                          :operator-gate/source-line])))))
+
+(deftest mission-doc-id-follows-the-watcher-label
+  (testing "the label comes from the watcher root covering the path, not basename+\"-d\""
+    (is (= "futon4-elisp-d/mission/formal-arxana"
+           (#'ingest/mission-doc-id "M-formal-arxana"
+                                    "/home/joe/code/futon4/holes/missions/M-formal-arxana.md")))
+    (is (= "futon6-py-d/mission/differentiable-math"
+           (#'ingest/mission-doc-id "M-differentiable-math"
+                                    "/home/joe/code/futon6/holes/missions/M-differentiable-math.md")))
+    (is (= "futon3c-d/mission/repl-circus"
+           (#'ingest/mission-doc-id "M-repl-circus"
+                                    "/home/joe/code/futon3c/holes/missions/M-repl-circus.md")))
+    (is (= "futon5-d2/mission/categorical-code"
+           (#'ingest/mission-doc-id "M-categorical-code"
+                                    "/home/joe/code/futon5/holes/missions/M-categorical-code.md")))))
+
+(deftest mission-doc-id-falls-back-to-basename-label-outside-watch-roots
+  (testing "a path under no watch root keeps the old basename+\"-d\" behaviour"
+    (is (= "futon9x-d/mission/side-quest"
+           (#'ingest/mission-doc-id "M-side-quest"
+                                    "/home/joe/code/futon9x/holes/missions/M-side-quest.md")))))
+
+(deftest scope-lane-writes-no-mission-doc-entity-for-excursion-stems
+  (let [ensured (atom [])]
+    (binding [ingest/*dry-run?* true]
+      (with-redefs [ingest/ensure-entity!
+                    (fn [_ _ _ spec]
+                      (swap! ensured conj spec)
+                      spec)]
+        (ingest/ingest-scope-tree! {:client nil
+                                    :base-url "http://unused"
+                                    :penholder "test"
+                                    :path "test/fixtures/scope-trees/E-side-quest.json"})
+        (is (empty? (filter #(= "mission/doc" (:type %)) @ensured))
+            "E- stems belong to the watcher's excursion/doc entities")))))
+
+(deftest scope-lane-still-writes-mission-doc-entity-for-mission-stems
+  (let [ensured (atom [])]
+    (binding [ingest/*dry-run?* true]
+      (with-redefs [ingest/ensure-entity!
+                    (fn [_ _ _ spec]
+                      (swap! ensured conj spec)
+                      spec)]
+        (ingest/ingest-scope-tree! {:client nil
+                                    :base-url "http://unused"
+                                    :penholder "test"
+                                    :path "test/fixtures/scope-trees/M-side-quest.json"})
+        (is (= ["futon3c-d/mission/side-quest"]
+               (map :id (filter #(= "mission/doc" (:type %)) @ensured))))))))

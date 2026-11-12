@@ -5,7 +5,9 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.set :as set]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.mission-ids :as mission-ids]
+            [futon3c.watcher.roots :as watch-roots])
   (:import (java.net URI URLEncoder)
            (java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers)
            (java.security MessageDigest)))
@@ -47,11 +49,9 @@
     (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
 
 (defn- slug [s]
-  (let [base (-> (str s)
-                 str/lower-case
-                 (str/replace #"[^a-z0-9]+" "-")
-                 (str/replace #"^-+|-+$" ""))]
-    (or (not-empty base) (subs (sha1 s) 0 12))))
+  ;; Canonical slug lives in futon3c.mission-ids so the watcher and this
+  ;; ingester derive the same id component (dedup repair 2026-11-12).
+  (mission-ids/slug s))
 
 (defn- url-encode [s]
   (URLEncoder/encode (str s) "UTF-8"))
@@ -295,11 +295,49 @@
   (or (second (re-find #"/code/([^/]+)/" (str path)))
       (second (re-find #"^([^/]+)/" (str path)))))
 
-(defn- mission-doc-id [mission path]
-  (let [repo (or (repo-name-from-path path) "mission")
-        repo-key (str repo "-d")
-        name (str/replace-first (str mission) #"^M-" "")]
-    (str repo-key "/mission/" (slug name))))
+(defn- mission-doc-id
+  "Canonical mission/doc entity id. The repo component is the WATCHER label
+   of the root covering PATH (roots.clj: a checkout is identified by its
+   watcher label, not its directory basename) — the basename+\"-d\"
+   derivation forked e.g. futon4-d/… off futon4-elisp-d/… for 89
+   external-ids. A path under no watch root keeps the old basename+\"-d\"
+   behaviour and is logged, so an unwatched repo still ingests."
+  [mission path]
+  (let [label (or (mission-ids/watcher-label-for-path watch-roots/watch-roots path)
+                  (let [fallback (str (or (repo-name-from-path path) "mission") "-d")]
+                    (println (str "[mission-scope-ingest] no watch root covers "
+                                  path "; falling back to basename label " fallback))
+                    fallback))]
+    (mission-ids/mission-doc-id label mission)))
+
+(defn- mission-stem-kind
+  "Stems are prefixed C- (campaign), E- (excursion) or M- (mission)."
+  [mission]
+  (let [s (str mission)]
+    (cond
+      (str/starts-with? s "E-") :excursion
+      (str/starts-with? s "C-") :campaign
+      :else :mission)))
+
+(defn- ensure-mission-doc-entity!
+  "Ensure the mission/doc entity for an M- stem. E-/C- stems are
+   excursions/campaigns: the watcher owns those entity docs, so the scope
+   lane must NOT write a mission/doc entity for them (the 755 E- + 9 C-
+   stray stubs found 2026-11-12). Returns a thin id map (no entity write)
+   for non-mission stems so scope hyperedges keep a stable endpoint."
+  [client base-url penholder mission mission-path]
+  (let [mission-id (mission-doc-id mission mission-path)]
+    (if (= :mission (mission-stem-kind mission))
+      (ensure-entity! client base-url penholder
+                      {:id mission-id
+                       :name mission-id
+                       :type "mission/doc"
+                       :external-id mission
+                       :source "mission-scope-tree"
+                       :props {:mission/id mission
+                               :mission/path mission-path}})
+      {:id mission-id
+       :external-id mission})))
 
 (defn- env-name [scope]
   (or (some #(when (= "environment" (:role %)) (:name %)) (:ends scope))
@@ -1755,14 +1793,7 @@
 
 (defn- upsert-single-scope!
   [client base-url penholder mission mission-path scope]
-  (let [mission-entity (ensure-entity! client base-url penholder
-                                       {:id (mission-doc-id mission mission-path)
-                                        :name (mission-doc-id mission mission-path)
-                                        :type "mission/doc"
-                                        :external-id mission
-                                        :source "mission-scope-tree"
-                                        :props {:mission/id mission
-                                                :mission/path mission-path}})
+  (let [mission-entity (ensure-mission-doc-entity! client base-url penholder mission mission-path)
         target-entity (when (= "relates-to" (:binder-type scope))
                         (resolve-target-mission client base-url (:target-mission-ident scope)))
         source-entity (when (= "source-material" (:binder-type scope))
@@ -1913,14 +1944,7 @@
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
-        mission-entity (ensure-entity! client base-url penholder
-                                       {:id mission-id
-                                        :name mission-id
-                                        :type "mission/doc"
-                                        :external-id mission
-                                        :source "mission-scope-tree"
-                                        :props {:mission/id mission
-                                                :mission/path mission-path}})
+        mission-entity (ensure-mission-doc-entity! client base-url penholder mission mission-path)
         legacy-report (if binder-filter
                         (retract-legacy-position-scopes! client base-url penholder mission mission-entity binder-filter)
                         {:legacy-hyperedge-retract-count 0

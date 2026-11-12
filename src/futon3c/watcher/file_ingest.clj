@@ -23,6 +23,7 @@
             [clojure.walk :as walk]
             [babashka.http-client :as http]
             [cheshire.core :as json]
+            [futon3c.mission-ids :as mission-ids]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.watcher.projections.elisp :as elisp]
             [futon3c.watcher.projections.python :as python]
@@ -946,7 +947,11 @@
         mission-mtime (or (:mission/mtime mission) (get mission "mission/mtime"))
         mission-psrs (or (:mission/psrs mission) (get mission "mission/psrs") [])
         mission-purs (or (:mission/purs mission) (get mission "mission/purs") [])
-        vertex-id (str label "/mission/" mission-id)
+        ;; Slug the mission id exactly as the scope ingester does
+        ;; (futon3c.mission-ids): keeping header case here split 28
+        ;; external-ids into case-paired duplicate entities
+        ;; (futon2-d/mission/G-over-cascades vs …/g-over-cascades).
+        vertex-id (mission-ids/mission-doc-id label mission-id)
         labels ["v05" "phase-4.5" label "mission-doc"]
         props {"repo" label
                "phase" 4.5

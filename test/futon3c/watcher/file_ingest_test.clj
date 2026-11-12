@@ -1,5 +1,6 @@
 (ns futon3c.watcher.file-ingest-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.scripts.mission-scope-ingest :as scope-ingest]
             [futon3c.watcher.file-ingest :as sut]
             [futon3c.watcher.multi :as multi]))
 
@@ -143,3 +144,37 @@
     (is (= 3 (:case-count report)))
     (is (true? (:lossless-roundtrip? report)))
     (is (every? :passed? (:cases report)))))
+
+(deftest watcher-and-scope-lane-derive-the-same-mission-entity-id
+  (testing "one fixture mission, both writers, one lowercase-slugged id"
+    (let [posted-entity (atom nil)]
+      (with-redefs [sut/sync-mission!
+                    (fn [_path _root]
+                      {:ok? true
+                       :status 200
+                       :body {:mission {:mission/id "G-over-cascades"
+                                        :mission/title "G over cascades"
+                                        :mission/status "open"
+                                        :mission/repo "futon2"
+                                        :mission/summary "fixture"
+                                        :mission/cross-refs []
+                                        :mission/code-paths []
+                                        :mission/phase "map"
+                                        :mission/psrs []
+                                        :mission/purs []}}})
+                    sut/post-hyperedge! (fn [& _args] {:ok? true})
+                    sut/post-entity! (fn [entity]
+                                       (reset! posted-entity entity)
+                                       {:ok? true})
+                    sut/emit-cross-ref-edges! (fn [& _args] {:emitted 0 :unresolved 0 :failed 0})
+                    sut/post-hyperedge-doc! (fn [_doc] {:ok? true})]
+        (sut/ingest-mission-doc! {:path "/home/joe/code/futon2/holes/missions/M-G-over-cascades.md"
+                                  :label "futon2-d"
+                                  :root "/home/joe/code/futon2"})
+        (is (= "futon2-d/mission/g-over-cascades" (:id @posted-entity))
+            "the watcher lowercases the slug — case no longer splits entities")
+        (is (= (#'scope-ingest/mission-doc-id
+                "M-G-over-cascades"
+                "/home/joe/code/futon2/holes/missions/M-G-over-cascades.md")
+               (:id @posted-entity))
+            "scope lane derives the identical id from the path")))))
