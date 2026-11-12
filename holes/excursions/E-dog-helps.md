@@ -60,6 +60,31 @@ cases. claude-13 holds a park with that deadline
 loaded by claude-13; measured withheld share over 20,358 existing record ids:
 29.9%). Progress toward the §2 targets counts from that moment.
 
+## Relation to E-prove-memory-useful (Joe, 2026-11-12)
+
+Joe: "we might want to look at E-prove-memory-useful in connection with our
+fortnight/month evaluation plan". That excursion (2026-10-16/17, claude-16
+then claude-3) defines usefulness as three checks: **delivery** (the
+memory is in the seat's context before round 1, put there by the harness,
+and the record says so), **effect** (on a task where the uninformed seat
+fails, the informed seat succeeds with the memory as the deciding fact) and
+**absence** (when nothing reached, the record says so in words). Its G6
+task bank found 3 of 5 tasks failing without the memory and passing with
+it; its "effect on failing baselines" criterion is still marked not met.
+
+The two fit together. 狗 now does the delivery (dog_recall on every
+operator turn, written as a typed record, absence included). This
+excursion's withheld arm is the randomized, live-traffic version of its
+paired runs; its task bank is the controlled version of this excursion's D1
+and D2. So the check-ins report both:
+- **2026-11-25 (halfway):** the progress block and D1 by arm (as above),
+  plus the G6 bank rerun with 狗's recall as the delivery (5 tasks, each
+  with and without), so the controlled effect and the live trend are read
+  side by side.
+- **Four weeks (2026-12-09):** D1/D2/D5 against their thresholds, and
+  E-prove-memory-useful's effect criterion judged on both the bank and the
+  arm.
+
 ## 1. What "狗 is helping" means
 
 Use rate (`dog_use`) says the reply touched a recalled memory. It does not
