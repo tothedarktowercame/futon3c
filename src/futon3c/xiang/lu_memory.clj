@@ -409,6 +409,12 @@
     (destroy-read-resident! @!read-resident)
     (reset! !read-resident nil)))
 
+(def ^:private resident-thread-env-keys
+  "Thread-pool sizes for the resident's numpy/torch: it embeds one query at a
+  time, and the defaults (one thread per core) made each resident 64 tasks."
+  ["OMP_NUM_THREADS" "OPENBLAS_NUM_THREADS" "MKL_NUM_THREADS"
+   "TOKENIZERS_PARALLELISM"])
+
 (defn- start-read-resident! [opts]
   (let [builder (doto (java.lang.ProcessBuilder.
                        ^java.util.List (vec (read-resident-command opts)))
@@ -416,23 +422,30 @@
         env (.environment builder)
         _ (.put env "HF_HUB_OFFLINE" "1")
         _ (.put env "TRANSFORMERS_OFFLINE" "1")
+        _ (doseq [k resident-thread-env-keys] (.put env k (if (= k "TOKENIZERS_PARALLELISM") "false" "2")))
         process (.start builder)
         resident {:process process
                   :reader (java.io.BufferedReader.
                            (java.io.InputStreamReader. (.getInputStream process)))
                   :writer (java.io.BufferedWriter.
-                           (java.io.OutputStreamWriter. (.getOutputStream process)))}
-        pending (future (.readLine ^java.io.BufferedReader (:reader resident)))
-        token (Object.)
-        line (deref pending (:startup-timeout-ms (merge read-defaults opts)) token)]
-    (if (or (identical? token line) (nil? line))
-      (do (future-cancel pending)
-          (destroy-read-resident! resident)
+                           (java.io.OutputStreamWriter. (.getOutputStream process)))}]
+    ;; Anything thrown between .start and the reset! (an interrupted deref,
+    ;; "unable to create native thread" for the future) must kill the child:
+    ;; otherwise it is neither owned nor destroyed. 2026-11-12: 24 such
+    ;; orphans (64 threads each) filled futon3c-zone's pids.max.
+    (try
+      (let [pending (future (.readLine ^java.io.BufferedReader (:reader resident)))
+            token (Object.)
+            line (deref pending (:startup-timeout-ms (merge read-defaults opts)) token)]
+        (future-cancel pending)
+        (when (or (identical? token line) (nil? line))
           (throw (ex-info "lu situation resident failed startup handshake"
                           {:error/code :resident-startup :line (str line)})))
-      (do (future-cancel pending)
-          (reset! !read-resident resident)
-          resident))))
+        (reset! !read-resident resident)
+        resident)
+      (catch Throwable t
+        (destroy-read-resident! resident)
+        (throw t)))))
 
 (defn read-resident-op!
   "One op against the resident situation reader: writes one JSON line,

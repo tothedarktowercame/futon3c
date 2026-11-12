@@ -108,19 +108,24 @@
         process (.start builder)
         resident {:process process
                   :reader (BufferedReader. (InputStreamReader. (.getInputStream process)))
-                  :writer (BufferedWriter. (OutputStreamWriter. (.getOutputStream process)))}
-        pending (future (.readLine ^BufferedReader (:reader resident)))
-        timeout-token (Object.)
-        ready-line (deref pending *startup-timeout-ms* timeout-token)
-        ready? (try (= {:resident "ready"} (json/parse-string ready-line true))
-                    (catch Throwable _ false))]
-    (when (or (identical? timeout-token ready-line)
-              (nil? ready-line)
-              (not ready?))
-      (future-cancel pending)
-      (destroy! resident)
-      (throw (ex-info "Resident pattern search failed startup handshake"
-                      {:error/code :resident-startup :line ready-line})))
+                  :writer (BufferedWriter. (OutputStreamWriter. (.getOutputStream process)))}]
+    ;; A throw before the handshake completes (interrupt, no native thread
+    ;; for the future) must not leave an unowned child running.
+    (try
+      (let [pending (future (.readLine ^BufferedReader (:reader resident)))
+            timeout-token (Object.)
+            ready-line (deref pending *startup-timeout-ms* timeout-token)
+            ready? (try (= {:resident "ready"} (json/parse-string ready-line true))
+                        (catch Throwable _ false))]
+        (when (or (identical? timeout-token ready-line)
+                  (nil? ready-line)
+                  (not ready?))
+          (future-cancel pending)
+          (throw (ex-info "Resident pattern search failed startup handshake"
+                          {:error/code :resident-startup :line ready-line}))))
+      (catch Throwable t
+        (destroy! resident)
+        (throw t)))
     (when @!started-before?
       (swap! !stats update :restarts inc))
     (reset! !started-before? true)
