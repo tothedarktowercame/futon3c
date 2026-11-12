@@ -498,6 +498,12 @@ the same cut-over (Joe's 11-12 statement supersedes it).
     be able to have whatever parts of the database we need to query in
     memory after all." So the Datascript option's one advantage, speed from
     holding the graph in memory, can come from XTDB's own caches given heap.
+  - **🈲 Must-do after the switch (Joe, 11-12):** "otherwise we won't be able
+    to access the migrated data if futon needs to restart!" The switch must
+    survive restarts: code defaults to :7073, futon3c's unit, `~/.claude.json`'s
+    `MINUS40_BASE` pin, Claude Code's environment, and a restart test, all
+    before :7093 stops. Checklist: MEM-migration-discovery-2026-11-12.md,
+    last section.
   - **Order (Joe, 11-12): "memory migration is the priority."** Discovery:
     kimi-2, `holes/labs/M-repl-circus/MEM-migration-discovery-2026-11-12.md`.
   **Real XTQL per use case** (kimi-1, `holes/labs/M-repl-circus/GCC-xtql-2026-11-12.md`,

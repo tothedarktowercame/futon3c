@@ -151,3 +151,30 @@ Amendments before step 1:
   This needs no edit to minus40's writers beyond the base URL.
 - **Resolve the factor-of-two in hyperedge counts** before using counts as
   the step-1 check.
+
+## Must-do after the switch: make it survive a restart (Joe, 2026-11-12)
+
+Joe: "Please add the config issues as a must-do action after the migration
+🈲 otherwise we won't be able to access the migrated data if futon needs to
+restart!" The switch itself (a JVM system property in futon3c, an exported
+variable elsewhere) lives only as long as the processes that hold it. Before
+:7093 is stopped, every one of these must hold :7073 without anyone
+re-applying the switch:
+
+- [ ] **The code defaults change to :7073** in every client (futon3c
+      `dog_provider.clj`, `xiang/lu_memory.clj`, `transport/http.clj`,
+      `scripts/lu_situations.py`; minus40's scripts), so a restart with no
+      setting lands on the migrated data. `FUTON_MEMORY_BASE` then remains
+      only as the rollback.
+- [ ] **futon3c's unit** (`futon3c-zone.service`): a drop-in setting
+      `FUTON_MEMORY_BASE`, until the code defaults have been loaded.
+- [ ] **`~/.claude.json`**: the minus40 MCP server entry's `MINUS40_BASE`
+      pin (:7093) is changed or removed; otherwise it overrides every default.
+- [ ] **The environment Claude Code starts in** (the hooks in
+      `~/.claude/settings.json` inherit it): no stale `MINUS40_BASE` or
+      `FUTON_MEMORY_BASE` pointing at :7093.
+- [ ] **A restart test**: after the above, restart a client of each kind
+      (one Claude session for the hooks and MCP tools; a futon3c namespace
+      reload with the property cleared) and confirm each reads :7073.
+- [ ] Only then is `minus40-store.service` stopped (after its read-only
+      period).
