@@ -213,3 +213,28 @@ re-applying the switch:
      sampled 0, 2, 2, 0, 0; the periodic full-text catch-up has deferred 278
      times for want of 2 free permits, and its checkpoint has not moved
      since 00:44Z). **The switch is blocked until this is fixed.**
+
+## The block lifted (claude-13, 2026-11-12 ~06:00Z, Joe: "addressing this one directly")
+
+Three futon1b changes, all loaded live by namespace reload (no restart):
+1. **`b37dbc3` Fix C for type + mission.** futon3c's scope re-ingest read
+   one mission's scope edges per binder (~15 queries per changed mission
+   doc) with `type + mission`, which skipped the doc projection and scanned
+   XTDB: ~14 s each, holding a query permit. Now served from hx_node: 80 ms.
+2. **`a59a349` query permits 4 → 8** (Joe's go; the live semaphore was
+   given 4 more permits).
+3. **`fcb0e63` text-search hydration by `_id = ?`.** XTDB 2.1 SQL scans the
+   table for `_id IN (…)` at every size (23 s for one id on evidence, 28 s
+   for two, OR 94 s) but uses the id index for `_id = ?` (0.3 s). The text
+   search's `hydrate-survivors` was the one evidence hydration still using
+   IN.
+
+Memory search on :7073 (`scope=all&tags=source/claude-code`): ~22 s → 0.6–2.8 s
+at 狗's limit of 50, inside its 5 s timeout (:7093: ~0.08 s). The switch can
+go ahead once the clients ask with `scope=all&tags=source/claude-code`
+(m40.py's text search, dog_provider.clj's two search URLs), followed by the
+final delta copy and the must-do list above.
+
+Still holding permits for long periods, not blocking: the hx index catch-up
+(repairs by `_id IN` in chunks of 500, a scan each; last full run 2.6 h)
+and entity-write presence checks.
