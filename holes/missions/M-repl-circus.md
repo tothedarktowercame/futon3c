@@ -342,6 +342,42 @@ the GCC: `needs` edges and item states are GCC records, and the focus relation
 is 猴's output. So each GCC update can recompute the pass and the projection.
 That keeps priorities current without a separate schedule.
 
+**The Giraffe store today** (claude-6, `holes/labs/M-repl-circus/GIRAFFE-store-2026-11-12.md`,
+`8ff0c1925`; Joe, 11-12: "a key consideration is "feed the Giraffe store" ...
+we need to work out how to make it update in real time"). It is files: 188
+run directories (1.3 GB, about 110 MB a day, never deleted), 441 full copies
+of the readings corpus (586 MB, one per landed reading), the re-read queue
+(SQLite, 593 rows: 386 landed, 145 failed), and an edges JSON no longer used
+as the pass's edge source. The re-read timer costs about 11 CPU-hours a day.
+The War Machine is the only code reader of the runs; no code reads the
+priorities, and no priorities are current (the last focus input was 11-07).
+**Nothing a settled turn produces reaches Giraffe**: relationship reviews go
+to :7073 and no Giraffe code reads them; 馬's tensions and 猴's focus have no
+writer. The watcher already turns changes to task documents into debounced
+"recompute Giraffe input" demands, but sends them only to a shadow ledger.
+
+**Real-time design (proposed):**
+1. The watcher's existing demand gets a real sink: a changed document's digest
+   upserts its re-read request at once; the timer goes.
+2. Giraffe's inputs become GCC records in futon1b: items, readings (keyed by
+   item and source sha; a new reading is a new version, so the full-copy
+   generations stop), `needs` relations (pinned to a reading, or to an
+   operator's resolution of a relationship review), re-read requests, focus,
+   one current pass record and one priorities record. Run directories remain
+   only as an export for the War Machine until futon2 reads the pass record.
+3. Recompute in the futon3c JVM over those records: an item or relation
+   change reruns the pass; a focus change reruns only the priority sort. A
+   settled turn changes at most one relation or the focus, so per-turn cost
+   is small once inputs are records (today's input build takes about two
+   minutes, mostly a checker process per reading).
+4. The Circus feeds it: relationship-review resolutions become `needs`
+   relations, 馬's tensions become proposed tickets, 猴 writes the focus.
+5. The invariant "Giraffe is always up to date": every open item's current
+   document sha has a reading or a request younger than B1; the pass record's
+   input digest equals the current items-and-relations digest within B2;
+   priorities come from the current pass and the newest focus. On 11-12, 16
+   items were unread and the pass went stale within an hour.
+
 **猴's place follows.** 猴 reads the GCC after a turn settles, locates the
 turn's cascade in it, and writes the operator focus (a schema 1.1 record).
 That focus is the input Giraffe's priority projection waits for. The flow
