@@ -845,3 +845,119 @@
     (is (= "ok" (:status result)))
     (is (= 3 (count (:used-memory-ids result)))
         "same use verdict as the shown fixture")))
+
+;; -------------------------------------------- E-dog-helps packet D:
+;; bury-split keeps what minus40 already knows as :said-again events, and
+;; dog_buried records them at :settled (empty when none), arm-independent.
+
+(deftest bury-split-keeps-the-suppression
+  ;; turn-UkLbCu's approve ruling, matched by an existing memory: kept
+  ;; empty, and the suppression is recorded with the act, Joe's words,
+  ;; and the matching memory ids + shared bigrams.
+  (let [{:keys [kept suppressed]}
+        (dog/bury-split @fixture-UkLbCu-bury
+                        {:known-detail-fn
+                         (fn [_] [{:memory "-home-joe-code/existing-memory"
+                                   :shared [["dispatch" "authorisation"]
+                                            ["chained" "parallel"]]}])})]
+    (is (= [] kept) "already-known ruling is not buried again")
+    (is (= 1 (count suppressed)))
+    (let [entry (first suppressed)]
+      (is (= "claude-13-turn-323-f-s1-0" (:act entry)) "the act id")
+      (is (= "approve" (:kind entry)))
+      (is (re-find #"(?i)chained" (:text entry)) "Joe's words, full span")
+      (is (= ["-home-joe-code/existing-memory"] (:memory-ids entry)))
+      (is (= #{"chained parallel" "dispatch authorisation"}
+             (set (map #(str/join " " %) (:shared entry))))))))
+
+(deftest said-again-respects-the-two-bigram-threshold
+  ;; The 2a near-miss (vDBr4L's retraction suppressed on the generic
+  ;; "question mode"): through the production known-memories-detailed
+  ;; path, a one-bigram overlap does NOT suppress, so no said-again.
+  (let [hit {:score -1.0
+             :entry {:evidence/body {:source "claude-code" :project "proj"
+                                     :name "existing" :hook "question mode"}}}
+        request-fn (fn [_url] {:results [hit]})]
+    (with-redefs [dog/memory-body
+                  (fn ([_] "question mode folklore, otherwise unrelated")
+                    ([_ _] "question mode folklore, otherwise unrelated"))]
+      (let [detailed (dog/known-memories-detailed request-fn "http://127.0.0.1:7093"
+                                                  "question mode")
+            {:keys [suppressed]} (dog/bury-split @fixture-vDBr4L-bury
+                                                 {:known-detail-fn
+                                                  (fn [text]
+                                                    (dog/known-memories-detailed
+                                                     request-fn "http://127.0.0.1:7093" text))})]
+        (is (= [] detailed) "one shared bigram is below echo-min-shared")
+        (is (= [] suppressed) "the near-miss is not recorded as said-again")
+        (is (some #(= "retract" (get-in % [:basis :kind]))
+                  (dog/bury-candidates @fixture-vDBr4L-bury))
+            "the retraction still buries")))))
+
+(deftest settled-event-records-said-again-and-writes-no-file
+  ;; End to end at :settled: UkLbCu's ruling matches an existing memory
+  ;; (two shared distinctive bigrams), so nothing is buried or ingested
+  ;; and dog_buried carries the said-again entry instead.
+  (let [store (tmp-store)
+        record-id "turn-buryTEST3"
+        dir (str (Files/createTempDirectory "dog-bury" (into-array FileAttribute [])))
+        ingested (atom [])
+        fix @fixture-UkLbCu-bury
+        hit {:score -1.0
+             :entry {:evidence/body {:source "claude-code" :project "proj"
+                                     :name "existing" :hook "an existing memory"}}}
+        request-fn (fn [_url] {:results [hit]})]
+    (write-operator-record! store record-id (:source_text fix))
+    (turn-store/update-record! store record-id
+                               #(assoc % :acts (vec (:acts fix))
+                                       :reply_text (:reply_text fix)
+                                       :dog_recall {:status "none" :items []}))
+    (with-redefs [dog/memory-body
+                  ;; two distinctive bigrams of the ruling's text
+                  ;; (\"chained parallel\", \"parallel dispatches\")
+                  (fn ([_] "chained parallel dispatches, held already")
+                    ([_ _] "chained parallel dispatches, held already"))]
+      (dog/handle-event {:store store
+                         :bury-dir dir
+                         :ingest-fn (fn [_cand _text _ms] (swap! ingested conj true) [200 200])
+                         :request-fn request-fn}
+                        {:event :settled :id record-id})
+      ;; the post-hook is async; wait inside the with-redefs scope
+      (is (loop [n 0]
+            (cond (:dog_buried (turn-store/read-record store record-id)) true
+                  (< 100 n) false
+                  :else (do (Thread/sleep 50) (recur (inc n)))))))
+    (let [buried (:dog_buried (turn-store/read-record store record-id))]
+      (is (= "none" (:status buried)) "nothing left to bury")
+      (is (= [] (:items buried)))
+      (is (= 1 (count (:said-again buried))) "the suppression is recorded")
+      (let [entry (first (:said-again buried))]
+        (is (= "claude-13-turn-323-f-s1-0" (:act entry)))
+        (is (= ["proj/existing"] (:memory-ids entry)))
+        (is (seq (:shared entry)))))
+    (is (empty? @ingested) "no store write for a suppressed candidate")
+    (is (not (.exists (io/file dir "狗"))) "no memory file written")))
+
+(deftest said-again-empty-on-a-plain-turn
+  ;; Every settled turn carries :said-again, empty when nothing matched.
+  (let [store (tmp-store)
+        record-id "turn-buryTEST4"
+        dir (str (Files/createTempDirectory "dog-bury" (into-array FileAttribute [])))
+        fix @fixture-UkLbCu-bury]
+    (write-operator-record! store record-id (:source_text fix))
+    (turn-store/update-record! store record-id
+                               #(assoc % :acts (vec (:acts fix))
+                                       :reply_text (:reply_text fix)
+                                       :dog_recall {:status "none" :items []}))
+    (dog/handle-event {:store store
+                       :bury-dir dir
+                       :ingest-fn (fn [_c _t _m] [200 200])
+                       :request-fn (fn [_url] {:results []})}
+                      {:event :settled :id record-id})
+    (is (loop [n 0]
+          (cond (:dog_buried (turn-store/read-record store record-id)) true
+                (< 100 n) false
+                :else (do (Thread/sleep 50) (recur (inc n))))))
+    (let [buried (:dog_buried (turn-store/read-record store record-id))]
+      (is (= "ok" (:status buried)))
+      (is (= [] (:said-again buried))))))

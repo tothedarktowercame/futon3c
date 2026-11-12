@@ -795,19 +795,40 @@
                     "disagree, " date ", verbatim:\n\n\"" paragraph "\"")
          :basis {:record record-id :kind "retract"}}))))
 
-(defn bury-candidates
-  "狗 post-hook, part 2a (SELECTION ONLY — no writes): the memories one
-   settled operator RECORD would bury. Buries Joe's own rulings and
-   directions — his acts of the bury-act-kinds, quoted verbatim with
-   their date — plus the reply's 🈹 self-correction when Joe disagreed
-   (retraction-candidate). Anything minus40 already returns for the
-   same text is suppressed: OPTS :known-fn (fn [candidate-text] → seq
-   of existing memory handles) is queried with the candidate's text —
-   the same text-search the recall uses; nil (the pure default) checks
-   nothing. Returns [{:slug :description :body :basis}] where :basis
-   cites the record id and the act index."
-  ([record] (bury-candidates record {}))
-  ([record {:keys [known-fn]}]
+(defn- candidate-check-text
+  "The text a candidate is checked against minus40 with: Joe's words (the
+   act span, or the retraction paragraph) — NOT the description+body, whose
+   \"status: buried by 狗 <date> ... verbatim:\" wrapper shares boilerplate
+   bigrams with every other buried memory of the same day and kind
+   (observed 2026-11-12: UkLbCu's ruling matched 12 memories on wrapper
+   text). The shared-bigrams test must be about the content."
+  [record candidate]
+  (let [acts (vec (:acts record))
+        act-index (get-in candidate [:basis :act-index])]
+    (if (integer? act-index)
+      (act-text record (nth acts act-index))
+      (some->> (re-find #"(?s)verbatim:\n\n\"(.*)\"\s*$" (:body candidate))
+               second))))
+
+(defn- said-again-entry
+  "The packet-D record of one suppressed candidate: Joe's words, the act
+   they came from, and the existing memories that already held them."
+  [record candidate matches]
+  {:act (get-in candidate [:basis :act-id])
+   :kind (get-in candidate [:basis :kind])
+   :text (candidate-check-text record candidate)
+   :memory-ids (vec (distinct (map :memory matches)))
+   :shared (vec (distinct (mapcat :shared matches)))})
+
+(defn bury-split
+  "bury-candidates with the suppressions kept: {:kept [...] :suppressed
+   [said-again entries]}. A suppressed candidate is a \"said again\"
+   event (E-dog-helps §3 metric D3): Joe ruled something a memory
+   already held. OPTS :known-detail-fn (fn [candidate-text] → seq of
+   {:memory :shared}); the legacy :known-fn (handles only) is accepted
+   and adapted. nil checks nothing."
+  ([record] (bury-split record {}))
+  ([record {:keys [known-fn known-detail-fn]}]
    (let [acts (vec (:acts record))
          rulings (keep-indexed
                   (fn [i act]
@@ -823,10 +844,69 @@
                         (ruling-candidate record i act))))
                   acts)
          retraction (retraction-candidate record)
-         candidates (cond-> (vec rulings) retraction (conj retraction))]
-     (if known-fn
-       (vec (remove #(seq (known-fn (str (:description %) "\n" (:body %)))) candidates))
-       candidates))))
+         candidates (cond-> (vec rulings) retraction (conj retraction))
+         detail-fn (or known-detail-fn
+                       (when known-fn
+                         (fn [text] (mapv (fn [m] {:memory m :shared []})
+                                          (known-fn text)))))]
+     (if detail-fn
+       (reduce (fn [acc c]
+                 (let [matches (detail-fn (candidate-check-text record c))]
+                   (if (seq matches)
+                     (update acc :suppressed conj
+                             (said-again-entry record c matches))
+                     (update acc :kept conj c))))
+               {:kept [] :suppressed []}
+               candidates)
+       {:kept candidates :suppressed []}))))
+
+(defn bury-candidates
+  "狗 post-hook, part 2a (SELECTION ONLY — no writes): the memories one
+   settled operator RECORD would bury. Buries Joe's own rulings and
+   directions — his acts of the bury-act-kinds, quoted verbatim with
+   their date — plus the reply's 🈹 self-correction when Joe disagreed
+   (retraction-candidate). Anything minus40 already returns for the
+   same text is suppressed: OPTS :known-fn (fn [candidate-text] → seq
+   of existing memory handles) is queried with the candidate's text —
+   the same text-search the recall uses; nil (the pure default) checks
+   nothing. Returns [{:slug :description :body :basis}] where :basis
+   cites the record id and the act index. The suppressions themselves
+   are kept by bury-split and recorded as dog_buried :said-again."
+  ([record] (bury-candidates record {}))
+  ([record opts] (:kept (bury-split record opts))))
+
+(defn- search-memories-uncapped
+  "All memory items minus40 returns for QUERY — no MAX-ITEMS cut.
+   known-memories must see the whole store's answer, not the recall's
+   top-3: a memory that already holds Joe's ruling can rank below the
+   recall's display cut (observed 2026-11-12: the buried UkLbCu memory
+   ranked 4th by FTS score and was never considered)."
+  [request-fn base query]
+  (let [url (str base
+                 "/api/alpha/evidence/text-search?q="
+                 (URLEncoder/encode query "UTF-8")
+                 "&limit=" search-limit)]
+    (->> (:results (or (request-fn url) {}))
+         (keep memory-item)
+         vec)))
+
+(defn known-memories-detailed
+  "known-memories with the evidence kept: [{:memory <handle> :shared
+   [<shared distinctive bigrams>]}] — which existing memories matched
+   TEXT and on what. The said-again record (packet D) needs both."
+  [request-fn base text]
+  (let [query (keywords text)
+        text-bigrams (content-bigrams text)]
+    (when-not (str/blank? query)
+      (->> (search-memories-uncapped request-fn base query)
+           (keep (fn [{:keys [memory]}]
+                   (let [body (memory-body memory)
+                         shared (when-not (str/blank? (str body))
+                                  (set/intersection text-bigrams
+                                                    (content-bigrams body)))]
+                     (when (and shared (<= echo-min-shared (count shared)))
+                       {:memory memory :shared (vec shared)}))))
+           (vec)))))
 
 (defn known-memories
   "The production :known-fn for bury-candidates: memories minus40 already
@@ -838,17 +918,7 @@
    use check's echo threshold (turn-WHNTlI's single-bigram false
    positive is why that threshold exists)."
   [request-fn base text]
-  (let [query (keywords text)
-        text-bigrams (content-bigrams text)]
-    (when-not (str/blank? query)
-      (->> (search-memories request-fn base query)
-           (filter (fn [{:keys [memory]}]
-                     (let [body (memory-body memory)]
-                       (and (not (str/blank? (str body)))
-                            (<= echo-min-shared
-                                (count (set/intersection text-bigrams
-                                                         (content-bigrams body))))))))
-           (mapv :memory)))))
+  (mapv :memory (known-memories-detailed request-fn base text)))
 
 ;; ---------------------------------------------------------------- bury write
 
@@ -969,10 +1039,12 @@
 
 (defn- prepare-bury!
   "The bury half of the post-hook, run after dog_use is written: bury
-   each candidate (suppress what minus40 already knows) and record
-   :dog_buried on the record — {:status \"ok\" :items [...]} or a typed
-   absence: \"off\" (bury off-switch), \"none\" (no candidates),
-   \"failed\". Never throws."
+   each kept candidate (suppress what minus40 already knows) and record
+   :dog_buried on the record — {:status \"ok\" :items [...] :said-again [...]}
+   or a typed absence: \"off\" (bury off-switch), \"none\" (no candidates),
+   \"failed\". :said-again (packet D, E-dog-helps §3 D3) rides every
+   settled turn — empty when nothing was suppressed, regardless of the
+   arm. Never throws."
   [opts record-id record]
   (try
     (let [record-id (str record-id)
@@ -984,13 +1056,19 @@
                 :else
                 (let [request-fn (effective-request-fn opts)
                       base (or (:base opts) minus40-base)
-                      candidates (bury-candidates
-                                  record {:known-fn (fn [text]
-                                                      (known-memories request-fn base text))})]
-                  (if (seq candidates)
+                      {:keys [kept suppressed]}
+                      (bury-split
+                       record {:known-detail-fn
+                               (fn [text]
+                                 (known-memories-detailed request-fn base text))})]
+                  ;; :said-again rides every settled turn (empty when none),
+                  ;; regardless of the arm (packet D, E-dog-helps §3 D3).
+                  (if (seq kept)
                     {:at (str (Instant/now)) :status "ok"
-                     :items (mapv #(bury-one! opts %) candidates)}
-                    {:at (str (Instant/now)) :status "none" :items []})))]
+                     :items (mapv #(bury-one! opts %) kept)
+                     :said-again suppressed}
+                    {:at (str (Instant/now)) :status "none" :items []
+                     :said-again suppressed})))]
           (turn-store/update-record! store record-id #(assoc % :dog_buried result)))))
     (catch Throwable t
       (println (str "[dog] bury failed: " (.getMessage t)))))
