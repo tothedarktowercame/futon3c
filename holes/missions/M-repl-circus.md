@@ -386,9 +386,16 @@ registers `/api/alpha/arxana/command` and `/query`.
 |---|---|---|---|---|
 | giraffe-reread | SQLite queue + EDN, no XTDB | every 5 min | scheduled task on its own executor | small |
 | Arxana demo :7084 | mock, in memory | unknown | mount in-process, or retire | small |
-| F1–F6 :7085–:7090 | in-memory XTDB from pinned inputs | idle since 11-09 | one `/arxana/v1` mount on :7070 over futon1b, `prepare!` as loaders | medium (F1), small each after |
-| code↔docs :7091 | same | idle since 11-09 | same mount | small |
+| F1–F6 :7085–:7090 | in-memory XTDB from pinned inputs | **retired 11-12** (Joe: already QA'ed and accepted) | loaders under the `/arxana/v1` mount, if ever wanted again | – |
+| code↔docs :7091 | same | **retired 11-12** | same | – |
 | workplan :7094 | own durable XTDB store, 130 MB, 24 post-load commands held nowhere else | daily | same mount, reload into futon1b, replay post-load writes | medium to large |
+
+**Retired 2026-11-12:** F1–F6 and code↔docs (seven JVMs; Joe: "I believe I
+already QA'ed and accepted the Arxana demos, really they should have been
+retired then"); recorded in futon4 `holes/missions/M-jvm-arxana.md`. Zone went
+from 13 JVMs to 6. Pending Joe: :7084 (the code-server demo on :8097 uses it)
+and the workplan store on :7094 (data of record, migrate first). The Giraffe
+packet is held until the JVM consolidation is sorted out (Joe, 11-12).
 
 **giraffe-reread is not folded as a schedule** (Joe, 11-12: "if the GCC is
 continuously up to date, then we don't need a scheduled reread, and we can
