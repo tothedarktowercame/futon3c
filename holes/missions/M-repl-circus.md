@@ -288,52 +288,87 @@ the remaining work is understanding their composition, then verifying it.
   helping after a while"), overlap modes, E-question-log, futon7
   E-futon-questions, the XTDB home of derived stores, prompt durability.
 
-## DERIVE (draft, claude-13, 2026-11-11, from the MAP note)
+## DERIVE (claude-13 with Joe, 2026-11-12, from the MAP note)
 
-**How the animals fit together today.** They do not read each other through
-the GCC. They hang off one chain of turn-service events on the operator's
-象 turn record (`~/.emacs-graph/session-turn-analysis/turn-X.json`), and each
-reads what earlier animals left on that record:
+Joe, 2026-11-12: "one projector rebuilding/extending the GCC from turn
+records is *one* crucial direction for DERIVE, though another lens on this
+that is important is that Giraffe priorities should be kept up to date
+routinely. These are closely linked b/c if we continuously update the GCC,
+we can also continuously update Giraffe priorities."
 
-1. `:recorded` (record written): 驴 reranks patterns (`:lu_ranked`); 狗 starts
-   its recall, seeded from 驴's patterns (`:dog_recall`); the 小象 draft; 象's
-   analysis seat is dispatched.
-2. `:reading` (象's reading published: `:acts`, `:sentences`, analysis.json).
-3. `:ported` (ports computed from the reading): 馬 reads the reply against
-   the acts (`:alignment`).
-4. `:aligned`: 馬-occurrence matches patterns against the turn
-   (`:pattern_verdicts`); the per-turn cascade is drawn from these.
-5. `:settled` (reading and reply both present): the evidence packet to :7073;
-   Giraffe's relationship-review candidates; 狗's use check and bury
-   (`:dog_use`, `:dog_buried`).
+### How the animals fit together today
 
-So the shared store in practice is the turn record, ordered by these events,
-plus :7073 for what must be evidence. Three things follow:
+They do not read each other through the GCC. They hang off one chain of
+turn-service events on the operator's 象 turn record
+(`~/.emacs-graph/session-turn-analysis/turn-X.json`), and each reads what
+earlier animals left on that record:
 
-- **The GCC has no production writer.** 驴's `[:pattern/proposal 1]`, 象's
-  `[:interpretation 1]`, 馬's `[:pattern/occurrence 1]` and Giraffe's
-  `[:needs 1]` are decided or built on fixtures; none is written live. Since
-  every animal's output is already on the record, the smallest composition is
-  one projector that rebuilds GCC records from the turn records (the GCC
-  "can be rebuilt from scratch"), rather than six writers. The animals keep
-  writing the record; the GCC is a projection of it, and the readers move to
-  the GCC one at a time.
-- **猴 is the missing stage after `:settled`.** It is meant to read a settled
-  frame, finish its cascade and place it in the GCC. With a projector, 猴
-  reads the GCC rather than parsing records, and its output (operator focus)
-  is a GCC record (schema 1.1). This is where circus-04 fits.
-- **Outputs without a reader.** 狗's three fields reach the Prompt line and
-  the E-dog-helps report but not the stepper. Giraffe's priority projection
-  has no reader found. Each needs a named reader or should stop.
+1. `:recorded`: 驴 reranks patterns (`:lu_ranked`); 狗 starts its recall,
+   seeded from 驴's patterns (`:dog_recall`); the 小象 draft; 象's analysis
+   seat is dispatched.
+2. `:reading`: 象's reading published (`:acts`, `:sentences`, analysis.json).
+3. `:ported`: 馬 reads the reply against the acts (`:alignment`).
+4. `:aligned`: 馬-occurrence matches patterns (`:pattern_verdicts`); the
+   per-turn cascade is drawn from these.
+5. `:settled`: the evidence packet to :7073; Giraffe's relationship-review
+   candidates; 狗's use check and bury (`:dog_use`, `:dog_buried`).
 
-**What VERIFY checks.** Coverage: every operator chat turn at :7073 has a
-record that reached `:settled` within a stated interval, with each animal's
-field present or typed absent (core.logic over the records). Attachment: one
-stepper per REPL (reazon). The order of events above is what coverage checks.
+The shared store in practice is the turn record, plus :7073 for what must be
+evidence. No GCC record type (驴 `[:pattern/proposal 1]`, 象
+`[:interpretation 1]`, 馬 `[:pattern/occurrence 1]`, Giraffe `[:needs 1]`) has
+a production writer.
 
-**Open for DERIVE.** Whether the projector runs at `:settled` or in batch;
-the GCC record types for 狗 (recall, use, buried) and 猴 (focus); where
-Giraffe's batch pipeline is scheduled, if anywhere; the CTRL write-up.
+### The composition: two continuous projections
+
+**1. The GCC projector.** One projector, run at `:settled`, reads the settled
+turn record and extends the GCC with that turn's records (§16 of E-gcc-schema:
+occurrences, gluing computed, `[:cascade/reading 1]`). A full rebuild from all
+turn records must give the same graph; that equality is the projector's check.
+The animals keep writing the record and stay independent of each other; the
+GCC is a projection of the records, not a seventh writer racing the six.
+
+**2. Giraffe priorities, kept current from the GCC.** Giraffe has two parts
+(`giraffe/pass.clj`, `giraffe/priority.clj`):
+- the *pass* orders a work pool (missions, excursions, tickets with their
+  state groups) by readiness over `needs` edges (closure, artifact,
+  alternative);
+- the *priority projection* bands that order by a focus relation received
+  from outside (focus / associated / elsewhere). Its docstring: "it does not
+  infer focus."
+
+Today the pass reads an edges file and nothing schedules it, and the priority
+projection has no reader (MAP note). With the projector, both inputs come from
+the GCC: `needs` edges and item states are GCC records, and the focus relation
+is 猴's output. So each GCC update can recompute the pass and the projection.
+That keeps priorities current without a separate schedule.
+
+**猴's place follows.** 猴 reads the GCC after a turn settles, locates the
+turn's cascade in it, and writes the operator focus (a schema 1.1 record).
+That focus is the input Giraffe's priority projection waits for. The flow
+closes: operator turn → 驴, 象, 狗, 馬 on the record → `:settled` → GCC
+projector → 猴 focus → Giraffe pass and priorities → the War Machine (and Joe)
+as readers of the priorities.
+
+### What VERIFY checks
+
+- **Coverage** (core.logic): every operator chat turn at :7073 has a record
+  that reached `:settled` within a stated interval, each animal's field present
+  or typed absent, and its GCC records present.
+- **Projection** : incremental GCC equals rebuilt GCC; Giraffe priorities are
+  no older than the newest settled turn.
+- **Attachment** (reazon): one stepper per REPL.
+
+### Open for DERIVE
+
+- Where the GCC lives (an XTDB store or a sidecar, see the mission's Open
+  list), and the projector's incremental write.
+- The record types for 狗 (recall, use, buried) and 猴 (focus): schema 1.1.
+- How the pass's work pool and `needs` edges become GCC records (today:
+  Giraffe run files from holes/tickets edges).
+- Who reads the priorities: the War Machine's selection, Joe's view (Mojira),
+  or both.
+- Cost: a pass per settled turn, or debounced like the pattern-index watcher.
+- The CTRL write-up.
 
 ## Acceptance checklist (IDENTIFY)
 
