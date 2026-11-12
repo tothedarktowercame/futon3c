@@ -588,7 +588,9 @@ def build_item(item_id, ctx):
                  "summary": (source_rec or {}).get("purpose"),
                  "reader": reader}
         if corpus_rec and sha == current_sha:
-            warnings = ["self-check: %s" % w
+            # warnings are shown on the page: shorten any full digest to 8
+            # characters (claude-13's review: two items showed 64-hex here)
+            warnings = ["self-check: %s" % re.sub(r"\b([0-9a-f]{8})[0-9a-f]{56}\b", r"\1", w)
                         for w in (corpus_rec.get("self_check") or [])]
             summary = corpus_rec.get("purpose")
             if ctx["plant_display_raw_sha"]:
