@@ -8,9 +8,9 @@ processes' own logs, and one `GET /arxana/v1/capabilities` per demo port.
 Nothing was signalled, restarted or edited. minus40's store (:7093) is out of
 scope here (kimi-2's MEM-migration discovery).
 
-Eight JVMs are covered: giraffe-reread and seven Arxana demo processes (the
-packet's list: :7084, F1–F6, code↔docs, workplan; that is nine demo ports,
-so nine demo JVMs, ten with giraffe-reread). All ten are described below.
+Ten JVMs are covered: giraffe-reread and nine Arxana demo processes (:7084,
+F1–F6, code↔docs, workplan). The packet counted these as eight; its own list
+comes to ten.
 
 ## What the nine Arxana processes have in common
 
