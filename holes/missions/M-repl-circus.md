@@ -368,7 +368,13 @@ owners. Joe, 11-12: "it's the Arxana demos that I thought of as "trial
 basis". Those need to all be merged into the 1x futon3c and 1x futon1b that
 we have discussed." Inventory: claude-6,
 `holes/labs/M-repl-circus/JVM-inventory-2026-11-12.md` (in progress). Until a
-merge is cut over, the demo processes are left running and unsignalled.
+merge is cut over, the demo processes are left running and unsignalled. Then
+futon1b's heap doubles (Joe, 11-12: "a much better route is to 2/13 the JVMs
+then 2x the memory for futon1b, since we are still far ahead on memory in
+that case"); the eleven JVMs use about 21 GB today, so a 16 GB futon1b
+still leaves Zone with more free memory than now. "If it *happens* that some
+aspect of this needs to be "hydrated" into datascript, that route remains
+open."
 
 ### What VERIFY checks
 
