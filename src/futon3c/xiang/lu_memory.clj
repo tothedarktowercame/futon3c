@@ -37,10 +37,19 @@
            [java.security MessageDigest]
            [java.util.concurrent ExecutorService Executors ThreadFactory]))
 
+(defn resolve-base
+  "Env precedence for the memory-store base URL: FUTON_MEMORY_BASE, else the
+   historical default :7093 (minus40 store). Joe's 2026-11-12 migration
+   decision (M-repl-circus MEM) switches this by setting the variable, not by
+   editing this file. Pure so the precedence is testable."
+  [env]
+  (or (get env "FUTON_MEMORY_BASE") "http://127.0.0.1:7093"))
+
 (def defaults
-  "The write half's knobs. :base is the minus40 store (the user unit
-  minus40-store); :request is the EDN transport, injectable for tests."
-  {:base "http://127.0.0.1:7093"
+  "The write half's knobs. :base is the memory store (minus40 store on :7093
+  by default; FUTON_MEMORY_BASE overrides — see resolve-base); :request is
+  the EDN transport, injectable for tests."
+  {:base (resolve-base (System/getenv))
    :request nil})
 
 (def author "lu-memory")

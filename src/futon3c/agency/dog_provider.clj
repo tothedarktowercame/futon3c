@@ -58,10 +58,24 @@
            [java.time Duration Instant]
            [java.util.concurrent ExecutorService Executors ThreadFactory]))
 
+(defn resolve-minus40-base
+  "Env precedence for the memory-store base URL: FUTON_MEMORY_BASE, then the
+   historical default (the minus40 store, user unit minus40-store on :7093).
+   Joe's 2026-11-12 decision migrates that store into the live :7073
+   (M-repl-circus MEM); the default stays :7093 until FUTON_MEMORY_BASE is
+   set for the switch, so nothing changes until then. Pure (env-map in) so
+   the precedence is testable."
+  [env]
+  (or (get env "FUTON_MEMORY_BASE") "http://127.0.0.1:7093"))
+
 (def minus40-base
-  "The minus40 store (user unit minus40-store on :7093). Never the live
-   :7073."
-  "http://127.0.0.1:7093")
+  "The memory store this provider reads and (bury only) writes. Resolution:
+   FUTON_MEMORY_BASE if set, else the historical default :7093 (the minus40
+   store, user unit minus40-store). The former rule \"never the live :7073\"
+   is superseded by Joe's 2026-11-12 migration decision (M-repl-circus MEM,
+   MEM-migration-discovery-2026-11-12.md) — the switch to :7073 is made by
+   setting FUTON_MEMORY_BASE, not by editing this file."
+  (resolve-minus40-base (System/getenv)))
 
 (def off-switch-path
   "The 狗 off-switch, in the style of 驴's lu-off: when this file exists

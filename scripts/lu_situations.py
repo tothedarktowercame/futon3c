@@ -42,7 +42,13 @@ import numpy as np
 
 EMBED_ROOT = os.path.expanduser("~/code/data/minus40/embeddings")
 DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-BASE = os.environ.get("MINUS40_BASE", "http://127.0.0.1:7093")
+# One memory-store base URL per process (Joe, 2026-11-12: minus40 :7093
+# migrates into futon1b :7073 — M-repl-circus MEM). Precedence:
+# FUTON_MEMORY_BASE, then the historical variable, then the historical
+# default. Nothing changes until FUTON_MEMORY_BASE is set.
+BASE = (os.environ.get("FUTON_MEMORY_BASE")
+        or os.environ.get("MINUS40_BASE")
+        or "http://127.0.0.1:7093")
 AUTHOR = "lu-memory"
 
 _write_lock = threading.Lock()

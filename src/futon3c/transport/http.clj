@@ -12251,12 +12251,24 @@
         (and mission (not (get-in agent [:agent/metadata :mission-id])))
         (assoc-in [:agent/metadata :mission-id] mission)))))
 
+(defn- resolve-scope-edge-base
+  "Env precedence for the scope-edge store: FUTON3C_SCOPE_EDGE_BASE, then
+   FUTON_MEMORY_BASE (the one memory-migration variable, Joe 2026-11-12,
+   M-repl-circus MEM), then the historical default. Pure so the precedence
+   is testable."
+  [env]
+  (or (get env "FUTON3C_SCOPE_EDGE_BASE")
+      (get env "FUTON_MEMORY_BASE")
+      "http://127.0.0.1:7093"))
+
 (def ^:private xiang-scope-edge-base
   "Where the classical scope edges are written. Every `xiang/scope` edge so
    far (the lab batch, 2026-10-12..14) is in the minus40 scratch store, and
    its readers (the resume brief footer, the walkthrough, the m40 tools) read
-   there; the live store has none. So the default is :7093, not :7073."
-  (or (System/getenv "FUTON3C_SCOPE_EDGE_BASE") "http://127.0.0.1:7093"))
+   there; the live store has none. So the default is :7093, not :7073 — the
+   switch to :7073 rides FUTON_MEMORY_BASE (set by the MEM migration, gated
+   on the lab batch being copied), never an edit here."
+  (resolve-scope-edge-base (System/getenv)))
 
 (defn- xiang-post-hyperedge!
   "POST one hyperedge map to the scope-edge store. Returns {:status n :body s};
