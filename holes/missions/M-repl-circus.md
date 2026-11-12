@@ -385,16 +385,18 @@ registers `/api/alpha/arxana/command` and `/query`.
 | JVM | Data | In use | Fold | Effort |
 |---|---|---|---|---|
 | giraffe-reread | SQLite queue + EDN, no XTDB | every 5 min | scheduled task on its own executor | small |
-| Arxana demo :7084 | mock, in memory | unknown | mount in-process, or retire | small |
+| Arxana demo :7084 | mock, in memory | **retired 11-12** with the :8097 code-server demo | – | – |
 | F1–F6 :7085–:7090 | in-memory XTDB from pinned inputs | **retired 11-12** (Joe: already QA'ed and accepted) | loaders under the `/arxana/v1` mount, if ever wanted again | – |
 | code↔docs :7091 | same | **retired 11-12** | same | – |
 | workplan :7094 | own durable XTDB store, 130 MB, 24 post-load commands held nowhere else | daily | same mount, reload into futon1b, replay post-load writes | medium to large |
 
 **Retired 2026-11-12:** F1–F6 and code↔docs (seven JVMs; Joe: "I believe I
 already QA'ed and accepted the Arxana demos, really they should have been
-retired then"); recorded in futon4 `holes/missions/M-jvm-arxana.md`. Zone went
-from 13 JVMs to 6. Pending Joe: :7084 (the code-server demo on :8097 uses it)
-and the workplan store on :7094 (data of record, migrate first). The Giraffe
+retired then"); recorded in futon4 `holes/missions/M-jvm-arxana.md`. Then :7084
+and the :8097 code-server demo (Joe: "We don't need the demo separately").
+Zone went from 13 JVMs to 5: futon3c, futon1b, minus40's store (migrating,
+Joe's go 11-12), the workplan store on :7094 (data of record; migrate after
+the memories, Joe 11-12), and giraffe-reread's periodic JVM (held). The Giraffe
 packet is held until the JVM consolidation is sorted out (Joe, 11-12).
 
 **giraffe-reread is not folded as a schedule** (Joe, 11-12: "if the GCC is
