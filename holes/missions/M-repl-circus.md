@@ -43,6 +43,34 @@ Parts already in place:
 This design depended on E-evidence-cleanup through IDENTIFY.  That dependency is
 now discharged; MAP starts from its clean evidence/derived-store boundary.
 
+## The gap at the heart of the mission (IDENTIFY note, Joe, 2026-11-12)
+
+Joe: "that gap is, I'd say, at the heart of M-repl-circus, and worth a note in
+IDENTIFY to make it explicit." The gap, found by the Giraffe store survey
+(`holes/labs/M-repl-circus/GIRAFFE-store-2026-11-12.md`, `8ff0c1925`):
+**nothing a settled turn produces reaches Giraffe.** The Circus animals run on
+every operator turn and write their output onto the turn record or into
+evidence, but:
+
+- relationship reviews (produced at `:settled`) go to :7073, and no Giraffe
+  code reads them; none has ever been resolved;
+- 馬's tensions, which the Circus table says become proposed tickets, have no
+  writer;
+- 猴's operator focus, which Giraffe's priorities wait for, has no writer;
+- the watcher already turns changes to task documents into "recompute Giraffe
+  input" demands, but sends them only to a shadow ledger;
+- Giraffe keeps up only by polling (a re-read timer, about 11 CPU-hours a
+  day), and its priorities have not been current since 11-07.
+
+So the Circus observes and records, but its observations do not reach the one
+place that turns them into what to work on next. The goal stated above ("the
+Circus talks through the graph") is met only when they do: a turn's Circus
+output changes the GCC, and the GCC change updates Giraffe's priorities. The
+design is in §DERIVE ("The Giraffe store today", "Real-time design").
+
+**Held** (Joe, 11-12) until the other unneeded JVMs are retired and the
+migrations are finished: "so that we're able to focus clearly on this task".
+
 ## Decided: where derived output goes (claude-8, 2026-11-05, on Joe's go for step 2)
 
 - **Output that relates things goes in the GCC as typed hyperedges** through futon1b's
