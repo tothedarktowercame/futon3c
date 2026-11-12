@@ -511,6 +511,41 @@ artifact provider, since the only one is in memory); workplan; F2–F6 and
 code↔docs; :7084. The futon4a README's "never a live store" rule changes at
 the same cut-over (Joe's 11-12 statement supersedes it).
 
+### GCC load design (draft for Joe, claude-13, 2026-11-12)
+
+Joe: "rather than just dump-and-load I think we should use the material to
+help us finish our design and make sure we load it in ways that are
+meaningful." From two reviews of the prototypes against E-gcc-schema:
+`holes/labs/M-repl-circus/GCC-workplan-review-2026-11-12.md` (kimi-2,
+`cf1ed5481`; the :7094 workplan and lexicon stack) and
+`GCC-giraffe-review-2026-11-12.md` (kimi-1, `7c404309b`; the Giraffe store).
+Nearly everything fits a B1 record shape. What differs is where each kind's
+truth comes from, and that decides how it enters the GCC:
+
+| How it enters | What | Why |
+|---|---|---|
+| **Loaded once, kept with provenance** (data of record) | Joe's acts: introductions (3 on :7094), word rules, assessments (his acceptances and rejections); reviewers' verdicts (41 hand-reviewed `needs` edges); agents' readings (645 current Giraffe readings with their supersession) and model attestations (the `serves` links) | Judgements that cannot be recomputed from anything else |
+| **Derived continuously** by a writer, never copied | items from holes/ documents (document watcher); git attestations (created-by commit); `names` from the parser; mentions from turns (the turn projector at `:settled`); `needs` from accepted readings | Their truth is a document, git or a turn; a copy goes stale |
+| **Recomputed on read or on change; only a receipt stored** | Giraffe's pass, priorities, clusters; `met`; the lexicon's 14-verb reduction; the ranking | E-gcc-schema rules 3 and 4 |
+| **Operational, outside the GCC** | the re-read queue; the shadow demand ledger | Work in progress, not knowledge |
+| **Dropped once the above verifies** (nothing deleted yet) | 188 Giraffe run directories, 441 corpus copies (~1.9 GB); the :7094 store after its records of record are in futon1b | Recomputable, or superseded by the load |
+
+One item node: the workplan's 323 items and Giraffe's 826 share an id space,
+so each is one `[:workplan/item 1]` node that Giraffe and the lexicon both
+point at. Two findings on the prototypes: the evidence mentions in the slice
+were written by hand (`make_all.py` `MENTIONS`), a hand-made version of what
+the turn projector must produce; and several truths (serves, pending levels,
+user stories) live in `~/notes` TSV files outside any repository.
+
+**Proposed schema lines, for Joe's ruling** (wording in the two reviews):
+from Giraffe, a reading type keyed by item and document digest with
+supersession; the re-read request as its own record or as the first B7 want
+with a horizon (after splitting failed from withdrawn, rule 7); the five
+state-group values. From the workplan, a home for word-rule members; the
+mention-role vocabulary; `pending/level` as an item readiness attestation;
+benefit-line levels in B8; introductions carrying their mark range and an
+honest timing basis.
+
 ### What VERIFY checks
 
 - **Coverage** (core.logic): every operator chat turn at :7073 has a record
