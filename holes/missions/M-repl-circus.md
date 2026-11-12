@@ -364,7 +364,11 @@ service as routes and scheduled tasks in the futon3c JVM (I-0), every store's
 data in futon1b. Order: minus40's store first (Joe: "memory migration is the
 priority"); giraffe-reread as an in-JVM scheduled task like the watchers; the
 Arxana demos as routes in futon3c with their data in futon1b, with their
-owners.
+owners. Joe, 11-12: "it's the Arxana demos that I thought of as "trial
+basis". Those need to all be merged into the 1x futon3c and 1x futon1b that
+we have discussed." Inventory: claude-6,
+`holes/labs/M-repl-circus/JVM-inventory-2026-11-12.md` (in progress). Until a
+merge is cut over, the demo processes are left running and unsignalled.
 
 ### What VERIFY checks
 
