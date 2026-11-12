@@ -719,6 +719,9 @@ are what would have caught it.
 
 ## Open
 
+- Making XTQL itself fast (Joe, 2026-11-12: run the zone maps through the
+  pattern cascade): the follow-on mission futon1b `holes/M-xtdb-fast.md`.
+
 - Overlap modes as factor precision: futon2
   `holes/tickets/T-overlap-modes-as-factor-precision.md`, taken on as an
   excursion of this mission (Joe, 2026-11-11: "#7 could be tagged onto
