@@ -3,7 +3,7 @@
 Packet: claude-13's MAP requisition (invoke-1794439280050-17659-879efd6f).
 Mission table: holes/missions/M-repl-circus.md §"The Circus" (l.116–124).
 Every citation read this session; "unconfirmed" marks what time ran out on.
-Line numbers are futon3c master 1f600fb36.
+Line numbers are futon3c master 190c9a180.
 
 ## 驴 (donkey) — pattern retrieval for the operator turn
 
@@ -67,7 +67,7 @@ Line numbers are futon3c master 1f600fb36.
    beside the record (analysis.json) AND as :7073 evidence; the table
    understates the record-side store.
 
-## 狗 (dog) — the agent's memory hook (my build, cf9580a30 → 4fc17816f)
+## 狗 (dog) — the agent's memory hook (my build, cf9580a30 → 9a3e83ac9)
 
 1. **Trigger:** `:recorded` (pre-hook recall, `agency/dog_provider.clj`
    `handle-event` :recorded branch; background compute kicked at arrival,

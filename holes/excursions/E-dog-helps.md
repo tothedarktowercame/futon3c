@@ -56,7 +56,7 @@ to see whether we are 50% / 40% / 20% of the way there". The check-in is on
 (items and turns since the arm went live, against the targets in §2), and
 report which of 50 / 40 / 20% is nearest, with D1 by arm so far and any D5
 cases. claude-13 holds a park with that deadline
-(`park-628d32de-23e2-4b93-9a05-180984281360`). **The arm went live at 2026-11-11T23:56:03Z** (packet B, `657bc9eef`,
+(`park-628d32de-23e2-4b93-9a05-180984281360`). **The arm went live at 2026-11-11T23:56:03Z** (packet B, `604dc1811`,
 loaded by claude-13; measured withheld share over 20,358 existing record ids:
 29.9%). Progress toward the §2 targets counts from that moment.
 
@@ -270,7 +270,7 @@ jobs for injection.
 
 ## Sources read
 
-- `src/futon3c/agency/dog_provider.clj` at `bca608795` (recall, use-check,
+- `src/futon3c/agency/dog_provider.clj` at `c15b97540` (recall, use-check,
   bury-candidates, known-memories, prepare-bury!).
 - `holes/labs/M-repl-circus/dog-family-measurement-2026-11-11.md` and
   `REVIEW-dog-and-minus40-2026-11-11.md`.

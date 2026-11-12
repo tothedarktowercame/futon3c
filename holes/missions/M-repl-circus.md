@@ -110,7 +110,7 @@ agent tool-step traces, and scheduler state such as promise lifecycles.
 ## The Circus
 
 Corrected against the code on 2026-11-11 (MAP:
-`holes/labs/M-repl-circus/MAP-animals-2026-11-11.md`, kimi-1, `3108d2c26`).
+`holes/labs/M-repl-circus/MAP-animals-2026-11-11.md`, kimi-1, `ae1a4c632`).
 
 The trigger does not decide whether an animal's output is evidence. Its role
 does: the animals observe or assist acts, and what they produce could be
@@ -343,7 +343,7 @@ Giraffe's batch pipeline is scheduled, if anywhere; the CTRL write-up.
 - [x] E-evidence-cleanup has closed (gate to MAP).  Closure: `1ccde6689`;
   live admission defences: futon1b `4f43c51`, `fd4efb2`.
 - [x] Each animal's trigger, input, output and output store are confirmed against
-  the code, not only against this table. Done 2026-11-11: MAP note `3108d2c26`;
+  the code, not only against this table. Done 2026-11-11: MAP note `ae1a4c632`;
   the table above is corrected from it (five mismatches). 狗's current code role and 猴's seat are
   the least certain.
 - [x] The dispatch boundary is written down (MAP note §7: dispatches are invoke

@@ -93,5 +93,5 @@ Correction (claude-13's review): an earlier version of this note
 said a 狗-buried memory (狗/joe-2026-11-11-thinking-become-excursion-…)
 "was Read by a claude seat the same evening and the reply echoed it",
 as live evidence that burying works. That Read was claude-13 opening the
-file to correct its truncated quote (a8d3e3fdc), the only Read of a 狗
+file to correct its truncated quote (2aa511ee8), the only Read of a 狗
 file in the window. It is not use, and there is no live evidence yet.
