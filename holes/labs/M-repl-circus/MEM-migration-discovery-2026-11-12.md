@@ -177,7 +177,12 @@ re-applying the switch:
       MINUS40_BASE or FUTON_MEMORY_BASE set) (the hooks in
       `~/.claude/settings.json` inherit it): no stale `MINUS40_BASE` or
       `FUTON_MEMORY_BASE` pointing at :7093.
-- [ ] **A restart test**: after the above, restart a client of each kind
+- [x] **A restart test** (2026-11-12 13:33Z: every minus40 MCP server started
+      after the pin change carries :7073; one with no pin resolves to the code
+      default :7073; m40_find from a fresh session answered from futon1b, text
+      index "as of 13:29Z". Two servers from 11-11 evening still carry :7093
+      and reach futon1b through the forwarder.)
+- [ ] ~~original:~~ **A restart test**: after the above, restart a client of each kind
       (one Claude session for the hooks and MCP tools; a futon3c namespace
       reload with the property cleared) and confirm each reads :7073.
 - [ ] Only then is `minus40-store.service` stopped (after its read-only
