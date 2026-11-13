@@ -60,24 +60,27 @@
       (is (map? result))
       (is (string? (:error result))))))
 
-(deftest proxy-invoke-fn-forwards-to-invoke-endpoint
-  (testing "proxy invoke calls /api/alpha/invoke and returns result/session"
+(deftest proxy-invoke-fn-enters-origin-bell-queue
+  (testing "proxy invoke calls /api/alpha/bell and returns its queued job identity"
     (let [calls (atom [])
           f (fed/make-proxy-invoke-fn "http://remote:7070" "codex-1")]
       (with-redefs [http/post (fn [url opts]
                                 (swap! calls conj {:url url :opts opts})
                                 (doto (promise)
-                                  (deliver {:status 200
-                                            :body "{\"ok\":true,\"result\":\"pong\",\"session-id\":\"sid-2\"}"})))]
+                                  (deliver {:status 202
+                                            :body "{\"ok\":true,\"accepted\":true,\"job-id\":\"invoke-remote-1\",\"state\":\"queued\"}"})))]
         (let [result (f "hello" "sess-1")
               call (first @calls)
               payload (json/parse-string (get-in call [:opts :body]) true)]
-          (is (= "pong" (:result result)))
-          (is (= "sid-2" (:session-id result)))
-          (is (= "http://remote:7070/api/alpha/invoke" (:url call)))
+          (is (= "[federation bell queued: invoke-remote-1]" (:result result)))
+          (is (= "sess-1" (:session-id result)))
+          (is (= "invoke-remote-1" (:remote-job-id result)))
+          (is (= "queued" (:remote-state result)))
+          (is (= "http://remote:7070/api/alpha/bell" (:url call)))
           (is (= "codex-1" (:agent-id payload)))
           (is (= "hello" (:prompt payload)))
-          (is (= "federation-proxy" (:caller payload))))))))
+          (is (= "federation-proxy" (:caller payload)))
+          (is (= "bell" (:surface payload))))))))
 
 ;; =============================================================================
 ;; Announcement — skips when not configured

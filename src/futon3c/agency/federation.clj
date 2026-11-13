@@ -13,8 +13,8 @@
      Local Agency ──announce──→ Peer Agency
        (real agent)               (proxy agent, invoke-fn = HTTP POST back)
 
-   The proxy invoke-fn POSTs to the origin Agency's /dispatch endpoint.
-   The origin Agency has the real agent registered and dispatches normally."
+   The proxy invoke-fn POSTs to the origin Agency's /api/alpha/bell endpoint.
+   The origin Agency has the real agent registered and queues normally."
   (:require [futon3c.agency.registry :as reg]
             [clojure.set :as set]
             [clojure.string :as str]
@@ -362,12 +362,13 @@
 ;; =============================================================================
 
 (defn make-proxy-invoke-fn
-  "Create an invoke-fn that forwards dispatch to a remote Agency.
+  "Create an invoke-fn that forwards a bell to a remote Agency.
    origin-url: the Agency where the real agent lives.
    agent-id: the agent's string ID.
 
-   Returns (fn [prompt session-id] result-map) that POSTs to
-   origin-url/api/alpha/invoke."
+   Returns (fn [prompt session-id] result-map) that POSTs to the origin's
+   ordinary bell endpoint.  Federation changes transport, not admission: the
+   origin Agency durably queues the turn behind any active turn for the agent."
   [origin-url agent-id]
   (fn [prompt session-id]
     (try
@@ -375,10 +376,11 @@
                   {"agent-id" agent-id
                    "prompt" prompt
                    "caller" "federation-proxy"
+                   "surface" "bell"
                    "timeout-ms" default-proxy-timeout-ms})
             ;; Use org.httpkit.client for non-blocking HTTP
             resp @(http/post
-                   (str origin-url "/api/alpha/invoke")
+                   (str origin-url "/api/alpha/bell")
                    {:headers {"Content-Type" "application/json"}
                     :body body
                     :timeout default-proxy-timeout-ms})
@@ -388,8 +390,11 @@
                      (catch Exception _
                        {}))]
         (if (and status (< status 400) (= true (:ok parsed)))
-          {:result (:result parsed)
-           :session-id (or (:session-id parsed) session-id)}
+          {:result (or (:result parsed)
+                       (str "[federation bell queued: " (:job-id parsed) "]"))
+           :session-id (or (:session-id parsed) session-id)
+           :remote-job-id (:job-id parsed)
+           :remote-state (:state parsed)}
           {:error (str "Proxy invoke failed: HTTP " status
                        (when-let [msg (:message parsed)]
                          (str " (" msg ")")))

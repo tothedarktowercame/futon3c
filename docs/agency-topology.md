@@ -71,7 +71,8 @@ The bridge auto-detects the remote target and registers via HTTP.
 
 When peers are configured, agent registrations are announced to peer
 Agencies. The peer creates a proxy invoke-fn that forwards prompts
-via `POST /api/alpha/invoke`. This works but adds HTTP latency and
+via `POST /api/alpha/bell`, so the origin Agency admits them through the same
+durable per-agent FIFO as local bells. This works but adds HTTP latency and
 doesn't maintain a persistent WS connection.
 
 The outbound WS bridge sets `:skip-federation-proxy? true` in metadata
