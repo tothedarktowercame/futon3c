@@ -836,6 +836,17 @@ batched scope writer is live (M-librarian re-ingest 36 s, same edges); the
 (E-workplan-validation); tickets become `ticket/doc` entities first so the
 19 workplan tickets attach like every other item.
 
+Item 3 done (2026-11-13, evening): 64 tickets are `ticket/doc` entities
+(futon3c 766aa7a0d); the :7094 records are in futon1b (3,669 created, every
+record and flat column read back, identical rerun created 0; futon1b
+19fe564…70abbd5; receipt kept privately under ~/storage); futon5's 16
+label pairs merged, M-coordination-rewrite reduced to futon3b's copy (futon3
+f76088f) and M-u88's fixture-copy entity removed (futon3c c1a3420ee: copies
+under a nested holes/ are not documents), so no document has two entities.
+Mojira's preview now reads futon1b (`gcc_preview.py --source futon1b`,
+futon3c 8ee2e446e; regenerated for all 34 items; names and mentions show
+"not rebuilt yet" until their writers exist). The :7094 JVM can stop.
+
 ## Acceptance checklist (IDENTIFY)
 
 - [ ] For each animal: which GCC node and edge types it writes, and which XTQL queries it reads
